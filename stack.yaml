@@ -1,0 +1,11 @@
+resolver: lts-9.21
+
+packages:
+- tools
+
+nix:
+    packages: [openssl, binutils, git]
+
+extra-deps:
+- log-warper-1.8.5
+- universum-0.9.0
