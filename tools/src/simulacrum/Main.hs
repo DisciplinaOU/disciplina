@@ -1,9 +1,10 @@
+{-# LANGUAGE LambdaCase   #-}
+{-# LANGUAGE TypeFamilies #-}
 
-{-# language TypeFamilies #-}
-{-# language LambdaCase #-}
+import           Prelude
 
-import Control.Arrow ((***), (&&&))
-import Control.Monad.Identity
+import           Control.Arrow          ((&&&), (***))
+import           Control.Monad.Identity
 
 -- | Buyer decisions.
 data Input
@@ -113,7 +114,7 @@ buyerGotData = null  -- any problem prevens for now
 
 -- | Check if buyer lost her fee.
 buyerLostFee SellerGetsAll = True
-buyerLostFee _             = False 
+buyerLostFee _             = False
 
 -- | Check if seller lost his fee.
 sellerLostFee BuyerGetsAll = True
@@ -147,7 +148,7 @@ contract buyer problems = loop Created
             | Garbage `elem` problems ->      Cancelled
             | otherwise               -> loop KeySent
           Timeout -> Cancelled
-            
+
       KeySent -> do
         buyer (state, problems) |> \case
           Reject    -> loop Arbitration
@@ -158,7 +159,7 @@ contract buyer problems = loop Created
         |  PlaintextWasGarbage `elem` problems
         || WrongSecretKey      `elem` problems ->
           BuyerGetsAll
-        
+
         | otherwise ->
           SellerGetsAll
 
@@ -194,7 +195,7 @@ main = do
     forM_ goodBuyerTrades $ \(problems, badThings) -> do
         when (not $ null badThings) $ do
             putStrLn (show problems ++ " -> " ++ show badThings)
-    
+
     putStrLn "Evil buyer:"
     forM_ evilBuyerTrades $ \(problems, badThings) -> do
         when (not $ null badThings) $ do
