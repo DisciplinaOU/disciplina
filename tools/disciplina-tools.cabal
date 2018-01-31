@@ -12,6 +12,7 @@ executable disciplina-simulacrum
   hs-source-dirs:      src/simulacrum
   main-is:             Main.hs
   build-depends:       universum
+                     , cardano-sl-binary
                      , base >= 4.9
                      , mtl
 

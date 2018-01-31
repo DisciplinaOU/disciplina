@@ -1,11 +1,96 @@
-resolver: lts-9.21
+resolver: lts-9.1
 
 packages:
+- core
+- public
+- accounts
+- private
 - tools
 
+- location:
+    git: https://github.com/serokell/kademlia.git
+    commit: 7120bb4d28e708acd52dfd61d3dca7914fac7d7f # master
+  extra-dep: true
+
+- location:
+    git: https://github.com/serokell/acid-state.git
+    commit: 95fce1dbada62020a0b2d6aa2dd7e88eadd7214b
+  extra-dep: true
+
+- location:
+    git: https://github.com/thoughtpolice/hs-ed25519
+    # We're waiting on next release
+    commit: da4247b5b3420120e20451e6a252e2a2ca15b43c
+  extra-dep: true
+
+- location:
+    git: https://github.com/serokell/cardano-sl
+    commit: 12dc1caf9332bd5af84ef002883a3ce0bf0afad8
+  extra-dep: true
+  subdirs:
+    - networking
+    - core
+    - binary
+    - util
+    - crypto
+
+- location:
+    git: https://github.com/well-typed/canonical-json.git
+    commit: 2d261bb971bada1893753b503452d9e6e217bc4a
+  extra-dep: true
+
+# These three are needed for cardano-sl-networking
+- location:
+    git: https://github.com/serokell/network-transport-tcp
+    commit: 3d56652123bd296dc759cd31947eb2a17924e68a # csl-0.6.0
+  extra-dep: true
+- location:
+    git: https://github.com/serokell/network-transport
+    commit: 018a50b9042c2115c3ec9c9fd5ca5f28737dd29c
+  extra-dep: true
+- location:
+      git: https://github.com/avieth/network-transport-inmemory
+      commit: 5d8ff2b07b9df35cf61329a3d975e2c8cf95c12a
+  extra-dep: true
+
+- location:
+    git: https://github.com/input-output-hk/cardano-crypto
+    commit: 1cde8e3a8d9093bbf571085920045c05edb3eaa4
+  extra-dep: true
+
+- location:
+    git: https://github.com/input-output-hk/plutus-prototype
+    commit: c8ea123947fb62e4e02ca46f0eaadc5b47da3605
+  extra-dep: true
+
 nix:
-    packages: [openssl, binutils, git]
+    packages:
+    - openssl
+    - zlib
+    - binutils
+    - git
+    - haskell.packages.ghc802.cpphs
+    - haskell.packages.ghc802.happy
 
 extra-deps:
-- log-warper-1.8.5
-- universum-0.9.0
+- log-warper-1.8.0
+- universum-0.9.2
+- cborg-0.2.0.0
+- serokell-util-0.5.2
+- time-units-1.0.0
+- pvss-0.2.0
+- base58-bytestring-0.1.0
+- ansi-terminal-0.6.3.1
+- concurrent-extra-0.7.0.11
+- containers-0.5.11.0
+- fmt-0.5.0.0
+- generic-arbitrary-0.1.0
+- mmorph-1.1.0
+- time-1.6.0.1
+- megaparsec-6.2.0
+
+apply-ghc-options: everything
+
+ghc-options:
+  # Needed to buid
+  cardano-sl-networking: -fno-warn-redundant-constraints

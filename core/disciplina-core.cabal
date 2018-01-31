@@ -1,0 +1,51 @@
+name:                disciplina-core
+version:             0.0.1
+synopsis:            Disciplina - Core types and functions
+description:         Core types and functions for Disciplina platform
+maintainer:          hi@serokell.io
+copyright:           2018 TeachMePlease.com
+cabal-version:       >=1.10
+
+library
+  exposed-modules:     Disciplina.Core
+  
+  other-modules:       Disciplina.Core.Types
+
+  build-depends:       cardano-sl-binary
+                     , cardano-sl-core
+                     , formatting
+                     , log-warper
+                     , universum
+
+  default-language:    Haskell2010
+
+  default-extensions:  DeriveDataTypeable
+                       DeriveGeneric
+                       GeneralizedNewtypeDeriving
+                       StandaloneDeriving
+                       FlexibleContexts
+                       FlexibleInstances
+                       MultiParamTypeClasses
+                       FunctionalDependencies
+                       DefaultSignatures
+                       NoImplicitPrelude
+                       OverloadedStrings
+                       RecordWildCards
+                       TypeApplications
+                       TupleSections
+                       ViewPatterns
+                       LambdaCase
+                       MultiWayIf
+                       ConstraintKinds
+                       UndecidableInstances
+                       BangPatterns
+                       TemplateHaskell
+                       ScopedTypeVariables
+                       MonadFailDesugaring
+
+  ghc-options:         -Wall
+                       -fno-warn-orphans
+                       -O2
+
+  build-tools: cpphs >= 1.19
+  ghc-options: -pgmP cpphs -optP --cpp
