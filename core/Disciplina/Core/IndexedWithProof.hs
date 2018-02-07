@@ -20,6 +20,7 @@ class MonadWriter (Proofs t) m => IndexedWithProof t m | t -> m where
     type Proofs t :: *
     type Proofs t = [Proof t]
 
-    retrieve :: Key t ->            m (Maybe (Value t))
-    upsert   :: Key t -> Value t -> m ()
-    remove   :: Key t ->            m (Bool)
+    initialize ::                          m  t
+    retrieve   :: t -> Key t ->            m (Maybe (Value t))
+    upsert     :: t -> Key t -> Value t -> m ()
+    remove     :: t -> Key t ->            m (Bool)
