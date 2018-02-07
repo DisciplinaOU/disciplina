@@ -13,9 +13,13 @@ library
   other-modules:       Disciplina.Accounts.Mempool
 
   build-depends:       base >= 4.9
+                     , AVL
                      , cardano-sl-binary
                      , cardano-sl-core
+                     , containers
                      , formatting
+                     , lens
+                     , lens-action
                      , log-warper
                      , universum
 

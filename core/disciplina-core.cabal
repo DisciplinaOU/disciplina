@@ -8,40 +8,47 @@ cabal-version:       >=1.10
 
 library
   exposed-modules:     Disciplina.Core
-  
-  other-modules:       Disciplina.Core.Types
+
+  other-modules:       Disciplina.Core.Types,
+                       Disciplina.Core.ProvenIx
 
   build-depends:       cardano-sl-binary
                      , cardano-sl-core
                      , formatting
                      , log-warper
+                     , lens
+                     , lens-action
+                     , mtl
                      , universum
 
   default-language:    Haskell2010
 
-  default-extensions:  DeriveDataTypeable
+  default-extensions:
+                       BangPatterns
+                       ConstraintKinds
+                       DefaultSignatures
+                       DeriveDataTypeable
                        DeriveGeneric
-                       GeneralizedNewtypeDeriving
-                       StandaloneDeriving
                        FlexibleContexts
                        FlexibleInstances
-                       MultiParamTypeClasses
                        FunctionalDependencies
-                       DefaultSignatures
+                       GeneralizedNewtypeDeriving
+                       LambdaCase
+                       MonadFailDesugaring
+                       MultiParamTypeClasses
+                       MultiWayIf
                        NoImplicitPrelude
                        OverloadedStrings
+                       RankNTypes
                        RecordWildCards
-                       TypeApplications
-                       TupleSections
-                       ViewPatterns
-                       LambdaCase
-                       MultiWayIf
-                       ConstraintKinds
-                       UndecidableInstances
-                       BangPatterns
-                       TemplateHaskell
                        ScopedTypeVariables
-                       MonadFailDesugaring
+                       StandaloneDeriving
+                       TemplateHaskell
+                       TupleSections
+                       TypeApplications
+                       TypeFamilies
+                       UndecidableInstances
+                       ViewPatterns
 
   ghc-options:         -Wall
                        -fno-warn-orphans
