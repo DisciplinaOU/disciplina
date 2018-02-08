@@ -7,11 +7,11 @@ import Universum
 
 import Control.Lens
 
-data Account storageHash codeHash = Account
+data Account hash = Account
     { _aBalance :: Integer
     , _aNonce   :: Int
-    , _aStorage :: storageHash
-    , _aCode    :: codeHash
+    , _aStorage :: hash
+    , _aCode    :: hash
     }
 
 makeLenses ''Account

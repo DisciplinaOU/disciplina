@@ -11,11 +11,12 @@ library
   exposed-modules:     Disciplina.Accounts
 
   other-modules:       Disciplina.Accounts.Mempool
+                     , Disciplina.Accounts.Account
 
   build-depends:       base >= 4.9
                      , AVL
-                     , cardano-sl-binary
-                     , cardano-sl-core
+--                     , cardano-sl-binary
+--                     , cardano-sl-core
                      , containers
                      , formatting
                      , lens
