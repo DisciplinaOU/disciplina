@@ -20,6 +20,10 @@ library
                      , Disciplina.Transaction.Internal
   -- other-extensions:
   build-depends:       base >=4.9 && <4.10
+                     , authenticated-data-structures
+                     , binary
+                     , bytestring
+                     , cryptonite
                      , disciplina-accounts
                      , disciplina-core
                      , exceptions

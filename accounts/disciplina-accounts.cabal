@@ -14,7 +14,7 @@ library
                      , Disciplina.Accounts.Account
 
   build-depends:       base >= 4.9
-                     , AVL
+                     , authenticated-data-structures
 --                     , cardano-sl-binary
 --                     , cardano-sl-core
                      , containers

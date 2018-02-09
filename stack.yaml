@@ -65,8 +65,8 @@ packages:
   extra-dep: true
 
 - location:
-    git: ssh://git@serokell.io:2222/vlad.podtelkin/AVL.git
-    commit: 0ade1115219de67b3463e248bd1289722d931ff0
+    git: https://github.com/serokell/authenticated-data-structures.git
+    commit: 2017d84d1e2ddac7ce8bcdf063ba6596c63e2c73
   extra-dep: true
 
 nix:

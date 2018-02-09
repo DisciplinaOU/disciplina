@@ -7,19 +7,25 @@ import Control.Lens
 import Control.Monad.Writer.Strict
 
 import Disciplina.Accounts
-import Disciplina.Core (IndexedWithProof(..))
+import Disciplina.WorldState.BlakeHash
 
-data WorldState tree hash identity
+import Pos.Crypto.Hashing
+
+import qualified Data.Tree.AVL as AVL
+
+data Identity = Identity Int
+
+data WorldState
   = WorldState
-    { _wsAccounts       :: tree hash identity (Account     hash)
-    , _wsPublications   :: tree hash identity (Publication hash)
-    , _wsSpecalizations :: tree hash identity (DAG         hash)
-    , _wsStorage        :: tree hash identity  Storage
+    { _wsAccounts       :: AVL.Map Hash Identity Account
+    , _wsPublications   :: AVL.Map Hash Identity Publication
+    , _wsSpecalizations :: AVL.Map Hash Identity DAG
+    , _wsStorage        :: AVL.Map Hash Identity Storage
     }
 
-type DAG         hash = ()
-type Publication hash = hash
-type Storage          = ()
+type DAG         = ()
+type Publication = Hash
+type Storage     = ()
 
 data TreeName
     = TNAccounts
@@ -28,13 +34,12 @@ data TreeName
     | TNStorage
 
 newWorldState
-    :: IndexedWithProof (tree hash identity anything) m
-    => MonadWriter proof m
-    => m (WorldState tree hash identity)
+    :: MonadWriter proof m
+    => m WorldState
 newWorldState =
     WorldState
-        <$> initialize
-        <*> initialize
-        <*> initialize
+        <$> AVL.empty
+        <*> AVL.empty
+        <*> AVL.empty
 
 makeLenses ''WorldState
