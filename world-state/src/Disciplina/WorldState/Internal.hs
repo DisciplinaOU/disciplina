@@ -1,4 +1,6 @@
 
+{-# language DeriveAnyClass #-}
+
 module Disciplina.WorldState.Internal where
 
 import Universum
@@ -6,21 +8,22 @@ import Universum
 import Control.Lens
 import Control.Monad.Writer.Strict
 
+import Data.Binary
+
 import Disciplina.Accounts
 import Disciplina.WorldState.BlakeHash
 
-import Pos.Crypto.Hashing
-
 import qualified Data.Tree.AVL as AVL
 
-data Identity = Identity Int
+data Entity = Entity Int
+    deriving (Show, Eq, Ord, Bounded, Generic, Binary)
 
 data WorldState
   = WorldState
-    { _wsAccounts       :: AVL.Map Hash Identity Account
-    , _wsPublications   :: AVL.Map Hash Identity Publication
-    , _wsSpecalizations :: AVL.Map Hash Identity DAG
-    , _wsStorage        :: AVL.Map Hash Identity Storage
+    { _wsAccounts       :: AVL.Map Hash Entity (Account Hash)
+    , _wsPublications   :: AVL.Map Hash Entity Publication
+    , _wsSpecalizations :: AVL.Map Hash Entity DAG
+    , _wsStorage        :: AVL.Map Hash Entity Storage
     }
 
 type DAG         = ()
@@ -33,13 +36,8 @@ data TreeName
     | TNSpecializations
     | TNStorage
 
-newWorldState
-    :: MonadWriter proof m
-    => m WorldState
-newWorldState =
-    WorldState
-        <$> AVL.empty
-        <*> AVL.empty
-        <*> AVL.empty
+emptyWorldState :: WorldState
+emptyWorldState =
+    WorldState AVL.empty AVL.empty AVL.empty AVL.empty
 
 makeLenses ''WorldState

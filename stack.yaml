@@ -65,8 +65,8 @@ packages:
   extra-dep: true
 
 - location:
-    git: https://github.com/serokell/authenticated-data-structures.git
-    commit: 2017d84d1e2ddac7ce8bcdf063ba6596c63e2c73
+    git: git@github.com:serokell/auth-data-structures.git
+    commit: 28c4b85ebf49b0e461168022d6da417d13f75eb5
   extra-dep: true
 
 nix:

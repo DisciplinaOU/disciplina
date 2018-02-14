@@ -24,10 +24,12 @@ library
                      , binary
                      , bytestring
                      , cryptonite
+                     , data-default
                      , disciplina-accounts
                      , disciplina-core
                      , exceptions
                      , lens
+                     , memory
                      , mtl
                      , universum
   hs-source-dirs:      src

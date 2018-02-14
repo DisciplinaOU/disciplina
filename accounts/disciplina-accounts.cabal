@@ -17,6 +17,7 @@ library
                      , authenticated-data-structures
 --                     , cardano-sl-binary
 --                     , cardano-sl-core
+                     , binary
                      , containers
                      , formatting
                      , lens
