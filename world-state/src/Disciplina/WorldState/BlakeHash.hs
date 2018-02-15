@@ -16,7 +16,7 @@ import Data.Default
 import qualified Data.Tree.AVL as AVL
 
 newtype Hash = Hash { getHash :: Digest Blake2sp_256 }
-    deriving (Eq, Show, ByteArrayAccess)
+    deriving (Eq, Ord, Show, ByteArrayAccess)
 
 instance Binary Hash where
     put (Hash blake) = put (BA.concat [blake] :: BS.ByteString)

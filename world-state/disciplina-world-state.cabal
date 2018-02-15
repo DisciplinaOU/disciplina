@@ -20,7 +20,7 @@ library
                      , Disciplina.Transaction.Internal
   -- other-extensions:
   build-depends:       base >=4.9 && <4.10
-                     , authenticated-data-structures
+                     , AVL
                      , binary
                      , bytestring
                      , cryptonite

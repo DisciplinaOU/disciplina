@@ -14,7 +14,6 @@ library
                      , Disciplina.Accounts.Account
 
   build-depends:       base >= 4.9
-                     , authenticated-data-structures
 --                     , cardano-sl-binary
 --                     , cardano-sl-core
                      , binary
