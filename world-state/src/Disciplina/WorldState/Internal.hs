@@ -5,10 +5,11 @@ module Disciplina.WorldState.Internal where
 
 import Universum
 
-import Control.Lens (makeLenses)
-import Control.Monad.Writer.Strict
+import Control.Lens (makeLenses, uses, (%=), (.=))
+-- import Control.Monad.Writer.Strict
 
-import Data.Binary
+import Data.Binary (Binary)
+import Data.Default
 
 import Disciplina.Accounts
 import Disciplina.WorldState.BlakeHash
@@ -20,10 +21,11 @@ data Entity = Entity Int
 
 data WorldState
   = WorldState
-    { _wsAccounts       :: AVLMap (Account Hash)
-    , _wsPublications   :: AVLMap Publication
-    , _wsSpecalizations :: AVLMap DAG
-    , _wsStorage        :: AVLMap Storage
+    { _accounts       :: AVLMap (Account Hash)
+    , _publications   :: AVLMap Publication
+    , _specalizations :: AVLMap DAG
+    , _storage        :: AVLMap Storage
+    , _code           :: AVLMap Code
     }
 
 type AVLMap v = AVL.Map Hash Entity v
@@ -34,6 +36,7 @@ data WorldStateProof
         , _publicationsProof  :: Either Hash (Proof Publication)
         , _specalizatiosProof :: Either Hash (Proof DAG)
         , _storageProof       :: Either Hash (Proof Storage)
+        , _codeProof          :: Either Hash (Proof Code)
         }
 
 type Proof = AVL.Proof Hash Entity
@@ -41,10 +44,11 @@ type Proof = AVL.Proof Hash Entity
 type DAG         = Hash
 type Publication = Hash
 type Storage     = Hash
+type Code        = Hash
 
 emptyWorldState :: WorldState
 emptyWorldState =
-    WorldState AVL.empty AVL.empty AVL.empty AVL.empty
+    WorldState AVL.empty AVL.empty AVL.empty AVL.empty AVL.empty
 
 makeLenses ''WorldState
 
@@ -63,15 +67,22 @@ data Transaction = Transaction
 data Focused = Focused
     { _world   :: WorldState
     , _author  :: Entity
-    , _changes :: (AVL.RevSet, AVL.RevSet, AVL.RevSet, AVL.RevSet)
+    , _changes :: (AVL.RevSet, AVL.RevSet, AVL.RevSet, AVL.RevSet, AVL.RevSet)
     }
 
 makeLenses ''Focused
 
+transaction :: State Focused a -> State Focused (a, WorldStateProof)
+transaction action = do
+    changes .= (def, def, def, def, def)
+    res  <- action
+    diff <- diffWorldState
+    return (res, diff)
+
 diffWorldState :: State Focused WorldStateProof
 diffWorldState = do
-    (da, db, dc, dd)   <- use changes
-    WorldState a b c d <- use world
+    (da, db, dc, dd, de) <- use changes
+    WorldState a b c d e <- use world
 
     return $ WorldStateProof
         (if null da
@@ -86,7 +97,43 @@ diffWorldState = do
         (if null dd
          then Left  $ d^.AVL.rootHash
          else Right $ AVL.prune dd d)
+        (if null de
+         then Left  $ e^.AVL.rootHash
+         else Right $ AVL.prune de e)
 
 lookupAccount :: Entity -> State Focused (Maybe (Account Hash))
 lookupAccount ent = do
-    () <- zoom
+    -- TODO(kirill.andreev): Hide this mess into AVL package
+    --                       Adapt the exported function to `MonadState Map m`
+    (mAcc, _, accTrails) <- uses (world.accounts)
+        (AVL.runZipped' (AVL.lookup' ent) AVL.UpdateMode)
+
+    changes._1 %= (<> accTrails)
+
+    return mAcc
+
+existsAccount :: Entity -> State Focused Bool
+existsAccount ent = maybe False (const True) <$> lookupAccount ent
+
+-- TODO(kirill.andreev): Add MonadThrow/MonadCatch instead of returning Bool
+createHumanAccount :: Entity -> Amount -> State Focused Bool
+createHumanAccount entity balance = do
+    existsAccount <- existsAccount entity
+
+    if existsAccount
+    then do
+        return False
+
+    else do
+        -- TODO(kirill.andreev): Hide this block into 'zoom (world.accounts) $ do'
+        accs <- use (world.accounts)
+        let
+          account =
+            Account balance 0 def def
+
+          ((), accs1, accTrails) =
+            AVL.runZipped' (AVL.insert' entity account) AVL.UpdateMode accs
+
+        world.accounts .= accs1
+        changes._1 %= (<> accTrails)
+        return True

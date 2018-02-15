@@ -66,7 +66,7 @@ packages:
 
 - location:
     git: git@github.com:serokell/auth-data-structures.git
-    commit: 553438f8f978c243d15404c326083895087730a8
+    commit: 4c2ccc2f35370754e353a67b99a1ecdab138d7ff
   extra-dep: true
 
 nix:
