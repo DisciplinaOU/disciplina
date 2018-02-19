@@ -2,6 +2,7 @@ resolver: lts-9.1
 
 packages:
 - '.'
+- 'tools'
 
 - location:
     git: https://github.com/serokell/kademlia.git

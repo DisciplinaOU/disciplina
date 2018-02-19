@@ -137,15 +137,10 @@ withProof :: WorldM a -> WorldM (WithProof a)
 withProof action = do
     was <- use fWorld
     (res, revSets) <- listen action
+    -- | TODO(kirill.andreev): check if 'listen' actually hides messages
     tell revSets
     let diff = diffWorldState revSets was
     return (WithProof res diff)
-
--- | Check that entity signed as author exists
-assertAuthorExists :: WorldM ()
-assertAuthorExists = do
-    sender <- view eAuthor
-    assertExistence (Sided sender Sender)
 
 -- | Generate a world proof from sets of nodes, touched during an action.
 diffWorldState :: RevisionSets -> WorldState -> WorldStateProof
@@ -175,6 +170,12 @@ diffWorldState changes world =
         (if null de
          then Left  $ e^.AVL.rootHash
          else Right $ AVL.prune de e)
+
+-- | Check that entity signed as author exists
+assertAuthorExists :: WorldM ()
+assertAuthorExists = do
+    sender <- view eAuthor
+    assertExistence (Sided sender Sender)
 
 lookupAccount :: Sided Entity -> WorldM (Maybe (Account Hash))
 lookupAccount entity = do
