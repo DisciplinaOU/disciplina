@@ -84,6 +84,7 @@ data TransactionError
     = AccountDoesNotExist      (Sided Entity)
     | AccountExistButShouldNot (Sided Entity)
     | NotEnoughTokens           Entity Amount Amount
+    | NoncesMismatch            Entity Int Int
     deriving (Show, Typeable)
 
 -- | Enrich 'Entity' with its Side in the deal to improve future error messages.
@@ -137,7 +138,7 @@ withProof action = do
     was <- use fWorld
     (res, revSets) <- listen action
     tell revSets
-    let diff = diffWorldState revSets world
+    let diff = diffWorldState revSets was
     return (WithProof res diff)
 
 -- | Check that entity signed as author exists
@@ -278,7 +279,16 @@ applyTransaction :: Transaction -> WorldM (WithProof Transaction)
 applyTransaction transaction = do
     withProof $ do
         local (eAuthor .~ transaction^.tAuthor) $ do
-            assertAuthorExists
+            author  <- view eAuthor
+            account <- getAuthorAccount
+
+            when (account^.aNonce /= transaction^.tNonce) $ do
+                throwM $ NoncesMismatch author
+                    (account^.aNonce)
+                    (transaction^.tNonce)
+
+            modifyAccount (Sided author Sender) (aNonce +~ 1)
+
             for_ (transaction^.tChanges) $ \change ->
                 case change of
                   TransferTokens to amount -> do

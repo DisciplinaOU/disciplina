@@ -1,9 +1,7 @@
 
 {-# language DeriveAnyClass #-}
 
-module Disciplina.Accounts.Account
-       ( module Disciplina.Accounts.Account
-       ) where
+module Disciplina.Accounts.Account where
 
 import Universum
 
