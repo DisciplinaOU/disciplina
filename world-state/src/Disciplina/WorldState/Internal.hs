@@ -5,7 +5,7 @@ module Disciplina.WorldState.Internal where
 
 import Universum
 
-import Control.Lens (makeLenses, uses, (%=), (.=))
+import Control.Lens (makeLenses, uses, (%=), (.=), zoom, (-~), (+~))
 -- import Control.Monad.Writer.Strict
 
 import Data.Binary (Binary)
@@ -60,9 +60,15 @@ data Change
 data Transaction = Transaction
     { _tAuthor     :: Entity
     , _tChanges    :: [Change]
-    , _tStateProof :: WorldStateProof
     , _tNonce      :: Int
     }
+
+data WithProof a = WithProof
+    { _wpBody  :: a
+    , _wpProof :: WorldStateProof
+    }
+
+makeLenses ''WithProof
 
 data Focused = Focused
     { _world   :: WorldState
@@ -72,14 +78,36 @@ data Focused = Focused
 
 makeLenses ''Focused
 
-transaction :: State Focused a -> State Focused (a, WorldStateProof)
-transaction action = do
+data TransactionError
+    = AccountDoesNotExist      (Sided Entity)
+    | AccountExistButShouldNot (Sided Entity)
+    | NotEnoughTokens           Entity Amount Amount
+    deriving (Show, Typeable)
+
+data Sided a = Sided { who :: a, side :: Side }
+    deriving (Show, Typeable)
+
+data Side = Sender | Receiver
+    deriving (Show, Typeable)
+
+deriving instance Exception TransactionError
+
+type WorldM = StateT Focused IO
+
+withProof :: WorldM a -> WorldM (WithProof a)
+withProof action = do
+    assertAuthorExists
     changes .= (def, def, def, def, def)
     res  <- action
     diff <- diffWorldState
-    return (res, diff)
+    return (WithProof res diff)
 
-diffWorldState :: State Focused WorldStateProof
+assertAuthorExists :: WorldM ()
+assertAuthorExists = do
+    sender <- use author
+    assertExistence (Sided sender Sender)
+
+diffWorldState :: WorldM WorldStateProof
 diffWorldState = do
     (da, db, dc, dd, de) <- use changes
     WorldState a b c d e <- use world
@@ -101,39 +129,102 @@ diffWorldState = do
          then Left  $ e^.AVL.rootHash
          else Right $ AVL.prune de e)
 
-lookupAccount :: Entity -> State Focused (Maybe (Account Hash))
-lookupAccount ent = do
-    -- TODO(kirill.andreev): Hide this mess into AVL package
-    --                       Adapt the exported function to `MonadState Map m`
-    (mAcc, _, accTrails) <- uses (world.accounts)
-        (AVL.runZipped' (AVL.lookup' ent) AVL.UpdateMode)
+lookupAccount :: Sided Entity -> WorldM (Maybe (Account Hash))
+lookupAccount entity = do
+    -- TODO(kirill.andreev):
+    --   Fix 'Data.Tree.AVL.Zipper.up' so that it doesn't rehash root
+    --   every time, so we can run lookup in ReadonlyMode
+    --   and remove this 'rollback'.
+    (mAcc, trails) <- rollback $ zoom (world.accounts) $ do
+        state $ AVL.lookup' (who entity)
 
-    changes._1 %= (<> accTrails)
+    changes._1 %= (<> trails)
 
     return mAcc
 
-existsAccount :: Entity -> State Focused Bool
-existsAccount ent = maybe False (const True) <$> lookupAccount ent
+requireAccount :: Sided Entity -> WorldM (Account Hash)
+requireAccount entity = do
+    mAcc <- lookupAccount entity
+    case mAcc of
+      Just it -> return it
+      Nothing -> throwM $ AccountDoesNotExist entity
+
+getAuthor :: WorldM (Account Hash)
+getAuthor = do
+    sender <- use author
+    requireAccount (Sided sender Sender)
+
+rollback :: MonadState s m => m a -> m a
+rollback action = do
+    was <- get
+    res <- action
+    put was
+    return res
+
+existsAccount :: Sided Entity -> WorldM Bool
+existsAccount entity = maybe False (const True) <$> lookupAccount entity
+
+assertExistence :: Sided Entity -> WorldM ()
+assertExistence entity = do
+    exists <- existsAccount entity
+    when (not exists) $ do
+        throwM $ AccountDoesNotExist entity
+
+assertAbsence :: Sided Entity -> WorldM ()
+assertAbsence entity = do
+    exists <- existsAccount entity
+    when (exists) $ do
+        throwM $ AccountExistButShouldNot entity
 
 -- TODO(kirill.andreev): Add MonadThrow/MonadCatch instead of returning Bool
-createHumanAccount :: Entity -> Amount -> State Focused Bool
-createHumanAccount entity balance = do
-    existsAccount <- existsAccount entity
+createAccount :: Entity -> Code -> WorldM ()
+createAccount whom code = do
+    assertAbsence (Sided whom Receiver)
 
-    if existsAccount
-    then do
-        return False
+    let
+      account = def
+        & aBalance .~ 0
+        & aCode    .~ code
 
-    else do
-        -- TODO(kirill.andreev): Hide this block into 'zoom (world.accounts) $ do'
-        accs <- use (world.accounts)
-        let
-          account =
-            Account balance 0 def def
+    trails <- zoom (world.accounts) $ do
+        state $ AVL.insert' whom account
 
-          ((), accs1, accTrails) =
-            AVL.runZipped' (AVL.insert' entity account) AVL.UpdateMode accs
+    changes._1 %= (<> trails)
 
-        world.accounts .= accs1
-        changes._1 %= (<> accTrails)
-        return True
+unsafeSetAccount :: Entity -> Account Hash -> WorldM ()
+unsafeSetAccount entity account = do
+    trails <- zoom (world.accounts) $ do
+        state $ AVL.insert' entity account
+
+    changes._1 %= (<> trails)
+
+modifyAccount :: Sided Entity -> (Account Hash -> Account Hash) -> WorldM ()
+modifyAccount entity f = do
+    mAccount <- lookupAccount entity
+
+    case mAccount of
+      Just account -> do
+        who entity `unsafeSetAccount` f account
+
+      Nothing -> do
+        throwM $ AccountDoesNotExist entity
+
+publicate :: Publication -> WorldM ()
+publicate publication = do
+    sender <- use author
+
+    trails <- zoom (world.publications) $ do
+        state $ sender `AVL.insert'` publication
+
+    changes._2 %= (<> trails)
+
+transferTokens :: Entity -> Amount -> WorldM ()
+transferTokens receiver amount = do
+    who    <- use author
+    sender <- getAuthor
+
+    when (sender^.aBalance < amount) $ do
+        throwM $ NotEnoughTokens who amount (sender^.aBalance)
+
+    modifyAccount (Sided who      Sender)   (aBalance -~ amount)
+    modifyAccount (Sided receiver Receiver) (aBalance +~ amount)

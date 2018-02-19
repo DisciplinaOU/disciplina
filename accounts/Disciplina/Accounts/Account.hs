@@ -10,6 +10,7 @@ import Universum
 import Control.Lens
 
 import Data.Binary
+import Data.Default
 
 data Account hash = Account
     { _aBalance :: Amount
@@ -17,7 +18,7 @@ data Account hash = Account
     , _aStorage :: hash
     , _aCode    :: hash
     }
-    deriving (Show, Eq, Generic, Binary)
+    deriving (Show, Eq, Generic, Binary, Default)
 
 type Amount = Integer
 

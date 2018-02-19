@@ -18,6 +18,7 @@ library
 --                     , cardano-sl-core
                      , binary
                      , containers
+                     , data-default
                      , formatting
                      , lens
                      , lens-action
