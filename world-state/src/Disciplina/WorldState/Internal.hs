@@ -6,7 +6,7 @@ module Disciplina.WorldState.Internal where
 import Universum
 
 import Control.Lens (makeLenses, uses, (%=), (.=), zoom, (-~), (+~))
--- import Control.Monad.Writer.Strict
+import Control.Monad.RWS (RWST(..), tell, listen)
 
 import Data.Binary (Binary)
 import Data.Default
@@ -46,16 +46,10 @@ type Publication = Hash
 type Storage     = Hash
 type Code        = Hash
 
-emptyWorldState :: WorldState
-emptyWorldState =
-    WorldState AVL.empty AVL.empty AVL.empty AVL.empty AVL.empty
-
-makeLenses ''WorldState
-
 data Change
-    = TransferTokens Entity
+    = TransferTokens Entity      Amount
     | Publicate      Publication
-    | CreateEntity   Entity
+    | CreateAccount  Entity      Code
 
 data Transaction = Transaction
     { _tAuthor     :: Entity
@@ -68,15 +62,23 @@ data WithProof a = WithProof
     , _wpProof :: WorldStateProof
     }
 
-makeLenses ''WithProof
-
 data Focused = Focused
-    { _world   :: WorldState
-    , _author  :: Entity
-    , _changes :: (AVL.RevSet, AVL.RevSet, AVL.RevSet, AVL.RevSet, AVL.RevSet)
+    { _fWorld   :: WorldState
     }
 
-makeLenses ''Focused
+-- | Set of node names to generate proof from.
+data RevisionSets = RevisionSets
+    { _accountRevSet       :: AVL.RevSet
+    , _publicationRevSet   :: AVL.RevSet
+    , _specalizationRevSet :: AVL.RevSet
+    , _storageRevSet       :: AVL.RevSet
+    , _codeRevSet          :: AVL.RevSet
+    }
+    deriving (Default, Monoid, Generic)
+
+data Environment = Environment
+    { _eAuthor :: Entity
+    }
 
 data TransactionError
     = AccountDoesNotExist      (Sided Entity)
@@ -84,7 +86,11 @@ data TransactionError
     | NotEnoughTokens           Entity Amount Amount
     deriving (Show, Typeable)
 
-data Sided a = Sided { who :: a, side :: Side }
+-- | Enrich 'Entity' with its Side in the deal to improve future error messages.
+data Sided a = Sided
+    { who  :: a
+    , side :: Side
+    }
     deriving (Show, Typeable)
 
 data Side = Sender | Receiver
@@ -92,27 +98,67 @@ data Side = Sender | Receiver
 
 deriving instance Exception TransactionError
 
-type WorldM = StateT Focused IO
+type WorldM = RWST Environment RevisionSets Focused IO
 
+makeLenses ''Environment
+makeLenses ''Focused
+makeLenses ''RevisionSets
+makeLenses ''Transaction
+makeLenses ''WithProof
+makeLenses ''WorldState
+
+emptyWorldState :: WorldState
+emptyWorldState =
+    WorldState AVL.empty AVL.empty AVL.empty AVL.empty AVL.empty
+
+-- instance Default RevisionSets where
+--    def = RevisionSets def def def def def
+
+-- instance Monoid RevisionSets where
+--     mempty = def
+
+--     RevisionSets a b c d e `mappend` RevisionSets a1 b1 c1 d1 e1 =
+--         RevisionSets (a <> a1) (b <> b1) (c <> c1) (d <> d1) (e <> e1)
+
+accountsChanged        :: AVL.RevSet -> RevisionSets
+publicationsChanged    :: AVL.RevSet -> RevisionSets
+specializationsChanged :: AVL.RevSet -> RevisionSets
+storagesChanged        :: AVL.RevSet -> RevisionSets
+codesChanged           :: AVL.RevSet -> RevisionSets
+accountsChanged        set = def & accountRevSet       .~ set
+publicationsChanged    set = def & publicationRevSet   .~ set
+specializationsChanged set = def & specalizationRevSet .~ set
+storagesChanged        set = def & storageRevSet       .~ set
+codesChanged           set = def & codeRevSet          .~ set
+
+-- | Enrich an action with a proof.
 withProof :: WorldM a -> WorldM (WithProof a)
 withProof action = do
-    assertAuthorExists
-    changes .= (def, def, def, def, def)
-    res  <- action
-    diff <- diffWorldState
+    was <- use fWorld
+    (res, revSets) <- listen action
+    tell revSets
+    let diff = diffWorldState revSets world
     return (WithProof res diff)
 
+-- | Check that entity signed as author exists
 assertAuthorExists :: WorldM ()
 assertAuthorExists = do
-    sender <- use author
+    sender <- view eAuthor
     assertExistence (Sided sender Sender)
 
-diffWorldState :: WorldM WorldStateProof
-diffWorldState = do
-    (da, db, dc, dd, de) <- use changes
-    WorldState a b c d e <- use world
+-- | Generate a world proof from sets of nodes, touched during an action.
+diffWorldState :: RevisionSets -> WorldState -> WorldStateProof
+diffWorldState changes world =
+    let
+      da = changes^.accountRevSet
+      db = changes^.publicationRevSet
+      dc = changes^.specalizationRevSet
+      dd = changes^.storageRevSet
+      de = changes^.codeRevSet
 
-    return $ WorldStateProof
+      WorldState a b c d e = world
+
+    in  WorldStateProof
         (if null da
          then Left  $ a^.AVL.rootHash
          else Right $ AVL.prune da a)
@@ -135,12 +181,19 @@ lookupAccount entity = do
     --   Fix 'Data.Tree.AVL.Zipper.up' so that it doesn't rehash root
     --   every time, so we can run lookup in ReadonlyMode
     --   and remove this 'rollback'.
-    (mAcc, trails) <- rollback $ zoom (world.accounts) $ do
+    (mAcc, trails) <- rollback $ zoom (fWorld.accounts) $ do
         state $ AVL.lookup' (who entity)
 
-    changes._1 %= (<> trails)
+    tell $ accountsChanged trails
 
     return mAcc
+
+rollback :: MonadState s m => m a -> m a
+rollback action = do
+    was <- get
+    res <- action
+    put was
+    return res
 
 requireAccount :: Sided Entity -> WorldM (Account Hash)
 requireAccount entity = do
@@ -149,17 +202,10 @@ requireAccount entity = do
       Just it -> return it
       Nothing -> throwM $ AccountDoesNotExist entity
 
-getAuthor :: WorldM (Account Hash)
-getAuthor = do
-    sender <- use author
+getAuthorAccount :: WorldM (Account Hash)
+getAuthorAccount = do
+    sender <- view eAuthor
     requireAccount (Sided sender Sender)
-
-rollback :: MonadState s m => m a -> m a
-rollback action = do
-    was <- get
-    res <- action
-    put was
-    return res
 
 existsAccount :: Sided Entity -> WorldM Bool
 existsAccount entity = maybe False (const True) <$> lookupAccount entity
@@ -176,7 +222,6 @@ assertAbsence entity = do
     when (exists) $ do
         throwM $ AccountExistButShouldNot entity
 
--- TODO(kirill.andreev): Add MonadThrow/MonadCatch instead of returning Bool
 createAccount :: Entity -> Code -> WorldM ()
 createAccount whom code = do
     assertAbsence (Sided whom Receiver)
@@ -186,17 +231,17 @@ createAccount whom code = do
         & aBalance .~ 0
         & aCode    .~ code
 
-    trails <- zoom (world.accounts) $ do
+    trails <- zoom (fWorld.accounts) $ do
         state $ AVL.insert' whom account
 
-    changes._1 %= (<> trails)
+    tell $ accountsChanged trails
 
 unsafeSetAccount :: Entity -> Account Hash -> WorldM ()
 unsafeSetAccount entity account = do
-    trails <- zoom (world.accounts) $ do
+    trails <- zoom (fWorld.accounts) $ do
         state $ AVL.insert' entity account
 
-    changes._1 %= (<> trails)
+    tell $ accountsChanged trails
 
 modifyAccount :: Sided Entity -> (Account Hash -> Account Hash) -> WorldM ()
 modifyAccount entity f = do
@@ -211,20 +256,46 @@ modifyAccount entity f = do
 
 publicate :: Publication -> WorldM ()
 publicate publication = do
-    sender <- use author
+    sender <- view eAuthor
 
-    trails <- zoom (world.publications) $ do
+    trails <- zoom (fWorld.publications) $ do
         state $ sender `AVL.insert'` publication
 
-    changes._2 %= (<> trails)
+    tell $ publicationsChanged trails
 
 transferTokens :: Entity -> Amount -> WorldM ()
 transferTokens receiver amount = do
-    who    <- use author
-    sender <- getAuthor
+    who    <- view eAuthor
+    sender <- getAuthorAccount
 
     when (sender^.aBalance < amount) $ do
         throwM $ NotEnoughTokens who amount (sender^.aBalance)
 
     modifyAccount (Sided who      Sender)   (aBalance -~ amount)
     modifyAccount (Sided receiver Receiver) (aBalance +~ amount)
+
+applyTransaction :: Transaction -> WorldM (WithProof Transaction)
+applyTransaction transaction = do
+    withProof $ do
+        local (eAuthor .~ transaction^.tAuthor) $ do
+            assertAuthorExists
+            for_ (transaction^.tChanges) $ \change ->
+                case change of
+                  TransferTokens to amount -> do
+                    transferTokens to amount
+
+                  Publicate publication -> do
+                    publicate publication
+
+                  CreateAccount newEntity code -> do
+                    createAccount newEntity code
+
+            return transaction
+
+-- | Ignores proofs of concrete transactions, just return whole-block proof.
+applyBlock :: [Transaction] -> WorldM (WithProof [Transaction])
+applyBlock transactions =
+    withProof $ do
+        forM transactions $ \transaction -> do
+            proven <- applyTransaction transaction
+            return (proven^.wpBody)
