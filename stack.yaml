@@ -1,12 +1,7 @@
 resolver: lts-9.1
 
 packages:
-- accounts
-- core
-- world-state
-- private
-- public
-- tools
+- '.'
 
 - location:
     git: https://github.com/serokell/kademlia.git
