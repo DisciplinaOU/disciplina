@@ -3,16 +3,16 @@
 
 module Disciplina.WorldState.Internal where
 
-import Universum
+import Universum hiding (Hashable)
 
-import Control.Lens (makeLenses, uses, (%=), (.=), zoom, (-~), (+~))
+import Control.Lens (makeLenses, makePrisms, uses, to, (%=), (.=), zoom, (-~), (+~))
 import Control.Monad.RWS (RWST(..), tell, listen)
 
 import Data.Binary (Binary)
 import Data.Default
 
 import Disciplina.Accounts
-import Disciplina.WorldState.BlakeHash
+import Disciplina.WorldState.BlakeHash (Hashable(..), Hash(..), combineAll)
 
 import qualified Data.Tree.AVL as AVL
 
@@ -32,12 +32,33 @@ type AVLMap v = AVL.Map Hash Entity v
 
 data WorldStateProof
     = WorldStateProof
-        { _accountsProof      :: Either Hash (Proof (Account Hash))
-        , _publicationsProof  :: Either Hash (Proof Publication)
-        , _specalizatiosProof :: Either Hash (Proof DAG)
-        , _storageProof       :: Either Hash (Proof Storage)
-        , _codeProof          :: Either Hash (Proof Code)
+        { _accountsProof      :: Proof (Account Hash)
+        , _publicationsProof  :: Proof Publication
+        , _specalizatiosProof :: Proof DAG
+        , _storageProof       :: Proof Storage
+        , _codeProof          :: Proof Code
         }
+    deriving (Show, Generic, Binary)
+
+instance Eq WorldStateProof where
+    WorldStateProof a b c d e == WorldStateProof f g h i k = and
+        [ a ==? f
+        , b ==? g
+        , c ==? h
+        , d ==? i
+        , e ==? k
+        ]
+      where
+        (==?)
+            :: (Show s, Eq s, Binary s)
+            => Proof s
+            -> Proof s
+            -> Bool
+        (==?) = (==) `on` getHash
+        getHash switch = switch
+            ^.AVL._Proof
+             .to (AVL.rehash)
+             .AVL.rootHash
 
 type Proof = AVL.Proof Hash Entity
 
@@ -58,12 +79,17 @@ data Transaction = Transaction
     }
 
 data WithProof a = WithProof
-    { _wpBody  :: a
-    , _wpProof :: WorldStateProof
+    { _wpBody    :: a
+    , _wpProof   :: WorldStateProof
+    , _wpEndHash :: Hash
     }
 
-data Focused = Focused
-    { _fWorld   :: WorldState
+data Server = Server
+    { _sWorld :: WorldState
+    }
+
+data Client = Client
+    { _cProof :: WorldStateProof
     }
 
 -- | Set of node names to generate proof from.
@@ -85,6 +111,8 @@ data TransactionError
     | AccountExistButShouldNot (Sided Entity)
     | NotEnoughTokens           Entity Amount Amount
     | NoncesMismatch            Entity Int Int
+    | InitialHashesMismatch
+    | FinalHashesMismatch
     deriving (Show, Typeable)
 
 -- | Enrich 'Entity' with its Side in the deal to improve future error messages.
@@ -99,14 +127,27 @@ data Side = Sender | Receiver
 
 deriving instance Exception TransactionError
 
-type WorldM = RWST Environment RevisionSets Focused IO
+type WorldM side = RWST Environment RevisionSets side IO
 
 makeLenses ''Environment
-makeLenses ''Focused
+makeLenses ''Server
+makeLenses ''Client
 makeLenses ''RevisionSets
 makeLenses ''Transaction
 makeLenses ''WithProof
 makeLenses ''WorldState
+
+makePrisms ''Server
+makePrisms ''Client
+
+class CanGetProof side where
+    getProof :: WorldM side WorldStateProof
+
+instance CanGetProof Server where
+    getProof = uses sWorld (diffWorldState def)
+
+instance CanGetProof Client where
+    getProof = use cProof
 
 emptyWorldState :: WorldState
 emptyWorldState =
@@ -133,14 +174,24 @@ storagesChanged        set = def & storageRevSet       .~ set
 codesChanged           set = def & codeRevSet          .~ set
 
 -- | Enrich an action with a proof.
-withProof :: WorldM a -> WorldM (WithProof a)
+withProof :: WorldM Server a -> WorldM Server (WithProof a)
 withProof action = do
-    was <- use fWorld
+    was <- use sWorld
     (res, revSets) <- listen action
     -- | TODO(kirill.andreev): check if 'listen' actually hides messages
     tell revSets
     let diff = diffWorldState revSets was
-    return (WithProof res diff)
+    endHash <- uses _Server (hash . diffWorldState def)
+    return (WithProof res diff endHash)
+
+parsePartialWorldState :: WorldStateProof -> WorldState
+parsePartialWorldState (WorldStateProof a b c d e) =
+    WorldState
+        (a^.AVL._Proof)
+        (b^.AVL._Proof)
+        (c^.AVL._Proof)
+        (d^.AVL._Proof)
+        (e^.AVL._Proof)
 
 -- | Generate a world proof from sets of nodes, touched during an action.
 diffWorldState :: RevisionSets -> WorldState -> WorldStateProof
@@ -155,35 +206,25 @@ diffWorldState changes world =
       WorldState a b c d e = world
 
     in  WorldStateProof
-        (if null da
-         then Left  $ a^.AVL.rootHash
-         else Right $ AVL.prune da a)
-        (if null db
-         then Left  $ b^.AVL.rootHash
-         else Right $ AVL.prune db b)
-        (if null dc
-         then Left  $ c^.AVL.rootHash
-         else Right $ AVL.prune dc c)
-        (if null dd
-         then Left  $ d^.AVL.rootHash
-         else Right $ AVL.prune dd d)
-        (if null de
-         then Left  $ e^.AVL.rootHash
-         else Right $ AVL.prune de e)
+        (AVL.prune da a)
+        (AVL.prune db b)
+        (AVL.prune dc c)
+        (AVL.prune dd d)
+        (AVL.prune de e)
 
 -- | Check that entity signed as author exists
-assertAuthorExists :: WorldM ()
+assertAuthorExists :: WorldM Server ()
 assertAuthorExists = do
     sender <- view eAuthor
     assertExistence (Sided sender Sender)
 
-lookupAccount :: Sided Entity -> WorldM (Maybe (Account Hash))
+lookupAccount :: Sided Entity -> WorldM Server (Maybe (Account Hash))
 lookupAccount entity = do
     -- TODO(kirill.andreev):
     --   Fix 'Data.Tree.AVL.Zipper.up' so that it doesn't rehash root
     --   every time, so we can run lookup in ReadonlyMode
     --   and remove this 'rollback'.
-    (mAcc, trails) <- rollback $ zoom (fWorld.accounts) $ do
+    (mAcc, trails) <- rollback $ zoom (sWorld.accounts) $ do
         state $ AVL.lookup' (who entity)
 
     tell $ accountsChanged trails
@@ -197,34 +238,34 @@ rollback action = do
     put was
     return res
 
-requireAccount :: Sided Entity -> WorldM (Account Hash)
+requireAccount :: Sided Entity -> WorldM Server (Account Hash)
 requireAccount entity = do
     mAcc <- lookupAccount entity
     case mAcc of
       Just it -> return it
       Nothing -> throwM $ AccountDoesNotExist entity
 
-getAuthorAccount :: WorldM (Account Hash)
+getAuthorAccount :: WorldM Server (Account Hash)
 getAuthorAccount = do
     sender <- view eAuthor
     requireAccount (Sided sender Sender)
 
-existsAccount :: Sided Entity -> WorldM Bool
+existsAccount :: Sided Entity -> WorldM Server Bool
 existsAccount entity = maybe False (const True) <$> lookupAccount entity
 
-assertExistence :: Sided Entity -> WorldM ()
+assertExistence :: Sided Entity -> WorldM Server ()
 assertExistence entity = do
     exists <- existsAccount entity
     when (not exists) $ do
         throwM $ AccountDoesNotExist entity
 
-assertAbsence :: Sided Entity -> WorldM ()
+assertAbsence :: Sided Entity -> WorldM Server ()
 assertAbsence entity = do
     exists <- existsAccount entity
     when (exists) $ do
         throwM $ AccountExistButShouldNot entity
 
-createAccount :: Entity -> Code -> WorldM ()
+createAccount :: Entity -> Code -> WorldM Server ()
 createAccount whom code = do
     assertAbsence (Sided whom Receiver)
 
@@ -233,19 +274,22 @@ createAccount whom code = do
         & aBalance .~ 0
         & aCode    .~ code
 
-    trails <- zoom (fWorld.accounts) $ do
+    trails <- zoom (sWorld.accounts) $ do
         state $ AVL.insert' whom account
 
     tell $ accountsChanged trails
 
-unsafeSetAccount :: Entity -> Account Hash -> WorldM ()
+unsafeSetAccount :: Entity -> Account Hash -> WorldM Server ()
 unsafeSetAccount entity account = do
-    trails <- zoom (fWorld.accounts) $ do
+    trails <- zoom (sWorld.accounts) $ do
         state $ AVL.insert' entity account
 
     tell $ accountsChanged trails
 
-modifyAccount :: Sided Entity -> (Account Hash -> Account Hash) -> WorldM ()
+modifyAccount
+    :: Sided Entity
+    -> (Account Hash -> Account Hash)
+    -> WorldM Server ()
 modifyAccount entity f = do
     mAccount <- lookupAccount entity
 
@@ -256,16 +300,16 @@ modifyAccount entity f = do
       Nothing -> do
         throwM $ AccountDoesNotExist entity
 
-publicate :: Publication -> WorldM ()
+publicate :: Publication -> WorldM Server ()
 publicate publication = do
     sender <- view eAuthor
 
-    trails <- zoom (fWorld.publications) $ do
+    trails <- zoom (sWorld.publications) $ do
         state $ sender `AVL.insert'` publication
 
     tell $ publicationsChanged trails
 
-transferTokens :: Entity -> Amount -> WorldM ()
+transferTokens :: Entity -> Amount -> WorldM Server ()
 transferTokens receiver amount = do
     who    <- view eAuthor
     sender <- getAuthorAccount
@@ -276,8 +320,8 @@ transferTokens receiver amount = do
     modifyAccount (Sided who      Sender)   (aBalance -~ amount)
     modifyAccount (Sided receiver Receiver) (aBalance +~ amount)
 
-applyTransaction :: Transaction -> WorldM (WithProof Transaction)
-applyTransaction transaction = do
+connectTransaction :: Transaction -> WorldM Server (WithProof Transaction)
+connectTransaction transaction = do
     withProof $ do
         local (eAuthor .~ transaction^.tAuthor) $ do
             author  <- view eAuthor
@@ -304,9 +348,44 @@ applyTransaction transaction = do
             return transaction
 
 -- | Ignores proofs of concrete transactions, just return whole-block proof.
-applyBlock :: [Transaction] -> WorldM (WithProof [Transaction])
-applyBlock transactions =
+connectBlock :: [Transaction] -> WorldM Server (WithProof [Transaction])
+connectBlock transactions =
     withProof $ do
         forM transactions $ \transaction -> do
-            proven <- applyTransaction transaction
+            proven <- connectTransaction transaction
             return (proven^.wpBody)
+
+usingProof :: WorldStateProof -> WorldM Server a -> WorldM Client a
+usingProof proof action = do
+    env <- ask
+    let state = parsePartialWorldState proof
+    (res, Server s, w) <- lift $ runRWST action env (Server state)
+    -- tell w
+    put $ Client $ diffWorldState def s
+    return res
+
+class CanAssumeTransaction side where
+    assumeTransaction :: WithProof Transaction -> WorldM side ()
+
+instance CanAssumeTransaction Client where
+    assumeTransaction transaction = do
+        now <- getProof
+        when (now /= transaction^.wpProof) $ do
+            throwM InitialHashesMismatch
+
+        became <- usingProof (transaction^.wpProof) $ do
+            assumeTransaction transaction
+            uses _Server (diffWorldState def)
+
+        put (Client became)
+
+
+instance CanAssumeTransaction Server where
+    assumeTransaction transaction = do
+        _        <- connectTransaction (transaction^.wpBody)
+        endProof <- uses _Server (diffWorldState def)
+
+        let endHash = hash endProof
+
+        when (endHash /= transaction^.wpEndHash) $ do
+            throwM FinalHashesMismatch
