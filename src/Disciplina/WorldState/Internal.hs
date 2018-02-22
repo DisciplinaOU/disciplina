@@ -369,10 +369,6 @@ class CanAssumeTransaction side where
 
 instance CanAssumeTransaction Client where
     assumeTransaction transaction = do
-        now <- getProof
-        when (now /= transaction^.wpProof) $ do
-            throwM InitialHashesMismatch
-
         became <- usingProof (transaction^.wpProof) $ do
             assumeTransaction transaction
             uses _Server (diffWorldState def)
@@ -382,6 +378,10 @@ instance CanAssumeTransaction Client where
 
 instance CanAssumeTransaction Server where
     assumeTransaction transaction = do
+        now <- getProof
+        when (now /= transaction^.wpProof) $ do
+            throwM InitialHashesMismatch
+
         _        <- connectTransaction (transaction^.wpBody)
         endProof <- uses _Server (diffWorldState def)
 
