@@ -13,6 +13,7 @@ module Common (module Common, module Control.Lens, module T) where
 import qualified Prelude (show)
 import Universum
 
+-- import Control.Arrow (second)
 import Control.Lens (to, each)
 
 -- import Data.Bits                                 (xor)
@@ -25,14 +26,15 @@ import Data.Foldable                        as T (for_)
 
 import System.IO.Unsafe
 
-import qualified Disciplina.WorldState as World
 import qualified Data.Tree.AVL         as AVL
+import qualified Disciplina.WorldState as World
+import qualified Debug.Trace           as Debug
 
 import Test.Framework                       as T (Test, defaultMain, testGroup)
 import Test.Framework.Providers.QuickCheck2 as T (testProperty)
 import Test.QuickCheck                      as T ( Arbitrary (..), Gen, Property
                                                  , (===), (==>), elements
-                                                 , vectorOf, oneof
+                                                 , vectorOf, oneof, suchThat
                                                  , Testable
                                                  , ioProperty
                                                  )
@@ -56,23 +58,24 @@ data Sandbox = Sandbox
 instance Show Sandbox where
     show (Sandbox world transactions) =
         concat
-          [ "Sandbox { world = ["
-          , world
-            ^.World.accounts
-             .to AVL.toList
-             .to Prelude.show
-          , "], transactions = "
+          [ "Sandbox { world = "
+          , show world
+          , ", transactions = "
           , map (^.World.wpBody) transactions^.to Prelude.show
           , " }"
           ]
 
+instance Show World.WorldState where
+    show world = world
+      ^.World.accounts
+       .to AVL.toList
+       .to (map (second (^.World.aBalance)))
+       .to Prelude.show
+
 instance Arbitrary Sandbox where
     arbitrary = do
-        alice <- arbitrary
-        eve   <- arbitrary
-        bob   <- arbitrary
+        actors @ [alice, eve, bob] <- vectorUniqueOf 3
 
-        let actors = [alice, eve, bob]
         let world  = actors `World.giveEach` 10 -- bucks
 
         transactions <- generateTransactions world alice [eve, bob]
@@ -85,7 +88,7 @@ instance Arbitrary Sandbox where
                 changes <- vectorOf 5 $ oneof
                     [ World.TransferTokens <$> elements rest <*> pure 1
                     , World.Publicate      <$> arbitrary
-                    , World.CreateAccount  <$> arbitrary <*> pure def
+                    , World.CreateAccount  <$> noneof (actor : rest) <*> pure def
                     ]
 
                 let server = World.Server world
@@ -94,6 +97,17 @@ instance Arbitrary Sandbox where
                     World.evalWorldM actor server $ do
                         transaction <- World.plan changes
                         World.connectTransaction transaction
+
+        noneof :: (Arbitrary a, Eq a) => [a] -> Gen a
+        noneof set = arbitrary `suchThat` (`notElem` set)
+
+        vectorUniqueOf :: (Arbitrary a, Eq a, Show a) => Int -> Gen [a]
+        vectorUniqueOf = loop []
+          where
+            loop acc 0 = return acc
+            loop acc n = do
+                next <- noneof acc
+                loop (next : acc) (n - 1)
 
 instance Arbitrary World.Entity where
   arbitrary = World.Entity <$> arbitrary

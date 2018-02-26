@@ -114,7 +114,7 @@ data RevisionSets = RevisionSets
     , _storageRevSet       :: AVL.RevSet
     , _codeRevSet          :: AVL.RevSet
     }
-    deriving (Default, Monoid, Generic)
+    deriving (Default, Generic)
 
 data Environment = Environment
     { _eAuthor :: Entity
@@ -193,11 +193,11 @@ giveEach ents amount = emptyWorldState
 -- instance Default RevisionSets where
 --    def = RevisionSets def def def def def
 
--- instance Monoid RevisionSets where
---     mempty = def
+instance Monoid RevisionSets where
+    mempty = def
 
---     RevisionSets a b c d e `mappend` RevisionSets a1 b1 c1 d1 e1 =
---         RevisionSets (a <> a1) (b <> b1) (c <> c1) (d <> d1) (e <> e1)
+    RevisionSets a b c d e `mappend` RevisionSets a1 b1 c1 d1 e1 =
+        RevisionSets (a <> a1) (b <> b1) (c <> c1) (d <> d1) (e <> e1)
 
 accountsChanged        :: AVL.RevSet -> RevisionSets
 publicationsChanged    :: AVL.RevSet -> RevisionSets

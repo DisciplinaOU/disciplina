@@ -3,6 +3,7 @@
 
 module Disciplina.WorldState.BlakeHash where
 
+import qualified Prelude (show)
 import Universum hiding (put, get, Hashable)
 
 import qualified Crypto.Hash as Base (hash)
@@ -20,7 +21,10 @@ class Hashable a where
     hash :: a -> Hash
 
 newtype Hash = Hash { getHash :: Digest Blake2sp_256 }
-    deriving (Eq, Ord, Show, ByteArrayAccess)
+    deriving (Eq, Ord, ByteArrayAccess)
+
+instance Show Hash where
+    show (Hash raw) = "#" <> Universum.take 8 (show raw)
 
 instance Binary Hash where
     put (Hash blake) = put (BA.concat [blake] :: BS.ByteString)
