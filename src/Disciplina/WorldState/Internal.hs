@@ -3,6 +3,8 @@
 
 module Disciplina.WorldState.Internal where
 
+import qualified Prelude (show)
+
 import Universum hiding (Hashable)
 
 import Control.Lens (makeLenses, makePrisms, uses, to, (%=), (.=), zoom, (-~), (+~))
@@ -17,7 +19,7 @@ import Disciplina.WorldState.BlakeHash (Hashable(..), Hash(..), combineAll)
 import qualified Data.Tree.AVL as AVL
 
 data Entity = Entity Int
-    deriving (Show, Eq, Ord, Bounded, Generic, Binary)
+    deriving (Show, Eq, Ord, Bounded, Generic, Binary, Default)
 
 data WorldState
   = WorldState
@@ -71,12 +73,24 @@ data Change
     = TransferTokens Entity      Amount
     | Publicate      Publication
     | CreateAccount  Entity      Code
+    deriving (Show)
 
 data Transaction = Transaction
     { _tAuthor     :: Entity
     , _tChanges    :: [Change]
     , _tNonce      :: Int
     }
+
+instance Show Transaction where
+    show (Transaction who what nonce) =
+        concat
+            [ show who
+            , ": "
+            , show what
+            , " ("
+            , show nonce
+            , ")"
+            ]
 
 data WithProof a = WithProof
     { _wpBody    :: a
@@ -149,9 +163,32 @@ instance CanGetProof Server where
 instance CanGetProof Client where
     getProof = use cProof
 
+runWorldM :: Entity -> side -> WorldM side a -> IO (a, side)
+runWorldM ent serverState action = do
+    (a, out, _) <- runRWST action (Environment ent) serverState
+    return (a, out)
+
+evalWorldM :: Entity -> side -> WorldM side a -> IO a
+evalWorldM ent serverState action = do
+    (a, _, _) <- runRWST action (Environment ent) serverState
+    return a
+
+execWorldM :: Entity -> side -> WorldM side a -> IO side
+execWorldM ent serverState action = do
+    (_, side, _) <- runRWST action (Environment ent) serverState
+    return side
+
 emptyWorldState :: WorldState
 emptyWorldState =
     WorldState AVL.empty AVL.empty AVL.empty AVL.empty AVL.empty
+
+giveEach :: [Entity] -> Amount -> WorldState
+giveEach ents amount = emptyWorldState
+    & accounts %~ give
+  where
+    give accs = foldr give' accs ents
+      where
+        give' ent = AVL.insertWithNoProof ent (def & aBalance .~ amount)
 
 -- instance Default RevisionSets where
 --    def = RevisionSets def def def def def
@@ -389,3 +426,10 @@ instance CanAssumeTransaction Server where
 
         when (endHash /= transaction^.wpEndHash) $ do
             throwM FinalHashesMismatch
+
+plan :: [Change] -> WorldM Server Transaction
+plan changes = do
+    authorAcc <- getAuthorAccount
+    let nonce = authorAcc^.aNonce
+    author <- view eAuthor
+    return $ Transaction author changes nonce

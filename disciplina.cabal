@@ -74,6 +74,7 @@ test-suite disciplina-test
   hs-source-dirs:           tests
   main-is:                  Main.hs
   build-depends:             base >= 0.4 && < 5
+                           , AVL
                            , disciplina
                            , data-default
                            , lens
