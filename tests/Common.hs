@@ -36,7 +36,7 @@ import Test.QuickCheck                      as T ( Arbitrary (..), Gen, Property
                                                  , (===), (==>), elements
                                                  , vectorOf, oneof, suchThat
                                                  , Testable
-                                                 , ioProperty
+                                                 , ioProperty, expectFailure
                                                  )
 import Test.QuickCheck.Instances            as T ()
 
@@ -51,17 +51,29 @@ f .=. g = \a ->
 infixr 5 .=.
 
 data Sandbox = Sandbox
-    { sWorld       :: World.WorldState
-    , sTransaction :: [World.WithProof World.Transaction]
+    { sWorld        :: World.WorldState
+    , sTransaction  :: [World.WithProof World.Transaction]
+    , alice         :: World.Entity
+    , eve           :: World.Entity
+    , bob           :: World.Entity
+    , initialAmount :: World.Amount
     }
 
 instance Show Sandbox where
-    show (Sandbox world transactions) =
+    show (Sandbox world transactions a e b lim) =
         concat
           [ "Sandbox { world = "
           , show world
           , ", transactions = "
           , map (^.World.wpBody) transactions^.to Prelude.show
+          , ", alice = "
+          , show a
+          , ", eve = "
+          , show e
+          , ", bob = "
+          , show b
+          , ", lim = "
+          , show lim
           , " }"
           ]
 
@@ -73,7 +85,7 @@ instance Arbitrary Sandbox where
 
         transactions <- generateTransactions world alice [eve, bob]
 
-        return $ Sandbox world transactions
+        return $ Sandbox world transactions alice eve bob 10
 
       where
         generateTransactions world actor rest =
@@ -98,22 +110,22 @@ instance Arbitrary Sandbox where
             rest   <- accountCreation (count - 1) (entity : excludedSet)
             return (World.CreateAccount entity def : rest)
 
-        noneof :: (Arbitrary a, Eq a, Show a) => [a] -> Gen a
-        noneof set = do
-            res <- arbitrary `suchThat` (`notElem` set)
-            -- Debug.traceShow (res, "<-/-", set) $
-            return res
+noneof :: (Arbitrary a, Eq a, Show a) => [a] -> Gen a
+noneof set = do
+    res <- arbitrary `suchThat` (`notElem` set)
+    -- Debug.traceShow (res, "<-/-", set) $
+    return res
 
-        vectorUniqueOf :: (Arbitrary a, Eq a, Show a) => Int -> Gen [a]
-        vectorUniqueOf = loop []
-          where
-            loop acc 0 = return acc
-            loop acc n = do
-                next <- noneof acc
-                loop (next : acc) (n - 1)
+vectorUniqueOf :: (Arbitrary a, Eq a, Show a) => Int -> Gen [a]
+vectorUniqueOf = loop []
+  where
+    loop acc 0 = return acc
+    loop acc n = do
+        next <- noneof acc
+        loop (next : acc) (n - 1)
 
 instance Arbitrary World.Entity where
-  arbitrary = World.Entity <$> arbitrary
+  arbitrary = World.Entity <$> (noneof [0])
 
 instance Arbitrary World.Publication where
   arbitrary = World.hash <$> (arbitrary :: Gen Int)

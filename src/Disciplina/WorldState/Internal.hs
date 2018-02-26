@@ -366,10 +366,15 @@ transferTokens receiver amount = do
     modifyAccount (Sided who      Sender)   (aBalance -~ amount)
     modifyAccount (Sided receiver Receiver) (aBalance +~ amount)
 
+impersonate :: Entity -> WorldM side a -> WorldM side a
+impersonate whom action =
+    local (eAuthor .~ whom) $ do
+        action
+
 connectTransaction :: Transaction -> WorldM Server (WithProof Transaction)
 connectTransaction transaction = do
     withProof $ do
-        local (eAuthor .~ transaction^.tAuthor) $ do
+        impersonate (transaction^.tAuthor) $ do
             author  <- view eAuthor
             account <- getAuthorAccount
 
