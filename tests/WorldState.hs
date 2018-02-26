@@ -30,5 +30,14 @@ tests =
                             transaction <- World.plan [World.TransferTokens b (limit + 1)]
                             World.connectTransaction transaction
                             return False
+
+        , testProperty "impossible to do things being an absent entity" $
+            \box @ (Sandbox world transactions a e b limit) ->
+                expectFailure $ do
+                    World.Server world `worldMProperty` do
+                        World.impersonate def $ do
+                            transaction <- World.plan [World.TransferTokens b (limit - 1)]
+                            World.connectTransaction transaction
+                            return False
         ]
     ]
