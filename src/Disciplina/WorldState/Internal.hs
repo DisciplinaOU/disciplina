@@ -5,10 +5,10 @@ module Disciplina.WorldState.Internal where
 
 import qualified Prelude (show)
 
-import Universum hiding (Hashable)
+import Universum hiding (Hashable, trace, use, get)
 
-import Control.Lens (makeLenses, makePrisms, uses, to, (%=), (.=), zoom, (-~), (+~))
-import Control.Monad.RWS (RWST(..), tell, listen)
+import Control.Lens (makeLenses, makePrisms, use, uses, to, (%=), (.=), zoom, (-~), (+~))
+import Control.Monad.RWS (RWST(..), tell, listen, get)
 
 import Data.Binary (Binary)
 import Data.Default
@@ -17,6 +17,7 @@ import Disciplina.Accounts
 import Disciplina.WorldState.BlakeHash (Hashable(..), Hash(..), combineAll)
 
 import qualified Data.Tree.AVL as AVL
+import qualified Debug.Trace   as Debug
 
 data Entity = Entity Int
     deriving (Show, Eq, Ord, Bounded, Generic, Binary, Default)
@@ -153,6 +154,13 @@ makeLenses ''WorldState
 
 makePrisms ''Server
 makePrisms ''Client
+
+instance Show WorldState where
+    show world = world
+      ^.accounts
+       .to AVL.toList
+       .to (map (second (^.aBalance)))
+       .to Prelude.show
 
 class CanGetProof side where
     getProof :: WorldM side WorldStateProof
@@ -304,6 +312,7 @@ assertAbsence entity = do
 
 createAccount :: Entity -> Code -> WorldM Server ()
 createAccount whom code = do
+    Server st <- get
     assertAbsence (Sided whom Receiver)
 
     let
@@ -415,8 +424,12 @@ instance CanAssumeTransaction Client where
 
 instance CanAssumeTransaction Server where
     assumeTransaction transaction = do
-        now <- getProof
-        when (now /= transaction^.wpProof) $ do
+        here <- getProof
+
+        let proof = transaction^.wpProof.to parsePartialWorldState
+        let there = diffWorldState def proof
+
+        when (hash here /= hash there) $ do
             throwM InitialHashesMismatch
 
         _        <- connectTransaction (transaction^.wpBody)
@@ -433,3 +446,8 @@ plan changes = do
     let nonce = authorAcc^.aNonce
     author <- view eAuthor
     return $ Transaction author changes nonce
+
+trace :: Show a => a -> WorldM side ()
+trace a = do
+    () <- Debug.traceShow a $ return ()
+    return ()

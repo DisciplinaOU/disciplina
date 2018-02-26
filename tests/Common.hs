@@ -65,13 +65,6 @@ instance Show Sandbox where
           , " }"
           ]
 
-instance Show World.WorldState where
-    show world = world
-      ^.World.accounts
-       .to AVL.toList
-       .to (map (second (^.World.aBalance)))
-       .to Prelude.show
-
 instance Arbitrary Sandbox where
     arbitrary = do
         actors @ [alice, eve, bob] <- vectorUniqueOf 3
@@ -88,18 +81,28 @@ instance Arbitrary Sandbox where
                 changes <- vectorOf 5 $ oneof
                     [ World.TransferTokens <$> elements rest <*> pure 1
                     , World.Publicate      <$> arbitrary
-                    , World.CreateAccount  <$> noneof (actor : rest) <*> pure def
                     ]
+
+                accountCreations <- accountCreation 5 (actor : rest)
 
                 let server = World.Server world
 
                 return $ unsafePerformIO $ do
                     World.evalWorldM actor server $ do
-                        transaction <- World.plan changes
+                        transaction <- World.plan (changes <> accountCreations)
                         World.connectTransaction transaction
 
-        noneof :: (Arbitrary a, Eq a) => [a] -> Gen a
-        noneof set = arbitrary `suchThat` (`notElem` set)
+        accountCreation 0     _           = return []
+        accountCreation count excludedSet = do
+            entity <- noneof excludedSet
+            rest   <- accountCreation (count - 1) (entity : excludedSet)
+            return (World.CreateAccount entity def : rest)
+
+        noneof :: (Arbitrary a, Eq a, Show a) => [a] -> Gen a
+        noneof set = do
+            res <- arbitrary `suchThat` (`notElem` set)
+            -- Debug.traceShow (res, "<-/-", set) $
+            return res
 
         vectorUniqueOf :: (Arbitrary a, Eq a, Show a) => Int -> Gen [a]
         vectorUniqueOf = loop []
