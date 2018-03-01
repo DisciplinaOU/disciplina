@@ -1,0 +1,12 @@
+\subsection{Anonymity and certification}
+\label{sec:cert}
+The permissionless nature of our public chain leads to the ability for malevolent students to create educational institutes in order to get the scores for the courses they did not attend. Moreover, the knowledge students actually get by completing the course, and the conditions upon which the course is considered completed, vary significantly between the educational institutions.
+
+These issues currently can not be solved solely on the protocol level: they require an external source of information to determine the physical existence and the reputation of an Educator. Although we leave the public chain open for the Educators to submit their private block headers, we propose to add a separate layer of reputation and trust on top of the protocol.
+
+We do so by disallowing a new Educator to join the network without an approval
+from another Educator. Educators are supposed to rate another Educators basing
+on off-chain sources of information -- such as a publication on an official site
+of a university, which claims that given Disciplina public key is issued by this
+university. By approving each other, Educators form a \textit{web of trust}.
+Ratings of Educators are backed up by ratings of Educators which trust them.

@@ -1,0 +1,73 @@
+\documentclass[a4paper]{article}
+
+%% Language and font encodings
+\usepackage[english]{babel}
+\usepackage[utf8x]{inputenc}
+\usepackage[T1]{fontenc}
+
+%% Sets page size and margins
+\usepackage[a4paper,top=3cm,bottom=2cm,left=3cm,right=3cm,marginparwidth=1.75cm]{geometry}
+
+%% Useful packages
+\usepackage{amsmath}
+\usepackage[colorlinks=true, allcolors=blue]{hyperref}
+
+\title{Disciplina: Rating System}
+\author{
+TeachMePlease, \href{https://teachmeplease.com}{\texttt{https://teachmeplease.com}} \and
+Serokell, \href{https://serokell.io}{\texttt{https://serokell.io}}
+}
+
+\date{%
+  Version 0.1\\%
+  \today
+}
+
+\begin{document}
+
+\maketitle
+
+\section*{Rationale}
+The current architecture of the platform relies on connecting the Educators in a
+\textit{web of trust} to ensure the existence of the Educators and the quality
+of education. We suppose that in the beginning there would be an initial clique
+of large Educators, backed up by developers, which will later add another
+Educators to their web of trust. However, we suppose that these large Educators would
+tend ignore private teachers and small schools. Thus, it worth examining whether
+we can allow new Educators to join the network without approval of existing Educators.
+
+However, removing this constraint leads to the following security concerns:
+\begin{itemize}
+\item A malevolent student can forge educational records by creating a fake Educator node.
+\item A corrupted Educator can create fake students to increase the size of the dataset.
+\end{itemize}
+
+Moreover, a \textit{grade} is a biased measure of students' knowledge. However, a recruiter is generally interested in an unbiased one. It is clear that unbiased measures are hard to achieve in the current setting, but it is safe to assume that the better the quality of education is, the less biased the grades are.
+
+\section*{Requirements}
+\begin{enumerate}
+  \item The rating system should define at least two mappings:
+    \begin{itemize}
+      \item Student's rating $R_S: (studentId, subjectId) \rightarrow Int$
+      \item Educator's rating $R_E: (educatorId, subjectId) \rightarrow Int$
+    \end{itemize}
+    The implementation, however, can define additional rated entities if necessary.
+  \item The mappings should be temporal: they should adjust in time to reflect changes in education quality and students' knowledge.
+  \item $R_S(\mathbf{S_1}, x) > R_S(\mathbf{S_2}, x) \iff$ the student $\mathbf{S_1}$ has deeper understanding of the subject $x$ than $\mathbf{S_2}$.
+  \item $R_E(\mathbf{E_1}, x) > R_E(\mathbf{E_2}, x) \iff$ the students of the educator $\mathbf{E_1}$ on average have deeper understanding of the subject $x$ than the students of $\mathbf{E_2}$. \\ Let $\Omega_{i, x}$ be the set of the students that have acquired a rating in some ATG subgraph of the subject $x$ by taking courses of the educator $\mathbf{E_i}$. Then for every pair of educators $\mathbf{E_1}$ and $\mathbf{E_2}$ and subject $x$ the following should hold true:
+    \begin{align*}
+      R_E(\mathbf{E_1}, x) &> R_E(\mathbf{E_2}, x) \\
+      &\Updownarrow\\
+      \frac{1}{|\Omega_{1, x}|} \sum_{s \in \Omega_{1, x}} R_S(s, x) &>
+      \frac{1}{|\Omega_{2, x}|} \sum_{t \in \Omega_{2, x}} R_S(t, x)
+    \end{align*}
+  \item The ratings should be based solely on the on-chain sources of information and should not require third-party oracles.
+  \item The ratings should be protected from fraud:
+  \begin{itemize}
+  	\item It should not be possible for any student with rating $R_S(\mathbf{S}, x) = r_1$ to get new rating $r_2 > r_1$ without completing courses in $x$.
+  	\item It should not be possible for any educator with rating $R_E(\mathbf{E}, x) = r_1$ to get new rating $r_2 > r_1$ without teaching students in $x$.
+  \end{itemize}
+
+\end{enumerate}
+
+\end{document}

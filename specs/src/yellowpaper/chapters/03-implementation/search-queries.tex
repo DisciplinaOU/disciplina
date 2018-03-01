@@ -1,0 +1,18 @@
+\subsection{Search queries}
+\label{sec:search-queries}
+
+An educator can answer one of the following queries:
+\begin{itemize}
+\item For a set of pairs $(subjectId_1, minGrade_1)$, $(subjectId_2, minGrade_2)$, ..., $(subject_n, minGrade_n)$ and some $Count$, find no more than $Count$  students with grades satisfying the following inequalities:
+\[
+\left\{
+\begin{array}{c}
+avgGrade_{subjectId_1} >= minGrade_1 \\ avgGrade_{subjectId_2} >= minGrade_2 \\
+\mathrel{\makebox[\widthof{=}]{\vdots}} \\ avgGrade_{subjectId_n} >= minGrade_n
+\end{array}
+\right.
+\]
+
+\item For the given identifier of a student, return all info about this student.
+\item For given assignment hash, return the document itself.
+\end{itemize}

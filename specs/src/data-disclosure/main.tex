@@ -1,0 +1,139 @@
+\documentclass[a4paper]{article}
+
+%% Language and font encodings
+\usepackage[english]{babel}
+\usepackage[utf8x]{inputenc}
+\usepackage[T1]{fontenc}
+
+%% Sets page size and margins
+\usepackage[a4paper,top=3cm,bottom=2cm,left=3cm,right=3cm,marginparwidth=1.75cm]{geometry}
+
+%% Useful packages
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{longtable,tabu}
+\usepackage{multirow}
+\usepackage{fontawesome}
+\usepackage{scrextend}
+\usepackage[colorinlistoftodos]{todonotes}
+\usepackage[colorlinks=true, allcolors=blue]{hyperref}
+\graphicspath{{images/}}
+
+\newcommand{\Lock}{{D_\text{\faLock}}}
+\newcommand{\Sign}{\mathtt{Sig}}
+\newcommand{\Encrypt}{\mathtt{E}}
+\newcommand{\Hash}{\mathtt{H}}
+\newcommand{\MerkleTree}{\mathtt{mtree}}
+\newcommand{\Root}{\mathtt{root}}
+\newcommand{\Path}{\mathtt{path}}
+\newcommand{\Party}[1]{\mathbf{#1}}
+\newcommand{\tParty}[1]{$\Party{#1}$}
+\newcommand{\Key}[1]{#1}
+\newcommand{\PubKey}[1]{pk_{\Party{#1}}}
+\newcommand{\SecretKey}[1]{sk_{\Party{#1}}}
+\newcommand{\Concat}{\bigoplus}
+\newcommand{\SizeOf}{\mathtt{sizeof}}
+
+
+\renewcommand{\thefootnote}{\fnsymbol{footnote}}
+
+\title{Disciplina: Data Disclosure Protocol}
+\author{
+TeachMePlease, \href{https://teachmeplease.com}{\texttt{https://teachmeplease.com}} \and
+Serokell, \href{https://serokell.io}{\texttt{https://serokell.io}}
+}
+
+\date{%
+  Version 0.1\\%
+  \today
+}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+This document describes the two-party protocol of fair data trade used in the Disciplina blockchain platform.
+\end{abstract}
+
+\section{Notation}
+Throughout this document we use the following notations:
+\tabulinesep=1.2mm
+\begin{longtabu} to \textwidth {| X[1,r] | X[5,l] |}
+  \hline
+  \textbf{Notation} &  \textbf{Description}\\ \hline
+  \endhead
+  \tParty{A} & A party that takes part in the protocol \\ \hline
+  $\Hash(m)$ & Result of applying a collision-resistant hash-function~$\Hash$ to a message~$m$ \\ \hline
+  $\MerkleTree(a)$ & Merkle tree of the data array $a$ \\ \hline
+  $\Root(M)$ & Root element of the Merkle tree $M$ \\ \hline
+  $\Path(e, M)$ & Path of the element $e$ in the Merkle tree $M$ \\ \hline
+  $k$ & Symmetric key \\ \hline
+  $\PubKey{A}$, $\SecretKey{A}$ & Public and secret keys of \tParty{A} \\ \hline
+  $\Encrypt_\Key{k}(m)$ & Symmetric encryption with the key $k$ \\ \hline
+  $\Encrypt_\Party{A}(m)$ & Asymmetric encryption with the key~$\PubKey{A}$\footnotemark\\ \hline
+  $\Sign_\Party{A}(m)$ & Tuple~$(\Party{A}, m, sig(\SecretKey{A}, H(m)))$, where $sig$ is a digital signature algorithm\footref{fn:pubkey} \\ \hline
+  $\SizeOf(m)$ & Size of $m$ in bytes \\ \hline
+  $\Concat$ & Binary string concatenation \\ \hline
+\end{longtabu}
+\footnotetext{\label{fn:pubkey}The particular keys $\PubKey{A}$ and $\SecretKey{A}$ belonging to the party $\mathbf{A}$ are generally deducible from the context}
+
+\section{Preliminary steps}
+Suppose the seller~\tParty{S} has some data~$D$. Before the deal \tParty{S} ought to perform some preparation steps. \tParty{S} should:
+\begin{enumerate}
+\item Divide~$D$ into $N$ chunks of size no more than 1~KiB:
+
+\begin{equation}
+D = \Concat_{i=1}^N d_i, \quad \SizeOf(d_i) \leq 1~\mathrm{KiB}
+\end{equation}
+
+\item Generate a symmetric key $k$
+\item Encrypt each~$d_i$ with $k$ and make an array of encrypted chunks:
+\begin{equation}
+\Lock = \{ \Encrypt_\Key{k}(d_1),\ \Encrypt_\Key{k}(d_2),\ ...,\ \Encrypt_\Key{k}(d_N) \}
+\end{equation}
+
+\item Compute a Merkle root of the encrypted chunks:
+\begin{equation}
+R = \Root(\MerkleTree(\Lock))
+\end{equation}
+
+\end{enumerate}
+
+On this stage $R$ is a public knowledge, while $k, \Lock$ and all of the $d_i$ are kept hidden.
+
+\section{Protocol description}
+The protocol fairness is guaranteed by a contract on the public chain. The contract is able to hold money and is stateful: it is capable of storing a log $L$ with data. All the data that parties send to the contract are appended to $L$.
+
+\begin{enumerate}
+\item The buyer generates a new keypair ($\PubKey{B},\ \SecretKey{B}$), creates the contract and sends the money to the contract address. Along with the money, \tParty{B} sends the public key $\PubKey{B}$ of the newly generated keypair.
+\item If \tParty{S} agrees to proceed, she also sends a predefined amount of money to the contract address.
+\item \tParty{S} transfers the encrypted data chunks $\Lock$ to the buyer. \tParty{B} computes the Merkle root $R'$ of the received data $\Lock'$:
+\begin{equation}
+R' = \Root(\MerkleTree(\Lock'))
+\end{equation}
+\item \tParty{B} makes a transaction with a receipt $\Sign_\Party{B}(R')$ to the contract address.
+\item \tParty{S} sends $\Sign_\Party{S}(\{\Encrypt_\Party{B}(k),\ R\})$ to the contract. The contract accepts it iff~$R=R'$ (this implies that~$\Lock=\Lock'$).
+\item \tParty{B} decyphers and checks the received data. In case some data chunk $e_i \in \Lock$ is invalid, \tParty{B}~sends a transaction with~$\{\SecretKey{B},\ e_i,\ \Path(e_i,\ \MerkleTree(\Lock))\}$ to the contract. By doing so, \tParty{B}~reveals the data chunk~$d_i$ corresponding to the encrypted chunk~$e_i$.  She also shares proof that~$e_i$ was indeed part of a  Mekle tree with root~$R$. The contract checks the validity of $d_i$ and decides whether \tParty{B}~has rightfully accused~\tParty{S} of cheating.
+\end{enumerate}
+
+The on-chain communications of the parties (steps 2, 4, 5, 6) are bounded by a time frame $\tau$. In order for the transaction to be valid, the time $\Delta t$ passed since the previous on-chain step has to be less than or equal to $\tau$. In case $\Delta t > \tau$ the communication between the parties is considered over, and one of the protocol exit points (Sec. \ref{sec:exit-points}) is automatically triggered.
+
+\section{Protocol exit points}
+\label{sec:exit-points}
+To decide on whether the communication is over, the protocol utilizes some timeout $\tau$ (e.g. 1 hour) which bounds the communications that should happen between \tParty{B} and \tParty{S}.
+
+\begin{longtabu} to \textwidth {| X[3, c, m] | X[5, l, m] | X[7, l, m] |}
+  \hline
+  \textbf{$\Delta t > \tau$ at step} & \textbf{Consequence} & \textbf{Interpretation}\\ \hline
+  \endhead
+  2 & \multirow{3}{=}{\tParty{B}, \tParty{S} get their money back} & \multirow{3}{=}{\tParty{S}~wasn't able to transfer the data to~\tParty{B}.} \\ \cline{1-1}
+  3 & & \\ \cline{1-1}
+  4 & & \\ \hline
+  5 & \tParty{B}, \tParty{S} get their money back & \tParty{B}~received the encrypted data, but \tParty{S}~wasn't able to share the key $k$ for it \\ \hline
+  6 & \tParty{S} gets all the money & \tParty{S} correctly shared data to \tParty{B} \\ \hline
+  Protocol finishes & Either \tParty{B} or \tParty{S} get all the money & The dispute situation. In case \tParty{B} proofs \tParty{S} cheated, \tParty{S} loses all her money. Otherwise, \tParty{B} loses her money for false accusation. \\ \hline
+\end{longtabu}
+
+
+\end{document}

@@ -1,0 +1,22 @@
+\subsection{Notations}
+\label{apx:notations}
+
+\tabulinesep=3pt
+\begin{longtabu} to \textwidth {| X[1,r] | X[5,l] |}
+  \hline
+  \textbf{Notation} &  \textbf{Description}\\ \hline
+  \endhead
+  \tParty{A} & A party that takes part in the protocol \\ \hline
+  $\Hash(m)$ & Result of applying a collision-resistant hash-function~$\Hash$ to a message~$m$ \\ \hline
+  $\MerkleTree(a)$ & Merkle tree of the data array $a$ \\ \hline
+  $\Root(M)$ & Root element of the Merkle tree $M$ \\ \hline
+  $\Path(e, M)$ & Path of the element $e$ in the Merkle tree $M$ \\ \hline
+  $k$ & Symmetric key \\ \hline
+  $\PubKey{A}$, $\SecretKey{A}$ & Public and secret keys of \tParty{A} \\ \hline
+  $\Encrypt_\Key{k}(m)$ & Symmetric encryption with the key $k$ \\ \hline
+  $\Encrypt_\Party{A}(m)$ & Asymmetric encryption with the key~$\PubKey{A}$\footnotemark\\ \hline
+  $\Sign_\Party{A}(m)$ & Tuple~$(\Party{A}, m, sig(\SecretKey{A}, H(m)))$, where $sig$ is a digital signature algorithm\footref{fn:pubkey} \\ \hline
+  $\SizeOf(m)$ & Size of $m$ in bytes \\ \hline
+  $\Concat$ & Binary string concatenation \\ \hline
+\end{longtabu}
+\footnotetext{\label{fn:pubkey}The particular keys $\PubKey{A}$ and $\SecretKey{A}$ belonging to the party $\mathbf{A}$ are generally deducible from the context}

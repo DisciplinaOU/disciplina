@@ -1,0 +1,15 @@
+\section{Implementation choices}
+In this section we describe the proposed architecture in more detail. We present the excerpt on the internal structure of both public and private chains and the reasoning behind these choices.
+
+In order to deduce the internal structure of our system, we first analyze its use-cases. The overview of the education process is given in Section~\ref{sec:architecture}. The communication between the Student and the Educator is saved as transactions in the private chain. However, the implementation details of this chain mostly depend on the data disclosure process.
+
+We will start from analyzing this process and determining the main issues that arise from the need to disclose and verify the validity of the private blocks. Then we will propose the structure of the private and public blocks that addresses these issues.
+
+\input{chapters/03-implementation/certification}
+\input{chapters/03-implementation/activity-type-graph}
+\input{chapters/03-implementation/search-queries}
+\input{chapters/03-implementation/private-chain}
+\input{chapters/03-implementation/public-chain}
+% \input{chapters/03-implementation/incentives}
+\input{chapters/03-implementation/fair-cv}
+\input{chapters/03-implementation/data-disclosure}

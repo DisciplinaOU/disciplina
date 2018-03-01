@@ -1,0 +1,230 @@
+\subsection{Smart-contract implementation}
+
+\subsubsection{Accounts}
+
+There are 2 kinds of accounts:
+\begin{itemize}
+  \item Personal: created for each client, directly belongs to that client;
+  \item Robot: created by client, doesn't belong directly to that client (and anyone else); represents smart contract.
+\end{itemize}
+
+Robot account should contain, aside from token mapping:
+\begin{itemize}
+  \item Data storage for smart contract state;
+  \item The code to control the account, compiled to Plutus Core language.
+\end{itemize}
+
+The Plutus Core language allows declaring a module with exported (public) methods.
+These methods will be the public API for the account.
+
+One can evaluate the Plutus Core code itself (not just call public methods) if account directly belongs to her.
+Personal accounts don't have any persistent associated code to control them.
+
+\subsubsection{Scripting}
+
+The Plutus language will be used to program Robot nodes.
+Any interaction with account is done via Plutus code.
+
+The evaluation cost is collected and summed into Fee.
+
+``Sandbox run'' can be performed, to check costs and programming errors.
+
+We will call natively-implemented functions to be called from Plutus Core ``NIFs''.
+
+Each atomic step of execution has an invocation cost.
+
+\subsubsection{NIFs}
+
+NIF is an action to be invoked on Account.
+NIF is the only source of changes in Account.
+
+Any operation on the Account to be implemented should be represented as a call to NIF OR as a sequence of NIF-calls.
+This will allow us to reason about security/validity of operations with more confidence and limit the access and scope of each operation.
+
+\subsubsection{Transaction}
+
+We will cover ``simple money transfer'' and ``data disclosure'' transactions in this section.
+
+``Simple money transfer'' transactions will be implemented as transactions with empty ``function call'' field.
+
+Transferral transaction must contain:
+\begin{itemize}
+  \item Sender signature;
+  \item Receiver signature;
+  \item Amount and kind of funds transferred (must be non-zero overall);
+  \item ``Nonce'' to prevent double-invocation.
+  \item (Optional) textual message for the receiver;
+  \item (Optional) function call to be invoked upon transaction approval.
+  \item Digest of all other fields, encrypted with Sender private key.
+\end{itemize}
+
+Transaction is the only way for accounts to interact.
+
+Function call (if present) will contain the name of exported function and arguments to be supplied upon invocation.
+
+The function would be invoked like that:
+
+\begin{verbatim}
+function-name(Sender-signature, amount, value1, value2, ..., valueN)
+\end{verbatim}
+
+On successful code invocation, money will be transmitted to the Target account and the costs will be demanded from the Sender.
+If the code fails, the transaction is not published as successful and is rejected.
+
+If there is not enough money supplied for the operation or the code raised an error, whole transaction will fail.
+
+If there is no function call in a transaction, the code invocation is assumed successful.
+
+The \verb|Gas| fee for transaction approval will be calculated as sum of costs for atomic actions performed.
+
+\subsubsection{Implementation of the data disclosure protocol using Robot account}
+
+We assume that we have 2 sides:
+\begin{itemize}
+  \item Buyer
+  \item Seller.
+\end{itemize}
+
+``Gas'' below is the estimation of the operation cost. The name and the idea are taken from Ethereum.
+``Fee'' is a forfeit to either side trying to deceive the opponent.
+``Sum'' is the price of the data to be sold.
+
+Robot would work as follows. The Buyer invokes a transaction which runs code directly on his account, that constructs a robot with the following exported methods:
+
+\begin{itemize}
+  \item \begin{verbatim} start-trade(); \end{verbatim}
+  \item \begin{verbatim} accept-encrypted(encrypted-mroot, size); \end{verbatim}
+  \item \begin{verbatim} send-encrypted-secret(encrypted-secret); \end{verbatim}
+  \item \begin{verbatim} handshake(); \end{verbatim}
+  \item \begin{verbatim} reject(sk, block, proof-enc); \end{verbatim}
+  \item \begin{verbatim} cancel(), \end{verbatim}
+\end{itemize}
+carrying \verb|Sum + Fee + Gas| amount of currency and some \verb|predicate| to check the data if applicable.
+
+This robot is initialized with the following data:
+\begin{itemize}
+  \item Cost in tokens;
+  \item Size of the encrypted data;
+  \item Merkle tree root of encrypted data;
+  \item Timeout, after which the account is destroyed;
+  \item Sink, a person whom the remaining money will be send on timeout;
+  \item Destructor, a procedure to invoke on timeout.
+\end{itemize}
+
+Here is the state machine of that Robot-account:
+
+\begin{verbatim}
+  (0) Account has just been created.
+    "start-trade" from Seller
+      WHEN transferred amount = Fee
+        Notify Buyer
+        AND GOTO 1
+
+  (1) The trade is started.
+    "accept-encrypted(encrypted-mroot, size)" from Buyer
+      IF encrypted Merkle root and size are the same as initially set in Robot state,
+        GOTO 2
+      ELSE
+        GOTO 8
+
+    Timeout!
+      GOTO 8
+
+  (2) Data was transferred. Seller encrypts a session key with the Buyer's public key.
+    "send-encrypted-secret(encrypted-secret)" from Seller
+    Notify Buyer
+
+  (3) Off the band, the symmetric key is sent.
+    "reject(sk, block, encrypted-proof)" from Buyer
+      GOTO 4
+
+    "handshake" from Buyer
+      GOTO 5
+
+    Timeout!
+      GOTO 6
+
+  (4) Arbitration.
+    The robot performs check.
+    If it finds that Buyer is right (block invalidates proofs OR the predicate fails),
+      GOTO 7
+    else if Seller is right
+      GOTO 6
+
+  (5) Cleanup I.
+    (Sum + Fee) is sent to Seller.
+    GOTO 7
+
+  (6) Cleanup II.
+    All remaining money is sent to Seller.
+    The account is closed.
+
+  (7) Cleanup III.
+    All remaining money is sent to Buyer.
+    The account is closed.
+
+  (8) Cleanup VI.
+    Fee is sent to Seller.
+    GOTO 7
+
+\end{verbatim}
+
+\subsubsection{Example}
+
+Lets assume there are:
+\begin{itemize}
+  \item Seller, which has declared that he has his students' Linear Algebra marks for Nov, 2018 worth 500 tokens (signed in some private Merkle tree);
+  \item Buyer, which has 600 tokens available.
+  \item Robot, which is a smart account created by the Buyer.
+\end{itemize}
+
+We will consider three cases:
+\begin{itemize}
+  \item Seller sends nothing at all;
+  \item Seller tried to send Buyer encrypted garbage instead of data;
+  \item Buyer tried to blame Seller in giving her invalid data with data being completely valid (in terms of proofs and predicate).
+\end{itemize}
+
+All trades will have same initial part, so we will branch when nessessary.
+The trades will go as follows:
+\begin{itemize}
+  \item The Buyer formulates a predicate to check that data corresponds its description OR uses universal truth as predicate.
+  \item The Buyer requests the data from the Seller.
+  \item The Seller notifies the Buyer of the data price (500 tokens).
+  \item The Buyer creates a Robot using the scheme above with 500 tokens and the predicate.
+  \item The Seller accepts the trade and sends \verb|start-trade()| to the Robot along with 20 tokens Fee.
+
+  \begin{enumerate}
+    \item Seller sends badly sized data or the Merkle root of the encrypted data does not match:
+      \begin{itemize}
+        \item The size or the Merkle root of the transferred data is invalid.
+        \item The trade is stalled until time is out.
+        \item On timeout the trade is reverted and money is returned to Buyer.
+      \end{itemize}
+    \item Seller tries to send garbage or one of blocks decrypts to garbage:
+      \begin{itemize}
+        \item Buyer finds that at least one block is invalid in either form.
+
+        \item She invokes \verb|reject(sk, block, encrypted-proof)| to start arbitration.
+
+        \item Robot checks that block falsifies proofs and that Buyer was right.
+
+        \item Robot returns all remaining funds to Buyer.
+      \end{itemize}
+    \item Buyer tries to blame Seller with valid data:
+      \begin{itemize}
+        \item Buyer selects the block to call ``invalid''.
+
+        \item Then she invokes \verb|reject(unencrypted-block, proof)| to start arbitration.
+
+        \item Robot performs \verb|check-block-and-proof(block, proof)| and finds that Buyer was not right.
+
+        \item Then it sends all 520 tokens to Seller.
+      \end{itemize}
+    \item Buyer receives the data and the key, but remains silent:
+      \begin{itemize}
+        \item If the timeout has expired, 520 tokens are sent to Seller.
+      \end{itemize}
+  \end{enumerate}
+
+\end{itemize}

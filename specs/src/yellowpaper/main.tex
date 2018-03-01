@@ -1,0 +1,90 @@
+\documentclass[a4paper]{article}
+
+%% Language and font encodings
+\usepackage[english]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+
+%% Sets page size and margins
+\usepackage[a4paper,top=3cm,bottom=2cm,left=3cm,right=3cm,marginparwidth=1.75cm]{geometry}
+
+%% Useful packages
+\usepackage{amsmath}
+\usepackage{bbm}
+\usepackage{calc}
+\usepackage{graphicx}
+\usepackage{tikz}
+\usepackage{enumitem}
+\usepackage{csquotes}
+\usepackage{longtable, tabu}
+\usepackage{multirow}
+\usepackage{fontawesome}
+\usepackage[blocks]{authblk}
+\usepackage[colorlinks=true, allcolors=blue]{hyperref}
+\usepackage{footmisc}
+\usepackage[backend=biber]{biblatex}
+
+\graphicspath{{images/}}
+\addbibresource{references.bib}
+
+\title{Disciplina: Blockchain for Education}
+\author[1]{Kirill Kuvshinov}
+\author[2]{Ilya Nikiforov}
+\author[3]{Jonn Mostovoy}
+\author[4]{Dmitry Mukhutdinov}
+\author[5]{Kirill Andreev}
+\author[6]{Vladislav Podtelkin}
+
+\affil[1, 2]{Teach Me Please, \href{https://teachmeplease.com}{\texttt{https://teachmeplease.com}}}
+\affil[3, 4, 5, 6]{Serokell, \href{https://serokell.io}{\texttt{https://serokell.io}}}
+
+\date{%
+Version 0.6.1\\%
+\today
+}
+
+\newcommand{\Lock}[1]{{#1_\text{\faLock}}}
+\newcommand{\Sign}{\mathtt{Sig}}
+\newcommand{\Encrypt}{\mathtt{E}}
+\newcommand{\Hash}{\mathtt{H}}
+\newcommand{\MerkleTree}{\mathtt{mtree}}
+\newcommand{\Root}{\mathtt{root}}
+\newcommand{\Path}{\mathtt{path}}
+\newcommand{\Party}[1]{\mathbf{#1}}
+\newcommand{\tParty}[1]{$\Party{#1}$}
+\newcommand{\Key}[1]{#1}
+\newcommand{\PubKey}[1]{pk_{\Party{#1}}}
+\newcommand{\SecretKey}[1]{sk_{\Party{#1}}}
+\newcommand{\Concat}{\bigoplus}
+\newcommand{\SizeOf}{\mathtt{sizeof}}
+
+\begin{document}
+\maketitle
+
+\input{chapters/00-abstract}
+\input{chapters/01-introduction}
+\input{chapters/02-architecture}
+\input{chapters/03-implementation}
+\input{chapters/04-future-work}
+\input{chapters/05-conclusion}
+
+\printbibliography
+
+\pagebreak
+
+\appendix
+\section{Appendix}
+
+\input{chapters/A-notations}
+%% \input{chapters/A-ratings}
+%% \input{chapters/A-data-object-storage}
+\input{chapters/A-pools}
+\input{chapters/A-account-technical}
+
+%\bibliographystyle{plain}
+%\bibliographystyle{alpha}
+%\bibliographystyle{unsrt}
+%\bibliographystyle{abbrv}
+%\bibliography{references}
+
+\end{document}

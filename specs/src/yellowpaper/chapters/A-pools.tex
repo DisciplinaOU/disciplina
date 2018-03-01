@@ -1,0 +1,114 @@
+\subsection{Partially centralized educators}
+\label{apx:pools}
+
+In the Section~\ref{sec:priv-chain} we have concluded that the cost of the
+private block proof publication should depend on the size of the corresponding
+Merkle tree. This is done in order to scale spendings of different educators
+with amount of data they produce and store in their private blockchains.
+
+But this solution has a disadvantage: the Witnesses are more incentivized to
+include proofs from large educators in public blocks rather than from small
+educators, as proofs from large educators contain more fees. If block size is
+limited, it may lead to delays of inclusion of small educators' proofs in the
+public blockchain.
+
+In order to resolve this problem, small educators can use trusted third-party
+services (e. g. \url{teachmeplease.com}) for interacting with Disciplina
+platform instead of running Educator nodes by themselves. But this means that
+third-party service has access to all the educator's data, including marks and
+assignments of her students, and also receives all the revenue for trading this
+data. Some small educators might find this option unacceptable.
+
+Therefore, we propose a mechanism of \textit{educator pools}, which allow small
+educators to delegate block proof publishing to a third party in a partially trustless
+way.
+
+\begin{figure}[ht]
+  \centering
+  \includegraphics[width=\textwidth]{pool-hierarchical-mtree}
+  \caption{Two-level hierarchical sized Merkle tree for a block published by a pool
+    manager}
+  \label{fig:pools:lvl2block}
+\end{figure}
+
+The idea is the following:
+
+\begin{itemize}
+\item Every small Educator still maintains her own small private chain
+\item When a small Educator forms a block in her private chain, she sends the
+  block header to a third party called \textit{pool manager} instead of
+  publishing it directly to Witnesses. Another difference is that Educator
+  should also send a separate signature for her \textit{ATG delta} (if it's not
+  empty).
+\item A \textit{pool manager} collects block headers from Educators until
+  total number of transactions in all Educator's blocks is more than some
+  threshold $K_{min}$.
+\item Then pool manager builds a sized Merkle tree over the list of received
+  Educator's block headers, forming a \textit{second-level block}
+  (Fig.~\ref{fig:pools:lvl2block}). The header of second-level block gets published
+  on the public blockchain. Instead of containing a single \textit{ATG delta},
+  the header of this second-level block contains a list of separate signed
+  \textit{ATG deltas} of small educators. We assume that this approach would
+  not create a problem of oversized block headers because Educators don't
+  typically create and close courses very often, and an average number of ATG
+  deltas in every single block header will stay small.
+\item After constructing a second-level block, pool manager sends each of the
+  small Educators a path to their block headers in a second-level sized Merkle tree.
+\item Having this path, each Educator can construct a publicly verifiable proof
+  for any transaction in her private block by simply concatenating this path
+  with a path to transaction in a first-level Merkle tree.
+\end{itemize}
+
+For every processed block header small educator pays pool manager a fee
+calculated by this formula:
+\begin{equation}\label{apx:pools:pools-cost-eq}
+  C_{pool}(B) = \alpha_{pool} + \beta_{pub} \cdot N_{tr}(B)
+\end{equation}
+where $\beta_{pub}$ is a network price coefficient from
+\ref{sec:priv-chain:pub-cost-eq}, and $\alpha_{pool}$ is a constant fee set by
+the pool manager.
+
+If a pool manager sets such $\alpha_{pool}$ that
+$\alpha_{pool} < \alpha_{pub}$, but $\alpha_{pool} N > \alpha_{pub}$, then for
+every published second-level block a pool manager gains
+$\alpha_{pool} N - \alpha_{pub}$ coins, while every Educator in pool pays less
+for the block header publishing then if published directly to Witnesses.
+Therefore, every participant has an incentive to remain in the pool.
+
+However, such approach poses a threat of excessive centralization in the network
+-- it might happen so that \textit{all} educators would find it beneficial to
+join one huge pool, which will be able to provide the lowest pool fees due to
+amount of its clients. In order to avoid this, we might change the formula
+\ref{sec:priv-chain:pub-cost-eq} in a way which diminishes the profits of
+joining the pool for big educators:
+
+\begin{equation}\label{apx:pools:poosl-cost-eq-2}
+  C_{pub}(B) = \alpha_{pub} \cdot \mathbbm{1}_{\{N_{tr} < K_{tr}\}} + \beta_{pub}
+  \cdot N_{tr}
+\end{equation}
+where $K_{tr}$ is a sufficiently big threshold value. This formula ensures that
+educators which publish large blocks don't pay constant $\alpha_{pub}$ coins for
+every block, which makes it unprofitable for them to use pools.
+
+Note that a small Educator participating in the pool should slightly change the
+structure of his own chain. Every block header should contain a hash of previous
+one (as described in Section~\ref{sec:priv-chain}), but blocks of an Educator
+participating in the pool are published only as part of second-level pooled
+block. So the educator's block header should contain a header hash of a
+second-level block containing previous first-level block in educator's chain
+instead of header hash of previous first-level block.
+
+We don't yet provide a fully trustless solution for pooling. Small Educators
+should trust a pool manager to provide correct second-level proofs of their
+blocks, and in theory an adversarial pool manager may cheat on Educators by not
+including their block headers in a published second-level block after she
+received the money. However, we assume that deceiving the small educators and
+losing them as a long-term clients is far less profitable than being honest.
+Nevertheless, we are currently working on a fully trustless pooling protocol
+based on a smart contract which ensures that a pool manager cannot deceive any
+Educator.
+
+The idea of pooling also improves the performance of the system, because it
+reduces the amount of information published on public chain. Lots of private
+block headers issued by lots of educators are replaced by few private block
+headers issued by large educators and pools.
