@@ -1,11 +1,8 @@
 resolver: lts-9.1
 
 packages:
-- core
-- public
-- accounts
-- private
-- tools
+- '.'
+- 'tools'
 
 - location:
     git: https://github.com/serokell/kademlia.git
@@ -63,6 +60,11 @@ packages:
     commit: c8ea123947fb62e4e02ca46f0eaadc5b47da3605
   extra-dep: true
 
+- location:
+    git: git@github.com:serokell/auth-data-structures.git
+    commit: 4c9667ccdfc800812c950230561bcfda52556a4e
+  extra-dep: true
+
 nix:
     packages:
     - openssl
@@ -73,21 +75,22 @@ nix:
     - haskell.packages.ghc802.happy
 
 extra-deps:
-- log-warper-1.8.0
-- universum-0.9.2
-- cborg-0.2.0.0
-- serokell-util-0.5.2
-- time-units-1.0.0
-- pvss-0.2.0
-- base58-bytestring-0.1.0
 - ansi-terminal-0.6.3.1
+- base58-bytestring-0.1.0
+- cborg-0.2.0.0
 - concurrent-extra-0.7.0.11
 - containers-0.5.11.0
 - fmt-0.5.0.0
 - generic-arbitrary-0.1.0
-- mmorph-1.1.0
-- time-1.6.0.1
+- log-warper-1.8.0
 - megaparsec-6.2.0
+- mmorph-1.1.0
+- pretty-tree-0.1.0.0
+- pvss-0.2.0
+- serokell-util-0.5.2
+- time-1.6.0.1
+- time-units-1.0.0
+- universum-0.9.2
 
 apply-ghc-options: everything
 
