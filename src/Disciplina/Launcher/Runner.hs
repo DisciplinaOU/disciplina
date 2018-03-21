@@ -7,7 +7,6 @@ module Disciplina.Launcher.Runner
 
 import Universum
 
-import qualified Control.Monad.Reader as Mtl
 import Mockable (Production)
 
 import Disciplina.Launcher.Mode (BasicRealContext (..), BasicRealMode)
@@ -19,7 +18,7 @@ runBasicRealMode ::
     -> BasicRealMode a
     -> Production a
 runBasicRealMode BasicNodeResources {..} action =
-    Mtl.runReaderT action context
+    runReaderT action context
   where
     context = BasicRealContext
         { _brcLoggerName = bnrLoggerName
