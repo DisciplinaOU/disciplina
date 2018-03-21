@@ -65,12 +65,18 @@ packages:
     commit: e4639c385595ae5544a017fac2d545ee0131f97d
   extra-dep: true
 
+- location:
+    git: https://github.com/input-output-hk/rocksdb-haskell-ng.git
+    commit: 49f501a082d745f3b880677220a29cafaa181452
+  extra-dep: true
+
 nix:
     packages:
     - openssl
     - zlib
     - binutils
     - git
+    - rocksdb
     - haskell.packages.ghc802.cpphs
     - haskell.packages.ghc802.happy
 
