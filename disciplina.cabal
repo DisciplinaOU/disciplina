@@ -85,7 +85,10 @@ executable disciplina-witness
                      , cardano-sl-networking
                      , formatting
                      , log-warper
+                     , network-transport-tcp
+                     , time-units
                      , optparse-applicative
+                     , random
                      , universum >= 0.1.11
   default-language:    Haskell2010
   ghc-options:         -threaded -rtsopts
