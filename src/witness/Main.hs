@@ -8,6 +8,7 @@ import Universum
 import Mockable (runProduction)
 import System.Wlog (logInfo, logWarning)
 
+import Disciplina.DB (DBType (WitnessDB))
 import Disciplina.Launcher (BasicNodeParams (..), LoggingParams (..), bracketBasicNodeResources,
                             runBasicRealMode)
 import Params (WitnessParams (..), getWitnessParams)
@@ -20,7 +21,11 @@ main = do
             , lpDirectory   = wpLogDir
             , lpConfigPath  = wpLogConfig
             }
-        basicParams = BasicNodeParams loggingParams
+        basicParams = BasicNodeParams
+            { bnpLoggingParams = loggingParams
+            , bnpDBType        = WitnessDB
+            , bnpDBPath        = wpDbPath
+            }
     runProduction . bracketBasicNodeResources basicParams $
         \nr -> runBasicRealMode nr $ do
             logInfo "Hey, here log-warper works!"

@@ -18,9 +18,12 @@ library
                        Disciplina.WorldState
                      , Disciplina.Transaction
                      , Disciplina.Launcher
+                     , Disciplina.DB
   other-modules:
                        Disciplina.Accounts
                      , Disciplina.Accounts.Account
+                     , Disciplina.DB.Types
+                     , Disciplina.DB.Functions
                      , Disciplina.Transaction.Class
                      , Disciplina.Transaction.Internal
                      , Disciplina.WorldState.BlakeHash
