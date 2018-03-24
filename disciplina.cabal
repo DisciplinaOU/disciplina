@@ -18,6 +18,8 @@ library
                        Disciplina.WorldState
                      , Disciplina.Transaction
                      , Disciplina.Launcher
+                     , Disciplina.Listeners
+                     , Disciplina.Workers
   other-modules:
                        Disciplina.Accounts
                      , Disciplina.Accounts.Account
@@ -29,6 +31,8 @@ library
                      , Disciplina.Launcher.Params
                      , Disciplina.Launcher.Resource
                      , Disciplina.Launcher.Runner
+                     , Disciplina.Listeners.Listener
+                     , Disciplina.Workers.Worker
   -- other-extensions:
   build-depends:       base >=4.9 && <4.10
                      , AVL
@@ -81,6 +85,8 @@ executable disciplina-witness
   main-is:             Main.hs
   other-modules:       Params
   build-depends:       base
+                     , bytestring
+                     , binary
                      , disciplina
                      , cardano-sl-networking
                      , formatting
