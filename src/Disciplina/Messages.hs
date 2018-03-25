@@ -1,7 +1,7 @@
 
 -- | Starting point for running a Witness node
 
-module Messages where
+module Disciplina.Messages where
 
 import Universum
 
@@ -11,20 +11,11 @@ import System.Wlog (logInfo, logWarning)
 
 import Disciplina.Launcher (BasicNodeParams (..), LoggingParams (..), bracketBasicNodeResources,
                             runBasicRealMode)
-import Params (WitnessParams (..), getWitnessParams)
 
-import qualified Network.Transport.TCP as TCP
 import           Node
 import           Data.Data (Data)
 import           Node.Message.Binary (BinaryP, binaryPacking)
-import qualified Data.ByteString.Char8 as B8
 import qualified Data.ByteString as BS
-import           System.Random
-import           Mockable.Concurrent (delay, forConcurrently, fork, killThread)
-import           Network.Transport.Abstract (closeTransport, Transport)
-import           Network.Transport.Concrete (concrete)
-import           Data.Time.Units (Microsecond, fromMicroseconds)
-import           System.IO (getChar)
 
 
 

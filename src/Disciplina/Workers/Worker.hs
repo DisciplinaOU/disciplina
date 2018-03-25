@@ -13,7 +13,7 @@ import           System.Random
 import           Mockable.Concurrent (delay, forConcurrently)
 import           Data.Time.Units (Microsecond, fromMicroseconds)
 
-import           Messages
+import           Disciplina.Messages
 
 
 

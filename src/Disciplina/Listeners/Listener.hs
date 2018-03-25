@@ -11,7 +11,7 @@ import           System.Wlog (logInfo, logWarning)
 import           Node
 import qualified Data.ByteString as BS
 
-import           Messages
+import           Disciplina.Messages
 
 
 

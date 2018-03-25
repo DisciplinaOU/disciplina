@@ -15,6 +15,7 @@ import Disciplina.Workers
 import Params (WitnessParams (..), getWitnessParams)
 
 import qualified Network.Transport.TCP as TCP
+--import           Pos.Diffusion.Transport.TCP (bracketTransportTCP)
 import           Node
 import           Node.Message.Binary (binaryPacking)
 import qualified Data.ByteString.Char8 as B8
@@ -24,8 +25,6 @@ import           Mockable.Concurrent (fork, killThread)
 import           Network.Transport.Abstract (closeTransport, Transport)
 import           Network.Transport.Concrete (concrete)
 import           System.IO (getChar)
-
-
 
 
 
@@ -40,6 +39,10 @@ main = do
         basicParams = BasicNodeParams loggingParams
     runProduction . bracketBasicNodeResources basicParams $
         \nr -> runBasicRealMode nr $ do
+
+            --next to implement, use bracketTransportTCP
+            --bracketTransportTCP networkConnectionTimeout tcpAddr $ \transport ->
+
             let params = TCP.defaultTCPParameters { TCP.tcpCheckPeerHost = True }
             transport_ <- do
                 transportOrError <- liftIO $
@@ -50,6 +53,7 @@ main = do
 
             let prng1 = mkStdGen 0
             let prng2 = mkStdGen 1
+
 
             logInfo "Starting node"
             lift $ node (simpleNodeEndPoint transport) (const noReceiveDelay) (const noReceiveDelay)
