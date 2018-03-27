@@ -26,14 +26,11 @@ packages:
 
 - location:
     git: https://github.com/serokell/cardano-sl
-    # first commit with bracketTransportTCP
-    commit: 2f727eaaacb0b43cf3d1ae5f53d5033162f01ad2
+    commit: f8fd7cf811b40ddf8683f019b85179594ee78b38
   extra-dep: true
   subdirs:
-    - infra
     - networking
     - core
-    - db
     - binary
     - util
     - crypto
@@ -67,17 +64,6 @@ packages:
     commit: c8ea123947fb62e4e02ca46f0eaadc5b47da3605
   extra-dep: true
 
-# These two are needed for cardano-sl-infra
-- location:
-    git: https://github.com/input-output-hk/cardano-report-server.git
-    commit: 19fd5ddf24dab731375a156ce38dcfce4319d1e4 # master v0.4.9
-  extra-dep: true
-
-- location:
-    git: https://github.com/input-output-hk/rocksdb-haskell-ng.git
-    commit: 100f24a8aa628bca57836f98f6b0c56406e59897
-  extra-dep: true
-
 - location:
     git: git@github.com:serokell/auth-data-structures.git
     commit: e4639c385595ae5544a017fac2d545ee0131f97d
@@ -87,8 +73,6 @@ nix:
     packages:
     - openssl
     - zlib
-    - lzma
-    - rocksdb
     - binutils
     - git
     - haskell.packages.ghc802.cpphs

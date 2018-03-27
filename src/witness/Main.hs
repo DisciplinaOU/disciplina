@@ -10,12 +10,12 @@ import System.Wlog (logInfo, logWarning)
 
 import Disciplina.Launcher (BasicNodeParams (..), LoggingParams (..), bracketBasicNodeResources,
                             runBasicRealMode)
+import Disciplina.Transport.TCP (bracketTransportTCP)
 import Disciplina.Listeners
 import Disciplina.Workers
 import Params (WitnessParams (..), getWitnessParams)
 
 import qualified Network.Transport.TCP as TCP
-import           Pos.Diffusion.Transport.TCP (bracketTransportTCP)
 import           Node
 import           Node.Message.Binary (binaryPacking)
 import qualified Data.ByteString.Char8 as B8

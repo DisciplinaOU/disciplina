@@ -38,10 +38,7 @@ library
                      , AVL
                      , binary
                      , bytestring
-                     , cardano-sl-infra
                      , cardano-sl-networking
-                     , cardano-report-server
-                     , rocksdb-haskell-ng
                      , cryptonite
                      , data-default
                      , exceptions
@@ -49,6 +46,7 @@ library
                      , log-warper
                      , memory
                      , mtl
+                     , network-transport
                      , random
                      , time-units
                      , universum
@@ -93,7 +91,6 @@ executable disciplina-witness
                      , bytestring
                      , binary
                      , disciplina
-                     , cardano-sl-infra
                      , cardano-sl-networking
                      , formatting
                      , log-warper
