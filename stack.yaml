@@ -26,7 +26,8 @@ packages:
 
 - location:
     git: https://github.com/serokell/cardano-sl
-    commit: f8fd7cf811b40ddf8683f019b85179594ee78b38
+    # first commit with bracketTransportTCP
+    commit: 2f727eaaacb0b43cf3d1ae5f53d5033162f01ad2
   extra-dep: true
   subdirs:
     - infra
@@ -69,7 +70,7 @@ packages:
 # These two are needed for cardano-sl-infra
 - location:
     git: https://github.com/input-output-hk/cardano-report-server.git
-    commit: 7b28613c9c3535193991712ff5a4a36a9f165570 # master v0.4.0
+    commit: 19fd5ddf24dab731375a156ce38dcfce4319d1e4 # master v0.4.9
   extra-dep: true
 
 - location:
