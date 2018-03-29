@@ -62,7 +62,12 @@ packages:
 
 - location:
     git: git@github.com:serokell/auth-data-structures.git
-    commit: e4639c385595ae5544a017fac2d545ee0131f97d
+    commit: b83e935cf444f38d707a954158c3995d558ca17b
+  extra-dep: true
+
+- location:
+    git: git@github.com:Heimdell/rocksdb-haskell.git
+    commit: 0c1f446799d3738598a5d51ebc031bbbfd2d78f8
   extra-dep: true
 
 nix:
