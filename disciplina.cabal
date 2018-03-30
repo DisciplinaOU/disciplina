@@ -35,6 +35,7 @@ library
                      , cryptonite
                      , data-default
                      , exceptions
+                     , hashable
                      , lens
                      , memory
                      , mtl
@@ -78,6 +79,9 @@ test-suite disciplina-test
   type:                     exitcode-stdio-1.0
   hs-source-dirs:           tests
   main-is:                  Main.hs
+  other-modules:
+                            Common
+                            WorldState
   build-depends:             base >= 0.4 && < 5
                            , AVL
                            , disciplina

@@ -1,5 +1,6 @@
 
 {-# LANGUAGE FlexibleInstances     #-}
+{-# LANGUAGE FlexibleContexts     #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -7,6 +8,7 @@
 {-# LANGUAGE RankNTypes            #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
 {-# LANGUAGE TypeSynonymInstances  #-}
+{-# LANGUAGE ExplicitForAll  #-}
 
 module Common (module Common, module Control.Lens, module T) where
 
@@ -81,7 +83,7 @@ instance Arbitrary Sandbox where
     arbitrary = do
         actors @ [alice, eve, bob] <- vectorUniqueOf 3
 
-        let world  = actors `World.giveEach` 10 -- bucks
+        let world = fairWorld 10 actors
 
         transactions <- generateTransactions world alice [eve, bob]
 
@@ -99,16 +101,36 @@ instance Arbitrary Sandbox where
 
                 let server = World.Server world
 
-                return $ unsafePerformIO $ do
-                    World.evalWorldM actor server $ do
-                        transaction <- World.plan (changes <> accountCreations)
-                        World.connectTransaction transaction
+                return $ unsafePerformPureWorldT actor server $ do
+                    transaction <- World.plan (changes <> accountCreations)
+                    World.connectTransaction transaction
 
         accountCreation 0     _           = return []
         accountCreation count excludedSet = do
             entity <- noneof excludedSet
             rest   <- accountCreation (count - 1) (entity : excludedSet)
             return (World.CreateAccount entity def : rest)
+
+fairWorld :: World.Amount -> [World.Entity] -> World.WorldState
+fairWorld amount actors =
+    let
+      (world, _) = unsafePerformIO $ do
+        (AVL.runOnEmptyCache :: AVL.HashMapStore World.Hash AVL.NullStore World.WorldState -> IO (World.WorldState, AVL.Storage World.Hash)) $ do
+            World.evalWorldT def (World.Server World.emptyWorldState) $ do
+                World.giveEach actors amount
+
+    in
+        world
+
+unsafePerformPureWorldT :: forall side a . World.Entity -> side -> World.WorldT side (AVL.HashMapStore World.Hash AVL.NullStore) a -> a
+unsafePerformPureWorldT who side action =
+    let
+      (a, _) = unsafePerformIO $ do
+        AVL.runOnEmptyCache $ do
+            World.evalWorldT def side $ do
+                action
+    in
+        a
 
 noneof :: (Arbitrary a, Eq a, Show a) => [a] -> Gen a
 noneof set = do
@@ -130,9 +152,11 @@ instance Arbitrary World.Entity where
 instance Arbitrary World.Publication where
   arbitrary = World.hash <$> (arbitrary :: Gen Int)
 
-worldMProperty
+worldTProperty
     :: Testable prop
     => side
-    -> World.WorldM side prop
+    -> World.WorldT side (AVL.HashMapStore World.Hash AVL.NullStore) prop
     -> Property
-worldMProperty side what = ioProperty $ World.evalWorldM def side what
+worldTProperty side what = ioProperty $ do
+    (prop, _) <- AVL.runOnEmptyCache $ World.evalWorldT def side what
+    return prop
