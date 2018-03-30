@@ -62,7 +62,7 @@ packages:
 
 - location:
     git: git@github.com:serokell/auth-data-structures.git
-    commit: b83e935cf444f38d707a954158c3995d558ca17b
+    commit: b07dec98435fec0cbdc05b8e51989f91713a612b
   extra-dep: true
 
 - location:
@@ -102,3 +102,6 @@ apply-ghc-options: everything
 ghc-options:
   # Needed to buid
   cardano-sl-networking: -fno-warn-redundant-constraints
+
+nix:
+    packages: [rocksdb]
