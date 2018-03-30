@@ -127,7 +127,7 @@ unsafePerformPureWorldT who side action =
     let
       (a, _) = unsafePerformIO $ do
         AVL.runOnEmptyCache $ do
-            World.evalWorldT def side $ do
+            World.evalWorldT who side $ do
                 action
     in
         a

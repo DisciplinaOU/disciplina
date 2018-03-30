@@ -496,6 +496,7 @@ instance CanAssumeTransaction Client where
 
 instance CanAssumeTransaction Server where
     assumeTransaction transaction = do
+        liftIO $ print ("hello, server")
         here <- getProof
 
         let proof = parsePartialWorldState (transaction^.wpProof)
