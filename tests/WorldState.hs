@@ -12,6 +12,7 @@ tests =
         [ testProperty "another server node can apply transactions" $
             \box @ (Sandbox world transactions a e b _) ->
                 World.Server world `worldTProperty` do
+                 Debug.traceShow (a, e, b) $ do
                     World.assumeTransaction (head transactions)
                     return True
 
