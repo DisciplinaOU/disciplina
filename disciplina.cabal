@@ -42,6 +42,7 @@ library
                      , cardano-sl-networking
                      , cryptonite
                      , data-default
+                     , ether
                      , exceptions
                      , lens
                      , log-warper
@@ -87,8 +88,8 @@ executable disciplina-witness
   main-is:             Main.hs
   other-modules:       Params
   build-depends:       base
-                     , disciplina
                      , cardano-sl-networking
+                     , disciplina
                      , formatting
                      , log-warper
                      , optparse-applicative

@@ -1,5 +1,6 @@
 module Disciplina.DB.Real.Types
-       ( DB (..)
+       ( MonadRealDB
+       , DB (..)
        , DBType (..)
        , NodeDB (..)
        , ndbType
@@ -10,6 +11,15 @@ import Universum
 
 import Control.Lens (makeLenses)
 import qualified Database.RocksDB as Rocks
+import Ether.Internal (HasLens)
+
+-- | Set of constraints necessary to operate on real DB.
+type MonadRealDB ctx m =
+    ( MonadReader ctx m
+    , HasLens NodeDB ctx NodeDB
+    , MonadIO m
+    , Monad m
+    )
 
 data DB = DB
     { rocksReadOpts  :: !Rocks.ReadOptions

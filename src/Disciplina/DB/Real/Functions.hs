@@ -13,9 +13,10 @@ module Disciplina.DB.Real.Functions
 import Universum
 
 import qualified Database.RocksDB as Rocks
+import Ether.Internal (HasLens (..))
 
 import Disciplina.DB.Class (MonadDB (..), MonadDBRead (..))
-import Disciplina.DB.Real.Types (DB (..), DBType, NodeDB (..))
+import Disciplina.DB.Real.Types (DB (..), DBType, MonadRealDB, NodeDB (..), ndbDatabase)
 
 -----------------------------------------------------------
 -- Opening/closing
@@ -56,3 +57,17 @@ rocksPutBytes k v DB {..} = Rocks.put rocksDB rocksWriteOpts k v
 -- | Delete element from RocksDB for given key.
 rocksDelete :: MonadIO m => ByteString -> DB -> m ()
 rocksDelete k DB {..} = Rocks.delete rocksDB rocksWriteOpts k
+
+------------------------------------------------------------
+-- Instances
+------------------------------------------------------------
+
+getDB :: (MonadReader ctx m, HasLens NodeDB ctx NodeDB) => m DB
+getDB = view $ lensOf @NodeDB . ndbDatabase
+
+instance MonadRealDB ctx m => MonadDBRead m where
+    dbGet key = getDB >>= rocksGetBytes key
+
+instance MonadRealDB ctx m => MonadDB m where
+    dbPut key val = getDB >>= rocksPutBytes key val
+    dbDelete key = getDB >>= rocksDelete key
