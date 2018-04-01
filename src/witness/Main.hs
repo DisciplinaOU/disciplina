@@ -46,7 +46,7 @@ main = do
             let prng1 = mkStdGen 0
 
             logInfo "Starting node"
-            lift $ node (simpleNodeEndPoint transport) (const noReceiveDelay) (const noReceiveDelay)
+            node (simpleNodeEndPoint transport) (const noReceiveDelay) (const noReceiveDelay)
                  prng1 binaryPacking (B8.pack "I am node 1") defaultNodeEnvironment $ \node1 ->
                         NodeAction (witnessListeners . nodeId $ node1) $ \converse -> do
                             mapM_ (\w -> fork $ w (nodeId node1) [] converse) witnessWorkers

@@ -14,6 +14,7 @@ import           Mockable.Concurrent (delay, forConcurrently)
 import           Data.Time.Units (Microsecond, fromMicroseconds)
 
 import           Disciplina.Messages
+import           Disciplina.Launcher.Mode (BasicRealMode)
 
 
 
@@ -23,18 +24,18 @@ witnessWorkers = [witnessTxWorker
 witnessTxWorker
     :: NodeId
     -> [NodeId]
-    -> Converse Packing BS.ByteString Production
-    -> Production ()
+    -> Converse Packing BS.ByteString BasicRealMode
+    -> BasicRealMode ()
 witnessTxWorker anId peerIds conv = logInfo "worker initialized" >> worker conv
     where
     worker
-        :: Converse Packing BS.ByteString Production
-        -> Production ()
+        :: Converse Packing BS.ByteString BasicRealMode
+        -> BasicRealMode ()
     worker converse = loop
         where
-        loop :: Production ()
+        loop :: BasicRealMode ()
         loop = do
-            let pongTx :: NodeId -> ConversationActions PingTx PongTx Production -> Production ()
+            let pongTx :: NodeId -> ConversationActions PingTx PongTx BasicRealMode -> BasicRealMode ()
                 pongTx peerId cactions = do
                     received <- recv cactions maxBound
                     case received of
@@ -47,18 +48,18 @@ witnessTxWorker anId peerIds conv = logInfo "worker initialized" >> worker conv
 witnessBlkWorker
     :: NodeId
     -> [NodeId]
-    -> Converse Packing BS.ByteString Production
-    -> Production ()
+    -> Converse Packing BS.ByteString BasicRealMode
+    -> BasicRealMode ()
 witnessBlkWorker anId peerIds conv = logInfo "worker initialized" >> worker conv
     where
     worker
-        :: Converse Packing BS.ByteString Production
-        -> Production ()
+        :: Converse Packing BS.ByteString BasicRealMode
+        -> BasicRealMode ()
     worker converse = loop
         where
-        loop :: Production ()
+        loop :: BasicRealMode ()
         loop = do
-            let pongBlk :: NodeId -> ConversationActions PingBlk PongBlk Production -> Production ()
+            let pongBlk :: NodeId -> ConversationActions PingBlk PongBlk BasicRealMode -> BasicRealMode ()
                 pongBlk peerId cactions = do
                     received <- recv cactions maxBound
                     case received of
