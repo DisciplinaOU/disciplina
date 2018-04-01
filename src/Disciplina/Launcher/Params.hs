@@ -7,7 +7,7 @@ import Universum
 
 import System.Wlog (LoggerName)
 
-import Disciplina.DB.Types (DBType)
+import Disciplina.DB.Real.Types (DBType)
 
 -- | Contains all parameters required for hierarchical logger initialization.
 data LoggingParams = LoggingParams

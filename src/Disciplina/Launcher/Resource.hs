@@ -12,7 +12,7 @@ import Mockable (Production)
 import System.Wlog (LoggerConfig (..), LoggerName, WithLogger, maybeLogsDirB, parseLoggerConfig,
                     productionB, removeAllHandlers, setupLogging, showTidB)
 
-import Disciplina.DB (NodeDB, closeNodeDB, openNodeDB)
+import Disciplina.DB.Real (NodeDB, closeNodeDB, openNodeDB)
 import Disciplina.Launcher.Params (BasicNodeParams (..), LoggingParams (..))
 
 -- | Datatype which contains resources required by all Disciplina nodes

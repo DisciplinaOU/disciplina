@@ -1,4 +1,4 @@
-module Disciplina.DB.Types
+module Disciplina.DB.Real.Types
        ( DB (..)
        , DBType (..)
        , NodeDB (..)

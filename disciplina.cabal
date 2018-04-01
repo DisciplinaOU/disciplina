@@ -22,8 +22,10 @@ library
   other-modules:
                        Disciplina.Accounts
                      , Disciplina.Accounts.Account
-                     , Disciplina.DB.Types
-                     , Disciplina.DB.Functions
+                     , Disciplina.DB.Class
+                     , Disciplina.DB.Real
+                     , Disciplina.DB.Real.Types
+                     , Disciplina.DB.Real.Functions
                      , Disciplina.Transaction.Class
                      , Disciplina.Transaction.Internal
                      , Disciplina.WorldState.BlakeHash
