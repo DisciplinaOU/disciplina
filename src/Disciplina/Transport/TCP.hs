@@ -7,7 +7,6 @@ module Disciplina.Transport.TCP
 
 import           Universum
 
-import           Disciplina.Launcher.Mode (BasicRealMode)
 import           Data.Time.Units (Microsecond)
 import           Formatting (sformat, shown, (%))
 import           System.Wlog (WithLogger, logError, usingLoggerName, askLoggerName)
@@ -18,20 +17,31 @@ import           Network.Transport.Abstract (Transport)
 import           Network.Transport.Concrete (concrete)
 import qualified Network.Transport.TCP as TCP
 
-bracketTransportTCP ::
-       Microsecond
+bracketTransportTCP
+    :: ( MonadIO m
+       , MonadIO n
+       , MonadThrow m
+       , MonadMask m
+       , WithLogger m
+       )
+    => Microsecond
     -> TCP.TCPAddr
-    -> (Transport BasicRealMode -> BasicRealMode a)
-    -> BasicRealMode a
+    -> (Transport n -> m a)
+    -> m a
 bracketTransportTCP connectionTimeout tcpAddr k = bracket
     (createTransportTCP connectionTimeout tcpAddr)
     snd
     (k . fst)
 
-createTransportTCP ::
-       Microsecond -- ^ Connection timeout
+createTransportTCP
+    :: ( MonadIO n
+       , MonadIO m
+       , WithLogger m
+       , MonadThrow m
+       )
+    => Microsecond -- ^ Connection timeout
     -> TCP.TCPAddr
-    -> BasicRealMode (Transport BasicRealMode, BasicRealMode ())
+    -> m (Transport n, m ())
 createTransportTCP connectionTimeout addrInfo = do
     loggerName <- askLoggerName
     let tcpParams =

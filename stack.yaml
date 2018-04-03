@@ -1,9 +1,5 @@
 resolver: lts-9.1
 
-flags:
-  ether:
-    disable-tup-instances: true
-
 packages:
 - '.'
 - 'tools'
