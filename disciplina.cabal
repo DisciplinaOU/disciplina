@@ -19,10 +19,8 @@ library
   other-modules:
                        Disciplina.Accounts
                      , Disciplina.Accounts.Account
-                     , Disciplina.Utils.Plug
                      , Disciplina.WorldState.BlakeHash
                      , Disciplina.WorldState.Internal
-                     , Disciplina.WorldState.Adapter
   -- other-extensions:
   build-depends:       base >=4.9 && <4.10
                      , AVL

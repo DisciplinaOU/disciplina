@@ -476,6 +476,8 @@ instance CanUseProof Client where
         return res
 
 instance CanUseProof Server where
+    -- Since all "servers" do hold the same state, we can assume
+    -- we can freely repeat an action on our current state here.
     usingProof _ action = action
 
 -- | Unpack 'a' from proof, check that hashes before and after action match.
