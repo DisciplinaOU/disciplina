@@ -1,15 +1,15 @@
 
 module Disciplina.WorldState.Adapter where
 
-import Universum
+--import Universum
 
-import Control.Concurrent
-import Control.Concurrent.STM.TChan
+--import Control.Concurrent
+--import Control.Concurrent.STM.TChan
 
-import Data.Default
+--import Data.Default
 
-import Disciplina.Utils.Plug
-import Disciplina.WorldState.Internal
+--import Disciplina.Utils.Plug
+--import Disciplina.WorldState.Internal
 --import Disciplina.WorldState.BlakeHash
 
 --runClient :: Client -> Plug (WithProof Transaction) -> IO (Plug (WithProof Transaction, Client))

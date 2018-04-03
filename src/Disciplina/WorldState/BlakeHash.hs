@@ -11,7 +11,6 @@ import Crypto.Hash (Digest, digestFromByteString, Blake2sp_256)
 
 import Data.Binary
 import Data.ByteArray       as  BA
-import Data.ByteString      as  BS
 import Data.ByteString.Lazy as LBS (toStrict)
 import Data.Default
 

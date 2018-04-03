@@ -10,9 +10,11 @@
 {-# LANGUAGE TypeSynonymInstances  #-}
 {-# LANGUAGE ExplicitForAll  #-}
 
-module Common (module Common, module Control.Lens, module T) where
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
-import qualified Prelude (show)
+module Common (module Common, module Control.Lens, module T, module Universum) where
+
+import qualified Prelude (show, unlines)
 import Universum
 
 -- import Control.Arrow (second)
@@ -20,17 +22,17 @@ import Control.Lens (to, each)
 
 -- import Data.Bits                                 (xor)
 import Data.Default                         as T (Default(def))
-import Data.Foldable                        as T (for_)
 -- import Data.Function                             (on)
 -- import Data.List                                 (sortBy, nubBy)
 -- import Data.Monoid                               ((<>))
 -- import Data.Ord                                  (comparing)
+import Data.Traversable                                  (for)
 
 import System.IO.Unsafe
 
 import qualified Data.Tree.AVL         as AVL
 import qualified Disciplina.WorldState as World
-import qualified Debug.Trace           as Debug
+--import qualified Debug.Trace           as Debug
 
 import Test.Framework                       as T (Test, defaultMain, testGroup)
 import Test.Framework.Providers.QuickCheck2 as T (testProperty)
@@ -66,8 +68,8 @@ instance Show Sandbox where
         concat
           [ "Sandbox { world = "
           , show world
-          , ", transactions = "
-          , map (^.World.wpBody) transactions^.to Prelude.show
+          , ", transactions = \n"
+          , Prelude.unlines $ map (^.World.wpBody.to Prelude.show.to ("\t" ++)) transactions
           , ", alice = "
           , show a
           , ", eve = "
@@ -81,35 +83,36 @@ instance Show Sandbox where
 
 instance Arbitrary Sandbox where
     arbitrary = do
-        actors @ [alice, eve, bob] <- vectorUniqueOf 3
+        actors <- vectorUniqueOf 3
+
+        let [alice', eve', bob'] = actors
 
         let world = fairWorld 10 actors
 
-        transactions <- generateTransactions world alice [eve, bob]
+        transactions <- generateTransactions world alice' [eve', bob']
 
-        return $ Sandbox world transactions alice eve bob 10
+        return $ Sandbox world transactions alice' eve' bob' 10
 
       where
-        generateTransactions world actor rest =
-            vectorOf 2 $ do
-                changes <- vectorOf 5 $ oneof
-                    [ World.TransferTokens <$> elements rest <*> pure 1
-                    , World.Publicate      <$> arbitrary
-                    ]
+        generateTransactions world actor rest = do
+            pairs <- vectorOf 2 $ vectorOf 5 $ oneof
+                [ World.TransferTokens <$> elements rest <*> pure 1
+                , World.Publicate      <$> arbitrary
+                ]
 
-                accountCreations <- accountCreation 5 (actor : rest)
+            let server = World.Server world
 
-                let server = World.Server world
-
-                return $ unsafePerformPureWorldT actor server $ do
-                    transaction <- World.plan (changes <> accountCreations)
+            return $ unsafePerformPureWorldT actor server $ do
+                for pairs $ \changes -> do
+                    transaction <- World.plan changes
                     World.connectTransaction transaction
 
-        accountCreation 0     _           = return []
-        accountCreation count excludedSet = do
-            entity <- noneof excludedSet
-            rest   <- accountCreation (count - 1) (entity : excludedSet)
-            return (World.CreateAccount entity def : rest)
+        --accountCreation :: Integer -> [World.Entity] -> Gen [World.Change]
+        --accountCreation 0     _           = return []
+        --accountCreation count excludedSet = do
+        --    entity <- noneof excludedSet
+        --    rest   <- accountCreation (count - 1) (entity : excludedSet)
+        --    return (World.CreateAccount entity def : rest)
 
 fairWorld :: World.Amount -> [World.Entity] -> World.WorldState
 fairWorld amount actors =
@@ -133,8 +136,8 @@ unsafePerformPureWorldT who side action =
         a
 
 noneof :: (Arbitrary a, Eq a, Show a) => [a] -> Gen a
-noneof set = do
-    res <- arbitrary `suchThat` (`notElem` set)
+noneof set' = do
+    res <- arbitrary `suchThat` (`notElem` set')
     -- Debug.traceShow (res, "<-/-", set) $
     return res
 

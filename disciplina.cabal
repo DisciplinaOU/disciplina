@@ -16,13 +16,10 @@ cabal-version:       >=1.10
 library
   exposed-modules:
                        Disciplina.WorldState
-                     , Disciplina.Transaction
                      , Disciplina.Launcher
   other-modules:
                        Disciplina.Accounts
                      , Disciplina.Accounts.Account
-                     , Disciplina.Transaction.Class
-                     , Disciplina.Transaction.Internal
                      , Disciplina.Utils.Plug
                      , Disciplina.WorldState.BlakeHash
                      , Disciplina.WorldState.Internal
@@ -78,8 +75,8 @@ library
                        ViewPatterns
 
   ghc-options:         -Wall
+                       -Werror
                        -fno-warn-orphans
-                       -O2
 
 executable disciplina-witness
   hs-source-dirs:      src/witness
@@ -143,4 +140,30 @@ test-suite disciplina-test
                            , universum
                            , QuickCheck
                            , quickcheck-instances
-  ghc-options:         -threaded -rtsopts -with-rtsopts=-N
+  default-extensions:
+                       BangPatterns
+                       ConstraintKinds
+                       DefaultSignatures
+                       DeriveDataTypeable
+                       DeriveGeneric
+                       FlexibleContexts
+                       FlexibleInstances
+                       FunctionalDependencies
+                       GeneralizedNewtypeDeriving
+                       LambdaCase
+                       MonadFailDesugaring
+                       MultiParamTypeClasses
+                       MultiWayIf
+                       NamedFieldPuns
+                       NoImplicitPrelude
+                       OverloadedStrings
+                       RankNTypes
+                       RecordWildCards
+                       ScopedTypeVariables
+                       StandaloneDeriving
+                       TemplateHaskell
+                       TupleSections
+                       TypeFamilies
+                       UndecidableInstances
+                       ViewPatterns
+  ghc-options:         -threaded -rtsopts -with-rtsopts=-N -Wall -Werror
