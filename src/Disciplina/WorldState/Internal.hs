@@ -7,14 +7,14 @@ import qualified Prelude (show)
 
 import Universum hiding (Hashable, trace, use, get)
 
-import Control.Lens (makeLenses, makePrisms, use, uses, to, (%=), (.=), zoom, (-~), (+~))
+import Control.Lens (makeLenses, makePrisms, use, to, zoom, (-~), (+~))
 import Control.Monad.RWS (RWST(..), tell, listen, get)
 
 import Data.Binary (Binary)
-import Data.Default
+import Data.Default (Default, def)
 
 import Disciplina.Accounts
-import Disciplina.WorldState.BlakeHash (HasHash(..), Hash(..), combineAll)
+import Disciplina.WorldState.BlakeHash (Hash, hash)
 
 import qualified Data.Tree.AVL as AVL
 import qualified Debug.Trace   as Debug
@@ -96,6 +96,7 @@ data WithProof a = WithProof
     , _wpProof   :: WorldStateProof
     , _wpEndHash :: Hash
     }
+    deriving (Show)
 
 -- | World state on server.
 data Server = Server
@@ -149,6 +150,11 @@ data Sided a = Sided
 
 data Side = Sender | Receiver
     deriving (Show, Typeable)
+
+data Block trans = Block
+    { _bTransactions :: [trans]
+    }
+    deriving (Show)
 
 -- | Monad for operations.
 type WorldT side m = RWST Environment DiffSets side m
@@ -208,11 +214,11 @@ emptyWorldState = WorldState AVL.empty AVL.empty AVL.empty AVL.empty AVL.empty
 --   the same amount of tokens.
 giveEach :: AVL.KVStoreMonad Hash m => [Entity] -> Amount -> WorldT side m WorldState
 giveEach ents amount = do
-    let empty       = emptyWorldState
+    let emptyWorld  = emptyWorldState
     let initalState = def & aBalance .~ amount
 
     distribution <- AVL.fromList $ zip ents (repeat initalState)
-    return $ empty & accounts .~ distribution
+    return $ emptyWorld & accounts .~ distribution
 
 -- instance Default DiffSets where
 --    def = DiffSets def def def def def
@@ -230,11 +236,11 @@ publicationsChanged    :: Set Hash -> DiffSets
 specializationsChanged :: Set Hash -> DiffSets
 storagesChanged        :: Set Hash -> DiffSets
 codesChanged           :: Set Hash -> DiffSets
-accountsChanged        set = def & accountRevSet       .~ set
-publicationsChanged    set = def & publicationRevSet   .~ set
-specializationsChanged set = def & specalizationRevSet .~ set
-storagesChanged        set = def & storageRevSet       .~ set
-codesChanged           set = def & codeRevSet          .~ set
+accountsChanged        set' = def & accountRevSet       .~ set'
+publicationsChanged    set' = def & publicationRevSet   .~ set'
+specializationsChanged set' = def & specalizationRevSet .~ set'
+storagesChanged        set' = def & storageRevSet       .~ set'
+codesChanged           set' = def & codeRevSet          .~ set'
 
 -- | Enrich an action with a proof.
 withProof :: AVL.KVStoreMonad Hash m => WorldT Server m a -> WorldT Server m (WithProof a)
@@ -343,13 +349,13 @@ assertAbsence entity = do
 
 -- | Create a new 'Account' with specified 'Code' to control it.
 createAccount :: AVL.KVStoreMonad Hash m => Entity -> Code -> WorldT Server m ()
-createAccount whom code = do
+createAccount whom code' = do
     assertAbsence (Sided whom Receiver)
 
     let
       account = def
         & aBalance .~ 0
-        & aCode    .~ code
+        & aCode    .~ code'
 
     trails <- zoom (sWorld.accounts) $ do
         accs            <- get
@@ -423,7 +429,7 @@ impersonate whom action =
     local (eAuthor .~ whom) $ do
         action
 
--- | Peroform the transaction, glue a proof to it.
+-- | Perform the transaction, glue a proof to it.
 connectTransaction :: AVL.KVStoreMonad Hash m => Transaction -> WorldT Server m (WithProof Transaction)
 connectTransaction transaction = do
     withProof $ do
@@ -432,6 +438,9 @@ connectTransaction transaction = do
             account <- getAuthorAccount
 
             when (account^.aNonce /= transaction^.tNonce) $ do
+                liftIO $ print account
+                liftIO $ print transaction
+                liftIO $ print ("----" :: String)
                 throwM $ NoncesMismatch author
                     (account^.aNonce)
                     (transaction^.tNonce)
@@ -440,14 +449,9 @@ connectTransaction transaction = do
 
             for_ (transaction^.tChanges) $ \change ->
                 case change of
-                  TransferTokens to amount -> do
-                    transferTokens to amount
-
-                  Publicate publication -> do
-                    publicate publication
-
-                  CreateAccount newEntity code -> do
-                    createAccount newEntity code
+                  TransferTokens to' amount      -> transferTokens to' amount
+                  Publicate      publication     -> publicate publication
+                  CreateAccount  newEntity code' -> createAccount newEntity code'
 
             return transaction
 
@@ -461,15 +465,46 @@ connectBlock transactions =
 
 -- | Using proof, replay some actions as if you're the server node.
 --   Does not generate proof for the actions replayed.
-usingProof :: AVL.KVStoreMonad Hash m => WorldStateProof -> WorldT Server m a -> WorldT Client m a
-usingProof proof action = do
-    env <- ask
-    let state = parsePartialWorldState proof
-    (res, Server s, w) <- lift $ runRWST action env (Server state)
-    -- tell w
-    diff <- diffWorldState def s
-    put $ Client diff
-    return res
+class CanUseProof side where
+    usingProof :: AVL.KVStoreMonad Hash m => WorldStateProof -> WorldT Server m a -> WorldT side m a
+
+instance CanUseProof Client where
+    usingProof proof action = do
+        env <- ask
+        let partialWorld = parsePartialWorldState proof
+        (res, Server s, _w) <- lift $ runRWST action env (Server partialWorld)
+        -- tell w
+        diff <- diffWorldState def s
+        put $ Client diff
+        return res
+
+instance CanUseProof Server where
+    usingProof _ action = action
+
+proving :: AVL.KVStoreMonad Hash m => CanUseProof side => WithProof a -> (a -> WorldT Server m b) -> WorldT side m b
+proving (WithProof body proof idealEndHash) action = do
+    usingProof proof $ do
+        res     <- action body
+        endHash <- getCurrentHash
+
+        when (endHash /= idealEndHash) $ do
+            throwM $ FinalHashesMismatch
+
+        return res
+
+class CanGetHash side where
+    getCurrentHash :: AVL.KVStoreMonad Hash m => WorldT side m Hash
+
+instance CanGetHash Server where
+    getCurrentHash = do
+        Server st <- get
+        proof <- diffWorldState def st
+        return (hash proof)
+
+instance CanGetHash Client where
+    getCurrentHash = do
+        Client proof <- get
+        return (hash proof)
 
 -- | Using proof, replay some actions as if you're the server node.
 --   Does not generate proof for the actions replayed.
@@ -496,7 +531,6 @@ instance CanAssumeTransaction Client where
 
 instance CanAssumeTransaction Server where
     assumeTransaction transaction = do
-        liftIO $ print ("hello, server")
         here <- getProof
 
         let proof = parsePartialWorldState (transaction^.wpProof)
@@ -521,6 +555,22 @@ plan changes = do
     let nonce = authorAcc^.aNonce
     author <- view eAuthor
     return $ Transaction author changes nonce
+
+generateBlock :: AVL.KVStoreMonad Hash m => [Transaction] -> WorldT Server m (WithProof (Block Transaction))
+generateBlock transactions = do
+    withProof $ do
+        _ <- connectBlock transactions
+        return (Block transactions)
+
+assumeBlock
+    :: CanUseProof side
+    => CanAssumeTransaction side
+    => AVL.KVStoreMonad Hash m
+    => WithProof (Block Transaction)
+    -> WorldT side m ()
+assumeBlock blockWithProof = do
+    proving blockWithProof $ \(Block transactions) -> do
+        for_ transactions connectTransaction
 
 trace :: AVL.KVStoreMonad Hash m => Show a => a -> WorldT side m ()
 trace a = do
