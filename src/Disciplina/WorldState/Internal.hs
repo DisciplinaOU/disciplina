@@ -250,16 +250,16 @@ codesChanged           set' = def & codeRevSet          .~ set'
 withProof :: CanStore m => WorldT Server m a -> WorldT Server m (WithProof a)
 withProof action = do
     was            <- use sWorld
-    beginProof     <- use _Server >>= diffWorldState def
+    beginHash      <- getCurrentHash
     (res, revSets) <- listen action
 
     -- | TODO(kirill.andreev): check if 'listen' actually hides messages
     tell revSets
 
-    diff     <- diffWorldState revSets was
-    endProof <- use _Server >>= diffWorldState def
+    diff    <- diffWorldState revSets was
+    endHash <- getCurrentHash
 
-    return (WithProof res diff (hash endProof) (hash beginProof))
+    return (WithProof res diff endHash beginHash)
 
 -- | Retrive a shard of world state from proof to perform operations on.
 parsePartialWorldState :: WorldStateProof -> WorldState
