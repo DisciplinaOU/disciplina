@@ -105,7 +105,7 @@ instance Arbitrary Sandbox where
             return $ unsafePerformPureWorldT actor server $ do
                 for pairs $ \changes -> do
                     transaction <- World.plan changes
-                    World.connectTransaction transaction
+                    World.playTransaction transaction
 
         --accountCreation :: Integer -> [World.Entity] -> Gen [World.Change]
         --accountCreation 0     _           = return []

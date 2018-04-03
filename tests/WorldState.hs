@@ -12,7 +12,7 @@ tests =
         [ testProperty "another server node can apply transactions" $
             \(Sandbox world (transaction : _) _ _ _ _) ->
                 World.Server world `worldTProperty` do
-                    World.assumeTransaction transaction
+                    World.replayTransaction transaction
                     return True
 
         , testProperty "another client node can apply transactions" $
@@ -20,7 +20,7 @@ tests =
                 World.Server world `worldTProperty` do
                     worldProof <- World.diffWorldState def world
                     World.Client worldProof `World.isolate` do
-                        for_ transactions World.assumeTransaction
+                        for_ transactions World.replayTransaction
                         return True
 
         , testProperty "impossible to send more than you have" $
@@ -29,7 +29,7 @@ tests =
                     World.Server world `worldTProperty` do
                         World.impersonate a $ do
                             transaction <- World.plan [World.TransferTokens b (limit + 1)]
-                            _ <- World.connectTransaction transaction
+                            _ <- World.playTransaction transaction
                             return False
 
         , testProperty "impossible to do things being an absent entity" $
@@ -38,7 +38,7 @@ tests =
                     World.Server world `worldTProperty` do
                         World.impersonate def $ do
                             transaction <- World.plan [World.TransferTokens b (limit - 1)]
-                            _ <- World.connectTransaction transaction
+                            _ <- World.playTransaction transaction
                             return False
         ]
     , testGroup "World/Blocks"
@@ -49,7 +49,7 @@ tests =
                     block      <- World.generateBlock ((^.World.wpBody) <$> transactions)
 
                     World.Client worldProof `World.isolate` do
-                        World.assumeBlock block
+                        World.replayBlock block
 
                     return True
 
@@ -58,7 +58,7 @@ tests =
                 World.Server world `worldTProperty` do
                     block <- World.dryRun $ World.generateBlock ((^.World.wpBody) <$> transactions)
 
-                    World.assumeBlock block
+                    World.replayBlock block
 
                     return True
 
