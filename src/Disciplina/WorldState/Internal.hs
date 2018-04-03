@@ -92,9 +92,10 @@ instance Show Transaction where
 
 -- | Wrapper that adds proof to either block or transaction.
 data WithProof a = WithProof
-    { _wpBody    :: a
-    , _wpProof   :: WorldStateProof
-    , _wpEndHash :: Hash
+    { _wpBody      :: a
+    , _wpProof     :: WorldStateProof
+    , _wpEndHash   :: Hash
+    , _wpBeginHash :: Hash
     }
     deriving (Show)
 
@@ -248,6 +249,7 @@ codesChanged           set' = def & codeRevSet          .~ set'
 withProof :: CanStore m => WorldT Server m a -> WorldT Server m (WithProof a)
 withProof action = do
     was            <- use sWorld
+    beginProof     <- use _Server >>= diffWorldState def
     (res, revSets) <- listen action
 
     -- | TODO(kirill.andreev): check if 'listen' actually hides messages
@@ -256,7 +258,7 @@ withProof action = do
     diff     <- diffWorldState revSets was
     endProof <- use _Server >>= diffWorldState def
 
-    return (WithProof res diff (hash endProof))
+    return (WithProof res diff (hash endProof) (hash beginProof))
 
 -- | Retrive a shard of world state from proof to perform operations on.
 parsePartialWorldState :: WorldStateProof -> WorldState
@@ -476,13 +478,18 @@ instance CanUseProof Server where
     usingProof _ action = action
 
 proving :: CanStore m => CanUseProof side => WithProof a -> (a -> WorldT Server m b) -> WorldT side m b
-proving (WithProof body proof idealEndHash) action = do
+proving (WithProof body proof idealEndHash proposedBeginHash) action = do
     usingProof proof $ do
+        beginHash <- getCurrentHash
+
+        when (beginHash /= proposedBeginHash) $ do
+            throwM InitialHashesMismatch
+
         res     <- action body
         endHash <- getCurrentHash
 
         when (endHash /= idealEndHash) $ do
-            throwM $ FinalHashesMismatch
+            throwM FinalHashesMismatch
 
         return res
 
@@ -524,23 +531,9 @@ instance CanReplayTransaction Client where
 
 
 instance CanReplayTransaction Server where
-    replayTransaction transaction = do
-        here <- getProof
-
-        let proof = parsePartialWorldState (transaction^.wpProof)
-
-        there <- diffWorldState def proof
-
-        when (hash here /= hash there) $ do
-            throwM InitialHashesMismatch
-
-        _        <- playTransaction (transaction^.wpBody)
-        endProof <- use _Server >>= diffWorldState def
-
-        let endHash = hash endProof
-
-        when (endHash /= transaction^.wpEndHash) $ do
-            throwM FinalHashesMismatch
+    replayTransaction transactionWithProof = do
+        _ <- proving transactionWithProof playTransaction
+        return ()
 
 -- | Freeze a bunch of changes in a transaction.
 plan :: CanStore m => [Change] -> WorldT Server m Transaction
