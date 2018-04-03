@@ -19,6 +19,7 @@ tests =
             \(Sandbox world transactions _ _ _ _) -> do
                 World.Server world `worldTProperty` do
                     worldProof <- World.diffWorldState def world
+
                     World.Client worldProof `World.isolate` do
                         for_ transactions World.replayTransaction
                         return True
@@ -46,7 +47,7 @@ tests =
             \(Sandbox world transactions _ _ _ _) -> do
                 World.Server world `worldTProperty` do
                     worldProof <- World.diffWorldState def world
-                    block      <- World.generateBlock ((^.World.wpBody) <$> transactions)
+                    block      <- World.generateBlock $ (^.World.wpBody) <$> transactions
 
                     World.Client worldProof `World.isolate` do
                         World.replayBlock block
@@ -56,7 +57,8 @@ tests =
         , testProperty "Client can add block to the blockchain" $
             \(Sandbox world transactions _ _ _ _) -> do
                 World.Server world `worldTProperty` do
-                    block <- World.dryRun $ World.generateBlock ((^.World.wpBody) <$> transactions)
+                    block <- World.dryRun $ do
+                        World.generateBlock $ (^.World.wpBody) <$> transactions
 
                     World.replayBlock block
 
