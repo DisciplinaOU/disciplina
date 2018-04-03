@@ -119,6 +119,7 @@ data DiffSets = DiffSets
     }
     deriving (Default, Generic)
 
+-- | Environment locat to transactions
 data Environment = Environment
     { _eAuthor :: Entity
     }
@@ -477,6 +478,7 @@ instance CanUseProof Client where
 instance CanUseProof Server where
     usingProof _ action = action
 
+-- | Unpack 'a' from proof, check that hashes before and after action match.
 proving :: CanStore m => CanUseProof side => WithProof a -> (a -> WorldT Server m b) -> WorldT side m b
 proving (WithProof body proof idealEndHash proposedBeginHash) action = do
     usingProof proof $ do
@@ -493,6 +495,7 @@ proving (WithProof body proof idealEndHash proposedBeginHash) action = do
 
         return res
 
+-- | Ability to retrieve hash of current state.
 class CanGetHash side where
     getCurrentHash :: CanStore m => WorldT side m Hash
 
@@ -551,12 +554,17 @@ playBlock transactions =
             proven <- playTransaction transaction
             return (proven^.wpBody)
 
+-- | Pack a bunch of transactions into a block.
 generateBlock :: CanStore m => [Transaction] -> WorldT Server m (WithProof (Block Transaction))
 generateBlock transactions = do
     withProof $ do
+        -- TODO(kir): Generation of proof is a monadic actions now, so
+        --            it is done and discarded. Make sure that we don't
+        --            generate proof for each and every transaction here.
         _ <- playBlock transactions
         return (Block transactions)
 
+-- | Take a block with proofs and apply it to current state.
 replayBlock
     :: CanUseProof side
     => CanReplayTransaction side
