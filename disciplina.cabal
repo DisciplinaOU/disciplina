@@ -20,7 +20,6 @@ library
   other-modules:
                        Disciplina.Accounts
                      , Disciplina.Accounts.Account
-                     , Disciplina.Utils.Plug
                      , Disciplina.WorldState.BlakeHash
                      , Disciplina.WorldState.Internal
                      , Disciplina.Launcher.Mode
