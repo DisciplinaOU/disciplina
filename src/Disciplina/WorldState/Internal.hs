@@ -7,14 +7,14 @@ import qualified Prelude (show)
 
 import Universum hiding (Hashable, trace, use, get)
 
-import Control.Lens (makeLenses, makePrisms, use, to, zoom, (-~), (+~))
+import Control.Lens (makeLenses, makePrisms, use, to, zoom, (-~), (+~), (.=))
 import Control.Monad.RWS (RWST(..), tell, listen, get)
 
 import Data.Binary (Binary)
 import Data.Default (Default, def)
 
 import Disciplina.Accounts
-import Disciplina.WorldState.BlakeHash (Hash, hash)
+import Disciplina.WorldState.BlakeHash (Hash, hash, HasHash(..))
 
 import qualified Data.Tree.AVL as AVL
 import qualified Debug.Trace   as Debug
@@ -31,6 +31,7 @@ data WorldState
     , _specalizations :: AVLMap DAG
     , _storage        :: AVLMap Storage
     , _code           :: AVLMap Code
+    , _prevBlockHash  :: Hash
     }
 
 type AVLMap v = AVL.Map Hash Entity v
@@ -43,12 +44,13 @@ data WorldStateProof
         , _specalizatiosProof :: Proof DAG
         , _storageProof       :: Proof Storage
         , _codeProof          :: Proof Code
+        , _prevBlockHashProof :: Hash
         }
     deriving (Show, Generic, Binary)
 
 instance Eq WorldStateProof where
-    WorldStateProof a b c d e == WorldStateProof f g h i k =
-        and [a ==? f, b ==? g, c ==? h, d ==? i, e ==? k]
+    WorldStateProof a b c d e x == WorldStateProof f g h i k y =
+        and [a ==? f, b ==? g, c ==? h, d ==? i, e ==? k, x == y]
       where
         (==?) :: (Show s, Eq s, Binary s) => Proof s -> Proof s -> Bool
         (==?) = (==) `on` getHash
@@ -70,7 +72,7 @@ data Change
     = TransferTokens Entity      Amount
     | Publicate      Publication
     | CreateAccount  Entity      Code
-    deriving (Show)
+    deriving (Show, Generic, Binary)
 
 -- TODO: implement signing (and make 'Entity' to be actual public key).
 data Transaction = Transaction
@@ -78,6 +80,7 @@ data Transaction = Transaction
     , _tChanges    :: [Change]
     , _tNonce      :: Int
     }
+    deriving (Generic, Binary)
 
 instance Show Transaction where
     show (Transaction who what nonce) =
@@ -139,6 +142,7 @@ data TransactionError
                                 }
     | InitialHashesMismatch
     | FinalHashesMismatch
+    | PreviousBlockHashMismatch
     deriving (Show, Typeable)
 
 deriving instance Exception TransactionError
@@ -155,8 +159,9 @@ data Side = Sender | Receiver
 
 data Block trans = Block
     { _bTransactions :: [trans]
+    , _bPrevBlockHash :: Hash
     }
-    deriving (Show)
+    deriving (Show, Generic, Binary)
 
 type CanStore = AVL.KVStoreMonad Hash
 
@@ -170,9 +175,13 @@ makeLenses ''DiffSets
 makeLenses ''Transaction
 makeLenses ''WithProof
 makeLenses ''WorldState
+makeLenses ''WorldStateProof
 
 makePrisms ''Server
 makePrisms ''Client
+
+--instance HasHash a => HasHash (Block a) where
+--    hash (Block list prev) = combineAll (prev : map hash list)
 
 instance (AVL.KVStoreMonad h m, Monoid b) => AVL.KVStoreMonad h (RWST a b c m) where
     retrieve = lift . AVL.retrieve
@@ -212,7 +221,7 @@ execWorldT ent serverState action = do
     return side
 
 emptyWorldState :: WorldState
-emptyWorldState = WorldState AVL.empty AVL.empty AVL.empty AVL.empty AVL.empty
+emptyWorldState = WorldState AVL.empty AVL.empty AVL.empty AVL.empty AVL.empty def
 
 -- | Generate a 'WorldState' for testing where given entites each have
 --   the same amount of tokens.
@@ -263,13 +272,14 @@ withProof action = do
 
 -- | Retrive a shard of world state from proof to perform operations on.
 parsePartialWorldState :: WorldStateProof -> WorldState
-parsePartialWorldState (WorldStateProof a b c d e) =
+parsePartialWorldState (WorldStateProof a b c d e h) =
     WorldState
         (a^.AVL._Proof)
         (b^.AVL._Proof)
         (c^.AVL._Proof)
         (d^.AVL._Proof)
         (e^.AVL._Proof)
+        h
 
 -- | Generate a world proof from sets of nodes touched during an action.
 diffWorldState :: CanStore m => DiffSets -> WorldState -> WorldT side m WorldStateProof
@@ -281,7 +291,7 @@ diffWorldState changes world =
       dd = changes^.storageRevSet
       de = changes^.codeRevSet
 
-      WorldState a b c d e = world
+      WorldState a b c d e h = world
 
     in pure WorldStateProof
         <*> AVL.prune da a
@@ -289,6 +299,7 @@ diffWorldState changes world =
         <*> AVL.prune dc c
         <*> AVL.prune dd d
         <*> AVL.prune de e
+        <*> pure h
 
 -- | Check that entity signed as author exists
 assertAuthorExists :: CanStore m => WorldT Server m ()
@@ -540,6 +551,17 @@ instance CanReplayTransaction Server where
         _ <- proving transactionWithProof playTransaction
         return ()
 
+class CanSetPrevBlockHash side where
+    setPrevBlockHash :: CanStore m => Hash -> WorldT side m ()
+
+instance CanSetPrevBlockHash Client where
+    setPrevBlockHash hash' = do
+        _Client.prevBlockHashProof .= hash'
+
+instance CanSetPrevBlockHash Server where
+    setPrevBlockHash hash' = do
+        _Server.prevBlockHash .= hash'
+
 -- | Freeze a bunch of changes in a transaction.
 plan :: CanStore m => [Change] -> WorldT Server m Transaction
 plan changes = do
@@ -560,11 +582,17 @@ playBlock transactions =
 generateBlock :: CanStore m => [Transaction] -> WorldT Server m (WithProof (Block Transaction))
 generateBlock transactions = do
     withProof $ do
+        prev <- use (_Server.prevBlockHash)
         -- TODO(kir): Generation of proof is a monadic actions now, so
         --            it is done and discarded. Make sure that we don't
         --            generate proof for each and every transaction here.
         _ <- playBlock transactions
-        return (Block transactions)
+
+        let block = Block transactions prev
+
+        _Server.prevBlockHash .= hash block
+
+        return block
 
 -- | Take a block with proofs and apply it to current state.
 replayBlock
@@ -574,8 +602,14 @@ replayBlock
     => WithProof (Block Transaction)
     -> WorldT side m ()
 replayBlock blockWithProof = do
-    proving blockWithProof $ \(Block transactions) -> do
+    proving blockWithProof $ \block @ (Block transactions prev) -> do
+        truePrev <- use (_Server.prevBlockHash)
+
+        when (prev /= truePrev) $ do
+            throwM PreviousBlockHashMismatch
+
         for_ transactions playTransaction
+        setPrevBlockHash $ hash block
 
 trace :: CanStore m => Show a => a -> WorldT side m ()
 trace a = do
