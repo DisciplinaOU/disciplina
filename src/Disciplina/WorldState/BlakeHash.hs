@@ -11,27 +11,39 @@ import Crypto.Hash (Digest, digestFromByteString, Blake2sp_256)
 
 import Data.Binary
 import Data.ByteArray       as  BA
-import Data.ByteString      as  BS
 import Data.ByteString.Lazy as LBS (toStrict)
 import Data.Default
 
+import qualified Data.Hashable as StdHash (Hashable(hash, hashWithSalt))
+
 import qualified Data.Tree.AVL as AVL
 
-class Hashable a where
+class HasHash a where
     hash :: a -> Hash
 
 newtype Hash = Hash { getHash :: Digest Blake2sp_256 }
     deriving (Eq, Ord, ByteArrayAccess)
 
+instance Binary Hash where
+    get = do
+      bs <- get
+      maybe (fail "get @(Hash): not a Blake2sp_256") (return . Hash) $
+        digestFromByteString (bs :: ByteString)
+
+    put = put . (convert :: Digest Blake2sp_256 -> ByteString) . getHash
+
+instance HasHash Hash where
+    hash = identity
+
 instance Show Hash where
     show (Hash raw) = "#" <> Universum.take 8 (show raw)
 
-instance Binary Hash where
-    put (Hash blake) = put (BA.concat [blake] :: BS.ByteString)
-    get = maybe def Hash . digestFromByteString <$> (get :: Get BS.ByteString)
-
 instance Default Hash where
     def = hash ()
+
+instance StdHash.Hashable Hash where
+    hash              = StdHash.hash              . (convert :: Hash -> ByteString)
+    hashWithSalt salt = StdHash.hashWithSalt salt . (convert :: Hash -> ByteString)
 
 instance
   ( Show k
@@ -42,34 +54,30 @@ instance
   , Bounded k
   , Binary k
   , Binary v
+  , StdHash.Hashable Hash
   )
   => AVL.Hash Hash k v
   where
     hashOf = \case
-      AVL.MLBranch re _ mk ck t l r -> combineAll
-        [ hash re
-        , hash mk
+      AVL.MLBranch _ mk ck t l r -> combineAll
+        [ hash mk
         , hash ck
         , hash (fromEnum t)
         , l
         , r
         ]
 
-      AVL.MLLeaf re _ k v n p -> combineAll
-        [ hash re
-        , hash k
+      AVL.MLLeaf _ k v n p -> combineAll
+        [ hash k
         , hash v
         , hash n
         , hash p
         ]
 
-      AVL.MLEmpty re _ ->
-        hash re
+      AVL.MLEmpty _ ->
+        def
 
-      AVL.MLPruned _ h _ _ _ ->
-        h
-
-instance Binary b => Hashable b where
+instance Binary b => HasHash b where
     hash = Hash . Base.hash . LBS.toStrict . encode
 
 hashBA :: ByteString -> Hash

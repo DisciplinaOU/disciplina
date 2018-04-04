@@ -16,15 +16,12 @@ cabal-version:       >=1.10
 library
   exposed-modules:
                        Disciplina.WorldState
-                     , Disciplina.Transaction
                      , Disciplina.Launcher
                      , Disciplina.Listeners
                      , Disciplina.Workers
   other-modules:
                        Disciplina.Accounts
                      , Disciplina.Accounts.Account
-                     , Disciplina.Transaction.Class
-                     , Disciplina.Transaction.Internal
                      , Disciplina.WorldState.BlakeHash
                      , Disciplina.WorldState.Internal
                      , Disciplina.Launcher.Mode
@@ -39,15 +36,18 @@ library
                      , binary
                      , bytestring
                      , cardano-sl-networking
+                     , containers
                      , cryptonite
                      , data-default
                      , exceptions
+                     , hashable
                      , lens
                      , log-warper
                      , memory
                      , mtl
                      , network-transport
                      , random
+                     , stm
                      , time-units
                      , universum
   hs-source-dirs:      src
@@ -66,6 +66,7 @@ library
                        MonadFailDesugaring
                        MultiParamTypeClasses
                        MultiWayIf
+                       NamedFieldPuns
                        NoImplicitPrelude
                        OverloadedStrings
                        RankNTypes
@@ -74,14 +75,13 @@ library
                        StandaloneDeriving
                        TemplateHaskell
                        TupleSections
-                       TypeApplications
                        TypeFamilies
                        UndecidableInstances
                        ViewPatterns
 
   ghc-options:         -Wall
+                       -Werror
                        -fno-warn-orphans
-                       -O2
 
 executable disciplina-witness
   hs-source-dirs:      src/witness
@@ -137,6 +137,9 @@ test-suite disciplina-test
   type:                     exitcode-stdio-1.0
   hs-source-dirs:           tests
   main-is:                  Main.hs
+  other-modules:
+                            Common
+                            WorldState
   build-depends:             base >= 0.4 && < 5
                            , AVL
                            , disciplina
@@ -147,4 +150,30 @@ test-suite disciplina-test
                            , universum
                            , QuickCheck
                            , quickcheck-instances
-  ghc-options:         -threaded -rtsopts -with-rtsopts=-N
+  default-extensions:
+                       BangPatterns
+                       ConstraintKinds
+                       DefaultSignatures
+                       DeriveDataTypeable
+                       DeriveGeneric
+                       FlexibleContexts
+                       FlexibleInstances
+                       FunctionalDependencies
+                       GeneralizedNewtypeDeriving
+                       LambdaCase
+                       MonadFailDesugaring
+                       MultiParamTypeClasses
+                       MultiWayIf
+                       NamedFieldPuns
+                       NoImplicitPrelude
+                       OverloadedStrings
+                       RankNTypes
+                       RecordWildCards
+                       ScopedTypeVariables
+                       StandaloneDeriving
+                       TemplateHaskell
+                       TupleSections
+                       TypeFamilies
+                       UndecidableInstances
+                       ViewPatterns
+  ghc-options:         -threaded -rtsopts -with-rtsopts=-N -Wall -Werror

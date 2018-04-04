@@ -9,7 +9,7 @@ module Disciplina.Launcher.Resource
 import Universum
 
 import Mockable (Production)
-import System.Wlog (LoggerConfig (..), LoggerName, WithLogger, maybeLogsDirB, parseLoggerConfig,
+import System.Wlog (LoggerConfig (..), LoggerName, {-WithLogger,-} maybeLogsDirB, parseLoggerConfig,
                     productionB, removeAllHandlers, setupLogging, showTidB)
 
 import Disciplina.Launcher.Params (BasicNodeParams (..), LoggingParams (..))
