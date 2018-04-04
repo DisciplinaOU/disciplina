@@ -18,6 +18,8 @@ import Control.Lens (makeLenses)
 import Mockable (MonadMockable, Production (..))
 import System.Wlog (HasLoggerName (..), LoggerName, WithLogger)
 
+import Disciplina.DB.Class (MonadDB)
+
 ---------------------------------------------------------------------
 -- WorkMode classes
 ---------------------------------------------------------------------
@@ -27,6 +29,7 @@ type BasicWorkMode m =
     ( WithLogger m
     , MonadMockable m
     , MonadIO m
+    , MonadDB m
     )
 
 ---------------------------------------------------------------------
