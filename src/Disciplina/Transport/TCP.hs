@@ -5,16 +5,16 @@ module Disciplina.Transport.TCP
     ( bracketTransportTCP
     ) where
 
-import           Universum
+import Universum
 
-import           Data.Time.Units (Microsecond)
-import           Formatting (sformat, shown, (%))
-import           System.Wlog (WithLogger, logError, usingLoggerName, askLoggerName)
+import Data.Time.Units (Microsecond)
+import Formatting (sformat, shown, (%))
+import System.Wlog (WithLogger, askLoggerName, logError, usingLoggerName)
 
-import           Network.QDisc.Fair (fairQDisc)
+import Network.QDisc.Fair (fairQDisc)
 import qualified Network.Transport as NT (closeTransport)
-import           Network.Transport.Abstract (Transport)
-import           Network.Transport.Concrete (concrete)
+import Network.Transport.Abstract (Transport)
+import Network.Transport.Concrete (concrete)
 import qualified Network.Transport.TCP as TCP
 
 bracketTransportTCP

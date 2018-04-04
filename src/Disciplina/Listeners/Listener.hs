@@ -3,16 +3,16 @@
 
 module Disciplina.Listeners.Listener where
 
-import           Universum
+import Universum
 
-import           Mockable (Production (..))
-import           System.Wlog (logInfo, logWarning)
+import Mockable (Production (..))
+import System.Wlog (logInfo, logWarning)
 
-import           Node
 import qualified Data.ByteString as BS
+import Node (Listener (..), ConversationActions, NodeId, send)
 
-import           Disciplina.Messages
-import           Disciplina.Launcher.Mode (BasicRealMode)
+import Disciplina.Launcher.Mode (BasicRealMode)
+import Disciplina.Messages (PongTx (..), PongBlk (..), PingTx, PingBlk, Packing)
 
 
 

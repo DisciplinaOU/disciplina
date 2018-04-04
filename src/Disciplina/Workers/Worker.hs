@@ -5,16 +5,16 @@ module Disciplina.Workers.Worker where
 
 import Universum
 
-import           Mockable (Production (..))
-import           System.Wlog (logInfo, logWarning)
-import           Node
 import qualified Data.ByteString as BS
-import           System.Random
-import           Mockable.Concurrent (delay, forConcurrently)
-import           Data.Time.Units (Microsecond, fromMicroseconds)
+import Data.Time.Units (Microsecond, fromMicroseconds)
+import Mockable (Production (..))
+import Mockable.Concurrent (delay, forConcurrently)
+import Node (NodeId, ConversationActions, Converse, recv)
+import System.Wlog (logInfo, logWarning)
 
-import           Disciplina.Messages
-import           Disciplina.Launcher.Mode (BasicRealMode)
+import Disciplina.Launcher.Mode (BasicRealMode)
+import Disciplina.Messages (PongTx (..), PongBlk (..), PingTx (..), PingBlk (..),
+                           Packing)
 
 
 
@@ -26,7 +26,7 @@ witnessTxWorker
     -> [NodeId]
     -> Converse Packing BS.ByteString BasicRealMode
     -> BasicRealMode ()
-witnessTxWorker anId peerIds conv = logInfo "worker initialized" >> worker conv
+witnessTxWorker anId peerIds conv = logInfo "tx worker initialized" >> worker conv
     where
     worker
         :: Converse Packing BS.ByteString BasicRealMode
@@ -40,7 +40,7 @@ witnessTxWorker anId peerIds conv = logInfo "worker initialized" >> worker conv
                     received <- recv cactions maxBound
                     case received of
                         Just (PongTx _) -> logInfo "heard Tx"
-                        Nothing -> error "Unexpected end of input"
+                        Nothing         -> error "Unexpected end of input"
             -- _ <- forConcurrently peerIds $ \peerId ->
             --     converseWith converse peerId (\_ -> Conversation (pongTx peerId))
             loop
@@ -50,7 +50,7 @@ witnessBlkWorker
     -> [NodeId]
     -> Converse Packing BS.ByteString BasicRealMode
     -> BasicRealMode ()
-witnessBlkWorker anId peerIds conv = logInfo "worker initialized" >> worker conv
+witnessBlkWorker anId peerIds conv = logInfo "blk worker initialized" >> worker conv
     where
     worker
         :: Converse Packing BS.ByteString BasicRealMode
@@ -64,7 +64,7 @@ witnessBlkWorker anId peerIds conv = logInfo "worker initialized" >> worker conv
                     received <- recv cactions maxBound
                     case received of
                         Just (PongBlk _) -> logInfo "heard Blk"
-                        Nothing -> error "Unexpected end of input"
+                        Nothing          -> error "Unexpected end of input"
             -- _ <- forConcurrently peerIds $ \peerId ->
             --     converseWith converse peerId (\_ -> Conversation (pongBlk peerId))
             loop

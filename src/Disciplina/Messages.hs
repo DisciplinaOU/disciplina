@@ -1,21 +1,12 @@
-
--- | Starting point for running a Witness node
-
 module Disciplina.Messages where
 
 import Universum
 
-import           Data.Binary (Binary)
-import Mockable (runProduction, Production (..))
-import System.Wlog (logInfo, logWarning)
-
-import Disciplina.Launcher (BasicNodeParams (..), LoggingParams (..), bracketBasicNodeResources,
-                            runBasicRealMode)
-
-import           Node
-import           Data.Data (Data)
-import           Node.Message.Binary (BinaryP, binaryPacking)
+import Data.Binary (Binary)
 import qualified Data.ByteString as BS
+import Data.Data (Data)
+import Node (Message, messageCode, formatMessage)
+import Node.Message.Binary (BinaryP, binaryPacking)
 
 
 
