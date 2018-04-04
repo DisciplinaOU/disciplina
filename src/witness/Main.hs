@@ -5,12 +5,27 @@ module Main where
 
 import Universum
 
-import Mockable (runProduction)
+import Mockable (Production (..), runProduction)
 import System.Wlog (logInfo, logWarning)
 
 import Disciplina.Launcher (BasicNodeParams (..), LoggingParams (..), bracketBasicNodeResources,
                             runBasicRealMode)
+import Disciplina.Listeners (witnessListeners)
+import Disciplina.Workers (witnessWorkers)
+import Disciplina.Transport.TCP (bracketTransportTCP)
 import Params (WitnessParams (..), getWitnessParams)
+
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Char8 as B8
+import Mockable.Concurrent (fork)
+import qualified Network.Transport.TCP as TCP
+import Node (NodeAction(..), nodeId, noReceiveDelay, simpleNodeEndPoint,
+              node, defaultNodeEnvironment)
+import Node.Message.Binary (binaryPacking)
+import System.IO (getChar)
+import System.Random (mkStdGen)
+
+
 
 main :: IO ()
 main = do
@@ -22,6 +37,21 @@ main = do
             }
         basicParams = BasicNodeParams loggingParams
     runProduction . bracketBasicNodeResources basicParams $
-        \nr -> runBasicRealMode nr $ do
+        \nr -> runBasicRealMode nr $
+          bracketTransportTCP (15000 {-- connection timeout ms--})
+                              (TCP.defaultTCPAddr "127.0.0.1" "10128") $ \transport -> do
+
+            let prng1 = mkStdGen 0
+
+            logInfo "Starting node"
+            node (simpleNodeEndPoint transport) (const noReceiveDelay) (const noReceiveDelay)
+                 prng1 binaryPacking (B8.pack "I am node 1") defaultNodeEnvironment $ \node1 ->
+                        NodeAction (witnessListeners . nodeId $ node1) $ \converse -> do
+                            mapM_ (\w -> fork $ w (nodeId node1) [] converse) witnessWorkers
+                            logInfo "Hit return to stop"
+                            _ <- liftIO getChar
+                            logInfo "Stopping node"
+            logInfo "All done."
+
             logInfo "Hey, here log-warper works!"
             logWarning "Don't forget to implement everything else though!"
