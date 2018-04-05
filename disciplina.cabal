@@ -16,8 +16,10 @@ cabal-version:       >=1.10
 library
   exposed-modules:
                        Disciplina.WorldState
+                     , Disciplina.DB  
                      , Disciplina.Launcher
-                     , Disciplina.DB
+                     , Disciplina.Listeners
+                     , Disciplina.Workers
   other-modules:
                        Disciplina.Accounts
                      , Disciplina.Accounts.Account
@@ -31,6 +33,8 @@ library
                      , Disciplina.Launcher.Params
                      , Disciplina.Launcher.Resource
                      , Disciplina.Launcher.Runner
+                     , Disciplina.Listeners.Listener
+                     , Disciplina.Workers.Worker
   -- other-extensions:
   build-depends:       base >=4.9 && <4.10
                      , AVL
@@ -47,8 +51,11 @@ library
                      , log-warper
                      , memory
                      , mtl
+                     , network-transport
+                     , random
                      , rocksdb-haskell-ng
                      , stm
+                     , time-units
                      , universum
   hs-source-dirs:      src
   default-language:    Haskell2010
@@ -88,11 +95,17 @@ executable disciplina-witness
   main-is:             Main.hs
   other-modules:       Params
   build-depends:       base
+                     , bytestring
+                     , binary
+                     , disciplina
                      , cardano-sl-networking
                      , disciplina
                      , formatting
                      , log-warper
+                     , network-transport-tcp
+                     , time-units
                      , optparse-applicative
+                     , random
                      , universum >= 0.1.11
   default-language:    Haskell2010
   ghc-options:         -threaded -rtsopts
