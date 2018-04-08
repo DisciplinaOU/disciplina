@@ -104,4 +104,4 @@ ghc-options:
   cardano-sl-networking: -fno-warn-redundant-constraints
 
 nix:
-    packages: [rocksdb]
+    packages: [rocksdb, haskellPackages.cpphs]

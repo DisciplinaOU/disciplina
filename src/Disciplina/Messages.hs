@@ -5,7 +5,7 @@ import Universum
 import Data.Binary (Binary)
 import qualified Data.ByteString as BS
 import Data.Data (Data)
-import Node (Message, messageCode, formatMessage)
+import Node (Message, formatMessage, messageCode)
 import Node.Message.Binary (BinaryP, binaryPacking)
 
 

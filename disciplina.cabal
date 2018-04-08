@@ -19,6 +19,7 @@ library
                      , Disciplina.Launcher
                      , Disciplina.Listeners
                      , Disciplina.Workers
+                     , Disciplina.Transport
   other-modules:
                        Disciplina.Accounts
                      , Disciplina.Accounts.Account
@@ -30,6 +31,8 @@ library
                      , Disciplina.Launcher.Runner
                      , Disciplina.Listeners.Listener
                      , Disciplina.Workers.Worker
+                     , Disciplina.Transport.TCP
+                     , Disciplina.Messages
   -- other-extensions:
   build-depends:       base >=4.9 && <4.10
                      , AVL
@@ -40,12 +43,14 @@ library
                      , cryptonite
                      , data-default
                      , exceptions
+                     , formatting
                      , hashable
                      , lens
                      , log-warper
                      , memory
                      , mtl
                      , network-transport
+                     , network-transport-tcp
                      , random
                      , stm
                      , time-units
@@ -80,7 +85,6 @@ library
                        ViewPatterns
 
   ghc-options:         -Wall
-                       -Werror
                        -fno-warn-orphans
 
 executable disciplina-witness

@@ -11,16 +11,16 @@ import System.Wlog (logInfo, logWarning)
 import Disciplina.Launcher (BasicNodeParams (..), LoggingParams (..), bracketBasicNodeResources,
                             runBasicRealMode)
 import Disciplina.Listeners (witnessListeners)
+import Disciplina.Transport (bracketTransportTCP)
 import Disciplina.Workers (witnessWorkers)
-import Disciplina.Transport.TCP (bracketTransportTCP)
 import Params (WitnessParams (..), getWitnessParams)
 
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as B8
 import Mockable.Concurrent (fork)
 import qualified Network.Transport.TCP as TCP
-import Node (NodeAction(..), nodeId, noReceiveDelay, simpleNodeEndPoint,
-              node, defaultNodeEnvironment)
+import Node (NodeAction (..), defaultNodeEnvironment, noReceiveDelay, node, nodeId,
+             simpleNodeEndPoint)
 import Node.Message.Binary (binaryPacking)
 import System.IO (getChar)
 import System.Random (mkStdGen)
