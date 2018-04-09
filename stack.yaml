@@ -1,4 +1,4 @@
-resolver: lts-9.1
+resolver: lts-10.8
 
 packages:
 - '.'
@@ -62,12 +62,17 @@ packages:
 
 - location:
     git: git@github.com:serokell/auth-data-structures.git
-    commit: b07dec98435fec0cbdc05b8e51989f91713a612b
+    commit: 6f2074b97d68475a2b2f2cb2cd7109967dc32641
   extra-dep: true
 
 - location:
     git: git@github.com:Heimdell/rocksdb-haskell.git
     commit: 0c1f446799d3738598a5d51ebc031bbbfd2d78f8
+  extra-dep: true
+
+- location:
+    git: git@github.com:serokell/snowdrop.git
+    commit: 3c7f938aef06be21bad46165c5d6f32f5f41d91c
   extra-dep: true
 
 nix:

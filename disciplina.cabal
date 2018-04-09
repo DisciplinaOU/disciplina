@@ -34,7 +34,7 @@ library
                      , Disciplina.Transport.TCP
                      , Disciplina.Messages
   -- other-extensions:
-  build-depends:       base >=4.9 && <4.10
+  build-depends:       base >= 4.9 && < 5
                      , AVL
                      , binary
                      , bytestring
@@ -52,6 +52,7 @@ library
                      , network-transport
                      , network-transport-tcp
                      , random
+                     , snowdrop
                      , stm
                      , time-units
                      , universum
