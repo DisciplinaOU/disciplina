@@ -19,7 +19,8 @@ data WitnessParams = WitnessParams
     }
 
 witnessParamsParser :: Parser WitnessParams
-witnessParamsParser = WitnessParams <$> dbPathParser <*> logParamsParser "witness"
+witnessParamsParser =
+    WitnessParams <$> dbPathParser <*> logParamsParser "witness"
 
 getWitnessParams :: IO WitnessParams
 getWitnessParams =
