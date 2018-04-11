@@ -66,7 +66,7 @@ packages:
   extra-dep: true
 
 - location:
-    git: git@github.com:Heimdell/rocksdb-haskell.git
+    git: https://github.com/Heimdell/rocksdb-haskell.git
     commit: 0c1f446799d3738598a5d51ebc031bbbfd2d78f8
   extra-dep: true
 
