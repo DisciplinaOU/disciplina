@@ -1,7 +1,10 @@
 
 -- | Command-line options and flags for Educator node
 
-module Params where
+module Params
+       ( educatorParamsParser
+       , getEducatorParams
+       ) where
 
 import Universum
 
