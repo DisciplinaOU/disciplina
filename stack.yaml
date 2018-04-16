@@ -76,13 +76,7 @@ packages:
   extra-dep: true
 
 nix:
-    packages:
-    - openssl
-    - zlib
-    - binutils
-    - git
-    - haskell.packages.ghc802.cpphs
-    - haskell.packages.ghc802.happy
+  shell-file: shell.nix
 
 extra-deps:
 - base58-bytestring-0.1.0
@@ -106,6 +100,3 @@ apply-ghc-options: everything
 ghc-options:
   # Needed to buid
   cardano-sl-networking: -fno-warn-redundant-constraints
-
-nix:
-    packages: [rocksdb, haskellPackages.cpphs, zlib]
