@@ -4,9 +4,10 @@
 module Disciplina.Educator.Txs
        ( PrivateTx (..)
        , PrivateTxPayload (..)
-       , PrivateTxWitness (..)
        , StudentTxMsg (..)
        , EducatorTxMsg (..)
+       , PrivateTxWitness (..)
+       , PrivateTxAux (..)
        ) where
 
 import Universum
@@ -31,15 +32,6 @@ data PrivateTx = PrivateTx
 data PrivateTxPayload
     = StudentTx  { _ptxStudentMsg  :: !StudentTxMsg }
     | EducatorTx { _ptxEducatorMsg :: !EducatorTxMsg }
-
--- Signature data
-type TxSigData = Hash PrivateTx
-type TxSig = Signature TxSigData
-
-data PrivateTxWitness = PkWitness
-    { ptwKey :: !PublicKey
-    , ptwSig :: !TxSig
-    }
 
 -- | Stub type for submissions. Submission transaction
 -- doesn't contain actual submission contents - only hash of them.
@@ -71,3 +63,19 @@ data EducatorTxMsg
     | GradeCourse
       { _etmGrade :: !Grade
       }
+
+-- Signature data
+type TxSigData = Hash PrivateTx
+type TxSig = Signature TxSigData
+
+-- | Witness contains data required to verify transaction.
+data PrivateTxWitness = PkWitness
+    { _ptwKey :: !PublicKey
+    , _ptwSig :: !TxSig
+    }
+
+-- | Datatype for verifiable transaction (transaction with a witness)
+data PrivateTxAux = PrivateTxAux
+    { _ptaTx      :: !PrivateTx
+    , _ptaWitness :: !PrivateTxWitness
+    }
