@@ -21,6 +21,8 @@ newtype AbstractPK ss = AbstractPK (PK ss)
 deriving instance Eq (PK ss) => Eq (AbstractPK ss)
 deriving instance Ord (PK ss) => Ord (AbstractPK ss)
 deriving instance Show (PK ss) => Show (AbstractPK ss)
+deriving instance ByteArrayAccess (PK ss) =>
+    ByteArrayAccess (AbstractPK ss)
 
 -- | Wrapper for a secret key. 'Eq', 'Ord' and 'Show' instances
 -- are not derived for security reasons.
@@ -33,6 +35,8 @@ newtype AbstractSig ss a = AbstractSig (Sig ss)
 deriving instance Eq (Sig ss) => Eq (AbstractSig ss a)
 deriving instance Ord (Sig ss) => Ord (AbstractSig ss a)
 deriving instance Show (Sig ss) => Show (AbstractSig ss a)
+deriving instance ByteArrayAccess (Sig ss) =>
+    ByteArrayAccess (AbstractSig ss a)
 
 -- | Simple signature scheme class.
 class SignatureScheme ss where

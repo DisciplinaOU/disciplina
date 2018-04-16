@@ -21,6 +21,7 @@ library
                      , Disciplina.Workers
                      , Disciplina.Transport
                      , Disciplina.Educator
+                     , Disciplina.Core
                      , Disciplina.Crypto
                      , Disciplina.CLI
   other-modules:
@@ -37,22 +38,27 @@ library
                      , Disciplina.Transport.TCP
                      , Disciplina.Messages
 
+                     -- Core datatypes and functions
+                     , Disciplina.Core.Types
+
                      -- Witness node model
                      , Disciplina.WorldState.BlakeHash
                      , Disciplina.WorldState.Internal
 
                      -- Educator node model
-                     , Disciplina.Educator.Types
                      , Disciplina.Educator.Block
                      , Disciplina.Educator.Txs
                      , Disciplina.Educator.State
                      
                      , Disciplina.Crypto.Hash
                      , Disciplina.Crypto.Hash.Class
-                     , Disciplina.Crypto.Hash.Hashable
                      , Disciplina.Crypto.Hash.Cryptonite
+                     , Disciplina.Crypto.Hash.Hashable
                      , Disciplina.Crypto.Hash.Impl
                      , Disciplina.Crypto.Signing
+                     , Disciplina.Crypto.Signing.Class
+                     , Disciplina.Crypto.Signing.Cryptonite
+                     , Disciplina.Crypto.Signing.Impl
                      , Disciplina.CLI.Common
   -- other-extensions:
   build-depends:       base >= 4.9 && < 5

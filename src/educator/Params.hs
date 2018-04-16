@@ -2,15 +2,13 @@
 -- | Command-line options and flags for Educator node
 
 module Params
-       ( educatorParamsParser
+       ( EducatorParams (..)
        , getEducatorParams
        ) where
 
 import Universum
 
-import Data.Version (showVersion)
-import Options.Applicative (Parser, execParser, fullDesc, help, helper, info, infoOption, long,
-                            progDesc)
+import Options.Applicative (Parser, execParser, fullDesc, helper, info, progDesc)
 
 import Disciplina.CLI (dbPathParser, logParamsParser, versionOption)
 import Disciplina.Launcher (LoggingParams)
