@@ -13,7 +13,7 @@ import Data.Hashable (Hashable)
 import qualified Data.Hashable as H
 import System.IO.Unsafe (unsafeDupablePerformIO)
 
-import Disciplina.Crypto.Hash.Class (HashFunction (..))
+import Disciplina.Crypto.Hash.Class (AbstractHash (..), HashFunction (..))
 
 -- | Tag for choosing 'hash' function from 'Data.Hashable' for hashing
 data HashableFunc = HashableFunc
@@ -31,5 +31,5 @@ instance ByteArrayAccess a => Hashable (HashableBAccess a) where
 
 -- | 'HashFunction' instance which uses 'Hashable' for 'ByteArray's
 instance HashFunction HashableFunc where
-    type AbstractHash HashableFunc a = Int
-    unsafeAbstractHash = H.hash . HashableBAccess
+    type HashResult HashableFunc = Int
+    unsafeAbstractHash = AbstractHash . H.hash . HashableBAccess

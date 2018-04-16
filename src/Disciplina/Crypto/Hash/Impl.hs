@@ -1,4 +1,3 @@
-{-# LANGUAGE TypeApplications #-}
 
 -- | Specific hash function implementations used in Disciplina
 
@@ -8,15 +7,16 @@ module Disciplina.Crypto.Hash.Impl
        , unsafeHash
        ) where
 
+import Crypto.Hash.Algorithms (Blake2sp_256)
 import Data.ByteArray (ByteArrayAccess)
 
-import Disciplina.Crypto.Hash.Class (HashFunction (..))
-import Disciplina.Crypto.Hash.Hashable (HashableFunc (..))
+import Disciplina.Crypto.Hash.Class (AbstractHash (..), HashFunction (..), abstractHash)
+import Disciplina.Crypto.Hash.Cryptonite (CryptoniteFunc (..))
 
-type Hash a = AbstractHash HashableFunc a
+type Hash a = AbstractHash (CryptoniteFunc Blake2sp_256) a
 
 hash :: forall a. ByteArrayAccess a => a -> Hash a
-hash = abstractHash @HashableFunc @a
+hash = abstractHash
 
 unsafeHash :: forall a b. ByteArrayAccess a => a -> Hash b
-unsafeHash = unsafeAbstractHash @HashableFunc @a @b
+unsafeHash = unsafeAbstractHash

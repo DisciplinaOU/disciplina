@@ -1,18 +1,37 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE TypeApplications    #-}
 
 -- | Abstract hash interface
 
 module Disciplina.Crypto.Hash.Class
        ( HashFunction (..)
+       , AbstractHash (..)
+       , abstractHash
        ) where
+
+import Universum
 
 import Data.ByteArray (ByteArrayAccess)
 
+-- | Wrapper for a hash value. Phantom type parameter 'a' denotes
+-- the type of object being hashed.
+newtype AbstractHash hf a = AbstractHash (HashResult hf)
+
+-- | 'GeneralizedNewtypeDeriving' cannot into type families,
+-- so we do this.
+deriving instance Eq (HashResult hf) => Eq (AbstractHash hf a)
+deriving instance Ord (HashResult hf) => Ord (AbstractHash hf a)
+deriving instance Show (HashResult hf) => Show (AbstractHash hf a)
+deriving instance ByteArrayAccess (HashResult hf) =>
+    ByteArrayAccess (AbstractHash hf a)
+
 class HashFunction hf where
-    type AbstractHash hf a :: *
+    type HashResult hf :: *
 
-    unsafeAbstractHash :: forall a b. ByteArrayAccess a => a -> AbstractHash hf b
+    unsafeAbstractHash ::
+        forall a b. ByteArrayAccess a => a -> AbstractHash hf b
 
-    abstractHash :: forall a. ByteArrayAccess a => a -> AbstractHash hf a
-    abstractHash = unsafeAbstractHash @hf @a @a
+-- | Type-safe version of
+abstractHash ::
+       forall hf a. (HashFunction hf, ByteArrayAccess a)
+    => a -> AbstractHash hf a
+abstractHash = unsafeAbstractHash
