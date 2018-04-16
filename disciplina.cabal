@@ -20,14 +20,14 @@ library
                      , Disciplina.Listeners
                      , Disciplina.Workers
                      , Disciplina.Transport
+                     , Disciplina.Educator
+                     , Disciplina.Crypto
                      , Disciplina.CLI
   other-modules:
                        Paths_disciplina
 
                      , Disciplina.Accounts
                      , Disciplina.Accounts.Account
-                     , Disciplina.WorldState.BlakeHash
-                     , Disciplina.WorldState.Internal
                      , Disciplina.Launcher.Mode
                      , Disciplina.Launcher.Params
                      , Disciplina.Launcher.Resource
@@ -35,8 +35,25 @@ library
                      , Disciplina.Listeners.Listener
                      , Disciplina.Workers.Worker
                      , Disciplina.Transport.TCP
-                     , Disciplina.CLI.Common
                      , Disciplina.Messages
+
+                     -- Witness node model
+                     , Disciplina.WorldState.BlakeHash
+                     , Disciplina.WorldState.Internal
+
+                     -- Educator node model
+                     , Disciplina.Educator.Types
+                     , Disciplina.Educator.Block
+                     , Disciplina.Educator.Txs
+                     , Disciplina.Educator.State
+                     
+                     , Disciplina.Crypto.Hash
+                     , Disciplina.Crypto.Hash.Class
+                     , Disciplina.Crypto.Hash.Hashable
+                     , Disciplina.Crypto.Hash.Cryptonite
+                     , Disciplina.Crypto.Hash.Impl
+                     , Disciplina.Crypto.Signing
+                     , Disciplina.CLI.Common
   -- other-extensions:
   build-depends:       base >= 4.9 && < 5
                      , AVL
@@ -203,6 +220,7 @@ test-suite disciplina-test
                            , universum
                            , QuickCheck
                            , quickcheck-instances
+  default-language:    Haskell2010
   default-extensions:
                        BangPatterns
                        ConstraintKinds
