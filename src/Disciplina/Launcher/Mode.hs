@@ -15,9 +15,10 @@ module Disciplina.Launcher.Mode
 import Universum
 
 import Control.Lens (makeLenses)
-import qualified Control.Monad.Reader as Mtl
 import Mockable (MonadMockable, Production (..))
 import System.Wlog (HasLoggerName (..), LoggerName, WithLogger)
+
+import Disciplina.DB.Class (MonadDB)
 
 ---------------------------------------------------------------------
 -- WorkMode classes
@@ -28,6 +29,7 @@ type BasicWorkMode m =
     ( WithLogger m
     , MonadMockable m
     , MonadIO m
+    , MonadDB m
     )
 
 ---------------------------------------------------------------------
@@ -40,7 +42,7 @@ data BasicRealContext = BasicRealContext
 
 makeLenses ''BasicRealContext
 
-type BasicRealMode = Mtl.ReaderT BasicRealContext Production
+type BasicRealMode = ReaderT BasicRealContext Production
 
 instance {-# OVERLAPPING #-} HasLoggerName BasicRealMode where
     askLoggerName = view brcLoggerName

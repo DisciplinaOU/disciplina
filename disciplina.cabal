@@ -16,6 +16,7 @@ cabal-version:       >=1.10
 library
   exposed-modules:
                        Disciplina.WorldState
+                     , Disciplina.DB  
                      , Disciplina.Launcher
                      , Disciplina.Listeners
                      , Disciplina.Workers
@@ -23,6 +24,10 @@ library
   other-modules:
                        Disciplina.Accounts
                      , Disciplina.Accounts.Account
+                     , Disciplina.DB.Class
+                     , Disciplina.DB.Real
+                     , Disciplina.DB.Real.Types
+                     , Disciplina.DB.Real.Functions
                      , Disciplina.WorldState.BlakeHash
                      , Disciplina.WorldState.Internal
                      , Disciplina.Launcher.Mode
@@ -42,6 +47,7 @@ library
                      , containers
                      , cryptonite
                      , data-default
+                     , ether
                      , exceptions
                      , formatting
                      , hashable
@@ -52,6 +58,7 @@ library
                      , network-transport
                      , network-transport-tcp
                      , random
+                     , rocksdb-haskell-ng
                      , stm
                      , time-units
                      , universum
@@ -96,6 +103,7 @@ executable disciplina-witness
                      , binary
                      , disciplina
                      , cardano-sl-networking
+                     , disciplina
                      , formatting
                      , log-warper
                      , network-transport-tcp

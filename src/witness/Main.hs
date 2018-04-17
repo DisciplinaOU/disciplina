@@ -8,6 +8,7 @@ import Universum
 import Mockable (Production (..), runProduction)
 import System.Wlog (logInfo, logWarning)
 
+import Disciplina.DB (DBType (WitnessDB))
 import Disciplina.Launcher (BasicNodeParams (..), LoggingParams (..), bracketBasicNodeResources,
                             runBasicRealMode)
 import Disciplina.Listeners (witnessListeners)
@@ -35,7 +36,11 @@ main = do
             , lpDirectory   = wpLogDir
             , lpConfigPath  = wpLogConfig
             }
-        basicParams = BasicNodeParams loggingParams
+        basicParams = BasicNodeParams
+            { bnpLoggingParams = loggingParams
+            , bnpDBType        = WitnessDB
+            , bnpDBPath        = wpDbPath
+            }
     runProduction . bracketBasicNodeResources basicParams $
         \nr -> runBasicRealMode nr $
           bracketTransportTCP (15000 {-- connection timeout ms--})
