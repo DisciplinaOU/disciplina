@@ -75,6 +75,11 @@ packages:
     commit: 3c7f938aef06be21bad46165c5d6f32f5f41d91c
   extra-dep: true
 
+- location:
+    git: https://github.com/input-output-hk/rocksdb-haskell-ng.git
+    commit: 49f501a082d745f3b880677220a29cafaa181452
+  extra-dep: true
+
 nix:
   shell-file: shell.nix
 
@@ -83,6 +88,7 @@ extra-deps:
 - cborg-0.2.0.0
 - concurrent-extra-0.7.0.11
 - containers-0.5.11.0
+- ether-0.5.1.0
 - fmt-0.5.0.0
 - generic-arbitrary-0.1.0
 - log-warper-1.8.11

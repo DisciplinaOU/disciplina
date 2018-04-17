@@ -12,12 +12,14 @@ import Mockable (Production)
 import System.Wlog (LoggerConfig (..), LoggerName, {-WithLogger,-} maybeLogsDirB, parseLoggerConfig,
                     productionB, removeAllHandlers, setupLogging, showTidB)
 
+import Disciplina.DB.Real (NodeDB, closeNodeDB, openNodeDB)
 import Disciplina.Launcher.Params (BasicNodeParams (..), LoggingParams (..))
 
 -- | Datatype which contains resources required by all Disciplina nodes
 -- to start working.
 data BasicNodeResources = BasicNodeResources
     { bnrLoggerName :: !LoggerName
+    , bnrDB         :: !NodeDB
     }
 
 ----------------------------------------------------------------------------
@@ -48,16 +50,19 @@ acquireBasicNodeResources ::
 acquireBasicNodeResources BasicNodeParams {..} = do
     setupLoggers bnpLoggingParams
     let bnrLoggerName = lpDefaultName bnpLoggingParams
+    bnrDB <- openNodeDB bnpDBType bnpDBPath
     return BasicNodeResources {..}
 
 releaseBasicNodeResources ::
        BasicNodeResources
     -> Production ()
-releaseBasicNodeResources _ = removeAllHandlers
+releaseBasicNodeResources BasicNodeResources {..} = do
+    closeNodeDB bnrDB
+    removeAllHandlers
 
 bracketBasicNodeResources ::
        BasicNodeParams
     -> (BasicNodeResources -> Production a)
     -> Production a
-bracketBasicNodeResources np action =
-    bracket (acquireBasicNodeResources np) releaseBasicNodeResources action
+bracketBasicNodeResources np =
+    bracket (acquireBasicNodeResources np) releaseBasicNodeResources

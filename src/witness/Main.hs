@@ -8,6 +8,7 @@ import Universum
 import Mockable (Production (..), runProduction)
 import System.Wlog (logInfo, logWarning)
 
+import Disciplina.DB (DBType (WitnessDB))
 import Disciplina.Launcher (BasicNodeParams (..), bracketBasicNodeResources, runBasicRealMode)
 import Disciplina.Listeners (witnessListeners)
 import Disciplina.Transport (bracketTransportTCP)
@@ -26,7 +27,11 @@ import System.Random (mkStdGen)
 main :: IO ()
 main = do
     WitnessParams {..} <- getWitnessParams
-    let basicParams = BasicNodeParams wpLogParams
+    let basicParams = BasicNodeParams
+            { bnpLoggingParams = wpLogParams
+            , bnpDBType        = WitnessDB
+            , bnpDBPath        = wpDbPath
+            }
     runProduction . bracketBasicNodeResources basicParams $
         \nr -> runBasicRealMode nr $
           bracketTransportTCP (15000 {-- connection timeout ms--})
