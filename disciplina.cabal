@@ -24,6 +24,7 @@ library
                      , Disciplina.Core
                      , Disciplina.Crypto
                      , Disciplina.CLI
+                     , Disciplina.Util
   other-modules:
                        Paths_disciplina
 

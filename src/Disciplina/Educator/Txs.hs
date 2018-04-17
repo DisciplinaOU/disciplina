@@ -15,16 +15,20 @@ import Universum
 import Disciplina.Core.Types (AssignmentId, CourseId, EducatorId, Grade, StudentId)
 import Disciplina.Crypto (Hash, PublicKey, Signature)
 
+-- | Private transaction.
 data PrivateTx = PrivateTx
     { _ptxStudentId  :: !StudentId
     -- ^ Every transaction relates to one particular student.
     , _ptxCourseId   :: !CourseId
-    -- ^ Every transaction relates to one particular course
+    -- ^ Every transaction relates to one particular course.
     , _ptxEducatorId :: !EducatorId
     -- ^ Included to simplify educator signature checking
     -- on student's side.
     , _ptxPayload    :: !PrivateTxPayload
-    }
+    -- ^ Actual contents of transaction.
+    } deriving (Show, Eq, Generic)
+
+type PrivateTxId = Hash PrivateTx
 
 -- | Private transaction payload. Divided by two types: student
 -- messages and educator messages, which have different signature
@@ -32,6 +36,7 @@ data PrivateTx = PrivateTx
 data PrivateTxPayload
     = StudentTx  { _ptxStudentMsg  :: !StudentTxMsg }
     | EducatorTx { _ptxEducatorMsg :: !EducatorTxMsg }
+    deriving (Show, Eq, Generic)
 
 -- | Stub type for submissions. Submission transaction
 -- doesn't contain actual submission contents - only hash of them.
@@ -45,6 +50,7 @@ data StudentTxMsg
       { _stmAssignmentId :: !AssignmentId
       , _stmSubmission   :: !(Hash Submission)
       }
+    deriving (Show, Eq, Generic)
 
 -- | Messages which can be sent by educator.
 data EducatorTxMsg
@@ -63,19 +69,27 @@ data EducatorTxMsg
     | GradeCourse
       { _etmGrade :: !Grade
       }
+    deriving (Show, Eq, Generic)
 
--- Signature data
-type TxSigData = Hash PrivateTx
-type TxSig = Signature TxSigData
+-- | Which data to sign in transaction.
+-- 'PrivateTxId' is basically a hash of all transaction contents,
+-- so it's sufficient to sign only that.
+type PrivateTxSigData = PrivateTxId
+
+-- | Type alias for private tx signature.
+type PrivateTxSig = Signature PrivateTxSigData
 
 -- | Witness contains data required to verify transaction.
+-- Included 'PublicKey' belongs either to Student or Educator.
+-- TODO: maybe we can say that Educator's key is already known
+-- to everybody, and not include it into Educator's witness?
 data PrivateTxWitness = PkWitness
     { _ptwKey :: !PublicKey
-    , _ptwSig :: !TxSig
-    }
+    , _ptwSig :: !PrivateTxSig
+    } deriving (Show, Eq, Generic)
 
 -- | Datatype for verifiable transaction (transaction with a witness)
 data PrivateTxAux = PrivateTxAux
     { _ptaTx      :: !PrivateTx
     , _ptaWitness :: !PrivateTxWitness
-    }
+    } deriving (Show, Eq, Generic)
