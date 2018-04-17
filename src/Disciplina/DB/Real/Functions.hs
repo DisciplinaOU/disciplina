@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeApplications #-}
+
 module Disciplina.DB.Real.Functions
        ( -- * Closing/opening
          openRocksDB

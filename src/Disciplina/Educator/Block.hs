@@ -11,7 +11,7 @@ module Disciplina.Educator.Block
        , PrivateBlockBody (..)
        , pbbTxs
        , PrivateBlock
-       , PrivateUndo
+       , PrivateUndo (..)
        , PrivateBlund
 
          -- * Blockchain configuration
@@ -23,12 +23,11 @@ module Disciplina.Educator.Block
 import Universum
 
 import Control.Lens (makeLenses)
-import Data.ByteArray (ByteArrayAccess)
 import Snowdrop.Model.Block.Core (BlkConfiguration (..), Block (..), BlockIntegrityVerifier (..),
                                   Blund (..))
 
 import Disciplina.Core.Types (ATGDelta (..))
-import Disciplina.Crypto (Hash, hash, unsafeHash)
+import Disciplina.Crypto (Hash, unsafeHash)
 import Disciplina.Educator.Txs (PrivateTxAux)
 import Disciplina.Util (OldestFirst (..))
 

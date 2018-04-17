@@ -8,6 +8,7 @@ import Universum
 import Mockable (Production (..), runProduction)
 import System.Wlog (logInfo, logWarning)
 
+import Disciplina.DB (DBType (EducatorDB))
 import Disciplina.Launcher (BasicNodeParams (..), bracketBasicNodeResources, runBasicRealMode)
 
 import Params (EducatorParams (..), getEducatorParams)
@@ -15,7 +16,11 @@ import Params (EducatorParams (..), getEducatorParams)
 main :: IO ()
 main = do
     EducatorParams {..} <- getEducatorParams
-    let basicParams = BasicNodeParams epLogParams
+    let basicParams = BasicNodeParams
+            { bnpLoggingParams = epLogParams
+            , bnpDBType        = EducatorDB
+            , bnpDBPath        = epDbPath
+            }
     runProduction . bracketBasicNodeResources basicParams $
         \nr -> runBasicRealMode nr $ do
             logInfo "This is the stub for Educator node executable"
