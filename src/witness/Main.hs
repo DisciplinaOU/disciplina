@@ -9,14 +9,12 @@ import Mockable (Production (..), runProduction)
 import System.Wlog (logInfo, logWarning)
 
 import Disciplina.DB (DBType (WitnessDB))
-import Disciplina.Launcher (BasicNodeParams (..), LoggingParams (..), bracketBasicNodeResources,
-                            runBasicRealMode)
+import Disciplina.Launcher (BasicNodeParams (..), bracketBasicNodeResources, runBasicRealMode)
 import Disciplina.Listeners (witnessListeners)
 import Disciplina.Transport (bracketTransportTCP)
 import Disciplina.Workers (witnessWorkers)
 import Params (WitnessParams (..), getWitnessParams)
 
-import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as B8
 import Mockable.Concurrent (fork)
 import qualified Network.Transport.TCP as TCP
@@ -26,18 +24,11 @@ import Node.Message.Binary (binaryPacking)
 import System.IO (getChar)
 import System.Random (mkStdGen)
 
-
-
 main :: IO ()
 main = do
     WitnessParams {..} <- getWitnessParams
-    let loggingParams = LoggingParams
-            { lpDefaultName = "witness"
-            , lpDirectory   = wpLogDir
-            , lpConfigPath  = wpLogConfig
-            }
-        basicParams = BasicNodeParams
-            { bnpLoggingParams = loggingParams
+    let basicParams = BasicNodeParams
+            { bnpLoggingParams = wpLogParams
             , bnpDBType        = WitnessDB
             , bnpDBPath        = wpDbPath
             }

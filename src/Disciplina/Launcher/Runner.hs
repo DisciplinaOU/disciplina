@@ -5,7 +5,7 @@ module Disciplina.Launcher.Runner
        ( runBasicRealMode
        ) where
 
---import Universum
+import Universum
 
 import Mockable (Production)
 

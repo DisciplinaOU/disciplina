@@ -1,4 +1,4 @@
-resolver: lts-9.1
+resolver: lts-10.8
 
 packages:
 - '.'
@@ -22,7 +22,7 @@ packages:
 
 - location:
     git: https://github.com/serokell/cardano-sl
-    commit: f8fd7cf811b40ddf8683f019b85179594ee78b38
+    commit: 19148a09d98416b40fa044f3dd8094df4cb42624
   extra-dep: true
   subdirs:
     - networking
@@ -61,8 +61,8 @@ packages:
   extra-dep: true
 
 - location:
-    git: https://github.com/serokell/auth-data-structures.git
-    commit: b07dec98435fec0cbdc05b8e51989f91713a612b
+    git: git@github.com:serokell/auth-data-structures.git
+    commit: bed9a644c90085f14700ca2f660bd2ac1f2b06d6
   extra-dep: true
 
 - location:
@@ -71,22 +71,19 @@ packages:
   extra-dep: true
 
 - location:
+    git: git@github.com:serokell/snowdrop.git
+    commit: 3c7f938aef06be21bad46165c5d6f32f5f41d91c
+  extra-dep: true
+
+- location:
     git: https://github.com/input-output-hk/rocksdb-haskell-ng.git
     commit: 49f501a082d745f3b880677220a29cafaa181452
   extra-dep: true
 
 nix:
-    packages:
-    - openssl
-    - zlib
-    - binutils
-    - git
-    - rocksdb
-    - haskell.packages.ghc802.cpphs
-    - haskell.packages.ghc802.happy
+  shell-file: shell.nix
 
 extra-deps:
-- ansi-terminal-0.6.3.1
 - base58-bytestring-0.1.0
 - cborg-0.2.0.0
 - concurrent-extra-0.7.0.11
@@ -94,21 +91,18 @@ extra-deps:
 - ether-0.5.1.0
 - fmt-0.5.0.0
 - generic-arbitrary-0.1.0
-- log-warper-1.8.0
+- log-warper-1.8.11
 - megaparsec-6.2.0
 - mmorph-1.1.0
+- o-clock-0.1.1
 - pretty-tree-0.1.0.0
 - pvss-0.2.0
-- serokell-util-0.5.2
-- time-1.6.0.1
+- serokell-util-0.8.0
 - time-units-1.0.0
-- universum-0.9.2
+- universum-1.1.0
 
 apply-ghc-options: everything
 
 ghc-options:
   # Needed to buid
   cardano-sl-networking: -fno-warn-redundant-constraints
-
-nix:
-    packages: [rocksdb, haskellPackages.cpphs]

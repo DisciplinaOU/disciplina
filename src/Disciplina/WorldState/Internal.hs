@@ -602,7 +602,9 @@ replayBlock
     => WithProof (Block Transaction)
     -> WorldT side m ()
 replayBlock blockWithProof = do
-    proving blockWithProof $ \block @ (Block transactions prev) -> do
+    proving blockWithProof $ \block -> do
+        let Block transactions prev = block
+
         truePrev <- use (_Server.prevBlockHash)
 
         when (prev /= truePrev) $ do

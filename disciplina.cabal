@@ -21,15 +21,21 @@ library
                      , Disciplina.Listeners
                      , Disciplina.Workers
                      , Disciplina.Transport
+                     , Disciplina.Educator
+                     , Disciplina.Core
+                     , Disciplina.Crypto
+                     , Disciplina.CLI
+                     , Disciplina.Util
   other-modules:
-                       Disciplina.Accounts
+                       Paths_disciplina
+
+                     , Disciplina.Accounts
                      , Disciplina.Accounts.Account
+
                      , Disciplina.DB.Class
                      , Disciplina.DB.Real
                      , Disciplina.DB.Real.Types
                      , Disciplina.DB.Real.Functions
-                     , Disciplina.WorldState.BlakeHash
-                     , Disciplina.WorldState.Internal
                      , Disciplina.Launcher.Mode
                      , Disciplina.Launcher.Params
                      , Disciplina.Launcher.Resource
@@ -38,8 +44,31 @@ library
                      , Disciplina.Workers.Worker
                      , Disciplina.Transport.TCP
                      , Disciplina.Messages
+
+                     -- Core datatypes and functions
+                     , Disciplina.Core.Types
+
+                     -- Witness node model
+                     , Disciplina.WorldState.BlakeHash
+                     , Disciplina.WorldState.Internal
+
+                     -- Educator node model
+                     , Disciplina.Educator.Block
+                     , Disciplina.Educator.Txs
+                     , Disciplina.Educator.State
+                     
+                     , Disciplina.Crypto.Hash
+                     , Disciplina.Crypto.Hash.Class
+                     , Disciplina.Crypto.Hash.Cryptonite
+                     , Disciplina.Crypto.Hash.Hashable
+                     , Disciplina.Crypto.Hash.Impl
+                     , Disciplina.Crypto.Signing
+                     , Disciplina.Crypto.Signing.Class
+                     , Disciplina.Crypto.Signing.Cryptonite
+                     , Disciplina.Crypto.Signing.Impl
+                     , Disciplina.CLI.Common
   -- other-extensions:
-  build-depends:       base >=4.9 && <4.10
+  build-depends:       base >= 4.9 && < 5
                      , AVL
                      , binary
                      , bytestring
@@ -57,7 +86,9 @@ library
                      , mtl
                      , network-transport
                      , network-transport-tcp
+                     , optparse-applicative
                      , random
+                     , snowdrop
                      , rocksdb-haskell-ng
                      , stm
                      , time-units
@@ -110,7 +141,7 @@ executable disciplina-witness
                      , time-units
                      , optparse-applicative
                      , random
-                     , universum >= 0.1.11
+                     , universum >= 1.0.0
   default-language:    Haskell2010
   ghc-options:         -threaded -rtsopts
                        -Wall
@@ -145,6 +176,49 @@ executable disciplina-witness
   build-tools: cpphs >= 1.19
   ghc-options: -pgmP cpphs -optP --cpp
 
+executable disciplina-educator
+  hs-source-dirs:      src/educator
+  main-is:             Main.hs
+  other-modules:       Params
+  build-depends:       base
+                     , disciplina
+                     , cardano-sl-networking
+                     , formatting
+                     , log-warper
+                     , network-transport-tcp
+                     , optparse-applicative
+                     , universum >= 1.0.0
+  default-language:    Haskell2010
+  ghc-options:         -threaded -rtsopts
+                       -Wall
+                       -fno-warn-orphans
+                       -O2
+
+  default-extensions:   DeriveDataTypeable
+                        DeriveGeneric
+                        GeneralizedNewtypeDeriving
+                        StandaloneDeriving
+                        FlexibleContexts
+                        FlexibleInstances
+                        MultiParamTypeClasses
+                        FunctionalDependencies
+                        DefaultSignatures
+                        NoImplicitPrelude
+                        OverloadedStrings
+                        RecordWildCards
+                        TypeApplications
+                        TupleSections
+                        ViewPatterns
+                        LambdaCase
+                        MultiWayIf
+                        ConstraintKinds
+                        UndecidableInstances
+                        BangPatterns
+                        TemplateHaskell
+                        ScopedTypeVariables
+                        GADTs
+                        MonadFailDesugaring
+
 test-suite disciplina-test
   type:                     exitcode-stdio-1.0
   hs-source-dirs:           tests
@@ -162,6 +236,7 @@ test-suite disciplina-test
                            , universum
                            , QuickCheck
                            , quickcheck-instances
+  default-language:    Haskell2010
   default-extensions:
                        BangPatterns
                        ConstraintKinds
