@@ -2,43 +2,25 @@
 -- | Module for methods related to Activity Type Graph
 
 module Disciplina.Core.ATG
-       ( atgDFSTraverse
-       , atgDFS
-       , ATGIndexed
+       ( ATGIndexed
        , mkATGIndexed
+       , hasPathFromM
+       , hasPathFromTo
+       , activityTypeGraph
+       , activityTypeGraphIndexed
        ) where
 
 import Universum
 
+import Control.Monad.Cont (Cont, MonadCont (..), runCont)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 import Data.Set (Set)
 import qualified Data.Set as S
 
-import Disciplina.Core.Types (ATG (..), ATGEdge (..), ATGNode (..), SubjectId, atgeChild)
-
-type ATGTraverseT = StateT (Set SubjectId)
-
--- | Depth-first search (generalized)
-atgDFSTraverse :: Monad m
-    => (SubjectId -> b -> m b)
-    -> ATGNode
-    -> b
-    -> ATGTraverseT m b
-atgDFSTraverse mf (ATGNode sId es) acc = do
-    visited <- gets (S.member sId)
-    if visited
-        then return acc
-        else do
-        modify' (S.insert sId)
-        acc' <- lift $ mf sId acc
-        foldlM (flip $ atgDFSTraverse mf) acc' $ map (^.atgeChild) es
-
-atgDFSM :: Monad m => (SubjectId -> b -> m b) -> ATGNode -> b -> m b
-atgDFSM f node acc = evalStateT (atgDFSTraverse f node acc) mempty
-
-atgDFS :: (SubjectId -> b -> b) -> ATGNode -> b -> b
-atgDFS f node = runIdentity . atgDFSM ((Identity .) . f) node
+import Disciplina.Core.Types (ATG (..), ATGEdge (..), ATGNode (..), SubjectId, atgeChild,
+                              atgnSubjectId)
+import Disciplina.Util (anyMapM)
 
 -- | ATG with an index from subject IDs to nodes.
 -- Constructor is unsafe, because it's totally possible
@@ -58,3 +40,66 @@ buildIndex = foldl' goNode mempty . getATGRoots
 
 mkATGIndexed :: ATG -> ATGIndexed
 mkATGIndexed atg = UnsafeATGIndexed atg $ buildIndex atg
+
+type ATGTraverse = State (Set SubjectId)
+
+-- | Check reachability using DFS
+hasPathFromM :: SubjectId -> ATGNode -> ATGTraverse Bool
+hasPathFromM sId (ATGNode sId' es)
+    | sId == sId' = return True
+    | otherwise = gets (S.member sId') >>= \case
+          True -> return False
+          False -> anyMapM (hasPathFromM sId) $ map (^.atgeChild) es
+
+-- | Given indexed ATG and two subject IDs, determine if
+-- there's a path from subject A to subject B.
+-- If either of given subjects are not present in ATG, then
+-- there's automatically no path.
+hasPathFromTo :: ATGIndexed -> SubjectId -> SubjectId -> Bool
+hasPathFromTo (UnsafeATGIndexed atg index) sFrom sTo =
+    case M.lookup sFrom index of
+        Nothing   -> False
+        Just node -> evalState (hasPathFromM sTo node) mempty
+
+-------------------------------------------------------------
+-- Sample ATG
+-------------------------------------------------------------
+
+{-
+@flyingleafe: Determining edges weight is a non-trivial task,
+so for now I leave them all equal to 1.
+
+Sample ATG structure repeats ATG described in yellowpaper, except for 'Education' node,
+which was meant to be the common root for everything, but now we don't necessarily
+need a common root.
+-}
+
+mkATGNode :: SubjectId -> [ATGNode] -> ATGNode
+mkATGNode sId = ATGNode sId . map (ATGEdge 1)
+
+atgMathematics =
+    mkATGNode 1 [atgElementary, atgCalculi, atgLogic]
+atgComputerScience =
+    mkATGNode 2 [atgEngineering, atgTheory]
+atgElementary =
+    mkATGNode 3 [atgHighSchoolAlgebra]
+atgCalculi =
+    mkATGNode 4 [atgHighSchoolAlgebra, atgPiCalculus]
+atgLogic =
+    mkATGNode 5 [atgComputabilityTheory]
+atgEngineering =
+    mkATGNode 6 []
+atgTheory =
+    mkATGNode 7 [atgComputabilityTheory]
+atgHighSchoolAlgebra =
+    mkATGNode 8 []
+atgPiCalculus =
+    mkATGNode 9 []
+atgComputabilityTheory =
+    mkATGNode 10 [atgPiCalculus]
+
+activityTypeGraph :: ATG
+activityTypeGraph = ATG [atgMathematics, atgComputerScience]
+
+activityTypeGraphIndexed :: ATGIndexed
+activityTypeGraphIndexed = mkATGIndexed activityTypeGraph
