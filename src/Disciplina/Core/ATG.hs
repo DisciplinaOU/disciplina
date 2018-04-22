@@ -3,6 +3,8 @@
 
 module Disciplina.Core.ATG
        ( ATGIndexed
+       , atgiGraph
+       , atgiIndex
        , mkATGIndexed
        , hasPathFromM
        , hasPathFromTo
@@ -12,14 +14,13 @@ module Disciplina.Core.ATG
 
 import Universum
 
-import Control.Monad.Cont (Cont, MonadCont (..), runCont)
+import Control.Lens (makeLenses)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
 import Data.Set (Set)
 import qualified Data.Set as S
 
-import Disciplina.Core.Types (ATG (..), ATGEdge (..), ATGNode (..), SubjectId, atgeChild,
-                              atgnSubjectId)
+import Disciplina.Core.Types (ATG (..), ATGEdge (..), ATGNode (..), SubjectId, atgeChild)
 import Disciplina.Util (anyMapM)
 
 -- | ATG with an index from subject IDs to nodes.
@@ -29,6 +30,8 @@ data ATGIndexed = UnsafeATGIndexed
     { _atgiGraph :: !ATG
     , _atgiIndex :: !(Map SubjectId ATGNode)
     } deriving (Show, Eq, Generic)
+
+makeLenses ''ATGIndexed
 
 buildIndex :: ATG -> Map SubjectId ATGNode
 buildIndex = foldl' goNode mempty . getATGRoots
@@ -56,8 +59,8 @@ hasPathFromM sId (ATGNode sId' es)
 -- If either of given subjects are not present in ATG, then
 -- there's automatically no path.
 hasPathFromTo :: ATGIndexed -> SubjectId -> SubjectId -> Bool
-hasPathFromTo (UnsafeATGIndexed atg index) sFrom sTo =
-    case M.lookup sFrom index of
+hasPathFromTo atgi sFrom sTo =
+    case M.lookup sFrom (atgi^.atgiIndex) of
         Nothing   -> False
         Just node -> evalState (hasPathFromM sTo node) mempty
 
@@ -76,6 +79,11 @@ need a common root.
 
 mkATGNode :: SubjectId -> [ATGNode] -> ATGNode
 mkATGNode sId = ATGNode sId . map (ATGEdge 1)
+
+atgMathematics, atgComputerScience, atgElementary,
+    atgCalculi, atgLogic, atgEngineering, atgTheory,
+    atgHighSchoolAlgebra, atgPiCalculus, atgComputabilityTheory
+    :: ATGNode
 
 atgMathematics =
     mkATGNode 1 [atgElementary, atgCalculi, atgLogic]

@@ -40,8 +40,7 @@ mkAddr :: PublicKey -> Address
 mkAddr = Address . hash
 
 -- | ID of particular subject.
--- TODO: 'Int' is a stub, change to something more real.
-type SubjectId = Int
+type SubjectId = Word32
 
 -- | Assignment/course grade.
 -- TODO: decide on final format of the grade.
