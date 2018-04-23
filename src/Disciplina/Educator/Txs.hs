@@ -3,6 +3,7 @@
 
 module Disciplina.Educator.Txs
        ( PrivateTx (..)
+       , PrivateTxId
        , PrivateTxPayload (..)
        , StudentTxMsg (..)
        , EducatorTxMsg (..)
