@@ -3,6 +3,7 @@
 
 module Disciplina.Crypto.Signing.Class
        ( SignatureScheme (..)
+       , HasAbstractSignature (..)
        , abstractSign
        , abstractVerify
        , AbstractPK (..)
@@ -12,7 +13,12 @@ module Disciplina.Crypto.Signing.Class
 
 import Universum
 
-import Data.ByteArray (ByteArrayAccess)
+-- | Class of signature schemes with defined format of keys and
+-- signatures.
+class SignatureScheme ss where
+    type PK ss  :: *
+    type SK ss  :: *
+    type Sig ss :: *
 
 -- | Wrapper for a public key.
 newtype AbstractPK ss = AbstractPK (PK ss)
@@ -21,8 +27,6 @@ newtype AbstractPK ss = AbstractPK (PK ss)
 deriving instance Eq (PK ss) => Eq (AbstractPK ss)
 deriving instance Ord (PK ss) => Ord (AbstractPK ss)
 deriving instance Show (PK ss) => Show (AbstractPK ss)
-deriving instance ByteArrayAccess (PK ss) =>
-    ByteArrayAccess (AbstractPK ss)
 
 -- | Wrapper for a secret key. 'Eq', 'Ord' and 'Show' instances
 -- are not derived for security reasons.
@@ -35,31 +39,23 @@ newtype AbstractSig ss a = AbstractSig (Sig ss)
 deriving instance Eq (Sig ss) => Eq (AbstractSig ss a)
 deriving instance Ord (Sig ss) => Ord (AbstractSig ss a)
 deriving instance Show (Sig ss) => Show (AbstractSig ss a)
-deriving instance ByteArrayAccess (Sig ss) =>
-    ByteArrayAccess (AbstractSig ss a)
 
--- | Simple signature scheme class.
-class SignatureScheme ss where
-    type PK ss  :: *
-    type SK ss  :: *
-    type Sig ss :: *
-
+-- | For each `a`, provide a way to sign it using scheme `ss`.
+class SignatureScheme ss => HasAbstractSignature ss a where
     unsafeAbstractSign ::
-           forall a b. ByteArrayAccess a
-        => AbstractSK ss -> a -> AbstractSig ss b
+           forall b. AbstractSK ss -> a -> AbstractSig ss b
 
     unsafeAbstractVerify ::
-           forall a b. ByteArrayAccess a
-        => AbstractPK ss -> a -> AbstractSig ss b -> Bool
+           forall b. AbstractPK ss -> a -> AbstractSig ss b -> Bool
 
 -- | Type-safe function for signing.
 abstractSign ::
-       forall ss a. (SignatureScheme ss, ByteArrayAccess a)
+       HasAbstractSignature ss a
     => AbstractSK ss -> a -> AbstractSig ss a
 abstractSign = unsafeAbstractSign
 
 -- | Type-safe function for signature verification.
 abstractVerify ::
-       forall ss a. (SignatureScheme ss, ByteArrayAccess a)
+       HasAbstractSignature ss a
     => AbstractPK ss -> a -> AbstractSig ss a -> Bool
 abstractVerify = unsafeAbstractVerify

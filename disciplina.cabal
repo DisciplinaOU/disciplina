@@ -57,7 +57,8 @@ library
                      , Disciplina.Educator.Block
                      , Disciplina.Educator.Txs
                      , Disciplina.Educator.State
-                     
+
+                     , Disciplina.Crypto.ByteArrayStruct
                      , Disciplina.Crypto.Hash
                      , Disciplina.Crypto.Hash.Class
                      , Disciplina.Crypto.Hash.Cryptonite
@@ -67,7 +68,7 @@ library
                      , Disciplina.Crypto.Signing
                      , Disciplina.Crypto.Signing.Class
                      , Disciplina.Crypto.Signing.Cryptonite
-                     , Disciplina.Crypto.Signing.Impl
+
                      , Disciplina.CLI.Common
   -- other-extensions:
   build-depends:       base >= 4.9 && < 5
