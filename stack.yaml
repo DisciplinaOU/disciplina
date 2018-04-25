@@ -8,6 +8,8 @@ nix:
   shell-file: shell.nix
 
 extra-deps:
+- serialise-0.2.0.0
+- cborg-0.2.0.0
 - ether-0.5.1.0
 - log-warper-1.8.11
 - o-clock-0.1.1

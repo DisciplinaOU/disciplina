@@ -7,10 +7,9 @@ import qualified Prelude (show)
 
 import Universum hiding (Hashable, get, trace, use)
 
+import Codec.Serialise (Serialise)
 import Control.Lens (makeLenses, makePrisms, to, use, zoom, (+~), (-~), (.=))
 import Control.Monad.RWS (RWST (..), get, listen, tell)
-
-import Data.Binary (Binary)
 import Data.Default (Default, def)
 
 import Disciplina.Accounts
@@ -24,7 +23,7 @@ type Hash' = Hash ()
 
 -- | Stub representation of entity.
 data Entity = Entity Int
-    deriving (Show, Eq, Ord, Bounded, Generic, Binary, Default)
+    deriving (Show, Eq, Ord, Bounded, Generic, Serialise, Default)
 
 -- | Global state of the network, maintained by each server node.
 data WorldState
@@ -49,13 +48,13 @@ data WorldStateProof
         , _codeProof          :: Proof Code
         , _prevBlockHashProof :: Hash'
         }
-    deriving (Show, Generic, Binary)
+    deriving (Show, Generic, Serialise)
 
 instance Eq WorldStateProof where
     WorldStateProof a b c d e x == WorldStateProof f g h i k y =
         and [a ==? f, b ==? g, c ==? h, d ==? i, e ==? k, x == y]
       where
-        (==?) :: (Show s, Eq s, Binary s) => Proof s -> Proof s -> Bool
+        (==?) :: (Show s, Eq s, Serialise s) => Proof s -> Proof s -> Bool
         (==?) = (==) `on` getHash
 
         -- TODO: move into Data.Tree.AVL.Proof
@@ -75,7 +74,7 @@ data Change
     = TransferTokens Entity      Amount
     | Publicate      Publication
     | CreateAccount  Entity      Code
-    deriving (Show, Generic, Binary)
+    deriving (Show, Generic, Serialise)
 
 -- TODO: implement signing (and make 'Entity' to be actual public key).
 data Transaction = Transaction
@@ -83,7 +82,7 @@ data Transaction = Transaction
     , _tChanges :: [Change]
     , _tNonce   :: Int
     }
-    deriving (Generic, Binary)
+    deriving (Generic, Serialise)
 
 instance Show Transaction where
     show (Transaction who what nonce) =
@@ -164,7 +163,7 @@ data Block trans = Block
     { _bTransactions  :: [trans]
     , _bPrevBlockHash :: Hash'
     }
-    deriving (Show, Generic, Binary)
+    deriving (Show, Generic, Serialise)
 
 type CanStore = AVL.KVStoreMonad Hash'
 

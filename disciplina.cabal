@@ -72,7 +72,6 @@ library
   build-depends:       base >= 4.9 && < 5
                      , autoexporter
                      , AVL
-                     , binary
                      , bytestring
                      , cardano-sl-networking
                      , containers
@@ -90,8 +89,9 @@ library
                      , network-transport-tcp
                      , optparse-applicative
                      , random
-                     , snowdrop
                      , rocksdb-haskell-ng
+                     , serialise
+                     , snowdrop
                      , stm
                      , time-units
                      , universum
@@ -133,7 +133,6 @@ executable disciplina-witness
   other-modules:       Params
   build-depends:       base
                      , bytestring
-                     , binary
                      , disciplina
                      , cardano-sl-networking
                      , disciplina

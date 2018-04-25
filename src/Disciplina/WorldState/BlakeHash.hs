@@ -1,20 +1,19 @@
 
-{-# language GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Disciplina.WorldState.BlakeHash where
 
 import qualified Prelude (show)
-import Universum hiding (put, get, Hashable)
+import Universum hiding (Hashable, get, put)
 
+import Codec.Serialise (Serialise (..), serialise)
+import Crypto.Hash (Blake2sp_256, Digest, digestFromByteString)
 import qualified Crypto.Hash as Base (hash)
-import Crypto.Hash (Digest, digestFromByteString, Blake2sp_256)
-
-import Data.Binary
-import Data.ByteArray       as  BA
+import Data.ByteArray as BA
 import Data.ByteString.Lazy as LBS (toStrict)
 import Data.Default
 
-import qualified Data.Hashable as StdHash (Hashable(hash, hashWithSalt))
+import qualified Data.Hashable as StdHash (Hashable (hash, hashWithSalt))
 
 import qualified Data.Tree.AVL as AVL
 
@@ -24,13 +23,13 @@ class HasHash a where
 newtype Hash = Hash { getHash :: Digest Blake2sp_256 }
     deriving (Eq, Ord, ByteArrayAccess)
 
-instance Binary Hash where
-    get = do
-      bs <- get
+instance Serialise Hash where
+    decode = do
+      bs <- decode
       maybe (fail "get @(Hash): not a Blake2sp_256") (return . Hash) $
         digestFromByteString (bs :: ByteString)
 
-    put = put . (convert :: Digest Blake2sp_256 -> ByteString) . getHash
+    encode = encode . (convert :: Digest Blake2sp_256 -> ByteString) . getHash
 
 instance HasHash Hash where
     hash = identity
@@ -52,8 +51,8 @@ instance
   , Eq v
   , Ord k
   , Bounded k
-  , Binary k
-  , Binary v
+  , Serialise k
+  , Serialise v
   , StdHash.Hashable Hash
   )
   => AVL.Hash Hash k v
@@ -77,8 +76,8 @@ instance
       AVL.MLEmpty _ ->
         def
 
-instance Binary b => HasHash b where
-    hash = Hash . Base.hash . LBS.toStrict . encode
+instance Serialise b => HasHash b where
+    hash = Hash . Base.hash . LBS.toStrict . serialise
 
 hashBA :: ByteString -> Hash
 hashBA = Hash . Base.hash
