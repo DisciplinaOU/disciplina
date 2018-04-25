@@ -8,7 +8,6 @@ nix:
   shell-file: shell.nix
 
 extra-deps:
-- cborg-0.2.0.0
 - ether-0.5.1.0
 - log-warper-1.8.11
 - o-clock-0.1.1
@@ -28,7 +27,6 @@ extra-deps:
   commit: e01c3730e1a3cf46296c3e3decffc6e780e2092c
   subdirs:
     - networking
-    - binary
 
 # These three are needed for cardano-sl-networking
 - git: https://github.com/serokell/network-transport-tcp
