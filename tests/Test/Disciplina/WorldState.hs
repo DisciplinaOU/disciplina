@@ -1,7 +1,7 @@
 
-module WorldState (tests) where
+module Test.Disciplina.WorldState (tests) where
 
-import Common
+import Test.Common
 
 import qualified Disciplina.WorldState as World
 --import qualified Debug.Trace           as Debug

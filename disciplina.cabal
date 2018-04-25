@@ -47,6 +47,7 @@ library
 
                      -- Core datatypes and functions
                      , Disciplina.Core.Types
+                     , Disciplina.Core.ATG
 
                      -- Witness node model
                      , Disciplina.WorldState.BlakeHash
@@ -224,14 +225,17 @@ test-suite disciplina-test
   hs-source-dirs:           tests
   main-is:                  Main.hs
   other-modules:
-                            Common
-                            WorldState
+                            Test.Common
+                            Test.Disciplina.WorldState
+                            Test.Disciplina.Core.ATG
   build-depends:             base >= 0.4 && < 5
                            , AVL
                            , disciplina
                            , data-default
+                           , HUnit
                            , lens
                            , test-framework
+                           , test-framework-hunit
                            , test-framework-quickcheck2
                            , universum
                            , QuickCheck

@@ -1,48 +1,50 @@
-
-{-# LANGUAGE FlexibleInstances     #-}
-{-# LANGUAGE FlexibleContexts     #-}
+{-# LANGUAGE ExplicitForAll             #-}
+{-# LANGUAGE FlexibleContexts           #-}
+{-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE LambdaCase            #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE PartialTypeSignatures #-}
-{-# LANGUAGE RankNTypes            #-}
-{-# LANGUAGE ScopedTypeVariables   #-}
-{-# LANGUAGE TypeSynonymInstances  #-}
-{-# LANGUAGE ExplicitForAll  #-}
+{-# LANGUAGE LambdaCase                 #-}
+{-# LANGUAGE MultiParamTypeClasses      #-}
+{-# LANGUAGE PartialTypeSignatures      #-}
+{-# LANGUAGE RankNTypes                 #-}
+{-# LANGUAGE ScopedTypeVariables        #-}
+{-# LANGUAGE TypeSynonymInstances       #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Common (module Common, module Control.Lens, module T, module Universum) where
+module Test.Common
+       ( module Test.Common
+       , module Control.Lens
+       , module T
+       , module Universum
+       ) where
 
 import qualified Prelude (show, unlines)
 import Universum
 
 -- import Control.Arrow (second)
-import Control.Lens (to, each)
+import Control.Lens (each, to)
 
 -- import Data.Bits                                 (xor)
-import Data.Default                         as T (Default(def))
+import Data.Default as T (Default (def))
 -- import Data.Function                             (on)
 -- import Data.List                                 (sortBy, nubBy)
 -- import Data.Monoid                               ((<>))
 -- import Data.Ord                                  (comparing)
-import Data.Traversable                                  (for)
+import Data.Traversable (for)
 
 import System.IO.Unsafe
 
-import qualified Data.Tree.AVL         as AVL
+import qualified Data.Tree.AVL as AVL
 import qualified Disciplina.WorldState as World
 --import qualified Debug.Trace           as Debug
 
-import Test.Framework                       as T (Test, defaultMain, testGroup)
+import Test.Framework as T (Test, defaultMain, testGroup)
+import Test.Framework.Providers.HUnit as T (testCase)
 import Test.Framework.Providers.QuickCheck2 as T (testProperty)
-import Test.QuickCheck                      as T ( Arbitrary (..), Gen, Property
-                                                 , (===), (==>), elements
-                                                 , vectorOf, oneof, suchThat
-                                                 , Testable
-                                                 , ioProperty, expectFailure
-                                                 )
-import Test.QuickCheck.Instances            as T ()
+import Test.HUnit as T (Assertion, assertBool, assertEqual, assertFailure, (@=?), (@?), (@?=))
+import Test.QuickCheck as T (Arbitrary (..), Gen, Property, Testable, elements, expectFailure,
+                             ioProperty, oneof, suchThat, vectorOf, (===), (==>))
+import Test.QuickCheck.Instances as T ()
 
 -- | Extensional equality combinator.
 (.=.) :: (Eq b, Show b, Arbitrary a) => (a -> b) -> (a -> b) -> a -> Property
