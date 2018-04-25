@@ -10,6 +10,7 @@ module Disciplina.Crypto.Hash.Class
 
 import Universum
 
+import Codec.Serialise (Serialise)
 import Data.ByteArray (ByteArrayAccess)
 
 -- | Wrapper for a hash value. Phantom type parameter 'a' denotes
@@ -23,6 +24,8 @@ deriving instance Ord (HashResult hf) => Ord (AbstractHash hf a)
 deriving instance Show (HashResult hf) => Show (AbstractHash hf a)
 deriving instance ByteArrayAccess (HashResult hf) =>
     ByteArrayAccess (AbstractHash hf a)
+deriving instance Serialise (HashResult hf) =>
+    Serialise (AbstractHash hf a)
 
 class HashFunction hf where
     type HashResult hf :: *

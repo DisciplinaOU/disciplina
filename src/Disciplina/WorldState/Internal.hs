@@ -7,7 +7,7 @@ import qualified Prelude (show)
 
 import Universum hiding (Hashable, get, trace, use)
 
-import Codec.Serialise (Serialise)
+import Codec.Serialise (Serialise (..))
 import Control.Lens (makeLenses, makePrisms, to, use, zoom, (+~), (-~), (.=))
 import Control.Monad.RWS (RWST (..), get, listen, tell)
 import Data.Default (Default, def)
@@ -63,6 +63,8 @@ instance Eq WorldStateProof where
              .to AVL.rootHash  -- reduce to hash
 
 type Proof = AVL.Proof Hash' Entity
+
+instance Serialise a => Serialise (Proof a)
 
 type DAG         = Hash'
 type Publication = Hash'
