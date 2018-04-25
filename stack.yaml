@@ -46,11 +46,8 @@ extra-deps:
 - git: git@github.com:serokell/snowdrop.git
   commit: 3c7f938aef06be21bad46165c5d6f32f5f41d91c
 
-- git: https://github.com/Heimdell/rocksdb-haskell.git
-  commit: 0c1f446799d3738598a5d51ebc031bbbfd2d78f8
-
-- git: https://github.com/input-output-hk/rocksdb-haskell-ng.git
-  commit: 49f501a082d745f3b880677220a29cafaa181452
+- git: https://github.com/serokell/rocksdb-haskell.git
+  commit: 2dd6b4ffdc4edb86b477273ee3c8416a1520f4e1
 
 # Needed to build `cardano-sl-networking` with newer GHC
 ghc-options:

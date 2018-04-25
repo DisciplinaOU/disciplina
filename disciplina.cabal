@@ -89,7 +89,7 @@ library
                      , network-transport-tcp
                      , optparse-applicative
                      , random
-                     , rocksdb-haskell-ng
+                     , rocksdb-haskell
                      , serialise
                      , snowdrop
                      , stm
