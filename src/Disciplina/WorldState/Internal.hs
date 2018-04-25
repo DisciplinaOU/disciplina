@@ -13,7 +13,7 @@ import Control.Monad.RWS (RWST (..), get, listen, tell)
 import Data.Default (Default, def)
 
 import Disciplina.Accounts
-import Disciplina.Crypto.Hash (Hash)
+import Disciplina.Crypto (Hash)
 
 import qualified Data.Tree.AVL as AVL
 import qualified Debug.Trace as Debug

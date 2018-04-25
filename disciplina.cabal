@@ -62,7 +62,8 @@ library
                      , Disciplina.Crypto.Hash.Class
                      , Disciplina.Crypto.Hash.Cryptonite
                      , Disciplina.Crypto.Hash.Hashable
-                     , Disciplina.Crypto.Hash.Impl
+                     , Disciplina.Crypto.Impl
+                     , Disciplina.Crypto.Serialise
                      , Disciplina.Crypto.Signing
                      , Disciplina.Crypto.Signing.Class
                      , Disciplina.Crypto.Signing.Cryptonite
