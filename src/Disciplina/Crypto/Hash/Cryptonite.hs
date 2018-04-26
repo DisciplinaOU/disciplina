@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP              #-}
 {-# LANGUAGE TypeApplications #-}
 
 -- | 'HashFunction' instances for 'Cryptonite' hashes
@@ -8,29 +9,38 @@ module Disciplina.Crypto.Hash.Cryptonite
 
 import Universum
 
+import Crypto.Hash (Digest, HashAlgorithm)
 import qualified Crypto.Hash as Crypto
-import Data.ByteArray (ByteArrayAccess)
+import Data.ByteArray (ByteArrayAccess, Bytes)
 
 import Disciplina.Crypto.Hash.Class (AbstractHash (..), HasAbstractHash (..), HashFunc (..))
-
--- | Provide 'ByteArrayAccess' instance for all byte array based hashes.
-deriving instance ByteArrayAccess (HashResult hf) =>
-    ByteArrayAccess (AbstractHash hf a)
+import Disciplina.Crypto.Signing.Class (AbstractPK, AbstractSK, AbstractSig)
 
 -- | Tag for choosing a particular hash algorithm from 'Crypto.Hash'
 -- for hashing.
 data CryptoniteFunc algo
 
-instance Crypto.HashAlgorithm algo =>
-         HashFunc (CryptoniteFunc algo) where
-    type HashResult (CryptoniteFunc algo) = Crypto.Digest algo
+-- | Default implementation is for 'ByteArrayAccess'.
+instance HashAlgorithm algo => HashFunc (CryptoniteFunc algo) where
+    type HashResult (CryptoniteFunc algo) = Digest algo
+    unsafeHashBytes = AbstractHash . Crypto.hash
 
--- | Hash anything with 'ByteArrayAccess'.
-instance (Crypto.HashAlgorithm algo, ByteArrayAccess a) =>
-         HasAbstractHash (CryptoniteFunc algo) a where
-    unsafeAbstractHash = AbstractHash . Crypto.hash
+-- | Instances for interesting types with 'ByteArrayAccess'.
+instance HashAlgorithm algo =>
+         HasAbstractHash (CryptoniteFunc algo) ByteString
+instance HashAlgorithm algo =>
+         HasAbstractHash (CryptoniteFunc algo) Bytes
 
--- | Also hash lazy bytestrings.
-instance {-# OVERLAPPING #-} Crypto.HashAlgorithm algo =>
+#define BA_INSTANCE_HASH(t)                         \
+instance (HashAlgorithm algo, ByteArrayAccess t) => \
+         HasAbstractHash (CryptoniteFunc algo) t    \
+
+BA_INSTANCE_HASH((AbstractHash hf a))
+BA_INSTANCE_HASH((AbstractPK ss))
+BA_INSTANCE_HASH((AbstractSK ss))
+BA_INSTANCE_HASH((AbstractSig ss a))
+
+-- | Also hash lazy bytestrings in a special way.
+instance HashAlgorithm algo =>
          HasAbstractHash (CryptoniteFunc algo) LByteString where
     unsafeAbstractHash = AbstractHash . Crypto.hashlazy

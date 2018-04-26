@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeSynonymInstances #-}
 
 -- | Actual implementations of abstract crypto primitives used in Disciplina.
 
@@ -21,6 +22,7 @@ module Disciplina.Crypto.Impl
 import Universum
 
 import Crypto.Hash.Algorithms (Blake2sp_256)
+import Data.ByteArray (ByteArrayAccess)
 
 import Disciplina.Crypto.Hash (AbstractHash (..), CryptoniteFunc, HasAbstractHash (..),
                                abstractHash)

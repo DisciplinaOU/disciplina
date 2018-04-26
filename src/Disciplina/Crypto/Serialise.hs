@@ -11,8 +11,9 @@ import Codec.Serialise.Decoding (decodeBytes)
 import Codec.Serialise.Encoding (encodeBytes)
 import Data.ByteArray (convert)
 
-import Disciplina.Crypto.ByteArrayStruct (ByteArrayStruct (..))
-import Disciplina.Crypto.Hash (AbstractHash (..), HasAbstractHash (..), HashFunc (..))
+import Disciplina.Crypto.ByteArray (ByteArrayStruct (..))
+import Disciplina.Crypto.Hash (AbstractHash (..), CryptoniteFunc, HasAbstractHash (..),
+                               HashFunc (..))
 import Disciplina.Crypto.Signing (AbstractPK (..), AbstractSK (..), AbstractSig (..),
                                   HasAbstractSignature (..), SignatureScheme (..))
 
@@ -31,8 +32,7 @@ instance {-# OVERLAPPABLE #-} ByteArrayStruct ba => Serialise ba where
 deriving instance Serialise (HashResult hf) =>
     Serialise (AbstractHash hf a)
 
--- | If 'LByteString' can be hashed with method `hf`, then every
--- 'Serialise' instance can.
+-- | If 'LByteString' can be hashed, then every 'Serialise' instance can.
 instance {-# OVERLAPPABLE #-}
     (Serialise a, HashFunc hf, HasAbstractHash hf LByteString) =>
     HasAbstractHash hf a where

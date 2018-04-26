@@ -50,15 +50,16 @@ library
                      , Disciplina.Core.ATG
 
                      -- Witness node model
-                     , Disciplina.WorldState.BlakeHash
+                     -- , Disciplina.WorldState.BlakeHash
                      , Disciplina.WorldState.Internal
+                     , Disciplina.WorldState.Instances
 
                      -- Educator node model
                      , Disciplina.Educator.Block
                      , Disciplina.Educator.Txs
                      , Disciplina.Educator.State
 
-                     , Disciplina.Crypto.ByteArrayStruct
+                     , Disciplina.Crypto.ByteArray
                      , Disciplina.Crypto.Hash
                      , Disciplina.Crypto.Hash.Class
                      , Disciplina.Crypto.Hash.Cryptonite
@@ -82,6 +83,7 @@ library
                      , ether
                      , exceptions
                      , formatting
+                     , free
                      , hashable
                      , lens
                      , log-warper

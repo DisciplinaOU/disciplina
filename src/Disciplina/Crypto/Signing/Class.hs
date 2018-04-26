@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeApplications #-}
 
 -- | Abstract interface for a signature scheme
 
@@ -13,12 +14,21 @@ module Disciplina.Crypto.Signing.Class
 
 import Universum
 
+import Data.ByteArray (ByteArrayAccess)
+
 -- | Class of signature schemes with defined format of keys and
 -- signatures.
 class SignatureScheme ss where
     type PK ss  :: *
     type SK ss  :: *
     type Sig ss :: *
+
+    unsafeSignBytes ::
+        forall a b. ByteArrayAccess a =>
+        AbstractSK ss -> a -> AbstractSig ss b
+    unsafeVerifyBytes ::
+        forall a b. ByteArrayAccess a =>
+        AbstractPK ss -> a -> AbstractSig ss b -> Bool
 
 -- | Wrapper for a public key.
 newtype AbstractPK ss = AbstractPK (PK ss)
@@ -40,13 +50,29 @@ deriving instance Eq (Sig ss) => Eq (AbstractSig ss a)
 deriving instance Ord (Sig ss) => Ord (AbstractSig ss a)
 deriving instance Show (Sig ss) => Show (AbstractSig ss a)
 
+-- | Provide 'ByteArrayAccess' instances for signatures and keys.
+deriving instance ByteArrayAccess (PK ss) =>
+    ByteArrayAccess (AbstractPK ss)
+deriving instance ByteArrayAccess (SK ss) =>
+    ByteArrayAccess (AbstractSK ss)
+deriving instance ByteArrayAccess (Sig ss) =>
+    ByteArrayAccess (AbstractSig ss a)
+
 -- | For each `a`, provide a way to sign it using scheme `ss`.
 class SignatureScheme ss => HasAbstractSignature ss a where
     unsafeAbstractSign ::
-           forall b. AbstractSK ss -> a -> AbstractSig ss b
+        forall b. AbstractSK ss -> a -> AbstractSig ss b
+    default unsafeAbstractSign ::
+        forall b. ByteArrayAccess a =>
+        AbstractSK ss -> a -> AbstractSig ss b
+    unsafeAbstractSign = unsafeSignBytes @ss
 
     unsafeAbstractVerify ::
-           forall b. AbstractPK ss -> a -> AbstractSig ss b -> Bool
+        forall b. AbstractPK ss -> a -> AbstractSig ss b -> Bool
+    default unsafeAbstractVerify ::
+        forall b. ByteArrayAccess a =>
+        AbstractPK ss -> a -> AbstractSig ss b -> Bool
+    unsafeAbstractVerify = unsafeVerifyBytes @ss
 
 -- | Type-safe function for signing.
 abstractSign ::

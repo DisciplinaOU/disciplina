@@ -12,6 +12,7 @@ import Universum
 import Data.Hashable (Hashable)
 import qualified Data.Hashable as H
 
+import Disciplina.Crypto.ByteArray (hashBytes)
 import Disciplina.Crypto.Hash.Class (AbstractHash (..), HasAbstractHash (..), HashFunc (..))
 
 -- | Make 'AbstractHash' itself 'Hashable'
@@ -23,7 +24,8 @@ data HashableFunc
 
 instance HashFunc HashableFunc where
     type HashResult HashableFunc = Int
+    unsafeHashBytes = AbstractHash . hashBytes
 
--- | 'HashFunction' instance which uses 'Hashable' for 'ByteArray's
+-- | Hash every 'Hashable' type (don't bother here with 'Serialise' and stuff...)
 instance Hashable a => HasAbstractHash HashableFunc a where
     unsafeAbstractHash = AbstractHash . H.hash

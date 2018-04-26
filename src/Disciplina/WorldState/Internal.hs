@@ -12,11 +12,12 @@ import Control.Lens (makeLenses, makePrisms, to, use, zoom, (+~), (-~), (.=))
 import Control.Monad.RWS (RWST (..), get, listen, tell)
 import Data.Default (Default, def)
 
-import Disciplina.Accounts
-import Disciplina.Crypto (Hash)
-
 import qualified Data.Tree.AVL as AVL
 import qualified Debug.Trace as Debug
+
+import Disciplina.Accounts
+import Disciplina.Crypto (Hash, unsafeHash)
+import Disciplina.WorldState.Instances ()
 
 -- | Hash without a phantom type parameter. Temporary.
 type Hash' = Hash ()
@@ -63,8 +64,6 @@ instance Eq WorldStateProof where
              .to AVL.rootHash  -- reduce to hash
 
 type Proof = AVL.Proof Hash' Entity
-
-instance Serialise a => Serialise (Proof a)
 
 type DAG         = Hash'
 type Publication = Hash'
@@ -520,12 +519,12 @@ instance CanGetHash Server where
     getCurrentHash = do
         Server st <- get
         proof <- diffWorldState def st
-        return (hash proof)
+        return (unsafeHash proof)
 
 instance CanGetHash Client where
     getCurrentHash = do
         Client proof <- get
-        return (hash proof)
+        return (unsafeHash proof)
 
 -- | Using proof, replay some actions as if you're the server node.
 --   Does not generate proof for the actions replayed.
@@ -594,7 +593,7 @@ generateBlock transactions = do
 
         let block = Block transactions prev
 
-        _Server.prevBlockHash .= hash block
+        _Server.prevBlockHash .= unsafeHash block
 
         return block
 
@@ -615,7 +614,7 @@ replayBlock blockWithProof = do
             throwM PreviousBlockHashMismatch
 
         for_ transactions playTransaction
-        setPrevBlockHash $ hash block
+        setPrevBlockHash $ unsafeHash block
 
 trace :: CanStore m => Show a => a -> WorldT side m ()
 trace a = do
