@@ -7,18 +7,18 @@ import Disciplina.Educator.Txs (PrivateTxId(..), PrivateTx(..))
 import Disciplina.Crypto (Hash)
 import qualified Disciplina.Core as Core (Grade(..), SubjectId(..))
 
--- Query type gives query return type
+-- | Query type determine query return type
 class RunQuery a b | a -> b where
   runQuery :: (MonadIO m) => a -> m b
 
--- todo, implement real interpretes, these are just stubs
+-- | TODO, implement real interpreters, these are just stubs
 runTxQuery :: (MonadIO m) => QueryTx -> m (Maybe PrivateTx)
 runTxQuery (SELECTTx _ (TxIdEq (a :: PrivateTxId))) = return Nothing
 
 instance RunQuery QueryTx (Maybe PrivateTx) where
   runQuery = runTxQuery
 
-runObjQuery (SELECTObj _ (ObjHashEq (a :: Hash b))) = return Nothing
+runObjQuery (SELECTObj _ (ObjHashEq (a :: Hash ()))) = return Nothing
 
 instance RunQuery QueryTxs [PrivateTx] where
   runQuery = runTxsQuery
@@ -31,8 +31,12 @@ runTxsQuery (SELECTTxs _ ((:&) a b)) = do
                   resA <- runTxsQuery (SELECTTxs WHERE a)
                   resB <- runTxsQuery (SELECTTxs WHERE b)
                   return []
+runTxsQuery (SELECTTxs _ ((:||) a b)) = do
+                  resA <- runTxsQuery (SELECTTxs WHERE a)
+                  resB <- runTxsQuery (SELECTTxs WHERE b)
+                  return []
 
-instance RunQuery (QueryObj a) (Maybe Int) where
+instance RunQuery QueryObj (Maybe Int) where
   runQuery = runObjQuery
 
 
