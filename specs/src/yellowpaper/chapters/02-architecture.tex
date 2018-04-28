@@ -1,14 +1,28 @@
 \section{Architecture overview}
 \label{sec:architecture}
 
+In this section we analyze the problem Disciplina aims to solve, describe the possible solutions and derive the architecture.
+
+We start from some of the major requirements:
+
+\begin{enumerate}
+\item The platform should be able to store large quantities of private data such as grades, assignments, solutions, etc.
+\item Educational institutions should be able to disclose the private data only to the payer.
+\item The platform should guarantee fairness of the data trade without involving a third-party intermediary.
+\end{enumerate}
+
 Due to the nature of the platform, it has to operate on sensitive data, such as
 courses, assignments, solutions and grades. Permissionless blockchains, like
 Ethereum or EOS, would require disclosing this data to the public, whereas the
-permissive ones, like Hyperledger, lack public verifiability. Our architecture
-splits the blockchain into two layers: the private layer contains sensitive
-data, and the public one contains the information necessary to validate the
-integrity and authenticity of the private blocks. The key entities of the
-proposed blockchain architecture are presented in Figure~\ref{fig:entities}.
+permissive ones, like Hyperledger, lack public verifiability.
+
+It is important to note that it is possible to use encryption schemes in order to store sensitive information in public ledgers. This approach, despite being seemingly viable, suffers from incentive and scalability problems. The nodes of the blockchain would have to store every grade issued by all the educational institutions from all over the world. The expected size of the dataset exceeds the storage capacities of regular personal computers, which can lead to excessive centralization of the platform. Moreover, in most of the public ledgers the distributed storage is quite expensive, while there is no incentive for educaional institutions to pay for every grade they issue. Thus, we consider storing the educaitonal records on the public blockchain economically unjustified. What is more, it is hard to make the data disclosure process fair in such setting: in order to use the blockchain as an arbiter in case of dispute one has to reveal the encryption key to a subset of the transcrips issued by a certain educational institution.
+
+Our architecture splits the blockchain into two layers: the private layer
+contains sensitive data, and the public one contains the information necessary
+to validate the integrity and authenticity of the private blocks. The key
+entities of the proposed blockchain architecture are presented in
+Figure~\ref{fig:entities}.
 
 \begin{figure}[ht]
 \centering
