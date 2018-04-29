@@ -232,11 +232,11 @@ test-suite disciplina-test
                            , AVL
                            , disciplina
                            , data-default
-                           , HUnit
+                           , hspec
                            , lens
-                           , test-framework
-                           , test-framework-hunit
-                           , test-framework-quickcheck2
+                           , tasty
+                           , tasty-hspec
+                           , tasty-discover
                            , universum
                            , QuickCheck
                            , quickcheck-instances
