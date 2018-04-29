@@ -237,6 +237,7 @@ test-suite disciplina-test
                            , tasty
                            , tasty-hunit
                            , tasty-quickcheck
+                           , tasty-discover
                            , universum
                            , QuickCheck
                            , quickcheck-instances

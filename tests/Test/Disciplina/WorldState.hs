@@ -1,67 +1,66 @@
-
-module Test.Disciplina.WorldState (tests) where
+module Test.Disciplina.WorldState where
 
 import Test.Common
 
 import qualified Disciplina.WorldState as World
 
-tests :: TestTree
-tests = testGroup "World"
-    [ testGroup "Transactions"
-        [ testProperty "another server node can apply transactions" $
-            \(Sandbox world (transaction : _) _ _ _ _) ->
-                World.Server world `worldTProperty` do
-                    World.replayTransaction transaction
+test_Transactions :: TestTree
+test_Transactions = testGroup "Transactions"
+    [ testProperty "another server node can apply transactions" $
+        \(Sandbox world (transaction : _) _ _ _ _) ->
+            World.Server world `worldTProperty` do
+                World.replayTransaction transaction
+                return True
+
+    , testProperty "another client node can apply transactions" $
+        \(Sandbox world transactions _ _ _ _) -> do
+            World.Server world `worldTProperty` do
+                worldProof <- World.diffWorldState def world
+
+                World.Client worldProof `World.isolate` do
+                    for_ transactions World.replayTransaction
                     return True
 
-        , testProperty "another client node can apply transactions" $
-            \(Sandbox world transactions _ _ _ _) -> do
+    , testProperty "impossible to send more than you have" $
+        \(Sandbox world _ a _ b limit) ->
+            expectFailure $ do
                 World.Server world `worldTProperty` do
-                    worldProof <- World.diffWorldState def world
+                    World.impersonate a $ do
+                        transaction <- World.plan [World.TransferTokens b (limit + 1)]
+                        _ <- World.playTransaction transaction
+                        return False
 
-                    World.Client worldProof `World.isolate` do
-                        for_ transactions World.replayTransaction
-                        return True
-
-        , testProperty "impossible to send more than you have" $
-            \(Sandbox world _ a _ b limit) ->
-                expectFailure $ do
-                    World.Server world `worldTProperty` do
-                        World.impersonate a $ do
-                            transaction <- World.plan [World.TransferTokens b (limit + 1)]
-                            _ <- World.playTransaction transaction
-                            return False
-
-        , testProperty "impossible to do things being an absent entity" $
-            \(Sandbox world _ _ _ b limit) ->
-                expectFailure $ do
-                    World.Server world `worldTProperty` do
-                        World.impersonate def $ do
-                            transaction <- World.plan [World.TransferTokens b (limit - 1)]
-                            _ <- World.playTransaction transaction
-                            return False
-        ]
-    , testGroup "Blocks"
-        [ testProperty "Client can add block to the blockchain" $
-            \(Sandbox world transactions _ _ _ _) -> do
+    , testProperty "impossible to do things being an absent entity" $
+        \(Sandbox world _ _ _ b limit) ->
+            expectFailure $ do
                 World.Server world `worldTProperty` do
-                    worldProof <- World.diffWorldState def world
-                    block      <- World.generateBlock $ (^.World.wpBody) <$> transactions
+                    World.impersonate def $ do
+                        transaction <- World.plan [World.TransferTokens b (limit - 1)]
+                        _ <- World.playTransaction transaction
+                        return False
+    ]
 
-                    World.Client worldProof `World.isolate` do
-                        World.replayBlock block
+test_Blocks :: TestTree
+test_Blocks = testGroup "Blocks"
+    [ testProperty "Client can add block to the blockchain" $
+        \(Sandbox world transactions _ _ _ _) -> do
+            World.Server world `worldTProperty` do
+                worldProof <- World.diffWorldState def world
+                block      <- World.generateBlock $ (^.World.wpBody) <$> transactions
 
-                    return True
-
-        , testProperty "Client can add block to the blockchain" $
-            \(Sandbox world transactions _ _ _ _) -> do
-                World.Server world `worldTProperty` do
-                    block <- World.dryRun $ do
-                        World.generateBlock $ (^.World.wpBody) <$> transactions
-
+                World.Client worldProof `World.isolate` do
                     World.replayBlock block
 
-                    return True
+                return True
 
-        ]
+    , testProperty "Client can add block to the blockchain" $
+        \(Sandbox world transactions _ _ _ _) -> do
+            World.Server world `worldTProperty` do
+                block <- World.dryRun $ do
+                    World.generateBlock $ (^.World.wpBody) <$> transactions
+
+                World.replayBlock block
+
+                return True
+
     ]
