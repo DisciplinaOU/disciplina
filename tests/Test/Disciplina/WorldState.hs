@@ -4,15 +4,15 @@ import Test.Common
 
 import qualified Disciplina.WorldState as World
 
-test_Transactions :: TestTree
-test_Transactions = testGroup "Transactions"
-    [ testProperty "another server node can apply transactions" $
+spec_Transactions :: Spec
+spec_Transactions = describe "Transactions" $ do
+    it "can be applied by another server node" $ property $
         \(Sandbox world (transaction : _) _ _ _ _) ->
             World.Server world `worldTProperty` do
                 World.replayTransaction transaction
                 return True
 
-    , testProperty "another client node can apply transactions" $
+    it "can be applied by another client node" $ property $
         \(Sandbox world transactions _ _ _ _) -> do
             World.Server world `worldTProperty` do
                 worldProof <- World.diffWorldState def world
@@ -21,7 +21,7 @@ test_Transactions = testGroup "Transactions"
                     for_ transactions World.replayTransaction
                     return True
 
-    , testProperty "impossible to send more than you have" $
+    it "is impossible to send more than you have" $ property $
         \(Sandbox world _ a _ b limit) ->
             expectFailure $ do
                 World.Server world `worldTProperty` do
@@ -30,7 +30,7 @@ test_Transactions = testGroup "Transactions"
                         _ <- World.playTransaction transaction
                         return False
 
-    , testProperty "impossible to do things being an absent entity" $
+    it "is impossible to do things being an absent entity" $ property $
         \(Sandbox world _ _ _ b limit) ->
             expectFailure $ do
                 World.Server world `worldTProperty` do
@@ -38,11 +38,10 @@ test_Transactions = testGroup "Transactions"
                         transaction <- World.plan [World.TransferTokens b (limit - 1)]
                         _ <- World.playTransaction transaction
                         return False
-    ]
 
-test_Blocks :: TestTree
-test_Blocks = testGroup "Blocks"
-    [ testProperty "Client can add block to the blockchain" $
+spec_Blocks :: Spec
+spec_Blocks = describe "Blocks" $ do
+    it "can be added by a client to the blockchain" $ property $
         \(Sandbox world transactions _ _ _ _) -> do
             World.Server world `worldTProperty` do
                 worldProof <- World.diffWorldState def world
@@ -53,7 +52,7 @@ test_Blocks = testGroup "Blocks"
 
                 return True
 
-    , testProperty "Client can add block to the blockchain" $
+    it "can be added by another server node to the blockchain" $ property $
         \(Sandbox world transactions _ _ _ _) -> do
             World.Server world `worldTProperty` do
                 block <- World.dryRun $ do
@@ -62,5 +61,3 @@ test_Blocks = testGroup "Blocks"
                 World.replayBlock block
 
                 return True
-
-    ]
