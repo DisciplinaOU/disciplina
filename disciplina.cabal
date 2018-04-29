@@ -21,6 +21,7 @@ library
                      , Disciplina.Listeners
                      , Disciplina.Workers
                      , Disciplina.Transport
+                     , Disciplina.Messages
                      , Disciplina.Educator
                      , Disciplina.Core
                      , Disciplina.Crypto
@@ -43,7 +44,6 @@ library
                      , Disciplina.Listeners.Listener
                      , Disciplina.Workers.Worker
                      , Disciplina.Transport.TCP
-                     , Disciplina.Messages
 
                      -- Core datatypes and functions
                      , Disciplina.Core.Types

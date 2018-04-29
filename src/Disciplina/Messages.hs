@@ -1,4 +1,11 @@
-module Disciplina.Messages where
+module Disciplina.Messages
+       ( PingBlk (..)
+       , PongBlk (..)
+       , PingTx (..)
+       , PongTx (..)
+       , Packing
+       , serialisePacking
+       ) where
 
 import Universum
 
@@ -7,7 +14,9 @@ import Control.Monad.ST (RealWorld, ST)
 import qualified Data.ByteString as BS
 import Data.Data (Data)
 import Node.Message.Class (Message (..), PackingType (..), Serializable (..))
+import qualified Node.Message.Class as Msg
 import qualified Node.Message.Decoder as Msg
+import System.IO.Unsafe (unsafePerformIO)
 
 -- | Type for messages from the workers to the witnessListeners.
 data PingBlk = PingBlk
@@ -44,6 +53,8 @@ data SerialiseP
 
 instance PackingType SerialiseP where
     type PackM SerialiseP = Identity
+    -- `IO` and not `ST s`, because `s` parameter doesn't get
+    -- propagated this way.
     type UnpackM SerialiseP = IO
 
 fromIDecode :: IDecode RealWorld a -> Msg.DecoderStep (UnpackM SerialiseP) a
@@ -59,5 +70,15 @@ instance Serialise a => Serializable SerialiseP a where
     packMsg _ = pure . serialise
     unpackMsg _ = mkDecoder deserialiseIncremental
 
+serialisePacking :: Applicative m => Msg.Packing SerialiseP m
+serialisePacking = Msg.Packing
+    { Msg.packingType = Proxy
+    , Msg.packM = pure . runIdentity
+    , Msg.unpackM = pure . unsafePerformIO
+    -- ^ Considered to be safe, because 'Decoder' only does
+    -- reads of byte arrays.
+    }
+
+-- | Choose 'SerialiseP' as default packing mechanism.
 type Packing = SerialiseP
 
