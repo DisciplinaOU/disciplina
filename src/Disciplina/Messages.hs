@@ -7,7 +7,6 @@ import Control.Monad.ST (RealWorld, ST)
 import qualified Data.ByteString as BS
 import Data.Data (Data)
 import Node.Message.Class (Message (..), PackingType (..), Serializable (..))
-import qualified Node.Message.Class as Msg
 import qualified Node.Message.Decoder as Msg
 
 -- | Type for messages from the workers to the witnessListeners.

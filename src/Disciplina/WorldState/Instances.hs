@@ -8,7 +8,7 @@ import Codec.Serialise (Serialise (..))
 import Control.Monad.Free (Free (..))
 import qualified Data.ByteArray as BA
 import Data.Default (Default (..))
-import Data.Hashable (Hashable (hashWithSalt), hashPtrWithSalt)
+import Data.Hashable (Hashable (hashWithSalt))
 import qualified Data.Tree.AVL as AVL
 
 import Disciplina.Crypto (HasHash, Hash, hashBytesWithSalt, unsafeHash)
