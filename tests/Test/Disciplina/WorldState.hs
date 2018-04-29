@@ -4,11 +4,10 @@ module Test.Disciplina.WorldState (tests) where
 import Test.Common
 
 import qualified Disciplina.WorldState as World
---import qualified Debug.Trace           as Debug
 
-tests :: [Test]
-tests =
-    [ testGroup "World/Transactions"
+tests :: TestTree
+tests = testGroup "World"
+    [ testGroup "Transactions"
         [ testProperty "another server node can apply transactions" $
             \(Sandbox world (transaction : _) _ _ _ _) ->
                 World.Server world `worldTProperty` do
@@ -42,7 +41,7 @@ tests =
                             _ <- World.playTransaction transaction
                             return False
         ]
-    , testGroup "World/Blocks"
+    , testGroup "Blocks"
         [ testProperty "Client can add block to the blockchain" $
             \(Sandbox world transactions _ _ _ _) -> do
                 World.Server world `worldTProperty` do

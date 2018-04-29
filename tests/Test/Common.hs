@@ -38,13 +38,13 @@ import qualified Data.Tree.AVL as AVL
 import qualified Disciplina.WorldState as World
 --import qualified Debug.Trace           as Debug
 
-import Test.Framework as T (Test, defaultMain, testGroup)
-import Test.Framework.Providers.HUnit as T (testCase)
-import Test.Framework.Providers.QuickCheck2 as T (testProperty)
 import Test.HUnit as T (Assertion, assertBool, assertEqual, assertFailure, (@=?), (@?), (@?=))
 import Test.QuickCheck as T (Arbitrary (..), Gen, Property, Testable, elements, expectFailure,
                              ioProperty, oneof, suchThat, vectorOf, (===), (==>))
 import Test.QuickCheck.Instances as T ()
+import Test.Tasty as T (TestName, TestTree, defaultMain, testGroup)
+import Test.Tasty.HUnit as T (testCase)
+import Test.Tasty.QuickCheck as T (testProperty)
 
 -- | Extensional equality combinator.
 (.=.) :: (Eq b, Show b, Arbitrary a) => (a -> b) -> (a -> b) -> a -> Property

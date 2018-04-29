@@ -234,9 +234,9 @@ test-suite disciplina-test
                            , data-default
                            , HUnit
                            , lens
-                           , test-framework
-                           , test-framework-hunit
-                           , test-framework-quickcheck2
+                           , tasty
+                           , tasty-hunit
+                           , tasty-quickcheck
                            , universum
                            , QuickCheck
                            , quickcheck-instances
