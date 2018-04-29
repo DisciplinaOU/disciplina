@@ -11,7 +11,7 @@ import Codec.Serialise.Decoding (decodeBytes)
 import Codec.Serialise.Encoding (encodeBytes)
 import Data.ByteArray (convert)
 
-import Disciplina.Crypto.ByteArray (ByteArrayStruct (..))
+import Disciplina.Crypto.ByteArray (FromByteArray (..))
 import Disciplina.Crypto.Hash (AbstractHash (..), CryptoniteFunc, HasAbstractHash (..),
                                HashFunc (..))
 import Disciplina.Crypto.Signing (AbstractPK (..), AbstractSK (..), AbstractSig (..),
@@ -19,9 +19,10 @@ import Disciplina.Crypto.Signing (AbstractPK (..), AbstractSK (..), AbstractSig 
 
 -- | 'Serialise' instance for any 'ByteArrayStruct' (including underlying
 -- values of hashes, keys and signatures).
-instance {-# OVERLAPPABLE #-} ByteArrayStruct ba => Serialise ba where
+instance {-# OVERLAPPABLE #-} FromByteArray ba => Serialise ba where
     encode = encodeBytes . convert
-    decode = decodeBytes >>= either fail return . reconstruct
+    decode = decodeBytes >>= maybe (fail errMsg) return . fromByteArray
+      where errMsg = "fromByteArray: invalid byte array representation"
 
 ---------------------------------------------------------------
 -- Hashes

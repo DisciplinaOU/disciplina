@@ -2,14 +2,14 @@
 -- | Utilities for manipulating byte arrays.
 
 module Disciplina.Crypto.ByteArray
-       ( ByteArrayStruct (..)
+       ( FromByteArray (..)
        , hashBytesWithSalt
        , hashBytes
        ) where
 
 import Universum
 
-import Crypto.Error (CryptoFailable, eitherCryptoError)
+import Crypto.Error (maybeCryptoError)
 import qualified Crypto.Hash as Crypto
 import qualified Crypto.PubKey.Ed25519 as Ed25519
 import Data.ByteArray (ByteArray, ByteArrayAccess)
@@ -19,45 +19,44 @@ import System.IO.Unsafe (unsafeDupablePerformIO)
 
 -- | Class of types, which can be reconstructed from a 'ByteArray',
 -- but only from a particular one.
--- TODO: naming is questionable, any ideas of better name?
--- TODO: maybe something better than 'String' for an error? Now
--- it's just because this 'String' goes to 'fail' from 'MonadFail'.
-class ByteArrayAccess ba => ByteArrayStruct ba where
-    reconstruct :: ByteArrayAccess ba' => ba' -> Either String ba
+class ByteArrayAccess ba => FromByteArray ba where
+    fromByteArray :: ByteArrayAccess ba' => ba' -> Maybe ba
 
 instance {-# OVERLAPPABLE #-}
-    (ByteArrayAccess ba, ByteArray ba) => ByteArrayStruct ba where
-    reconstruct = Right . BA.convert
-
-cfToEither :: CryptoFailable a -> Either String a
-cfToEither = first show . eitherCryptoError
+    (ByteArrayAccess ba, ByteArray ba) => FromByteArray ba where
+    fromByteArray = pure . BA.convert
 
 ----------------------------------------------------------
 -- Hashes
 ----------------------------------------------------------
 
 instance Crypto.HashAlgorithm algo =>
-         ByteArrayStruct (Crypto.Digest algo) where
-    reconstruct = maybeToRight "invalid hash representation" .
-                  Crypto.digestFromByteString
+         FromByteArray (Crypto.Digest algo) where
+    fromByteArray = Crypto.digestFromByteString
 
 ----------------------------------------------------------
 -- Signatures
 ----------------------------------------------------------
 
-instance ByteArrayStruct Ed25519.SecretKey where
-    reconstruct = cfToEither . Ed25519.secretKey
+instance FromByteArray Ed25519.SecretKey where
+    fromByteArray = maybeCryptoError . Ed25519.secretKey
 
-instance ByteArrayStruct Ed25519.PublicKey where
-    reconstruct = cfToEither . Ed25519.publicKey
+instance FromByteArray Ed25519.PublicKey where
+    fromByteArray = maybeCryptoError . Ed25519.publicKey
 
-instance ByteArrayStruct Ed25519.Signature where
-    reconstruct = cfToEither . Ed25519.signature
+instance FromByteArray Ed25519.Signature where
+    fromByteArray = maybeCryptoError . Ed25519.signature
 
 -----------------------------------------------------------
 -- Utils
 -----------------------------------------------------------
 
+-- | Perform some IO action which requires array length and memory
+-- pointer to it unsafely.
+--
+-- Uses `unsafeDupablePerformIO`, which is very fast, but may occasionally be
+-- run simultaneously in several threads, so IO action must be chosen carefully
+-- (read-only operations are OK, beware of writes).
 unsafeWithBytesAndLength ::
     ByteArrayAccess ba => ba -> (Int -> Ptr p -> IO a) -> a
 unsafeWithBytesAndLength ba action =
@@ -74,3 +73,4 @@ hashBytesWithSalt s h = unsafeWithBytesAndLength h $ \len ptr ->
 hashBytes :: ByteArrayAccess ba => ba -> Int
 hashBytes h = unsafeWithBytesAndLength h $ \len ptr ->
     Hash.hashPtr ptr len
+
