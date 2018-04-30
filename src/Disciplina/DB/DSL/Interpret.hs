@@ -1,18 +1,23 @@
 module Disciplina.DB.DSL.Interpret
+              ( runQuery
+              )
               where
 
 import Universum
-import Disciplina.DB.DSL.Types
+import Disciplina.DB.Class (MonadDBRead)
+import Disciplina.DB.DSL.Types (QueryTx(..), QueryTxs(..), WHERE (..)
+                               ,TxIdEq (..), TxGrade(..), QueryObj(..)
+                               ,TxsFilterExpr(..), ObjHashEq(..))
 import Disciplina.Educator.Txs (PrivateTxId(..), PrivateTx(..))
 import Disciplina.Crypto (Hash)
 import qualified Disciplina.Core as Core (Grade(..), SubjectId(..))
 
 -- | Query type determine query return type
 class RunQuery a b | a -> b where
-  runQuery :: (MonadIO m) => a -> m b
+  runQuery :: (MonadDBRead m) => a -> m b
 
 -- | TODO, implement real interpreters, these are just stubs
-runTxQuery :: (MonadIO m) => QueryTx -> m (Maybe PrivateTx)
+runTxQuery :: (MonadDBRead m) => QueryTx -> m (Maybe PrivateTx)
 runTxQuery (SELECTTx _ (TxIdEq (a :: PrivateTxId))) = return Nothing
 
 instance RunQuery QueryTx (Maybe PrivateTx) where
