@@ -14,6 +14,6 @@ buildStack {
 
   overrides = final: previous: {
     rocksdb-haskell = dependCabal previous.rocksdb-haskell [ rocksdb ];
-    cardano-sl-networking = appendConfigureFlag previous.cardano-sl-networking "--ghc-option=-fno-warn-redundant-constraints";
+    cardano-sl-networking = haskell.lib.appendConfigureFlag previous.cardano-sl-networking "--ghc-option=-fno-warn-redundant-constraints";
   };
 }
