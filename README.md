@@ -1,3 +1,3 @@
-# disciplina
-Blockchain platform for the field of education
-.
+# Disciplina
+
+Blockchain platform for the field of education.
