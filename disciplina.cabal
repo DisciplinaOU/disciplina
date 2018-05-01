@@ -69,6 +69,7 @@ library
                      , Disciplina.CLI.Common
   -- other-extensions:
   build-depends:       base >= 4.9 && < 5
+                     , autoexporter
                      , AVL
                      , binary
                      , bytestring
