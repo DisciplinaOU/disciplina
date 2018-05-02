@@ -9,10 +9,10 @@ One of the main goals of the Disciplina platform is to provide a way for the Stu
 \label{fig:cv}
 \end{figure}
 
-In order to prove that some transaction actually occurred in some private block of the concrete Educator, the student has to provide the cryptographic proofs along with the actual data. The cryptographic proof of the inclusion of an element in an authenticated data structure is generally a path of hashes. Let us denote the path of the element~$e$ in some authenticated data structure~$X$ as~$\Path(e, X)$. Thus, the Student has to  provide the following data:
+In order to prove that some transaction actually occurred in some private block of the particular Educator, the student has to provide the cryptographic proofs along with the actual data. The cryptographic proof of the inclusion of an element in an authenticated data structure is generally a path of hashes. Let us denote the path of the element~$e$ in some authenticated data structure~$X$ as~$\Path(e, X)$. Thus, the Student has to  provide the following data:
 \begin{itemize}
   \item The Student's and the Educator's public keys $\PubKey{S}$ and $\PubKey{E}$.
-  \item The course $a_i$ and the a private transaction $T_{priv}$ with the score.
+  \item The private transaction $T_{priv}$ with the course and the grade.
   \item The Merkle path of the transaction in the journal: $P_{priv} = \Path(T_{priv}, M_{priv})$, where $M_{priv}$ is a Merkle tree of the transactions in the private block.
   \item The public block number $H$ and the Merkle path of the transaction $T_{pub}$ that pushed the private block into the public chain: $P_{pub} = \Path(T_{pub}, M_{pub})$, where $M_{pub}$ is a Merkle tree of the transactions in the block $H$.
 \end{itemize}
