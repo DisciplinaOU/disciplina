@@ -4,7 +4,6 @@ module Disciplina.DB.DSL.Types
         ( WHERE (..)
         , TxIdEq (..)
         , TxGrade (..)
-        , NodeWithProp (..)
         , TxsFilterExpr (..)
         , ObjHashEq (..)
         , QueryTx (..)
@@ -24,21 +23,16 @@ data TxIdEq = TxIdEq PrivateTxId
 
 data TxGrade = TxGrade
 
-data NodeWithProp = SubjectNode Core.SubjectId
-                  | TxSubjectNode
-
--- | TODO, what is the correct type for TxSubjectIdEq?
-data TxsFilterExpr = TxSubjectIdEq Int
+data TxsFilterExpr = TxSubjectIdEq Core.SubjectId
                    | TxGradeEq Core.Grade
                    | (:>=) TxGrade Core.Grade
                    | (:&) TxsFilterExpr TxsFilterExpr
                    | (:||) TxsFilterExpr TxsFilterExpr
-                   | (:~>) NodeWithProp NodeWithProp
+                   | TxSubjectIsDescendantOf Core.SubjectId
 
 infixr 4 :>=
 infixr 4 :||
 infixr 3 :&
-infixr 4 :~>
 
 -- | TODO, use correct object hash type
 type Hash' = Hash ()
