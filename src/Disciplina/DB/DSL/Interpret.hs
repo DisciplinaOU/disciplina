@@ -1,6 +1,7 @@
 module Disciplina.DB.DSL.Interpret
               ( runQuery
               , RunQuery (..)
+              , MonadSearchTxObj (..)
               )
               where
 
@@ -37,7 +38,7 @@ instance RunQuery QueryTxs [PrivateTx] where
   runQuery = runTxsQuery
 
 runIOTxsQuery :: QueryTxs -> IO [PrivateTx]
-runIOTxsQuery (SELECTTxs _ (TxSubjectIdEq (a :: Int))) = return []
+runIOTxsQuery (SELECTTxs _ (TxSubjectIdEq (a :: Core.SubjectId))) = return []
 runIOTxsQuery (SELECTTxs _ (TxGradeEq (a :: Core.Grade))) = return []
 runIOTxsQuery (SELECTTxs _ ((:>=) _ (a :: Core.Grade))) = return []
 runIOTxsQuery (SELECTTxs _ (TxSubjectIsDescendantOf a)) = return []
@@ -55,7 +56,6 @@ instance RunQuery QueryObj (Maybe Int) where
 
 runIOObjQuery :: QueryObj -> IO (Maybe Int)
 runIOObjQuery (SELECTObj _ (ObjHashEq (a :: Hash ()))) = return Nothing
-
 
 {-- query construction
 
