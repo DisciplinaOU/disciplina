@@ -9,7 +9,7 @@ module Disciplina.Core.Types
        , Grade (..)
        , StudentId
        , EducatorId
-       , CourseId (..)
+       , CourseId
        , AssignmentId
 
        -- * Activity Type Graph
@@ -55,16 +55,9 @@ type StudentId = Address
 -- | Educator is identified by their public adddress.
 type EducatorId = Address
 
-data CourseId = CourseId
-    { ciSubject :: !SubjectId
-    -- ^ We include subject ID into course ID to simplify
-    -- indexing of transactions by subject.
-    -- TODO: think about it, maybe it's better to reduce size of
-    -- transactions and use really fast map from subject IDs to course IDs?
-    , ciId      :: !Int
-    -- ^ An identificator of particular Educator's course
-    -- among all courses on that subject.
-    } deriving (Show, Eq, Ord, Serialise, Generic)
+-- | Educator's course ID is simply a 'Word32' too.
+-- There's a mapping from course ID to a set of associated subject IDs.
+type CourseId = Word32
 
 -- | 'AssignmentId' is a hash of assignment contents,
 -- which are stored off-chain.
