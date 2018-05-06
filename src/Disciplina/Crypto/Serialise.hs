@@ -21,8 +21,7 @@ import Disciplina.Crypto.Signing (AbstractPK (..), AbstractSK (..), AbstractSig 
 -- values of hashes, keys and signatures).
 instance {-# OVERLAPPABLE #-} FromByteArray ba => Serialise ba where
     encode = encodeBytes . convert
-    decode = decodeBytes >>= maybe (fail errMsg) return . fromByteArray
-      where errMsg = "fromByteArray: invalid byte array representation"
+    decode = decodeBytes >>= either fail return . fromByteArray
 
 ---------------------------------------------------------------
 -- Hashes

@@ -9,7 +9,7 @@ module Disciplina.Crypto.ByteArray
 
 import Universum
 
-import Crypto.Error (maybeCryptoError)
+import Crypto.Error (CryptoFailable, eitherCryptoError)
 import qualified Crypto.Hash as Crypto
 import qualified Crypto.PubKey.Ed25519 as Ed25519
 import Data.ByteArray (ByteArray, ByteArrayAccess)
@@ -20,7 +20,7 @@ import System.IO.Unsafe (unsafeDupablePerformIO)
 -- | Class of types, which can be reconstructed from a 'ByteArray',
 -- but only from a particular one.
 class ByteArrayAccess ba => FromByteArray ba where
-    fromByteArray :: ByteArrayAccess ba' => ba' -> Maybe ba
+    fromByteArray :: ByteArrayAccess ba' => ba' -> Either String ba
 
 instance {-# OVERLAPPABLE #-}
     (ByteArrayAccess ba, ByteArray ba) => FromByteArray ba where
@@ -32,20 +32,24 @@ instance {-# OVERLAPPABLE #-}
 
 instance Crypto.HashAlgorithm algo =>
          FromByteArray (Crypto.Digest algo) where
-    fromByteArray = Crypto.digestFromByteString
+    fromByteArray = maybeToRight "Invalid hash size." .
+                    Crypto.digestFromByteString
 
 ----------------------------------------------------------
 -- Signatures
 ----------------------------------------------------------
 
+cfToEither :: CryptoFailable a -> Either String a
+cfToEither = first show . eitherCryptoError
+
 instance FromByteArray Ed25519.SecretKey where
-    fromByteArray = maybeCryptoError . Ed25519.secretKey
+    fromByteArray = cfToEither . Ed25519.secretKey
 
 instance FromByteArray Ed25519.PublicKey where
-    fromByteArray = maybeCryptoError . Ed25519.publicKey
+    fromByteArray = cfToEither . Ed25519.publicKey
 
 instance FromByteArray Ed25519.Signature where
-    fromByteArray = maybeCryptoError . Ed25519.signature
+    fromByteArray = cfToEither . Ed25519.signature
 
 -----------------------------------------------------------
 -- Utils
