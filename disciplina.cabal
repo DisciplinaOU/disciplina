@@ -50,7 +50,6 @@ library
                      , Disciplina.Core.ATG
 
                      -- Witness node model
-                     -- , Disciplina.WorldState.BlakeHash
                      , Disciplina.WorldState.Internal
                      , Disciplina.WorldState.Instances
 
