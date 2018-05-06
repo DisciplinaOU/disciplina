@@ -5,13 +5,20 @@ module Disciplina.WorldState.Instances () where
 import Universum
 
 import Codec.Serialise (Serialise (..))
+import qualified Codec.Serialise as S
 import Control.Monad.Free (Free (..))
 import qualified Data.ByteArray as BA
+import qualified Data.ByteString.Lazy as LBS
 import Data.Default (Default (..))
 import Data.Hashable (Hashable (hashWithSalt))
 import qualified Data.Tree.AVL as AVL
 
 import Disciplina.Crypto (HasHash, Hash, hashBytesWithSalt, unsafeHash)
+
+-- Every 'Serialise' instance is 'Serialisable'
+instance Serialise a => AVL.Serialisable a where
+    serialise = LBS.toStrict . S.serialise
+    deserialise = first show . S.deserialiseOrFail . LBS.fromStrict
 
 -- 'Serialise' instances for AVL types. Temporary.
 instance Serialise AVL.Tilt
