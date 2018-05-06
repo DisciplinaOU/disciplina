@@ -41,7 +41,7 @@ extra-deps:
   commit: 5d8ff2b07b9df35cf61329a3d975e2c8cf95c12a
 
 - git: git@github.com:serokell/auth-data-structures.git
-  commit: bed9a644c90085f14700ca2f660bd2ac1f2b06d6
+  commit: 3bd0cbc7ac0408f897f11746dbd245e3f8437bbb
 
 - git: git@github.com:serokell/snowdrop.git
   commit: 3c7f938aef06be21bad46165c5d6f32f5f41d91c
