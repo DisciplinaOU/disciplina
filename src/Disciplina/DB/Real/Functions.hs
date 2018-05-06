@@ -28,11 +28,11 @@ openRocksDB :: MonadIO m => FilePath -> m DB
 openRocksDB path = do
     let rocksReadOpts = Rocks.defaultReadOptions
         rocksWriteOpts = Rocks.defaultWriteOptions
-        rocksOptions = (Rocks.defaultOptions path)
-            { Rocks.optionsCreateIfMissing = True
-            , Rocks.optionsCompression = Rocks.NoCompression
+        rocksOptions = Rocks.defaultOptions
+            { Rocks.createIfMissing = True
+            , Rocks.compression = Rocks.NoCompression
             }
-    rocksDB <- Rocks.open rocksOptions
+    rocksDB <- Rocks.open path rocksOptions
     return DB {..}
 
 closeRocksDB :: MonadIO m => DB -> m ()

@@ -4,6 +4,7 @@
 module Disciplina.Educator.Block
        ( -- * Basic types
          PrivateHeaderHash
+       , SizedMerkleRoot (..)
        , PrivateBlockHeader (..)
        , pbhPrevBlock
        , pbhBodyProof

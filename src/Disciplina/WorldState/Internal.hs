@@ -1,58 +1,61 @@
 
-{-# language DeriveAnyClass #-}
+{-# LANGUAGE DeriveAnyClass #-}
 
 module Disciplina.WorldState.Internal where
 
 import qualified Prelude (show)
 
-import Universum hiding (Hashable, trace, use, get)
+import Universum hiding (Hashable, get, trace, use)
 
-import Control.Lens (makeLenses, makePrisms, use, to, zoom, (-~), (+~), (.=))
-import Control.Monad.RWS (RWST(..), tell, listen, get)
-
-import Data.Binary (Binary)
+import Codec.Serialise (Serialise (..))
+import Control.Lens (makeLenses, makePrisms, to, use, zoom, (+~), (-~), (.=))
+import Control.Monad.RWS (RWST (..), get, listen, tell)
 import Data.Default (Default, def)
 
-import Disciplina.Accounts
-import Disciplina.WorldState.BlakeHash (Hash, hash, HasHash(..))
-
 import qualified Data.Tree.AVL as AVL
-import qualified Debug.Trace   as Debug
+import qualified Debug.Trace as Debug
+
+import Disciplina.Accounts
+import Disciplina.Crypto (Hash, unsafeHash)
+import Disciplina.WorldState.Instances ()
+
+-- | Hash without a phantom type parameter. Temporary.
+type Hash' = Hash ()
 
 -- | Stub representation of entity.
 data Entity = Entity Int
-    deriving (Show, Eq, Ord, Bounded, Generic, Binary, Default)
+    deriving (Show, Eq, Ord, Bounded, Generic, Serialise, Default)
 
 -- | Global state of the network, maintained by each server node.
 data WorldState
   = WorldState
-    { _accounts       :: AVLMap (Account Hash)
+    { _accounts       :: AVLMap (Account Hash')
     , _publications   :: AVLMap Publication
     , _specalizations :: AVLMap DAG
     , _storage        :: AVLMap Storage
     , _code           :: AVLMap Code
-    , _prevBlockHash  :: Hash
+    , _prevBlockHash  :: Hash'
     }
 
-type AVLMap v = AVL.Map Hash Entity v
+type AVLMap v = AVL.Map Hash' Entity v
 
 -- | Proof of any action on global data.
 data WorldStateProof
     = WorldStateProof
-        { _accountsProof      :: Proof (Account Hash)
+        { _accountsProof      :: Proof (Account Hash')
         , _publicationsProof  :: Proof Publication
         , _specalizatiosProof :: Proof DAG
         , _storageProof       :: Proof Storage
         , _codeProof          :: Proof Code
-        , _prevBlockHashProof :: Hash
+        , _prevBlockHashProof :: Hash'
         }
-    deriving (Show, Generic, Binary)
+    deriving (Show, Generic, Serialise)
 
 instance Eq WorldStateProof where
     WorldStateProof a b c d e x == WorldStateProof f g h i k y =
         and [a ==? f, b ==? g, c ==? h, d ==? i, e ==? k, x == y]
       where
-        (==?) :: (Show s, Eq s, Binary s) => Proof s -> Proof s -> Bool
+        (==?) :: (Show s, Eq s, Serialise s) => Proof s -> Proof s -> Bool
         (==?) = (==) `on` getHash
 
         -- TODO: move into Data.Tree.AVL.Proof
@@ -60,27 +63,27 @@ instance Eq WorldStateProof where
             ^.   AVL._Proof    -- get the tree
              .to AVL.rootHash  -- reduce to hash
 
-type Proof = AVL.Proof Hash Entity
+type Proof = AVL.Proof Hash' Entity
 
-type DAG         = Hash
-type Publication = Hash
-type Storage     = Hash
-type Code        = Hash
+type DAG         = Hash'
+type Publication = Hash'
+type Storage     = Hash'
+type Code        = Hash'
 
 -- | The changes the transaction consists from.
 data Change
     = TransferTokens Entity      Amount
     | Publicate      Publication
     | CreateAccount  Entity      Code
-    deriving (Show, Generic, Binary)
+    deriving (Show, Generic, Serialise)
 
 -- TODO: implement signing (and make 'Entity' to be actual public key).
 data Transaction = Transaction
-    { _tAuthor     :: Entity
-    , _tChanges    :: [Change]
-    , _tNonce      :: Int
+    { _tAuthor  :: Entity
+    , _tChanges :: [Change]
+    , _tNonce   :: Int
     }
-    deriving (Generic, Binary)
+    deriving (Generic, Serialise)
 
 instance Show Transaction where
     show (Transaction who what nonce) =
@@ -97,8 +100,8 @@ instance Show Transaction where
 data WithProof a = WithProof
     { _wpBody      :: a
     , _wpProof     :: WorldStateProof
-    , _wpEndHash   :: Hash
-    , _wpBeginHash :: Hash
+    , _wpEndHash   :: Hash'
+    , _wpBeginHash :: Hash'
     }
     deriving (Show)
 
@@ -114,11 +117,11 @@ data Client = Client
 
 -- | Set of node identities to generate proof from. Proof prefab.
 data DiffSets = DiffSets
-    { _accountRevSet       :: Set Hash
-    , _publicationRevSet   :: Set Hash
-    , _specalizationRevSet :: Set Hash
-    , _storageRevSet       :: Set Hash
-    , _codeRevSet          :: Set Hash
+    { _accountRevSet       :: Set Hash'
+    , _publicationRevSet   :: Set Hash'
+    , _specalizationRevSet :: Set Hash'
+    , _storageRevSet       :: Set Hash'
+    , _codeRevSet          :: Set Hash'
     }
     deriving (Default, Generic)
 
@@ -132,13 +135,13 @@ data TransactionError
     = AccountDoesNotExist       { doesNotExist   :: Sided Entity }
     | AccountExistButShouldNot  { shouldNotExist :: Sided Entity }
 
-    | NotEnoughTokens           { holder         :: Entity
-                                , wantsToSpend   :: Amount
-                                , hasOnly        :: Amount
+    | NotEnoughTokens           { holder       :: Entity
+                                , wantsToSpend :: Amount
+                                , hasOnly      :: Amount
                                 }
-    | NoncesMismatch            { entity         :: Entity
-                                , hasNonce       :: Int
-                                , requiredNonce  :: Int
+    | NoncesMismatch            { entity        :: Entity
+                                , hasNonce      :: Int
+                                , requiredNonce :: Int
                                 }
     | InitialHashesMismatch
     | FinalHashesMismatch
@@ -158,12 +161,12 @@ data Side = Sender | Receiver
     deriving (Show, Typeable)
 
 data Block trans = Block
-    { _bTransactions :: [trans]
-    , _bPrevBlockHash :: Hash
+    { _bTransactions  :: [trans]
+    , _bPrevBlockHash :: Hash'
     }
-    deriving (Show, Generic, Binary)
+    deriving (Show, Generic, Serialise)
 
-type CanStore = AVL.KVStoreMonad Hash
+type CanStore = AVL.KVStoreMonad Hash'
 
 -- | Monad for operations.
 type WorldT side m = RWST Environment DiffSets side m
@@ -244,11 +247,11 @@ instance Monoid DiffSets where
         DiffSets (a <> a1) (b <> b1) (c <> c1) (d <> d1) (e <> e1)
 
 -- | Smart constructors for change reports.
-accountsChanged        :: Set Hash -> DiffSets
-publicationsChanged    :: Set Hash -> DiffSets
-specializationsChanged :: Set Hash -> DiffSets
-storagesChanged        :: Set Hash -> DiffSets
-codesChanged           :: Set Hash -> DiffSets
+accountsChanged        :: Set Hash' -> DiffSets
+publicationsChanged    :: Set Hash' -> DiffSets
+specializationsChanged :: Set Hash' -> DiffSets
+storagesChanged        :: Set Hash' -> DiffSets
+codesChanged           :: Set Hash' -> DiffSets
 accountsChanged        set' = def & accountRevSet       .~ set'
 publicationsChanged    set' = def & publicationRevSet   .~ set'
 specializationsChanged set' = def & specalizationRevSet .~ set'
@@ -307,7 +310,7 @@ assertAuthorExists = do
     sender <- view eAuthor
     assertExistence (Sided sender Sender)
 
-lookupAccount :: CanStore m => Sided Entity -> WorldT Server m (Maybe (Account Hash))
+lookupAccount :: CanStore m => Sided Entity -> WorldT Server m (Maybe (Account Hash'))
 lookupAccount entity = do
     -- TODO(kirill.andreev):
     --   Fix 'Data.Tree.AVL.Zipper.up' so that it doesn't rehash root
@@ -332,7 +335,7 @@ dryRun action = do
     return res
 
 -- | Retrieves an account. Fail if account does not exist.
-requireAccount :: CanStore m => Sided Entity -> WorldT Server m (Account Hash)
+requireAccount :: CanStore m => Sided Entity -> WorldT Server m (Account Hash')
 requireAccount entity = do
     mAcc <- lookupAccount entity
     case mAcc of
@@ -340,7 +343,7 @@ requireAccount entity = do
       Nothing -> throwM $ AccountDoesNotExist entity
 
 -- | Retrieves account of author.
-getAuthorAccount :: CanStore m => WorldT Server m (Account Hash)
+getAuthorAccount :: CanStore m => WorldT Server m (Account Hash')
 getAuthorAccount = do
     sender <- view eAuthor
     requireAccount (Sided sender Sender)
@@ -383,7 +386,7 @@ createAccount whom code' = do
     tell $ accountsChanged trails
 
 -- | Upsert an (entity, account) into 'accounts' map.
-unsafeSetAccount :: CanStore m => Entity -> Account Hash -> WorldT Server m ()
+unsafeSetAccount :: CanStore m => Entity -> Account Hash' -> WorldT Server m ()
 unsafeSetAccount entity account = do
     trails <- zoom (sWorld.accounts) $ do
         accs            <- get
@@ -399,7 +402,7 @@ unsafeSetAccount entity account = do
 modifyAccount
     ::  CanStore m
     =>  Sided Entity
-    -> (Account Hash -> Account Hash)
+    -> (Account Hash' -> Account Hash')
     ->  WorldT Server m ()
 modifyAccount entity f = do
     mAccount <- lookupAccount entity
@@ -510,18 +513,18 @@ proving (WithProof body proof idealEndHash proposedBeginHash) action = do
 
 -- | Ability to retrieve hash of current state.
 class CanGetHash side where
-    getCurrentHash :: CanStore m => WorldT side m Hash
+    getCurrentHash :: CanStore m => WorldT side m Hash'
 
 instance CanGetHash Server where
     getCurrentHash = do
         Server st <- get
         proof <- diffWorldState def st
-        return (hash proof)
+        return (unsafeHash proof)
 
 instance CanGetHash Client where
     getCurrentHash = do
         Client proof <- get
-        return (hash proof)
+        return (unsafeHash proof)
 
 -- | Using proof, replay some actions as if you're the server node.
 --   Does not generate proof for the actions replayed.
@@ -552,7 +555,7 @@ instance CanReplayTransaction Server where
         return ()
 
 class CanSetPrevBlockHash side where
-    setPrevBlockHash :: CanStore m => Hash -> WorldT side m ()
+    setPrevBlockHash :: CanStore m => Hash' -> WorldT side m ()
 
 instance CanSetPrevBlockHash Client where
     setPrevBlockHash hash' = do
@@ -590,7 +593,7 @@ generateBlock transactions = do
 
         let block = Block transactions prev
 
-        _Server.prevBlockHash .= hash block
+        _Server.prevBlockHash .= unsafeHash block
 
         return block
 
@@ -611,7 +614,7 @@ replayBlock blockWithProof = do
             throwM PreviousBlockHashMismatch
 
         for_ transactions playTransaction
-        setPrevBlockHash $ hash block
+        setPrevBlockHash $ unsafeHash block
 
 trace :: CanStore m => Show a => a -> WorldT side m ()
 trace a = do
