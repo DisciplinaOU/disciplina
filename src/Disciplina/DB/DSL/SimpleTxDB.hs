@@ -1,5 +1,4 @@
-module Disciplina.DB.DSL.SimpleTxDB
-              where
+module Disciplina.DB.DSL.SimpleTxDB () where
 
 import Universum
 
@@ -19,6 +18,7 @@ import Disciplina.DB.DSL.Interpret (MonadSearchTxObj(..), RunQuery(..))
 import qualified Disciplina.Core as Core (Grade(..), SubjectId(..))
 import qualified Data.ByteString.Char8 as C
 import Codec.Serialise (Serialise(..))
+import Control.Lens (filtered, traversed)
 
 
 import Crypto.Hash.Algorithms (Blake2sp_256(..))
@@ -46,35 +46,36 @@ instance Serialise PrivateTxPayload
 instance Serialise CourseId
 instance Serialise PrivateTx
 
--- | DSL interpreter for SimpleTXDB
+-- | interpreter for SELECTTx WHERE TxIdEq
 runSimpleTxQuery :: QueryTx -> SimpleTxDB (Maybe PrivateTx)
-runSimpleTxQuery (SELECTTx _ (TxIdEq (a :: PrivateTxId)))
+runSimpleTxQuery (SELECTTx _ (TxIdEq (h :: PrivateTxId)))
   = do
-     txs :: [PrivateTx] <- ask
-     return (safeHead txs)
+     -- find Tx in db with hash h
+     txs <- ask
+     return $ txs ^? traversed . filtered ((==h).hash)
 
 -- | query
 -- given <tx_hash>, I want to be able to get { <tx> | hash(<tx>) = <tx_hash> }
-foo :: PrivateTx -> SimpleTxDB (Maybe PrivateTx)
-foo tx = runQuery q
+findTx :: PrivateTx -> SimpleTxDB (Maybe PrivateTx)
+findTx tx = runQuery q
   where q = SELECTTx WHERE (TxIdEq (hash tx))
 
-
 -- | run query
-runSimpleTxDB :: PrivateTx -> Maybe PrivateTx
-runSimpleTxDB tx = runReader (getSimpleTxDB $ foo (mkPrivateTx 'a' 'k'))
-                              privateTxs
+runFindTx :: PrivateTx -> Maybe PrivateTx
+runFindTx tx = runReader (getSimpleTxDB $ findTx tx) simpleTxDB
 
-tx1 = mkPrivateTx 'a' 'k'
+-- | Should return Nothing since mkPrivateTx 'a' 'l'
+-- | does not exist in privateTx db
+testFindTx1 :: Maybe PrivateTx
+testFindTx1 = runFindTx $ mkPrivateTx 'a' 'l'
 
-privateTxs :: [PrivateTx]
-privateTxs = fmap (uncurry mkPrivateTx) (zip ['a'..'j'] ['k'..'t'])
+-- | Should return Just (mkPrivate 'a' 'k')
+testFindTx2 :: Maybe PrivateTx
+testFindTx2 = runFindTx $ mkPrivateTx 'a' 'k'
 
--- | create key pair from seed
-mkKeyPair :: Char -> (PublicKey, SecretKey)
-mkKeyPair seed =
-  let (CryptoPassed x) = Ed25519.secretKey (C.replicate 32 seed)
-  in (AbstractPK (Ed25519.toPublic x) :: PublicKey, AbstractSK x :: SecretKey)
+
+simpleTxDB :: [PrivateTx]
+simpleTxDB = fmap (uncurry mkPrivateTx) (zip ['a'..'j'] ['k'..'t'])
 
 type StudentKey = Char
 type EducatorKey = Char
@@ -92,3 +93,10 @@ mkPrivateTx studentKey educatorKey = PrivateTx {
                        , ciId = 2
                        }
    payload = StudentTx { _ptxStudentMsg  = Enroll }
+
+-- | create key pair from seed
+mkKeyPair :: Char -> (PublicKey, SecretKey)
+mkKeyPair seed =
+  let (CryptoPassed x) = Ed25519.secretKey (C.replicate 32 seed)
+  in (AbstractPK (Ed25519.toPublic x) :: PublicKey, AbstractSK x :: SecretKey)
+
