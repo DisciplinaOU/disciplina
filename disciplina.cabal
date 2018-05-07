@@ -45,6 +45,11 @@ library
                      , Disciplina.Workers.Worker
                      , Disciplina.Transport.TCP
 
+                     -- DSL
+                     , Disciplina.DB.DSL.Types
+                     , Disciplina.DB.DSL.Interpret
+                     , Disciplina.DB.DSL.SimpleTxDB
+
                      -- Core datatypes and functions
                      , Disciplina.Core.Types
                      , Disciplina.Core.ATG
