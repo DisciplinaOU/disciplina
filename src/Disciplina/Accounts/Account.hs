@@ -1,14 +1,13 @@
 
-{-# language DeriveAnyClass #-}
+{-# LANGUAGE DeriveAnyClass #-}
 
 module Disciplina.Accounts.Account where
 
 import Universum
 
-import Control.Lens
-
-import Data.Binary
-import Data.Default
+import Codec.Serialise (Serialise)
+import Control.Lens (makeLenses)
+import Data.Default (Default)
 
 data Account hash = Account
     { _aBalance :: Amount
@@ -16,7 +15,7 @@ data Account hash = Account
     , _aStorage :: hash
     , _aCode    :: hash
     }
-    deriving (Show, Eq, Generic, Binary, Default)
+    deriving (Show, Eq, Generic, Serialise, Default)
 
 type Amount = Integer
 

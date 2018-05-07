@@ -35,6 +35,7 @@ import Data.Traversable (for)
 import System.IO.Unsafe
 
 import qualified Data.Tree.AVL as AVL
+import qualified Disciplina.Crypto as Crypto
 import qualified Disciplina.WorldState as World
 --import qualified Debug.Trace           as Debug
 
@@ -118,14 +119,14 @@ fairWorld :: World.Amount -> [World.Entity] -> World.WorldState
 fairWorld amount actors =
     let
       (world, _) = unsafePerformIO $ do
-        (AVL.runOnEmptyCache :: AVL.HashMapStore World.Hash AVL.NullStore World.WorldState -> IO (World.WorldState, AVL.Storage World.Hash)) $ do
+        (AVL.runOnEmptyCache :: AVL.HashMapStore World.Hash' AVL.NullStore World.WorldState -> IO (World.WorldState, AVL.Storage World.Hash')) $ do
             World.evalWorldT def (World.Server World.emptyWorldState) $ do
                 World.giveEach actors amount
 
     in
         world
 
-unsafePerformPureWorldT :: forall side a . World.Entity -> side -> World.WorldT side (AVL.HashMapStore World.Hash AVL.NullStore) a -> a
+unsafePerformPureWorldT :: forall side a . World.Entity -> side -> World.WorldT side (AVL.HashMapStore World.Hash' AVL.NullStore) a -> a
 unsafePerformPureWorldT who side action =
     let
       (a, _) = unsafePerformIO $ do
@@ -153,12 +154,12 @@ instance Arbitrary World.Entity where
   arbitrary = World.Entity <$> (noneof [0])
 
 instance Arbitrary World.Publication where
-  arbitrary = World.hash <$> (arbitrary :: Gen Int)
+  arbitrary = Crypto.unsafeHash <$> (arbitrary :: Gen Int)
 
 worldTProperty
     :: Testable prop
     => side
-    -> World.WorldT side (AVL.HashMapStore World.Hash AVL.NullStore) prop
+    -> World.WorldT side (AVL.HashMapStore World.Hash' AVL.NullStore) prop
     -> Property
 worldTProperty side what = ioProperty $ do
     (prop, _) <- AVL.runOnEmptyCache $ World.evalWorldT def side what

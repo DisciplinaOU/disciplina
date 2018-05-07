@@ -21,6 +21,7 @@ library
                      , Disciplina.Listeners
                      , Disciplina.Workers
                      , Disciplina.Transport
+                     , Disciplina.Messages
                      , Disciplina.Educator
                      , Disciplina.Core
                      , Disciplina.Crypto
@@ -43,36 +44,36 @@ library
                      , Disciplina.Listeners.Listener
                      , Disciplina.Workers.Worker
                      , Disciplina.Transport.TCP
-                     , Disciplina.Messages
 
                      -- Core datatypes and functions
                      , Disciplina.Core.Types
                      , Disciplina.Core.ATG
 
                      -- Witness node model
-                     , Disciplina.WorldState.BlakeHash
                      , Disciplina.WorldState.Internal
+                     , Disciplina.WorldState.Instances
 
                      -- Educator node model
                      , Disciplina.Educator.Block
                      , Disciplina.Educator.Txs
                      , Disciplina.Educator.State
-                     
+
+                     , Disciplina.Crypto.ByteArray
                      , Disciplina.Crypto.Hash
                      , Disciplina.Crypto.Hash.Class
                      , Disciplina.Crypto.Hash.Cryptonite
                      , Disciplina.Crypto.Hash.Hashable
-                     , Disciplina.Crypto.Hash.Impl
+                     , Disciplina.Crypto.Impl
+                     , Disciplina.Crypto.Serialise
                      , Disciplina.Crypto.Signing
                      , Disciplina.Crypto.Signing.Class
                      , Disciplina.Crypto.Signing.Cryptonite
-                     , Disciplina.Crypto.Signing.Impl
+
                      , Disciplina.CLI.Common
   -- other-extensions:
   build-depends:       base >= 4.9 && < 5
                      , autoexporter
                      , AVL
-                     , binary
                      , bytestring
                      , cardano-sl-networking
                      , containers
@@ -81,6 +82,7 @@ library
                      , ether
                      , exceptions
                      , formatting
+                     , free
                      , hashable
                      , lens
                      , log-warper
@@ -90,8 +92,9 @@ library
                      , network-transport-tcp
                      , optparse-applicative
                      , random
+                     , rocksdb-haskell
+                     , serialise
                      , snowdrop
-                     , rocksdb-haskell-ng
                      , stm
                      , time-units
                      , universum
@@ -133,7 +136,6 @@ executable disciplina-witness
   other-modules:       Params
   build-depends:       base
                      , bytestring
-                     , binary
                      , disciplina
                      , cardano-sl-networking
                      , disciplina

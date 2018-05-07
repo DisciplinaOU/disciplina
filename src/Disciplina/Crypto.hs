@@ -1,5 +1,6 @@
 
 module Disciplina.Crypto (module M) where
 
-import Disciplina.Crypto.Hash as M
-import Disciplina.Crypto.Signing as M
+import Disciplina.Crypto.ByteArray as M
+import Disciplina.Crypto.Impl as M
+import Disciplina.Crypto.Serialise ()

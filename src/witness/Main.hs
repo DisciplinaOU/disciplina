@@ -8,21 +8,21 @@ import Universum
 import Mockable (Production (..), runProduction)
 import System.Wlog (logInfo, logWarning)
 
-import Disciplina.DB (DBType (WitnessDB))
-import Disciplina.Launcher (BasicNodeParams (..), bracketBasicNodeResources, runBasicRealMode)
-import Disciplina.Listeners (witnessListeners)
-import Disciplina.Transport (bracketTransportTCP)
-import Disciplina.Workers (witnessWorkers)
-import Params (WitnessParams (..), getWitnessParams)
-
 import qualified Data.ByteString.Char8 as B8
 import Mockable.Concurrent (fork)
 import qualified Network.Transport.TCP as TCP
 import Node (NodeAction (..), defaultNodeEnvironment, noReceiveDelay, node, nodeId,
              simpleNodeEndPoint)
-import Node.Message.Binary (binaryPacking)
 import System.IO (getChar)
 import System.Random (mkStdGen)
+
+import Disciplina.DB (DBType (WitnessDB))
+import Disciplina.Launcher (BasicNodeParams (..), bracketBasicNodeResources, runBasicRealMode)
+import Disciplina.Listeners (witnessListeners)
+import Disciplina.Messages (serialisePacking)
+import Disciplina.Transport (bracketTransportTCP)
+import Disciplina.Workers (witnessWorkers)
+import Params (WitnessParams (..), getWitnessParams)
 
 main :: IO ()
 main = do
@@ -41,7 +41,7 @@ main = do
 
             logInfo "Starting node"
             node (simpleNodeEndPoint transport) (const noReceiveDelay) (const noReceiveDelay)
-                 prng1 binaryPacking (B8.pack "I am node 1") defaultNodeEnvironment $ \node1 ->
+                 prng1 serialisePacking (B8.pack "I am node 1") defaultNodeEnvironment $ \node1 ->
                         NodeAction (witnessListeners . nodeId $ node1) $ \converse -> do
                             mapM_ (\w -> fork $ w (nodeId node1) [] converse) witnessWorkers
                             logInfo "Hit return to stop"
