@@ -12,13 +12,14 @@ import Disciplina.DB.DSL.Types (QueryTx(..), QueryTxs(..), WHERE(..)
 import Disciplina.Educator.Txs (PrivateTxId, PrivateTx(..), EducatorTxMsg(..)
                                ,StudentTxMsg(..), PrivateTxPayload(..))
 import Disciplina.Crypto (hash, PublicKey, SecretKey)
-import Disciplina.Core (Address(..), CourseId(..), mkAddr)
+import Disciplina.Core (Address(..), CourseId(..), SubjectId, Grade(..)
+                       ,mkAddr, hasPathFromTo
+                       ,activityTypeGraphIndexed)
 import Disciplina.DB.DSL.Interpret (MonadSearchTxObj(..), RunQuery(..))
-import Data.List (union)
+import Data.List (union, intersect)
 
 import qualified Crypto.PubKey.Ed25519 as Ed25519
 import qualified Data.ByteString.Char8 as C
-import qualified Disciplina.Core as Core (Grade(..), SubjectId)
 
 
 -- | Simple transaction database
@@ -36,7 +37,7 @@ instance Serialise Address where
   decode = Address <$> decode
 
 -- | TODO, where should we put these?
-instance Serialise Core.Grade
+instance Serialise Grade
 instance Serialise EducatorTxMsg
 instance Serialise StudentTxMsg
 instance Serialise PrivateTxPayload
@@ -51,7 +52,7 @@ runSimpleTxQuery (SELECTTx _ (TxIdEq (h :: PrivateTxId))) =
 
 -- | Find Txs in db with SubjectId == a
 runSimpleTxsQuery :: QueryTxs -> SimpleTxDB [PrivateTx]
-runSimpleTxsQuery (SELECTTxs _ (TxSubjectIdEq (sId :: Core.SubjectId))) =
+runSimpleTxsQuery (SELECTTxs _ (TxSubjectIdEq sId)) =
   filter ((==sId).ciSubject._ptxCourseId) <$> ask
 
 -- | Find Txs in db with grade == g
@@ -67,13 +68,15 @@ runSimpleTxsQuery (SELECTTxs _ (_ :>= grade)) = do
         getGrade _ = Nothing
 
 runSimpleTxsQuery (SELECTTxs _ (a :& b)) =
-   union <$> runQuery (SELECTTxs WHERE a) <*> runQuery (SELECTTxs WHERE b)
+   intersect <$> runQuery (SELECTTxs WHERE a) <*> runQuery (SELECTTxs WHERE b)
 
 runSimpleTxsQuery (SELECTTxs _ (a :|| b)) =
-   (<>) <$> runQuery (SELECTTxs WHERE a) <*> runQuery (SELECTTxs WHERE b)
+   union <$> runQuery (SELECTTxs WHERE a) <*> runQuery (SELECTTxs WHERE b)
 
--- TODO, implement this one
-runSimpleTxsQuery (SELECTTxs _ (TxSubjectIsDescendantOf a)) = return []
+-- | Find all txs with subjectId which is descendant of sId
+runSimpleTxsQuery (SELECTTxs _ (TxSubjectIsDescendantOf sId)) =
+  filter (isDescendantOf sId . ciSubject ._ptxCourseId) <$> ask
+  where isDescendantOf x y = hasPathFromTo activityTypeGraphIndexed x y
 
 
 -- | run query
@@ -97,6 +100,7 @@ testFindTx2 = runFindTx $ mkPrivateTx 'a' 'k'
 runFindTxs :: QueryTxs -> [PrivateTx]
 runFindTxs q = runReader (getSimpleTxDB . runQuery $ q) simpleTxDB
 
+-- | TODO, move tests to test module
 txsQuery1 :: QueryTxs
 txsQuery1 = SELECTTxs WHERE (TxSubjectIdEq 1)
 
@@ -104,19 +108,22 @@ txsQuery2 :: QueryTxs
 txsQuery2 = SELECTTxs WHERE (TxSubjectIdEq 2)
 
 txsQuery3 :: QueryTxs
-txsQuery3 = SELECTTxs WHERE (TxGrade :>= Core.B)
+txsQuery3 = SELECTTxs WHERE (TxGrade :>= B)
 
 txsQuery4 :: QueryTxs
-txsQuery4 = SELECTTxs WHERE (TxSubjectIdEq 2 :& TxGrade :>= Core.B)
+txsQuery4 = SELECTTxs WHERE (TxSubjectIdEq 2 :& TxGrade :>= B)
 
 txsQuery5 :: QueryTxs
-txsQuery5 = SELECTTxs WHERE (TxSubjectIdEq 2 :& TxGrade :>= Core.A)
+txsQuery5 = SELECTTxs WHERE (TxSubjectIdEq 2 :& TxGrade :>= A)
 
 txsQuery6 :: QueryTxs
-txsQuery6 = SELECTTxs WHERE (TxSubjectIdEq 2 :& ((TxGrade :>= Core.A) :|| TxSubjectIdEq 4))
+txsQuery6 = SELECTTxs WHERE (TxSubjectIdEq 2 :& ((TxGrade :>= A) :|| TxSubjectIdEq 4))
 
 txsQuery7 :: QueryTxs
-txsQuery7 = SELECTTxs WHERE ((TxSubjectIdEq 2 :& TxGrade :>= Core.A) :|| TxSubjectIdEq 2)
+txsQuery7 = SELECTTxs WHERE ((TxSubjectIdEq 2 :& TxGrade :>= A) :|| TxSubjectIdEq 2)
+
+txsQuery8 :: QueryTxs
+txsQuery8 = SELECTTxs WHERE ((TxSubjectIdEq 2 :& TxGrade :>= A) :& TxSubjectIsDescendantOf 2)
 
 
 simpleTxDB :: [PrivateTx]
@@ -138,7 +145,7 @@ mkPrivateTx studentKey educatorKey = PrivateTx {
                        , ciId = 2
                        }
    payload1 = StudentTx { _ptxStudentMsg  = Enroll }
-   payload2 = EducatorTx { _ptxEducatorMsg  = GradeCourse Core.B }
+   payload2 = EducatorTx { _ptxEducatorMsg  = GradeCourse B }
 
 -- | Create key pair from seed
 mkKeyPair :: Char -> (PublicKey, SecretKey)
