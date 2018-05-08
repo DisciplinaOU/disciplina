@@ -3,23 +3,22 @@ module Disciplina.DB.DSL.SimpleTxDB () where
 import Universum
 
 import Codec.Serialise (Serialise(..))
-import Control.Lens (filtered, traversed)
 import Crypto.Error (CryptoFailable(..))
 
 import Disciplina.Crypto.Signing.Class (AbstractPK(..), AbstractSK(..))
 import Disciplina.DB.DSL.Types (QueryTx(..), QueryTxs(..), WHERE(..)
                                ,TxIdEq(..), TxGrade(..), QueryObj(..)
                                ,TxsFilterExpr(..), ObjHashEq(..))
-import Disciplina.Educator.Txs (PrivateTxId(..), PrivateTx(..), EducatorTxMsg(..)
+import Disciplina.Educator.Txs (PrivateTxId, PrivateTx(..), EducatorTxMsg(..)
                                ,StudentTxMsg(..), PrivateTxPayload(..))
-import Disciplina.Crypto (Hash, hash, PublicKey, SecretKey)
-import Disciplina.Core (Address(..), CourseId(..), mkAddr, AssignmentId, StudentId)
+import Disciplina.Crypto (hash, PublicKey, SecretKey)
+import Disciplina.Core (Address(..), CourseId(..), mkAddr)
 import Disciplina.DB.DSL.Interpret (MonadSearchTxObj(..), RunQuery(..))
 import Data.List (union)
 
 import qualified Crypto.PubKey.Ed25519 as Ed25519
-import qualified Disciplina.Core as Core (Grade(..), SubjectId(..))
 import qualified Data.ByteString.Char8 as C
+import qualified Disciplina.Core as Core (Grade(..), SubjectId)
 
 
 -- | Simple transaction database
@@ -45,18 +44,14 @@ instance Serialise CourseId
 instance Serialise PrivateTx
 
 
--- | interpreter for SELECTTx
+-- | Find Tx in db with hash == h
 runSimpleTxQuery :: QueryTx -> SimpleTxDB (Maybe PrivateTx)
-runSimpleTxQuery (SELECTTx _ (TxIdEq (h :: PrivateTxId))) = do
-  -- find Tx in db with hash == h
-  txs <- ask
-  return $ txs ^? traversed . filtered ((==h).hash)
+runSimpleTxQuery (SELECTTx _ (TxIdEq (h :: PrivateTxId))) =
+  safeHead.filter ((==h).hash) <$> ask
 
-
--- | interpreter for SELECTTxs
+-- | Find Txs in db with SubjectId == a
 runSimpleTxsQuery :: QueryTxs -> SimpleTxDB [PrivateTx]
 runSimpleTxsQuery (SELECTTxs _ (TxSubjectIdEq (sId :: Core.SubjectId))) =
-  -- find Txs in db with SubjectId == a
   filter ((==sId).ciSubject._ptxCourseId) <$> ask
 
 -- | Find Txs in db with grade == g
@@ -117,6 +112,11 @@ txsQuery4 = SELECTTxs WHERE (TxSubjectIdEq 2 :& TxGrade :>= Core.B)
 txsQuery5 :: QueryTxs
 txsQuery5 = SELECTTxs WHERE (TxSubjectIdEq 2 :& TxGrade :>= Core.A)
 
+txsQuery6 :: QueryTxs
+txsQuery6 = SELECTTxs WHERE (TxSubjectIdEq 2 :& ((TxGrade :>= Core.A) :|| TxSubjectIdEq 4))
+
+txsQuery7 :: QueryTxs
+txsQuery7 = SELECTTxs WHERE ((TxSubjectIdEq 2 :& TxGrade :>= Core.A) :|| TxSubjectIdEq 2)
 
 
 simpleTxDB :: [PrivateTx]
@@ -125,7 +125,7 @@ simpleTxDB = fmap (uncurry mkPrivateTx) (zip ['a'..'j'] ['k'..'t'])
 type StudentKey = Char
 type EducatorKey = Char
 
--- | create a simple private transaction
+-- | Create a simple private transaction
 mkPrivateTx :: StudentKey -> EducatorKey -> PrivateTx
 mkPrivateTx studentKey educatorKey = PrivateTx {
        _ptxStudentId = mkAddr . fst $ mkKeyPair studentKey
@@ -140,7 +140,7 @@ mkPrivateTx studentKey educatorKey = PrivateTx {
    payload1 = StudentTx { _ptxStudentMsg  = Enroll }
    payload2 = EducatorTx { _ptxEducatorMsg  = GradeCourse Core.B }
 
--- | create key pair from seed
+-- | Create key pair from seed
 mkKeyPair :: Char -> (PublicKey, SecretKey)
 mkKeyPair seed =
   let (CryptoPassed x) = Ed25519.secretKey (C.replicate 32 seed)
