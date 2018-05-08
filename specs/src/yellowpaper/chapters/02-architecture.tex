@@ -16,7 +16,18 @@ courses, assignments, solutions and grades. Permissionless blockchains, like
 Ethereum or EOS, would require disclosing this data to the public, whereas the
 permissive ones, like Hyperledger, lack public verifiability.
 
-It is important to note that it is possible to use encryption schemes in order to store sensitive information in public ledgers. This approach, despite being seemingly viable, suffers from incentive and scalability problems. The nodes of the blockchain would have to store every grade issued by all the educational institutions from all over the world. The expected size of the dataset exceeds the storage capacities of regular personal computers, which can lead to excessive centralization of the platform. Moreover, in most of the public ledgers the distributed storage is quite expensive, while there is no incentive for educaional institutions to pay for every grade they issue. Thus, we consider storing the educaitonal records on the public blockchain economically unjustified. What is more, it is hard to make the data disclosure process fair in such setting: in order to use the blockchain as an arbiter in case of dispute one has to reveal the encryption key to a subset of the transcrips issued by a certain educational institution.
+It is important to note that it is possible to use encryption schemes in order
+to store sensitive information in public ledgers. This approach, despite being
+seemingly viable, suffers from incentive and scalability problems. The nodes of
+the blockchain would have to store every grade issued by all the educational
+institutions from all over the world. Moreover, in most of the public ledgers
+the distributed storage is quite expensive, while there is no incentive for
+educaional institutions to pay for every grade they issue. Thus, we consider
+storing the educaitonal records on the public blockchain economically
+unjustified. What is more, it is hard to make the data disclosure process fair
+in such setting: in order to use the blockchain as an arbiter in case of dispute
+one has to reveal the encryption key to a subset of the transcrips issued by a
+certain educational institution.
 
 Our architecture splits the blockchain into two layers: the private layer
 contains sensitive data, and the public one contains the information necessary
