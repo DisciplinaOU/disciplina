@@ -10,6 +10,9 @@ module Disciplina.Educator.Block
        , pbhAtgDelta
        , PrivateBlockBody (..)
        , pbbTxs
+       , PrivateBlock (..)
+       , pbHeader
+       , pbBody
 
          -- * Constants
        , genesisHeaderHash
@@ -23,9 +26,8 @@ import Universum
 import Control.Lens (makeLenses)
 import Disciplina.Core.Types (ATGDelta (..))
 import Disciplina.Crypto (Hash, unsafeHash)
-import Disciplina.Crypto.MerkleTree (MerkleSignature, fromFoldable, getMerkleRoot)
+import Disciplina.Crypto.MerkleTree (MerkleSignature)
 import Disciplina.Educator.Txs (PrivateTxAux)
-
 
 ----------------------------------------------------------
 -- Block elements
@@ -34,7 +36,8 @@ import Disciplina.Educator.Txs (PrivateTxAux)
 -- | Hash of the private block.
 type PrivateHeaderHash = Hash PrivateBlockHeader
 
--- | Header of a private block.
+-- | Header of a private block. There's no signatures here, as it's private anyway.
+-- During publishing, Educator will provide a signature as a part of transaction.
 data PrivateBlockHeader = PrivateBlockHeader
     { _pbhPrevBlock :: !PrivateHeaderHash
     -- ^ Previous header in the chain
@@ -72,3 +75,13 @@ data PrivateBlockBody = PrivateBlockBody
     } deriving (Show, Eq, Generic)
 
 makeLenses ''PrivateBlockBody
+
+-- | Private block consists (surprisingly) of header and body.
+-- We won't define a private undo yet, because we're yet to define
+-- the usecase for rollbacks in private chain.
+data PrivateBlock = PrivateBlock
+    { _pbHeader :: !PrivateBlockHeader
+    , _pbBody   :: !PrivateBlockBody
+    } deriving (Show, Eq, Generic)
+
+makeLenses ''PrivateBlock

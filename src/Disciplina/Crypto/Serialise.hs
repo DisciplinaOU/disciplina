@@ -2,7 +2,9 @@
 
 -- | Instances for binary serialisation for 'Disciplina.Crypto' datatypes
 
-module Disciplina.Crypto.Serialise () where
+module Disciplina.Crypto.Serialise
+       ( Raw
+       ) where
 
 import Universum
 
@@ -10,6 +12,7 @@ import Codec.Serialise (Serialise (..), serialise)
 import Codec.Serialise.Decoding (decodeBytes)
 import Codec.Serialise.Encoding (encodeBytes)
 import Data.ByteArray (convert)
+import qualified Data.ByteString.Lazy as LBS
 
 import Disciplina.Crypto.ByteArray (FromByteArray (..))
 import Disciplina.Crypto.Hash (AbstractHash (..), HasAbstractHash (..), HashFunc (..))
@@ -52,3 +55,10 @@ instance {-# OVERLAPPABLE #-}
     HasAbstractSignature ss a where
     unsafeAbstractSign sk = unsafeAbstractSign sk . serialise
     unsafeAbstractVerify pk = unsafeAbstractVerify pk . serialise
+
+-- | Type alias for denoting raw bytes. Indended to be used with hashes
+-- and signatures, like in type `Hash Raw`, and not type-safe hashing and
+-- signing.
+-- TODO: probably it makes sense to make it a newtype, like in Cardano?
+-- Also, is it the most appropriate place for it?
+type Raw = LBS.ByteString

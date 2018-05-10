@@ -1,16 +1,16 @@
-{-# LANGUAGE DeriveAnyClass #-}
 
 -- | Core types used across Disciplina codebase.
 
 module Disciplina.Core.Types
        ( Address (..)
        , mkAddr
-       , SubjectId
+       , SubjectId (..)
        , Grade (..)
        , StudentId
        , EducatorId
-       , CourseId
+       , CourseId (..)
        , AssignmentId
+       , Submission
 
        -- * Activity Type Graph
        , ATGDelta (..)
@@ -28,21 +28,22 @@ import Universum
 import Control.Lens (makeLenses)
 import Data.Map (Map)
 
-import Codec.Serialise (Serialise)
-import Disciplina.Crypto (Hash, PublicKey, hash)
+import Disciplina.Crypto (Hash, PublicKey, Raw, hash)
 
 -- | 'Address' datatype. Not 'newtype', because later it will
 -- inevitably become more complex.
 -- TODO: maybe we should use a shorter hash for address, like in Cardano?
 data Address = Address
     { addrHash :: !(Hash PublicKey)
-    } deriving (Eq, Ord, Show, Serialise, Generic)
+    } deriving (Eq, Ord, Show, Generic)
 
 mkAddr :: PublicKey -> Address
 mkAddr = Address . hash
 
 -- | ID of particular subject.
-type SubjectId = Word32
+newtype SubjectId = SubjectId
+    { getSubjectId :: Word32
+    } deriving (Eq, Ord, Show, Num)
 
 -- | Assignment/course grade.
 -- TODO: decide on final format of the grade.
@@ -57,13 +58,19 @@ type EducatorId = Address
 
 -- | Educator's course ID is simply a 'Word32' too.
 -- There's a mapping from course ID to a set of associated subject IDs.
-type CourseId = Word32
+newtype CourseId = CourseId
+    { getCourseId :: Word32
+    } deriving (Eq, Ord, Show, Num)
 
 -- | 'AssignmentId' is a hash of assignment contents,
 -- which are stored off-chain.
 data Assignment
 
 type AssignmentId = Hash Assignment
+
+-- | Stub type for submissions. Submission transaction
+-- doesn't contain actual submission contents - only hash of them.
+type Submission = Hash Raw
 
 -- | ATGDelta is a diff for set of subjects which are taught by Educator.
 -- Implemented as 'Map SubjectId Bool' to avoid representing invalid diffs

@@ -3,9 +3,12 @@ module Disciplina.Core.Serialise () where
 import Codec.Serialise (Serialise (..))
 
 import Disciplina.Core.Types (ATG (..), ATGDelta (..), ATGEdge (..), ATGNode (..), Address (..),
-                              Grade (..))
+                              CourseId (..), Grade (..), SubjectId (..))
 
 -- TODO: move to well-specified serialisation instead of generic one.
+deriving instance Serialise CourseId
+deriving instance Serialise SubjectId
+
 instance Serialise Address
 instance Serialise Grade
 instance Serialise ATGNode

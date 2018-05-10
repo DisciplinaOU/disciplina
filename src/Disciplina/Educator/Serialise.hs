@@ -4,8 +4,7 @@ import Codec.Serialise (Serialise (..))
 
 import Disciplina.Core.Serialise ()
 import Disciplina.Crypto.Serialise ()
-import Disciplina.Educator.Block (PrivateBlockBody (..), PrivateBlockHeader (..),
-                                  SizedMerkleRoot (..))
+import Disciplina.Educator.Block (PrivateBlock (..), PrivateBlockBody (..), PrivateBlockHeader (..))
 import Disciplina.Educator.Txs (EducatorTxMsg (..), PrivateTx (..), PrivateTxAux (..),
                                 PrivateTxPayload (..), PrivateTxWitness (..), StudentTxMsg (..))
 
@@ -20,6 +19,6 @@ instance Serialise PrivateTxWitness
 instance Serialise PrivateTxAux
 
 -- | Block
-instance Serialise (SizedMerkleRoot a)
 instance Serialise PrivateBlockHeader
 instance Serialise PrivateBlockBody
+instance Serialise PrivateBlock

@@ -61,7 +61,6 @@ library
 
                      -- Educator node model
                      , Disciplina.Educator.Block
-                     , Disciplina.Educator.Configuration
                      , Disciplina.Educator.Txs
                      , Disciplina.Educator.Serialise
                      , Disciplina.Educator.State
