@@ -12,8 +12,7 @@ import Codec.Serialise.Encoding (encodeBytes)
 import Data.ByteArray (convert)
 
 import Disciplina.Crypto.ByteArray (FromByteArray (..))
-import Disciplina.Crypto.Hash (AbstractHash (..), CryptoniteFunc, HasAbstractHash (..),
-                               HashFunc (..))
+import Disciplina.Crypto.Hash (AbstractHash (..), HasAbstractHash (..), HashFunc (..))
 import Disciplina.Crypto.Signing (AbstractPK (..), AbstractSK (..), AbstractSig (..),
                                   HasAbstractSignature (..), SignatureScheme (..))
 
