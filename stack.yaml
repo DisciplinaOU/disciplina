@@ -44,7 +44,7 @@ extra-deps:
   commit: 3bd0cbc7ac0408f897f11746dbd245e3f8437bbb
 
 - git: git@github.com:serokell/snowdrop.git
-  commit: 3c7f938aef06be21bad46165c5d6f32f5f41d91c
+  commit: 3410fda24997ef6f8f2d9059b9a9905cbeccb9b7
 
 - git: https://github.com/serokell/rocksdb-haskell.git
   commit: 2dd6b4ffdc4edb86b477273ee3c8416a1520f4e1
