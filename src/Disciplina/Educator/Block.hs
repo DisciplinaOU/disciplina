@@ -34,7 +34,8 @@ import Disciplina.Educator.Txs (PrivateTxAux)
 -- | Hash of the private block.
 type PrivateHeaderHash = Hash PrivateBlockHeader
 
--- | Header of a private block.
+-- | Header of a private block. There's no signatures here, as it's private anyway.
+-- During publishing, Educator will provide a signature as a part of transaction.
 data PrivateBlockHeader = PrivateBlockHeader
     { _pbhPrevBlock :: !PrivateHeaderHash
     -- ^ Previous header in the chain
