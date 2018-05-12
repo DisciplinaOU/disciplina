@@ -234,10 +234,13 @@ test-suite disciplina-test
   main-is:                  Main.hs
   other-modules:
                             Test.Common
+                            Test.Disciplina.DB.DSL.SimpleTxDB
                             Test.Disciplina.WorldState
                             Test.Disciplina.Core.ATG
   build-depends:             base >= 0.4 && < 5
                            , AVL
+                           , bytestring
+                           , cryptonite
                            , disciplina
                            , data-default
                            , hspec
