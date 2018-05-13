@@ -46,9 +46,9 @@ library
                      , Disciplina.Transport.TCP
 
                      -- DSL
-                     , Disciplina.DB.DSL.Types
-                     , Disciplina.DB.DSL.Interpret
-                     , Disciplina.DB.DSL.SimpleTxDB
+                     , Disciplina.DB.DSL.Class
+                     , Disciplina.DB.DSL.Interpret.IO
+                     , Disciplina.DB.DSL.Interpret.SimpleTxDB
 
                      -- Core datatypes and functions
                      , Disciplina.Core.Types
@@ -234,7 +234,7 @@ test-suite disciplina-test
   main-is:                  Main.hs
   other-modules:
                             Test.Common
-                            Test.Disciplina.DB.DSL.SimpleTxDB
+                            Test.Disciplina.DB.DSL.Interpret.SimpleTxDB
                             Test.Disciplina.WorldState
                             Test.Disciplina.Core.ATG
   build-depends:             base >= 0.4 && < 5

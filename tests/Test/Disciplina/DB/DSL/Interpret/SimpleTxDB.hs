@@ -1,4 +1,4 @@
-module Test.Disciplina.DB.DSL.SimpleTxDB where
+module Test.Disciplina.DB.DSL.Interpret.SimpleTxDB where
 
 import Test.Common
 
