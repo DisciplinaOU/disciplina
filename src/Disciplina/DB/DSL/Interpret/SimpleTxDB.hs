@@ -51,7 +51,7 @@ evalSimpleTxQuery (SELECTTx _ (TxIdEq (h :: PrivateTxId))) = do
   db <- ask
   return $ db ^?  traversed . _SSTx . filtered (((h==).hash))
 
--- | Evaluator for query: find Tx in db with obj hash == h
+-- | Evaluator for query: find Obj in db with obj hash == h
 evalSimpleObjQuery :: QueryObj -> SimpleTxDB (Maybe Obj)
 evalSimpleObjQuery (SELECTObj _ (ObjHashEq h)) = do
   db <- ask
@@ -62,15 +62,15 @@ evalSimpleTxsQuery :: QueryTxs -> SimpleTxDB [PrivateTx]
 evalSimpleTxsQuery (SELECTTxs _ (TxSubjectIdEq sId)) = do
   db <- ask
   return $ db ^..  traversed
-              . _SSTx
-              . filtered ((==sId).ciSubject._ptxCourseId)
+               . _SSTx
+               . filtered ((==sId).ciSubject._ptxCourseId)
 
 -- | Evaluator for query: find Txs in db with grade == g
 evalSimpleTxsQuery (SELECTTxs _ (TxGradeEq grade)) = do
   db <- ask
   return $ db ^..  traversed
-              . _SSTx
-              . filtered ((== Just grade).getGrade._ptxPayload)
+               . _SSTx
+               . filtered ((== Just grade).getGrade._ptxPayload)
   where getGrade (EducatorTx (GradeCourse g)) = Just g
         getGrade _ = Nothing
 
@@ -78,8 +78,8 @@ evalSimpleTxsQuery (SELECTTxs _ (TxGradeEq grade)) = do
 evalSimpleTxsQuery (SELECTTxs _ (_ :>= grade)) = do
   db <- ask
   return $ db ^..  traversed
-              . _SSTx
-              . filtered ((>= Just grade).getGrade._ptxPayload)
+               . _SSTx
+               . filtered ((>= Just grade).getGrade._ptxPayload)
   where getGrade (EducatorTx (GradeCourse g)) = Just g
         getGrade _ = Nothing
 
@@ -95,11 +95,11 @@ evalSimpleTxsQuery (SELECTTxs _ (a :|| b)) =
 evalSimpleTxsQuery (SELECTTxs _ (TxSubjectIsDescendantOf sId)) = do
   db <- ask
   return $ db ^..  traversed
-              . _SSTx
-              . filtered (isDescendantOf sId . ciSubject ._ptxCourseId)
+               . _SSTx
+               . filtered (isDescendantOf sId . ciSubject ._ptxCourseId)
   where isDescendantOf x y = hasPathFromTo activityTypeGraphIndexed x y
 
 -- | Run query in SimpleTxDB
-runSimpleTxDBQuery :: RunQuery a b => [PrivateTx] -> a -> b
-runSimpleTxDBQuery db query = runReader (getSimpleTxDB . runQuery $ query) mkDb
- where mkDb = fmap SSTx db
+runSimpleTxDBQuery :: RunQuery a b => [PrivateTx] -> [Obj] -> a -> b
+runSimpleTxDBQuery dbTx dbObj query = runReader (getSimpleTxDB . runQuery $ query) mkDb
+ where mkDb = fmap SSTx dbTx <> fmap SSObj dbObj

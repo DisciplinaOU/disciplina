@@ -3,8 +3,8 @@ module Test.Disciplina.DB.DSL.Interpret.SimpleTxDB where
 import Test.Common
 
 import Crypto.Error (CryptoFailable(..))
-import Disciplina.DB (QueryTx(..), QueryTxs(..), WHERE(..)
-                     ,TxIdEq(..), TxGrade(..)
+import Disciplina.DB (QueryTx(..), QueryTxs(..), ObjHashEq(..), WHERE(..)
+                     ,TxIdEq(..), TxGrade(..), QueryObj(..), Obj
                      ,TxsFilterExpr(..), runSimpleTxDBQuery)
 import Disciplina.Educator (PrivateTx(..), EducatorTxMsg(..)
                            ,StudentTxMsg(..), PrivateTxPayload(..))
@@ -79,6 +79,12 @@ simpleTxDB :: [PrivateTx]
 simpleTxDB = fmap (uncurry enrollPrivateTx) (zip ['a'..'j'] ['k'..'t'])
              <> [tx1,tx2,tx3,tx4]
 
+obj1 :: Obj
+obj1 = "obj1"
+
+simpleObjDB :: [Obj]
+simpleObjDB = [obj1]
+
 spec_Transactions :: Spec
 spec_Transactions = describe "SimpleTxDB Query" $ do
     it "Find tx with TxIdEq" $ do
@@ -102,71 +108,83 @@ spec_Transactions = describe "SimpleTxDB Query" $ do
     it "Find txs with TxSubjectIsDescendantOf" $ do
         testQuery70 `shouldBe` []
         testQuery71 `shouldBe` [tx3,tx4]
+    it "Find object with ObjHashEq" $ do
+        testQuery80 `shouldBe` Nothing
+        testQuery81 `shouldBe` (Just obj1)
+
 
 -- | Should return Just (enrollPrivateTx 'a' 'k')
 testQuery10 :: Maybe PrivateTx
-testQuery10 = runSimpleTxDBQuery simpleTxDB query
+testQuery10 = runSimpleTxDBQuery simpleTxDB simpleObjDB query
   where query = SELECTTx WHERE (TxIdEq (hash tx))
         tx = enrollPrivateTx 'a' 'k'
 
 -- | Should return Nothing since enrollPrivateTx 'a' 'l'
 -- | does not exist in simpleTxDB
 testQuery11 :: Maybe PrivateTx
-testQuery11 = runSimpleTxDBQuery simpleTxDB query
+testQuery11 = runSimpleTxDBQuery simpleTxDB simpleObjDB query
   where query = SELECTTx WHERE (TxIdEq (hash tx))
         tx = enrollPrivateTx 'a' 'l'
 
 testQuery20 :: [PrivateTx]
-testQuery20 = runSimpleTxDBQuery simpleTxDB query
+testQuery20 = runSimpleTxDBQuery simpleTxDB simpleObjDB query
   where query = SELECTTxs WHERE (TxSubjectIdEq sIdComputerScience)
 
 testQuery21 :: [PrivateTx]
-testQuery21 = runSimpleTxDBQuery simpleTxDB query
+testQuery21 = runSimpleTxDBQuery simpleTxDB simpleObjDB query
   where query = SELECTTxs WHERE (TxSubjectIdEq sIdCalculi)
 
 testQuery22 :: [PrivateTx]
-testQuery22 = runSimpleTxDBQuery simpleTxDB query
+testQuery22 = runSimpleTxDBQuery simpleTxDB simpleObjDB query
   where query = SELECTTxs WHERE (TxSubjectIdEq sIdComputerScience
                                 :|| TxSubjectIdEq sIdElementary)
 
 testQuery30 :: [PrivateTx]
-testQuery30 = runSimpleTxDBQuery simpleTxDB query
+testQuery30 = runSimpleTxDBQuery simpleTxDB simpleObjDB query
   where query= SELECTTxs WHERE (TxGrade :>= B)
 
 testQuery31 :: [PrivateTx]
-testQuery31 = runSimpleTxDBQuery simpleTxDB query
+testQuery31 = runSimpleTxDBQuery simpleTxDB simpleObjDB query
   where query= SELECTTxs WHERE (TxGrade :>= A)
 
 testQuery40 :: [PrivateTx]
-testQuery40 = runSimpleTxDBQuery simpleTxDB query
+testQuery40 = runSimpleTxDBQuery simpleTxDB simpleObjDB query
   where query= SELECTTxs WHERE (TxSubjectIdEq sIdComputerScience :& TxGrade :>= B)
 
 testQuery41 :: [PrivateTx]
-testQuery41 = runSimpleTxDBQuery simpleTxDB query
+testQuery41 = runSimpleTxDBQuery simpleTxDB simpleObjDB query
   where query= SELECTTxs WHERE (TxSubjectIdEq sIdElementary :& TxGrade :>= B)
 
 testQuery42 :: [PrivateTx]
-testQuery42 = runSimpleTxDBQuery simpleTxDB query
+testQuery42 = runSimpleTxDBQuery simpleTxDB simpleObjDB query
   where query= SELECTTxs WHERE (TxSubjectIdEq sIdElementary :& TxGrade :>= D)
 
 testQuery43 :: [PrivateTx]
-testQuery43 = runSimpleTxDBQuery simpleTxDB query
+testQuery43 = runSimpleTxDBQuery simpleTxDB simpleObjDB query
   where query = SELECTTxs WHERE (TxSubjectIdEq sIdComputerScience :& TxGrade :>= A)
 
 testQuery50 :: [PrivateTx]
-testQuery50 = runSimpleTxDBQuery simpleTxDB query
+testQuery50 = runSimpleTxDBQuery simpleTxDB simpleObjDB query
   where query = SELECTTxs WHERE (TxSubjectIdEq sIdComputerScience
                                  :& ((TxGrade :>= B) :|| TxSubjectIdEq sIdCalculi))
 
 testQuery60 :: [PrivateTx]
-testQuery60 = runSimpleTxDBQuery simpleTxDB query
+testQuery60 = runSimpleTxDBQuery simpleTxDB simpleObjDB query
   where query = SELECTTxs WHERE ((TxSubjectIdEq sIdComputerScience :& TxGrade :>= A)
                                  :|| TxSubjectIdEq sIdComputerScience)
 
 testQuery70 :: [PrivateTx]
-testQuery70 = runSimpleTxDBQuery simpleTxDB query
+testQuery70 = runSimpleTxDBQuery simpleTxDB simpleObjDB query
   where query = SELECTTxs WHERE (TxSubjectIsDescendantOf sIdEngineering)
 
 testQuery71 :: [PrivateTx]
-testQuery71 = runSimpleTxDBQuery simpleTxDB query
+testQuery71 = runSimpleTxDBQuery simpleTxDB simpleObjDB query
   where query = SELECTTxs WHERE (TxSubjectIsDescendantOf sIdElementary)
+
+testQuery80 :: Maybe Obj
+testQuery80 = runSimpleTxDBQuery simpleTxDB simpleObjDB query
+  where query = SELECTObj WHERE (ObjHashEq (hash "does not exists"))
+
+testQuery81 :: Maybe Obj
+testQuery81 = runSimpleTxDBQuery simpleTxDB simpleObjDB query
+  where query = SELECTObj WHERE (ObjHashEq (hash obj1))
