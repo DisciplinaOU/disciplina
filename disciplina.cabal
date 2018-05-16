@@ -45,6 +45,11 @@ library
                      , Disciplina.Workers.Worker
                      , Disciplina.Transport.TCP
 
+                     -- DSL
+                     , Disciplina.DB.DSL.Class
+                     , Disciplina.DB.DSL.Interpret.IO
+                     , Disciplina.DB.DSL.Interpret.SimpleTxDB
+
                      -- Core datatypes and functions
                      , Disciplina.Core.Types
                      , Disciplina.Core.ATG
@@ -229,10 +234,13 @@ test-suite disciplina-test
   main-is:                  Main.hs
   other-modules:
                             Test.Common
+                            Test.Disciplina.DB.DSL.Interpret.SimpleTxDB
                             Test.Disciplina.WorldState
                             Test.Disciplina.Core.ATG
   build-depends:             base >= 0.4 && < 5
                            , AVL
+                           , bytestring
+                           , cryptonite
                            , disciplina
                            , data-default
                            , hspec

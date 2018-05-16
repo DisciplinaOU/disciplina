@@ -45,7 +45,7 @@ type SubjectId = Word32
 -- | Assignment/course grade.
 -- TODO: decide on final format of the grade.
 data Grade = F | D | C | B | A
-    deriving (Eq, Ord, Enum, Bounded, Show)
+    deriving (Eq, Ord, Enum, Bounded, Show, Generic)
 
 -- | Student is identified by their public address.
 type StudentId = Address
