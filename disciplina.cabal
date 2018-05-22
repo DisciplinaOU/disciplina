@@ -62,6 +62,7 @@ library
                      , Disciplina.Educator.Block
                      , Disciplina.Educator.Txs
                      , Disciplina.Educator.State
+                     , Disciplina.Educator.SizedMerkleTree
 
                      , Disciplina.Crypto.ByteArray
                      , Disciplina.Crypto.Hash
