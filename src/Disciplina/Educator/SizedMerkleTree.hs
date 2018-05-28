@@ -1,13 +1,14 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE DeriveFoldable #-}
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveFunctor #-}
 
 -- | Sized Merkle tree implementation.
 module Disciplina.Educator.SizedMerkleTree
        ( SizedMerkleRoot(..)
        , SizedMerkleTree (..)
        , getSizedMerkleRoot
-       , mkSizedMerkleTree
+       , fromFoldable
 
        , SizedMerkleNode (..)
        , mkBranch
@@ -17,14 +18,14 @@ module Disciplina.Educator.SizedMerkleTree
 import Universum hiding (foldMap, toList)
 
 import Disciplina.Crypto (Hash, HasHash, hash, unsafeHash)
-import Disciplina.Crypto.Hash.Class (HashFunc, AbstractHash (..))
+import Disciplina.Crypto.Hash.Class (AbstractHash (..))
 
-import Codec.Serialise (Serialise(..), serialise)
+import Codec.Serialise (Serialise(..))
 import Data.Bits (Bits (..))
-import Data.ByteArray (ByteArrayAccess, convert)
-import Data.ByteString.Builder (Builder, byteString, lazyByteString)
+import Data.ByteArray (convert)
+import Data.ByteString.Builder (Builder, byteString)
 import Data.Foldable (Foldable (..))
-import Prelude (show)
+import Data.Tree as Tree (Tree(Node), drawTree)
 
 import qualified Data.ByteString.Builder.Extra as Builder
 import qualified Data.ByteString.Lazy as LBS
@@ -34,29 +35,26 @@ data SizedMerkleRoot a = SizedMerkleRoot
     { smrHash :: Hash LBS.ByteString  -- ^ returns root 'Hash' of Merkle Tree
     , smrSize :: Word8 -- ^ size of root node,
                        -- size is defined as number of leafs in this subtree
-    } deriving (Show, Eq, Ord, Generic, ByteArrayAccess , Serialise, Typeable)
+    } deriving (Show, Eq, Ord, Generic, Serialise, Functor, Typeable)
 
 
 data SizedMerkleTree a
   = SizedMerkleEmpty
   | SizedMerkleTree !(SizedMerkleNode a)
-  deriving (Eq, Generic)
+  deriving (Eq, Show, Generic)
 
 
 instance Foldable SizedMerkleTree where
-    foldMap _ SizedMerkleEmpty      = mempty
+    foldMap _ SizedMerkleEmpty    = mempty
     foldMap f (SizedMerkleTree n) = foldMap f n
 
     null SizedMerkleEmpty = True
     null _                = False
 
-    length SizedMerkleEmpty      = 0
-    length (SizedMerkleTree n) = fromInteger (toInteger (smrSize (mRoot n)))
+    length SizedMerkleEmpty    = 0
+    length (SizedMerkleTree n) = fromIntegral (smrSize (mRoot n))
 
-instance Show a => Show (SizedMerkleTree a) where
-  show SizedMerkleEmpty = "Empty Sized Merkle tree "
-  show (SizedMerkleTree n) = "Sized Merkle tree:  " <> Prelude.show n
-  --show tree = "Merkle tree: "  <> Prelude.show (toList tree)
+deriving instance Container (SizedMerkleTree a)
 
 type LeafIndex = Int
 
@@ -67,7 +65,7 @@ data SizedMerkleNode a
     | SizedMerkleLeaf { mRoot  :: !(SizedMerkleRoot a)
                       , mIndex :: !LeafIndex
                       , mVal   :: !a}
-    deriving (Eq, Show, Generic)
+    deriving (Eq, Show, Functor, Generic)
 
 instance Foldable SizedMerkleNode where
   foldMap f x = case x of
@@ -108,12 +106,12 @@ mkBranchRootHash (SizedMerkleRoot (AbstractHash hl) sl)
      (sl + sr)
 
 -- | Smart constructor for 'SizedMerkleTree'.
-mkSizedMerkleTree :: (HasHash a, Foldable t) => t a -> SizedMerkleTree a
-mkSizedMerkleTree x = mkSizedMerkleTree' (zip [0,1..] (toList x))
+fromFoldable :: (HasHash a, Foldable t) => t a -> SizedMerkleTree a
+fromFoldable x = fromList (zip [0,1..] (toList x))
 
-mkSizedMerkleTree' :: HasHash a => [(LeafIndex, a)] -> SizedMerkleTree a
-mkSizedMerkleTree' [] = SizedMerkleEmpty
-mkSizedMerkleTree' ls = SizedMerkleTree (go lsLen ls)
+fromList :: HasHash a => [(LeafIndex, a)] -> SizedMerkleTree a
+fromList [] = SizedMerkleEmpty
+fromList ls = SizedMerkleTree (go lsLen ls)
   where
     lsLen = Universum.length ls
     go :: HasHash a => Int -> [(LeafIndex, a)] -> SizedMerkleNode a
@@ -182,7 +180,7 @@ mkMerkleProof (SizedMerkleTree rootNode) n =
     constructPath pElems (SizedMerkleLeaf leafRoot' leafIndex _)
       | n == leafIndex = (pElems, Just leafRoot')
       | otherwise = ([], Nothing)
-    constructPath pElems (SizedMerkleBranch bRoot ln rn) =
+    constructPath pElems (SizedMerkleBranch _ ln rn) =
          case (lPath, rPath) of
               ((xs, Nothing), (ys, Nothing)) -> (xs ++ ys, Nothing)
               ((xs, Just l), (ys, _))        -> (xs ++ ys, Just l)
@@ -216,7 +214,7 @@ validateMerkleProof (MerkleProof _ Nothing) _ = False
 
 -- | TODO, create tests and put in test module
 testTree :: SizedMerkleTree ByteString
-testTree = mkSizedMerkleTree ["a","b","c","d","e"]
+testTree = fromFoldable ["a","b","c","d","e"]
 
 proof :: MerkleProof ByteString
 proof = mkMerkleProof testTree 0
@@ -224,7 +222,15 @@ proof = mkMerkleProof testTree 0
 valid :: Bool
 valid = validateMerkleProof proof testTree
 
---
+-- | Debug print of tree.
+drawMerkleTree :: (Show a, IsString a) => SizedMerkleTree a -> String
+drawMerkleTree SizedMerkleEmpty = "empty tree"
+drawMerkleTree (SizedMerkleTree n) = Tree.drawTree (asTree n)
+  where
+   asTree :: (Show a, IsString a) => SizedMerkleNode a -> Tree.Tree String
+   asTree (SizedMerkleBranch {..}) = Tree.Node (show mRoot) [asTree mLeft, asTree mRight]
+   asTree leaf = Tree.Node (show leaf) []
+
 --valid2 = validateMerkleProof proof testTree (mRoot (mkLeaf "a"))
 --valid3 = validateMerkleProof proof testTree (mRoot (mkLeaf "b"))
 --valid4 = validateMerkleProof proof testTree (mRoot (mkLeaf "c"))
