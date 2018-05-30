@@ -32,19 +32,6 @@ instance MonadSearchTxObj SimpleTxDB where
   runTxsQuery = evalSimpleTxsQuery
   runObjQuery = evalSimpleObjQuery
 
-instance Serialise Address where
-  encode (Address h) = encode h
-  decode = Address <$> decode
-
--- | TODO, where should we put these?
-instance Serialise Grade
-instance Serialise EducatorTxMsg
-instance Serialise StudentTxMsg
-instance Serialise PrivateTxPayload
-instance Serialise CourseId
-instance Serialise PrivateTx
-
-
 -- | Evaluator for query: find Tx in db with hash == h
 evalSimpleTxQuery :: QueryTx -> SimpleTxDB (Maybe PrivateTx)
 evalSimpleTxQuery (SELECTTx _ (TxIdEq (h :: PrivateTxId))) = do

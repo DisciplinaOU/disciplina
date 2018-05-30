@@ -5,17 +5,23 @@
 
 -- | Sized Merkle tree implementation.
 module Disciplina.Educator.SizedMerkleTree
-       ( SizedMerkleRoot(..)
-       , SizedMerkleTree (..)
-       , getSizedMerkleRoot
+       ( MerkleSignature(..)
+       , MerkleTree (..)
+       , getMerkleRoot
        , fromFoldable
+       , fromContainer
 
-       , SizedMerkleNode (..)
+       , MerkleProof (..)
+       , mkMerkleProof
+       , validateMerkleProof
+
+       , MerkleNode (..)
+       , drawMerkleTree
        , mkBranch
        , mkLeaf
        ) where
 
-import Universum hiding (foldMap, toList)
+import Universum
 
 import Disciplina.Crypto (Hash, HasHash, hash, unsafeHash)
 import Disciplina.Crypto.Hash.Class (AbstractHash (..))
@@ -24,80 +30,79 @@ import Codec.Serialise (Serialise(..))
 import Data.Bits (Bits (..))
 import Data.ByteArray (convert)
 import Data.ByteString.Builder (Builder, byteString)
-import Data.Foldable (Foldable (..))
 import Data.Tree as Tree (Tree(Node), drawTree)
 
+import qualified Data.Foldable as F (Foldable (..))
 import qualified Data.ByteString.Builder.Extra as Builder
 import qualified Data.ByteString.Lazy as LBS
 
 -- | Data type for root of sized merkle tree.
-data SizedMerkleRoot a = SizedMerkleRoot
+data MerkleSignature a = MerkleSignature
     { smrHash :: Hash LBS.ByteString  -- ^ returns root 'Hash' of Merkle Tree
     , smrSize :: Word8 -- ^ size of root node,
                        -- size is defined as number of leafs in this subtree
     } deriving (Show, Eq, Ord, Generic, Serialise, Functor, Typeable)
 
 
-data SizedMerkleTree a
-  = SizedMerkleEmpty
-  | SizedMerkleTree !(SizedMerkleNode a)
+data MerkleTree a
+  = MerkleEmpty
+  | MerkleTree !(MerkleNode a)
   deriving (Eq, Show, Generic)
 
 
-instance Foldable SizedMerkleTree where
-    foldMap _ SizedMerkleEmpty    = mempty
-    foldMap f (SizedMerkleTree n) = foldMap f n
+instance Foldable MerkleTree where
+    foldMap _ MerkleEmpty    = mempty
+    foldMap f (MerkleTree n) = F.foldMap f n
 
-    null SizedMerkleEmpty = True
+    null MerkleEmpty      = True
     null _                = False
 
-    length SizedMerkleEmpty    = 0
-    length (SizedMerkleTree n) = fromIntegral (smrSize (mRoot n))
+    length MerkleEmpty    = 0
+    length (MerkleTree n) = fromIntegral (smrSize (mRoot n))
 
-deriving instance Container (SizedMerkleTree a)
+deriving instance Container (MerkleTree a)
 
 type LeafIndex = Int
 
-data SizedMerkleNode a
-    = SizedMerkleBranch { mRoot  :: !(SizedMerkleRoot a)
-                        , mLeft  :: !(SizedMerkleNode a)
-                        , mRight :: !(SizedMerkleNode a)}
-    | SizedMerkleLeaf { mRoot  :: !(SizedMerkleRoot a)
-                      , mIndex :: !LeafIndex
-                      , mVal   :: !a}
+data MerkleNode a
+    = MerkleBranch { mRoot  :: !(MerkleSignature a)
+                   , mLeft  :: !(MerkleNode a)
+                   , mRight :: !(MerkleNode a)}
+    | MerkleLeaf { mRoot  :: !(MerkleSignature a)
+                 , mIndex :: !LeafIndex
+                 , mVal   :: !a}
     deriving (Eq, Show, Functor, Generic)
 
-instance Foldable SizedMerkleNode where
+instance Foldable MerkleNode where
   foldMap f x = case x of
-    SizedMerkleLeaf {mVal} -> f mVal
-    SizedMerkleBranch {mLeft, mRight} -> foldMap f mLeft `mappend` foldMap f mRight
+    MerkleLeaf {mVal} -> f mVal
+    MerkleBranch {mLeft, mRight} -> F.foldMap f mLeft `mappend` F.foldMap f mRight
 
 toLazyByteString :: Builder -> LBS.ByteString
 toLazyByteString = Builder.toLazyByteStringWith (Builder.safeStrategy 1024 4096) mempty
 
-mkLeaf :: HasHash a => (LeafIndex, a) -> SizedMerkleNode a
-mkLeaf (i, a) =
-    SizedMerkleLeaf
+mkLeaf :: HasHash a => (LeafIndex, a) -> MerkleNode a
+mkLeaf (i, a) = MerkleLeaf
     { mVal  = a
     , mIndex = i
-    , mRoot = SizedMerkleRoot (unsafeHash a) -- unsafeHash since we need to hash to ByteString
+    , mRoot = MerkleSignature (unsafeHash a) -- unsafeHash since we need to hash to ByteString
                               1 -- size of leaf node is 1
     }
 
-mkBranch :: SizedMerkleNode a -> SizedMerkleNode a -> SizedMerkleNode a
+mkBranch :: MerkleNode a -> MerkleNode a -> MerkleNode a
 mkBranch l r =
-    SizedMerkleBranch
+    MerkleBranch
     { mLeft  = l
     , mRight = r
     , mRoot  = mkBranchRootHash (mRoot l) (mRoot r)
     }
 
-mkBranchRootHash :: SizedMerkleRoot a -- ^ left merkle root
-                 -> SizedMerkleRoot a -- ^ right merkle root
-                 -> SizedMerkleRoot a
-mkBranchRootHash (SizedMerkleRoot (AbstractHash hl) sl)
-                 (SizedMerkleRoot (AbstractHash hr) sr)
-  = SizedMerkleRoot
+mkBranchRootHash :: MerkleSignature a -- ^ left merkle root
+                 -> MerkleSignature a -- ^ right merkle root
+                 -> MerkleSignature a
+mkBranchRootHash (MerkleSignature (AbstractHash hl) sl)
+                 (MerkleSignature (AbstractHash hr) sr)
+  = MerkleSignature
      (hash $ toLazyByteString $ mconcat
         [ byteString (one sl)
         , byteString (one sr)
@@ -105,16 +110,20 @@ mkBranchRootHash (SizedMerkleRoot (AbstractHash hl) sl)
         , byteString (convert hr) ])
      (sl + sr)
 
--- | Smart constructor for 'SizedMerkleTree'.
-fromFoldable :: (HasHash a, Foldable t) => t a -> SizedMerkleTree a
-fromFoldable x = fromList (zip [0,1..] (toList x))
+-- | Smart constructor for MerkleTree.
+fromFoldable :: (HasHash a, Foldable t) => t a -> MerkleTree a
+fromFoldable = fromList . zip [0,1..] . F.toList
 
-fromList :: HasHash a => [(LeafIndex, a)] -> SizedMerkleTree a
-fromList [] = SizedMerkleEmpty
-fromList ls = SizedMerkleTree (go lsLen ls)
+-- | Smart constructor for MerkleTree.
+fromContainer :: (HasHash (Element t), Container t) => t -> MerkleTree (Element t)
+fromContainer = fromFoldable . toList
+
+fromList :: HasHash a => [(LeafIndex, a)] -> MerkleTree a
+fromList [] = MerkleEmpty
+fromList ls = MerkleTree (go lsLen ls)
   where
     lsLen = Universum.length ls
-    go :: HasHash a => Int -> [(LeafIndex, a)] -> SizedMerkleNode a
+    go :: HasHash a => Int -> [(LeafIndex, a)] -> MerkleNode a
     go _  [x] = mkLeaf x
     go len xs = mkBranch (go i l) (go (len - i) r)
       where
@@ -122,12 +131,12 @@ fromList ls = SizedMerkleTree (go lsLen ls)
         (l, r) = splitAt i xs
 
 -- | Returns root of merkle tree.
-getSizedMerkleRoot :: SizedMerkleTree a -> SizedMerkleRoot a
-getSizedMerkleRoot SizedMerkleEmpty    = emptyHash
-getSizedMerkleRoot (SizedMerkleTree x) = mRoot x
+getMerkleRoot :: MerkleTree a -> MerkleSignature a
+getMerkleRoot MerkleEmpty    = emptyHash
+getMerkleRoot (MerkleTree x) = mRoot x
 
-emptyHash :: SizedMerkleRoot a
-emptyHash = SizedMerkleRoot (hash mempty) 0
+emptyHash :: MerkleSignature a
+emptyHash = MerkleSignature (hash mempty) 0
 
 -- | Return the largest power of two such that it's smaller than X.
 --
@@ -149,16 +158,15 @@ powerOfTwo n
      -}
     go w = if w .&. (w - 1) == 0 then w else go (w .&. (w - 1))
 
-data MerkleProof a =
-  MerkleProof { getMerkleProof :: [ProofElem a]  -- ^ list of proof elements
-              , getMerkleProofRoot :: Maybe (SizedMerkleRoot a) -- ^ leaf root proof is
-                                                                -- constructed for
-              }
+data MerkleProof a = MerkleProof
+  { getMerkleProof     :: [ProofElem a]  -- ^ list of proof elements
+  , getMerkleProofRoot :: Maybe (MerkleSignature a) -- ^ leaf root proof is constructed for
+  }
   deriving (Show, Eq, Ord, Generic, Serialise)
 
 data ProofElem a = ProofElem
-  { nodeRoot    :: SizedMerkleRoot a
-  , siblingRoot :: SizedMerkleRoot a
+  { nodeRoot    :: MerkleSignature a
+  , siblingRoot :: MerkleSignature a
   , nodeSide    :: Side
   } deriving (Show, Eq, Ord, Generic, Serialise)
 
@@ -166,21 +174,20 @@ data Side = L | R
   deriving (Show, Eq, Ord, Generic, Serialise)
 
 -- | Construct merkle proof by recusive walking the tree and collecting ProofElem until we hit
--- matching leafRoot
-mkMerkleProof :: forall a. SizedMerkleTree a -- ^ merkle tree we want to
-                                             -- construct a proof from
-                        -> LeafIndex         -- ^ leaf index used for proof
+-- matching leafRoot.
+mkMerkleProof :: forall a. MerkleTree a -- ^ merkle tree we want to construct a proof from
+                        -> LeafIndex    -- ^ leaf index used for proof
                         -> MerkleProof a
-mkMerkleProof SizedMerkleEmpty _ = MerkleProof [] Nothing
-mkMerkleProof (SizedMerkleTree rootNode) n =
+mkMerkleProof MerkleEmpty _ = MerkleProof [] Nothing
+mkMerkleProof (MerkleTree rootNode) n =
   let (path, proofLeaf) = constructPath [] rootNode
   in MerkleProof path proofLeaf
   where
-    constructPath :: [ProofElem a] -> SizedMerkleNode a -> ([ProofElem a], Maybe (SizedMerkleRoot a))
-    constructPath pElems (SizedMerkleLeaf leafRoot' leafIndex _)
+    constructPath :: [ProofElem a] -> MerkleNode a -> ([ProofElem a], Maybe (MerkleSignature a))
+    constructPath pElems (MerkleLeaf leafRoot' leafIndex _)
       | n == leafIndex = (pElems, Just leafRoot')
       | otherwise = ([], Nothing)
-    constructPath pElems (SizedMerkleBranch _ ln rn) =
+    constructPath pElems (MerkleBranch _ ln rn) =
          case (lPath, rPath) of
               ((xs, Nothing), (ys, Nothing)) -> (xs ++ ys, Nothing)
               ((xs, Just l), (ys, _))        -> (xs ++ ys, Just l)
@@ -192,18 +199,18 @@ mkMerkleProof (SizedMerkleTree rootNode) n =
         lPath = constructPath (lProofElem:pElems) ln
         rPath = constructPath (rProofElem:pElems) rn
 
--- | Validate a merkle tree proof
-validateMerkleProof :: forall a. MerkleProof a -> SizedMerkleTree a -> Bool
-validateMerkleProof (MerkleProof proofElems (Just leafRoot)) (SizedMerkleTree treeNode) =
+-- | Validate a merkle tree proof.
+validateMerkleProof :: forall a. MerkleProof a -> MerkleTree a -> Bool
+validateMerkleProof (MerkleProof proofElems (Just leafRoot)) (MerkleTree treeNode) =
     validate proofElems leafRoot
   where
-    validate :: [ProofElem a] -> SizedMerkleRoot a -> Bool
+    validate :: [ProofElem a] -> MerkleSignature a -> Bool
     validate [] proofRoot = proofRoot == mRoot treeNode
     validate (pElem:pElems) proofRoot
       | proofRoot /= nodeRoot pElem = False
       | otherwise = validate pElems $ hashProofElem pElem
 
-    hashProofElem :: ProofElem a -> SizedMerkleRoot a
+    hashProofElem :: ProofElem a -> MerkleSignature a
     hashProofElem (ProofElem pRoot sibRoot side) =
       case side of
         L -> mkBranchRootHash pRoot sibRoot
@@ -211,33 +218,11 @@ validateMerkleProof (MerkleProof proofElems (Just leafRoot)) (SizedMerkleTree tr
 
 validateMerkleProof (MerkleProof _ Nothing) _ = False
 
-
--- | TODO, create tests and put in test module
-testTree :: SizedMerkleTree ByteString
-testTree = fromFoldable ["a","b","c","d","e"]
-
-proof :: MerkleProof ByteString
-proof = mkMerkleProof testTree 0
-
-valid :: Bool
-valid = validateMerkleProof proof testTree
-
 -- | Debug print of tree.
-drawMerkleTree :: (Show a, IsString a) => SizedMerkleTree a -> String
-drawMerkleTree SizedMerkleEmpty = "empty tree"
-drawMerkleTree (SizedMerkleTree n) = Tree.drawTree (asTree n)
+drawMerkleTree :: (Show a, IsString a) => MerkleTree a -> String
+drawMerkleTree MerkleEmpty = "empty tree"
+drawMerkleTree (MerkleTree n) = Tree.drawTree (asTree n)
   where
-   asTree :: (Show a, IsString a) => SizedMerkleNode a -> Tree.Tree String
-   asTree (SizedMerkleBranch {..}) = Tree.Node (show mRoot) [asTree mLeft, asTree mRight]
+   asTree :: (Show a, IsString a) => MerkleNode a -> Tree.Tree String
+   asTree (MerkleBranch {..}) = Tree.Node (show mRoot) [asTree mLeft, asTree mRight]
    asTree leaf = Tree.Node (show leaf) []
-
---valid2 = validateMerkleProof proof testTree (mRoot (mkLeaf "a"))
---valid3 = validateMerkleProof proof testTree (mRoot (mkLeaf "b"))
---valid4 = validateMerkleProof proof testTree (mRoot (mkLeaf "c"))
---valid5 = validateMerkleProof proof testTree (mRoot (mkLeaf "d"))
---valid6 = validateMerkleProof proof testTree (mRoot (mkLeaf "e"))
---
---valid7 = validateMerkleProof proof2 testTree (mRoot (mkLeaf "h"))
---valid8 = validateMerkleProof proof2 testTree (mRoot (mkLeaf "e"))
---
---valid9 = validateMerkleProof proof3 testTree (mRoot (mkLeaf "e"))

@@ -4,7 +4,6 @@
 module Disciplina.Educator.Block
        ( -- * Basic types
          PrivateHeaderHash
-       , SizedMerkleRoot (..)
        , PrivateBlockHeader (..)
        , pbhPrevBlock
        , pbhBodyProof
@@ -29,28 +28,10 @@ import Snowdrop.Model.Block.Core (BlkConfiguration (..), Block (..), BlockIntegr
 
 import Disciplina.Core.Types (ATGDelta (..))
 import Disciplina.Crypto (Hash, unsafeHash)
+import Disciplina.Educator.SizedMerkleTree (MerkleSignature, getMerkleRoot, fromFoldable)
 import Disciplina.Educator.Txs (PrivateTxAux)
 import Disciplina.Util (OldestFirst (..))
 
--- | A type for root of sized Merkle tree.
--- TODO: define it in the separate module containing actual
--- sized Merkle tree implementation (and this module should
--- probably be in `auth-data-structures` repo).
-data SizedMerkleRoot a = SizedMerkleRoot
-    { smrHash :: !(Hash (SizedMerkleTree a))
-    , smrSize :: !Word32
-    } deriving (Show, Eq, Ord, Generic)
-
--- | Stub type for a sized Merkle tree.
-type SizedMerkleTree a = Void
-
--- | Stub function for constructing a sized Merkle tree from
--- a bunch of elements.
-mkSizedMerkleTree :: [a] -> SizedMerkleTree a
-mkSizedMerkleTree = error "Sized Merkle trees are not implemented yet"
-
-getSizedMerkleRoot :: SizedMerkleTree a -> SizedMerkleRoot a
-getSizedMerkleRoot = absurd
 
 ----------------------------------------------------------
 -- Block elements
@@ -63,7 +44,7 @@ type PrivateHeaderHash = Hash PrivateBlockHeader
 data PrivateBlockHeader = PrivateBlockHeader
     { _pbhPrevBlock :: !PrivateHeaderHash
     -- ^ Previous header in the chain
-    , _pbhBodyProof :: !(SizedMerkleRoot PrivateTxAux)
+    , _pbhBodyProof :: !(MerkleSignature PrivateTxAux)
     -- ^ Body payload proof (for now - only root of sized Merkle tree
     -- over private transactions)
     , _pbhAtgDelta  :: !ATGDelta
@@ -126,7 +107,7 @@ type PrivateBlockVerifier =
 verifyPrivatePayload :: PrivateBlockVerifier
 verifyPrivatePayload = BIV $ \Block {..} ->
     blkHeader^.pbhBodyProof ==
-    getSizedMerkleRoot (mkSizedMerkleTree $ blkPayload^.pbbTxs)
+    getMerkleRoot (fromFoldable $ blkPayload^.pbbTxs)
 
 -- | Deciding if one chain is better than another.
 -- TODO: not sure what should be there, because how there can be
