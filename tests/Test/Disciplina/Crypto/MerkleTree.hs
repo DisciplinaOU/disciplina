@@ -1,10 +1,10 @@
-module Test.Disciplina.Educator.SizedMerkleTree where
+module Test.Disciplina.Crypto.MerkleTree where
 
 import Test.Common
-import Disciplina.Educator (MerkleTree(..), MerkleProof(..)
-                           ,mkMerkleProof, validateMerkleProof, drawMerkleTree
-                           ,fromFoldable, fromContainer, smrSize, smrHash
-                           ,getMerkleRoot)
+import Disciplina.Crypto (MerkleTree(..), MerkleProof(..)
+                         ,mkMerkleProof, validateMerkleProof, drawMerkleTree
+                         ,fromFoldable, fromContainer, smrSize, smrHash
+                         ,getMerkleRoot)
 
 spec_merkleTree :: Spec
 spec_merkleTree = describe "Merkle Tree tests" $ do

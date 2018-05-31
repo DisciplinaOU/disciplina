@@ -62,7 +62,6 @@ library
                      , Disciplina.Educator.Block
                      , Disciplina.Educator.Txs
                      , Disciplina.Educator.State
-                     , Disciplina.Educator.SizedMerkleTree
 
                      , Disciplina.Crypto.ByteArray
                      , Disciplina.Crypto.Hash
@@ -70,6 +69,7 @@ library
                      , Disciplina.Crypto.Hash.Cryptonite
                      , Disciplina.Crypto.Hash.Hashable
                      , Disciplina.Crypto.Impl
+                     , Disciplina.Crypto.MerkleTree
                      , Disciplina.Crypto.Serialise
                      , Disciplina.Crypto.Signing
                      , Disciplina.Crypto.Signing.Class

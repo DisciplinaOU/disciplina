@@ -4,7 +4,7 @@
 {-# LANGUAGE DeriveFunctor #-}
 
 -- | Sized Merkle tree implementation.
-module Disciplina.Educator.SizedMerkleTree
+module Disciplina.Crypto.MerkleTree
        ( MerkleSignature(..)
        , MerkleTree (..)
        , getMerkleRoot
@@ -23,7 +23,8 @@ module Disciplina.Educator.SizedMerkleTree
 
 import Universum
 
-import Disciplina.Crypto (Hash, HasHash, hash, unsafeHash)
+import Disciplina.Crypto.Serialise ()
+import Disciplina.Crypto.Impl (Hash, HasHash, hash, unsafeHash)
 import Disciplina.Crypto.Hash.Class (AbstractHash (..))
 
 import Codec.Serialise (Serialise(..))

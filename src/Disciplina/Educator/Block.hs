@@ -28,7 +28,7 @@ import Snowdrop.Model.Block.Core (BlkConfiguration (..), Block (..), BlockIntegr
 
 import Disciplina.Core.Types (ATGDelta (..))
 import Disciplina.Crypto (Hash, unsafeHash)
-import Disciplina.Educator.SizedMerkleTree (MerkleSignature, getMerkleRoot, fromFoldable)
+import Disciplina.Crypto.MerkleTree (MerkleSignature, getMerkleRoot, fromFoldable)
 import Disciplina.Educator.Txs (PrivateTxAux)
 import Disciplina.Util (OldestFirst (..))
 
