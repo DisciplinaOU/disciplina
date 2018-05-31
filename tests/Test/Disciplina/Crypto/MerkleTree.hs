@@ -1,41 +1,38 @@
 module Test.Disciplina.Crypto.MerkleTree where
 
 import Test.Common
-import Disciplina.Crypto (MerkleTree(..), MerkleProof(..)
-                         ,mkMerkleProof, validateMerkleProof, drawMerkleTree
-                         ,fromFoldable, fromContainer, smrSize, smrHash
+import Disciplina.Crypto (MerkleTree (..), mkMerkleProof, validateMerkleProof
+                         ,fromFoldable, fromContainer, smrSize
                          ,getMerkleRoot)
 
 spec_merkleTree :: Spec
-spec_merkleTree = describe "Merkle Tree tests" $ do
-    it "should construct tree" $ do
-        toList (fromFoldable leafsTree1) `shouldBe` leafsTree1
-        toList (fromContainer leafsTree2) `shouldBe` "abcde"
-        smrHash (getMerkleRoot testTree1)
-          `shouldBe` smrHash (getMerkleRoot testTree2)
+spec_merkleTree = describe "Merkle Tree Tests" $ do
+    it "should preserve leaf order when constructed from Foldable" $ property $
+      \(xs :: [Int]) -> toList (fromFoldable xs) == xs
 
-    it "should have properties" $ do
-        length testTree1 `shouldBe` length leafsTree1
-        smrSize (getMerkleRoot testTree1)
-          `shouldBe` fromIntegral (length leafsTree1)
+    it "should preserve leaf order when constructed from Container" $ property $
+      \(xs :: String) -> toList (fromContainer xs) == xs
 
-    it "should validate merkle tree proof" $ do
-        validateMerkleProof (mkMerkleProof testTree1 0) testTree1
-          `shouldBe` True
-        validateMerkleProof (mkMerkleProof testTree1 4) testTree1
-          `shouldBe` True
-        validateMerkleProof (mkMerkleProof testTree1 5) testTree1
-          `shouldBe` False
+    it "should have correct length" $ property $
+       \(xs :: [ByteString]) ->
+         length (fromFoldable xs) `shouldBe` length xs
 
-leafsTree1 :: [Text]
-leafsTree1 = ["a","b","c","d","e"]
+    it "should have correct size" $ property $
+       \(xs :: [ByteString]) ->
+         smrSize (getMerkleRoot (fromFoldable xs))
+          `shouldBe` fromIntegral (length xs)
 
-testTree1 :: MerkleTree Text
-testTree1 = fromFoldable leafsTree1
+    it "should have correct length and size even for empty tree" $ do
+         smrSize (getMerkleRoot MerkleEmpty) `shouldBe` 0
+         length MerkleEmpty `shouldBe` 0
 
-leafsTree2 :: Text
-leafsTree2 = "abcde"
+    it "should have equal length and size" $ property $
+       \(xs :: [Char]) ->
+         smrSize (getMerkleRoot (fromFoldable xs))
+            `shouldBe` fromIntegral (length xs)
 
-testTree2 :: MerkleTree Char
-testTree2 = fromContainer leafsTree2
-
+    it "can construct and verify proofs " $ property $
+       \(xs :: [Int], leafIdx) ->
+        let tree = fromFoldable xs
+        in validateMerkleProof (mkMerkleProof tree leafIdx) tree
+            `shouldBe` (leafIdx < length xs && leafIdx >= 0)

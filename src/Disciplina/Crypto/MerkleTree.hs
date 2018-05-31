@@ -79,9 +79,6 @@ instance Foldable MerkleNode where
     MerkleLeaf {mVal} -> f mVal
     MerkleBranch {mLeft, mRight} -> F.foldMap f mLeft `mappend` F.foldMap f mRight
 
-toLazyByteString :: Builder -> LBS.ByteString
-toLazyByteString = Builder.toLazyByteStringWith (Builder.safeStrategy 1024 4096) mempty
-
 mkLeaf :: HasHash a => (LeafIndex, a) -> MerkleNode a
 mkLeaf (i, a) = MerkleLeaf
     { mVal  = a
@@ -110,6 +107,9 @@ mkBranchRootHash (MerkleSignature (AbstractHash hl) sl)
         , byteString (convert hl)
         , byteString (convert hr) ])
      (sl + sr)
+  where
+    toLazyByteString :: Builder -> LBS.ByteString
+    toLazyByteString = Builder.toLazyByteStringWith (Builder.safeStrategy 1024 4096) mempty
 
 -- | Smart constructor for MerkleTree.
 fromFoldable :: (HasHash a, Foldable t) => t a -> MerkleTree a
