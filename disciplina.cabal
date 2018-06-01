@@ -79,6 +79,7 @@ library
   -- other-extensions:
   build-depends:       base >= 4.9 && < 5
                      , autoexporter
+                     , array
                      , AVL
                      , bytestring
                      , cardano-sl-networking
@@ -238,6 +239,7 @@ test-suite disciplina-test
                             Test.Disciplina.DB.DSL.Interpret.SimpleTxDB
                             Test.Disciplina.WorldState
                             Test.Disciplina.Core.ATG
+                            Test.Disciplina.Crypto.MerkleTree
   build-depends:             base >= 0.4 && < 5
                            , AVL
                            , bytestring

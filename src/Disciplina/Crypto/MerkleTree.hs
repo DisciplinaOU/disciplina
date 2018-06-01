@@ -28,6 +28,7 @@ import Disciplina.Crypto.Impl (Hash, HasHash, hash, unsafeHash)
 import Disciplina.Crypto.Hash.Class (AbstractHash (..))
 
 import Codec.Serialise (Serialise(..))
+import Data.Array
 import Data.Bits (Bits (..))
 import Data.ByteArray (convert)
 import Data.ByteString.Builder (Builder, byteString)
@@ -113,23 +114,25 @@ mkBranchRootHash (MerkleSignature (AbstractHash hl) sl)
 
 -- | Smart constructor for MerkleTree.
 fromFoldable :: (HasHash a, Foldable t) => t a -> MerkleTree a
-fromFoldable = fromList . zip [0,1..] . F.toList
+fromFoldable = fromList . F.toList
 
 -- | Smart constructor for MerkleTree.
 fromContainer :: (HasHash (Element t), Container t) => t -> MerkleTree (Element t)
 fromContainer = fromFoldable . toList
 
-fromList :: HasHash a => [(LeafIndex, a)] -> MerkleTree a
+fromList :: HasHash a => [a] -> MerkleTree a
 fromList [] = MerkleEmpty
-fromList ls = MerkleTree (go lsLen ls)
+fromList ls = MerkleTree (go' 1 (length lsIndexed))
   where
-    lsLen = Universum.length ls
-    go :: HasHash a => Int -> [(LeafIndex, a)] -> MerkleNode a
-    go _  [x] = mkLeaf x
-    go len xs = mkBranch (go i l) (go (len - i) r)
+    lsIndexed = zip [1,2..] ls
+    arr = array (1, length lsIndexed) lsIndexed
+    go' lo hi = if lo == hi
+                then mkLeaf (lo - 1, arr ! lo)
+                else mkBranch (go' loL hiL) (go' loR hiR)
       where
-        i = powerOfTwo len
-        (l, r) = splitAt i xs
+        -- new borders
+        (!loL, !hiL, !loR, !hiR) = (lo, lo + i, lo + i + 1, hi)
+        i = powerOfTwo (hi - lo)
 
 -- | Returns root of merkle tree.
 getMerkleRoot :: MerkleTree a -> MerkleSignature a
@@ -217,13 +220,13 @@ validateMerkleProof (MerkleProof proofElems (Just leafRoot)) (MerkleTree treeNod
         L -> mkBranchRootHash pRoot sibRoot
         R -> mkBranchRootHash sibRoot pRoot
 
-validateMerkleProof (MerkleProof _ Nothing) _ = False
+validateMerkleProof (MerkleProof _ _) _ = False
 
 -- | Debug print of tree.
-drawMerkleTree :: (Show a, IsString a) => MerkleTree a -> String
+drawMerkleTree :: (Show a) => MerkleTree a -> String
 drawMerkleTree MerkleEmpty = "empty tree"
 drawMerkleTree (MerkleTree n) = Tree.drawTree (asTree n)
   where
-   asTree :: (Show a, IsString a) => MerkleNode a -> Tree.Tree String
+   asTree :: (Show a) => MerkleNode a -> Tree.Tree String
    asTree (MerkleBranch {..}) = Tree.Node (show mRoot) [asTree mLeft, asTree mRight]
    asTree leaf = Tree.Node (show leaf) []
