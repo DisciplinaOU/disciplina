@@ -1,5 +1,5 @@
 let
-  overlay = builtins.fetchGit "ssh://git@github.com:/serokell/serokell-overlay.git";
+  overlay = import ''${builtins.fetchGit "ssh://git@github.com:/serokell/serokell-overlay.git}/pkgs'';
   nixpkgs = import (builtins.fetchTarball "https://github.com/serokell/nixpkgs/archive/master.tar.gz") {
     overlays = [ overlay ];
   };
