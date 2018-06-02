@@ -1,16 +1,16 @@
 let
-  nixpkgs = import "${overlay}/nixpkgs.nix";
-  overlay = builtins.fetchGit {
-    url = "ssh://git@github.com:/serokell/serokell-ops.git";
+  overlay = import ''${builtins.fetchGit "ssh://git@github.com:/serokell/serokell-overlay.git"}/pkgs'';
+  nixpkgs = import (builtins.fetchTarball "https://github.com/serokell/nixpkgs/archive/master.tar.gz") {
+    overlays = [ overlay ];
   };
 in
 
 with nixpkgs;
 
-buildStack {
+buildStackApplication {
   package = "disciplina";
   src = lib.cleanSource ./.;
-  ghc = pkgs.haskell.compiler.ghc822;
+  ghc = haskell.compiler.ghc822;
 
   overrides = final: previous: {
     rocksdb-haskell = dependCabal previous.rocksdb-haskell [ rocksdb ];
