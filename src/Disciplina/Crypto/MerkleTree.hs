@@ -28,7 +28,7 @@ import Disciplina.Crypto.Impl (Hash, HasHash, hash, unsafeHash)
 import Disciplina.Crypto.Hash.Class (AbstractHash (..))
 
 import Codec.Serialise (Serialise(..))
-import Data.Array
+import Data.Array (array, (!))
 import Data.Bits (Bits (..))
 import Data.ByteArray (convert)
 import Data.ByteString.Builder (Builder, byteString)
