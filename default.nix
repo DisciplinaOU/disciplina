@@ -1,5 +1,5 @@
 let
-  overlay = import ''${builtins.fetchGit "ssh://git@github.com:/serokell/serokell-overlay.git}/pkgs'';
+  overlay = import ''${builtins.fetchGit "ssh://git@github.com:/serokell/serokell-overlay.git"}/pkgs'';
   nixpkgs = import (builtins.fetchTarball "https://github.com/serokell/nixpkgs/archive/master.tar.gz") {
     overlays = [ overlay ];
   };
@@ -7,7 +7,7 @@ in
 
 with nixpkgs;
 
-buildStack {
+buildStackApplication {
   package = "disciplina";
   src = lib.cleanSource ./.;
   ghc = haskell.compiler.ghc822;
