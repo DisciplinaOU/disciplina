@@ -40,16 +40,16 @@ import qualified Data.ByteString.Lazy as LBS
 
 -- | Data type for root of sized merkle tree.
 data MerkleSignature a = MerkleSignature
-    { smrHash :: Hash LBS.ByteString  -- ^ returns root 'Hash' of Merkle Tree
-    , smrSize :: Word8 -- ^ size of root node,
+    { mrHash :: !(Hash LBS.ByteString)  -- ^ returns root 'Hash' of Merkle Tree
+    , mrSize :: !Word8 -- ^ size of root node,
                        -- size is defined as number of leafs in this subtree
     } deriving (Show, Eq, Ord, Generic, Serialise, Functor, Typeable)
 
 
 data MerkleTree a
-  = MerkleEmpty
-  | MerkleTree !(MerkleNode a)
-  deriving (Eq, Show, Generic)
+    = MerkleEmpty
+    | MerkleTree !(MerkleNode a)
+    deriving (Eq, Show, Generic)
 
 
 instance Foldable MerkleTree where
@@ -60,25 +60,27 @@ instance Foldable MerkleTree where
     null _                = False
 
     length MerkleEmpty    = 0
-    length (MerkleTree n) = fromIntegral (smrSize (mRoot n))
+    length (MerkleTree n) = fromIntegral (mrSize (mRoot n))
 
 deriving instance Container (MerkleTree a)
 
 type LeafIndex = Int
 
 data MerkleNode a
-    = MerkleBranch { mRoot  :: !(MerkleSignature a)
-                   , mLeft  :: !(MerkleNode a)
-                   , mRight :: !(MerkleNode a)}
-    | MerkleLeaf { mRoot  :: !(MerkleSignature a)
-                 , mIndex :: !LeafIndex
-                 , mVal   :: !a}
+    = MerkleBranch
+       { mRoot  :: !(MerkleSignature a)
+       , mLeft  :: !(MerkleNode a)
+       , mRight :: !(MerkleNode a) }
+    | MerkleLeaf
+       { mRoot  :: !(MerkleSignature a)
+       , mIndex :: !LeafIndex
+       , mVal   :: !a }
     deriving (Eq, Show, Functor, Generic)
 
 instance Foldable MerkleNode where
-  foldMap f x = case x of
-    MerkleLeaf {mVal} -> f mVal
-    MerkleBranch {mLeft, mRight} -> F.foldMap f mLeft `mappend` F.foldMap f mRight
+    foldMap f x = case x of
+      MerkleLeaf {mVal} -> f mVal
+      MerkleBranch {mLeft, mRight} -> F.foldMap f mLeft `mappend` F.foldMap f mRight
 
 mkLeaf :: HasHash a => (LeafIndex, a) -> MerkleNode a
 mkLeaf (i, a) = MerkleLeaf
@@ -89,8 +91,7 @@ mkLeaf (i, a) = MerkleLeaf
     }
 
 mkBranch :: MerkleNode a -> MerkleNode a -> MerkleNode a
-mkBranch l r =
-    MerkleBranch
+mkBranch l r = MerkleBranch
     { mLeft  = l
     , mRight = r
     , mRoot  = mkBranchRootHash (mRoot l) (mRoot r)
@@ -101,13 +102,13 @@ mkBranchRootHash :: MerkleSignature a -- ^ left merkle root
                  -> MerkleSignature a
 mkBranchRootHash (MerkleSignature (AbstractHash hl) sl)
                  (MerkleSignature (AbstractHash hr) sr)
-  = MerkleSignature
-     (hash $ toLazyByteString $ mconcat
-        [ byteString (one sl)
-        , byteString (one sr)
-        , byteString (convert hl)
-        , byteString (convert hr) ])
-     (sl + sr)
+   = MerkleSignature
+   (hash $ toLazyByteString $ mconcat
+      [ byteString (one sl)
+      , byteString (one sr)
+      , byteString (convert hl)
+      , byteString (convert hr) ])
+   (sl + sr)
   where
     toLazyByteString :: Builder -> LBS.ByteString
     toLazyByteString = Builder.toLazyByteStringWith (Builder.safeStrategy 1024 4096) mempty
@@ -118,7 +119,7 @@ fromFoldable = fromList . F.toList
 
 -- | Smart constructor for MerkleTree.
 fromContainer :: (HasHash (Element t), Container t) => t -> MerkleTree (Element t)
-fromContainer = fromFoldable . toList
+fromContainer = fromList . toList
 
 fromList :: HasHash a => [a] -> MerkleTree a
 fromList [] = MerkleEmpty
@@ -163,19 +164,51 @@ powerOfTwo n
     go w = if w .&. (w - 1) == 0 then w else go (w .&. (w - 1))
 
 data MerkleProof a = MerkleProof
-  { getMerkleProof     :: [ProofElem a]  -- ^ list of proof elements
-  , getMerkleProofRoot :: Maybe (MerkleSignature a) -- ^ leaf root proof is constructed for
-  }
-  deriving (Show, Eq, Ord, Generic, Serialise)
+    { getMerkleProof     :: [ProofElem a]  -- ^ list of proof elements
+    , getMerkleProofRoot :: Maybe (MerkleSignature a) -- ^ leaf root proof is constructed for
+    }
+    deriving (Show, Eq, Ord, Generic, Serialise)
 
 data ProofElem a = ProofElem
-  { nodeRoot    :: MerkleSignature a
-  , siblingRoot :: MerkleSignature a
-  , nodeSide    :: Side
-  } deriving (Show, Eq, Ord, Generic, Serialise)
+    { nodeRoot    :: MerkleSignature a
+    , siblingRoot :: MerkleSignature a
+    , nodeSide    :: Side
+    } deriving (Show, Eq, Ord, Generic, Serialise)
 
 data Side = L | R
-  deriving (Show, Eq, Ord, Generic, Serialise)
+    deriving (Show, Eq, Ord, Generic, Serialise)
+
+data MerkleProof' a
+    = ProofBranch
+        { pnRoot    :: !(MerkleSignature a)
+        , pnLeft    :: !(MerkleProof' a)
+        , pnRight   :: !(MerkleProof' a) }
+    | ProofLeaf
+        { pnRoot  :: !(MerkleSignature a)
+        , pnIndex :: !LeafIndex }
+    | ProofPruned
+        { pnRoot :: !(MerkleSignature a) }
+    deriving (Eq, Show, Functor, Generic)
+
+
+-- | Todo, finish this function, WIP
+-- | input should be Set of indicies
+-- | rewrite validate proof
+mkMerkleProof' :: forall a. MerkleTree a -- ^ merkle tree we want to construct a proof from
+                        -> LeafIndex     -- ^ leaf index used for proof
+                        -> Maybe (MerkleProof' a)
+mkMerkleProof' MerkleEmpty _ = Nothing
+mkMerkleProof' (MerkleTree rootNode) n =
+    Just (constructProof rootNode)
+  where
+    constructProof ::  MerkleNode a -> MerkleProof' a
+    constructProof (MerkleLeaf {..})
+      | n == mIndex = ProofLeaf mRoot mIndex
+      | otherwise = ProofPruned mRoot
+    constructProof (MerkleBranch mRoot' mLeft' mRight') =
+      case (constructProof mLeft', constructProof mRight') of
+        (ProofPruned _, ProofPruned _) -> ProofPruned mRoot'
+        (pL, pR)   -> ProofBranch mRoot' pL pR
 
 -- | Construct merkle proof by recusive walking the tree and collecting ProofElem until we hit
 -- matching leafRoot.
@@ -184,8 +217,8 @@ mkMerkleProof :: forall a. MerkleTree a -- ^ merkle tree we want to construct a 
                         -> MerkleProof a
 mkMerkleProof MerkleEmpty _ = MerkleProof [] Nothing
 mkMerkleProof (MerkleTree rootNode) n =
-  let (path, proofLeaf) = constructPath [] rootNode
-  in MerkleProof path proofLeaf
+    let (path, proofLeaf) = constructPath [] rootNode
+    in MerkleProof path proofLeaf
   where
     constructPath :: [ProofElem a] -> MerkleNode a -> ([ProofElem a], Maybe (MerkleSignature a))
     constructPath pElems (MerkleLeaf leafRoot' leafIndex _)
@@ -227,6 +260,23 @@ drawMerkleTree :: (Show a) => MerkleTree a -> String
 drawMerkleTree MerkleEmpty = "empty tree"
 drawMerkleTree (MerkleTree n) = Tree.drawTree (asTree n)
   where
-   asTree :: (Show a) => MerkleNode a -> Tree.Tree String
-   asTree (MerkleBranch {..}) = Tree.Node (show mRoot) [asTree mLeft, asTree mRight]
-   asTree leaf = Tree.Node (show leaf) []
+    asTree :: (Show a) => MerkleNode a -> Tree.Tree String
+    asTree (MerkleBranch {..}) = Tree.Node (show mRoot) [asTree mLeft, asTree mRight]
+    asTree leaf = Tree.Node (show leaf) []
+
+-- | Debug print of proof tree.
+drawProofNode :: (Show a) => Maybe (MerkleProof' a) -> String
+drawProofNode Nothing = "empty proof"
+drawProofNode (Just p) = Tree.drawTree (asTree p)
+  where
+    asTree :: (Show a) => MerkleProof' a -> Tree.Tree String
+    asTree (ProofLeaf {..}) = Tree.Node ("leaf, " <> show pnRoot) []
+    asTree (ProofBranch {..}) = Tree.Node ("branch, " <> show pnRoot) [asTree pnLeft, asTree pnRight]
+    asTree (ProofPruned {..}) = Tree.Node ("pruned, " <> show pnRoot) []
+
+t :: MerkleTree Text
+t = fromList ["a","b","c","d","e"]
+
+p1 = mkMerkleProof' t 0
+
+p1Show = drawProofNode p1
