@@ -13,6 +13,7 @@ module Disciplina.Crypto.MerkleTree
 
        , MerkleProof (..)
        , mkMerkleProof
+       , mkMerkleProofSingle
        , validateMerkleProof
 
        , MerkleNode (..)
@@ -32,6 +33,7 @@ import Data.Array (array, (!))
 import Data.Bits (Bits (..))
 import Data.ByteArray (convert)
 import Data.ByteString.Builder (Builder, byteString)
+import qualified Data.Set as Set
 import Data.Tree as Tree (Tree(Node), drawTree)
 
 import qualified Data.Foldable as F (Foldable (..))
@@ -163,97 +165,57 @@ powerOfTwo n
      -}
     go w = if w .&. (w - 1) == 0 then w else go (w .&. (w - 1))
 
-data MerkleProof a = MerkleProof
-    { getMerkleProof     :: [ProofElem a]  -- ^ list of proof elements
-    , getMerkleProofRoot :: Maybe (MerkleSignature a) -- ^ leaf root proof is constructed for
-    }
-    deriving (Show, Eq, Ord, Generic, Serialise)
-
-data ProofElem a = ProofElem
-    { nodeRoot    :: MerkleSignature a
-    , siblingRoot :: MerkleSignature a
-    , nodeSide    :: Side
-    } deriving (Show, Eq, Ord, Generic, Serialise)
-
-data Side = L | R
-    deriving (Show, Eq, Ord, Generic, Serialise)
-
-data MerkleProof' a
+data MerkleProof a
     = ProofBranch
-        { pnRoot    :: !(MerkleSignature a)
-        , pnLeft    :: !(MerkleProof' a)
-        , pnRight   :: !(MerkleProof' a) }
+        { pnSig    :: !(MerkleSignature a)
+        , pnLeft    :: !(MerkleProof a)
+        , pnRight   :: !(MerkleProof a) }
     | ProofLeaf
-        { pnRoot  :: !(MerkleSignature a)
-        , pnIndex :: !LeafIndex }
+        { pnSig  :: !(MerkleSignature a) }
     | ProofPruned
-        { pnRoot :: !(MerkleSignature a) }
+        { pnSig :: !(MerkleSignature a) }
     deriving (Eq, Show, Functor, Generic)
 
+getMerkleProofRoot :: MerkleProof a -> MerkleSignature a
+getMerkleProofRoot = pnSig
 
--- | Todo, finish this function, WIP
--- | input should be Set of indicies
--- | rewrite validate proof
-mkMerkleProof' :: forall a. MerkleTree a -- ^ merkle tree we want to construct a proof from
-                        -> LeafIndex     -- ^ leaf index used for proof
-                        -> Maybe (MerkleProof' a)
-mkMerkleProof' MerkleEmpty _ = Nothing
-mkMerkleProof' (MerkleTree rootNode) n =
-    Just (constructProof rootNode)
+mkMerkleProofSingle :: forall a. MerkleTree a -- ^ merkle tree we want to construct a proof from
+                              -> LeafIndex -- ^ leaf index used for proof
+                              -> Maybe (MerkleProof a)
+mkMerkleProofSingle t n = mkMerkleProof t (Set.fromList [n])
+
+mkMerkleProof :: forall a. MerkleTree a -- ^ merkle tree we want to construct a proof from
+                        -> Set LeafIndex -- ^ leaf index used for proof
+                        -> Maybe (MerkleProof a)
+mkMerkleProof MerkleEmpty _ = Nothing
+mkMerkleProof (MerkleTree rootNode) n =
+    case constructProof rootNode of
+      ProofPruned _ -> Nothing
+      x -> Just x
   where
-    constructProof ::  MerkleNode a -> MerkleProof' a
+    constructProof :: MerkleNode a -> MerkleProof a
     constructProof (MerkleLeaf {..})
-      | n == mIndex = ProofLeaf mRoot mIndex
+      | Set.member mIndex n = ProofLeaf mRoot
       | otherwise = ProofPruned mRoot
     constructProof (MerkleBranch mRoot' mLeft' mRight') =
       case (constructProof mLeft', constructProof mRight') of
         (ProofPruned _, ProofPruned _) -> ProofPruned mRoot'
-        (pL, pR)   -> ProofBranch mRoot' pL pR
-
--- | Construct merkle proof by recusive walking the tree and collecting ProofElem until we hit
--- matching leafRoot.
-mkMerkleProof :: forall a. MerkleTree a -- ^ merkle tree we want to construct a proof from
-                        -> LeafIndex    -- ^ leaf index used for proof
-                        -> MerkleProof a
-mkMerkleProof MerkleEmpty _ = MerkleProof [] Nothing
-mkMerkleProof (MerkleTree rootNode) n =
-    let (path, proofLeaf) = constructPath [] rootNode
-    in MerkleProof path proofLeaf
-  where
-    constructPath :: [ProofElem a] -> MerkleNode a -> ([ProofElem a], Maybe (MerkleSignature a))
-    constructPath pElems (MerkleLeaf leafRoot' leafIndex _)
-      | n == leafIndex = (pElems, Just leafRoot')
-      | otherwise = ([], Nothing)
-    constructPath pElems (MerkleBranch _ ln rn) =
-         case (lPath, rPath) of
-              ((xs, Nothing), (ys, Nothing)) -> (xs ++ ys, Nothing)
-              ((xs, Just l), (ys, _))        -> (xs ++ ys, Just l)
-              ((xs, _), (ys, Just r))        -> (xs ++ ys, Just r)
-      where
-        lProofElem = ProofElem (mRoot ln) (mRoot rn) L
-        rProofElem = ProofElem (mRoot rn) (mRoot ln) R
-
-        lPath = constructPath (lProofElem:pElems) ln
-        rPath = constructPath (rProofElem:pElems) rn
+        (pL, pR) -> ProofBranch mRoot' pL pR
 
 -- | Validate a merkle tree proof.
-validateMerkleProof :: forall a. MerkleProof a -> MerkleTree a -> Bool
-validateMerkleProof (MerkleProof proofElems (Just leafRoot)) (MerkleTree treeNode) =
-    validate proofElems leafRoot
+validateMerkleProof :: forall a. MerkleProof a -> MerkleSignature a -> Bool
+validateMerkleProof proof treeRoot =
+    computeMerkleRoot proof == Just treeRoot
   where
-    validate :: [ProofElem a] -> MerkleSignature a -> Bool
-    validate [] proofRoot = proofRoot == mRoot treeNode
-    validate (pElem:pElems) proofRoot
-      | proofRoot /= nodeRoot pElem = False
-      | otherwise = validate pElems $ hashProofElem pElem
-
-    hashProofElem :: ProofElem a -> MerkleSignature a
-    hashProofElem (ProofElem pRoot sibRoot side) =
-      case side of
-        L -> mkBranchRootHash pRoot sibRoot
-        R -> mkBranchRootHash sibRoot pRoot
-
-validateMerkleProof (MerkleProof _ _) _ = False
+    computeMerkleRoot :: MerkleProof a -> Maybe (MerkleSignature a)
+    computeMerkleRoot (ProofLeaf {..}) = Just pnSig
+    computeMerkleRoot (ProofPruned {..}) = Just pnSig
+    computeMerkleRoot (ProofBranch pnRoot' pnLeft' pnRight') = do
+      pnSigL <- computeMerkleRoot pnLeft'
+      pnSigR <- computeMerkleRoot pnRight'
+      case mkBranchRootHash pnSigL pnSigR == pnRoot' of
+        True -> Just pnRoot'
+        False -> Nothing
 
 -- | Debug print of tree.
 drawMerkleTree :: (Show a) => MerkleTree a -> String
@@ -265,18 +227,24 @@ drawMerkleTree (MerkleTree n) = Tree.drawTree (asTree n)
     asTree leaf = Tree.Node (show leaf) []
 
 -- | Debug print of proof tree.
-drawProofNode :: (Show a) => Maybe (MerkleProof' a) -> String
+drawProofNode :: (Show a) => Maybe (MerkleProof a) -> String
 drawProofNode Nothing = "empty proof"
 drawProofNode (Just p) = Tree.drawTree (asTree p)
   where
-    asTree :: (Show a) => MerkleProof' a -> Tree.Tree String
-    asTree (ProofLeaf {..}) = Tree.Node ("leaf, " <> show pnRoot) []
-    asTree (ProofBranch {..}) = Tree.Node ("branch, " <> show pnRoot) [asTree pnLeft, asTree pnRight]
-    asTree (ProofPruned {..}) = Tree.Node ("pruned, " <> show pnRoot) []
+    asTree :: (Show a) => MerkleProof a -> Tree.Tree String
+    asTree (ProofLeaf {..}) = Tree.Node ("leaf, " <> show pnSig) []
+    asTree (ProofBranch {..}) = Tree.Node ("branch, " <> show pnSig) [asTree pnLeft, asTree pnRight]
+    asTree (ProofPruned {..}) = Tree.Node ("pruned, " <> show pnSig) []
 
-t :: MerkleTree Text
+t,t2 :: MerkleTree Text
 t = fromList ["a","b","c","d","e"]
+t2 = fromList ["e","b","c","d","e"]
 
-p1 = mkMerkleProof' t 0
+t3 = fromList [0 :: Int]
+
+p1 = mkMerkleProof t (Set.fromList [0,3])
+p2 = mkMerkleProofSingle t3 2
+
+valid1 = validateMerkleProof <$> p1 <*> Just (getMerkleRoot t2)
 
 p1Show = drawProofNode p1
