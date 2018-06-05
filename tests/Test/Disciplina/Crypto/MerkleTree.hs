@@ -1,9 +1,10 @@
 module Test.Disciplina.Crypto.MerkleTree where
 
 import Test.Common
-import Disciplina.Crypto (MerkleTree (..), mkMerkleProofSingle
-                         ,validateMerkleProof,fromFoldable
+import Disciplina.Crypto (MerkleTree (..), mkMerkleProof, mkMerkleProofSingle
+                         ,validateMerkleProof, fromFoldable
                          ,fromContainer, mrSize, getMerkleRoot)
+import qualified Data.Set as Set
 
 spec_merkleTree :: Spec
 spec_merkleTree = describe "Merkle Tree Tests" $ do
@@ -31,10 +32,20 @@ spec_merkleTree = describe "Merkle Tree Tests" $ do
          mrSize (getMerkleRoot (fromFoldable xs))
             `shouldBe` fromIntegral (length xs)
 
-    it "can construct and verify proofs " $ property $
+    it "can construct and verify single proofs " $ property $
        \(xs :: [Int], leafIdx) ->
         let tree = fromFoldable xs
         in (validateMerkleProof <$> mkMerkleProofSingle tree leafIdx <*> Just (getMerkleRoot tree))
-            `shouldBe` if (leafIdx < length xs && leafIdx >= 0) == True
-                       then Just True
-                       else Nothing
+            `shouldBe` case leafIdx < length xs && leafIdx >= 0 of
+                         True -> Just True
+                         False -> Nothing
+
+    it "can construct and verify Set proofs " $ property $
+       \(treeLeafs :: [Int], proofIndicies' :: [Int]) ->
+        let tree = fromFoldable treeLeafs
+            proofIndicies = Set.fromList proofIndicies'
+            haveLeafIndex = any (\x -> x < length treeLeafs && x >= 0) proofIndicies'
+        in (validateMerkleProof <$> mkMerkleProof tree proofIndicies <*> Just (getMerkleRoot tree))
+            `shouldBe` case haveLeafIndex of
+                         True -> Just True
+                         False -> Nothing

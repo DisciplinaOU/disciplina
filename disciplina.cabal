@@ -243,6 +243,7 @@ test-suite disciplina-test
   build-depends:             base >= 0.4 && < 5
                            , AVL
                            , bytestring
+                           , containers
                            , cryptonite
                            , disciplina
                            , data-default

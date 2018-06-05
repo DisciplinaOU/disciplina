@@ -167,11 +167,13 @@ powerOfTwo n
 
 data MerkleProof a
     = ProofBranch
-        { pnSig    :: !(MerkleSignature a)
+        { pnSig     :: !(MerkleSignature a)
         , pnLeft    :: !(MerkleProof a)
         , pnRight   :: !(MerkleProof a) }
     | ProofLeaf
-        { pnSig  :: !(MerkleSignature a) }
+        { pnSig   :: !(MerkleSignature a)
+        , pnVal   :: !a
+        }
     | ProofPruned
         { pnSig :: !(MerkleSignature a) }
     deriving (Eq, Show, Functor, Generic)
@@ -195,7 +197,7 @@ mkMerkleProof (MerkleTree rootNode) n =
   where
     constructProof :: MerkleNode a -> MerkleProof a
     constructProof (MerkleLeaf {..})
-      | Set.member mIndex n = ProofLeaf mRoot
+      | Set.member mIndex n = ProofLeaf mRoot mVal
       | otherwise = ProofPruned mRoot
     constructProof (MerkleBranch mRoot' mLeft' mRight') =
       case (constructProof mLeft', constructProof mRight') of
@@ -203,12 +205,15 @@ mkMerkleProof (MerkleTree rootNode) n =
         (pL, pR) -> ProofBranch mRoot' pL pR
 
 -- | Validate a merkle tree proof.
-validateMerkleProof :: forall a. MerkleProof a -> MerkleSignature a -> Bool
+validateMerkleProof :: forall a. HasHash a => MerkleProof a -> MerkleSignature a -> Bool
 validateMerkleProof proof treeRoot =
     computeMerkleRoot proof == Just treeRoot
   where
     computeMerkleRoot :: MerkleProof a -> Maybe (MerkleSignature a)
-    computeMerkleRoot (ProofLeaf {..}) = Just pnSig
+    computeMerkleRoot (ProofLeaf {..}) = do
+      case MerkleSignature (unsafeHash pnVal) 1 == pnSig of
+        True -> Just pnSig
+        False -> Nothing
     computeMerkleRoot (ProofPruned {..}) = Just pnSig
     computeMerkleRoot (ProofBranch pnRoot' pnLeft' pnRight') = do
       pnSigL <- computeMerkleRoot pnLeft'
@@ -235,16 +240,3 @@ drawProofNode (Just p) = Tree.drawTree (asTree p)
     asTree (ProofLeaf {..}) = Tree.Node ("leaf, " <> show pnSig) []
     asTree (ProofBranch {..}) = Tree.Node ("branch, " <> show pnSig) [asTree pnLeft, asTree pnRight]
     asTree (ProofPruned {..}) = Tree.Node ("pruned, " <> show pnSig) []
-
-t,t2 :: MerkleTree Text
-t = fromList ["a","b","c","d","e"]
-t2 = fromList ["e","b","c","d","e"]
-
-t3 = fromList [0 :: Int]
-
-p1 = mkMerkleProof t (Set.fromList [0,3])
-p2 = mkMerkleProofSingle t3 2
-
-valid1 = validateMerkleProof <$> p1 <*> Just (getMerkleRoot t2)
-
-p1Show = drawProofNode p1
