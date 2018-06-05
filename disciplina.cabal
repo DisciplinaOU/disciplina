@@ -69,6 +69,7 @@ library
                      , Disciplina.Crypto.Hash.Cryptonite
                      , Disciplina.Crypto.Hash.Hashable
                      , Disciplina.Crypto.Impl
+                     , Disciplina.Crypto.MerkleTree
                      , Disciplina.Crypto.Serialise
                      , Disciplina.Crypto.Signing
                      , Disciplina.Crypto.Signing.Class
@@ -78,6 +79,7 @@ library
   -- other-extensions:
   build-depends:       base >= 4.9 && < 5
                      , autoexporter
+                     , array
                      , AVL
                      , bytestring
                      , cardano-sl-networking
@@ -237,9 +239,11 @@ test-suite disciplina-test
                             Test.Disciplina.DB.DSL.Interpret.SimpleTxDB
                             Test.Disciplina.WorldState
                             Test.Disciplina.Core.ATG
+                            Test.Disciplina.Crypto.MerkleTree
   build-depends:             base >= 0.4 && < 5
                            , AVL
                            , bytestring
+                           , containers
                            , cryptonite
                            , disciplina
                            , data-default

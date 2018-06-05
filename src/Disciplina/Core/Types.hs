@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveAnyClass #-}
 
 -- | Core types used across Disciplina codebase.
 
@@ -27,6 +28,7 @@ import Universum
 import Control.Lens (makeLenses)
 import Data.Map (Map)
 
+import Codec.Serialise (Serialise)
 import Disciplina.Crypto (Hash, PublicKey, hash)
 
 -- | 'Address' datatype. Not 'newtype', because later it will
@@ -34,7 +36,7 @@ import Disciplina.Crypto (Hash, PublicKey, hash)
 -- TODO: maybe we should use a shorter hash for address, like in Cardano?
 data Address = Address
     { addrHash :: !(Hash PublicKey)
-    } deriving (Eq, Ord, Show, Generic)
+    } deriving (Eq, Ord, Show, Serialise, Generic)
 
 mkAddr :: PublicKey -> Address
 mkAddr = Address . hash
@@ -45,7 +47,7 @@ type SubjectId = Word32
 -- | Assignment/course grade.
 -- TODO: decide on final format of the grade.
 data Grade = F | D | C | B | A
-    deriving (Eq, Ord, Enum, Bounded, Show, Generic)
+    deriving (Eq, Ord, Enum, Bounded, Show, Serialise, Generic)
 
 -- | Student is identified by their public address.
 type StudentId = Address
@@ -62,7 +64,7 @@ data CourseId = CourseId
     , ciId      :: !Int
     -- ^ An identificator of particular Educator's course
     -- among all courses on that subject.
-    } deriving (Show, Eq, Ord, Generic)
+    } deriving (Show, Eq, Ord, Serialise, Generic)
 
 -- | 'AssignmentId' is a hash of assignment contents,
 -- which are stored off-chain.
