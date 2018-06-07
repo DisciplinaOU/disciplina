@@ -1,4 +1,3 @@
-{-# LANGUAGE DeriveAnyClass #-}
 
 -- | Definitions of private transactions
 
@@ -14,9 +13,8 @@ module Disciplina.Educator.Txs
 
 import Universum
 
-import Codec.Serialise (Serialise)
-import Disciplina.Core.Types (AssignmentId, CourseId, EducatorId, Grade, StudentId)
-import Disciplina.Crypto (Hash, HasHash, PublicKey, Signature)
+import Disciplina.Core.Types (AssignmentId, CourseId, EducatorId, Grade, StudentId, Submission)
+import Disciplina.Crypto (Hash, PublicKey, Signature)
 
 -- | Private transaction.
 data PrivateTx = PrivateTx
@@ -29,7 +27,7 @@ data PrivateTx = PrivateTx
     -- on student's side.
     , _ptxPayload    :: !PrivateTxPayload
     -- ^ Actual contents of transaction.
-    } deriving (Show, Eq, Serialise, Generic)
+    } deriving (Show, Eq, Generic)
 
 type PrivateTxId = Hash PrivateTx
 
@@ -39,11 +37,7 @@ type PrivateTxId = Hash PrivateTx
 data PrivateTxPayload
     = StudentTx  { _ptxStudentMsg  :: !StudentTxMsg }
     | EducatorTx { _ptxEducatorMsg :: !EducatorTxMsg }
-    deriving (Show, Eq, Serialise, Generic)
-
--- | Stub type for submissions. Submission transaction
--- doesn't contain actual submission contents - only hash of them.
-data Submission
+    deriving (Show, Eq, Generic)
 
 -- | Messages which can be sent by student.
 data StudentTxMsg
@@ -51,9 +45,9 @@ data StudentTxMsg
     -- ^ TODO: add some conditions for successful course enrollment maybe?
     | Submit
       { _stmAssignmentId :: !AssignmentId
-      , _stmSubmission   :: !(Hash Submission)
+      , _stmSubmission   :: !Submission
       }
-    deriving (Show, Eq, Serialise, Generic)
+    deriving (Show, Eq, Generic)
 
 -- | Messages which can be sent by educator.
 data EducatorTxMsg
@@ -72,7 +66,7 @@ data EducatorTxMsg
     | GradeCourse
       { _etmGrade :: !Grade
       }
-    deriving (Show, Eq, Serialise, Generic)
+    deriving (Show, Eq, Generic)
 
 -- | Which data to sign in transaction.
 -- 'PrivateTxId' is basically a hash of all transaction contents,
@@ -89,10 +83,10 @@ type PrivateTxSig = Signature PrivateTxSigData
 data PrivateTxWitness = PkWitness
     { _ptwKey :: !PublicKey
     , _ptwSig :: !PrivateTxSig
-    } deriving (Show, Eq, Serialise, Generic)
+    } deriving (Show, Eq, Generic)
 
 -- | Datatype for verifiable transaction (transaction with a witness)
 data PrivateTxAux = PrivateTxAux
     { _ptaTx      :: !PrivateTx
     , _ptaWitness :: !PrivateTxWitness
-    } deriving (Show, Eq, Serialise, Generic)
+    } deriving (Show, Eq, Generic)

@@ -10,28 +10,21 @@ module Disciplina.Educator.Block
        , pbhAtgDelta
        , PrivateBlockBody (..)
        , pbbTxs
-       , PrivateBlock
-       , PrivateUndo (..)
-       , PrivateBlund
 
-         -- * Blockchain configuration
-       , PrivateBlockVerifier
-       , PrivateChainConfiguration
-       , privateChainConfiguration
+         -- * Constants
+       , genesisHeaderHash
+
+         -- * Helpers
+       , getPrevBlockRefMaybe
        ) where
 
 import Universum
 
 import Control.Lens (makeLenses)
-import Snowdrop.Model.Block.Core (BlkConfiguration (..), Block (..), BlockIntegrityVerifier (..),
-                                  Blund (..))
-
 import Disciplina.Core.Types (ATGDelta (..))
 import Disciplina.Crypto (Hash, unsafeHash)
-import Disciplina.Crypto.MerkleTree (MerkleSignature, getMerkleRoot, fromFoldable)
+import Disciplina.Crypto.MerkleTree (MerkleSignature)
 import Disciplina.Educator.Txs (PrivateTxAux)
-import Disciplina.Util (OldestFirst (..))
-
 
 ----------------------------------------------------------
 -- Block elements
@@ -40,7 +33,8 @@ import Disciplina.Util (OldestFirst (..))
 -- | Hash of the private block.
 type PrivateHeaderHash = Hash PrivateBlockHeader
 
--- | Header of a private block.
+-- | Header of a private block. There's no signatures here, as it's private anyway.
+-- During publishing, Educator will provide a signature as a part of transaction.
 data PrivateBlockHeader = PrivateBlockHeader
     { _pbhPrevBlock :: !PrivateHeaderHash
     -- ^ Previous header in the chain
@@ -59,6 +53,14 @@ makeLenses ''PrivateBlockHeader
 genesisHeaderHash :: PrivateHeaderHash
 genesisHeaderHash = unsafeHash ("pvaforever" :: ByteString)
 
+-- | Get previous block header, if previous block exists,
+-- 'Nothing' otherwise.
+getPrevBlockRefMaybe :: PrivateBlockHeader -> Maybe PrivateHeaderHash
+getPrevBlockRefMaybe PrivateBlockHeader {..} =
+    if _pbhPrevBlock == genesisHeaderHash
+    then Nothing
+    else Just _pbhPrevBlock
+
 -- | Private block body. Contains only private transactions (for now).
 -- TODO: should we also store inner Merkle nodes in some sort of cache,
 -- to provide quick positions?
@@ -70,68 +72,3 @@ data PrivateBlockBody = PrivateBlockBody
     } deriving (Show, Eq, Generic)
 
 makeLenses ''PrivateBlockBody
-
-------------------------------------------------------------
--- Block definition
-------------------------------------------------------------
-
--- | Define block using Snowdrop datatype.
-type PrivateBlock = Block PrivateBlockHeader PrivateBlockBody
-
--- | There's arguably no use case for rolling blocks back in
--- private chain (_especially_ if headers of these blocks has
--- already been published). So we leave 'PrivateUndo' as unit
--- for now.
--- TODO: probably it still makes sense to provide a working
--- way to undo a block?
-data PrivateUndo = UnsafePrivateUndo
-
-type PrivateBlund = Blund PrivateBlockHeader PrivateBlockBody PrivateUndo
-
-------------------------------------------------------------
--- Block configuration
-------------------------------------------------------------
-
--- | Get previous block header, if previous block exists,
--- 'Nothing' otherwise.
-getPrevBlockRefMaybe :: PrivateBlockHeader -> Maybe PrivateHeaderHash
-getPrevBlockRefMaybe PrivateBlockHeader {..} =
-    if _pbhPrevBlock == genesisHeaderHash
-    then Nothing
-    else Just _pbhPrevBlock
-
--- | Type for verifier of private block.
-type PrivateBlockVerifier =
-    BlockIntegrityVerifier PrivateBlockHeader PrivateBlockBody
-
-verifyPrivatePayload :: PrivateBlockVerifier
-verifyPrivatePayload = BIV $ \Block {..} ->
-    blkHeader^.pbhBodyProof ==
-    getMerkleRoot (fromFoldable $ blkPayload^.pbbTxs)
-
--- | Deciding if one chain is better than another.
--- TODO: not sure what should be there, because how there can be
--- forks in public chain? Let it be chain lenght for now.
-privateIsBetterThan ::
-       OldestFirst [] PrivateBlockHeader
-    -> OldestFirst [] PrivateBlockHeader
-    -> Bool
-privateIsBetterThan = (>=) `on` length
-
--- | Private chains shouldn't fork at all.
-privateMaxForkDepth :: Int
-privateMaxForkDepth = 1
-
--- | Block configuration for private chain.
-type PrivateChainConfiguration =
-    BlkConfiguration PrivateBlockHeader PrivateBlockBody PrivateHeaderHash
-
-privateChainConfiguration :: PrivateChainConfiguration
-privateChainConfiguration = BlkConfiguration
-    { bcBlockRef     = error "nice hashing isn't implemented yet"
-      -- ^ Here should be 'hash', but binary serialization isn't ready yet.
-    , bcPrevBlockRef = getPrevBlockRefMaybe
-    , bcBlkVerify    = verifyPrivatePayload
-    , bcIsBetterThan = privateIsBetterThan
-    , bcMaxForkDepth = privateMaxForkDepth
-    }
