@@ -45,6 +45,8 @@ extra-deps:
 
 - git: git@github.com:serokell/snowdrop.git
   commit: ac5c7cf3cff367982c4f973c15472b2cc2209186
+  subdirs:
+    - snowdrop
 
 - git: https://github.com/serokell/rocksdb-haskell.git
   commit: 2dd6b4ffdc4edb86b477273ee3c8416a1520f4e1
