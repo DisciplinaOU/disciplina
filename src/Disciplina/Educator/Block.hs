@@ -23,9 +23,8 @@ import Universum
 import Control.Lens (makeLenses)
 import Disciplina.Core.Types (ATGDelta (..))
 import Disciplina.Crypto (Hash, unsafeHash)
-import Disciplina.Crypto.MerkleTree (MerkleSignature, fromFoldable, getMerkleRoot)
+import Disciplina.Crypto.MerkleTree (MerkleSignature)
 import Disciplina.Educator.Txs (PrivateTxAux)
-
 
 ----------------------------------------------------------
 -- Block elements

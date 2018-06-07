@@ -1,4 +1,3 @@
-{-# LANGUAGE DeriveAnyClass #-}
 
 -- | Core types used across Disciplina codebase.
 
