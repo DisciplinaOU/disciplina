@@ -29,12 +29,12 @@ data TxIdEq = TxIdEq PrivateTxId
 
 data TxGrade = TxGrade
 
-data TxsFilterExpr = TxSubjectIdEq Core.SubjectId
+data TxsFilterExpr = TxHasSubjectId Core.SubjectId
                    | TxGradeEq Core.Grade
                    | (:>=) TxGrade Core.Grade
                    | (:&) TxsFilterExpr TxsFilterExpr
                    | (:||) TxsFilterExpr TxsFilterExpr
-                   | TxSubjectIsDescendantOf Core.SubjectId
+                   | TxHasDescendantOfSubjectId Core.SubjectId
 
 infixr 4 :>=
 infixr 4 :||
@@ -54,19 +54,19 @@ data QueryObj = SELECTObj WHERE ObjHashEq
 data QueryTxs = SELECTTxs WHERE TxsFilterExpr
 
 class (Monad m) => MonadSearchTxObj m where
-  runTxQuery :: QueryTx -> m (Maybe PrivateTx)
-  runTxsQuery :: QueryTxs -> m [PrivateTx]
-  runObjQuery :: QueryObj -> m (Maybe Obj)
+    runTxQuery :: QueryTx -> m (Maybe PrivateTx)
+    runTxsQuery :: QueryTxs -> m [PrivateTx]
+    runObjQuery :: QueryObj -> m (Maybe Obj)
 
 -- | Query type determine query return type
 class RunQuery a b | a -> b where
-  runQuery :: (MonadSearchTxObj m) => a -> m b
+    runQuery :: (MonadSearchTxObj m) => a -> m b
 
 instance RunQuery QueryTx (Maybe PrivateTx) where
-  runQuery = runTxQuery
+    runQuery = runTxQuery
 
 instance RunQuery QueryObj (Maybe Obj) where
-  runQuery = runObjQuery
+    runQuery = runObjQuery
 
 instance RunQuery QueryTxs [PrivateTx] where
-  runQuery = runTxsQuery
+    runQuery = runTxsQuery
