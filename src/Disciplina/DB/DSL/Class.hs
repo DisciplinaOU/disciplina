@@ -1,19 +1,18 @@
 {-# LANGUAGE TypeOperators #-}
 
 module Disciplina.DB.DSL.Class
-        ( MonadSearchTxObj (..)
-        , TxsFilterExpr (..)
-        , TxGrade (..)
-        , TxIdEq (..)
-        , RunQuery (..)
-        , Obj
-        , ObjHashEq (..)
-        , QueryTx (..)
-        , QueryTxs (..)
-        , QueryObj (..)
-        , WHERE (..)
-        )
-        where
+       ( MonadSearchTxObj (..)
+       , TxsFilterExpr (..)
+       , TxGrade (..)
+       , TxIdEq (..)
+       , RunQuery (..)
+       , Obj
+       , ObjHashEq (..)
+       , QueryTx (..)
+       , QueryTxs (..)
+       , QueryObj (..)
+       , WHERE (..)
+       ) where
 
 import Universum
 

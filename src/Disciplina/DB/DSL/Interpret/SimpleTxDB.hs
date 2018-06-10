@@ -1,5 +1,5 @@
 module Disciplina.DB.DSL.Interpret.SimpleTxDB
-       (runSimpleTxDBQuery
+       ( runSimpleTxDBQuery
        ) where
 
 import Universum
@@ -17,21 +17,20 @@ import Disciplina.Educator (EducatorTxMsg (..), PrivateTx (..), PrivateTxId, Pri
 
 import qualified Data.Map as Map hiding (Map)
 
--- | data type representing transactions and objects
-data SimpleObj = SSTx { _sstorePTx :: !PrivateTx }
+-- | Transactions and objects to be stored in database
+data SimpleObj = SSTx  { _sstorePTx :: !PrivateTx }
                | SSObj { _sstoreObj :: !Obj }
 
 makePrisms ''SimpleObj
 
--- | Database for simple transactions
+-- | Simple database containing transactions, object
+-- and a mapping of course id to subject ids.
 data SimpleDB = SimpleDB
-    { _getSimpleObj :: ![SimpleObj]
+    { _getSimpleObj        :: ![SimpleObj]
     , _courseIdToSubjectId :: !(Map CourseId [SubjectId])
     }
 
-makePrisms ''SimpleDB
-
--- | Simple transaction database
+-- | Database put in a reader environment
 newtype SimpleTxDB a = SimpleTxDB
     { getSimpleTxDB :: Reader SimpleDB a
     } deriving (Functor, Applicative, Monad, MonadReader SimpleDB)
@@ -65,7 +64,7 @@ evalSimpleTxsQuery (SELECTTxs _ (TxHasSubjectId sId)) = do
   where subjectIdHasCourseId subjToCourseMap courseId =
           case subjToCourseMap ^? at courseId . _Just . to (any (==sId)) of
                  Just True -> True
-                 _ -> False
+                 _         -> False
 
 -- | Evaluator for query: find Txs in db with grade == g
 evalSimpleTxsQuery (SELECTTxs _ (TxGradeEq grade)) = do
@@ -104,7 +103,7 @@ evalSimpleTxsQuery (SELECTTxs _ (TxHasDescendantOfSubjectId sId)) = do
   where hasDescendantOf subjToCourseMap courseId =
           case subjToCourseMap ^? at courseId . _Just . to (any (isDescendantOf sId)) of
                  Just True -> True
-                 _ -> False
+                 _         -> False
 
         isDescendantOf x y = hasPathFromTo activityTypeGraphIndexed x y
 
@@ -119,9 +118,11 @@ runSimpleTxDBQuery dbTx dbObj query =
                                              ,sIdCalculi
                                              ,sIdTheory
                                              ,sIdPiCalculus
-                                             ,sIdComputabilityTheory])
+                                             ,sIdComputabilityTheory
+                                             ])
                                     , (cId2, [sIdHighSchoolAlgebra
-                                             ,sIdMathematics])
+                                             ,sIdMathematics
+                                             ])
                                     , (cId3, [sIdComputerScience])
                                     , (cId4, [sIdElementary])
                                     , (cId5, [sIdEngineering])

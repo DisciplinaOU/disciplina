@@ -1,5 +1,5 @@
 module Disciplina.DB.DSL.Interpret.IO
-       ( runQuery
+       (
        )
        where
 
@@ -9,7 +9,7 @@ import Data.List (intersect, union)
 
 import qualified Disciplina.Core as Core (Grade (..), SubjectId (..))
 import Disciplina.DB.DSL.Class (MonadSearchTxObj (..), Obj, ObjHashEq (..), QueryObj (..),
-                                QueryTx (..), QueryTxs (..), RunQuery (..), TxIdEq (..),
+                                QueryTx (..), QueryTxs (..), TxIdEq (..),
                                 TxsFilterExpr (..), WHERE (..))
 import Disciplina.Educator.Txs (PrivateTx (..), PrivateTxId)
 
@@ -41,7 +41,6 @@ runIOTxsQuery (SELECTTxs _ ((:||) a b)) = do
     resA <- runIOTxsQuery (SELECTTxs WHERE a)
     resB <- runIOTxsQuery (SELECTTxs WHERE b)
     return (resA `union` resB)
-
 
 runIOObjQuery :: QueryObj -> IO (Maybe Obj)
 runIOObjQuery (SELECTObj _ (ObjHashEq _)) =
