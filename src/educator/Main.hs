@@ -5,11 +5,10 @@ module Main where
 
 import Universum
 
-import Mockable (Production (..), runProduction)
 import System.Wlog (logInfo, logWarning)
 
 import Disciplina.DB (DBType (EducatorDB))
-import Disciplina.Launcher (BasicNodeParams (..), bracketBasicNodeResources, runBasicRealMode)
+import Disciplina.Launcher (BasicNodeParams (..), bracketBasicNodeResources, runEducatorRealMode)
 
 import Params (EducatorParams (..), getEducatorParams)
 
@@ -21,7 +20,7 @@ main = do
             , bnpDBType        = EducatorDB
             , bnpDBPath        = epDbPath
             }
-    runProduction . bracketBasicNodeResources basicParams $
-        \nr -> runBasicRealMode nr $ do
+    bracketBasicNodeResources basicParams $
+        \nr -> runEducatorRealMode nr $ do
             logInfo "This is the stub for Educator node executable"
             logWarning "Please don't forget to implement everything else!"

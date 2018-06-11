@@ -94,8 +94,10 @@ library
                      , free
                      , hashable
                      , lens
+                     , lifted-async
                      , log-warper
                      , memory
+                     , monad-control
                      , mtl
                      , network-transport
                      , network-transport-tcp
@@ -107,6 +109,7 @@ library
                      , stm
                      , time-units
                      , universum
+                     , unliftio
   hs-source-dirs:      src
   default-language:    Haskell2010
   default-extensions:
@@ -156,6 +159,7 @@ executable disciplina-witness
                      , optparse-applicative
                      , random
                      , universum >= 1.0.0
+                     , unliftio
   default-language:    Haskell2010
   ghc-options:         -threaded -rtsopts
                        -Wall
@@ -202,6 +206,7 @@ executable disciplina-educator
                      , network-transport-tcp
                      , optparse-applicative
                      , universum >= 1.0.0
+                     , unliftio
   default-language:    Haskell2010
   ghc-options:         -threaded -rtsopts
                        -Wall

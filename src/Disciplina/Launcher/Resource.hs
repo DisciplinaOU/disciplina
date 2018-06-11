@@ -8,9 +8,8 @@ module Disciplina.Launcher.Resource
 
 import Universum
 
-import Mockable (Production)
-import System.Wlog (LoggerConfig (..), LoggerName, {-WithLogger,-} maybeLogsDirB, parseLoggerConfig,
-                    productionB, removeAllHandlers, setupLogging, showTidB)
+import System.Wlog (LoggerConfig (..), LoggerName, maybeLogsDirB, parseLoggerConfig, productionB,
+                    removeAllHandlers, setupLogging, showTidB)
 
 import Disciplina.DB.Real (NodeDB, closeNodeDB, openNodeDB)
 import Disciplina.Launcher.Params (BasicNodeParams (..), LoggingParams (..))
@@ -46,7 +45,7 @@ setupLoggers params = setupLogging Nothing =<< getRealLoggerConfig params
 
 acquireBasicNodeResources ::
        BasicNodeParams
-    -> Production BasicNodeResources
+    -> IO BasicNodeResources
 acquireBasicNodeResources BasicNodeParams {..} = do
     setupLoggers bnpLoggingParams
     let bnrLoggerName = lpDefaultName bnpLoggingParams
@@ -55,14 +54,14 @@ acquireBasicNodeResources BasicNodeParams {..} = do
 
 releaseBasicNodeResources ::
        BasicNodeResources
-    -> Production ()
+    -> IO ()
 releaseBasicNodeResources BasicNodeResources {..} = do
     closeNodeDB bnrDB
     removeAllHandlers
 
 bracketBasicNodeResources ::
        BasicNodeParams
-    -> (BasicNodeResources -> Production a)
-    -> Production a
+    -> (BasicNodeResources -> IO a)
+    -> IO a
 bracketBasicNodeResources np =
     bracket (acquireBasicNodeResources np) releaseBasicNodeResources
