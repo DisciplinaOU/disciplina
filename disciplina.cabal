@@ -51,8 +51,9 @@ library
                      , Disciplina.DB.DSL.Interpret.SimpleTxDB
 
                      -- Core datatypes and functions
-                     , Disciplina.Core.Types
                      , Disciplina.Core.ATG
+                     , Disciplina.Core.Serialise
+                     , Disciplina.Core.Types
 
                      -- Witness node model
                      , Disciplina.WorldState.Internal
@@ -61,6 +62,7 @@ library
                      -- Educator node model
                      , Disciplina.Educator.Block
                      , Disciplina.Educator.Txs
+                     , Disciplina.Educator.Serialise
                      , Disciplina.Educator.State
 
                      , Disciplina.Crypto.ByteArray
@@ -135,6 +137,7 @@ library
                        ViewPatterns
 
   ghc-options:         -Wall
+                       -Werror
                        -fno-warn-orphans
 
 executable disciplina-witness

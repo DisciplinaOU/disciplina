@@ -1,7 +1,7 @@
-{-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE DeriveFoldable #-}
 {-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DeriveFoldable #-}
+{-# LANGUAGE DeriveFunctor  #-}
+{-# LANGUAGE NamedFieldPuns #-}
 
 -- | Sized Merkle tree implementation.
 module Disciplina.Crypto.MerkleTree
@@ -12,9 +12,11 @@ module Disciplina.Crypto.MerkleTree
        , fromContainer
 
        , MerkleProof (..)
+       , drawProofNode
        , mkMerkleProof
        , mkMerkleProofSingle
        , validateMerkleProof
+       , getMerkleProofRoot
 
        , MerkleNode (..)
        , drawMerkleTree
@@ -24,25 +26,25 @@ module Disciplina.Crypto.MerkleTree
 
 import Universum
 
-import Disciplina.Crypto.Serialise ()
-import Disciplina.Crypto.Impl (Hash, HasHash, hash, unsafeHash)
 import Disciplina.Crypto.Hash.Class (AbstractHash (..))
+import Disciplina.Crypto.Impl (HasHash, Hash, hash, unsafeHash)
+import Disciplina.Crypto.Serialise (Raw)
 
-import Codec.Serialise (Serialise(..))
+import Codec.Serialise (Serialise (..))
 import Data.Array (array, (!))
 import Data.Bits (Bits (..))
 import Data.ByteArray (convert)
 import Data.ByteString.Builder (Builder, byteString)
 import qualified Data.Set as Set
-import Data.Tree as Tree (Tree(Node), drawTree)
+import Data.Tree as Tree (Tree (Node), drawTree)
 
-import qualified Data.Foldable as F (Foldable (..))
 import qualified Data.ByteString.Builder.Extra as Builder
 import qualified Data.ByteString.Lazy as LBS
+import qualified Data.Foldable as F (Foldable (..))
 
 -- | Data type for root of sized merkle tree.
 data MerkleSignature a = MerkleSignature
-    { mrHash :: !(Hash LBS.ByteString)  -- ^ returns root 'Hash' of Merkle Tree
+    { mrHash :: !(Hash Raw)  -- ^ returns root 'Hash' of Merkle Tree
     , mrSize :: !Word8 -- ^ size of root node,
                        -- size is defined as number of leafs in this subtree
     } deriving (Show, Eq, Ord, Generic, Serialise, Functor, Typeable)
@@ -58,8 +60,8 @@ instance Foldable MerkleTree where
     foldMap _ MerkleEmpty    = mempty
     foldMap f (MerkleTree n) = F.foldMap f n
 
-    null MerkleEmpty      = True
-    null _                = False
+    null MerkleEmpty = True
+    null _           = False
 
     length MerkleEmpty    = 0
     length (MerkleTree n) = fromIntegral (mrSize (mRoot n))
@@ -81,7 +83,7 @@ data MerkleNode a
 
 instance Foldable MerkleNode where
     foldMap f x = case x of
-      MerkleLeaf {mVal} -> f mVal
+      MerkleLeaf {mVal}            -> f mVal
       MerkleBranch {mLeft, mRight} -> F.foldMap f mLeft `mappend` F.foldMap f mRight
 
 mkLeaf :: HasHash a => (LeafIndex, a) -> MerkleNode a
@@ -167,12 +169,12 @@ powerOfTwo n
 
 data MerkleProof a
     = ProofBranch
-        { pnSig     :: !(MerkleSignature a)
-        , pnLeft    :: !(MerkleProof a)
-        , pnRight   :: !(MerkleProof a) }
-    | ProofLeaf
         { pnSig   :: !(MerkleSignature a)
-        , pnVal   :: !a
+        , pnLeft  :: !(MerkleProof a)
+        , pnRight :: !(MerkleProof a) }
+    | ProofLeaf
+        { pnSig :: !(MerkleSignature a)
+        , pnVal :: !a
         }
     | ProofPruned
         { pnSig :: !(MerkleSignature a) }
@@ -193,7 +195,7 @@ mkMerkleProof MerkleEmpty _ = Nothing
 mkMerkleProof (MerkleTree rootNode) n =
     case constructProof rootNode of
       ProofPruned _ -> Nothing
-      x -> Just x
+      x             -> Just x
   where
     constructProof :: MerkleNode a -> MerkleProof a
     constructProof (MerkleLeaf {..})
@@ -202,7 +204,7 @@ mkMerkleProof (MerkleTree rootNode) n =
     constructProof (MerkleBranch mRoot' mLeft' mRight') =
       case (constructProof mLeft', constructProof mRight') of
         (ProofPruned _, ProofPruned _) -> ProofPruned mRoot'
-        (pL, pR) -> ProofBranch mRoot' pL pR
+        (pL, pR)                       -> ProofBranch mRoot' pL pR
 
 -- | Validate a merkle tree proof.
 validateMerkleProof :: forall a. HasHash a => MerkleProof a -> MerkleSignature a -> Bool
@@ -212,14 +214,14 @@ validateMerkleProof proof treeRoot =
     computeMerkleRoot :: MerkleProof a -> Maybe (MerkleSignature a)
     computeMerkleRoot (ProofLeaf {..}) = do
       case MerkleSignature (unsafeHash pnVal) 1 == pnSig of
-        True -> Just pnSig
+        True  -> Just pnSig
         False -> Nothing
     computeMerkleRoot (ProofPruned {..}) = Just pnSig
     computeMerkleRoot (ProofBranch pnRoot' pnLeft' pnRight') = do
       pnSigL <- computeMerkleRoot pnLeft'
       pnSigR <- computeMerkleRoot pnRight'
       case mkBranchRootHash pnSigL pnSigR == pnRoot' of
-        True -> Just pnRoot'
+        True  -> Just pnRoot'
         False -> Nothing
 
 -- | Debug print of tree.
@@ -229,7 +231,7 @@ drawMerkleTree (MerkleTree n) = Tree.drawTree (asTree n)
   where
     asTree :: (Show a) => MerkleNode a -> Tree.Tree String
     asTree (MerkleBranch {..}) = Tree.Node (show mRoot) [asTree mLeft, asTree mRight]
-    asTree leaf = Tree.Node (show leaf) []
+    asTree leaf                = Tree.Node (show leaf) []
 
 -- | Debug print of proof tree.
 drawProofNode :: (Show a) => Maybe (MerkleProof a) -> String
