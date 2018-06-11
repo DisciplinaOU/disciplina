@@ -4,8 +4,8 @@ module Disciplina.DB.DSL.Interpret.SimpleTxDB
 
 import Universum
 
-import Control.Lens (_Just, at, filtered, makePrisms, traversed, to)
-import Data.Map (Map)
+import Control.Lens (filtered, makePrisms, traversed)
+import Data.Map.Strict (Map)
 import Data.List (intersect, union)
 
 import Disciplina.Core (CourseId (..), SubjectId, hasPathFromTo, activityTypeGraphIndexed)
@@ -15,24 +15,24 @@ import Disciplina.DB.DSL.Class (MonadSearchTxObj (..), Obj, ObjHashEq (..), Quer
                                 TxsFilterExpr (..), WHERE (..))
 import Disciplina.Educator (EducatorTxMsg (..), PrivateTx (..), PrivateTxId, PrivateTxPayload (..))
 
-import qualified Data.Map as Map hiding (Map)
+import qualified Data.Map.Strict as Map hiding (Map)
 
 -- | Transactions and objects to be stored in database
-data SimpleObj = SSTx  { _sstorePTx :: !PrivateTx }
-               | SSObj { _sstoreObj :: !Obj }
+data SimpleObj = SSTx  { _sotorePTx :: !PrivateTx }
+               | SSObj { _sotoreObj :: !Obj }
 
 makePrisms ''SimpleObj
 
 -- | Simple database containing transactions, object
 -- and a mapping of course id to subject ids.
 data SimpleDB = SimpleDB
-    { _getSimpleObj        :: ![SimpleObj]
-    , _courseIdToSubjectId :: !(Map CourseId [SubjectId])
+    { sdbGetSimpleObj        :: ![SimpleObj]
+    , sdbCourseIdToSubjectId :: !(Map CourseId [SubjectId])
     }
 
 -- | Database put in a reader environment
 newtype SimpleTxDB a = SimpleTxDB
-    { getSimpleTxDB :: Reader SimpleDB a
+    { runSimpleTxDB :: Reader SimpleDB a
     } deriving (Functor, Applicative, Monad, MonadReader SimpleDB)
 
 instance MonadSearchTxObj SimpleTxDB where
@@ -43,32 +43,32 @@ instance MonadSearchTxObj SimpleTxDB where
 -- | Evaluator for query: find Tx in db with hash == h
 evalSimpleTxQuery :: QueryTx -> SimpleTxDB (Maybe PrivateTx)
 evalSimpleTxQuery (SELECTTx _ (TxIdEq (h :: PrivateTxId))) = do
-    db <- asks _getSimpleObj
+    db <- asks sdbGetSimpleObj
     return $ db ^? traversed . _SSTx . filtered (((h==).hash))
 
 -- | Evaluator for query: find Obj in db with obj hash == h
 evalSimpleObjQuery :: QueryObj -> SimpleTxDB (Maybe Obj)
 evalSimpleObjQuery (SELECTObj _ (ObjHashEq h)) = do
-    db <- asks _getSimpleObj
+    db <- asks sdbGetSimpleObj
     return $ db ^? traversed . _SSObj . filtered (((h==).hash))
 
 -- | Evaluator for query: find Txs in db with SubjectId == a
 evalSimpleTxsQuery :: QueryTxs -> SimpleTxDB [PrivateTx]
 evalSimpleTxsQuery (SELECTTxs _ (TxHasSubjectId sId)) = do
-    db <- asks _getSimpleObj
-    subjToCourseMap <- asks _courseIdToSubjectId
+    db <- asks sdbGetSimpleObj
+    subjToCourseMap <- asks sdbCourseIdToSubjectId
     let txs = db ^.. traversed
                   . _SSTx
                   . filtered (subjectIdHasCourseId subjToCourseMap . _ptxCourseId)
     return txs
   where subjectIdHasCourseId subjToCourseMap courseId =
-          case subjToCourseMap ^? at courseId . _Just . to (any (==sId)) of
+          case any (== sId) <$> Map.lookup courseId subjToCourseMap of
                  Just True -> True
                  _         -> False
 
 -- | Evaluator for query: find Txs in db with grade == g
 evalSimpleTxsQuery (SELECTTxs _ (TxGradeEq grade)) = do
-    db <- asks _getSimpleObj
+    db <- asks sdbGetSimpleObj
     return $ db ^.. traversed
                  . _SSTx
                  . filtered ((== Just grade).getGrade._ptxPayload)
@@ -77,7 +77,7 @@ evalSimpleTxsQuery (SELECTTxs _ (TxGradeEq grade)) = do
 
 -- | Evaluator for query: find Txs in db with grade >= g
 evalSimpleTxsQuery (SELECTTxs _ (_ :>= grade)) = do
-    db <- asks _getSimpleObj
+    db <- asks sdbGetSimpleObj
     return $ db ^.. traversed
                  . _SSTx
                  . filtered ((>= Just grade).getGrade._ptxPayload)
@@ -94,14 +94,14 @@ evalSimpleTxsQuery (SELECTTxs _ (a :|| b)) =
 
 -- | Evaluator for query: find all txs with subjectId which is descendant of sId
 evalSimpleTxsQuery (SELECTTxs _ (TxHasDescendantOfSubjectId sId)) = do
-    db <- asks _getSimpleObj
-    subjToCourseMap <- asks _courseIdToSubjectId
+    db <- asks sdbGetSimpleObj
+    subjToCourseMap <- asks sdbCourseIdToSubjectId
     let txs = db ^.. traversed
                   . _SSTx
                   . filtered (hasDescendantOf subjToCourseMap . _ptxCourseId)
     return txs
   where hasDescendantOf subjToCourseMap courseId =
-          case subjToCourseMap ^? at courseId . _Just . to (any (isDescendantOf sId)) of
+          case any (isDescendantOf sId) <$> Map.lookup courseId subjToCourseMap of
                  Just True -> True
                  _         -> False
 
@@ -110,7 +110,7 @@ evalSimpleTxsQuery (SELECTTxs _ (TxHasDescendantOfSubjectId sId)) = do
 -- | Run query in SimpleTxDB
 runSimpleTxDBQuery :: RunQuery a b => [PrivateTx] -> [Obj] -> a -> b
 runSimpleTxDBQuery dbTx dbObj query =
-    runReader (getSimpleTxDB . runQuery $ query) mkDb
+    runReader (runSimpleTxDB . runQuery $ query) mkDb
   where mkDb = SimpleDB (fmap SSTx dbTx <> fmap SSObj dbObj) courseToSubj
         courseToSubj = Map.fromList [ (cId1, [sIdMathematics
                                              ,sIdEngineering

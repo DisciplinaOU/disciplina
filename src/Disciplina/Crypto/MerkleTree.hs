@@ -28,7 +28,7 @@ import Universum
 
 import Disciplina.Crypto.Hash.Class (AbstractHash (..))
 import Disciplina.Crypto.Impl (HasHash, Hash, hash, unsafeHash)
-import Disciplina.Crypto.Serialise ()
+import Disciplina.Crypto.Serialise (Raw)
 
 import Codec.Serialise (Serialise (..))
 import Data.Array (array, (!))
@@ -44,7 +44,7 @@ import qualified Data.Foldable as F (Foldable (..))
 
 -- | Data type for root of sized merkle tree.
 data MerkleSignature a = MerkleSignature
-    { mrHash :: !(Hash LBS.ByteString)  -- ^ returns root 'Hash' of Merkle Tree
+    { mrHash :: !(Hash Raw)  -- ^ returns root 'Hash' of Merkle Tree
     , mrSize :: !Word8 -- ^ size of root node,
                        -- size is defined as number of leafs in this subtree
     } deriving (Show, Eq, Ord, Generic, Serialise, Functor, Typeable)
