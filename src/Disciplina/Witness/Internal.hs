@@ -1,7 +1,7 @@
 
 {-# LANGUAGE DeriveAnyClass #-}
 
-module Disciplina.WorldState.Internal where
+module Disciplina.Witness.Internal where
 
 import qualified Prelude (show)
 
@@ -17,7 +17,7 @@ import qualified Debug.Trace as Debug
 
 import Disciplina.Accounts
 import Disciplina.Crypto (Hash, unsafeHash)
-import Disciplina.WorldState.Instances ()
+import Disciplina.Witness.Instances ()
 
 -- | Hash without a phantom type parameter. Temporary.
 type Hash' = Hash ()

@@ -20,8 +20,8 @@ import Disciplina.Launcher (BasicNodeParams (..), prepareAndRunRealMode)
 import Disciplina.Listeners (witnessListeners)
 import Disciplina.Messages (serialisePacking)
 import Disciplina.Transport (bracketTransportTCP)
+import Disciplina.Witness (WitnessParams (..))
 import Disciplina.Workers (witnessWorkers)
-import Disciplina.WorldState (WitnessParams (..))
 import qualified Params as Params
 
 main :: IO ()

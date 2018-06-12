@@ -1,7 +1,7 @@
 
 -- | Resources used by Witness node
 
-module Disciplina.WorldState.Launcher.Resource
+module Disciplina.Witness.Launcher.Resource
        ( WitnessResources (..)
        ) where
 
@@ -10,8 +10,8 @@ import Universum
 import Disciplina.DB.Real (NodeDB)
 import Disciplina.Launcher.Mode (FormNodeContext (..), NodeContext (..))
 import Disciplina.Launcher.Resource (BasicNodeResources (..), BracketResource (..))
-import Disciplina.WorldState.Launcher.Params (WitnessParams (..))
-import Disciplina.WorldState.Mode (Witness, WitnessCustomContext (..))
+import Disciplina.Witness.Launcher.Params (WitnessParams (..))
+import Disciplina.Witness.Mode (Witness, WitnessCustomContext (..))
 
 -- | Datatype which contains resources required by witness node to start
 -- working.

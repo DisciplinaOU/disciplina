@@ -10,7 +10,7 @@ import Node (Conversation (..), ConversationActions, Converse, NodeId, converseW
 import System.Wlog (logInfo)
 
 import Disciplina.Messages (Packing, PingBlk (..), PingTx (..), PongBlk (..), PongTx (..))
-import Disciplina.WorldState.Mode (WitnessWorkMode)
+import Disciplina.Witness.Mode (WitnessWorkMode)
 
 -- | Function which accepts current node ID and IDs of peers, a conversation object
 -- and starts doing some network stuff.

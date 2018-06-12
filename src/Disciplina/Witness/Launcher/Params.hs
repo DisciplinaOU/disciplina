@@ -1,4 +1,4 @@
-module Disciplina.WorldState.Launcher.Params
+module Disciplina.Witness.Launcher.Params
        ( WitnessParams (..)
        ) where
 

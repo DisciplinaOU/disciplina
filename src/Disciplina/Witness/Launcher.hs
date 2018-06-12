@@ -1,5 +1,5 @@
 
-module Disciplina.WorldState.Launcher (module M) where
+module Disciplina.Witness.Launcher (module M) where
 
-import Disciplina.WorldState.Launcher.Params as M
-import Disciplina.WorldState.Launcher.Resource as M
+import Disciplina.Witness.Launcher.Params as M
+import Disciplina.Witness.Launcher.Resource as M

@@ -1,7 +1,7 @@
 
-module Disciplina.WorldState (module M) where
+module Disciplina.Witness (module M) where
 
 import Disciplina.Accounts.Account as M
-import Disciplina.WorldState.Instances ()
-import Disciplina.WorldState.Internal as M
-import Disciplina.WorldState.Launcher as M
+import Disciplina.Witness.Instances ()
+import Disciplina.Witness.Internal as M
+import Disciplina.Witness.Launcher as M

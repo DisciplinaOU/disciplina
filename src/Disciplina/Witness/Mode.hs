@@ -2,7 +2,7 @@
 
 -- | Module contains the definition of Witness's WorkMode and its implementations.
 
-module Disciplina.WorldState.Mode
+module Disciplina.Witness.Mode
     (
       -- * Constraints
       WitnessWorkMode
