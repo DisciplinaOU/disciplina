@@ -15,7 +15,7 @@ cabal-version:       >=1.10
 
 library
   exposed-modules:
-                       Disciplina.WorldState
+                       Disciplina.Witness
                      , Disciplina.DB  
                      , Disciplina.Launcher
                      , Disciplina.Listeners
@@ -56,12 +56,12 @@ library
                      , Disciplina.Core.Types
 
                      -- Witness node model
-                     , Disciplina.WorldState.Internal
-                     , Disciplina.WorldState.Instances
-                     , Disciplina.WorldState.Launcher
-                     , Disciplina.WorldState.Launcher.Params
-                     , Disciplina.WorldState.Launcher.Resource
-                     , Disciplina.WorldState.Mode
+                     , Disciplina.Witness.Internal
+                     , Disciplina.Witness.Instances
+                     , Disciplina.Witness.Launcher
+                     , Disciplina.Witness.Launcher.Params
+                     , Disciplina.Witness.Launcher.Resource
+                     , Disciplina.Witness.Mode
 
                      -- Educator node model
                      , Disciplina.Educator.Block
@@ -253,7 +253,7 @@ test-suite disciplina-test
   other-modules:
                             Test.Common
                             Test.Disciplina.DB.DSL.Interpret.SimpleTxDB
-                            Test.Disciplina.WorldState
+                            Test.Disciplina.Witness
                             Test.Disciplina.Core.ATG
                             Test.Disciplina.Crypto.MerkleTree
   build-depends:             base >= 0.4 && < 5
