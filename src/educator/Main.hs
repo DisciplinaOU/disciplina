@@ -7,7 +7,6 @@ import Universum
 
 import System.Wlog (logInfo, logWarning)
 
-import Disciplina.DB (DBParams)
 import Disciplina.Educator (EducatorParams (..))
 import Disciplina.Launcher (BasicNodeParams (..), prepareAndRunRealMode)
 

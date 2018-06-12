@@ -15,7 +15,7 @@ import System.IO (getChar)
 import System.Random (mkStdGen)
 import UnliftIO.Async (async)
 
-import Disciplina.DB (DBParams (..), DBType (WitnessDB))
+import Disciplina.DB (DBParams (..))
 import Disciplina.Launcher (BasicNodeParams (..), prepareAndRunRealMode)
 import Disciplina.Listeners (witnessListeners)
 import Disciplina.Messages (serialisePacking)
@@ -32,8 +32,7 @@ main = do
                 { bnpLoggingParams = wpLogParams
                 }
             , wpDBParams = DBParams
-                { dbpType = WitnessDB
-                , dbpPath = wpDbPath
+                { dbpPath = wpDbPath
                 }
             }
     prepareAndRunRealMode witnessParams $ do

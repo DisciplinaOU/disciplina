@@ -40,7 +40,7 @@ closeRocksDB :: MonadIO m => DB -> m ()
 closeRocksDB = Rocks.close . rocksDB
 
 openNodeDB :: MonadIO m => DBParams -> m NodeDB
-openNodeDB DBParams{..} = NodeDB dbpType <$> openRocksDB dbpPath
+openNodeDB DBParams{..} = NodeDB <$> openRocksDB dbpPath
 
 closeNodeDB :: MonadIO m => NodeDB -> m ()
 closeNodeDB = closeRocksDB . _ndbDatabase
