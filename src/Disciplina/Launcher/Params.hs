@@ -7,8 +7,6 @@ import Universum
 
 import System.Wlog (LoggerName)
 
-import Disciplina.DB.Real.Types (DBType)
-
 -- | Contains all parameters required for hierarchical logger initialization.
 data LoggingParams = LoggingParams
     { lpDefaultName :: !LoggerName
@@ -23,8 +21,4 @@ data LoggingParams = LoggingParams
 data BasicNodeParams = BasicNodeParams
     { bnpLoggingParams :: !LoggingParams
     -- ^ Logging params
-    , bnpDBType        :: !DBType
-    -- ^ Database type (Witness or Node)
-    , bnpDBPath        :: !FilePath
-    -- ^ Path to the database
     } deriving Show

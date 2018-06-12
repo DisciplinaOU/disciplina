@@ -1,25 +1,69 @@
+{-# LANGUAGE FunctionalDependencies #-}
 
 -- | Common resources used by Disciplina nodes
 
 module Disciplina.Launcher.Resource
        ( BasicNodeResources (..)
-       , bracketBasicNodeResources
+       , BracketResource(..)
        ) where
 
 import Universum
 
+import Control.Monad.Cont (ContT (..))
 import System.Wlog (LoggerConfig (..), LoggerName, maybeLogsDirB, parseLoggerConfig, productionB,
                     removeAllHandlers, setupLogging, showTidB)
 
-import Disciplina.DB.Real (NodeDB, closeNodeDB, openNodeDB)
+import Disciplina.DB.Real (DBParams, NodeDB, bracketNodeDB)
 import Disciplina.Launcher.Params (BasicNodeParams (..), LoggingParams (..))
 
 -- | Datatype which contains resources required by all Disciplina nodes
 -- to start working.
 data BasicNodeResources = BasicNodeResources
     { bnrLoggerName :: !LoggerName
-    , bnrDB         :: !NodeDB
     }
+
+----------------------------------------------------------------------------
+-- Resources
+----------------------------------------------------------------------------
+
+{- No acquire and release for intension, having bracket built from brackets
+of smaller resources automatially forces proper coupling of acquire and
+release operations and so it's easier to use in various nodes which require
+different resources.
+-}
+
+-- | Resources construction.
+class BracketResource param res | param -> res, res -> param where
+    -- | Construct a resource using given parameters. Automatic cleanup.
+    bracketResource :: param -> (res -> IO a) -> IO a
+    bracketResource = runContT . bracketResourceC
+
+    {- | Version of 'bracketResource' convenient for building from
+    smaller resources as soon as it gives do-notation.
+
+    Compare:
+
+    @
+    bracketResource BasicNodeParams {..} = do
+        bnrLoggerName <- bracketResource bnpLoggingParams
+        bnrDB <- bracketResource bnpDBType bnpDBPath
+        return BasicNodeResources {..}
+    @
+
+    with explicit variant
+
+    @
+    bracketResource BasicNodeParams {..} action =
+        bracketResource bnpLoggingParams $ \bnrLoggerName ->
+        bracketResource bnpDBType bnpDBPath $ \bnrDB ->
+        action BasicNodeResources {..}
+    @
+
+    Make sure you do not drop continuation anywhere!
+    (this won't happen if you do not do any Cont stuff by hand).
+    -}
+    bracketResourceC :: param -> ContT r IO res
+    bracketResourceC = ContT . bracketResource
 
 ----------------------------------------------------------------------------
 -- Logging
@@ -39,29 +83,20 @@ getRealLoggerConfig LoggingParams{..} = do
 setupLoggers :: MonadIO m => LoggingParams -> m ()
 setupLoggers params = setupLogging Nothing =<< getRealLoggerConfig params
 
+instance BracketResource LoggingParams LoggerName where
+    bracketResource params = bracket pre fin
+      where
+        pre = setupLoggers params $> lpDefaultName params
+        fin _ = removeAllHandlers
+
 ----------------------------------------------------------------------------
--- Acquire/release/bracket
+-- Bracket
 ----------------------------------------------------------------------------
 
-acquireBasicNodeResources ::
-       BasicNodeParams
-    -> IO BasicNodeResources
-acquireBasicNodeResources BasicNodeParams {..} = do
-    setupLoggers bnpLoggingParams
-    let bnrLoggerName = lpDefaultName bnpLoggingParams
-    bnrDB <- openNodeDB bnpDBType bnpDBPath
-    return BasicNodeResources {..}
+instance BracketResource DBParams NodeDB where
+    bracketResource = bracketNodeDB
 
-releaseBasicNodeResources ::
-       BasicNodeResources
-    -> IO ()
-releaseBasicNodeResources BasicNodeResources {..} = do
-    closeNodeDB bnrDB
-    removeAllHandlers
-
-bracketBasicNodeResources ::
-       BasicNodeParams
-    -> (BasicNodeResources -> IO a)
-    -> IO a
-bracketBasicNodeResources np =
-    bracket (acquireBasicNodeResources np) releaseBasicNodeResources
+instance BracketResource BasicNodeParams BasicNodeResources where
+    bracketResourceC BasicNodeParams{..} = do
+        bnrLoggerName <- bracketResourceC bnpLoggingParams
+        return BasicNodeResources {..}

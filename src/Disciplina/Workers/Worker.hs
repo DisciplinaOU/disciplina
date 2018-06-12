@@ -9,8 +9,8 @@ import UnliftIO.Async (forConcurrently_)
 import Node (Conversation (..), ConversationActions, Converse, NodeId, converseWith, recv)
 import System.Wlog (logInfo)
 
-import Disciplina.Launcher.Mode (WitnessWorkMode)
 import Disciplina.Messages (Packing, PingBlk (..), PingTx (..), PongBlk (..), PongTx (..))
+import Disciplina.WorldState.Mode (WitnessWorkMode)
 
 -- | Function which accepts current node ID and IDs of peers, a conversation object
 -- and starts doing some network stuff.

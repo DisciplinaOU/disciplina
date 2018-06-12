@@ -15,24 +15,28 @@ import System.IO (getChar)
 import System.Random (mkStdGen)
 import UnliftIO.Async (async)
 
-import Disciplina.DB (DBType (WitnessDB))
-import Disciplina.Launcher (BasicNodeParams (..), bracketBasicNodeResources, runWitnessRealMode)
+import Disciplina.DB (DBParams (..), DBType (WitnessDB))
+import Disciplina.Launcher (BasicNodeParams (..), prepareAndRunRealMode)
 import Disciplina.Listeners (witnessListeners)
 import Disciplina.Messages (serialisePacking)
 import Disciplina.Transport (bracketTransportTCP)
 import Disciplina.Workers (witnessWorkers)
-import Params (WitnessParams (..), getWitnessParams)
+import Disciplina.WorldState (WitnessParams (..))
+import qualified Params as Params
 
 main :: IO ()
 main = do
-    WitnessParams {..} <- getWitnessParams
-    let basicParams = BasicNodeParams
-            { bnpLoggingParams = wpLogParams
-            , bnpDBType        = WitnessDB
-            , bnpDBPath        = wpDbPath
+    Params.WitnessParams {..} <- Params.getWitnessParams
+    let witnessParams = WitnessParams
+            { wpBasicParams = BasicNodeParams
+                { bnpLoggingParams = wpLogParams
+                }
+            , wpDBParams = DBParams
+                { dbpType = WitnessDB
+                , dbpPath = wpDbPath
+                }
             }
-    bracketBasicNodeResources basicParams $
-        \nr -> runWitnessRealMode nr $ do
+    prepareAndRunRealMode witnessParams $ do
           -- bracketTransportTCP (15000 {-- connection timeout ms--})
           --                     (TCP.defaultTCPAddr "127.0.0.1" "10128") $ \transport -> do
 

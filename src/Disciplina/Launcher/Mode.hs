@@ -1,4 +1,5 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell        #-}
+{-# LANGUAGE TypeFamilyDependencies #-}
 
 {- | Module contains the definition of WorkMode and its implementations.
 
@@ -20,8 +21,6 @@ module Disciplina.Launcher.Mode
        (
          -- * Constraints
          BasicWorkMode
-       , EducatorWorkMode
-       , WitnessWorkMode
 
          -- * Implementations
        , RealMode
@@ -29,28 +28,18 @@ module Disciplina.Launcher.Mode
        , CustomContext
        , ncCustomCtx
 
-       , BasicRealMode
-       , Basic
-       , NoCustomContext (..)
-
-       , EducatorRealMode
-       , Educator
-       , EducatorCustomContext (..)
-
-       , WitnessRealMode
-       , Witness
-       , WitnessCustomContext (..)
+       , -- * Misc
+         FormNodeContext (..)
        ) where
 
 import Universum
 
 import Control.Lens (makeLenses)
+import Control.Monad.Trans.Control (MonadBaseControl)
+import Disciplina.Async (Forall, Pure)
 import Ether.Internal (HasLens (..))
 import System.Wlog (HasLoggerName (..), LoggerName, WithLogger)
 import UnliftIO (MonadUnliftIO)
-
-import Disciplina.DB.Class (MonadDB)
-import Disciplina.DB.Real.Types (NodeDB)
 
 ---------------------------------------------------------------------
 -- WorkMode classes
@@ -64,20 +53,12 @@ type BasicWorkMode m =
     , MonadUnliftIO m  -- allows to use lifted-async
     )
 
-type EducatorWorkMode m =
-    ( BasicWorkMode m
-    )
-
-type WitnessWorkMode m =
-    ( BasicWorkMode m
-    )
-
 ---------------------------------------------------------------------
 -- WorkMode implementations
 ---------------------------------------------------------------------
 
 -- | For node role returns related context.
-type family CustomContext r :: *
+type family CustomContext r = cc | cc -> r
 
 -- | Contains basic context suitable for any node + custom context,
 -- which depends on node role.
@@ -94,36 +75,11 @@ instance {-# OVERLAPPING #-} HasLoggerName (RealMode r) where
     askLoggerName = view ncLoggerName
     modifyLoggerName name = local $ ncLoggerName %~ name
 
--- | Used in cases where any role fits.
-data Basic
+---------------------------------------------------------------------
+-- Misc
+---------------------------------------------------------------------
 
-type instance CustomContext Basic = NoCustomContext
-data NoCustomContext = NoCustomContext
+-- | Forms context using given pack of resources.
+class FormNodeContext res ctx | ctx -> res, res -> ctx where
+    formNodeContext :: res -> IO ctx
 
-type BasicRealMode = RealMode Basic
--- TODO [DSCP-105]: perhaps we don't need these alises, and 'RealMode Someone' is quite telling?
-
--- | Educator node role.
-data Educator
-
-type instance CustomContext Educator = EducatorCustomContext
-data EducatorCustomContext = EducatorCustomContext
-
-makeLenses ''EducatorCustomContext
-
-type EducatorRealMode = RealMode Educator
-
--- | Witness node role.
-data Witness
-
-type instance CustomContext Witness = WitnessCustomContext
-data WitnessCustomContext = WitnessCustomContext
-    { _wcDB :: NodeDB
-    }
-
-makeLenses ''WitnessCustomContext
-
-type WitnessRealMode = RealMode Witness
-
-instance HasLens NodeDB (NodeContext Witness) NodeDB where
-    lensOf = ncCustomCtx . wcDB

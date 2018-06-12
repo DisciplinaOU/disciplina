@@ -2,6 +2,7 @@ module Disciplina.DB.Real.Types
        ( MonadRealDB
        , DB (..)
        , DBType (..)
+       , DBParams (..)
        , NodeDB (..)
        , ndbType
        , ndbDatabase
@@ -29,8 +30,15 @@ data DB = DB
     }
 
 data DBType = WitnessDB
-            | EducatorDB
             deriving Show
+
+-- | Set of parameters provided on opening connection.
+data DBParams = DBParams
+    { dbpType :: !DBType
+    -- ^ Database type (Witness or Node)
+    , dbpPath :: !FilePath
+    -- ^ Path to the database
+    } deriving Show
 
 data NodeDB = NodeDB
     { _ndbType     :: !DBType

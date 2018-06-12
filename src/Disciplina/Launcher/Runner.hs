@@ -2,45 +2,31 @@
 -- | Helpers for starting a Disciplina node
 
 module Disciplina.Launcher.Runner
-       ( runBasicRealMode
-       , runEducatorRealMode
-       , runWitnessRealMode
+       ( runRealMode
+       , prepareAndRunRealMode
        ) where
 
 import Universum
 
-import Control.Monad.Reader (withReaderT)
-import Disciplina.Launcher.Mode (NodeContext (..), ncCustomCtx)
+import Disciplina.Launcher.Mode (FormNodeContext (..), NodeContext (..))
 import qualified Disciplina.Launcher.Mode as Mode
-import Disciplina.Launcher.Resource (BasicNodeResources (..))
+import Disciplina.Launcher.Resource (BracketResource (..))
 
 -- | Given allocated node resources, construct node context and run `WorkMode` monad.
-runBasicRealMode ::
-       BasicNodeResources
-    -> Mode.RealMode Mode.Basic a
+runRealMode
+    :: (FormNodeContext resources ctx, ctx ~ NodeContext r)
+    => resources
+    -> Mode.RealMode r a
     -> IO a
-runBasicRealMode BasicNodeResources {..} action =
-    runReaderT action context
-  where
-    context = NodeContext
-        { _ncLoggerName = bnrLoggerName
-        , _ncCustomCtx = Mode.NoCustomContext
-        }
+runRealMode res action =
+    formNodeContext res >>= runReaderT action
 
-runEducatorRealMode ::
-      BasicNodeResources
-   -> Mode.RealMode Mode.Educator a
-   -> IO a
-runEducatorRealMode bres@BasicNodeResources{..} action = do
-    let educatorCtx = Mode.EducatorCustomContext
-    runBasicRealMode bres $ withReaderT (ncCustomCtx .~ educatorCtx) action
-
-runWitnessRealMode ::
-      BasicNodeResources
-   -> Mode.RealMode Mode.Witness a
-   -> IO a
-runWitnessRealMode bres@BasicNodeResources{..} action = do
-    let witnessCtx = Mode.WitnessCustomContext
-            { _wcDB = bnrDB
-            }
-    runBasicRealMode bres $ withReaderT (ncCustomCtx .~ witnessCtx) action
+-- | Given params, allocate resources, construct node context and run `WorkMode` monad.
+prepareAndRunRealMode
+    :: ( BracketResource params resources
+       , FormNodeContext resources ctx
+       , ctx ~ NodeContext r
+       )
+    => params -> Mode.RealMode r a -> IO a
+prepareAndRunRealMode params action =
+    bracketResource params (\res -> runRealMode res action)

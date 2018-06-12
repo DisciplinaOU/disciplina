@@ -7,20 +7,20 @@ import Universum
 
 import System.Wlog (logInfo, logWarning)
 
-import Disciplina.DB (DBType (EducatorDB))
-import Disciplina.Launcher (BasicNodeParams (..), bracketBasicNodeResources, runEducatorRealMode)
+import Disciplina.DB (DBParams)
+import Disciplina.Educator (EducatorParams (..))
+import Disciplina.Launcher (BasicNodeParams (..), prepareAndRunRealMode)
 
-import Params (EducatorParams (..), getEducatorParams)
+import qualified Params as Params
 
 main :: IO ()
 main = do
-    EducatorParams {..} <- getEducatorParams
-    let basicParams = BasicNodeParams
-            { bnpLoggingParams = epLogParams
-            , bnpDBType        = EducatorDB
-            , bnpDBPath        = epDbPath
+    Params.EducatorParams {..} <- Params.getEducatorParams
+    let educatorParams = EducatorParams
+            { epBasicParams = BasicNodeParams
+                { bnpLoggingParams = epLogParams
+                }
             }
-    bracketBasicNodeResources basicParams $
-        \nr -> runEducatorRealMode nr $ do
-            logInfo "This is the stub for Educator node executable"
-            logWarning "Please don't forget to implement everything else!"
+    prepareAndRunRealMode educatorParams $ do
+        logInfo "This is the stub for Educator node executable"
+        logWarning "Please don't forget to implement everything else!"

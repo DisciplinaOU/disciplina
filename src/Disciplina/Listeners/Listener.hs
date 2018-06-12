@@ -9,8 +9,8 @@ import qualified Data.ByteString as BS
 import Node (ConversationActions, Listener (..), NodeId, send)
 import System.Wlog (logInfo)
 
-import Disciplina.Launcher.Mode (WitnessWorkMode)
 import Disciplina.Messages (Packing, PingBlk, PingTx, PongBlk (..), PongTx (..))
+import Disciplina.WorldState.Mode (WitnessWorkMode)
 
 witnessListeners
     :: forall m. WitnessWorkMode m

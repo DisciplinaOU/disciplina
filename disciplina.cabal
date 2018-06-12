@@ -58,9 +58,17 @@ library
                      -- Witness node model
                      , Disciplina.WorldState.Internal
                      , Disciplina.WorldState.Instances
+                     , Disciplina.WorldState.Launcher
+                     , Disciplina.WorldState.Launcher.Params
+                     , Disciplina.WorldState.Launcher.Resource
+                     , Disciplina.WorldState.Mode
 
                      -- Educator node model
                      , Disciplina.Educator.Block
+                     , Disciplina.Educator.Mode
+                     , Disciplina.Educator.Launcher
+                     , Disciplina.Educator.Launcher.Params
+                     , Disciplina.Educator.Launcher.Resource
                      , Disciplina.Educator.Txs
                      , Disciplina.Educator.Serialise
                      , Disciplina.Educator.State
