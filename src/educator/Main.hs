@@ -7,8 +7,8 @@ import Universum
 
 import System.Wlog (logInfo, logWarning)
 
-import Disciplina.Educator (EducatorParams (..))
-import Disciplina.Launcher (BasicNodeParams (..), prepareAndRunRealMode)
+import Disciplina.Educator (EducatorParams (..), launchEducatorRealMode)
+import Disciplina.Launcher (BasicNodeParams (..))
 
 import qualified Params as Params
 
@@ -20,6 +20,6 @@ main = do
                 { bnpLoggingParams = epLogParams
                 }
             }
-    prepareAndRunRealMode educatorParams $ do
+    launchEducatorRealMode educatorParams $ do
         logInfo "This is the stub for Educator node executable"
         logWarning "Please don't forget to implement everything else!"

@@ -27,9 +27,6 @@ module Disciplina.Launcher.Mode
        , NodeContext (..)
        , CustomContext
        , ncCustomCtx
-
-       , -- * Misc
-         FormNodeContext (..)
        ) where
 
 import Universum
@@ -74,12 +71,4 @@ type RealMode r = ReaderT (NodeContext r) IO
 instance {-# OVERLAPPING #-} HasLoggerName (RealMode r) where
     askLoggerName = view ncLoggerName
     modifyLoggerName name = local $ ncLoggerName %~ name
-
----------------------------------------------------------------------
--- Misc
----------------------------------------------------------------------
-
--- | Forms context using given pack of resources.
-class FormNodeContext res ctx | ctx -> res, res -> ctx where
-    formNodeContext :: res -> IO ctx
 

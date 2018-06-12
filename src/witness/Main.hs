@@ -16,11 +16,11 @@ import System.Random (mkStdGen)
 import UnliftIO.Async (async)
 
 import Disciplina.DB (DBParams (..))
-import Disciplina.Launcher (BasicNodeParams (..), prepareAndRunRealMode)
+import Disciplina.Launcher (BasicNodeParams (..))
 import Disciplina.Listeners (witnessListeners)
 import Disciplina.Messages (serialisePacking)
 import Disciplina.Transport (bracketTransportTCP)
-import Disciplina.Witness (WitnessParams (..))
+import Disciplina.Witness (WitnessParams (..), launchWitnessRealMode)
 import Disciplina.Workers (witnessWorkers)
 import qualified Params as Params
 
@@ -31,11 +31,9 @@ main = do
             { wpBasicParams = BasicNodeParams
                 { bnpLoggingParams = wpLogParams
                 }
-            , wpDBParams = DBParams
-                { dbpPath = wpDbPath
-                }
+            , wpDBParams = DBParams{ dbpPath = wpDbPath }
             }
-    prepareAndRunRealMode witnessParams $ do
+    launchWitnessRealMode witnessParams $ do
           -- bracketTransportTCP (15000 {-- connection timeout ms--})
           --                     (TCP.defaultTCPAddr "127.0.0.1" "10128") $ \transport -> do
 

@@ -8,10 +8,8 @@ module Disciplina.Witness.Launcher.Resource
 import Universum
 
 import Disciplina.DB.Real (NodeDB)
-import Disciplina.Launcher.Mode (FormNodeContext (..), NodeContext (..))
 import Disciplina.Launcher.Resource (BasicNodeResources (..), BracketResource (..))
 import Disciplina.Witness.Launcher.Params (WitnessParams (..))
-import Disciplina.Witness.Mode (Witness, WitnessCustomContext (..))
 
 -- | Datatype which contains resources required by witness node to start
 -- working.
@@ -26,11 +24,3 @@ instance BracketResource WitnessParams WitnessResources where
         wrDB <- bracketResourceC wpDBParams
         return WitnessResources {..}
 
-instance FormNodeContext WitnessResources (NodeContext Witness) where
-    formNodeContext WitnessResources{..} =
-        pure NodeContext
-        { _ncLoggerName = bnrLoggerName wrBasicResources
-        , _ncCustomCtx = WitnessCustomContext
-            { _wccDB = wrDB
-            }
-        }

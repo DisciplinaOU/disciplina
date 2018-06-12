@@ -61,6 +61,7 @@ library
                      , Disciplina.Witness.Launcher
                      , Disciplina.Witness.Launcher.Params
                      , Disciplina.Witness.Launcher.Resource
+                     , Disciplina.Witness.Launcher.Runner
                      , Disciplina.Witness.Mode
 
                      -- Educator node model
@@ -69,6 +70,7 @@ library
                      , Disciplina.Educator.Launcher
                      , Disciplina.Educator.Launcher.Params
                      , Disciplina.Educator.Launcher.Resource
+                     , Disciplina.Educator.Launcher.Runner
                      , Disciplina.Educator.Txs
                      , Disciplina.Educator.Serialise
                      , Disciplina.Educator.State
