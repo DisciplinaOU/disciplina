@@ -26,10 +26,10 @@ data BasicNodeResources = BasicNodeResources
 -- Resources
 ----------------------------------------------------------------------------
 
-{- No acquire and release for intension, having bracket built from brackets
-of smaller resources automatially forces proper coupling of acquire and
-release operations and so it's easier to use in various nodes which require
-different resources.
+{- No top-level @acquire@s and @release@s for intension, having bracket built
+from brackets of smaller resources automatially forces proper coupling of
+acquire and release operations and so it's easier to use in various types of
+node which require different resources.
 -}
 
 -- | Resources construction.
@@ -59,7 +59,7 @@ class BracketResource param res | param -> res, res -> param where
         action BasicNodeResources {..}
     @
 
-    Make sure you do not drop continuation anywhere!
+    Make sure you do not drop continuation anywhere! Nothing will start then.
     (this won't happen if you do not do any Cont stuff by hand).
     -}
     bracketResourceC :: param -> ContT r IO res
