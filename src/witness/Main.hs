@@ -22,7 +22,7 @@ import Disciplina.Listeners (witnessListeners)
 import Disciplina.Messages (serialisePacking)
 import Disciplina.Transport (bracketTransportTCP)
 import Disciplina.Workers (witnessWorkers)
-import Params (WitnessParams (..), getWitnessParams)
+import WitnessParams (WitnessParams (..), getWitnessParams)
 
 main :: IO ()
 main = do

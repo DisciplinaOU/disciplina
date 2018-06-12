@@ -1,7 +1,7 @@
 
 -- | Command-line options and flags for Educator node
 
-module Params
+module EducatorParams
        ( EducatorParams (..)
        , getEducatorParams
        ) where

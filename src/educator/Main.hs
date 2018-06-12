@@ -11,7 +11,7 @@ import System.Wlog (logInfo, logWarning)
 import Disciplina.DB (DBType (EducatorDB))
 import Disciplina.Launcher (BasicNodeParams (..), bracketBasicNodeResources, runBasicRealMode)
 
-import Params (EducatorParams (..), getEducatorParams)
+import EducatorParams (EducatorParams (..), getEducatorParams)
 
 main :: IO ()
 main = do
