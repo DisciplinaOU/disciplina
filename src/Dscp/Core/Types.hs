@@ -15,6 +15,8 @@ module Dscp.Core.Types
        , Submission (..)
        , SubmissionType
        , SignedSubmission (..)
+       , SubmissionWitness (..)
+       , SubmissionWitnessAux (..)
 
        -- * Activity Type Graph
        , ATGDelta (..)
@@ -96,7 +98,7 @@ data Submission = Submission
     , sType       :: !SubmissionType
     -- ^ Submission type
     , sAssignment :: !Assignment
-    -- ^ Assignment this submission
+    -- ^ Assignment of this submission
     } deriving (Eq, Show, Generic)
 
 -- | Type alias for Submission signature.
@@ -106,7 +108,7 @@ type SubmissionSig = Signature Submission
 data SignedSubmission = SignedSubmission
     { ssSubmission :: !Submission
     -- ^ Student submission
-    , ssWitness    :: !SubmissionSig
+    , ssWitness    :: !SubmissionWitness
     -- ^ Submission witness
     } deriving (Eq, Show, Generic)
 
@@ -116,7 +118,7 @@ data SignedSubmission = SignedSubmission
 -- to everybody, and not include it into Educator's witness?
 data SubmissionWitness = SubmissionWitness
     { _swKey :: !PublicKey
-    , _swSig :: !SignedSubmission
+    , _swSig :: !SubmissionSig
     } deriving (Show, Eq, Generic)
 
 -- | Datatype for verifiable transaction (transaction with a witness)
