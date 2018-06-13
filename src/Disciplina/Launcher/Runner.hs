@@ -8,9 +8,11 @@ module Disciplina.Launcher.Runner
 
 import Universum
 
+import Control.Monad.Component (runComponentM)
+
 import Disciplina.Launcher.Mode (NodeContext (..))
 import qualified Disciplina.Launcher.Mode as Mode
-import Disciplina.Launcher.Resource (BracketResource (..))
+import Disciplina.Launcher.Resource (AllocResource (..))
 
 -- | Given allocated node resources, construct node context and run `WorkMode` monad.
 runRealMode
@@ -21,11 +23,10 @@ runRealMode ctx action = runReaderT action ctx
 
 -- | Given params, allocate resources, construct node context and run `WorkMode` monad.
 prepareAndRunRealMode
-    :: ( BracketResource params resources
-       )
+    :: AllocResource params resources
     => (resources -> NodeContext r) -> params -> Mode.RealMode r a -> IO a
 prepareAndRunRealMode formCtx params action =
-    bracketResource params $
+    runComponentM "Disciplina (real mode)" (allocResource params) $
       \resources ->
         let ctx = formCtx resources
         in runRealMode ctx action

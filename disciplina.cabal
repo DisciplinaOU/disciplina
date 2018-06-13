@@ -96,6 +96,7 @@ library
                      , bytestring
                      , cardano-sl-networking
                      , containers
+                     , componentm
                      , cryptonite
                      , data-default
                      , ether

@@ -6,7 +6,6 @@ module Disciplina.DB.Real.Functions
        , closeRocksDB
        , openNodeDB
        , closeNodeDB
-       , bracketNodeDB
          -- * Reading/writing
        , rocksGetBytes
        , rocksPutBytes
@@ -44,11 +43,6 @@ openNodeDB DBParams{..} = NodeDB <$> openRocksDB dbpPath
 
 closeNodeDB :: MonadIO m => NodeDB -> m ()
 closeNodeDB = closeRocksDB . _ndbDatabase
-
-bracketNodeDB
-    :: (MonadIO m, MonadMask m)
-    => DBParams -> (NodeDB -> m a) -> m a
-bracketNodeDB params = bracket (openNodeDB params) closeNodeDB
 
 ------------------------------------------------------------
 -- Reading/writing

@@ -8,7 +8,7 @@ module Disciplina.Witness.Launcher.Resource
 import Universum
 
 import Disciplina.DB.Real (NodeDB)
-import Disciplina.Launcher.Resource (BasicNodeResources (..), BracketResource (..))
+import Disciplina.Launcher.Resource (AllocResource (..), BasicNodeResources (..))
 import Disciplina.Witness.Launcher.Params (WitnessParams (..))
 
 -- | Datatype which contains resources required by witness node to start
@@ -18,9 +18,9 @@ data WitnessResources = WitnessResources
     , wrDB             :: !NodeDB
     }
 
-instance BracketResource WitnessParams WitnessResources where
-    bracketResourceC WitnessParams{..} = do
-        wrBasicResources <- bracketResourceC wpBasicParams
-        wrDB <- bracketResourceC wpDBParams
+instance AllocResource WitnessParams WitnessResources where
+    allocResource WitnessParams{..} = do
+        wrBasicResources <- allocResource wpBasicParams
+        wrDB <- allocResource wpDBParams
         return WitnessResources {..}
 

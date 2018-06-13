@@ -8,7 +8,7 @@ module Disciplina.Educator.Launcher.Resource
 import Universum
 
 import Disciplina.Educator.Launcher.Params (EducatorParams (..))
-import Disciplina.Launcher.Resource (BasicNodeResources (..), BracketResource (..))
+import Disciplina.Launcher.Resource (AllocResource (..), BasicNodeResources (..))
 
 -- | Datatype which contains resources required by all Disciplina nodes
 -- to start working.
@@ -16,8 +16,8 @@ data EducatorResources = EducatorResources
     { erBasicResources :: !BasicNodeResources
     }
 
-instance BracketResource EducatorParams EducatorResources where
-    bracketResourceC EducatorParams{..} = do
-        erBasicResources <- bracketResourceC epBasicParams
+instance AllocResource EducatorParams EducatorResources where
+    allocResource EducatorParams{..} = do
+        erBasicResources <- allocResource epBasicParams
         return EducatorResources {..}
 
