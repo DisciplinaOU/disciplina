@@ -4,9 +4,6 @@
 module Dscp.Educator.Txs
        ( PrivateTx (..)
        , PrivateTxId
-       , PrivateTxPayload (..)
-       , StudentTxMsg (..)
-       , EducatorTxMsg (..)
        , PrivateTxWitness (..)
        , PrivateTxAux (..)
        ) where
@@ -28,43 +25,6 @@ data PrivateTx = PrivateTx
     } deriving (Show, Eq, Generic)
 
 type PrivateTxId = Hash PrivateTx
-
--- | Private transaction payload. Divided by two types: student
--- messages and educator messages, which have different signature
--- verification procedures.
-data PrivateTxPayload
-    = StudentTx  { _ptxStudentMsg  :: !StudentTxMsg }
-    | EducatorTx { _ptxEducatorMsg :: !EducatorTxMsg }
-    deriving (Show, Eq, Generic)
-
--- | Messages which can be sent by student.
-data StudentTxMsg
-    = Enroll
-    -- ^ TODO: add some conditions for successful course enrollment maybe?
-    | Submit
-      { _stmAssignmentId :: !AssignmentId
-      , _stmSubmission   :: !Submission
-      }
-    deriving (Show, Eq, Generic)
-
--- | Messages which can be sent by educator.
-data EducatorTxMsg
-    = Assign
-      -- @flyingleafe: I think that it's more straightforward if
-      -- not a student takes an assignment (like currently described in YP),
-      -- but an educator gives it to a student. That's how things work in
-      -- most of the schools/universities anyway, and it also seems to be
-      -- simpler to implement in terms of student-educator communication.
-      { _etmAssignmentId :: !AssignmentId
-      }
-    | GradeAssignment
-      { _etmAssignmentId :: !AssignmentId
-      , _etmGrade        :: !Grade
-      }
-    | GradeCourse
-      { _etmGrade :: !Grade
-      }
-    deriving (Show, Eq, Generic)
 
 -- | Which data to sign in transaction.
 -- 'PrivateTxId' is basically a hash of all transaction contents,
