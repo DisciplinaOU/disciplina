@@ -5,13 +5,13 @@ module Disciplina.Witness.Launcher.Params
 import Universum
 
 import Disciplina.DB.Real.Types (DBParams)
-import Disciplina.Launcher.Params (BasicNodeParams)
+import Disciplina.Launcher.Params (LoggingParams)
 
 -- | Contains all initialization parameters of Witness node.
 data WitnessParams = WitnessParams
-    { wpBasicParams :: !BasicNodeParams
+    { wpLoggingParams :: !LoggingParams
     -- ^ Basic parameters for any node
-    , wpDBParams    :: !DBParams
+    , wpDBParams      :: !DBParams
     -- ^ DB parameters
     } deriving Show
 

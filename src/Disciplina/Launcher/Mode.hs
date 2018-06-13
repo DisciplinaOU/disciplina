@@ -21,21 +21,11 @@ module Disciplina.Launcher.Mode
        (
          -- * Constraints
          BasicWorkMode
-
-         -- * Implementations
-       , RealMode
-       , NodeContext (..)
-       , CustomContext
-       , ncCustomCtx
        ) where
 
 import Universum
 
-import Control.Lens (makeLenses)
-import Control.Monad.Trans.Control (MonadBaseControl)
-import Disciplina.Async (Forall, Pure)
-import Ether.Internal (HasLens (..))
-import System.Wlog (HasLoggerName (..), LoggerName, WithLogger)
+import System.Wlog (WithLogger)
 import UnliftIO (MonadUnliftIO)
 
 ---------------------------------------------------------------------
@@ -46,7 +36,6 @@ import UnliftIO (MonadUnliftIO)
 type BasicWorkMode m =
     ( WithLogger m
     , MonadIO m
-    , MonadDB m
     , MonadUnliftIO m  -- allows to use lifted-async
     )
 
@@ -54,21 +43,4 @@ type BasicWorkMode m =
 -- WorkMode implementations
 ---------------------------------------------------------------------
 
--- | For node role returns related context.
-type family CustomContext r = cc | cc -> r
-
--- | Contains basic context suitable for any node + custom context,
--- which depends on node role.
-data NodeContext r = NodeContext
-    { _ncCustomCtx  :: CustomContext r
-    , _ncLoggerName :: LoggerName
-    }
-
-makeLenses ''NodeContext
-
-type RealMode r = ReaderT (NodeContext r) IO
-
-instance {-# OVERLAPPING #-} HasLoggerName (RealMode r) where
-    askLoggerName = view ncLoggerName
-    modifyLoggerName name = local $ ncLoggerName %~ name
 

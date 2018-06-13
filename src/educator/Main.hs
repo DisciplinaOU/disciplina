@@ -7,8 +7,9 @@ import Universum
 
 import System.Wlog (logInfo, logWarning)
 
+import Disciplina.DB (DBParams (..))
 import Disciplina.Educator (EducatorParams (..), launchEducatorRealMode)
-import Disciplina.Launcher (BasicNodeParams (..))
+import Disciplina.Witness (WitnessParams (..))
 
 import qualified Params as Params
 
@@ -16,8 +17,9 @@ main :: IO ()
 main = do
     Params.EducatorParams {..} <- Params.getEducatorParams
     let educatorParams = EducatorParams
-            { epBasicParams = BasicNodeParams
-                { bnpLoggingParams = epLogParams
+            { epWitnessParams = WitnessParams
+                { wpLoggingParams = epLogParams
+                , wpDBParams = DBParams{ dbpPath = epDbPath }
                 }
             }
     launchEducatorRealMode educatorParams $ do

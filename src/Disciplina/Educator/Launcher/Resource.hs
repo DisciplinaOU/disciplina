@@ -8,16 +8,17 @@ module Disciplina.Educator.Launcher.Resource
 import Universum
 
 import Disciplina.Educator.Launcher.Params (EducatorParams (..))
-import Disciplina.Launcher.Resource (AllocResource (..), BasicNodeResources (..))
+import Disciplina.Launcher.Resource (AllocResource (..))
+import qualified Disciplina.Witness.Launcher.Resource as Witness
 
 -- | Datatype which contains resources required by all Disciplina nodes
 -- to start working.
 data EducatorResources = EducatorResources
-    { erBasicResources :: !BasicNodeResources
+    { erWitnessResources :: !Witness.WitnessResources
     }
 
 instance AllocResource EducatorParams EducatorResources where
     allocResource EducatorParams{..} = do
-        erBasicResources <- allocResource epBasicParams
+        erWitnessResources <- allocResource epWitnessParams
         return EducatorResources {..}
 

@@ -16,7 +16,6 @@ import System.Random (mkStdGen)
 import UnliftIO.Async (async)
 
 import Disciplina.DB (DBParams (..))
-import Disciplina.Launcher (BasicNodeParams (..))
 import Disciplina.Listeners (witnessListeners)
 import Disciplina.Messages (serialisePacking)
 import Disciplina.Transport (bracketTransportTCP)
@@ -28,17 +27,10 @@ main :: IO ()
 main = do
     Params.WitnessParams {..} <- Params.getWitnessParams
     let witnessParams = WitnessParams
-            { wpBasicParams = BasicNodeParams
-                { bnpLoggingParams = wpLogParams
-                }
+            { wpLoggingParams = wpLogParams
             , wpDBParams = DBParams{ dbpPath = wpDbPath }
             }
     launchWitnessRealMode witnessParams $ do
-          -- bracketTransportTCP (15000 {-- connection timeout ms--})
-          --                     (TCP.defaultTCPAddr "127.0.0.1" "10128") $ \transport -> do
-
-            let prng1 = mkStdGen 0
-
             logInfo "Starting node"
             -- TODO: This networking can't live without Production and Mockables
             --       so leaving it commented for now

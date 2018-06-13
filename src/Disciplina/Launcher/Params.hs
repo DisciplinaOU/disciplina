@@ -1,6 +1,5 @@
 module Disciplina.Launcher.Params
-       ( BasicNodeParams (..)
-       , LoggingParams (..)
+       ( LoggingParams (..)
        ) where
 
 import Universum
@@ -15,10 +14,4 @@ data LoggingParams = LoggingParams
     -- ^ Path to log directory
     , lpConfigPath  :: !(Maybe FilePath)
     -- ^ Path to logger configuration
-    } deriving Show
-
--- | Contains all initialization parameters which all Disciplina nodes share.
-data BasicNodeParams = BasicNodeParams
-    { bnpLoggingParams :: !LoggingParams
-    -- ^ Logging params
     } deriving Show

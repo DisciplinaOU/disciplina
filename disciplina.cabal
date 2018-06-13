@@ -40,7 +40,6 @@ library
                      , Disciplina.Launcher.Mode
                      , Disciplina.Launcher.Params
                      , Disciplina.Launcher.Resource
-                     , Disciplina.Launcher.Runner
                      , Disciplina.Listeners.Listener
                      , Disciplina.Workers.Worker
                      , Disciplina.Transport.TCP

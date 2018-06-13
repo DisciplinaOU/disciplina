@@ -3,8 +3,7 @@
 -- | Common resources used by Disciplina nodes
 
 module Disciplina.Launcher.Resource
-       ( BasicNodeResources (..)
-       , AllocResource(..)
+       ( AllocResource(..)
        ) where
 
 import Universum
@@ -14,13 +13,7 @@ import System.Wlog (LoggerConfig (..), LoggerName, maybeLogsDirB, parseLoggerCon
                     removeAllHandlers, setupLogging, showTidB)
 
 import Disciplina.DB.Real (DBParams, NodeDB, closeNodeDB, openNodeDB)
-import Disciplina.Launcher.Params (BasicNodeParams (..), LoggingParams (..))
-
--- | Datatype which contains resources required by all Disciplina nodes
--- to start working.
-data BasicNodeResources = BasicNodeResources
-    { bnrLoggerName :: !LoggerName
-    }
+import Disciplina.Launcher.Params (LoggingParams (..))
 
 ----------------------------------------------------------------------------
 -- Resources
@@ -62,8 +55,3 @@ instance AllocResource LoggingParams LoggerName where
 
 instance AllocResource DBParams NodeDB where
     allocResource p = buildComponent "RocksDB" (openNodeDB p) closeNodeDB
-
-instance AllocResource BasicNodeParams BasicNodeResources where
-    allocResource BasicNodeParams{..} = do
-        bnrLoggerName <- allocResource bnpLoggingParams
-        return BasicNodeResources {..}

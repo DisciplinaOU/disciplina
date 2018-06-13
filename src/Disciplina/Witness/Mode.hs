@@ -8,18 +8,17 @@ module Disciplina.Witness.Mode
       WitnessWorkMode
 
       -- * Implementations
-    , Witness
-    , WitnessCustomContext (..)
+    , WitnessContext (..)
     , WitnessRealMode
-
-      -- * Re-exports
-    , Basic.RealMode
+    , wcDB
+    , wcLoggerName
     ) where
 
 import Universum
 
 import Control.Lens (makeLenses)
 import Ether.Internal (HasLens (..))
+import System.Wlog (HasLoggerName (..), LoggerName)
 
 import Disciplina.DB.Class (MonadDB)
 import Disciplina.DB.Real.Types (NodeDB)
@@ -39,21 +38,23 @@ type WitnessWorkMode m =
 -- WorkMode implementation
 ---------------------------------------------------------------------
 
--- | Witness node role.
-data Witness
-
-type instance Basic.CustomContext Witness = WitnessCustomContext
-data WitnessCustomContext = WitnessCustomContext
-    { _wccDB :: NodeDB
+data WitnessContext = WitnessContext
+    { _wcDB         :: NodeDB
+    , _wcLoggerName :: LoggerName
     }
 
-makeLenses ''WitnessCustomContext
+makeLenses ''WitnessContext
 
-type WitnessRealMode = Basic.RealMode Witness
+type WitnessRealMode = ReaderT WitnessContext IO
 
 ---------------------------------------------------------------------
 -- Instances
 ---------------------------------------------------------------------
 
-instance HasLens NodeDB (Basic.NodeContext Witness) NodeDB where
-    lensOf = Basic.ncCustomCtx . wccDB
+instance HasLens NodeDB WitnessContext NodeDB where
+    lensOf = wcDB
+
+instance {-# OVERLAPPING #-} HasLoggerName WitnessRealMode where
+    askLoggerName = view wcLoggerName
+    modifyLoggerName name = local $ wcLoggerName %~ name
+

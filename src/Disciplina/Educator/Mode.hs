@@ -6,40 +6,57 @@ module Disciplina.Educator.Mode
     (
       -- * Constraints
       EducatorWorkMode
+    , CombinedWorkMode
 
       -- * Implementations
-    , Educator
-    , EducatorCustomContext (..)
+    , EducatorContext (..)
     , EducatorRealMode
-
-      -- * Re-exports
-    , Basic.RealMode
     ) where
+
+import Universum
 
 import Control.Lens (makeLenses)
 
+import Disciplina.DB.Real.Types (NodeDB)
 import qualified Disciplina.Launcher.Mode as Basic
+import qualified Disciplina.Witness.Mode as Witness
+import Ether.Internal (HasLens (..))
+import System.Wlog (HasLoggerName (..))
 
 ---------------------------------------------------------------------
 -- WorkMode class
 ---------------------------------------------------------------------
 
--- | Set of typeclasses which define capabilities of Educator node.
+-- | Set of typeclasses which define capabilities of bare Educator node.
 type EducatorWorkMode m =
     ( Basic.BasicWorkMode m
+    )
+
+-- | Set of typeclasses which define capabilities both of Educator and Witness.
+type CombinedWorkMode m =
+    ( EducatorWorkMode m
+    , Witness.WitnessWorkMode m
     )
 
 ---------------------------------------------------------------------
 -- WorkMode implementation
 ---------------------------------------------------------------------
 
--- | Educator node role.
-data Educator
+data EducatorContext = EducatorContext
+    { _ecWitnessCtx :: Witness.WitnessContext
+    }
 
-type instance Basic.CustomContext Educator = EducatorCustomContext
-data EducatorCustomContext = EducatorCustomContext
+makeLenses ''EducatorContext
 
-makeLenses ''EducatorCustomContext
+type EducatorRealMode = ReaderT EducatorContext IO
 
-type EducatorRealMode = Basic.RealMode Educator
+---------------------------------------------------------------------
+-- Instances
+---------------------------------------------------------------------
 
+instance HasLens NodeDB EducatorContext NodeDB where
+    lensOf = ecWitnessCtx . Witness.wcDB
+
+instance {-# OVERLAPPING #-} HasLoggerName EducatorRealMode where
+    askLoggerName = view (ecWitnessCtx . Witness.wcLoggerName)
+    modifyLoggerName name = local $ (ecWitnessCtx . Witness.wcLoggerName) %~ name

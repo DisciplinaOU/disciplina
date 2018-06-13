@@ -7,20 +7,22 @@ module Disciplina.Witness.Launcher.Resource
 
 import Universum
 
+import System.Wlog (LoggerName)
+
 import Disciplina.DB.Real (NodeDB)
-import Disciplina.Launcher.Resource (AllocResource (..), BasicNodeResources (..))
+import Disciplina.Launcher.Resource (AllocResource (..))
 import Disciplina.Witness.Launcher.Params (WitnessParams (..))
 
 -- | Datatype which contains resources required by witness node to start
 -- working.
 data WitnessResources = WitnessResources
-    { wrBasicResources :: !BasicNodeResources
-    , wrDB             :: !NodeDB
+    { wrLoggerName :: !LoggerName
+    , wrDB         :: !NodeDB
     }
 
 instance AllocResource WitnessParams WitnessResources where
     allocResource WitnessParams{..} = do
-        wrBasicResources <- allocResource wpBasicParams
+        wrLoggerName <- allocResource wpLoggingParams
         wrDB <- allocResource wpDBParams
         return WitnessResources {..}
 
