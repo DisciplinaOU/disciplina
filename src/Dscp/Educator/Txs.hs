@@ -10,8 +10,7 @@ module Dscp.Educator.Txs
 
 import Universum
 
-import Dscp.Core.Types (AssignmentId, CourseId, EducatorId, Grade, SignedSubmission (..), StudentId,
-                        Submission)
+import Dscp.Core.Types (Grade, SignedSubmission (..))
 import Dscp.Crypto (Hash, PublicKey, Signature)
 
 -- | Private transaction.

@@ -3,12 +3,13 @@ module Test.Dscp.DB.DSL.Interpret.SimpleTxDB where
 import Test.Common
 
 import Crypto.Error (CryptoFailable (..))
-import Dscp.Core (CourseId (..), Grade (..), SubjectId, mkAddr)
-import Dscp.Crypto (AbstractPK (..), AbstractSK (..), PublicKey, SecretKey, hash)
+import Dscp.Core (Assignment (..), AssignmentType (..), CourseId (..), Grade (..),
+                  SignedSubmission (..), SubjectId, Submission (..), SubmissionType (..),
+                  SubmissionWitness (..), mkAddr)
+import Dscp.Crypto (AbstractPK (..), AbstractSK (..), PublicKey, SecretKey, hash, sign)
 import Dscp.DB (Obj, ObjHashEq (..), QueryObj (..), QueryTx (..), QueryTxs (..), TxGrade (..),
-                      TxIdEq (..), TxsFilterExpr (..), WHERE (..), runSimpleTxDBQuery)
-import Dscp.Educator (EducatorTxMsg (..), PrivateTx (..), PrivateTxPayload (..),
-                            StudentTxMsg (..))
+                TxIdEq (..), TxsFilterExpr (..), WHERE (..), runSimpleTxDBQuery)
+import Dscp.Educator (PrivateTx (..))
 
 import qualified Crypto.PubKey.Ed25519 as Ed25519
 import qualified Data.ByteString.Char8 as C
@@ -34,14 +35,39 @@ sIdPiCalculus = 9
 sIdComputabilityTheory = 10
 
 -- | Create a private transaction
-mkPrivateTx :: CourseId -> PrivateTxPayload -> StudentKey -> EducatorKey -> PrivateTx
-mkPrivateTx courseId payload studentKey educatorKey =
-    PrivateTx { _ptxStudentId = mkAddr . fst $ mkKeyPair studentKey
-              , _ptxCourseId = courseId
-              , _ptxEducatorId = mkAddr . fst $ mkKeyPair educatorKey
-              , _ptxPayload = payload
+mkPrivateTx :: CourseId -> StudentKey -> EducatorKey -> PrivateTx
+mkPrivateTx courseId studentKey educatorKey =
+    PrivateTx { _ptxSignedSubmission = mkSignedSubmission
+              , _ptxGrade = C
+              , _ptxTime = 1
               }
   where
+     mkSignedSubmission :: SignedSubmission
+     mkSignedSubmission = SignedSubmission
+       { ssSubmission = mkSubmission
+       , ssWitness = mkSubmissionWitness
+       }
+
+     mkSubmission :: Submission
+     mkSubmission = Submission
+       { sStudentId = mkAddr . fst $ mkKeyPair studentKey
+       , sType = Digital
+       , sAssignment = mkAssignment
+       }
+
+     mkSubmissionWitness :: SubmissionWitness
+     mkSubmissionWitness = SubmissionWitness
+       { _swKey = fst (mkKeyPair educatorKey)
+       , _swSig = sign (snd (mkKeyPair educatorKey)) mkSubmission
+       }
+
+     mkAssignment :: Assignment
+     mkAssignment = Assignment
+       { aCourseId = courseId
+       , aType = Regular
+       , aAssignment = ""
+       }
+
      -- Create key pair from seed
      mkKeyPair :: Char -> (PublicKey, SecretKey)
      mkKeyPair seed =
@@ -50,30 +76,29 @@ mkPrivateTx courseId payload studentKey educatorKey =
 
 -- | Enroll student in course Mathematics
 enrollMathPrivateTx :: StudentKey -> EducatorKey -> PrivateTx
-enrollMathPrivateTx = mkPrivateTx courseId payload
+enrollMathPrivateTx = mkPrivateTx courseId
   where
     courseId = CourseId 2
-    payload = StudentTx { _ptxStudentMsg = Enroll }
 
 -- | Enroll student 'a' in course id 3 at educator 'k'
 tx1 :: PrivateTx
-tx1 = mkPrivateTx (CourseId 3) (StudentTx Enroll) 'a' 'k'
+tx1 = mkPrivateTx (CourseId 3) 'a' 'k'
 
 -- | Student 'a' gets graded B by educator 'k' in course id 3
 tx2 :: PrivateTx
-tx2 = mkPrivateTx (CourseId 3) (EducatorTx (GradeCourse B)) 'a' 'k'
+tx2 = mkPrivateTx (CourseId 3) 'a' 'k'
 
 -- | Enroll student 'b' in course id 4 at educator 'k'
 tx3 :: PrivateTx
-tx3 = mkPrivateTx (CourseId 4) (StudentTx Enroll) 'a' 'k'
+tx3 = mkPrivateTx (CourseId 4) 'a' 'k'
 
 -- | Student 'b' gets graded C by educator 'k' in course id 4
 tx4 :: PrivateTx
-tx4 = mkPrivateTx (CourseId 4) (EducatorTx (GradeCourse C)) 'a' 'k'
+tx4 = mkPrivateTx (CourseId 4) 'a' 'k'
 
 -- | Enroll student 'a' in course id 5 at educator 'k'
 tx5 :: PrivateTx
-tx5 = mkPrivateTx (CourseId 5) (StudentTx Enroll) 'a' 'k'
+tx5 = mkPrivateTx (CourseId 5) 'a' 'k'
 
 simpleTxDB :: [PrivateTx]
 simpleTxDB =

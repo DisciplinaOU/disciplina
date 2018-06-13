@@ -7,8 +7,7 @@ import Test.Common
 --                      TxIdEq (..), TxsFilterExpr (..), WHERE (..), runSimpleTxDBQuery)
 --import Dscp.Educator (EducatorTxMsg (..), PrivateTx (..), PrivateTxPayload (..),
 --                            StudentTxMsg (..))
-import Dscp.Educator (validate)
-import Dscp.Educator.Block (PrivateBlock, pbBody, pbHeader, pbbTxs, pbhBodyProof)
+--import Dscp.Educator (PrivateBlock, validate, pbHeader, pbBody, pbbTxs, pbhBodyProof)
 
 
 

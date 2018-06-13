@@ -13,7 +13,7 @@ module Dscp.Core.Types
        , AssignmentType (..)
        , AssignmentId
        , Submission (..)
-       , SubmissionType
+       , SubmissionType (..)
        , SignedSubmission (..)
        , SubmissionWitness (..)
        , SubmissionWitnessAux (..)
@@ -34,7 +34,7 @@ import Universum
 import Control.Lens (makeLenses)
 import Data.Map (Map)
 
-import Dscp.Crypto (Hash, PublicKey, Raw, Signature, hash)
+import Dscp.Crypto (Hash, PublicKey, Signature, hash)
 
 -- | 'Address' datatype. Not 'newtype', because later it will
 -- inevitably become more complex.
