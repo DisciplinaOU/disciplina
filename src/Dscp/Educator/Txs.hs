@@ -13,20 +13,18 @@ module Dscp.Educator.Txs
 
 import Universum
 
-import Dscp.Core.Types (AssignmentId, CourseId, EducatorId, Grade, StudentId, Submission)
+import Dscp.Core.Types (AssignmentId, CourseId, EducatorId, Grade, SignedSubmission (..), StudentId,
+                        Submission)
 import Dscp.Crypto (Hash, PublicKey, Signature)
 
 -- | Private transaction.
 data PrivateTx = PrivateTx
-    { _ptxStudentId  :: !StudentId
-    -- ^ Every transaction relates to one particular student.
-    , _ptxCourseId   :: !CourseId
-    -- ^ Every transaction relates to one particular course.
-    , _ptxEducatorId :: !EducatorId
-    -- ^ Included to simplify educator signature checking
-    -- on student's side.
-    , _ptxPayload    :: !PrivateTxPayload
-    -- ^ Actual contents of transaction.
+    { _ptxSignedSubmission :: !SignedSubmission
+    -- ^ Every transaction contains one signed student submission
+    , _ptxGrade            :: !Grade
+    -- ^ Grade for this submission
+    , _ptxTime             :: !Integer
+    -- ^ Timestamp for this transaction
     } deriving (Show, Eq, Generic)
 
 type PrivateTxId = Hash PrivateTx
