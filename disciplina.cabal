@@ -58,15 +58,15 @@ library
                      , Disciplina.Witness.Internal
                      , Disciplina.Witness.Instances
                      , Disciplina.Witness.Launcher
+                     , Disciplina.Witness.Launcher.Mode
                      , Disciplina.Witness.Launcher.Params
                      , Disciplina.Witness.Launcher.Resource
                      , Disciplina.Witness.Launcher.Runner
-                     , Disciplina.Witness.Mode
 
                      -- Educator node model
                      , Disciplina.Educator.Block
-                     , Disciplina.Educator.Mode
                      , Disciplina.Educator.Launcher
+                     , Disciplina.Educator.Launcher.Mode
                      , Disciplina.Educator.Launcher.Params
                      , Disciplina.Educator.Launcher.Resource
                      , Disciplina.Educator.Launcher.Runner

@@ -7,9 +7,9 @@ import Universum
 
 import Control.Monad.Component (runComponentM)
 
+import Disciplina.Educator.Launcher.Mode (EducatorContext (..), EducatorRealMode)
 import Disciplina.Educator.Launcher.Params (EducatorParams (..))
 import Disciplina.Educator.Launcher.Resource (EducatorResources (..))
-import Disciplina.Educator.Mode (EducatorContext (..), EducatorRealMode)
 import Disciplina.Launcher.Resource (AllocResource (..))
 import Disciplina.Witness.Launcher.Runner (formWitnessContext)
 

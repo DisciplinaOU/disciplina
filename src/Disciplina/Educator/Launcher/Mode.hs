@@ -2,7 +2,7 @@
 
 -- | Module contains the definition of Educator's WorkMode and its implementations.
 
-module Disciplina.Educator.Mode
+module Disciplina.Educator.Launcher.Mode
     (
       -- * Constraints
       EducatorWorkMode
@@ -19,7 +19,7 @@ import Control.Lens (makeLenses)
 
 import Disciplina.DB.Real.Types (NodeDB)
 import qualified Disciplina.Launcher.Mode as Basic
-import qualified Disciplina.Witness.Mode as Witness
+import qualified Disciplina.Witness.Launcher as Witness
 import Ether.Internal (HasLens (..))
 import System.Wlog (HasLoggerName (..))
 

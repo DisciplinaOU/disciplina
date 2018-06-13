@@ -2,7 +2,7 @@
 
 -- | Module contains the definition of Witness's WorkMode and its implementations.
 
-module Disciplina.Witness.Mode
+module Disciplina.Witness.Launcher.Mode
     (
       -- * Constraints
       WitnessWorkMode

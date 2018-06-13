@@ -10,7 +10,7 @@ import Node (ConversationActions, Listener (..), NodeId, send)
 import System.Wlog (logInfo)
 
 import Disciplina.Messages (Packing, PingBlk, PingTx, PongBlk (..), PongTx (..))
-import Disciplina.Witness.Mode (WitnessWorkMode)
+import Disciplina.Witness.Launcher (WitnessWorkMode)
 
 witnessListeners
     :: forall m. WitnessWorkMode m

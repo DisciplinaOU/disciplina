@@ -8,9 +8,9 @@ import Universum
 import Control.Monad.Component (runComponentM)
 
 import Disciplina.Launcher.Resource (AllocResource (..))
+import Disciplina.Witness.Launcher.Mode (WitnessContext (..), WitnessRealMode)
 import Disciplina.Witness.Launcher.Params (WitnessParams (..))
 import Disciplina.Witness.Launcher.Resource (WitnessResources (..))
-import Disciplina.Witness.Mode (WitnessContext (..), WitnessRealMode)
 
 -- | Make up Witness context from dedicated pack of allocated resources.
 formWitnessContext :: WitnessResources -> WitnessContext
