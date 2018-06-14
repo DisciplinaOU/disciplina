@@ -1,6 +1,6 @@
 {-# LANGUAGE TypeApplications #-}
 
-module Disciplina.WorldState.Instances () where
+module Disciplina.Witness.Instances () where
 
 import Universum
 

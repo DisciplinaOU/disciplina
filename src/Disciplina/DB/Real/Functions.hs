@@ -18,7 +18,7 @@ import qualified Database.RocksDB as Rocks
 import Ether.Internal (HasLens (..))
 
 import Disciplina.DB.Class (MonadDB (..), MonadDBRead (..))
-import Disciplina.DB.Real.Types (DB (..), DBType, MonadRealDB, NodeDB (..), ndbDatabase)
+import Disciplina.DB.Real.Types (DB (..), DBParams (..), MonadRealDB, NodeDB (..), ndbDatabase)
 
 -----------------------------------------------------------
 -- Opening/closing
@@ -38,8 +38,8 @@ openRocksDB path = do
 closeRocksDB :: MonadIO m => DB -> m ()
 closeRocksDB = Rocks.close . rocksDB
 
-openNodeDB :: MonadIO m => DBType -> FilePath -> m NodeDB
-openNodeDB dbType path = NodeDB dbType <$> openRocksDB path
+openNodeDB :: MonadIO m => DBParams -> m NodeDB
+openNodeDB DBParams{..} = NodeDB <$> openRocksDB dbpPath
 
 closeNodeDB :: MonadIO m => NodeDB -> m ()
 closeNodeDB = closeRocksDB . _ndbDatabase

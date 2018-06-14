@@ -5,23 +5,23 @@ module Main where
 
 import Universum
 
-import Mockable (Production (..), runProduction)
 import System.Wlog (logInfo, logWarning)
 
-import Disciplina.DB (DBType (EducatorDB))
-import Disciplina.Launcher (BasicNodeParams (..), bracketBasicNodeResources, runBasicRealMode)
+import Disciplina.DB (DBParams (..))
+import Disciplina.Educator (EducatorParams (..), launchEducatorRealMode)
+import Disciplina.Witness (WitnessParams (..))
 
-import EducatorParams (EducatorParams (..), getEducatorParams)
+import qualified EducatorParams as Params
 
 main :: IO ()
 main = do
-    EducatorParams {..} <- getEducatorParams
-    let basicParams = BasicNodeParams
-            { bnpLoggingParams = epLogParams
-            , bnpDBType        = EducatorDB
-            , bnpDBPath        = epDbPath
+    Params.EducatorParams {..} <- Params.getEducatorParams
+    let educatorParams = EducatorParams
+            { epWitnessParams = WitnessParams
+                { wpLoggingParams = epLogParams
+                , wpDBParams = DBParams{ dbpPath = epDbPath }
+                }
             }
-    runProduction . bracketBasicNodeResources basicParams $
-        \nr -> runBasicRealMode nr $ do
-            logInfo "This is the stub for Educator node executable"
-            logWarning "Please don't forget to implement everything else!"
+    launchEducatorRealMode educatorParams $ do
+        logInfo "This is the stub for Educator node executable"
+        logWarning "Please don't forget to implement everything else!"
