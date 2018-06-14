@@ -1,7 +1,7 @@
 
 -- | Command-line options and flags for Witness nodes
 
-module Params
+module WitnessParams
        ( WitnessParams (..)
        , getWitnessParams
        ) where
