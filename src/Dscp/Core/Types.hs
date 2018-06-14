@@ -16,7 +16,6 @@ module Dscp.Core.Types
        , SubmissionType (..)
        , SignedSubmission (..)
        , SubmissionWitness (..)
-       , SubmissionWitnessAux (..)
 
        -- * Activity Type Graph
        , ATGDelta (..)
@@ -79,7 +78,7 @@ data Assignment = Assignment
     , aType       :: !AssignmentType
     -- ^ Assignment type
     , aAssignment :: !Text
-    -- ^ Hash of assignment content
+    -- ^ Description of assignment
     } deriving (Eq, Show, Generic)
 
 -- | 'AssignmentId' is a hash of assignment contents,
@@ -101,31 +100,25 @@ data Submission = Submission
     -- ^ Assignment of this submission
     } deriving (Eq, Show, Generic)
 
--- | Type alias for Submission signature.
-type SubmissionSig = Signature Submission
+-- | Type alias for Submission hash
+type SubmissionId = Hash Submission
 
--- | Submission signature.
-data SignedSubmission = SignedSubmission
-    { ssSubmission :: !Submission
-    -- ^ Student submission
-    , ssWitness    :: !SubmissionWitness
-    -- ^ Submission witness
-    } deriving (Eq, Show, Generic)
+-- | Type alias for Submission signature.
+type SubmissionSig = Signature SubmissionId
 
 -- | Witness contains data required to verify transaction.
--- Included 'PublicKey' belongs either to Student or Educator.
--- TODO: maybe we can say that Educator's key is already known
--- to everybody, and not include it into Educator's witness?
 data SubmissionWitness = SubmissionWitness
     { _swKey :: !PublicKey
     , _swSig :: !SubmissionSig
     } deriving (Show, Eq, Generic)
 
 -- | Datatype for verifiable transaction (transaction with a witness)
-data SubmissionWitnessAux = SubmissionWitnessAux
-    { _swaTx      :: !Submission
-    , _swaWitness :: !SubmissionWitness
-    } deriving (Show, Eq, Generic)
+data SignedSubmission = SignedSubmission
+    { ssSubmission :: !Submission
+    -- ^ Student submission
+    , ssWitness    :: !SubmissionWitness
+    -- ^ Submission witness
+    } deriving (Eq, Show, Generic)
 
 
 -- | ATGDelta is a diff for set of subjects which are taught by Educator.

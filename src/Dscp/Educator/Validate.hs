@@ -7,26 +7,34 @@ module Dscp.Educator.Validate
 
 import Universum
 
-import Dscp.Crypto (hash, verify)
-import Dscp.Crypto.MerkleTree (fromFoldable, getMerkleRoot)
-import Dscp.Educator.Block (PrivateBlock, pbBody, pbHeader, pbbTxs, pbhBodyProof)
+import Control.Monad.Except (MonadError)
+import Serokell.Util.Verify (verResToMonadError, verifyGeneric)
+
+import Dscp.Core (Address (..), SignedSubmission (..), Submission (..))
+import Dscp.Crypto (fromFoldable, getMerkleRoot, hash, verify)
+import Dscp.Educator.Block (PrivateBlock (..), PrivateBlockHeader (..), pbBody, pbbTxs)
 import Dscp.Educator.Serialise ()
-import Dscp.Educator.Txs (PrivateTxAux (..), PrivateTxWitness (..))
+import Dscp.Educator.Txs (PrivateTx (..), PrivateTxAux (..), PrivateTxWitness (..))
 
 -- | Validate private block.
 -- Block is valid if header matches body
--- and all transactions have valid signatures.
-validate :: PrivateBlock -> Bool
+-- and all transactions have valid signatures and signature public key
+-- correspond to student public key
+validate :: (MonadError [Text] m) => PrivateBlock -> m ()
 validate pb =
     let txs = pb ^. pbBody . pbbTxs
         merkleRoot = getMerkleRoot (fromFoldable txs)
-        headerProof = pb ^. pbHeader . pbhBodyProof
-        headerProofValid = headerProof == merkleRoot
-        txsSigProofValid = all (==True) (map validateTx txs)
-    in headerProofValid && txsSigProofValid
-  where validateTx :: PrivateTxAux -> Bool
+        headerVer = validateTxHeader (_pbHeader pb) merkleRoot
+        blockValid = verifyGeneric (headerVer <> concatMap validateTx txs)
+    in verResToMonadError toList blockValid
+  where validateTxHeader (PrivateBlockHeader {..}) merkleRoot =
+          [(_pbhBodyProof == merkleRoot, "Header signature missmatch")]
+
         validateTx (PrivateTxAux {..}) =
           let txProofSig = _ptwSig _ptaWitness
               txProofKey = _ptwKey _ptaWitness
               tx = hash _ptaTx
-          in verify txProofKey tx txProofSig
+              txAddrHash = addrHash (sStudentId (ssSubmission (_ptxSignedSubmission _ptaTx)))
+          in [(verify txProofKey tx txProofSig, "Tx signature not valid")
+             ,(hash txProofKey == txAddrHash, "Tx public key missmatch")
+             ]

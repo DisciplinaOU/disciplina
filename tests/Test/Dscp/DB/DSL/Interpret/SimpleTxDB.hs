@@ -58,7 +58,7 @@ mkPrivateTx courseId studentKey educatorKey =
      mkSubmissionWitness :: SubmissionWitness
      mkSubmissionWitness = SubmissionWitness
        { _swKey = fst (mkKeyPair educatorKey)
-       , _swSig = sign (snd (mkKeyPair educatorKey)) mkSubmission
+       , _swSig = sign (snd (mkKeyPair educatorKey)) (hash mkSubmission)
        }
 
      mkAssignment :: Assignment

@@ -10,6 +10,8 @@ module Dscp.Educator.Txs
 
 import Universum
 
+import Data.Time.Clock (UTCTime)
+
 import Dscp.Core.Types (Grade, SignedSubmission (..))
 import Dscp.Crypto (Hash, PublicKey, Signature)
 
@@ -19,7 +21,7 @@ data PrivateTx = PrivateTx
     -- ^ Every transaction contains one signed student submission
     , _ptxGrade            :: !Grade
     -- ^ Grade for this submission
-    , _ptxTime             :: !Integer
+    , _ptxTime             :: !UTCTime
     -- ^ Timestamp for this transaction
     } deriving (Show, Eq, Generic)
 
