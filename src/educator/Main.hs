@@ -11,7 +11,7 @@ import Disciplina.DB (DBParams (..))
 import Disciplina.Educator (EducatorParams (..), launchEducatorRealMode)
 import Disciplina.Witness (WitnessParams (..))
 
-import qualified Params as Params
+import qualified EducatorParams as Params
 
 main :: IO ()
 main = do

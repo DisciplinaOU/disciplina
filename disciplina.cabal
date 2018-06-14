@@ -156,7 +156,7 @@ library
 executable disciplina-witness
   hs-source-dirs:      src/witness
   main-is:             Main.hs
-  other-modules:       Params
+  other-modules:       WitnessParams
   build-depends:       base
                      , bytestring
                      , disciplina
@@ -207,7 +207,7 @@ executable disciplina-witness
 executable disciplina-educator
   hs-source-dirs:      src/educator
   main-is:             Main.hs
-  other-modules:       Params
+  other-modules:       EducatorParams
   build-depends:       base
                      , disciplina
                      , cardano-sl-networking

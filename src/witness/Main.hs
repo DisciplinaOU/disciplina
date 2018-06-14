@@ -21,7 +21,7 @@ import Disciplina.Messages (serialisePacking)
 import Disciplina.Transport (bracketTransportTCP)
 import Disciplina.Witness (WitnessParams (..), launchWitnessRealMode)
 import Disciplina.Workers (witnessWorkers)
-import qualified Params as Params
+import qualified WitnessParams as Params
 
 main :: IO ()
 main = do
