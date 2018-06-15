@@ -2,7 +2,7 @@
 -- | Command-line options and flags for Witness nodes
 
 module WitnessParams
-       ( WitnessParams (..)
+       ( WitnessOptParams (..)
        , getWitnessParams
        ) where
 
@@ -13,16 +13,16 @@ import Options.Applicative (Parser, execParser, fullDesc, help, helper, info, lo
 import Disciplina.CLI (dbPathParser, logParamsParser, versionOption)
 import Disciplina.Launcher (LoggingParams)
 
-data WitnessParams = WitnessParams
+data WitnessOptParams = WitnessOptParams
     { wpDbPath    :: !FilePath
     , wpLogParams :: !LoggingParams
     }
 
-witnessParamsParser :: Parser WitnessParams
+witnessParamsParser :: Parser WitnessOptParams
 witnessParamsParser =
-    WitnessParams <$> dbPathParser <*> logParamsParser "witness"
+    WitnessOptParams <$> dbPathParser <*> logParamsParser "witness"
 
-getWitnessParams :: IO WitnessParams
+getWitnessParams :: IO WitnessOptParams
 getWitnessParams =
     execParser $ info (helper <*> versionOption <*> witnessParamsParser) $
     fullDesc <> progDesc "Disciplina witness node."

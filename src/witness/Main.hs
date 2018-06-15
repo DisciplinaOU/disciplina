@@ -21,11 +21,11 @@ import Disciplina.Messages (serialisePacking)
 import Disciplina.Transport (bracketTransportTCP)
 import Disciplina.Witness (WitnessParams (..), launchWitnessRealMode)
 import Disciplina.Workers (witnessWorkers)
-import qualified WitnessParams as Params
+import WitnessParams (WitnessOptParams (..), getWitnessParams)
 
 main :: IO ()
 main = do
-    Params.WitnessParams {..} <- Params.getWitnessParams
+    WitnessOptParams {..} <- getWitnessParams
     let witnessParams = WitnessParams
             { wpLoggingParams = wpLogParams
             , wpDBParams = DBParams{ dbpPath = wpDbPath }
