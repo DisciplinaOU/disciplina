@@ -1,4 +1,5 @@
-resolver: lts-10.8
+resolver:
+    https://raw.githubusercontent.com/serokell/lootbox/db765836e61f11350519d95ca3a0cb74d0b5a94c/snapshot.yaml
 
 packages:
 - '.'
@@ -22,6 +23,7 @@ extra-deps:
 - teardown-0.5.0.0
 - unliftio-0.2.7.0
 - universum-1.1.0
+- base-noprelude-4.10.1.0
 
 - git: https://github.com/serokell/kademlia.git
   commit: 7120bb4d28e708acd52dfd61d3dca7914fac7d7f # master
@@ -55,6 +57,12 @@ extra-deps:
 
 - git: https://github.com/serokell/rocksdb-haskell.git
   commit: 2dd6b4ffdc4edb86b477273ee3c8416a1520f4e1
+
+- git: https://github.com/serokell/lootbox.git
+  commit: f287dd6cfe29707b28cc0418e8aa099de3bfbe77
+  subdirs:
+    - code/prelude
+    - code/log
 
 # Needed to build `cardano-sl-networking` with newer GHC
 ghc-options:

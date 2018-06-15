@@ -89,6 +89,7 @@ library
                      , Dscp.CLI.Common
   -- other-extensions:
   build-depends:       base >= 4.9 && < 5
+                     , aeson
                      , autoexporter
                      , array
                      , AVL
@@ -101,11 +102,13 @@ library
                      , ether
                      , exceptions
                      , formatting
+                     , fmt
                      , free
                      , hashable
                      , lens
                      , lifted-async
                      , log-warper
+                     , loot-log
                      , memory
                      , monad-control
                      , mtl
@@ -148,6 +151,7 @@ library
                        TypeFamilies
                        UndecidableInstances
                        ViewPatterns
+                       TypeApplications
 
   ghc-options:         -Wall
                        -Werror
@@ -163,7 +167,7 @@ executable disciplina-witness
                      , cardano-sl-networking
                      , disciplina
                      , formatting
-                     , log-warper
+                     , loot-log
                      , network-transport-tcp
                      , time-units
                      , optparse-applicative
@@ -212,7 +216,7 @@ executable disciplina-educator
                      , disciplina
                      , cardano-sl-networking
                      , formatting
-                     , log-warper
+                     , loot-log
                      , network-transport-tcp
                      , optparse-applicative
                      , universum >= 1.0.0

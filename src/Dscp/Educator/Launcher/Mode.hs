@@ -11,17 +11,18 @@ module Dscp.Educator.Launcher.Mode
       -- * Implementations
     , EducatorContext (..)
     , EducatorRealMode
+    , ecWitnessCtx
     ) where
 
 import Universum
 
 import Control.Lens (makeLenses)
+import Loot.Log.Rio (LoggingIO)
 
 import Dscp.DB.Real.Types (NodeDB)
 import qualified Dscp.Launcher.Mode as Basic
 import qualified Dscp.Witness.Launcher as Witness
 import Ether.Internal (HasLens (..))
-import System.Wlog (HasLoggerName (..))
 
 ---------------------------------------------------------------------
 -- WorkMode class
@@ -48,7 +49,7 @@ data EducatorContext = EducatorContext
 
 makeLenses ''EducatorContext
 
-type EducatorRealMode = ReaderT EducatorContext IO
+type EducatorRealMode = Basic.RIO EducatorContext
 
 ---------------------------------------------------------------------
 -- Instances
@@ -57,6 +58,5 @@ type EducatorRealMode = ReaderT EducatorContext IO
 instance HasLens NodeDB EducatorContext NodeDB where
     lensOf = ecWitnessCtx . Witness.wcDB
 
-instance {-# OVERLAPPING #-} HasLoggerName EducatorRealMode where
-    askLoggerName = view (ecWitnessCtx . Witness.wcLoggerName)
-    modifyLoggerName name = local $ (ecWitnessCtx . Witness.wcLoggerName) %~ name
+instance HasLens LoggingIO EducatorContext LoggingIO where
+    lensOf = ecWitnessCtx . Witness.wcLogging

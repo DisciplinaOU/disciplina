@@ -5,9 +5,8 @@ module Main where
 
 import Universum
 
-import System.Wlog (logInfo, logWarning)
-
 import qualified Data.ByteString.Char8 as B8
+import Loot.Log (logInfo, logWarning)
 import qualified Network.Transport.TCP as TCP
 import Node (NodeAction (..), defaultNodeEnvironment, noReceiveDelay, node, nodeId,
              simpleNodeEndPoint)

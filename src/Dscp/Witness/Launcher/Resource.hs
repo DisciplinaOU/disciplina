@@ -7,7 +7,7 @@ module Dscp.Witness.Launcher.Resource
 
 import Universum
 
-import System.Wlog (LoggerName)
+import Loot.Log.Rio (LoggingIO)
 
 import Dscp.DB.Real (NodeDB)
 import Dscp.Launcher.Resource (AllocResource (..))
@@ -16,13 +16,12 @@ import Dscp.Witness.Launcher.Params (WitnessParams (..))
 -- | Datatype which contains resources required by witness node to start
 -- working.
 data WitnessResources = WitnessResources
-    { wrLoggerName :: !LoggerName
-    , wrDB         :: !NodeDB
+    { wrLogging :: !LoggingIO
+    , wrDB      :: !NodeDB
     }
 
 instance AllocResource WitnessParams WitnessResources where
     allocResource WitnessParams{..} = do
-        wrLoggerName <- allocResource wpLoggingParams
+        wrLogging <- allocResource wpLoggingParams
         wrDB <- allocResource wpDBParams
         return WitnessResources {..}
-

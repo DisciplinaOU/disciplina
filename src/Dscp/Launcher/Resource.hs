@@ -9,10 +9,15 @@ module Dscp.Launcher.Resource
 import Universum
 
 import Control.Monad.Component (ComponentM, buildComponent)
-import System.Wlog (LoggerConfig (..), LoggerName, maybeLogsDirB, parseLoggerConfig, productionB,
-                    removeAllHandlers, setupLogging, showTidB)
+import Data.Aeson (encode)
+import Fmt ((+|), (|+))
+import Loot.Log (NameSelector (GivenName), logDebug, modifyLogName)
+import Loot.Log.Rio (LoggingIO)
+import Loot.Log.Warper (LoggerConfig, prepareLogWarper)
+import System.Wlog (maybeLogsDirB, parseLoggerConfig, productionB, removeAllHandlers, showTidB)
 
 import Dscp.DB.Real (DBParams, NodeDB, closeNodeDB, openNodeDB)
+import Dscp.Launcher.Mode (runRIO)
 import Dscp.Launcher.Params (LoggingParams (..))
 
 ----------------------------------------------------------------------------
@@ -30,7 +35,7 @@ class AllocResource param resource | param -> resource, resource -> param where
 ----------------------------------------------------------------------------
 
 readLoggerConfig :: MonadIO m => Maybe FilePath -> m LoggerConfig
-readLoggerConfig = maybe (return productionB) parseLoggerConfig
+readLoggerConfig = maybe (pure productionB) parseLoggerConfig
 
 getRealLoggerConfig :: MonadIO m => LoggingParams -> m LoggerConfig
 getRealLoggerConfig LoggingParams{..} = do
@@ -40,13 +45,18 @@ getRealLoggerConfig LoggingParams{..} = do
     cfg <- readLoggerConfig lpConfigPath
     pure $ cfg <> cfgBuilder
 
-setupLoggers :: MonadIO m => LoggingParams -> m ()
-setupLoggers params = setupLogging Nothing =<< getRealLoggerConfig params
-
-instance AllocResource LoggingParams LoggerName where
+instance AllocResource LoggingParams LoggingIO where
     allocResource params = buildComponent "logging" pre fin
       where
-        pre = setupLoggers params $> lpDefaultName params
+        pre = do
+            config <- getRealLoggerConfig params
+            (config', logging) <- prepareLogWarper config (GivenName mempty)
+            printCfg logging config'
+            return logging
+        printCfg logging finalConfig =
+            runRIO logging $ modifyLogName (<> "log" <> "init") $ do
+                let configText = decodeUtf8 (encode finalConfig) :: Text
+                logDebug $ "Logging config: "+|configText|+""
         fin _ = removeAllHandlers
 
 ----------------------------------------------------------------------------

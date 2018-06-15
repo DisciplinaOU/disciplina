@@ -4,11 +4,11 @@ module Dscp.Launcher.Params
 
 import Universum
 
-import System.Wlog (LoggerName)
+import qualified Loot.Log as Log
 
 -- | Contains all parameters required for hierarchical logger initialization.
 data LoggingParams = LoggingParams
-    { lpDefaultName :: !LoggerName
+    { lpDefaultName :: !Log.Name
     -- ^ Logger name which will be used by default
     , lpDirectory   :: !(Maybe FilePath)
     -- ^ Path to log directory

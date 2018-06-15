@@ -5,7 +5,7 @@ module Main where
 
 import Universum
 
-import System.Wlog (logInfo, logWarning)
+import Loot.Log (logInfo, logWarning)
 
 import Dscp.DB (DBParams (..))
 import Dscp.Educator (EducatorParams (..), launchEducatorRealMode)
