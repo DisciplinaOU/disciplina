@@ -2,22 +2,11 @@ module Test.Dscp.DB.DSL.Interpret.SimpleTxDB where
 
 import Test.Common
 
-import Crypto.Error (CryptoFailable (..))
-import Data.Time.Clock (UTCTime)
-import Data.Time.Format (defaultTimeLocale, parseTimeOrError)
-import Dscp.Core (Assignment (..), AssignmentType (..), CourseId (..), Grade (..),
-                  SignedSubmission (..), SubjectId, Submission (..), SubmissionType (..),
-                  SubmissionWitness (..), mkAddr)
-import Dscp.Crypto (AbstractPK (..), AbstractSK (..), PublicKey, SecretKey, hash, sign)
+import Dscp.Core (CourseId (..), Grade (..), SubjectId)
+import Dscp.Crypto (PublicKey, SecretKey, hash)
 import Dscp.DB (Obj, ObjHashEq (..), QueryObj (..), QueryTx (..), QueryTxs (..), TxGrade (..),
                 TxIdEq (..), TxsFilterExpr (..), WHERE (..), runSimpleTxDBQuery)
 import Dscp.Educator (PrivateTx (..))
-
-import qualified Crypto.PubKey.Ed25519 as Ed25519
-import qualified Data.ByteString.Char8 as C
-
-type StudentKey = Char
-type EducatorKey = Char
 
 -- | Made up courses
 courseLinearAlg, courseCompScience1, courseCalculi, courseLogic :: CourseId
@@ -42,72 +31,42 @@ sIdHighSchoolAlgebra = 8
 sIdPiCalculus = 9
 sIdComputabilityTheory = 10
 
--- | Create a private transaction
-mkPrivateTx :: CourseId -> Grade -> StudentKey -> EducatorKey -> PrivateTx
-mkPrivateTx courseId grade studentKey educatorKey =
-    PrivateTx { _ptxSignedSubmission = mkSignedSubmission
-              , _ptxGrade = grade
-              , _ptxTime = time
-              }
-  where
-     time :: UTCTime
-     time = parseTimeOrError True defaultTimeLocale "%Y-%-m-%-d" "2018-03-04"
+studentAPubKey, studentBPubKey :: PublicKey
+studentAPubKey = mkPubKey 'a'
+studentBPubKey = mkPubKey 'b'
 
-     mkSignedSubmission :: SignedSubmission
-     mkSignedSubmission = SignedSubmission
-       { ssSubmission = mkSubmission
-       , ssWitness = mkSubmissionWitness
-       }
+educatorKKeyPair :: (PublicKey, SecretKey)
+educatorKKeyPair = mkKeyPair 'k'
 
-     mkSubmission :: Submission
-     mkSubmission = Submission
-       { sStudentId = mkAddr . fst $ mkKeyPair studentKey
-       , sType = Digital
-       , sAssignment = mkAssignment
-       }
+type StudentKeySeed = Char
+type EducatorKeySeed = Char
 
-     mkSubmissionWitness :: SubmissionWitness
-     mkSubmissionWitness = SubmissionWitness
-       { _swKey = fst (mkKeyPair educatorKey)
-       , _swSig = sign (snd (mkKeyPair educatorKey)) (hash mkSubmission)
-       }
-
-     mkAssignment :: Assignment
-     mkAssignment = Assignment
-       { aCourseId = courseId
-       , aType = Regular
-       , aAssignment = ""
-       }
-
-     -- Create key pair from seed
-     mkKeyPair :: Char -> (PublicKey, SecretKey)
-     mkKeyPair seed =
-       let (CryptoPassed x) = Ed25519.secretKey (C.replicate 32 seed)
-       in (AbstractPK (Ed25519.toPublic x), AbstractSK x)
-
--- | Grade student a C in course linear alg
-mkLinAlgPrivateTx :: StudentKey -> EducatorKey -> PrivateTx
-mkLinAlgPrivateTx = mkPrivateTx courseLinearAlg C
+-- | Grade student an C in course linear alg
+mkLinAlgPrivateTx :: StudentKeySeed -> EducatorKeySeed -> PrivateTx
+mkLinAlgPrivateTx sKeySeed eKeySeed =
+    let studentKey = mkPubKey sKeySeed
+        educatorKeyPair = mkKeyPair eKeySeed
+    in mkPrivateTx courseLinearAlg C studentKey educatorKeyPair
 
 -- | Educator 'k' grade student 'a' an A in course Computer science
 tx1 :: PrivateTx
-tx1 = mkPrivateTx courseCompScience1 B 'a' 'k'
+tx1 = mkPrivateTx courseCompScience1 B studentAPubKey educatorKKeyPair
 
 -- | Educator 'k' grade student 'a' an D by in course Computer science
 tx2 :: PrivateTx
-tx2 = mkPrivateTx courseCompScience1 D 'a' 'k'
+tx2 = mkPrivateTx courseCompScience1 D studentAPubKey educatorKKeyPair
 
 -- | Educator 'k' grade student 'b' an D in course Calculi
 tx3 :: PrivateTx
-tx3 = mkPrivateTx courseCalculi D 'a' 'k'
+tx3 = mkPrivateTx courseCalculi D studentAPubKey educatorKKeyPair
 
 -- | Educator 'k' grade studet 'b' a C in course Calculi
 tx4 :: PrivateTx
-tx4 = mkPrivateTx courseCalculi C 'a' 'k'
+tx4 = mkPrivateTx courseCalculi C studentAPubKey educatorKKeyPair
 
 -- | Educator 'k' grade student 'a' an D in course logic
 tx5 :: PrivateTx
-tx5 = mkPrivateTx courseLogic D 'a' 'k'
+tx5 = mkPrivateTx courseLogic D studentAPubKey educatorKKeyPair
 
 -- | Create a bunch of transactions where student gets graded D in course Linear alg
 txs :: [PrivateTx]

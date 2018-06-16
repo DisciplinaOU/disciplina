@@ -17,9 +17,10 @@ import Dscp.Educator.Serialise ()
 import Dscp.Educator.Txs (PrivateTx (..), PrivateTxAux (..), PrivateTxWitness (..))
 
 -- | Validate private block.
--- Block is valid if header matches body
--- and all transactions have valid signatures and signature public key
--- correspond to student public key
+-- Block is valid if
+-- 1. Header matches body
+-- 2. All transactions have valid signatures
+-- 3. Transaction signature public key correspond to student public key
 validate :: (MonadError [Text] m) => PrivateBlock -> m ()
 validate pb =
     let txs = pb ^. pbBody . pbbTxs
