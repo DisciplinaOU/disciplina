@@ -11,11 +11,10 @@ import Disciplina.DB (DBParams (..))
 import Disciplina.Educator (EducatorParams (..), launchEducatorRealMode)
 import Disciplina.Witness (WitnessParams (..))
 
-import qualified EducatorParams as Params
-
+import EducatorParams (EducatorOptParams (..), getEducatorParams)
 main :: IO ()
 main = do
-    Params.EducatorParams {..} <- Params.getEducatorParams
+    EducatorOptParams {..} <- getEducatorParams
     let educatorParams = EducatorParams
             { epWitnessParams = WitnessParams
                 { wpLoggingParams = epLogParams

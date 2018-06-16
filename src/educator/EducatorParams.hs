@@ -2,7 +2,7 @@
 -- | Command-line options and flags for Educator node
 
 module EducatorParams
-       ( EducatorParams (..)
+       ( EducatorOptParams (..)
        , getEducatorParams
        ) where
 
@@ -13,16 +13,16 @@ import Options.Applicative (Parser, execParser, fullDesc, helper, info, progDesc
 import Disciplina.CLI (dbPathParser, logParamsParser, versionOption)
 import Disciplina.Launcher (LoggingParams)
 
-data EducatorParams = EducatorParams
+data EducatorOptParams = EducatorOptParams
     { epDbPath    :: !FilePath
     , epLogParams :: !LoggingParams
     }
 
-educatorParamsParser :: Parser EducatorParams
+educatorParamsParser :: Parser EducatorOptParams
 educatorParamsParser =
-    EducatorParams <$> dbPathParser <*> logParamsParser "educator"
+    EducatorOptParams <$> dbPathParser <*> logParamsParser "educator"
 
-getEducatorParams :: IO EducatorParams
+getEducatorParams :: IO EducatorOptParams
 getEducatorParams =
     execParser $ info (helper <*> versionOption <*> educatorParamsParser) $
     fullDesc <> progDesc "Discplina educator node."
