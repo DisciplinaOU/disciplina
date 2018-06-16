@@ -5,7 +5,7 @@ module Main where
 
 import Universum
 
-import Loot.Log (logInfo, logWarning)
+import Loot.Log (logInfo, logWarning, modifyLogName)
 
 import Dscp.DB (DBParams (..))
 import Dscp.Educator (EducatorParams (..), launchEducatorRealMode)
@@ -22,6 +22,7 @@ main = do
                 , wpDBParams = DBParams{ dbpPath = epDbPath }
                 }
             }
-    launchEducatorRealMode educatorParams $ do
+    launchEducatorRealMode educatorParams $
+      modifyLogName (<> "node") $ do
         logInfo "This is the stub for Educator node executable"
         logWarning "Please don't forget to implement everything else!"

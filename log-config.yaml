@@ -1,0 +1,12 @@
+loggerTree:
+  handlers:
+    - file: node.log
+
+  severity: Info+
+
+  node:
+    severity: Debug+
+
+  init:
+    log:
+      severity: Debug+

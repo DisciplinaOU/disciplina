@@ -54,7 +54,7 @@ instance AllocResource LoggingParams LoggingIO where
             printCfg logging config'
             return logging
         printCfg logging finalConfig =
-            runRIO logging $ modifyLogName (<> "log" <> "init") $ do
+            runRIO logging $ modifyLogName (<> "init" <> "log") $ do
                 let configText = decodeUtf8 (encode finalConfig) :: Text
                 logDebug $ "Logging config: "+|configText|+""
         fin _ = removeAllHandlers
