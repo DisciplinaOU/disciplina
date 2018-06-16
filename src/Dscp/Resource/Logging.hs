@@ -1,38 +1,38 @@
-{-# LANGUAGE FunctionalDependencies #-}
-
--- | Common resources used by Disciplina nodes
-
-module Dscp.Launcher.Resource
-       ( AllocResource(..)
-       ) where
+-- | Logging resource.
+module Dscp.Resource.Logging
+    ( LoggingParams(..)
+    ) where
 
 import Universum
 
-import Control.Monad.Component (ComponentM, buildComponent)
+import Control.Monad.Component (buildComponent)
 import Data.Aeson (encode)
 import Fmt ((+|), (|+))
-import Loot.Log (NameSelector (GivenName), logDebug, modifyLogName)
+import Loot.Log (Name, NameSelector (GivenName), logDebug, modifyLogName)
 import Loot.Log.Rio (LoggingIO)
 import Loot.Log.Warper (LoggerConfig, prepareLogWarper)
-import System.Wlog (maybeLogsDirB, parseLoggerConfig, productionB, removeAllHandlers, showTidB)
+import System.Wlog (LoggerName, maybeLogsDirB, parseLoggerConfig, productionB, removeAllHandlers,
+                    showTidB)
 
-import Dscp.DB.Rocks.Real (RocksDB, RocksDBParams, closeNodeDB, openNodeDB)
-import Dscp.DB.SQLite (SQLiteDB, SQLiteParams, closeSQLiteDB, openSQLiteDB)
-import Dscp.Launcher.Params (LoggingParams (..))
 import Dscp.Launcher.Rio (runRIO)
+import Dscp.Resource.Class (AllocResource (..))
 
 ----------------------------------------------------------------------------
--- Resources
+-- Params
 ----------------------------------------------------------------------------
 
--- | Resources safe allocation.
-class AllocResource param resource | param -> resource, resource -> param where
-    -- | Construct a resource using given parameters. Automatic cleanup.
-    -- Use 'buildComponent' to construct function of this type.
-    allocResource :: param -> ComponentM resource
+-- | Contains all parameters required for hierarchical logger initialization.
+data LoggingParams = LoggingParams
+    { lpDefaultName :: !Name
+    -- ^ Logger name which will be used by default
+    , lpDirectory   :: !(Maybe FilePath)
+    -- ^ Path to log directory
+    , lpConfigPath  :: !(Maybe FilePath)
+    -- ^ Path to logger configuration
+    } deriving Show
 
 ----------------------------------------------------------------------------
--- Logging
+-- Other
 ----------------------------------------------------------------------------
 
 readLoggerConfig :: MonadIO m => Maybe FilePath -> m LoggerConfig
@@ -59,13 +59,3 @@ instance AllocResource LoggingParams LoggingIO where
                 let configText = decodeUtf8 (encode finalConfig) :: Text
                 logDebug $ "Logging config: "+|configText|+""
         fin _ = removeAllHandlers
-
-----------------------------------------------------------------------------
--- Bracket
-----------------------------------------------------------------------------
-
-instance AllocResource RocksDBParams RocksDB where
-    allocResource p = buildComponent "RocksDB" (openNodeDB p) closeNodeDB
-
-instance AllocResource SQLiteParams SQLiteDB where
-    allocResource p = buildComponent "SQLite DB" (openSQLiteDB p) closeSQLiteDB

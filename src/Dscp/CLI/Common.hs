@@ -4,8 +4,8 @@
 
 module Dscp.CLI.Common
        ( logParamsParser
-       , dbPathParser
-       , sqliteDbPathParser
+       , rocksParamsParser
+       , sqliteParamsParser
        , versionOption
        ) where
 
@@ -15,7 +15,9 @@ import Data.Version (showVersion)
 import qualified Loot.Log as Log
 import Options.Applicative (Parser, help, infoOption, long, metavar, optional, strOption, value)
 
-import Dscp.Launcher.Params (LoggingParams (..))
+import Dscp.DB.Rocks.Real.Types (RocksDBParams (..))
+import Dscp.DB.SQLite.Types (SQLiteDBLocation (..), SQLiteParams (..))
+import Dscp.Resource.Logging (LoggingParams (..))
 import Paths_disciplina (version)
 
 logParamsParser :: Log.Name -> Parser LoggingParams
@@ -33,16 +35,16 @@ logParamsParser lpDefaultName = do
         metavar "FILEPATH" <>
         help "Path to logs directory."
 
-dbPathParser :: Parser FilePath
-dbPathParser = strOption $
+rocksParamsParser :: Parser RocksDBParams
+rocksParamsParser = fmap RocksDBParams $ strOption $
     long "db-path" <>
     metavar "FILEPATH" <>
     help "Path to database directory for witness node." <>
     value "witness-db"
 
-sqliteDbPathParser :: Parser FilePath
-sqliteDbPathParser = strOption $
-    long "db-path" <>
+sqliteParamsParser :: Parser SQLiteParams
+sqliteParamsParser = fmap (SQLiteParams . SQLiteReal) $ strOption $
+    long "sql-path" <>
     metavar "FILEPATH" <>
     help "Path to database directory for educator's private data." <>
     value "educator-db"

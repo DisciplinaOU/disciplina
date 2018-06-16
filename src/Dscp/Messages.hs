@@ -81,4 +81,3 @@ serialisePacking = Msg.Packing
 
 -- | Choose 'SerialiseP' as default packing mechanism.
 type Packing = SerialiseP
-

@@ -1,4 +1,6 @@
-module Dscp.Educator.Launcher.Params where
+module Dscp.Educator.Launcher.Params
+    ( EducatorParams(..)
+    ) where
 
 import Dscp.DB.SQLite (SQLiteParams)
 import Dscp.Witness.Launcher.Params (WitnessParams)

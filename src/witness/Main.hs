@@ -1,4 +1,3 @@
-
 -- | Starting point for running a Witness node
 
 module Main where
@@ -10,26 +9,23 @@ import Loot.Log (logInfo, logWarning, modifyLogName)
 import qualified Network.Transport.TCP as TCP
 import Node (NodeAction (..), defaultNodeEnvironment, noReceiveDelay, node, nodeId,
              simpleNodeEndPoint)
+import Options.Applicative (Parser, execParser, fullDesc, help, helper, info, long, progDesc)
 import System.IO (getChar)
 import System.Random (mkStdGen)
 import UnliftIO.Async (async)
 
-import Dscp.DB (RocksDBParams (..))
+import Dscp.CLI (versionOption)
 import Dscp.Listeners (witnessListeners)
 import Dscp.Messages (serialisePacking)
 import Dscp.Transport (bracketTransportTCP)
-import Dscp.Witness (WitnessParams (..), launchWitnessRealMode)
+import Dscp.Witness (WitnessParams, launchWitnessRealMode, witnessParamsParser)
 import Dscp.Workers (witnessWorkers)
-import qualified WitnessParams as Params
+
 
 main :: IO ()
 main = do
-    Params.WitnessParams {..} <- Params.getWitnessParams
-    let witnessParams = WitnessParams
-            { wpLoggingParams = wpLogParams
-            , wpDBParams = RocksDBParams{ rdpPath = wpDbPath }
-            }
-    launchWitnessRealMode witnessParams $
+    witnessParams <- getWitnessParams
+    launchWitnessRealMode witnessParams $ do
       modifyLogName (<> "node") $ do
             logInfo "Starting node"
             -- TODO: This networking can't live without Production and Mockables
@@ -45,3 +41,9 @@ main = do
 
             logInfo "Hey, here log-warper works!"
             logWarning "Don't forget to implement everything else though!"
+
+
+getWitnessParams :: IO WitnessParams
+getWitnessParams =
+    execParser $ info (helper <*> versionOption <*> witnessParamsParser) $
+    fullDesc <> progDesc "Disciplina witness node."

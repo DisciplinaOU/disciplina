@@ -1,4 +1,3 @@
-
 -- | Helpers for starting an Witness node
 
 module Dscp.Witness.Launcher.Runner where
@@ -7,8 +6,8 @@ import Universum
 
 import Control.Monad.Component (runComponentM)
 
-import Dscp.Launcher.Resource (AllocResource (..))
 import Dscp.Launcher.Rio (runRIO)
+import Dscp.Resource.Class (AllocResource (..))
 import Dscp.Witness.Launcher.Mode (WitnessContext (..), WitnessRealMode)
 import Dscp.Witness.Launcher.Params (WitnessParams (..))
 import Dscp.Witness.Launcher.Resource (WitnessResources (..))

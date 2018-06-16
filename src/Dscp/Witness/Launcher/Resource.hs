@@ -1,4 +1,3 @@
-
 -- | Resources used by Witness node
 
 module Dscp.Witness.Launcher.Resource
@@ -10,7 +9,7 @@ import Universum
 import Loot.Log.Rio (LoggingIO)
 
 import Dscp.DB.Rocks.Real (RocksDB)
-import Dscp.Launcher.Resource (AllocResource (..))
+import Dscp.Resource (AllocResource (..))
 import Dscp.Witness.Launcher.Params (WitnessParams (..))
 
 -- | Datatype which contains resources required by witness node to start
