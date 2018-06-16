@@ -15,78 +15,78 @@ cabal-version:       >=1.10
 
 library
   exposed-modules:
-                       Disciplina.Witness
-                     , Disciplina.DB  
-                     , Disciplina.Launcher
-                     , Disciplina.Listeners
-                     , Disciplina.Workers
-                     , Disciplina.Transport
-                     , Disciplina.Messages
-                     , Disciplina.Educator
-                     , Disciplina.Core
-                     , Disciplina.Crypto
-                     , Disciplina.CLI
-                     , Disciplina.Util
+                       Dscp.Witness
+                     , Dscp.DB  
+                     , Dscp.Launcher
+                     , Dscp.Listeners
+                     , Dscp.Workers
+                     , Dscp.Transport
+                     , Dscp.Messages
+                     , Dscp.Educator
+                     , Dscp.Core
+                     , Dscp.Crypto
+                     , Dscp.CLI
+                     , Dscp.Util
   other-modules:
                        Paths_disciplina
 
-                     , Disciplina.Accounts
-                     , Disciplina.Accounts.Account
+                     , Dscp.Accounts
+                     , Dscp.Accounts.Account
 
-                     , Disciplina.DB.Class
-                     , Disciplina.DB.Real
-                     , Disciplina.DB.Real.Types
-                     , Disciplina.DB.Real.Functions
-                     , Disciplina.Launcher.Mode
-                     , Disciplina.Launcher.Params
-                     , Disciplina.Launcher.Resource
-                     , Disciplina.Listeners.Listener
-                     , Disciplina.Workers.Worker
-                     , Disciplina.Transport.TCP
+                     , Dscp.DB.Class
+                     , Dscp.DB.Real
+                     , Dscp.DB.Real.Types
+                     , Dscp.DB.Real.Functions
+                     , Dscp.Launcher.Mode
+                     , Dscp.Launcher.Params
+                     , Dscp.Launcher.Resource
+                     , Dscp.Listeners.Listener
+                     , Dscp.Workers.Worker
+                     , Dscp.Transport.TCP
 
                      -- DSL
-                     , Disciplina.DB.DSL.Class
-                     , Disciplina.DB.DSL.Interpret.IO
-                     , Disciplina.DB.DSL.Interpret.SimpleTxDB
+                     , Dscp.DB.DSL.Class
+                     , Dscp.DB.DSL.Interpret.IO
+                     , Dscp.DB.DSL.Interpret.SimpleTxDB
 
                      -- Core datatypes and functions
-                     , Disciplina.Core.ATG
-                     , Disciplina.Core.Serialise
-                     , Disciplina.Core.Types
+                     , Dscp.Core.ATG
+                     , Dscp.Core.Serialise
+                     , Dscp.Core.Types
 
                      -- Witness node model
-                     , Disciplina.Witness.Internal
-                     , Disciplina.Witness.Instances
-                     , Disciplina.Witness.Launcher
-                     , Disciplina.Witness.Launcher.Mode
-                     , Disciplina.Witness.Launcher.Params
-                     , Disciplina.Witness.Launcher.Resource
-                     , Disciplina.Witness.Launcher.Runner
+                     , Dscp.Witness.Internal
+                     , Dscp.Witness.Instances
+                     , Dscp.Witness.Launcher
+                     , Dscp.Witness.Launcher.Mode
+                     , Dscp.Witness.Launcher.Params
+                     , Dscp.Witness.Launcher.Resource
+                     , Dscp.Witness.Launcher.Runner
 
                      -- Educator node model
-                     , Disciplina.Educator.Block
-                     , Disciplina.Educator.Launcher
-                     , Disciplina.Educator.Launcher.Mode
-                     , Disciplina.Educator.Launcher.Params
-                     , Disciplina.Educator.Launcher.Resource
-                     , Disciplina.Educator.Launcher.Runner
-                     , Disciplina.Educator.Txs
-                     , Disciplina.Educator.Serialise
-                     , Disciplina.Educator.State
+                     , Dscp.Educator.Block
+                     , Dscp.Educator.Launcher
+                     , Dscp.Educator.Launcher.Mode
+                     , Dscp.Educator.Launcher.Params
+                     , Dscp.Educator.Launcher.Resource
+                     , Dscp.Educator.Launcher.Runner
+                     , Dscp.Educator.Txs
+                     , Dscp.Educator.Serialise
+                     , Dscp.Educator.State
 
-                     , Disciplina.Crypto.ByteArray
-                     , Disciplina.Crypto.Hash
-                     , Disciplina.Crypto.Hash.Class
-                     , Disciplina.Crypto.Hash.Cryptonite
-                     , Disciplina.Crypto.Hash.Hashable
-                     , Disciplina.Crypto.Impl
-                     , Disciplina.Crypto.MerkleTree
-                     , Disciplina.Crypto.Serialise
-                     , Disciplina.Crypto.Signing
-                     , Disciplina.Crypto.Signing.Class
-                     , Disciplina.Crypto.Signing.Cryptonite
+                     , Dscp.Crypto.ByteArray
+                     , Dscp.Crypto.Hash
+                     , Dscp.Crypto.Hash.Class
+                     , Dscp.Crypto.Hash.Cryptonite
+                     , Dscp.Crypto.Hash.Hashable
+                     , Dscp.Crypto.Impl
+                     , Dscp.Crypto.MerkleTree
+                     , Dscp.Crypto.Serialise
+                     , Dscp.Crypto.Signing
+                     , Dscp.Crypto.Signing.Class
+                     , Dscp.Crypto.Signing.Cryptonite
 
-                     , Disciplina.CLI.Common
+                     , Dscp.CLI.Common
   -- other-extensions:
   build-depends:       base >= 4.9 && < 5
                      , autoexporter
@@ -254,10 +254,10 @@ test-suite disciplina-test
   main-is:                  Main.hs
   other-modules:
                             Test.Common
-                            Test.Disciplina.DB.DSL.Interpret.SimpleTxDB
-                            Test.Disciplina.Witness
-                            Test.Disciplina.Core.ATG
-                            Test.Disciplina.Crypto.MerkleTree
+                            Test.Dscp.DB.DSL.Interpret.SimpleTxDB
+                            Test.Dscp.Witness
+                            Test.Dscp.Core.ATG
+                            Test.Dscp.Crypto.MerkleTree
   build-depends:             base >= 0.4 && < 5
                            , AVL
                            , bytestring

@@ -10,8 +10,8 @@ import Universum
 
 import Options.Applicative (Parser, execParser, fullDesc, help, helper, info, long, progDesc)
 
-import Disciplina.CLI (dbPathParser, logParamsParser, versionOption)
-import Disciplina.Launcher (LoggingParams)
+import Dscp.CLI (dbPathParser, logParamsParser, versionOption)
+import Dscp.Launcher (LoggingParams)
 
 data WitnessParams = WitnessParams
     { wpDbPath    :: !FilePath

@@ -10,8 +10,8 @@ import Universum
 
 import Options.Applicative (Parser, execParser, fullDesc, helper, info, progDesc)
 
-import Disciplina.CLI (dbPathParser, logParamsParser, versionOption)
-import Disciplina.Launcher (LoggingParams)
+import Dscp.CLI (dbPathParser, logParamsParser, versionOption)
+import Dscp.Launcher (LoggingParams)
 
 data EducatorParams = EducatorParams
     { epDbPath    :: !FilePath
