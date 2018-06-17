@@ -11,8 +11,7 @@ import Fmt ((+|), (|+))
 import Loot.Log (Name, NameSelector (GivenName), logDebug, modifyLogName)
 import Loot.Log.Rio (LoggingIO)
 import Loot.Log.Warper (LoggerConfig, prepareLogWarper)
-import System.Wlog (LoggerName, maybeLogsDirB, parseLoggerConfig, productionB, removeAllHandlers,
-                    showTidB)
+import System.Wlog (maybeLogsDirB, parseLoggerConfig, productionB, removeAllHandlers, showTidB)
 
 import Dscp.Launcher.Rio (runRIO)
 import Dscp.Resource.Class (AllocResource (..))

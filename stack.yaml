@@ -8,7 +8,6 @@ nix:
   shell-file: shell.nix
 
 extra-deps:
-- ether-0.5.1.0
 - log-warper-1.8.11
 - pretty-tree-0.1.0.0
 - serokell-util-0.8.0
@@ -34,7 +33,7 @@ extra-deps:
 # These three are needed for cardano-sl-networking
 - git: https://github.com/serokell/network-transport-tcp
   commit: 3d56652123bd296dc759cd31947eb2a17924e68a # csl-0.6.0
-  
+
 - git: https://github.com/serokell/network-transport
   commit: 018a50b9042c2115c3ec9c9fd5ca5f28737dd29c
 
@@ -53,10 +52,12 @@ extra-deps:
   commit: 2dd6b4ffdc4edb86b477273ee3c8416a1520f4e1
 
 - git: https://github.com/serokell/lootbox.git
-  commit: f287dd6cfe29707b28cc0418e8aa099de3bfbe77
+  commit: a3d6b30fae4ff142b7a0697f07af9d4ca055b1a1
   subdirs:
-    - code/prelude
+    - code/base
     - code/log
+    - code/network
+    - code/prelude
 
 # Forced by lootbox #
 - base-noprelude-4.10.1.0

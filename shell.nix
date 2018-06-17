@@ -22,6 +22,7 @@ in
     buildInputs = [
       openssl
       zlib
+      zeromq
       binutils
       git
       rocksdb

@@ -1,3 +1,5 @@
+{-# LANGUAGE ApplicativeDo #-}
+
 -- | CLI parameters of witness.
 
 module Dscp.Witness.CLI
@@ -8,9 +10,12 @@ import Universum
 
 import Options.Applicative (Parser)
 
-import Dscp.CLI.Common (logParamsParser, rocksParamsParser)
+import Dscp.CLI.Common (logParamsParser, netServParamsParser, rocksParamsParser)
 import Dscp.Witness.Launcher.Params (WitnessParams (..))
 
 witnessParamsParser :: Parser WitnessParams
-witnessParamsParser =
-    WitnessParams <$> logParamsParser "witness" <*> rocksParamsParser
+witnessParamsParser = do
+    wpLoggingParams <- logParamsParser "witness"
+    wpDBParams <- rocksParamsParser
+    wpNetworkParams <- netServParamsParser
+    pure $ WitnessParams {..}

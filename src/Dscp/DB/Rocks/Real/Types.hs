@@ -10,12 +10,12 @@ import Universum
 
 import Control.Lens (makeLenses)
 import qualified Database.RocksDB as Rocks
-import Ether.Internal (HasLens)
+import Loot.Base.HasLens (HasLens')
 
 -- | Set of constraints necessary to operate on real DB.
 type MonadRealDB ctx m =
     ( MonadReader ctx m
-    , HasLens RocksDB ctx RocksDB
+    , HasLens' ctx RocksDB
     , MonadIO m
     , Monad m
     )

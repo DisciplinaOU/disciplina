@@ -17,8 +17,8 @@ import Dscp.Witness.Launcher.Runner (formWitnessContext)
 formEducatorContext :: EducatorResources -> EducatorContext
 formEducatorContext EducatorResources{..} =
     EducatorContext
-    { _ecWitnessCtx = formWitnessContext erWitnessResources
-    , _ecDB = erDB
+    { _ecWitnessCtx = formWitnessContext _erWitnessResources
+    , _ecDB = _erDB
     }
 
 runEducatorRealMode :: EducatorContext -> EducatorRealMode a -> IO a

@@ -8,8 +8,8 @@ module Dscp.Transport.TCP
 import Universum
 
 import Data.Time.Units (Microsecond)
-import Ether.Internal (HasLens (..))
 import Fmt ((+||), (||+))
+import Loot.Base.HasLens (HasLens (..))
 import Loot.Log (logError, modifyLogName)
 import Loot.Log.Rio (LoggingIO)
 

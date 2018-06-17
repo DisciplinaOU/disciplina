@@ -17,7 +17,6 @@ library:
     - componentm
     - cryptonite
     - data-default
-    - ether
     - exceptions
     - formatting
     - fmt
@@ -25,7 +24,9 @@ library:
     - hashable
     - lens
     - lifted-async
+    - loot-base
     - loot-log
+    - loot-network
     - log-warper
     - memory
     - monad-control

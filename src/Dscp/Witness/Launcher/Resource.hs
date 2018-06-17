@@ -8,19 +8,38 @@ import Universum
 
 import Loot.Log.Rio (LoggingIO)
 
+import Control.Lens (makeLenses)
+import Loot.Base.HasLens (HasLens (..))
+import Loot.Network.ZMQ (ZTGlobalEnv, ZTNetCliEnv, ZTNetServEnv)
+
 import Dscp.DB.Rocks.Real (RocksDB)
-import Dscp.Resource (AllocResource (..))
+import Dscp.Resource (AllocResource (..), NetServResources)
 import Dscp.Witness.Launcher.Params (WitnessParams (..))
 
 -- | Datatype which contains resources required by witness node to start
 -- working.
 data WitnessResources = WitnessResources
-    { wrLogging :: !LoggingIO
-    , wrDB      :: !RocksDB
+    { _wrLogging :: !LoggingIO
+    , _wrDB      :: !RocksDB
+    , _wrNetwork :: !NetServResources
     }
+
+makeLenses ''WitnessResources
+
+instance HasLens LoggingIO WitnessResources LoggingIO where
+    lensOf = wrLogging
+instance HasLens RocksDB WitnessResources RocksDB where
+    lensOf = wrDB
+instance HasLens ZTGlobalEnv WitnessResources ZTGlobalEnv where
+    lensOf = wrNetwork . lensOf @ZTGlobalEnv
+instance HasLens ZTNetCliEnv WitnessResources ZTNetCliEnv where
+    lensOf = wrNetwork . lensOf @ZTNetCliEnv
+instance HasLens ZTNetServEnv WitnessResources ZTNetServEnv where
+    lensOf = wrNetwork . lensOf @ZTNetServEnv
 
 instance AllocResource WitnessParams WitnessResources where
     allocResource WitnessParams{..} = do
-        wrLogging <- allocResource wpLoggingParams
-        wrDB <- allocResource wpDBParams
+        _wrLogging <- allocResource wpLoggingParams
+        _wrDB <- allocResource wpDBParams
+        _wrNetwork <- allocResource wpNetworkParams
         return WitnessResources {..}

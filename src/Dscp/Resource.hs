@@ -4,4 +4,5 @@ module Dscp.Resource (module M) where
 
 import Dscp.Resource.Class as M
 import Dscp.Resource.Logging as M
+import Dscp.Resource.Network as M
 import Dscp.Resource.Other ()

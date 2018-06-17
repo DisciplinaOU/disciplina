@@ -15,7 +15,7 @@ module Dscp.DB.Rocks.Real.Functions
 import Universum
 
 import qualified Database.RocksDB as Rocks
-import Ether.Internal (HasLens (..))
+import Loot.Base.HasLens (HasLens (..), HasLens')
 
 import Dscp.DB.Rocks.Class (MonadDB (..), MonadDBRead (..))
 import Dscp.DB.Rocks.Real.Types (DB (..), MonadRealDB, RocksDB (..), RocksDBParams (..), rdDatabase)
@@ -64,7 +64,7 @@ rocksDelete k DB {..} = Rocks.delete rocksDB rocksWriteOpts k
 -- Instances
 ------------------------------------------------------------
 
-getDB :: (MonadReader ctx m, HasLens RocksDB ctx RocksDB) => m DB
+getDB :: (MonadReader ctx m, HasLens' ctx RocksDB) => m DB
 getDB = view $ lensOf @RocksDB . rdDatabase
 
 instance MonadRealDB ctx m => MonadDBRead m where

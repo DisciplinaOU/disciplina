@@ -12,13 +12,12 @@ import Dscp.Witness.Launcher.Mode (WitnessContext (..), WitnessRealMode)
 import Dscp.Witness.Launcher.Params (WitnessParams (..))
 import Dscp.Witness.Launcher.Resource (WitnessResources (..))
 
+-- TODO Maybe this function should be "-> IO WitnessContext" and other
+-- non-resource context parts can be allocated here.
 -- | Make up Witness context from dedicated pack of allocated resources.
 formWitnessContext :: WitnessResources -> WitnessContext
-formWitnessContext WitnessResources{..} =
-    WitnessContext
-    { _wcLogging = wrLogging
-    , _wcDB = wrDB
-    }
+formWitnessContext res@WitnessResources{..} =
+    WitnessContext { _wcResources = res }
 
 runWitnessRealMode :: WitnessContext -> WitnessRealMode a -> IO a
 runWitnessRealMode = runRIO
