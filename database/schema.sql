@@ -26,10 +26,10 @@ create table if not exists Courses (
 -- Creating 'Subjects' table.
 --
 create table if not exists Subjects (
-    id         INTEGER,
+    id         INTEGER  not null,
     course_id  INTEGER  not null,
 
-    primary key (id asc),
+    primary key (id, course_id),
     foreign key (course_id) references Courses (id)
 );
 
@@ -48,9 +48,9 @@ create table if not exists Students (
 
 -- Creating 'StudentCourses' table.
 --
--- [Appears to be] many-to-many ref between Students and Cources.
+-- [Appears to be] many-to-many ref between Students and Courses.
 --
-create table if not exists StudentCources (
+create table if not exists StudentCourses (
     student_addr  BLOB     not null,
     course_id     INTEGER  not null,
 
@@ -63,16 +63,16 @@ create table if not exists StudentCources (
 
 ) without rowid;
 
-create index if not exists StudentCources_student_addr on StudentCources (student_addr);
-create index if not exists StudentCources_course_id    on StudentCources (course_id);
+create index if not exists StudentCourses_student_addr on StudentCourses (student_addr);
+create index if not exists StudentCourses_course_id    on StudentCourses (course_id);
 
 -- Creating 'Assignments' table.
 --
 create table if not exists Assignments (
-    hash       BLOB     not null,
-    course_id  INTEGER  not null,
-    type       INTEGER  not null,
-    desc       TEXT     null,
+    hash           BLOB     not null,
+    course_id      INTEGER  not null,
+    contents_hash  BLOB  not null,
+    desc           TEXT     null,
 
     primary key (hash),
     foreign key (course_id) references Courses(id)
@@ -105,12 +105,10 @@ create table if not exists Submissions (
     hash             BLOB     not null,
     student_addr     BLOB     not null,
     assignment_hash  BLOB     not null,
-    type             INTEGER  not null,
+    contents_hash    BLOB     not null,
     signature        BLOB     not null,
 
     primary key (hash),
-    foreign key (student_addr)    references Students    (addr),
-    foreign key (assignment_hash) references Assignments (hash),
 
     -- Composite foreign key.
     -- We may not need it, actually, but it may help us.
@@ -130,6 +128,7 @@ create table if not exists Transactions (
     submission_hash  BLOB     not null,
     grade            INTEGER  not null,
     time             TIME     not null,
+    idx              INTEGER  not null,    -- Index inside a block. Can be 0 or -1 for every mempool transaction.
 
     primary key (hash),
     foreign key (submission_hash) references Submissions(hash)
@@ -139,20 +138,21 @@ create table if not exists Transactions (
 create index if not exists Transactions_submission_hash on Transactions (submission_hash);
 
 -- Creating 'Blocks' table.
---
+-- We need `idx` field to be able to perform queries like "get N last blocks" efficiently.
 create table if not exists Blocks (
-    hash       BLOB  not null,
-    time       TIME  not null,
-    prev_hash  BLOB  null,
-    atg_delta  BLOB  not null,
-    mroot      BLOB  not null,
-    mtree      BLOB  not null,
+    idx        INTEGER          ,
+    hash       BLOB     not null,
+    time       TIME     not null,
+    prev_hash  BLOB     null,
+    atg_delta  BLOB     not null,
+    mroot      BLOB     not null,
+    mtree      BLOB     not null,
 
-    primary key (hash),
-    foreign key (prev_hash) references Blocks(hash)
+    primary key (idx asc)
 
 ) without rowid;
 
+create index if not exists Blocks_hash on Blocks (hash);
 create index if not exists Blocks_prev_hash on Blocks (prev_hash);
 
 -- Creating 'Educator' table.
@@ -166,16 +166,14 @@ create table if not exists Educator (
 -- Creating 'BlocksTxs' table.
 --
 create table if not exists BlockTxs (
-    block_hash        BLOB  not null,
-    transaction_hash  BLOB  not null,
+    blk_idx  INTEGER  not null,
+    tx_hash  BLOB     not null,
 
-    primary key (block_hash, transaction_hash),
+    primary key (tx_hash),  -- A transaction can belong only to one block
 
-    foreign key (block_hash)       references Blocks      (hash),
-    foreign key (transaction_hash) references Transactions(hash)
+    foreign key (blk_idx) references Blocks      (idx),
+    foreign key (tx_hash) references Transactions(hash)
 
 ) without rowid;
 
-create index if not exists BlockTxs_block_hash       on BlockTxs (block_hash);
-create index if not exists BlockTxs_transaction_hash on BlockTxs (transaction_hash);
-
+create index if not exists BlockTxs_blk_idx on BlockTxs (blk_idx);
