@@ -4,7 +4,8 @@ import Test.Common
 
 import Dscp.Core (ATGDelta (..), CourseId (..), Grade (..))
 import Dscp.Crypto (PublicKey, SecretKey, fromFoldable, getMerkleRoot, hash, sign)
-import Dscp.Educator ()
+import Dscp.Educator (PrivateBlock (..), PrivateBlockBody (..), PrivateBlockHeader (..),
+                      PrivateTxAux (..), PrivateTxWitness (..), genesisHeaderHash, validate)
 
 import qualified Data.Map.Strict as M
 

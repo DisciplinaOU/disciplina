@@ -22,15 +22,15 @@ import Data.List (unlines)
 import GHC.Show (Show (show))
 import Universum hiding (show, unlines)
 
-import Data.Time.Format (defaultTimeLocale, parseTimeOrError)
 import Data.Time.Clock (UTCTime)
+import Data.Time.Format (defaultTimeLocale, parseTimeOrError)
 
 import Crypto.Error (CryptoFailable (..))
-import Disciplina.Educator (PrivateTx (..))
-import Disciplina.Crypto (AbstractPK (..), AbstractSK (..), PublicKey, SecretKey, hash, sign)
-import Disciplina.Core (CourseId (..), Grade (..), SignedSubmission (..),
-                        Assignment (..), AssignmentType (..), Submission (..),
-                        SubmissionType (..), SubmissionWitness (..), mkAddr)
+import Dscp.Core (Assignment (..), AssignmentType (..), CourseId (..), Grade (..),
+                  SignedSubmission (..), Submission (..), SubmissionType (..),
+                  SubmissionWitness (..), mkAddr)
+import Dscp.Crypto (AbstractPK (..), AbstractSK (..), PublicKey, SecretKey, hash, sign)
+import Dscp.Educator (PrivateTx (..))
 
 import qualified Crypto.PubKey.Ed25519 as Ed25519
 import qualified Data.ByteString.Char8 as C
