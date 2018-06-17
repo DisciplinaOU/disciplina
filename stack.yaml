@@ -18,13 +18,6 @@ extra-deps:
 - teardown-0.5.0.0
 - unliftio-0.2.7.0
 
-- git: https://github.com/serokell/kademlia.git
-  commit: 7120bb4d28e708acd52dfd61d3dca7914fac7d7f # master
-
-- git: https://github.com/thoughtpolice/hs-ed25519
-  # We're waiting on next release
-  commit: da4247b5b3420120e20451e6a252e2a2ca15b43c
-
 - git: git@github.com:serokell/auth-data-structures.git
   commit: 3bd0cbc7ac0408f897f11746dbd245e3f8437bbb
 
