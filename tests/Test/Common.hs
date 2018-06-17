@@ -35,8 +35,8 @@ import Data.Traversable (for)
 import System.IO.Unsafe
 
 import qualified Data.Tree.AVL as AVL
-import qualified Disciplina.Crypto as Crypto
-import qualified Disciplina.WorldState as World
+import qualified Dscp.Crypto as Crypto
+import qualified Dscp.Witness as Witness
 --import qualified Debug.Trace           as Debug
 
 import Test.Hspec as T (Expectation, Spec, describe, it, shouldBe, shouldSatisfy, specify)
@@ -56,12 +56,12 @@ f .=. g = \a ->
 infixr 5 .=.
 
 data Sandbox = Sandbox
-    { sWorld        :: World.WorldState
-    , sTransaction  :: [World.WithProof World.Transaction]
-    , alice         :: World.Entity
-    , eve           :: World.Entity
-    , bob           :: World.Entity
-    , initialAmount :: World.Amount
+    { sWorld        :: Witness.WorldState
+    , sTransaction  :: [Witness.WithProof Witness.Transaction]
+    , alice         :: Witness.Entity
+    , eve           :: Witness.Entity
+    , bob           :: Witness.Entity
+    , initialAmount :: Witness.Amount
     }
 
 instance Show Sandbox where
@@ -70,7 +70,7 @@ instance Show Sandbox where
           [ "Sandbox { world = "
           , show world
           , ", transactions = \n"
-          , Prelude.unlines $ map (^.World.wpBody.to Prelude.show.to ("\t" ++)) transactions
+          , Prelude.unlines $ map (^.Witness.wpBody.to Prelude.show.to ("\t" ++)) transactions
           , ", alice = "
           , show a
           , ", eve = "
@@ -97,41 +97,41 @@ instance Arbitrary Sandbox where
       where
         generateTransactions world actor rest = do
             pairs <- vectorOf 2 $ vectorOf 5 $ oneof
-                [ World.TransferTokens <$> elements rest <*> pure 1
-                , World.Publicate      <$> arbitrary
+                [ Witness.TransferTokens <$> elements rest <*> pure 1
+                , Witness.Publicate      <$> arbitrary
                 ]
 
-            let server = World.Server world
+            let server = Witness.Server world
 
             return $ unsafePerformPureWorldT actor server $ do
                 for pairs $ \changes -> do
-                    transaction <- World.plan changes
-                    World.playTransaction transaction
+                    transaction <- Witness.plan changes
+                    Witness.playTransaction transaction
 
-        --accountCreation :: Integer -> [World.Entity] -> Gen [World.Change]
+        --accountCreation :: Integer -> [Witness.Entity] -> Gen [Witness.Change]
         --accountCreation 0     _           = return []
         --accountCreation count excludedSet = do
         --    entity <- noneof excludedSet
         --    rest   <- accountCreation (count - 1) (entity : excludedSet)
-        --    return (World.CreateAccount entity def : rest)
+        --    return (Witness.CreateAccount entity def : rest)
 
-fairWorld :: World.Amount -> [World.Entity] -> World.WorldState
+fairWorld :: Witness.Amount -> [Witness.Entity] -> Witness.WorldState
 fairWorld amount actors =
     let
       (world, _) = unsafePerformIO $ do
-        (AVL.runOnEmptyCache :: AVL.HashMapStore World.Hash' AVL.NullStore World.WorldState -> IO (World.WorldState, AVL.Storage World.Hash')) $ do
-            World.evalWorldT def (World.Server World.emptyWorldState) $ do
-                World.giveEach actors amount
+        (AVL.runOnEmptyCache :: AVL.HashMapStore Witness.Hash' AVL.NullStore Witness.WorldState -> IO (Witness.WorldState, AVL.Storage Witness.Hash')) $ do
+            Witness.evalWorldT def (Witness.Server Witness.emptyWorldState) $ do
+                Witness.giveEach actors amount
 
     in
         world
 
-unsafePerformPureWorldT :: forall side a . World.Entity -> side -> World.WorldT side (AVL.HashMapStore World.Hash' AVL.NullStore) a -> a
+unsafePerformPureWorldT :: forall side a . Witness.Entity -> side -> Witness.WorldT side (AVL.HashMapStore Witness.Hash' AVL.NullStore) a -> a
 unsafePerformPureWorldT who side action =
     let
       (a, _) = unsafePerformIO $ do
         AVL.runOnEmptyCache $ do
-            World.evalWorldT who side $ do
+            Witness.evalWorldT who side $ do
                 action
     in
         a
@@ -150,17 +150,17 @@ vectorUniqueOf = loop []
         next <- noneof acc
         loop (next : acc) (n - 1)
 
-instance Arbitrary World.Entity where
-  arbitrary = World.Entity <$> (noneof [0])
+instance Arbitrary Witness.Entity where
+  arbitrary = Witness.Entity <$> (noneof [0])
 
-instance Arbitrary World.Publication where
+instance Arbitrary Witness.Publication where
   arbitrary = Crypto.unsafeHash <$> (arbitrary :: Gen Int)
 
 worldTProperty
     :: Testable prop
     => side
-    -> World.WorldT side (AVL.HashMapStore World.Hash' AVL.NullStore) prop
+    -> Witness.WorldT side (AVL.HashMapStore Witness.Hash' AVL.NullStore) prop
     -> Property
 worldTProperty side what = ioProperty $ do
-    (prop, _) <- AVL.runOnEmptyCache $ World.evalWorldT def side what
+    (prop, _) <- AVL.runOnEmptyCache $ Witness.evalWorldT def side what
     return prop
