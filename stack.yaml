@@ -1,5 +1,5 @@
 resolver:
-    https://raw.githubusercontent.com/serokell/lootbox/db765836e61f11350519d95ca3a0cb74d0b5a94c/snapshot.yaml
+    https://raw.githubusercontent.com/serokell/lootbox/e445a9729e6d203234e9a3135d9c1fc99949da39/snapshot.yaml
 
 packages:
 - '.'
