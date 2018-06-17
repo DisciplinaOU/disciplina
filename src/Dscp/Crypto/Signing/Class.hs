@@ -2,7 +2,7 @@
 
 -- | Abstract interface for a signature scheme
 
-module Disciplina.Crypto.Signing.Class
+module Dscp.Crypto.Signing.Class
        ( SignatureScheme (..)
        , HasAbstractSignature (..)
        , abstractSign

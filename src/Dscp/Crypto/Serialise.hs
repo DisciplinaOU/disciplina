@@ -1,8 +1,8 @@
 {-# LANGUAGE TypeApplications #-}
 
--- | Instances for binary serialisation for 'Disciplina.Crypto' datatypes
+-- | Instances for binary serialisation for 'Dscp.Crypto' datatypes
 
-module Disciplina.Crypto.Serialise
+module Dscp.Crypto.Serialise
        ( Raw
        ) where
 
@@ -14,9 +14,9 @@ import Codec.Serialise.Encoding (encodeBytes)
 import Data.ByteArray (convert)
 import qualified Data.ByteString.Lazy as LBS
 
-import Disciplina.Crypto.ByteArray (FromByteArray (..))
-import Disciplina.Crypto.Hash (AbstractHash (..), HasAbstractHash (..), HashFunc (..))
-import Disciplina.Crypto.Signing (AbstractPK (..), AbstractSK (..), AbstractSig (..),
+import Dscp.Crypto.ByteArray (FromByteArray (..))
+import Dscp.Crypto.Hash (AbstractHash (..), HasAbstractHash (..), HashFunc (..))
+import Dscp.Crypto.Signing (AbstractPK (..), AbstractSK (..), AbstractSig (..),
                                   HasAbstractSignature (..), SignatureScheme (..))
 
 -- | 'Serialise' instance for any 'ByteArrayStruct' (including underlying

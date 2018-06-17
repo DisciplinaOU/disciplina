@@ -1,4 +1,4 @@
-module Disciplina.DB.Class where
+module Dscp.DB.Class where
 
 import Universum
 

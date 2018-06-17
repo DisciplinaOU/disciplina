@@ -1,7 +1,7 @@
 
 {-# LANGUAGE DeriveAnyClass #-}
 
-module Disciplina.Witness.Internal where
+module Dscp.Witness.Internal where
 
 import qualified Prelude (show)
 
@@ -15,9 +15,9 @@ import Data.Default (Default, def)
 import qualified Data.Tree.AVL as AVL
 import qualified Debug.Trace as Debug
 
-import Disciplina.Accounts
-import Disciplina.Crypto (Hash, unsafeHash)
-import Disciplina.Witness.Instances ()
+import Dscp.Accounts
+import Dscp.Crypto (Hash, unsafeHash)
+import Dscp.Witness.Instances ()
 
 -- | Hash without a phantom type parameter. Temporary.
 type Hash' = Hash ()

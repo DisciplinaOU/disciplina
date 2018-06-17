@@ -1,4 +1,4 @@
 
-module Disciplina.Listeners (module M) where
+module Dscp.Listeners (module M) where
 
-import Disciplina.Listeners.Listener as M
+import Dscp.Listeners.Listener as M

@@ -1,7 +1,7 @@
 
-module Disciplina.Witness (module M) where
+module Dscp.Witness (module M) where
 
-import Disciplina.Accounts.Account as M
-import Disciplina.Witness.Instances ()
-import Disciplina.Witness.Internal as M
-import Disciplina.Witness.Launcher as M
+import Dscp.Accounts.Account as M
+import Dscp.Witness.Instances ()
+import Dscp.Witness.Internal as M
+import Dscp.Witness.Launcher as M

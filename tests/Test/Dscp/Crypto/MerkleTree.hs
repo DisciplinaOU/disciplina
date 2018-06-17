@@ -1,7 +1,7 @@
-module Test.Disciplina.Crypto.MerkleTree where
+module Test.Dscp.Crypto.MerkleTree where
 
 import Test.Common
-import Disciplina.Crypto (MerkleTree (..), mkMerkleProof, mkMerkleProofSingle
+import Dscp.Crypto (MerkleTree (..), mkMerkleProof, mkMerkleProofSingle
                          ,validateMerkleProof, fromFoldable
                          ,fromContainer, mrSize, getMerkleRoot)
 import qualified Data.Set as Set

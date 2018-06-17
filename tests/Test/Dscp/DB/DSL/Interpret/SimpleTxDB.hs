@@ -1,13 +1,13 @@
-module Test.Disciplina.DB.DSL.Interpret.SimpleTxDB where
+module Test.Dscp.DB.DSL.Interpret.SimpleTxDB where
 
 import Test.Common
 
 import Crypto.Error (CryptoFailable (..))
-import Disciplina.Core (CourseId (..), Grade (..), SubjectId, mkAddr)
-import Disciplina.Crypto (AbstractPK (..), AbstractSK (..), PublicKey, SecretKey, hash)
-import Disciplina.DB (Obj, ObjHashEq (..), QueryObj (..), QueryTx (..), QueryTxs (..), TxGrade (..),
+import Dscp.Core (CourseId (..), Grade (..), SubjectId, mkAddr)
+import Dscp.Crypto (AbstractPK (..), AbstractSK (..), PublicKey, SecretKey, hash)
+import Dscp.DB (Obj, ObjHashEq (..), QueryObj (..), QueryTx (..), QueryTxs (..), TxGrade (..),
                       TxIdEq (..), TxsFilterExpr (..), WHERE (..), runSimpleTxDBQuery)
-import Disciplina.Educator (EducatorTxMsg (..), PrivateTx (..), PrivateTxPayload (..),
+import Dscp.Educator (EducatorTxMsg (..), PrivateTx (..), PrivateTxPayload (..),
                             StudentTxMsg (..))
 
 import qualified Crypto.PubKey.Ed25519 as Ed25519
@@ -16,7 +16,7 @@ import qualified Data.ByteString.Char8 as C
 type StudentKey = Char
 type EducatorKey = Char
 
--- | SubjectIds are taken from Disciplina.Core.ATG
+-- | SubjectIds are taken from Dscp.Core.ATG
 sIdMathematics, sIdComputerScience, sIdElementary
    ,sIdCalculi, sIdLogic, sIdEngineering
    ,sIdTheory, sIdHighSchoolAlgebra, sIdPiCalculus

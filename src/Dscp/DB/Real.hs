@@ -1,5 +1,5 @@
 
-module Disciplina.DB.Real (module M) where
+module Dscp.DB.Real (module M) where
 
-import Disciplina.DB.Real.Functions as M
-import Disciplina.DB.Real.Types as M
+import Dscp.DB.Real.Functions as M
+import Dscp.DB.Real.Types as M

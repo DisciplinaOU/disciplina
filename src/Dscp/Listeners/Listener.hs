@@ -1,7 +1,7 @@
 
 -- | Node Listeners
 
-module Disciplina.Listeners.Listener where
+module Dscp.Listeners.Listener where
 
 import Universum
 
@@ -9,8 +9,8 @@ import qualified Data.ByteString as BS
 import Node (ConversationActions, Listener (..), NodeId, send)
 import System.Wlog (logInfo)
 
-import Disciplina.Messages (Packing, PingBlk, PingTx, PongBlk (..), PongTx (..))
-import Disciplina.Witness.Launcher (WitnessWorkMode)
+import Dscp.Messages (Packing, PingBlk, PingTx, PongBlk (..), PongTx (..))
+import Dscp.Witness.Launcher (WitnessWorkMode)
 
 witnessListeners
     :: forall m. WitnessWorkMode m

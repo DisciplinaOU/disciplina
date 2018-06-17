@@ -2,7 +2,7 @@
 
 -- | Signature scheme implementations provided by `crytonite` package.
 
-module Disciplina.Crypto.Signing.Cryptonite
+module Dscp.Crypto.Signing.Cryptonite
        ( CryptoEd25519
        ) where
 
@@ -12,8 +12,8 @@ import qualified Crypto.PubKey.Ed25519 as Ed25519
 import Data.ByteArray (ByteArrayAccess, Bytes)
 import qualified Data.ByteString.Lazy as BSL
 
-import Disciplina.Crypto.Hash.Class (AbstractHash (..))
-import Disciplina.Crypto.Signing.Class (AbstractPK (..), AbstractSK (..), AbstractSig (..),
+import Dscp.Crypto.Hash.Class (AbstractHash (..))
+import Dscp.Crypto.Signing.Class (AbstractPK (..), AbstractSK (..), AbstractSig (..),
                                         HasAbstractSignature (..), SignatureScheme (..))
 
 -- | Tag for 'Ed25519' signature scheme implementation from `crytonite`.

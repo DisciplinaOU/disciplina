@@ -1,4 +1,4 @@
 
-module Disciplina.Accounts (module M) where
+module Dscp.Accounts (module M) where
 
-import Disciplina.Accounts.Account as M
+import Dscp.Accounts.Account as M

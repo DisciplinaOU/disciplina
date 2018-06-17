@@ -1,6 +1,6 @@
 
-module Disciplina.Launcher (module M) where
+module Dscp.Launcher (module M) where
 
-import Disciplina.Launcher.Mode as M
-import Disciplina.Launcher.Params as M
-import Disciplina.Launcher.Resource as M
+import Dscp.Launcher.Mode as M
+import Dscp.Launcher.Params as M
+import Dscp.Launcher.Resource as M

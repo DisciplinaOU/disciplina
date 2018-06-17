@@ -1,8 +1,8 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 
--- | Actual implementations of abstract crypto primitives used in Disciplina.
+-- | Actual implementations of abstract crypto primitives used in Dscp.
 
-module Disciplina.Crypto.Impl
+module Dscp.Crypto.Impl
        ( -- * Hashing
          Hash
        , HasHash
@@ -23,9 +23,9 @@ import Universum
 
 import Crypto.Hash.Algorithms (Blake2sp_256)
 
-import Disciplina.Crypto.Hash (AbstractHash (..), CryptoniteFunc, HasAbstractHash (..),
+import Dscp.Crypto.Hash (AbstractHash (..), CryptoniteFunc, HasAbstractHash (..),
                                abstractHash)
-import Disciplina.Crypto.Signing (AbstractPK (..), AbstractSK (..), AbstractSig (..), CryptoEd25519,
+import Dscp.Crypto.Signing (AbstractPK (..), AbstractSK (..), AbstractSig (..), CryptoEd25519,
                                   HasAbstractSignature (..), abstractSign, abstractVerify)
 
 ------------------------------------------------------

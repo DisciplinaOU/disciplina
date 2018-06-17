@@ -15,12 +15,12 @@ import System.IO (getChar)
 import System.Random (mkStdGen)
 import UnliftIO.Async (async)
 
-import Disciplina.DB (DBParams (..))
-import Disciplina.Listeners (witnessListeners)
-import Disciplina.Messages (serialisePacking)
-import Disciplina.Transport (bracketTransportTCP)
-import Disciplina.Witness (WitnessParams (..), launchWitnessRealMode)
-import Disciplina.Workers (witnessWorkers)
+import Dscp.DB (DBParams (..))
+import Dscp.Listeners (witnessListeners)
+import Dscp.Messages (serialisePacking)
+import Dscp.Transport (bracketTransportTCP)
+import Dscp.Witness (WitnessParams (..), launchWitnessRealMode)
+import Dscp.Workers (witnessWorkers)
 import qualified WitnessParams as Params
 
 main :: IO ()

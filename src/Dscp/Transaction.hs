@@ -1,4 +1,4 @@
 
-module Disciplina.Transaction where
+module Dscp.Transaction where
 
-import Disciplina.Transaction.Internal
+import Dscp.Transaction.Internal

@@ -1,4 +1,4 @@
-module Disciplina.DB.Real.Types
+module Dscp.DB.Real.Types
        ( MonadRealDB
        , DB (..)
        , DBParams (..)

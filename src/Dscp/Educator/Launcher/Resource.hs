@@ -1,15 +1,15 @@
 
 -- | Resources used by Educator node
 
-module Disciplina.Educator.Launcher.Resource
+module Dscp.Educator.Launcher.Resource
        ( EducatorResources (..)
        ) where
 
 import Universum
 
-import Disciplina.Educator.Launcher.Params (EducatorParams (..))
-import Disciplina.Launcher.Resource (AllocResource (..))
-import qualified Disciplina.Witness.Launcher.Resource as Witness
+import Dscp.Educator.Launcher.Params (EducatorParams (..))
+import Dscp.Launcher.Resource (AllocResource (..))
+import qualified Dscp.Witness.Launcher.Resource as Witness
 
 -- | Datatype which contains resources required by all Disciplina nodes
 -- to start working.

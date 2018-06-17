@@ -1,4 +1,4 @@
-module Disciplina.Messages
+module Dscp.Messages
        ( PingBlk (..)
        , PongBlk (..)
        , PingTx (..)

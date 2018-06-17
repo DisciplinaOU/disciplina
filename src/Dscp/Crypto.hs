@@ -1,8 +1,8 @@
 
-module Disciplina.Crypto (module M) where
+module Dscp.Crypto (module M) where
 
-import Disciplina.Crypto.ByteArray as M
-import Disciplina.Crypto.Impl as M
-import Disciplina.Crypto.MerkleTree as M
-import Disciplina.Crypto.Serialise as M
-import Disciplina.Crypto.Signing as M
+import Dscp.Crypto.ByteArray as M
+import Dscp.Crypto.Impl as M
+import Dscp.Crypto.MerkleTree as M
+import Dscp.Crypto.Serialise as M
+import Dscp.Crypto.Signing as M

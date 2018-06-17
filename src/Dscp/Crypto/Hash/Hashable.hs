@@ -3,7 +3,7 @@
 -- Here for demonstration. Never use this implementation in actual
 -- cryptographic purposes!
 
-module Disciplina.Crypto.Hash.Hashable
+module Dscp.Crypto.Hash.Hashable
        ( HashableFunc
        ) where
 
@@ -12,8 +12,8 @@ import Universum
 import Data.Hashable (Hashable)
 import qualified Data.Hashable as H
 
-import Disciplina.Crypto.ByteArray (hashBytes)
-import Disciplina.Crypto.Hash.Class (AbstractHash (..), HasAbstractHash (..), HashFunc (..))
+import Dscp.Crypto.ByteArray (hashBytes)
+import Dscp.Crypto.Hash.Class (AbstractHash (..), HasAbstractHash (..), HashFunc (..))
 
 -- | Make 'AbstractHash' itself 'Hashable'
 deriving instance Hashable (HashResult hf) =>

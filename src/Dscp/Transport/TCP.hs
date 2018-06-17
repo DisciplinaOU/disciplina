@@ -1,7 +1,7 @@
 -- | Convenient TCP transport acquire and release with common configuration
 -- options.
 
-module Disciplina.Transport.TCP
+module Dscp.Transport.TCP
     ( bracketTransportTCP
     ) where
 

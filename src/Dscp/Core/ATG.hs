@@ -1,7 +1,7 @@
 
 -- | Module for methods related to Activity Type Graph
 
-module Disciplina.Core.ATG
+module Dscp.Core.ATG
        ( ATGIndexed
        , atgiGraph
        , atgiIndex
@@ -20,8 +20,8 @@ import qualified Data.Map.Strict as M
 import Data.Set (Set)
 import qualified Data.Set as S
 
-import Disciplina.Core.Types (ATG (..), ATGEdge (..), ATGNode (..), SubjectId, atgeChild)
-import Disciplina.Util (anyMapM)
+import Dscp.Core.Types (ATG (..), ATGEdge (..), ATGNode (..), SubjectId, atgeChild)
+import Dscp.Util (anyMapM)
 
 -- | ATG with an index from subject IDs to nodes.
 -- Constructor is unsafe, because it's totally possible

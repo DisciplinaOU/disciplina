@@ -1,4 +1,4 @@
 
-module Disciplina.Workers (module M) where
+module Dscp.Workers (module M) where
 
-import Disciplina.Workers.Worker as M
+import Dscp.Workers.Worker as M

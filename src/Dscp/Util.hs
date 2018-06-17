@@ -1,7 +1,7 @@
 
 -- | Utilities
 
-module Disciplina.Util
+module Dscp.Util
        ( anyMapM
          -- * Re-exports
        , module Snowdrop.Util

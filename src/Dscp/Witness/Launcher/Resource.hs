@@ -1,7 +1,7 @@
 
 -- | Resources used by Witness node
 
-module Disciplina.Witness.Launcher.Resource
+module Dscp.Witness.Launcher.Resource
        ( WitnessResources (..)
        ) where
 
@@ -9,9 +9,9 @@ import Universum
 
 import System.Wlog (LoggerName)
 
-import Disciplina.DB.Real (NodeDB)
-import Disciplina.Launcher.Resource (AllocResource (..))
-import Disciplina.Witness.Launcher.Params (WitnessParams (..))
+import Dscp.DB.Real (NodeDB)
+import Dscp.Launcher.Resource (AllocResource (..))
+import Dscp.Witness.Launcher.Params (WitnessParams (..))
 
 -- | Datatype which contains resources required by witness node to start
 -- working.

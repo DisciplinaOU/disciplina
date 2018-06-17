@@ -1,6 +1,6 @@
 {-# LANGUAGE TypeOperators #-}
 
-module Disciplina.DB.DSL.Class
+module Dscp.DB.DSL.Class
        ( MonadSearchTxObj (..)
        , TxsFilterExpr (..)
        , TxGrade (..)
@@ -16,10 +16,10 @@ module Disciplina.DB.DSL.Class
 
 import Universum
 
-import Disciplina.Educator.Txs (PrivateTxId, PrivateTx(..))
-import Disciplina.Crypto (Hash)
+import Dscp.Educator.Txs (PrivateTxId, PrivateTx(..))
+import Dscp.Crypto (Hash)
 
-import qualified Disciplina.Core as Core (Grade, SubjectId)
+import qualified Dscp.Core as Core (Grade, SubjectId)
 import qualified Data.ByteString.Lazy as LBS
 
 data WHERE = WHERE

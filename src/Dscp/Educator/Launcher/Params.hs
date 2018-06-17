@@ -1,6 +1,6 @@
-module Disciplina.Educator.Launcher.Params where
+module Dscp.Educator.Launcher.Params where
 
-import Disciplina.Witness.Launcher.Params (WitnessParams)
+import Dscp.Witness.Launcher.Params (WitnessParams)
 
 -- | Contains all initialization parameters of Educator node.
 data EducatorParams = EducatorParams

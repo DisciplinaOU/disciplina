@@ -1,4 +1,4 @@
-module Disciplina.Educator.State
+module Dscp.Educator.State
        (
        ) where
 

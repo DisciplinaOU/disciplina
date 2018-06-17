@@ -1,7 +1,7 @@
 
 {-# LANGUAGE DeriveAnyClass #-}
 
-module Disciplina.Accounts.Account where
+module Dscp.Accounts.Account where
 
 import Universum
 

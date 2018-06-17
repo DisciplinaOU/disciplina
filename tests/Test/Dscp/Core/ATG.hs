@@ -1,9 +1,9 @@
-module Test.Disciplina.Core.ATG where
+module Test.Dscp.Core.ATG where
 
 import Test.Common
 
-import Disciplina.Core (SubjectId)
-import qualified Disciplina.Core as Core
+import Dscp.Core (SubjectId)
+import qualified Dscp.Core as Core
 
 pathFromTo :: SubjectId -> SubjectId -> Bool
 pathFromTo = Core.hasPathFromTo Core.activityTypeGraphIndexed

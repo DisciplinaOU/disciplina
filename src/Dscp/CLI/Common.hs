@@ -2,7 +2,7 @@
 
 -- | Common CLI params
 
-module Disciplina.CLI.Common
+module Dscp.CLI.Common
        ( logParamsParser
        , dbPathParser
        , versionOption
@@ -14,7 +14,7 @@ import Data.Version (showVersion)
 import Options.Applicative (Parser, help, infoOption, long, metavar, optional, strOption, value)
 import System.Wlog (LoggerName)
 
-import Disciplina.Launcher.Params (LoggingParams (..))
+import Dscp.Launcher.Params (LoggingParams (..))
 import Paths_disciplina (version)
 
 logParamsParser :: LoggerName -> Parser LoggingParams

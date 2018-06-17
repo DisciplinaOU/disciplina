@@ -1,3 +1,3 @@
-module Disciplina.CLI (module M) where
+module Dscp.CLI (module M) where
 
-import Disciplina.CLI.Common as M
+import Dscp.CLI.Common as M

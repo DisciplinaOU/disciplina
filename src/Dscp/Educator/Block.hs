@@ -1,7 +1,7 @@
 
 -- | Blocks- and blockchain-related datatypes definition.
 
-module Disciplina.Educator.Block
+module Dscp.Educator.Block
        ( -- * Basic types
          PrivateHeaderHash
        , PrivateBlockHeader (..)
@@ -24,10 +24,10 @@ module Disciplina.Educator.Block
 import Universum
 
 import Control.Lens (makeLenses)
-import Disciplina.Core.Types (ATGDelta (..))
-import Disciplina.Crypto (Hash, unsafeHash)
-import Disciplina.Crypto.MerkleTree (MerkleSignature)
-import Disciplina.Educator.Txs (PrivateTxAux)
+import Dscp.Core.Types (ATGDelta (..))
+import Dscp.Crypto (Hash, unsafeHash)
+import Dscp.Crypto.MerkleTree (MerkleSignature)
+import Dscp.Educator.Txs (PrivateTxAux)
 
 ----------------------------------------------------------
 -- Block elements

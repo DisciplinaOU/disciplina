@@ -1,4 +1,4 @@
-module Disciplina.Launcher.Params
+module Dscp.Launcher.Params
        ( LoggingParams (..)
        ) where
 

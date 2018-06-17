@@ -4,7 +4,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 
 -- | Sized Merkle tree implementation.
-module Disciplina.Crypto.MerkleTree
+module Dscp.Crypto.MerkleTree
        ( MerkleSignature(..)
        , MerkleTree (..)
        , getMerkleRoot
@@ -26,9 +26,9 @@ module Disciplina.Crypto.MerkleTree
 
 import Universum
 
-import Disciplina.Crypto.Hash.Class (AbstractHash (..))
-import Disciplina.Crypto.Impl (HasHash, Hash, hash, unsafeHash)
-import Disciplina.Crypto.Serialise (Raw)
+import Dscp.Crypto.Hash.Class (AbstractHash (..))
+import Dscp.Crypto.Impl (HasHash, Hash, hash, unsafeHash)
+import Dscp.Crypto.Serialise (Raw)
 
 import Codec.Serialise (Serialise (..))
 import Data.Array (array, (!))

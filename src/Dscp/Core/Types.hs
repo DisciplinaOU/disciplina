@@ -1,7 +1,7 @@
 
 -- | Core types used across Disciplina codebase.
 
-module Disciplina.Core.Types
+module Dscp.Core.Types
        ( Address (..)
        , mkAddr
        , SubjectId (..)
@@ -28,7 +28,7 @@ import Universum
 import Control.Lens (makeLenses)
 import Data.Map (Map)
 
-import Disciplina.Crypto (Hash, PublicKey, Raw, hash)
+import Dscp.Crypto (Hash, PublicKey, Raw, hash)
 
 -- | 'Address' datatype. Not 'newtype', because later it will
 -- inevitably become more complex.

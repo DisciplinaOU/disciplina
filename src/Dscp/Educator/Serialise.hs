@@ -1,11 +1,11 @@
-module Disciplina.Educator.Serialise () where
+module Dscp.Educator.Serialise () where
 
 import Codec.Serialise (Serialise (..))
 
-import Disciplina.Core.Serialise ()
-import Disciplina.Crypto.Serialise ()
-import Disciplina.Educator.Block (PrivateBlock (..), PrivateBlockBody (..), PrivateBlockHeader (..))
-import Disciplina.Educator.Txs (EducatorTxMsg (..), PrivateTx (..), PrivateTxAux (..),
+import Dscp.Core.Serialise ()
+import Dscp.Crypto.Serialise ()
+import Dscp.Educator.Block (PrivateBlock (..), PrivateBlockBody (..), PrivateBlockHeader (..))
+import Dscp.Educator.Txs (EducatorTxMsg (..), PrivateTx (..), PrivateTxAux (..),
                                 PrivateTxPayload (..), PrivateTxWitness (..), StudentTxMsg (..))
 
 -- TODO: make well-defined Serialise instances instead of generic ones

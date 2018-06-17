@@ -3,7 +3,7 @@
 
 -- | 'HashFunction' instances for 'Cryptonite' hashes
 
-module Disciplina.Crypto.Hash.Cryptonite
+module Dscp.Crypto.Hash.Cryptonite
        ( CryptoniteFunc
        ) where
 
@@ -13,8 +13,8 @@ import Crypto.Hash (Digest, HashAlgorithm)
 import qualified Crypto.Hash as Crypto
 import Data.ByteArray (ByteArrayAccess, Bytes)
 
-import Disciplina.Crypto.Hash.Class (AbstractHash (..), HasAbstractHash (..), HashFunc (..))
-import Disciplina.Crypto.Signing.Class (AbstractPK, AbstractSK, AbstractSig)
+import Dscp.Crypto.Hash.Class (AbstractHash (..), HasAbstractHash (..), HashFunc (..))
+import Dscp.Crypto.Signing.Class (AbstractPK, AbstractSK, AbstractSig)
 
 -- | Tag for choosing a particular hash algorithm from 'Crypto.Hash'
 -- for hashing.

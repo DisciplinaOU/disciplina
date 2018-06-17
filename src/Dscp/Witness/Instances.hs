@@ -1,6 +1,6 @@
 {-# LANGUAGE TypeApplications #-}
 
-module Disciplina.Witness.Instances () where
+module Dscp.Witness.Instances () where
 
 import Universum
 
@@ -13,7 +13,7 @@ import Data.Default (Default (..))
 import Data.Hashable (Hashable (hashWithSalt))
 import qualified Data.Tree.AVL as AVL
 
-import Disciplina.Crypto (HasHash, Hash, hashBytesWithSalt, unsafeHash)
+import Dscp.Crypto (HasHash, Hash, hashBytesWithSalt, unsafeHash)
 
 -- Every 'Serialise' instance is 'Serialisable'
 instance Serialise a => AVL.Serialisable a where

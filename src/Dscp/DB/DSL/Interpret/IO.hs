@@ -1,4 +1,4 @@
-module Disciplina.DB.DSL.Interpret.IO
+module Dscp.DB.DSL.Interpret.IO
        (
        )
        where
@@ -7,11 +7,11 @@ import Universum
 
 import Data.List (intersect, union)
 
-import qualified Disciplina.Core as Core (Grade (..), SubjectId (..))
-import Disciplina.DB.DSL.Class (MonadSearchTxObj (..), Obj, ObjHashEq (..), QueryObj (..),
+import qualified Dscp.Core as Core (Grade (..), SubjectId (..))
+import Dscp.DB.DSL.Class (MonadSearchTxObj (..), Obj, ObjHashEq (..), QueryObj (..),
                                 QueryTx (..), QueryTxs (..), TxIdEq (..),
                                 TxsFilterExpr (..), WHERE (..))
-import Disciplina.Educator.Txs (PrivateTx (..), PrivateTxId)
+import Dscp.Educator.Txs (PrivateTx (..), PrivateTxId)
 
 -- | TODO, we should have a proper monad here, not IO
 instance MonadSearchTxObj IO where

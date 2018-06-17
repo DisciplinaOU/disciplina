@@ -1,4 +1,4 @@
-module Disciplina.DB.DSL.Interpret.SimpleTxDB
+module Dscp.DB.DSL.Interpret.SimpleTxDB
        ( runSimpleTxDBQuery
        ) where
 
@@ -8,12 +8,12 @@ import Control.Lens (filtered, makePrisms, traversed)
 import Data.Map.Strict (Map)
 import Data.List (intersect, union)
 
-import Disciplina.Core (CourseId (..), SubjectId, hasPathFromTo, activityTypeGraphIndexed)
-import Disciplina.Crypto (hash)
-import Disciplina.DB.DSL.Class (MonadSearchTxObj (..), Obj, ObjHashEq (..), QueryObj (..),
+import Dscp.Core (CourseId (..), SubjectId, hasPathFromTo, activityTypeGraphIndexed)
+import Dscp.Crypto (hash)
+import Dscp.DB.DSL.Class (MonadSearchTxObj (..), Obj, ObjHashEq (..), QueryObj (..),
                                 QueryTx (..), QueryTxs (..), RunQuery (..), TxIdEq (..),
                                 TxsFilterExpr (..), WHERE (..))
-import Disciplina.Educator (EducatorTxMsg (..), PrivateTx (..), PrivateTxId, PrivateTxPayload (..))
+import Dscp.Educator (EducatorTxMsg (..), PrivateTx (..), PrivateTxId, PrivateTxPayload (..))
 
 import qualified Data.Map.Strict as Map hiding (Map)
 
@@ -128,7 +128,7 @@ runSimpleTxDBQuery dbTx dbObj query =
                                     , (cId5, [sIdEngineering])
                                     ]
         -- Some arbitrarly choosen subject ids.
-        -- Taken from Disciplina.Core.ATG
+        -- Taken from Dscp.Core.ATG
         sIdMathematics = 1
         sIdComputerScience = 2
         sIdElementary = 3

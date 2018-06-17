@@ -1,8 +1,8 @@
-module Disciplina.Core.Serialise () where
+module Dscp.Core.Serialise () where
 
 import Codec.Serialise (Serialise (..))
 
-import Disciplina.Core.Types (ATG (..), ATGDelta (..), ATGEdge (..), ATGNode (..), Address (..),
+import Dscp.Core.Types (ATG (..), ATGDelta (..), ATGEdge (..), ATGNode (..), Address (..),
                               CourseId (..), Grade (..), SubjectId (..))
 
 -- TODO: move to well-specified serialisation instead of generic one.

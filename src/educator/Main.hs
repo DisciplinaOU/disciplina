@@ -7,9 +7,9 @@ import Universum
 
 import System.Wlog (logInfo, logWarning)
 
-import Disciplina.DB (DBParams (..))
-import Disciplina.Educator (EducatorParams (..), launchEducatorRealMode)
-import Disciplina.Witness (WitnessParams (..))
+import Dscp.DB (DBParams (..))
+import Dscp.Educator (EducatorParams (..), launchEducatorRealMode)
+import Dscp.Witness (WitnessParams (..))
 
 import qualified EducatorParams as Params
 

@@ -1,8 +1,8 @@
-module Test.Disciplina.Witness where
+module Test.Dscp.Witness where
 
 import Test.Common
 
-import qualified Disciplina.Witness as Witness
+import qualified Dscp.Witness as Witness
 
 spec_Transactions :: Spec
 spec_Transactions = describe "Transactions" $ do

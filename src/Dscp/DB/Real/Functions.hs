@@ -1,6 +1,6 @@
 {-# LANGUAGE TypeApplications #-}
 
-module Disciplina.DB.Real.Functions
+module Dscp.DB.Real.Functions
        ( -- * Closing/opening
          openRocksDB
        , closeRocksDB
@@ -17,8 +17,8 @@ import Universum
 import qualified Database.RocksDB as Rocks
 import Ether.Internal (HasLens (..))
 
-import Disciplina.DB.Class (MonadDB (..), MonadDBRead (..))
-import Disciplina.DB.Real.Types (DB (..), DBParams (..), MonadRealDB, NodeDB (..), ndbDatabase)
+import Dscp.DB.Class (MonadDB (..), MonadDBRead (..))
+import Dscp.DB.Real.Types (DB (..), DBParams (..), MonadRealDB, NodeDB (..), ndbDatabase)
 
 -----------------------------------------------------------
 -- Opening/closing

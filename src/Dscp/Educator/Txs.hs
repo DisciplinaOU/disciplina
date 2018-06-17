@@ -1,7 +1,7 @@
 
 -- | Definitions of private transactions
 
-module Disciplina.Educator.Txs
+module Dscp.Educator.Txs
        ( PrivateTx (..)
        , PrivateTxId
        , PrivateTxPayload (..)
@@ -13,8 +13,8 @@ module Disciplina.Educator.Txs
 
 import Universum
 
-import Disciplina.Core.Types (AssignmentId, CourseId, EducatorId, Grade, StudentId, Submission)
-import Disciplina.Crypto (Hash, PublicKey, Signature)
+import Dscp.Core.Types (AssignmentId, CourseId, EducatorId, Grade, StudentId, Submission)
+import Dscp.Crypto (Hash, PublicKey, Signature)
 
 -- | Private transaction.
 data PrivateTx = PrivateTx

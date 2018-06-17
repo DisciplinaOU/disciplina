@@ -1,7 +1,7 @@
 
 -- | Utilities for manipulating byte arrays.
 
-module Disciplina.Crypto.ByteArray
+module Dscp.Crypto.ByteArray
        ( FromByteArray (..)
        , hashBytesWithSalt
        , hashBytes

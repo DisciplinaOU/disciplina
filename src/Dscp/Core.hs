@@ -1,4 +1,4 @@
-module Disciplina.Core (module M) where
+module Dscp.Core (module M) where
 
-import Disciplina.Core.ATG as M
-import Disciplina.Core.Types as M
+import Dscp.Core.ATG as M
+import Dscp.Core.Types as M

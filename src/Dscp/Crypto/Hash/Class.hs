@@ -3,7 +3,7 @@
 
 -- | Abstract hash interface
 
-module Disciplina.Crypto.Hash.Class
+module Dscp.Crypto.Hash.Class
        ( HashFunc (..)
        , HasAbstractHash (..)
        , AbstractHash (..)

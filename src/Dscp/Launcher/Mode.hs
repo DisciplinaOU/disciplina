@@ -17,7 +17,7 @@ Alternatives are
 same thing with it
 
 -}
-module Disciplina.Launcher.Mode
+module Dscp.Launcher.Mode
        (
          -- * Constraints
          BasicWorkMode

@@ -1,4 +1,4 @@
 
-module Disciplina.Transport (module M) where
+module Dscp.Transport (module M) where
 
-import Disciplina.Transport.TCP as M
+import Dscp.Transport.TCP as M

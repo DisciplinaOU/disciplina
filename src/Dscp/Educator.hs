@@ -1,6 +1,6 @@
-module Disciplina.Educator (module M) where
+module Dscp.Educator (module M) where
 
-import Disciplina.Educator.Block as M
-import Disciplina.Educator.Launcher as M
-import Disciplina.Educator.Serialise ()
-import Disciplina.Educator.Txs as M
+import Dscp.Educator.Block as M
+import Dscp.Educator.Launcher as M
+import Dscp.Educator.Serialise ()
+import Dscp.Educator.Txs as M

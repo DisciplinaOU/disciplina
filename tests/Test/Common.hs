@@ -35,8 +35,8 @@ import Data.Traversable (for)
 import System.IO.Unsafe
 
 import qualified Data.Tree.AVL as AVL
-import qualified Disciplina.Crypto as Crypto
-import qualified Disciplina.Witness as Witness
+import qualified Dscp.Crypto as Crypto
+import qualified Dscp.Witness as Witness
 --import qualified Debug.Trace           as Debug
 
 import Test.Hspec as T (Expectation, Spec, describe, it, shouldBe, shouldSatisfy, specify)

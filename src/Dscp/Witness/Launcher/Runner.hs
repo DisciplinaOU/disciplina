@@ -1,16 +1,16 @@
 
 -- | Helpers for starting an Witness node
 
-module Disciplina.Witness.Launcher.Runner where
+module Dscp.Witness.Launcher.Runner where
 
 import Universum
 
 import Control.Monad.Component (runComponentM)
 
-import Disciplina.Launcher.Resource (AllocResource (..))
-import Disciplina.Witness.Launcher.Mode (WitnessContext (..), WitnessRealMode)
-import Disciplina.Witness.Launcher.Params (WitnessParams (..))
-import Disciplina.Witness.Launcher.Resource (WitnessResources (..))
+import Dscp.Launcher.Resource (AllocResource (..))
+import Dscp.Witness.Launcher.Mode (WitnessContext (..), WitnessRealMode)
+import Dscp.Witness.Launcher.Params (WitnessParams (..))
+import Dscp.Witness.Launcher.Resource (WitnessResources (..))
 
 -- | Make up Witness context from dedicated pack of allocated resources.
 formWitnessContext :: WitnessResources -> WitnessContext

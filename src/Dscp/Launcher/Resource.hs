@@ -2,7 +2,7 @@
 
 -- | Common resources used by Disciplina nodes
 
-module Disciplina.Launcher.Resource
+module Dscp.Launcher.Resource
        ( AllocResource(..)
        ) where
 
@@ -12,8 +12,8 @@ import Control.Monad.Component (ComponentM, buildComponent)
 import System.Wlog (LoggerConfig (..), LoggerName, maybeLogsDirB, parseLoggerConfig, productionB,
                     removeAllHandlers, setupLogging, showTidB)
 
-import Disciplina.DB.Real (DBParams, NodeDB, closeNodeDB, openNodeDB)
-import Disciplina.Launcher.Params (LoggingParams (..))
+import Dscp.DB.Real (DBParams, NodeDB, closeNodeDB, openNodeDB)
+import Dscp.Launcher.Params (LoggingParams (..))
 
 ----------------------------------------------------------------------------
 -- Resources

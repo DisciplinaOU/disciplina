@@ -1,17 +1,17 @@
 
 -- | Helpers for starting an Educator node
 
-module Disciplina.Educator.Launcher.Runner where
+module Dscp.Educator.Launcher.Runner where
 
 import Universum
 
 import Control.Monad.Component (runComponentM)
 
-import Disciplina.Educator.Launcher.Mode (EducatorContext (..), EducatorRealMode)
-import Disciplina.Educator.Launcher.Params (EducatorParams (..))
-import Disciplina.Educator.Launcher.Resource (EducatorResources (..))
-import Disciplina.Launcher.Resource (AllocResource (..))
-import Disciplina.Witness.Launcher.Runner (formWitnessContext)
+import Dscp.Educator.Launcher.Mode (EducatorContext (..), EducatorRealMode)
+import Dscp.Educator.Launcher.Params (EducatorParams (..))
+import Dscp.Educator.Launcher.Resource (EducatorResources (..))
+import Dscp.Launcher.Resource (AllocResource (..))
+import Dscp.Witness.Launcher.Runner (formWitnessContext)
 
 -- | Make up Educator context from dedicated pack of allocated resources.
 formEducatorContext :: EducatorResources -> EducatorContext

@@ -2,7 +2,7 @@
 
 -- | Module contains the definition of Witness's WorkMode and its implementations.
 
-module Disciplina.Witness.Launcher.Mode
+module Dscp.Witness.Launcher.Mode
     (
       -- * Constraints
       WitnessWorkMode
@@ -20,9 +20,9 @@ import Control.Lens (makeLenses)
 import Ether.Internal (HasLens (..))
 import System.Wlog (HasLoggerName (..), LoggerName)
 
-import Disciplina.DB.Class (MonadDB)
-import Disciplina.DB.Real.Types (NodeDB)
-import qualified Disciplina.Launcher.Mode as Basic
+import Dscp.DB.Class (MonadDB)
+import Dscp.DB.Real.Types (NodeDB)
+import qualified Dscp.Launcher.Mode as Basic
 
 ---------------------------------------------------------------------
 -- WorkMode class
