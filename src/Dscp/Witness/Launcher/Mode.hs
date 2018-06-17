@@ -26,7 +26,7 @@ import Dscp.DB.Rocks.Class (MonadDB)
 import Dscp.DB.Rocks.Real.Types (RocksDB)
 import qualified Dscp.Launcher.Mode as Basic
 import Dscp.Launcher.Rio (RIO)
-import Dscp.Resource.Network ()
+import Dscp.Network ()
 import Dscp.Witness.Launcher.Resource (WitnessResources)
 
 ---------------------------------------------------------------------

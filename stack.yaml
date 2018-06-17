@@ -10,10 +10,10 @@ nix:
 extra-deps:
 - log-warper-1.8.11
 - pretty-tree-0.1.0.0
-- serokell-util-0.8.0
 - time-units-1.0.0
 - componentm-0.0.0.2
 - rio-0.1.2.0
+- serokell-util-0.8.0
 - typed-process-0.2.2.0
 - teardown-0.5.0.0
 - unliftio-0.2.7.0
@@ -24,21 +24,6 @@ extra-deps:
 - git: https://github.com/thoughtpolice/hs-ed25519
   # We're waiting on next release
   commit: da4247b5b3420120e20451e6a252e2a2ca15b43c
-
-- git: https://github.com/serokell/cardano-sl
-  commit: e01c3730e1a3cf46296c3e3decffc6e780e2092c
-  subdirs:
-    - networking
-
-# These three are needed for cardano-sl-networking
-- git: https://github.com/serokell/network-transport-tcp
-  commit: 3d56652123bd296dc759cd31947eb2a17924e68a # csl-0.6.0
-
-- git: https://github.com/serokell/network-transport
-  commit: 018a50b9042c2115c3ec9c9fd5ca5f28737dd29c
-
-- git: https://github.com/avieth/network-transport-inmemory
-  commit: 5d8ff2b07b9df35cf61329a3d975e2c8cf95c12a
 
 - git: git@github.com:serokell/auth-data-structures.git
   commit: 3bd0cbc7ac0408f897f11746dbd245e3f8437bbb
@@ -80,9 +65,5 @@ extra-deps:
 # for serialise
 - cborg-0.2.0.0
 # Lootbox dependencies end #
-
-# Needed to build `cardano-sl-networking` with newer GHC
-ghc-options:
-  cardano-sl-networking: -fno-warn-redundant-constraints
 
 apply-ghc-options: everything

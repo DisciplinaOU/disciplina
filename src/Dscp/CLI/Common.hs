@@ -22,7 +22,6 @@ import qualified Loot.Log as Log
 import Loot.Network.ZMQ.Common (ZTNodeId (..), parseZTNodeId)
 import Options.Applicative (Parser, eitherReader, help, infoOption, long, metavar, option, optional,
                             strOption, value)
-import System.Wlog (LoggerName)
 
 import Dscp.DB.Rocks.Real.Types (RocksDBParams (..))
 import Dscp.DB.SQLite.Types (SQLiteDBLocation (..), SQLiteParams (..))

@@ -6,14 +6,11 @@ import Universum
 
 import Control.Lens (makeLenses)
 import Control.Monad.Component (buildComponent)
-import Loot.Base.HasLens (HasLens (..), HasLens')
+import Loot.Base.HasLens (HasLens (..))
 import Loot.Log (Level)
-import Loot.Network.Class (NetworkingCli (..), NetworkingServ (..))
-import Loot.Network.ZMQ (ZTGlobalEnv, ZTNetCliEnv, ZTNetServEnv, ZTNodeId (..), ZmqTcp,
-                         createNetCliEnv, createNetServEnv, ztGlobalEnv, ztGlobalEnvRelease)
-import qualified Loot.Network.ZMQ.Instance as Z
+import Loot.Network.ZMQ (ZTGlobalEnv, ZTNetCliEnv, ZTNetServEnv, ZTNodeId (..), createNetCliEnv,
+                         createNetServEnv, ztGlobalEnv, ztGlobalEnvRelease)
 
-import Dscp.Launcher.Rio (RIO)
 import Dscp.Resource.Class (AllocResource (..))
 
 ----------------------------------------------------------------------------
@@ -50,14 +47,6 @@ makeLenses ''NetCliResources
 instance HasLens ZTGlobalEnv NetCliResources ZTGlobalEnv where lensOf = ncGlobalEnv
 instance HasLens ZTNetCliEnv NetCliResources ZTNetCliEnv where lensOf = ncClientEnv
 
-instance (HasLens' ctx ZTGlobalEnv, HasLens' ctx ZTNetCliEnv) =>
-         NetworkingCli ZmqTcp (RIO ctx) where
-    type NodeId ZmqTcp = Z.ZTNodeId
-    runClient = Z.runClientDefault
-    getPeers = Z.getPeersDefault
-    updatePeers = Z.updatePeersDefault
-    registerClient = Z.registerClientDefault
-
 instance AllocResource NetCliParams NetCliResources where
     allocResource NetCliParams {ncPeers} =
         buildComponent "netcli" allocate release
@@ -92,12 +81,6 @@ makeLenses ''NetServResources
 instance HasLens ZTGlobalEnv NetServResources ZTGlobalEnv where lensOf = nsGlobalEnv
 instance HasLens ZTNetCliEnv NetServResources ZTNetCliEnv where lensOf = nsClientEnv
 instance HasLens ZTNetServEnv NetServResources ZTNetServEnv where lensOf = nsServerEnv
-
-instance (HasLens' ctx ZTGlobalEnv, HasLens' ctx ZTNetServEnv) =>
-         NetworkingServ ZmqTcp (RIO ctx) where
-    type CliId ZmqTcp = Z.ZTCliId
-    runServer = Z.runServerDefault
-    registerListener = Z.registerListenerDefault
 
 instance AllocResource NetServParams NetServResources where
     allocResource NetServParams {..} =

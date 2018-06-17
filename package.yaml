@@ -12,7 +12,6 @@ library:
     - array
     - AVL
     - bytestring
-    - cardano-sl-networking
     - containers
     - componentm
     - cryptonite
@@ -31,13 +30,11 @@ library:
     - memory
     - monad-control
     - mtl
-    - network-transport
-    - network-transport-tcp
     - optparse-applicative
     - random
     - rocksdb-haskell
-    - serokell-util
     - serialise
+    - serokell-util
     - snowdrop
     - sqlite-simple
     - stm
@@ -71,11 +68,9 @@ executables:
     source-dirs: src/witness
     dependencies:
       - bytestring
-      - cardano-sl-networking
       - disciplina
       - formatting
       - loot-log
-      - network-transport-tcp
       - time-units
       - optparse-applicative
       - random
