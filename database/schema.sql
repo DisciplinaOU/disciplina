@@ -110,11 +110,8 @@ create table if not exists Submissions (
 
     primary key (hash),
 
-    -- Composite foreign key.
-    -- We may not need it, actually, but it may help us.
-    --
-    foreign key (student_addr, assignment_hash)
-        references StudentAssignments(student_addr, assignment_hash)
+    foreign key (student_addr)    references Students (addr),
+    foreign key (assignment_hash) references Assignments (hash)
 
 ) without rowid;
 
