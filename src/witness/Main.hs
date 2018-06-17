@@ -28,7 +28,6 @@ main = do
             logInfo "Hey, here log-warper works!"
             logWarning "Don't forget to implement everything else though!"
 
-
 getWitnessParams :: IO WitnessParams
 getWitnessParams =
     execParser $ info (helper <*> versionOption <*> witnessParamsParser) $

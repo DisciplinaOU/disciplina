@@ -21,4 +21,4 @@ main = do
 getEducatorParams :: IO EducatorParams
 getEducatorParams =
     execParser $ info (helper <*> versionOption <*> educatorParamsParser) $
-    fullDesc <> progDesc "Discplina educator node."
+    fullDesc <> progDesc "Disciplina educator node."
