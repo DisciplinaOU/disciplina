@@ -1,0 +1,72 @@
+# This file defines sensible defaults but does not actually apply
+# any of them, so it can be safely included.
+
+_definitions:
+  _top-level:
+    - &meta
+        version:            '0.1.0.0'
+        author:             Serokell
+        maintainer:         hi@serokell.io
+        copyright:          2018 TeachMePlease.com
+        github:             DisciplinaOU/disciplina
+        extra-source-files: [README.md]
+
+    - &default-extensions
+        - BangPatterns
+        - ConstraintKinds
+        - DefaultSignatures
+        - DeriveDataTypeable
+        - DeriveGeneric
+        - FlexibleContexts
+        - FlexibleInstances
+        - FunctionalDependencies
+        - GeneralizedNewtypeDeriving
+        - LambdaCase
+        - MonadFailDesugaring
+        - MultiParamTypeClasses
+        - MultiWayIf
+        - NamedFieldPuns
+        - NoImplicitPrelude
+        - OverloadedStrings
+        - RankNTypes
+        - RecordWildCards
+        - ScopedTypeVariables
+        - StandaloneDeriving
+        - TemplateHaskell
+        - TupleSections
+        - TypeFamilies
+        - UndecidableInstances
+        - ViewPatterns
+
+    - &dependencies
+        - base
+        - universum
+
+    - &ghc-options
+        - -Wall
+        - -fno-warn-orphans
+
+  _utils:
+    - &lib-common
+        source-dirs: src
+
+    - &test-common
+        main:        Main.hs
+        source-dirs: tests
+
+        ghc-options:
+          - -threaded
+          - -rtsopts
+          - -with-rtsopts=-N
+
+    - &bench-common
+        source-dirs: bench
+
+        ghc-options:
+          - -threaded
+
+    - &exec-common
+        main:        Main.hs
+        ghc-options:
+          - -threaded
+          - -O2

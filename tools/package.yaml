@@ -1,0 +1,12 @@
+<<: !include "../hpack/module.yaml"
+
+name:        disciplina-tools
+description: This package contains tools for development of Disciplina
+             platform, such as simulators of cryptographic protocols.
+
+executables:
+  disciplina-simulacrum:
+    <<: *exec-common
+    source-dirs: src/simulacrum
+    dependencies:
+      - mtl

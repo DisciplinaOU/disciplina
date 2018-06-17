@@ -1,0 +1,85 @@
+<<: !include "./hpack/module.yaml"
+
+name: disciplina
+description: A blockchain system for education
+
+library:
+  <<: *lib-common
+
+  dependencies:
+    - autoexporter
+    - array
+    - AVL
+    - bytestring
+    - cardano-sl-networking
+    - containers
+    - componentm
+    - cryptonite
+    - data-default
+    - ether
+    - exceptions
+    - formatting
+    - free
+    - hashable
+    - lens
+    - lifted-async
+    - log-warper
+    - memory
+    - monad-control
+    - mtl
+    - network-transport
+    - network-transport-tcp
+    - optparse-applicative
+    - random
+    - rocksdb-haskell
+    - serialise
+    - snowdrop
+    - stm
+    - time-units
+    - unliftio
+
+tests:
+  disciplina-test:
+    <<: *test-common
+
+    dependencies:
+      - AVL
+      - bytestring
+      - containers
+      - cryptonite
+      - disciplina
+      - data-default
+      - hspec
+      - lens
+      - tasty
+      - tasty-hspec
+      - tasty-discover
+      - universum
+      - QuickCheck
+      - quickcheck-instances
+
+executables:
+  disciplina-witness:
+    <<: *exec-common
+    source-dirs: src/witness
+    dependencies:
+      - bytestring
+      - cardano-sl-networking
+      - disciplina
+      - formatting
+      - log-warper
+      - network-transport-tcp
+      - time-units
+      - optparse-applicative
+      - random
+      - universum >= 1.0.0
+      - unliftio
+  disciplina-educator:
+    <<: *exec-common
+    source-dirs: src/educator
+    dependencies:
+      - disciplina
+      - formatting
+      - log-warper
+      - optparse-applicative
+      - unliftio
