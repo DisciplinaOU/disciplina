@@ -88,7 +88,7 @@ library
 
                      , Dscp.CLI.Common
   -- other-extensions:
-  build-depends:       base >= 4.9 && < 5
+  build-depends:       base-noprelude >= 4.9 && < 5
                      , aeson
                      , autoexporter
                      , array
@@ -109,6 +109,7 @@ library
                      , lifted-async
                      , log-warper
                      , loot-log
+                     , loot-prelude
                      , memory
                      , monad-control
                      , mtl
@@ -161,13 +162,14 @@ executable disciplina-witness
   hs-source-dirs:      src/witness
   main-is:             Main.hs
   other-modules:       WitnessParams
-  build-depends:       base
+  build-depends:       base-noprelude >= 4.9 && < 5
                      , bytestring
                      , disciplina
                      , cardano-sl-networking
                      , disciplina
                      , formatting
                      , loot-log
+                     , loot-prelude
                      , network-transport-tcp
                      , time-units
                      , optparse-applicative
@@ -212,11 +214,12 @@ executable disciplina-educator
   hs-source-dirs:      src/educator
   main-is:             Main.hs
   other-modules:       EducatorParams
-  build-depends:       base
+  build-depends:       base-noprelude >= 4.9 && < 5
                      , disciplina
                      , cardano-sl-networking
                      , formatting
                      , loot-log
+                     , loot-prelude
                      , network-transport-tcp
                      , optparse-applicative
                      , universum >= 1.0.0
@@ -262,7 +265,7 @@ test-suite disciplina-test
                             Test.Dscp.Witness
                             Test.Dscp.Core.ATG
                             Test.Dscp.Crypto.MerkleTree
-  build-depends:             base >= 0.4 && < 5
+  build-depends:             base-noprelude >= 4.9 && < 5
                            , AVL
                            , bytestring
                            , containers
@@ -271,6 +274,7 @@ test-suite disciplina-test
                            , data-default
                            , hspec
                            , lens
+                           , loot-prelude
                            , tasty
                            , tasty-hspec
                            , tasty-discover

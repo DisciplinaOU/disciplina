@@ -12,7 +12,8 @@ executable disciplina-simulacrum
   hs-source-dirs:      src/simulacrum
   main-is:             Main.hs
   build-depends:       universum
-                     , base >= 4.9
+                     , base-noprelude >= 4.9 && < 5
+                     , loot-prelude
                      , mtl
 
   default-language:    Haskell2010

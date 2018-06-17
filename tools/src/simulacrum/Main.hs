@@ -1,10 +1,10 @@
 {-# LANGUAGE LambdaCase   #-}
 {-# LANGUAGE TypeFamilies #-}
 
-import           Prelude
+import Prelude hiding (State)
 
-import           Control.Arrow          ((&&&), (***))
-import           Control.Monad.Identity
+import Control.Arrow ((&&&), (***))
+import Data.List ((!!))
 
 -- | Buyer decisions.
 data Input
@@ -191,12 +191,12 @@ evilBuyer (input, problems) = case input of
   KeySent -> Reject
 
 main = do
-    putStrLn "Good buyer:"
+    putTextLn "Good buyer:"
     forM_ goodBuyerTrades $ \(problems, badThings) -> do
         when (not $ null badThings) $ do
             putStrLn (show problems ++ " -> " ++ show badThings)
 
-    putStrLn "Evil buyer:"
+    putTextLn "Evil buyer:"
     forM_ evilBuyerTrades $ \(problems, badThings) -> do
         when (not $ null badThings) $ do
             putStrLn (show problems ++ " -> " ++ show badThings)
