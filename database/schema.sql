@@ -155,6 +155,14 @@ create table if not exists Blocks (
 
 create index if not exists Blocks_prev_hash on Blocks (prev_hash);
 
+-- Creating 'Educator' table.
+--
+create table if not exists Educator (
+    signature  BLOB non null,
+
+    primary key (signature)
+) without rowid;
+
 -- Creating 'BlocksTxs' table.
 --
 create table if not exists BlockTxs (
