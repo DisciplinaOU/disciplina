@@ -6,8 +6,8 @@ import Universum
 
 import UnliftIO.Async (forConcurrently_)
 
+import Loot.Log (logInfo)
 import Node (Conversation (..), ConversationActions, Converse, NodeId, converseWith, recv)
-import System.Wlog (logInfo)
 
 import Dscp.Messages (Packing, PingBlk (..), PingTx (..), PongBlk (..), PongTx (..))
 import Dscp.Witness.Launcher (WitnessWorkMode)
@@ -64,4 +64,3 @@ witnessBlkWorker _anId peerIds conv = logInfo "blk worker initialized" >> worker
             forConcurrently_ peerIds $ \peerId ->
                 converseWith converse peerId (\_ -> Conversation (pongBlk peerId))
             loop
-

@@ -5,9 +5,8 @@ module Main where
 
 import Universum
 
-import System.Wlog (logInfo, logWarning)
-
 import qualified Data.ByteString.Char8 as B8
+import Loot.Log (logInfo, logWarning, modifyLogName)
 import qualified Network.Transport.TCP as TCP
 import Node (NodeAction (..), defaultNodeEnvironment, noReceiveDelay, node, nodeId,
              simpleNodeEndPoint)
@@ -30,7 +29,8 @@ main = do
             { wpLoggingParams = wpLogParams
             , wpDBParams = DBParams{ dbpPath = wpDbPath }
             }
-    launchWitnessRealMode witnessParams $ do
+    launchWitnessRealMode witnessParams $
+      modifyLogName (<> "node") $ do
             logInfo "Starting node"
             -- TODO: This networking can't live without Production and Mockables
             --       so leaving it commented for now

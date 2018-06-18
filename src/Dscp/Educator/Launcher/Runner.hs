@@ -10,6 +10,7 @@ import Control.Monad.Component (runComponentM)
 import Dscp.Educator.Launcher.Mode (EducatorContext (..), EducatorRealMode)
 import Dscp.Educator.Launcher.Params (EducatorParams (..))
 import Dscp.Educator.Launcher.Resource (EducatorResources (..))
+import Dscp.Launcher.Mode (runRIO)
 import Dscp.Launcher.Resource (AllocResource (..))
 import Dscp.Witness.Launcher.Runner (formWitnessContext)
 
@@ -21,7 +22,7 @@ formEducatorContext EducatorResources{..} =
     }
 
 runEducatorRealMode :: EducatorContext -> EducatorRealMode a -> IO a
-runEducatorRealMode ctx action = runReaderT action ctx
+runEducatorRealMode = runRIO
 
 -- | Given params, allocate resources, construct node context and run
 -- `EducatorWorkMode` monad.

@@ -7,6 +7,7 @@ import Universum
 
 import Control.Monad.Component (runComponentM)
 
+import Dscp.Launcher.Mode (runRIO)
 import Dscp.Launcher.Resource (AllocResource (..))
 import Dscp.Witness.Launcher.Mode (WitnessContext (..), WitnessRealMode)
 import Dscp.Witness.Launcher.Params (WitnessParams (..))
@@ -16,12 +17,12 @@ import Dscp.Witness.Launcher.Resource (WitnessResources (..))
 formWitnessContext :: WitnessResources -> WitnessContext
 formWitnessContext WitnessResources{..} =
     WitnessContext
-    { _wcLoggerName = wrLoggerName
+    { _wcLogging = wrLogging
     , _wcDB = wrDB
     }
 
 runWitnessRealMode :: WitnessContext -> WitnessRealMode a -> IO a
-runWitnessRealMode ctx action = runReaderT action ctx
+runWitnessRealMode = runRIO
 
 -- | Given params, allocate resources, construct node context and run
 -- `WitnessWorkMode` monad.
@@ -31,4 +32,3 @@ launchWitnessRealMode params action =
       \resources ->
         let ctx = formWitnessContext resources
         in runWitnessRealMode ctx action
-

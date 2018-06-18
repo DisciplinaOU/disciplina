@@ -8,8 +8,10 @@ module Dscp.Transport.TCP
 import Universum
 
 import Data.Time.Units (Microsecond)
-import Formatting (sformat, shown, (%))
-import System.Wlog (WithLogger, askLoggerName, logError, usingLoggerName)
+import Ether.Internal (HasLens (..))
+import Fmt ((+||), (||+))
+import Loot.Log (logError, modifyLogName)
+import Loot.Log.Rio (LoggingIO)
 
 import Network.QDisc.Fair (fairQDisc)
 import qualified Network.Transport as NT (closeTransport)
@@ -17,33 +19,31 @@ import Network.Transport.Abstract (Transport)
 import Network.Transport.Concrete (concrete)
 import qualified Network.Transport.TCP as TCP
 
+import Dscp.Launcher.Mode (RIO, runRIO)
+
 bracketTransportTCP
-    :: ( MonadIO m
-       , MonadIO n
-       , MonadThrow m
-       , MonadMask m
-       , WithLogger m
+    :: ( MonadIO n
+       , HasLens LoggingIO ctx LoggingIO
        )
     => Microsecond
     -> TCP.TCPAddr
-    -> (Transport n -> m a)
-    -> m a
+    -> (Transport n -> RIO ctx a)
+    -> RIO ctx a
 bracketTransportTCP connectionTimeout tcpAddr k = bracket
     (createTransportTCP connectionTimeout tcpAddr)
     snd
     (k . fst)
 
 createTransportTCP
-    :: ( MonadIO n
-       , MonadIO m
-       , WithLogger m
-       , MonadThrow m
+    :: forall n ctx.
+       ( MonadIO n
+       , HasLens LoggingIO ctx LoggingIO
        )
     => Microsecond -- ^ Connection timeout
     -> TCP.TCPAddr
-    -> m (Transport n, m ())
+    -> RIO ctx (Transport n, RIO ctx ())
 createTransportTCP connectionTimeout addrInfo = do
-    loggerName <- askLoggerName
+    logging <- view $ lensOf @LoggingIO
     let tcpParams =
             (TCP.defaultTCPParameters
              { TCP.transportConnectTimeout =
@@ -54,12 +54,13 @@ createTransportTCP connectionTimeout addrInfo = do
              -- of service attack.
              , TCP.tcpCheckPeerHost = True
              , TCP.tcpServerExceptionHandler = \e ->
-                     usingLoggerName (loggerName <> "transport") $
-                         logError $ sformat ("Exception in tcp server: " % shown) e
+                     runRIO logging $
+                     modifyLogName (<> "transport") $
+                         logError $ "Exception in tcp server: "+||e||+""
              })
     transportE <- liftIO $ TCP.createTransport addrInfo tcpParams
     case transportE of
         Left e -> do
-            logError $ sformat ("Error creating TCP transport: " % shown) e
+            logError $ "Error creating TCP transport: "+||e||+""
             throwM e
         Right transport -> return (concrete transport, liftIO $ NT.closeTransport transport)

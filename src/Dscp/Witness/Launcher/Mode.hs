@@ -11,14 +11,12 @@ module Dscp.Witness.Launcher.Mode
     , WitnessContext (..)
     , WitnessRealMode
     , wcDB
-    , wcLoggerName
+    , wcLogging
     ) where
-
-import Universum
 
 import Control.Lens (makeLenses)
 import Ether.Internal (HasLens (..))
-import System.Wlog (HasLoggerName (..), LoggerName)
+import Loot.Log.Rio (LoggingIO)
 
 import Dscp.DB.Class (MonadDB)
 import Dscp.DB.Real.Types (NodeDB)
@@ -39,13 +37,13 @@ type WitnessWorkMode m =
 ---------------------------------------------------------------------
 
 data WitnessContext = WitnessContext
-    { _wcDB         :: NodeDB
-    , _wcLoggerName :: LoggerName
+    { _wcDB      :: NodeDB
+    , _wcLogging :: LoggingIO
     }
 
 makeLenses ''WitnessContext
 
-type WitnessRealMode = ReaderT WitnessContext IO
+type WitnessRealMode = Basic.RIO WitnessContext
 
 ---------------------------------------------------------------------
 -- Instances
@@ -54,7 +52,5 @@ type WitnessRealMode = ReaderT WitnessContext IO
 instance HasLens NodeDB WitnessContext NodeDB where
     lensOf = wcDB
 
-instance {-# OVERLAPPING #-} HasLoggerName WitnessRealMode where
-    askLoggerName = view wcLoggerName
-    modifyLoggerName name = local $ wcLoggerName %~ name
-
+instance HasLens LoggingIO WitnessContext LoggingIO where
+    lensOf = wcLogging

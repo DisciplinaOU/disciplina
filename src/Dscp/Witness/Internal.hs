@@ -3,14 +3,13 @@
 
 module Dscp.Witness.Internal where
 
-import qualified Prelude (show)
-
-import Universum hiding (Hashable, get, trace, use)
+import Prelude hiding (Hashable, get, trace, use)
 
 import Codec.Serialise (Serialise (..))
 import Control.Lens (makeLenses, makePrisms, to, use, zoom, (+~), (-~), (.=))
 import Control.Monad.RWS (RWST (..), get, listen, tell)
 import Data.Default (Default, def)
+import qualified Text.Show
 
 import qualified Data.Tree.AVL as AVL
 import qualified Debug.Trace as Debug

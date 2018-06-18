@@ -11,13 +11,13 @@ module Dscp.CLI.Common
 import Universum
 
 import Data.Version (showVersion)
+import qualified Loot.Log as Log
 import Options.Applicative (Parser, help, infoOption, long, metavar, optional, strOption, value)
-import System.Wlog (LoggerName)
 
 import Dscp.Launcher.Params (LoggingParams (..))
 import Paths_disciplina (version)
 
-logParamsParser :: LoggerName -> Parser LoggingParams
+logParamsParser :: Log.Name -> Parser LoggingParams
 logParamsParser lpDefaultName = do
     lpConfigPath <- logConfigParser
     lpDirectory <- logDirParser
