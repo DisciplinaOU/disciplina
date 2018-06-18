@@ -15,6 +15,6 @@ buildStackApplication {
   overrides = final: previous: {
     rocksdb-haskell = dependCabal previous.rocksdb-haskell [ rocksdb ];
     cardano-sl-networking = haskell.lib.appendConfigureFlag previous.cardano-sl-networking "--ghc-option=-fno-warn-redundant-constraints";
-    disciplina = previous.disciplina.overrideAttrs (super: { buildTools = super.tools ++ [ final.hpack ]; preConfigure = "hpack ."; });
+    disciplina = previous.disciplina.overrideAttrs (super: { buildTools = super.buildTools ++ [ final.hpack ]; preConfigure = "hpack ."; });
   };
 }
