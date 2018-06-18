@@ -20,7 +20,7 @@ import Universum
 import Control.Lens (makeLenses)
 import Loot.Log.Rio (LoggingIO)
 
-import Dscp.DB.Rocks.Real.Types (NodeDB)
+import Dscp.DB.Rocks.Real.Types (RocksDB)
 import Dscp.DB.SQLite (MonadSQLiteDB, SQLiteDB)
 import qualified Dscp.Launcher.Mode as Basic
 import qualified Dscp.Witness.Launcher as Witness
@@ -59,7 +59,7 @@ type EducatorRealMode = Basic.RIO EducatorContext
 -- Instances
 ---------------------------------------------------------------------
 
-instance HasLens NodeDB EducatorContext NodeDB where
+instance HasLens RocksDB EducatorContext RocksDB where
     lensOf = ecWitnessCtx . Witness.wcDB
 
 instance HasLens LoggingIO EducatorContext LoggingIO where

@@ -14,7 +14,7 @@ import System.IO (getChar)
 import System.Random (mkStdGen)
 import UnliftIO.Async (async)
 
-import Dscp.DB (DBParams (..))
+import Dscp.DB (RocksDBParams (..))
 import Dscp.Listeners (witnessListeners)
 import Dscp.Messages (serialisePacking)
 import Dscp.Transport (bracketTransportTCP)
@@ -27,7 +27,7 @@ main = do
     Params.WitnessParams {..} <- Params.getWitnessParams
     let witnessParams = WitnessParams
             { wpLoggingParams = wpLogParams
-            , wpDBParams = DBParams{ dbpPath = wpDbPath }
+            , wpDBParams = RocksDBParams{ rdpPath = wpDbPath }
             }
     launchWitnessRealMode witnessParams $
       modifyLogName (<> "node") $ do

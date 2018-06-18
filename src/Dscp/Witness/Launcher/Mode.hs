@@ -19,7 +19,7 @@ import Ether.Internal (HasLens (..))
 import Loot.Log.Rio (LoggingIO)
 
 import Dscp.DB.Rocks.Class (MonadDB)
-import Dscp.DB.Rocks.Real.Types (NodeDB)
+import Dscp.DB.Rocks.Real.Types (RocksDB)
 import qualified Dscp.Launcher.Mode as Basic
 
 ---------------------------------------------------------------------
@@ -37,7 +37,7 @@ type WitnessWorkMode m =
 ---------------------------------------------------------------------
 
 data WitnessContext = WitnessContext
-    { _wcDB      :: NodeDB
+    { _wcDB      :: RocksDB
     , _wcLogging :: LoggingIO
     }
 
@@ -49,7 +49,7 @@ type WitnessRealMode = Basic.RIO WitnessContext
 -- Instances
 ---------------------------------------------------------------------
 
-instance HasLens NodeDB WitnessContext NodeDB where
+instance HasLens RocksDB WitnessContext RocksDB where
     lensOf = wcDB
 
 instance HasLens LoggingIO WitnessContext LoggingIO where

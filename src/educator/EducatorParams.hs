@@ -15,14 +15,14 @@ import Dscp.CLI (dbPathParser, logParamsParser, sqliteDbPathParser, versionOptio
 import Dscp.Launcher (LoggingParams)
 
 data EducatorParams = EducatorParams
-    { epDbPath       :: !FilePath
+    { epRocksDbPath  :: !FilePath
     , epLogParams    :: !LoggingParams
     , epSqliteDbPath :: !FilePath
     }
 
 educatorParamsParser :: Parser EducatorParams
 educatorParamsParser = do
-    epDbPath <- dbPathParser
+    epRocksDbPath <- dbPathParser
     epLogParams <- logParamsParser "educator"
     epSqliteDbPath <- sqliteDbPathParser
     return EducatorParams{..}

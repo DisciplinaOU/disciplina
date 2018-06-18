@@ -16,7 +16,7 @@ import Loot.Log.Rio (LoggingIO)
 import Loot.Log.Warper (LoggerConfig, prepareLogWarper)
 import System.Wlog (maybeLogsDirB, parseLoggerConfig, productionB, removeAllHandlers, showTidB)
 
-import Dscp.DB.Rocks.Real (DBParams, NodeDB, closeNodeDB, openNodeDB)
+import Dscp.DB.Rocks.Real (RocksDB, RocksDBParams, closeNodeDB, openNodeDB)
 import Dscp.DB.SQLite (SQLiteDB, SQLiteParams, closeSQLiteDB, openSQLiteDB)
 import Dscp.Launcher.Mode (runRIO)
 import Dscp.Launcher.Params (LoggingParams (..))
@@ -64,7 +64,7 @@ instance AllocResource LoggingParams LoggingIO where
 -- Bracket
 ----------------------------------------------------------------------------
 
-instance AllocResource DBParams NodeDB where
+instance AllocResource RocksDBParams RocksDB where
     allocResource p = buildComponent "RocksDB" (openNodeDB p) closeNodeDB
 
 instance AllocResource SQLiteParams SQLiteDB where

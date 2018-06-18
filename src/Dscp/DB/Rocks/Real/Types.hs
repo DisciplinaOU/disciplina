@@ -1,9 +1,9 @@
 module Dscp.DB.Rocks.Real.Types
        ( MonadRealDB
        , DB (..)
-       , DBParams (..)
-       , NodeDB (..)
-       , ndbDatabase
+       , RocksDBParams (..)
+       , RocksDB (..)
+       , rdDatabase
        ) where
 
 import Universum
@@ -15,11 +15,12 @@ import Ether.Internal (HasLens)
 -- | Set of constraints necessary to operate on real DB.
 type MonadRealDB ctx m =
     ( MonadReader ctx m
-    , HasLens NodeDB ctx NodeDB
+    , HasLens RocksDB ctx RocksDB
     , MonadIO m
     , Monad m
     )
 
+-- | Internal helper to carry Rocks parameters and handlers.
 data DB = DB
     { rocksReadOpts  :: !Rocks.ReadOptions
     , rocksWriteOpts :: !Rocks.WriteOptions
@@ -28,13 +29,13 @@ data DB = DB
     }
 
 -- | Set of parameters provided on opening connection.
-data DBParams = DBParams
-    { dbpPath :: !FilePath
+data RocksDBParams = RocksDBParams
+    { rdpPath :: !FilePath
     -- ^ Path to the database
     } deriving Show
 
-data NodeDB = NodeDB
-    { _ndbDatabase :: !DB
+data RocksDB = RocksDB
+    { _rdDatabase :: !DB
     }
 
-makeLenses ''NodeDB
+makeLenses ''RocksDB
