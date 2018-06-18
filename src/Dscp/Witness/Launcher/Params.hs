@@ -4,7 +4,7 @@ module Dscp.Witness.Launcher.Params
 
 import Universum
 
-import Dscp.DB.Real.Types (DBParams)
+import Dscp.DB.Rocks.Real.Types (DBParams)
 import Dscp.Launcher.Params (LoggingParams)
 
 -- | Contains all initialization parameters of Witness node.
@@ -14,4 +14,3 @@ data WitnessParams = WitnessParams
     , wpDBParams      :: !DBParams
     -- ^ DB parameters
     } deriving Show
-

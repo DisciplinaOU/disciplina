@@ -1,4 +1,4 @@
-module Dscp.DB.Real.Types
+module Dscp.DB.Rocks.Real.Types
        ( MonadRealDB
        , DB (..)
        , DBParams (..)

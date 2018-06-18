@@ -9,7 +9,7 @@ import Universum
 
 import Loot.Log.Rio (LoggingIO)
 
-import Dscp.DB.Real (NodeDB)
+import Dscp.DB.Rocks.Real (NodeDB)
 import Dscp.Launcher.Resource (AllocResource (..))
 import Dscp.Witness.Launcher.Params (WitnessParams (..))
 

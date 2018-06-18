@@ -20,7 +20,7 @@ import Universum
 import Control.Lens (makeLenses)
 import Loot.Log.Rio (LoggingIO)
 
-import Dscp.DB.Real.Types (NodeDB)
+import Dscp.DB.Rocks.Real.Types (NodeDB)
 import Dscp.DB.SQLite (MonadSQLiteDB, SQLiteDB)
 import qualified Dscp.Launcher.Mode as Basic
 import qualified Dscp.Witness.Launcher as Witness

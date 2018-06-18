@@ -18,8 +18,8 @@ import Control.Lens (makeLenses)
 import Ether.Internal (HasLens (..))
 import Loot.Log.Rio (LoggingIO)
 
-import Dscp.DB.Class (MonadDB)
-import Dscp.DB.Real.Types (NodeDB)
+import Dscp.DB.Rocks.Class (MonadDB)
+import Dscp.DB.Rocks.Real.Types (NodeDB)
 import qualified Dscp.Launcher.Mode as Basic
 
 ---------------------------------------------------------------------
