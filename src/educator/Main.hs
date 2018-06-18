@@ -7,7 +7,7 @@ import Universum
 
 import Loot.Log (logInfo, logWarning, modifyLogName)
 
-import Dscp.DB (DBParams (..))
+import Dscp.DB (DBParams (..), SQLiteDBLocation (..), SQLiteParams (..))
 import Dscp.Educator (EducatorParams (..), launchEducatorRealMode)
 import Dscp.Witness (WitnessParams (..))
 
@@ -21,6 +21,8 @@ main = do
                 { wpLoggingParams = epLogParams
                 , wpDBParams = DBParams{ dbpPath = epDbPath }
                 }
+            , epSQLiteParams = SQLiteParams
+                { sdpLocation = SQLiteReal epSqliteDbPath }
             }
     launchEducatorRealMode educatorParams $
       modifyLogName (<> "node") $ do

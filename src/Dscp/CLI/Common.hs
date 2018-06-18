@@ -5,6 +5,7 @@
 module Dscp.CLI.Common
        ( logParamsParser
        , dbPathParser
+       , sqliteDbPathParser
        , versionOption
        ) where
 
@@ -38,6 +39,13 @@ dbPathParser = strOption $
     metavar "FILEPATH" <>
     help "Path to database directory for witness node." <>
     value "witness-db"
+
+sqliteDbPathParser :: Parser FilePath
+sqliteDbPathParser = strOption $
+    long "db-path" <>
+    metavar "FILEPATH" <>
+    help "Path to database directory for educator's private data." <>
+    value "educator-db"
 
 versionOption :: Parser (a -> a)
 versionOption = infoOption ("disciplina-" <> (showVersion version)) $

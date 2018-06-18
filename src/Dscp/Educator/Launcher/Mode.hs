@@ -12,6 +12,7 @@ module Dscp.Educator.Launcher.Mode
     , EducatorContext (..)
     , EducatorRealMode
     , ecWitnessCtx
+    , ecSqliteDB
     ) where
 
 import Universum
@@ -20,6 +21,7 @@ import Control.Lens (makeLenses)
 import Loot.Log.Rio (LoggingIO)
 
 import Dscp.DB.Real.Types (NodeDB)
+import Dscp.DB.SQLite (SQLiteDB)
 import qualified Dscp.Launcher.Mode as Basic
 import qualified Dscp.Witness.Launcher as Witness
 import Ether.Internal (HasLens (..))
@@ -45,6 +47,7 @@ type CombinedWorkMode m =
 
 data EducatorContext = EducatorContext
     { _ecWitnessCtx :: Witness.WitnessContext
+    , _ecSqliteDB   :: SQLiteDB
     }
 
 makeLenses ''EducatorContext
