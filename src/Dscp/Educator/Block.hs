@@ -27,7 +27,7 @@ import Control.Lens (makeLenses)
 import Dscp.Core.Types (ATGDelta (..))
 import Dscp.Crypto (Hash, unsafeHash)
 import Dscp.Crypto.MerkleTree (MerkleSignature)
-import Dscp.Educator.Txs (PrivateTxAux)
+import Dscp.Educator.Txs (PrivateTx)
 
 ----------------------------------------------------------
 -- Block elements
@@ -41,7 +41,7 @@ type PrivateHeaderHash = Hash PrivateBlockHeader
 data PrivateBlockHeader = PrivateBlockHeader
     { _pbhPrevBlock :: !PrivateHeaderHash
     -- ^ Previous header in the chain
-    , _pbhBodyProof :: !(MerkleSignature PrivateTxAux)
+    , _pbhBodyProof :: !(MerkleSignature PrivateTx)
     -- ^ Body payload proof (for now - only root of sized Merkle tree
     -- over private transactions)
     , _pbhAtgDelta  :: !ATGDelta
@@ -68,10 +68,7 @@ getPrevBlockRefMaybe PrivateBlockHeader {..} =
 -- TODO: should we also store inner Merkle nodes in some sort of cache,
 -- to provide quick positions?
 data PrivateBlockBody = PrivateBlockBody
-    { _pbbTxs :: ![PrivateTxAux]
-    -- ^ We don't store tx witnesses separately, because we don't really care
-    -- much about private block size, but we do care about simplicity of
-    -- sharing private transactions together with their proofs.
+    { _pbbTxs :: ![PrivateTx]
     } deriving (Show, Eq, Generic)
 
 makeLenses ''PrivateBlockBody
