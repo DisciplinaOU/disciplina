@@ -7,6 +7,7 @@ library:
   <<: *lib-common
 
   dependencies:
+    - aeson
     - autoexporter
     - array
     - AVL
@@ -19,10 +20,12 @@ library:
     - ether
     - exceptions
     - formatting
+    - fmt
     - free
     - hashable
     - lens
     - lifted-async
+    - loot-log
     - log-warper
     - memory
     - monad-control
@@ -54,7 +57,6 @@ tests:
       - tasty
       - tasty-hspec
       - tasty-discover
-      - universum
       - QuickCheck
       - quickcheck-instances
 
@@ -67,12 +69,11 @@ executables:
       - cardano-sl-networking
       - disciplina
       - formatting
-      - log-warper
+      - loot-log
       - network-transport-tcp
       - time-units
       - optparse-applicative
       - random
-      - universum >= 1.0.0
       - unliftio
   disciplina-educator:
     <<: *exec-common
@@ -80,6 +81,6 @@ executables:
     dependencies:
       - disciplina
       - formatting
-      - log-warper
+      - loot-log
       - optparse-applicative
       - unliftio

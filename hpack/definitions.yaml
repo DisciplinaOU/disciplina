@@ -37,9 +37,11 @@ _definitions:
         - TypeFamilies
         - UndecidableInstances
         - ViewPatterns
+        - TypeApplications
 
     - &dependencies
-        - base
+        - base-noprelude >= 4.9 && < 5
+        - loot-prelude
         - universum
 
     - &ghc-options

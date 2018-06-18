@@ -18,8 +18,9 @@ module Test.Common
        , module Universum
        ) where
 
-import qualified Prelude (show, unlines)
-import Universum
+import Data.List (unlines)
+import GHC.Show (Show (show))
+import Universum hiding (show, unlines)
 
 -- import Control.Arrow (second)
 import Control.Lens (each, to)
@@ -70,7 +71,7 @@ instance Show Sandbox where
           [ "Sandbox { world = "
           , show world
           , ", transactions = \n"
-          , Prelude.unlines $ map (^.Witness.wpBody.to Prelude.show.to ("\t" ++)) transactions
+          , unlines $ map (^.Witness.wpBody.to show.to ("\t" ++)) transactions
           , ", alice = "
           , show a
           , ", eve = "
