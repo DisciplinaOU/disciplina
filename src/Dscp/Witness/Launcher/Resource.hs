@@ -9,7 +9,7 @@ import Universum
 
 import Loot.Log.Rio (LoggingIO)
 
-import Dscp.DB.Real (NodeDB)
+import Dscp.DB.Rocks.Real (RocksDB)
 import Dscp.Launcher.Resource (AllocResource (..))
 import Dscp.Witness.Launcher.Params (WitnessParams (..))
 
@@ -17,7 +17,7 @@ import Dscp.Witness.Launcher.Params (WitnessParams (..))
 -- working.
 data WitnessResources = WitnessResources
     { wrLogging :: !LoggingIO
-    , wrDB      :: !NodeDB
+    , wrDB      :: !RocksDB
     }
 
 instance AllocResource WitnessParams WitnessResources where

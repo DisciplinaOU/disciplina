@@ -1,4 +1,4 @@
-module Dscp.DB.Class where
+module Dscp.DB.Rocks.Class where
 
 import Universum
 

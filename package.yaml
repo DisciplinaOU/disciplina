@@ -37,6 +37,7 @@ library:
     - rocksdb-haskell
     - serialise
     - snowdrop
+    - sqlite-simple
     - stm
     - time-units
     - unliftio

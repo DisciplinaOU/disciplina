@@ -7,7 +7,7 @@ import Universum
 
 import Loot.Log (logInfo, logWarning, modifyLogName)
 
-import Dscp.DB (DBParams (..))
+import Dscp.DB (RocksDBParams (..), SQLiteDBLocation (..), SQLiteParams (..))
 import Dscp.Educator (EducatorParams (..), launchEducatorRealMode)
 import Dscp.Witness (WitnessParams (..))
 
@@ -19,8 +19,10 @@ main = do
     let educatorParams = EducatorParams
             { epWitnessParams = WitnessParams
                 { wpLoggingParams = epLogParams
-                , wpDBParams = DBParams{ dbpPath = epDbPath }
+                , wpDBParams = RocksDBParams{ rdpPath = epRocksDbPath }
                 }
+            , epDBParams = SQLiteParams
+                { sdpLocation = SQLiteReal epSqliteDbPath }
             }
     launchEducatorRealMode educatorParams $
       modifyLogName (<> "node") $ do

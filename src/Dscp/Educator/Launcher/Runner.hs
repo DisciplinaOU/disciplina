@@ -10,8 +10,8 @@ import Control.Monad.Component (runComponentM)
 import Dscp.Educator.Launcher.Mode (EducatorContext (..), EducatorRealMode)
 import Dscp.Educator.Launcher.Params (EducatorParams (..))
 import Dscp.Educator.Launcher.Resource (EducatorResources (..))
-import Dscp.Launcher.Mode (runRIO)
 import Dscp.Launcher.Resource (AllocResource (..))
+import Dscp.Launcher.Rio (runRIO)
 import Dscp.Witness.Launcher.Runner (formWitnessContext)
 
 -- | Make up Educator context from dedicated pack of allocated resources.
@@ -19,6 +19,7 @@ formEducatorContext :: EducatorResources -> EducatorContext
 formEducatorContext EducatorResources{..} =
     EducatorContext
     { _ecWitnessCtx = formWitnessContext erWitnessResources
+    , _ecDB = erDB
     }
 
 runEducatorRealMode :: EducatorContext -> EducatorRealMode a -> IO a

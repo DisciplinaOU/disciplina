@@ -7,8 +7,8 @@ import Universum
 
 import Control.Monad.Component (runComponentM)
 
-import Dscp.Launcher.Mode (runRIO)
 import Dscp.Launcher.Resource (AllocResource (..))
+import Dscp.Launcher.Rio (runRIO)
 import Dscp.Witness.Launcher.Mode (WitnessContext (..), WitnessRealMode)
 import Dscp.Witness.Launcher.Params (WitnessParams (..))
 import Dscp.Witness.Launcher.Resource (WitnessResources (..))

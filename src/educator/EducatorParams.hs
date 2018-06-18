@@ -1,3 +1,4 @@
+{-# LANGUAGE ApplicativeDo #-}
 
 -- | Command-line options and flags for Educator node
 
@@ -10,17 +11,21 @@ import Universum
 
 import Options.Applicative (Parser, execParser, fullDesc, helper, info, progDesc)
 
-import Dscp.CLI (dbPathParser, logParamsParser, versionOption)
+import Dscp.CLI (dbPathParser, logParamsParser, sqliteDbPathParser, versionOption)
 import Dscp.Launcher (LoggingParams)
 
 data EducatorParams = EducatorParams
-    { epDbPath    :: !FilePath
-    , epLogParams :: !LoggingParams
+    { epRocksDbPath  :: !FilePath
+    , epLogParams    :: !LoggingParams
+    , epSqliteDbPath :: !FilePath
     }
 
 educatorParamsParser :: Parser EducatorParams
-educatorParamsParser =
-    EducatorParams <$> dbPathParser <*> logParamsParser "educator"
+educatorParamsParser = do
+    epRocksDbPath <- dbPathParser
+    epLogParams <- logParamsParser "educator"
+    epSqliteDbPath <- sqliteDbPathParser
+    return EducatorParams{..}
 
 getEducatorParams :: IO EducatorParams
 getEducatorParams =

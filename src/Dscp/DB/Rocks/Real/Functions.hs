@@ -1,6 +1,6 @@
 {-# LANGUAGE TypeApplications #-}
 
-module Dscp.DB.Real.Functions
+module Dscp.DB.Rocks.Real.Functions
        ( -- * Closing/opening
          openRocksDB
        , closeRocksDB
@@ -17,8 +17,8 @@ import Universum
 import qualified Database.RocksDB as Rocks
 import Ether.Internal (HasLens (..))
 
-import Dscp.DB.Class (MonadDB (..), MonadDBRead (..))
-import Dscp.DB.Real.Types (DB (..), DBParams (..), MonadRealDB, NodeDB (..), ndbDatabase)
+import Dscp.DB.Rocks.Class (MonadDB (..), MonadDBRead (..))
+import Dscp.DB.Rocks.Real.Types (DB (..), MonadRealDB, RocksDB (..), RocksDBParams (..), rdDatabase)
 
 -----------------------------------------------------------
 -- Opening/closing
@@ -38,11 +38,11 @@ openRocksDB path = do
 closeRocksDB :: MonadIO m => DB -> m ()
 closeRocksDB = Rocks.close . rocksDB
 
-openNodeDB :: MonadIO m => DBParams -> m NodeDB
-openNodeDB DBParams{..} = NodeDB <$> openRocksDB dbpPath
+openNodeDB :: MonadIO m => RocksDBParams -> m RocksDB
+openNodeDB RocksDBParams{..} = RocksDB <$> openRocksDB rdpPath
 
-closeNodeDB :: MonadIO m => NodeDB -> m ()
-closeNodeDB = closeRocksDB . _ndbDatabase
+closeNodeDB :: MonadIO m => RocksDB -> m ()
+closeNodeDB = closeRocksDB . _rdDatabase
 
 ------------------------------------------------------------
 -- Reading/writing
@@ -64,8 +64,8 @@ rocksDelete k DB {..} = Rocks.delete rocksDB rocksWriteOpts k
 -- Instances
 ------------------------------------------------------------
 
-getDB :: (MonadReader ctx m, HasLens NodeDB ctx NodeDB) => m DB
-getDB = view $ lensOf @NodeDB . ndbDatabase
+getDB :: (MonadReader ctx m, HasLens RocksDB ctx RocksDB) => m DB
+getDB = view $ lensOf @RocksDB . rdDatabase
 
 instance MonadRealDB ctx m => MonadDBRead m where
     dbGet key = getDB >>= rocksGetBytes key
