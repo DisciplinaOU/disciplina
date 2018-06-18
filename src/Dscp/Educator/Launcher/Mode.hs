@@ -23,6 +23,7 @@ import Loot.Log.Rio (LoggingIO)
 import Dscp.DB.Rocks.Real.Types (RocksDB)
 import Dscp.DB.SQLite (MonadSQLiteDB, SQLiteDB)
 import qualified Dscp.Launcher.Mode as Basic
+import Dscp.Launcher.Rio (RIO)
 import qualified Dscp.Witness.Launcher as Witness
 import Ether.Internal (HasLens (..))
 
@@ -53,7 +54,7 @@ data EducatorContext = EducatorContext
 
 makeLenses ''EducatorContext
 
-type EducatorRealMode = Basic.RIO EducatorContext
+type EducatorRealMode = RIO EducatorContext
 
 ---------------------------------------------------------------------
 -- Instances

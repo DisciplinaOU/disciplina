@@ -21,6 +21,7 @@ import Loot.Log.Rio (LoggingIO)
 import Dscp.DB.Rocks.Class (MonadDB)
 import Dscp.DB.Rocks.Real.Types (RocksDB)
 import qualified Dscp.Launcher.Mode as Basic
+import Dscp.Launcher.Rio (RIO)
 
 ---------------------------------------------------------------------
 -- WorkMode class
@@ -43,7 +44,7 @@ data WitnessContext = WitnessContext
 
 makeLenses ''WitnessContext
 
-type WitnessRealMode = Basic.RIO WitnessContext
+type WitnessRealMode = RIO WitnessContext
 
 ---------------------------------------------------------------------
 -- Instances

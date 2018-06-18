@@ -18,8 +18,8 @@ import System.Wlog (maybeLogsDirB, parseLoggerConfig, productionB, removeAllHand
 
 import Dscp.DB.Rocks.Real (RocksDB, RocksDBParams, closeNodeDB, openNodeDB)
 import Dscp.DB.SQLite (SQLiteDB, SQLiteParams, closeSQLiteDB, openSQLiteDB)
-import Dscp.Launcher.Mode (runRIO)
 import Dscp.Launcher.Params (LoggingParams (..))
+import Dscp.Launcher.Rio (runRIO)
 
 ----------------------------------------------------------------------------
 -- Resources

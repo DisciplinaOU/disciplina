@@ -19,7 +19,7 @@ import Network.Transport.Abstract (Transport)
 import Network.Transport.Concrete (concrete)
 import qualified Network.Transport.TCP as TCP
 
-import Dscp.Launcher.Mode (RIO, runRIO)
+import Dscp.Launcher.Rio (RIO, runRIO)
 
 bracketTransportTCP
     :: ( MonadIO n

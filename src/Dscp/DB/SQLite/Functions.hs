@@ -14,7 +14,7 @@ import Ether.Internal (HasLens (..))
 import Dscp.DB.SQLite.Class (MonadSQLiteDB (..))
 import Dscp.DB.SQLite.Error (SQLConnectionOpenningError (..), rethrowSQLRequestError)
 import Dscp.DB.SQLite.Types (SQLiteDB (..), SQLiteDBLocation (..), SQLiteParams (..))
-import Dscp.Launcher.Mode (RIO, runRIO)
+import Dscp.Launcher.Rio (RIO, runRIO)
 import Dscp.Util (wrapRethrowIO)
 
 -----------------------------------------------------------
