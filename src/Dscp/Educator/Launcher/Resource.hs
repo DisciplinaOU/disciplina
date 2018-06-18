@@ -16,11 +16,11 @@ import qualified Dscp.Witness.Launcher.Resource as Witness
 -- to start working.
 data EducatorResources = EducatorResources
     { erWitnessResources :: !Witness.WitnessResources
-    , erSQLiteDB         :: !SQLiteDB
+    , erDB               :: !SQLiteDB
     }
 
 instance AllocResource EducatorParams EducatorResources where
     allocResource EducatorParams{..} = do
         erWitnessResources <- allocResource epWitnessParams
-        erSQLiteDB <- allocResource epSQLiteParams
+        erDB <- allocResource epDBParams
         return EducatorResources {..}

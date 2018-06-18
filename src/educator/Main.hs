@@ -21,7 +21,7 @@ main = do
                 { wpLoggingParams = epLogParams
                 , wpDBParams = RocksDBParams{ rdpPath = epRocksDbPath }
                 }
-            , epSQLiteParams = SQLiteParams
+            , epDBParams = SQLiteParams
                 { sdpLocation = SQLiteReal epSqliteDbPath }
             }
     launchEducatorRealMode educatorParams $

@@ -7,6 +7,6 @@ import Dscp.Witness.Launcher.Params (WitnessParams)
 data EducatorParams = EducatorParams
     { epWitnessParams :: !WitnessParams
     -- ^ Witness parameters
-    , epSQLiteParams  :: !SQLiteParams
+    , epDBParams      :: !SQLiteParams
     -- ^ Handler to SQLite database
     }

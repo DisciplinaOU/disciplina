@@ -19,7 +19,7 @@ formEducatorContext :: EducatorResources -> EducatorContext
 formEducatorContext EducatorResources{..} =
     EducatorContext
     { _ecWitnessCtx = formWitnessContext erWitnessResources
-    , _ecSqliteDB = erSQLiteDB
+    , _ecDB = erDB
     }
 
 runEducatorRealMode :: EducatorContext -> EducatorRealMode a -> IO a

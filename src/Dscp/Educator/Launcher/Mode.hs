@@ -12,7 +12,7 @@ module Dscp.Educator.Launcher.Mode
     , EducatorContext (..)
     , EducatorRealMode
     , ecWitnessCtx
-    , ecSqliteDB
+    , ecDB
     ) where
 
 import Universum
@@ -48,7 +48,7 @@ type CombinedWorkMode m =
 
 data EducatorContext = EducatorContext
     { _ecWitnessCtx :: Witness.WitnessContext
-    , _ecSqliteDB   :: SQLiteDB
+    , _ecDB         :: SQLiteDB
     }
 
 makeLenses ''EducatorContext
@@ -66,4 +66,4 @@ instance HasLens LoggingIO EducatorContext LoggingIO where
     lensOf = ecWitnessCtx . Witness.wcLogging
 
 instance HasLens SQLiteDB EducatorContext SQLiteDB where
-    lensOf = ecSqliteDB
+    lensOf = ecDB
