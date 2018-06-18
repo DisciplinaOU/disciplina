@@ -9,20 +9,20 @@ module Dscp.DB.SQLite.Functions
 import Universum
 
 import qualified Database.SQLite.Simple as Lower
+import Ether.Internal (HasLens (..))
 
+import Dscp.DB.SQLite.Class (MonadSQLiteDB (..))
+import Dscp.DB.SQLite.Error (SQLConnectionOpenningError (..), rethrowSQLRequestError)
 import Dscp.DB.SQLite.Types (SQLiteDB (..), SQLiteDBLocation (..), SQLiteParams (..))
+import Dscp.Launcher.Mode (RIO, runRIO)
+import Dscp.Util (wrapRethrowIO)
 
 -----------------------------------------------------------
 -- Opening/closing
 -----------------------------------------------------------
 
-newtype InvalidSQLitePathException = InvalidSQLitePathException FilePath
-    deriving (Show)
-
-instance Exception InvalidSQLitePathException
-
 openSQLiteDB
-    :: (MonadIO m, MonadThrow m)
+    :: (MonadIO m, MonadCatch m)
     => SQLiteParams -> m SQLiteDB
 openSQLiteDB SQLiteParams{..} = do
     path <- case sdpLocation of
@@ -31,10 +31,12 @@ openSQLiteDB SQLiteParams{..} = do
         SQLiteReal path ->
             -- some paths produce db in memory, can't use them
             if any (== path) ["", ":memory:"]
-            then throwM (InvalidSQLitePathException path)
+            then throwM (SQLInvalidPathError path)
             else return path
 
-    sdConn <- liftIO $ Lower.open path
+    sdConn <-
+        wrapRethrowIO @SomeException (SQLConnectionOpenningError . show) $
+        Lower.open path
     return SQLiteDB {..}
 
 closeSQLiteDB :: MonadIO m => SQLiteDB -> m ()
@@ -43,3 +45,18 @@ closeSQLiteDB = liftIO . Lower.close . sdConn
 ------------------------------------------------------------
 -- Instances
 ------------------------------------------------------------
+
+instance HasLens SQLiteDB ctx SQLiteDB => MonadSQLiteDB (RIO ctx) where
+    query q params =
+        rethrowSQLRequestError $ do
+            SQLiteDB{..} <- view $ lensOf @SQLiteDB
+            liftIO $ Lower.query sdConn q params
+    queryStreamed q params acc f =
+        rethrowSQLRequestError $ do
+            ctx <- ask
+            let SQLiteDB{..} = ctx ^. lensOf @SQLiteDB
+            liftIO $ Lower.fold sdConn q params acc (runRIO ctx ... f)
+    execute q params = do
+        rethrowSQLRequestError $ do
+            SQLiteDB{..} <- view $ lensOf @SQLiteDB
+            liftIO $ Lower.execute sdConn q params

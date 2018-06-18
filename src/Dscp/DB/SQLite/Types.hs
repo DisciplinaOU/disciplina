@@ -1,6 +1,5 @@
 module Dscp.DB.SQLite.Types
-       ( MonadSQLiteDB
-       , SQLiteDBLocation (..)
+       ( SQLiteDBLocation (..)
        , SQLiteDB (..)
        , SQLiteParams (..)
        ) where
@@ -8,15 +7,6 @@ module Dscp.DB.SQLite.Types
 import Universum
 
 import Database.SQLite.Simple (Connection)
-import Ether.Internal (HasLens)
-
--- | Set of constraints necessary to operate on SQLite database.
-type MonadSQLiteDB ctx m =
-    ( MonadReader ctx m
-    , HasLens SQLiteDB ctx SQLiteDB
-    , MonadIO m
-    , Monad m
-    )
 
 -- | Where database lies.
 data SQLiteDBLocation

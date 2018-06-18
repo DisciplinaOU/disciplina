@@ -21,7 +21,7 @@ import Control.Lens (makeLenses)
 import Loot.Log.Rio (LoggingIO)
 
 import Dscp.DB.Real.Types (NodeDB)
-import Dscp.DB.SQLite (SQLiteDB)
+import Dscp.DB.SQLite (MonadSQLiteDB, SQLiteDB)
 import qualified Dscp.Launcher.Mode as Basic
 import qualified Dscp.Witness.Launcher as Witness
 import Ether.Internal (HasLens (..))
@@ -33,6 +33,7 @@ import Ether.Internal (HasLens (..))
 -- | Set of typeclasses which define capabilities of bare Educator node.
 type EducatorWorkMode m =
     ( Basic.BasicWorkMode m
+    , MonadSQLiteDB m
     )
 
 -- | Set of typeclasses which define capabilities both of Educator and Witness.
@@ -63,3 +64,6 @@ instance HasLens NodeDB EducatorContext NodeDB where
 
 instance HasLens LoggingIO EducatorContext LoggingIO where
     lensOf = ecWitnessCtx . Witness.wcLogging
+
+instance HasLens SQLiteDB EducatorContext SQLiteDB where
+    lensOf = ecSqliteDB
