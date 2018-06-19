@@ -1,4 +1,1 @@
-
-module Dscp.Listeners (module M) where
-
-import Dscp.Listeners.Listener as M
+{-# OPTIONS_GHC -F -pgmF autoexporter #-}
