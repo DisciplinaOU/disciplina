@@ -35,10 +35,12 @@ library:
     - optparse-applicative
     - random
     - rocksdb-haskell
+    - serokell-util
     - serialise
     - snowdrop
     - sqlite-simple
     - stm
+    - time
     - time-units
     - unliftio
 
@@ -58,6 +60,7 @@ tests:
       - tasty
       - tasty-hspec
       - tasty-discover
+      - time
       - QuickCheck
       - quickcheck-instances
 

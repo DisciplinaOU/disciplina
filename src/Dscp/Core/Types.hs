@@ -9,8 +9,13 @@ module Dscp.Core.Types
        , StudentId
        , EducatorId
        , CourseId (..)
+       , Assignment (..)
+       , AssignmentType (..)
        , AssignmentId
-       , Submission
+       , Submission (..)
+       , SubmissionType (..)
+       , SignedSubmission (..)
+       , SubmissionWitness (..)
 
        -- * Activity Type Graph
        , ATGDelta (..)
@@ -28,7 +33,7 @@ import Universum
 import Control.Lens (makeLenses)
 import Data.Map (Map)
 
-import Dscp.Crypto (Hash, PublicKey, Raw, hash)
+import Dscp.Crypto (Hash, PublicKey, Signature, hash)
 
 -- | 'Address' datatype. Not 'newtype', because later it will
 -- inevitably become more complex.
@@ -62,15 +67,59 @@ newtype CourseId = CourseId
     { getCourseId :: Word32
     } deriving (Eq, Ord, Show, Num)
 
+-- | Assignment can be either regular of final
+data AssignmentType = Regular | CourseFinal
+    deriving (Eq, Show, Generic)
+
+-- | Assignment doesn't contain actual assignment contents - only hash of them.
+data Assignment = Assignment
+    { aCourseId   :: !CourseId
+    -- ^ Course this assignement belongs to
+    , aType       :: !AssignmentType
+    -- ^ Assignment type
+    , aAssignment :: !Text
+    -- ^ Description of assignment
+    } deriving (Eq, Show, Generic)
+
 -- | 'AssignmentId' is a hash of assignment contents,
 -- which are stored off-chain.
-data Assignment
-
 type AssignmentId = Hash Assignment
 
--- | Stub type for submissions. Submission transaction
--- doesn't contain actual submission contents - only hash of them.
-type Submission = Hash Raw
+-- | Submission can be digital or offline
+-- TODO, better description of how these differs
+data SubmissionType = Digital | Offline
+    deriving (Eq, Show, Generic)
+
+-- | Student submissions
+data Submission = Submission
+    { sStudentId  :: !StudentId
+    -- ^ Student who created this submission
+    , sType       :: !SubmissionType
+    -- ^ Submission type
+    , sAssignment :: !Assignment
+    -- ^ Assignment of this submission
+    } deriving (Eq, Show, Generic)
+
+-- | Type alias for Submission hash
+type SubmissionId = Hash Submission
+
+-- | Type alias for Submission signature.
+type SubmissionSig = Signature SubmissionId
+
+-- | Witness contains data required to verify transaction.
+data SubmissionWitness = SubmissionWitness
+    { _swKey :: !PublicKey
+    , _swSig :: !SubmissionSig
+    } deriving (Show, Eq, Generic)
+
+-- | Datatype for verifiable transaction (transaction with a witness)
+data SignedSubmission = SignedSubmission
+    { ssSubmission :: !Submission
+    -- ^ Student submission
+    , ssWitness    :: !SubmissionWitness
+    -- ^ Submission witness
+    } deriving (Eq, Show, Generic)
+
 
 -- | ATGDelta is a diff for set of subjects which are taught by Educator.
 -- Implemented as 'Map SubjectId Bool' to avoid representing invalid diffs

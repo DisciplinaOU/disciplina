@@ -22,6 +22,19 @@ import Data.List (unlines)
 import GHC.Show (Show (show))
 import Universum hiding (show, unlines)
 
+import Data.Time.Clock (UTCTime)
+import Data.Time.Format (defaultTimeLocale, parseTimeOrError)
+
+import Crypto.Error (CryptoFailable (..))
+import Dscp.Core (Assignment (..), AssignmentType (..), CourseId (..), Grade (..),
+                  SignedSubmission (..), Submission (..), SubmissionType (..),
+                  SubmissionWitness (..), mkAddr)
+import Dscp.Crypto (AbstractPK (..), AbstractSK (..), PublicKey, SecretKey, hash, sign)
+import Dscp.Educator (PrivateTx (..))
+
+import qualified Crypto.PubKey.Ed25519 as Ed25519
+import qualified Data.ByteString.Char8 as C
+
 -- import Control.Arrow (second)
 import Control.Lens (each, to)
 
@@ -165,3 +178,61 @@ worldTProperty
 worldTProperty side what = ioProperty $ do
     (prop, _) <- AVL.runOnEmptyCache $ Witness.evalWorldT def side what
     return prop
+
+-- | Create public key from seed
+mkPubKey :: Char -> PublicKey
+mkPubKey seed = fst (mkKeyPair seed)
+
+-- | Create private key from seed
+mkPrivKey :: Char -> SecretKey
+mkPrivKey seed = snd (mkKeyPair seed)
+
+-- | Create key pair from seed
+mkKeyPair :: Char -> (PublicKey, SecretKey)
+mkKeyPair seed =
+  let (CryptoPassed x) = Ed25519.secretKey (C.replicate 32 seed)
+  in (AbstractPK (Ed25519.toPublic x), AbstractSK x)
+
+-- | Create a private transaction
+mkPrivateTx :: CourseId -- ^ course id
+            -> Grade -- ^ grade
+            -> PublicKey -- ^ student public key
+            -> (PublicKey, SecretKey) -- ^ educator key pair
+            -> PrivateTx
+mkPrivateTx courseId grade studentKey (educatorPKey, educatorSKey) =
+    PrivateTx { _ptxSignedSubmission = mkSignedSubmission
+              , _ptxGrade = grade
+              , _ptxTime = time
+              }
+  where
+     time :: UTCTime
+     time = parseTimeOrError True defaultTimeLocale "%Y-%-m-%-d" "2018-03-04"
+
+     mkSignedSubmission :: SignedSubmission
+     mkSignedSubmission = SignedSubmission
+       { ssSubmission = mkSubmission
+       , ssWitness = mkSubmissionWitness
+       }
+
+     mkSubmission :: Submission
+     mkSubmission = Submission
+       { sStudentId = mkAddr studentKey
+       , sType = Digital
+       , sAssignment = mkAssignment
+       }
+
+     mkSubmissionWitness :: SubmissionWitness
+     mkSubmissionWitness = SubmissionWitness
+       { _swKey = educatorPKey
+       , _swSig = sign educatorSKey (hash mkSubmission)
+       }
+
+     mkAssignment :: Assignment
+     mkAssignment = Assignment
+       { aCourseId = courseId
+       , aType = Regular
+       , aAssignment = ""
+       }
+
+
+

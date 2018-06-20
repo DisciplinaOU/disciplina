@@ -3,7 +3,9 @@ module Dscp.Core.Serialise () where
 import Codec.Serialise (Serialise (..))
 
 import Dscp.Core.Types (ATG (..), ATGDelta (..), ATGEdge (..), ATGNode (..), Address (..),
-                              CourseId (..), Grade (..), SubjectId (..))
+                        Assignment (..), AssignmentType (..), CourseId (..), Grade (..),
+                        SignedSubmission (..), SubjectId (..), Submission (..), SubmissionType,
+                        SubmissionWitness (..))
 
 -- TODO: move to well-specified serialisation instead of generic one.
 deriving instance Serialise CourseId
@@ -16,3 +18,10 @@ instance Serialise ATGEdge
 
 deriving instance Serialise ATGDelta
 deriving instance Serialise ATG
+
+instance Serialise Assignment
+instance Serialise AssignmentType
+instance Serialise Submission
+instance Serialise SubmissionType
+instance Serialise SubmissionWitness
+instance Serialise SignedSubmission
