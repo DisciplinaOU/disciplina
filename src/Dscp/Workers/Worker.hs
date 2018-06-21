@@ -1,63 +1,36 @@
+{-# LANGUAGE OverloadedLists #-}
+
 -- | Node workers
 
 module Dscp.Workers.Worker where
 
 import Universum
 
+import Loot.Log (logInfo, logWarning, modifyLogName)
 import Loot.Network.Class (ClientEnv, ClientId, MsgType, Subscription)
+import Loot.Network.Class (CliId, Content, ListenerEnv, ListenerId, MsgType, ServSendMsg (..))
 
+import Dscp.Network.Messages (PingBlk (..), PingTx (..), PongBlk (..), PongTx (..))
+import Dscp.Network.Wrapped (Worker (..), cliRecvResp, cliSend, msgType)
 import Dscp.Witness.Launcher (WitnessWorkMode)
 
+witnessWorkers :: WitnessWorkMode m => [Worker t m]
+witnessWorkers = [witnessTxWorker]
 
-data ClientWorker t m = ClientWorker
-    { cliId          :: ClientId
-    , cMsgTypes      :: Set MsgType
-    , sSubscriptions :: Set Subscription
-    , cAction        :: ClientEnv t -> m ()
-    }
+witnessTxWorker :: forall t m. WitnessWorkMode m => Worker t m
+witnessTxWorker = Worker "txWorker" [msgType @PongTx] [] action
+  where
+    action :: ClientEnv t -> m ()
+    action btq = forever $ do
+        cliSend @t btq Nothing PingTx
+        (nId,PongTx txt) <- cliRecvResp @t btq (-1)
+        logInfo $ fromString $ "Heard pongtx: " <> show txt
 
-witnessWorkers :: WitnessWorkMode m => [ClientWorker t m]
-witnessWorkers = [] -- [ witnessTxWorker
-                    -- , witnessBlkWorker
-                    -- ]
-
--- TODO DSCP-105 Repair this
---witnessTxWorker :: forall m. WitnessWorkMode m => WitnessWorker m
---witnessTxWorker _anId peerIds conv = logInfo "tx worker initialized" >> worker conv
---    where
---    worker
---        :: Converse Packing ByteString m
---        -> m ()
---    worker converse = loop
---        where
---        loop :: m ()
---        loop = do
---            let pongTx :: NodeId -> ConversationActions PingTx PongTx m -> m ()
---                pongTx _peerId cactions = do
---                    received <- recv cactions maxBound
---                    case received of
---                        Just (PongTx _) -> logInfo "heard Tx"
---                        Nothing         -> error "Unexpected end of input"
---            forConcurrently_ peerIds $ \peerId ->
---                converseWith converse peerId (\_ -> Conversation (pongTx peerId))
---            loop
---
---witnessBlkWorker :: forall m. WitnessWorkMode m => WitnessWorker m
---witnessBlkWorker _anId peerIds conv = logInfo "blk worker initialized" >> worker conv
---    where
---    worker
---        :: Converse Packing ByteString m
---        -> m ()
---    worker converse = loop
---        where
---        loop :: m ()
---        loop = do
---            let pongBlk :: NodeId -> ConversationActions PingBlk PongBlk m -> m ()
---                pongBlk _peerId cactions = do
---                    received <- recv cactions maxBound
---                    case received of
---                        Just (PongBlk _) -> logInfo "heard Blk"
---                        Nothing          -> error "Unexpected end of input"
---            forConcurrently_ peerIds $ \peerId ->
---                converseWith converse peerId (\_ -> Conversation (pongBlk peerId))
---            loop
+witnessBlkWorker :: forall t m. WitnessWorkMode m => Worker t m
+witnessBlkWorker = Worker "blkWorker" [msgType @PongBlk] [] action
+  where
+    action :: ClientEnv t -> m ()
+    action btq = forever $ do
+        cliSend @t btq Nothing PingBlk
+        (nId,PongBlk txt) <- cliRecvResp @t btq (-1)
+        logInfo $ fromString $ "Heard pongblk: " <> show txt

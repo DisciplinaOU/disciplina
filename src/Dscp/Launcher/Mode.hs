@@ -6,9 +6,10 @@
 Some notes on architcturial descisions:
 
 * Among the project we use monad stack consisting of @ReaderT ctx m@,
-and thus tend to use module for
-threading because it perfectly fits for IO-based monad stacks which have no
-state embeded into them, i.e. @StM m a ~ a@.
+and thus tend to use 'UnliftIO.Async' module for threading because it
+perfectly fits for IO-based monad stacks which have no state embeded
+into them, i.e. @StM m a ~ a@.
+
 Alternatives are
   * 'Control.Concurrent.Async' for 'IO'
   * 'Control.Concurrent.Async.Lifted.Safe' for monad stack with no embeded state
@@ -37,4 +38,5 @@ type BasicWorkMode m =
     ( WithLogging m
     , MonadIO m
     , MonadUnliftIO m  -- allows to use lifted-async
+    , MonadMask m
     )

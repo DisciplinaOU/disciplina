@@ -12,6 +12,7 @@ _definitions:
         extra-source-files: [README.md]
 
     - &default-extensions
+        - AllowAmbiguousTypes
         - BangPatterns
         - ConstraintKinds
         - DefaultSignatures

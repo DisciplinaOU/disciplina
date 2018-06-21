@@ -1,5 +1,4 @@
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE DataKinds #-}
 
 -- | Message types we're using are bytestrings with a decimal ASCII
 -- representation of the message tag. Obviously, more efficient
@@ -9,10 +8,7 @@
 
 module Dscp.Network.Messages
     (
-      getMsgType
-    , fromMsgType
-
-    , PingBlk(..)
+      PingBlk(..)
     , PongBlk(..)
     , PingTx(..)
     , PongTx(..)
@@ -21,33 +17,28 @@ module Dscp.Network.Messages
 import Universum
 
 import Codec.Serialise (Serialise)
-import qualified Data.ByteString.Char8 as BS
-import Loot.Network.Class (MsgType (..))
-import Loot.Network.Message (Message (..), getMsgTag)
+import Loot.Network.Message (Message (..))
 
--- | Get a 'MsgType' related to the message specified (pack the
--- natural which is related to the message type).
-getMsgType :: forall d. (Message d) => MsgType
-getMsgType = MsgType $ BS.pack $ show $ getMsgTag @d
+import Dscp.Network.Wrapped (MsgK)
 
--- | Convert 'MsgType' to a natural number.
-fromMsgType :: MsgType -> Maybe Natural
-fromMsgType (MsgType bs) = readMaybe (BS.unpack bs)
+----------------------------------------------------------------------------
+-- Real messages (move them elsewhere)
+----------------------------------------------------------------------------
 
 -- | Type for messages from the workers to the witnessListeners.
 data PingBlk = PingBlk deriving (Generic,Show)
 instance Serialise PingBlk
-instance Message PingBlk where type MsgTag PingBlk = 0
+instance Message MsgK PingBlk where type MsgTag MsgK PingBlk = 0
 
 data PingTx = PingTx deriving (Generic,Show)
 instance Serialise PingTx
-instance Message PingTx where type MsgTag PingTx = 1
+instance Message MsgK PingTx where type MsgTag MsgK PingTx = 1
 
 -- | Type for messages from the witnessListeners to the workers.
 data PongBlk = PongBlk ByteString deriving (Generic,Show)
 instance Serialise PongBlk
-instance Message PongBlk where type MsgTag PongBlk = 2
+instance Message MsgK PongBlk where type MsgTag MsgK PongBlk = 2
 
 data PongTx = PongTx ByteString deriving (Generic,Show)
 instance Serialise PongTx
-instance Message PongTx where type MsgTag PongTx = 3
+instance Message MsgK PongTx where type MsgTag MsgK PongTx = 3

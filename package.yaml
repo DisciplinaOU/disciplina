@@ -22,7 +22,6 @@ library:
     - free
     - hashable
     - lens
-    - lifted-async
     - loot-base
     - loot-log
     - loot-network
