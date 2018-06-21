@@ -38,6 +38,8 @@ library:
     - snowdrop
     - sqlite-simple
     - stm
+    - text
+    - text-format
     - time
     - time-units
     - unliftio
