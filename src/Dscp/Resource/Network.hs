@@ -1,6 +1,12 @@
 -- | ZMQ TCP Networking resource allocation.
 
-module Dscp.Resource.Network where
+module Dscp.Resource.Network
+    ( NetCliParams(..)
+    , NetCliResources(..)
+
+    , NetServParams(..)
+    , NetServResources(..)
+    ) where
 
 import Universum
 

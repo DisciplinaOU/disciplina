@@ -18,7 +18,7 @@ extra-deps:
 - teardown-0.5.0.0
 - unliftio-0.2.7.0
 
-- git: git@github.com:serokell/auth-data-structures.git
+- git: https://github.com/serokell/auth-data-structures.git
   commit: 3bd0cbc7ac0408f897f11746dbd245e3f8437bbb
 
 - git: git@github.com:serokell/snowdrop.git

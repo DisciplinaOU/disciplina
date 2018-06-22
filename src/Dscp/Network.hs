@@ -6,3 +6,4 @@ module Dscp.Network
 
 import Dscp.Network.Instances ()
 import Dscp.Network.Messages as M
+import Dscp.Network.Wrapped as M

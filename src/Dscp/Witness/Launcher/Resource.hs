@@ -42,4 +42,5 @@ instance AllocResource WitnessParams WitnessResources where
         _wrLogging <- allocResource wpLoggingParams
         _wrDB <- allocResource wpDBParams
         _wrNetwork <- allocResource wpNetworkParams
+        liftIO $ putText "kek"
         return WitnessResources {..}

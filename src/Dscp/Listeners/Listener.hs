@@ -2,15 +2,13 @@
 
 -- | Node Listeners
 
-module Dscp.Listeners.Listener where
+module Dscp.Listeners.Listener
+    ( witnessListeners
+    ) where
 
 import Universum
 
-import Codec.Serialise (serialise)
 import qualified Data.ByteString.Lazy as BSL
-import Loot.Network.BiTQueue (BiTQueue, recvBtq, sendBtq)
-import Loot.Network.Class (CliId, Content, ListenerEnv, ListenerId, MsgType, ServSendMsg (..))
-import Loot.Network.Message (CallbackWrapper (..), Message, handlerDecoded, runCallbacksInt)
 
 import Dscp.Network.Messages (PingBlk (..), PingTx (..), PongBlk (..), PongTx (..))
 import Dscp.Network.Wrapped (Listener, fromMsgType, lcallback, msgType, servSend, simpleListener)

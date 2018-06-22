@@ -19,14 +19,14 @@ formWitnessContext :: WitnessResources -> WitnessContext
 formWitnessContext res@WitnessResources{..} =
     WitnessContext { _wcResources = res }
 
-runWitnessRealMode :: WitnessContext -> WitnessRealMode a -> IO a
+runWitnessRealMode :: WitnessContext -> WitnessRealMode () -> IO ()
 runWitnessRealMode = runRIO
 
 -- | Given params, allocate resources, construct node context and run
 -- `WitnessWorkMode` monad.
-launchWitnessRealMode :: WitnessParams -> WitnessRealMode a -> IO a
+launchWitnessRealMode :: WitnessParams -> WitnessRealMode () -> IO ()
 launchWitnessRealMode params action =
     runComponentM "Witness (real mode)" (allocResource params) $
       \resources ->
         let ctx = formWitnessContext resources
-        in runWitnessRealMode ctx action
+        in            runWitnessRealMode ctx action

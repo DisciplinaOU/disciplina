@@ -2,7 +2,9 @@
 
 -- | Node workers
 
-module Dscp.Workers.Worker where
+module Dscp.Workers.Worker
+    ( witnessWorkers
+    ) where
 
 import Universum
 

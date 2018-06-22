@@ -25,6 +25,9 @@ module Dscp.Network.Wrapped
     , cliRecv
     , cliRecvResp
     , cliRecvUpdate
+
+    , withClient
+    , withServer
     ) where
 
 
@@ -40,7 +43,7 @@ import Loot.Log (MonadLogging, logDebug, logError, logWarning)
 import Loot.Network.BiTQueue (recvBtq, sendBtq)
 import Loot.Network.Class (CliId, ClientEnv, ClientId, ListenerEnv, ListenerId, MsgType (..),
                            NetworkingCli, NetworkingServ, NodeId, Subscription (..), registerClient,
-                           registerListener)
+                           registerListener, runClient, runServer)
 import qualified Loot.Network.Class as L
 import Loot.Network.Message (CallbackWrapper, Message (..), getMsgTag, handlerDecoded,
                              runCallbacksInt)
@@ -253,3 +256,15 @@ cliRecvUpdate ::
     -> Int
     -> m (NodeId t, d)
 cliRecvUpdate = cliRecvOne @SubK @t @d
+
+----------------------------------------------------------------------------
+-- Launching
+----------------------------------------------------------------------------
+
+-- | Launch server on the background.
+withClient :: (MonadUnliftIO m, NetworkingCli t m) => m a -> m a
+withClient = withAsync runClient . const
+
+-- | Launch server on the background.
+withServer :: (MonadUnliftIO m, NetworkingServ t m, NetworkingCli t m) => m a -> m a
+withServer = withAsync runServer . const . withAsync runClient . const
