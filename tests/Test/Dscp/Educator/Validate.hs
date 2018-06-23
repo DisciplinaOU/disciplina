@@ -2,11 +2,11 @@ module Test.Dscp.Educator.Validate where
 
 import Test.Common
 
-import Dscp.Core (ATGDelta (..), CourseId (..), Grade (..))
+import Dscp.Core (ATGDelta (..), CourseId (..), Grade (..), _swKey, _swSig, ssSubmission, ssWitness)
 import Dscp.Crypto (AbstractPK (..), AbstractSK (..), PublicKey, SecretKey,
-                    getMerkleRoot, fromFoldable)
+                    hash, getMerkleRoot, fromFoldable)
 import Dscp.Educator (PrivateBlock (..), PrivateBlockBody (..), PrivateBlockHeader (..),
-                      PrivateTx (..), genesisHeaderHash, validatePrivateBlk)
+                      PrivateTx (..), genesisHeaderHash, validatePrivateBlk, ValidationFailure (..))
 
 import System.IO.Unsafe (unsafePerformIO)
 import qualified Crypto.PubKey.Ed25519 as Ed25519
@@ -15,22 +15,15 @@ import qualified Data.Map.Strict as M
 courseCompScience1 :: CourseId
 courseCompScience1 = CourseId 3
 
-studentAPubKey, studentBPubKey,
-  educatorJPubKey, educatorKPubKey :: PublicKey
+studentAPubKey, studentBPubKey :: PublicKey
 studentAPubKey = mkPubKey 'a'
 studentBPubKey = mkPubKey 'b'
-educatorJPubKey = mkPubKey 'j'
-educatorKPubKey = mkPubKey 'k'
 
-studentAPrivKey, studentBPrivKey,
-  educatorJPrivKey, educatorKPrivKey :: SecretKey
+studentAPrivKey, studentBPrivKey :: SecretKey
 studentAPrivKey = mkPrivKey 'a'
 studentBPrivKey = mkPrivKey 'b'
-educatorJPrivKey = mkPrivKey 'j'
-educatorKPrivKey = mkPrivKey 'k'
 
-educatorKKeyPair, studentAKeyPair :: (PublicKey, SecretKey)
-educatorKKeyPair = mkKeyPair 'k'
+studentAKeyPair :: (PublicKey, SecretKey)
 studentAKeyPair = mkKeyPair 'a'
 
 -- | Educator 'k' grade student a an B in course Computer science
@@ -62,10 +55,22 @@ spec_ValidateBlock = describe "Validate private block" $ do
         validatePrivateBlk (mkBlock [tx1]) `shouldBe` Right ()
         validatePrivateBlk (mkBlock [tx1, tx4]) `shouldBe` Right ()
         validatePrivateBlk (mkBlock txsValid) `shouldBe` Right ()
-    it "do not validate non valid block" $ do
-        validatePrivateBlk (mkBlock [tx2]) `shouldBe` Left ["Tx signature not valid"]
-        validatePrivateBlk (mkBlock [tx3]) `shouldBe` Left ["Tx public key missmatch", "Tx signature not valid"]
-  where mkBlock txs = PrivateBlock
+    it "do not validate non-valid transaction signatures " $ do
+        validatePrivateBlk (mkBlock [tx2]) `shouldBe`
+          Left [TxSignatureMismatch (getTxKey tx2)
+                                    (getTxSig tx2)
+                                    (hashTxSub tx2)]
+        validatePrivateBlk (mkBlock [tx3]) `shouldBe`
+          Left [TxPublicKeyMismatch (hash studentAPubKey) (hash (getTxKey tx3))
+               ,TxSignatureMismatch (getTxKey tx3) (getTxSig tx3) (hashTxSub tx3)]
+    it "do not validate non-valid merkle root " $ do
+        let block = mkBlock txsValid
+        validatePrivateBlk (replaceMerkleRoot block [tx1, tx2, tx4]) `shouldBe`
+          Left [MerkleSignatureMismatch (mkBodyProof [tx1, tx2, tx4]) (_pbhBodyProof (_pbHeader block))]
+  where getTxKey = _swKey . ssWitness . _ptxSignedSubmission
+        getTxSig = _swSig . ssWitness . _ptxSignedSubmission
+        hashTxSub = hash . ssSubmission . _ptxSignedSubmission
+        mkBlock txs = PrivateBlock
           { _pbHeader = mkBlockHeader txs
           , _pbBody = mkBlockBody txs
           }
@@ -79,3 +84,6 @@ spec_ValidateBlock = describe "Validate private block" $ do
           }
         mkBodyProof txs = getMerkleRoot (fromFoldable txs)
         mkATGDelta = ATGDelta M.empty
+        replaceMerkleRoot :: PrivateBlock -> [PrivateTx] -> PrivateBlock
+        replaceMerkleRoot block txs =
+          block { _pbHeader = (_pbHeader block) { _pbhBodyProof = mkBodyProof txs } }

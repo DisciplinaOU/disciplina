@@ -196,10 +196,10 @@ mkKeyPair seed =
 -- | Create a private transaction
 mkPrivateTx :: CourseId -- ^ course id
             -> Grade -- ^ grade
-            -> PublicKey -- ^ student public key
-            -> (PublicKey, SecretKey) -- ^ educator key pair
+            -> PublicKey -- ^ public key to derive address from
+            -> (PublicKey, SecretKey) -- ^ witness key pair
             -> PrivateTx
-mkPrivateTx courseId grade studentKey (educatorPKey, educatorSKey) =
+mkPrivateTx courseId grade addrKey (witnessPKey, witnessSKey) =
     PrivateTx { _ptxSignedSubmission = mkSignedSubmission
               , _ptxGrade = grade
               , _ptxTime = time
@@ -216,15 +216,15 @@ mkPrivateTx courseId grade studentKey (educatorPKey, educatorSKey) =
 
      mkSubmission :: Submission
      mkSubmission = Submission
-       { sStudentId = mkAddr studentKey
+       { sStudentId = mkAddr addrKey
        , sType = Digital
        , sAssignment = mkAssignment
        }
 
      mkSubmissionWitness :: SubmissionWitness
      mkSubmissionWitness = SubmissionWitness
-       { _swKey = educatorPKey
-       , _swSig = sign educatorSKey (hash mkSubmission)
+       { _swKey = witnessPKey
+       , _swSig = sign witnessSKey (hash mkSubmission)
        }
 
      mkAssignment :: Assignment
@@ -233,6 +233,3 @@ mkPrivateTx courseId grade studentKey (educatorPKey, educatorSKey) =
        , aType = Regular
        , aAssignment = ""
        }
-
-
-

@@ -15,6 +15,7 @@ module Dscp.Core.Types
        , Submission (..)
        , SubmissionType (..)
        , SignedSubmission (..)
+       , SubmissionSig
        , SubmissionWitness (..)
 
        -- * Activity Type Graph
