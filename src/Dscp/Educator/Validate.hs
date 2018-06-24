@@ -23,12 +23,12 @@ import qualified Data.Text.Buildable ()
 
 -- | Validation failures
 data ValidationFailure
-    = MerkleSignatureMismatch (MerkleSignature PrivateTx) (MerkleSignature PrivateTx)
+    = MerkleSignatureMismatch !(MerkleSignature PrivateTx) !(MerkleSignature PrivateTx)
       -- ^ Header merkle tree root does not match
       -- body merkle tree root
-    | TxPublicKeyMismatch (Hash PublicKey) (Hash PublicKey)
+    | TxPublicKeyMismatch !(Hash PublicKey) !(Hash PublicKey)
       -- ^ Witness public key do not match transaction address
-    | TxSignatureMismatch PublicKey SubmissionSig (Hash Submission)
+    | TxSignatureMismatch !PublicKey !SubmissionSig !(Hash Submission)
       -- ^ Witness signature do not match transaction submission signature
     deriving (Eq)
 
