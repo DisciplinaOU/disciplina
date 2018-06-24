@@ -10,7 +10,7 @@ import Dscp.Educator.Launcher.Mode (EducatorContext (..), EducatorRealMode)
 import Dscp.Educator.Launcher.Params (EducatorParams (..))
 import Dscp.Educator.Launcher.Resource (EducatorResources (..))
 import Dscp.Launcher.Rio (runRIO)
-import Dscp.Resource.Class (AllocResource (..))
+import Dscp.Resource (AllocResource (..))
 import Dscp.Witness.Launcher.Runner (formWitnessContext)
 
 -- | Make up Educator context from dedicated pack of allocated resources.

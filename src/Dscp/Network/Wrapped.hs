@@ -1,5 +1,9 @@
 {-# LANGUAGE ExistentialQuantification #-}
 
+-- Some of these methods have 'NetworkingX' constraint added though it is
+-- not required. I use it to force fundep m -> t so user can use methods
+-- without specifying t.
+
 -- | High-level typed wrapper over loot-network, is supposed to be
 -- used within the library instead of loot-network directly.
 
@@ -39,7 +43,7 @@ import Control.Concurrent.STM (orElse)
 import Control.Concurrent.STM.TMVar (newEmptyTMVarIO, putTMVar, readTMVar)
 import qualified Data.ByteString.Char8 as BS8
 import qualified Data.ByteString.Lazy as BSL
-import Loot.Log (MonadLogging, logDebug, logError, logWarning)
+import Loot.Log (MonadLogging, logDebug, logError, logInfo, logWarning)
 import Loot.Network.BiTQueue (recvBtq, sendBtq)
 import Loot.Network.Class (CliId, ClientEnv, ClientId, ListenerEnv, ListenerId, MsgType (..),
                            NetworkingCli, NetworkingServ, NodeId, Subscription (..), registerClient,
@@ -87,12 +91,14 @@ data Listener t m = Listener
     }
 
 runListener ::
-       forall t m n. (NetworkingServ t n)
+       forall t m n. (NetworkingServ t n, MonadLogging n)
     => (forall x. m x -> n x)
     -> Listener t m
     -> n ()
 runListener nat Listener{..} = do
+    logInfo "registering listener"
     (lEnv :: ListenerEnv t) <- registerListener @t lId lMsgTypes
+    logInfo "registering listener, running"
     nat $ lAction lEnv
 
 servSend :: forall t d. Message MsgK d => ListenerEnv t -> CliId t -> d -> STM ()
@@ -117,6 +123,7 @@ simpleListener lId lMsgTypes getCallbacks =
         logDebug $ fromString $ "Listener " <> show lId <> " has started."
         forever $ action btq `catchAny` handler
     action btq = do
+        logInfo $ fromString $ "simpleListener " <> show lId <> ": receiving..."
         let callbacks = getCallbacks btq
         (cliId,msgT,content) <- atomically $ recvBtq btq
         case (fromMsgType msgT,content) of
@@ -156,7 +163,7 @@ runWorker nat Worker{..} = do
     nat $ wAction cEnv
 
 cliSend ::
-       forall t d m. (Message MsgK d, MonadIO m)
+       forall t d m. (Message MsgK d, NetworkingCli t m, MonadIO m)
     => ClientEnv t
     -> Maybe (NodeId t)
     -> d
@@ -180,14 +187,20 @@ data CliRecvExcInternal
 
 instance Exception CliRecvExcInternal
 
+type SendConstraint k t d m
+     = ( Message k d
+       , NetworkingCli t m
+       , MonadUnliftIO m
+       , MonadCatch m
+       , MonadLogging m)
+
 -- Timeout -- milliseconds, 0 if instant response is expected, -1 (any
 -- negative) if timeout should be disabled.
 --
 -- Callback takes care of decoding itself because we might want to
 -- propagate data first (before decoding the message).
 cliRecv ::
-       forall t k d m a.
-       (Message k d, MonadUnliftIO m, MonadCatch m, MonadLogging m)
+       forall t k d m a. SendConstraint k t d m
     => ClientEnv t
     -> Int
     -> [CallbackWrapper (NodeId t) m a]
@@ -227,8 +240,7 @@ cliRecv btq timeout callbacks = withHandler $ withTimeout $ \tmAction -> do
               withAsync timer $ \_async -> action (readTMVar timeoutVar)
 
 cliRecvOne ::
-       forall k t d m.
-       (Message k d, MonadUnliftIO m, MonadCatch m, MonadLogging m)
+       forall k t d m. SendConstraint k t d m
     => ClientEnv t
     -> Int
     -> m (NodeId t, d)
@@ -242,16 +254,14 @@ cliRecvOne btq timeout =
         ]
 
 cliRecvResp ::
-       forall t d m.
-       (Message MsgK d, MonadUnliftIO m, MonadCatch m, MonadLogging m)
+       forall t d m. SendConstraint MsgK t d m
     => ClientEnv t
     -> Int
     -> m (NodeId t, d)
 cliRecvResp = cliRecvOne @MsgK @t @d
 
 cliRecvUpdate ::
-       forall t d m.
-       (Message SubK d, MonadUnliftIO m, MonadCatch m, MonadLogging m)
+       forall t d m. SendConstraint SubK t d m
     => ClientEnv t
     -> Int
     -> m (NodeId t, d)

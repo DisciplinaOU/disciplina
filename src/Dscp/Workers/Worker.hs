@@ -8,31 +8,37 @@ module Dscp.Workers.Worker
 
 import Universum
 
-import Loot.Log (logInfo, logWarning, modifyLogName)
-import Loot.Network.Class (ClientEnv, ClientId, MsgType, Subscription)
-import Loot.Network.Class (CliId, Content, ListenerEnv, ListenerId, MsgType, ServSendMsg (..))
+import Loot.Log (logInfo)
+import Loot.Network.Class (ClientEnv)
+import Loot.Network.ZMQ (ZmqTcp)
 
 import Dscp.Network.Messages (PingBlk (..), PingTx (..), PongBlk (..), PongTx (..))
 import Dscp.Network.Wrapped (Worker (..), cliRecvResp, cliSend, msgType)
 import Dscp.Witness.Launcher (WitnessWorkMode)
 
-witnessWorkers :: WitnessWorkMode m => [Worker t m]
+witnessWorkers :: WitnessWorkMode m => [Worker ZmqTcp m]
 witnessWorkers = [witnessTxWorker]
 
-witnessTxWorker :: forall t m. WitnessWorkMode m => Worker t m
+witnessTxWorker :: forall m. WitnessWorkMode m => Worker ZmqTcp m
 witnessTxWorker = Worker "txWorker" [msgType @PongTx] [] action
   where
-    action :: ClientEnv t -> m ()
-    action btq = forever $ do
-        cliSend @t btq Nothing PingTx
-        (nId,PongTx txt) <- cliRecvResp @t btq (-1)
-        logInfo $ fromString $ "Heard pongtx: " <> show txt
+    action :: ClientEnv ZmqTcp -> m ()
+    action btq = do
+      logInfo "Started witness tx worker"
+      forever $ do
+        logInfo "txWorker: sending"
+        cliSend btq Nothing PingTx
+        logInfo "txWorker: receiving"
+        (nId,PongTx txt) <- cliRecvResp btq (-1)
+        logInfo $ fromString $ "Heard pongtx: " <> show txt <> " from " <> show nId
 
-witnessBlkWorker :: forall t m. WitnessWorkMode m => Worker t m
+witnessBlkWorker :: forall m. WitnessWorkMode m => Worker ZmqTcp m
 witnessBlkWorker = Worker "blkWorker" [msgType @PongBlk] [] action
   where
-    action :: ClientEnv t -> m ()
-    action btq = forever $ do
-        cliSend @t btq Nothing PingBlk
-        (nId,PongBlk txt) <- cliRecvResp @t btq (-1)
-        logInfo $ fromString $ "Heard pongblk: " <> show txt
+    action :: ClientEnv ZmqTcp -> m ()
+    action btq = do
+      logInfo "Started witness blk worker"
+      forever $ do
+        cliSend btq Nothing PingBlk
+        (nId,PongBlk txt) <- cliRecvResp btq (-1)
+        logInfo $ fromString $ "Heard pongblk: " <> show txt <> " from " <> show nId

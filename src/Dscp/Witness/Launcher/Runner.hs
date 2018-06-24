@@ -7,7 +7,7 @@ import Universum
 import Control.Monad.Component (runComponentM)
 
 import Dscp.Launcher.Rio (runRIO)
-import Dscp.Resource.Class (AllocResource (..))
+import Dscp.Resource (AllocResource (..))
 import Dscp.Witness.Launcher.Mode (WitnessContext (..), WitnessRealMode)
 import Dscp.Witness.Launcher.Params (WitnessParams (..))
 import Dscp.Witness.Launcher.Resource (WitnessResources (..))
@@ -24,7 +24,7 @@ runWitnessRealMode = runRIO
 
 -- | Given params, allocate resources, construct node context and run
 -- `WitnessWorkMode` monad.
-launchWitnessRealMode :: WitnessParams -> WitnessRealMode () -> IO ()
+launchWitnessRealMode ::WitnessParams -> WitnessRealMode () -> IO ()
 launchWitnessRealMode params action =
     runComponentM "Witness (real mode)" (allocResource params) $
       \resources ->

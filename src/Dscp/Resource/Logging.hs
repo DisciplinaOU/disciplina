@@ -50,7 +50,8 @@ instance AllocResource LoggingParams LoggingIO where
       where
         pre = do
             config <- getRealLoggerConfig params
-            (config', logging) <- prepareLogWarper config (GivenName mempty)
+            (config', logging) <-
+                prepareLogWarper config (GivenName $ lpDefaultName params)
             printCfg logging config'
             return logging
         printCfg logging finalConfig =
