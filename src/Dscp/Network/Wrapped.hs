@@ -149,10 +149,10 @@ lcallback foo = handlerDecoded $ \cId -> either (const $ pass) (foo cId)
 ----------------------------------------------------------------------------
 
 data Worker t m = Worker
-    { wId       :: ClientId
-    , wMsgTypes :: Set MsgType
-    , wSubs     :: Set Subscription
-    , wAction   :: ClientEnv t -> m ()
+    { wId       :: !ClientId
+    , wMsgTypes :: !(Set MsgType)
+    , wSubs     :: !(Set Subscription)
+    , wAction   :: !(ClientEnv t -> m ())
     }
 
 runWorker ::

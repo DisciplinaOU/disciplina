@@ -63,15 +63,15 @@ netLogging = given
 
 -- | Client networking params.
 data NetCliParams = NetCliParams
-    { ncPeers   :: Set ZTNodeId
+    { ncPeers   :: !(Set ZTNodeId)
       -- ^ Peers we should connect to.
     } deriving (Show)
 
 -- | Resources needed for ZMQ TCP client.
 data NetCliResources = NetCliResources
-    { _ncGlobalEnv :: ZTGlobalEnv
+    { _ncGlobalEnv :: !ZTGlobalEnv
       -- ^ Global client environment.
-    , _ncClientEnv :: ZTNetCliEnv
+    , _ncClientEnv :: !ZTNetCliEnv
       -- ^ Client-specific environment.
     }
 
@@ -96,17 +96,17 @@ instance WithNetLogging => AllocResource NetCliParams NetCliResources where
 
 -- | Server networking params.
 data NetServParams = NetServParams
-    { nsPeers      :: Set ZTNodeId
+    { nsPeers      :: !(Set ZTNodeId)
       -- ^ Peers we should connect to
-    , nsOurAddress :: ZTNodeId
+    , nsOurAddress :: !ZTNodeId
       -- ^ Our binding address
     } deriving (Show)
 
 -- | Resources needed for ZMQ TCP client + server.
 data NetServResources = NetServResources
-    { _nsGlobalEnv :: ZTGlobalEnv
-    , _nsClientEnv :: ZTNetCliEnv
-    , _nsServerEnv :: ZTNetServEnv
+    { _nsGlobalEnv :: !ZTGlobalEnv
+    , _nsClientEnv :: !ZTNetCliEnv
+    , _nsServerEnv :: !ZTNetServEnv
     }
 
 makeLenses ''NetServResources
