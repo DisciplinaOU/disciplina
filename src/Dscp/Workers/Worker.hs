@@ -8,7 +8,8 @@ module Dscp.Workers.Worker
 
 import Universum
 
-import Loot.Log (logInfo)
+import Control.Concurrent (threadDelay)
+import Loot.Log (logError, logInfo)
 import Loot.Network.Class (ClientEnv)
 import Loot.Network.ZMQ (ZmqTcp)
 
@@ -17,28 +18,33 @@ import Dscp.Network.Wrapped (Worker (..), cliRecvResp, cliSend, msgType)
 import Dscp.Witness.Launcher (WitnessWorkMode)
 
 witnessWorkers :: WitnessWorkMode m => [Worker ZmqTcp m]
-witnessWorkers = [witnessTxWorker]
+witnessWorkers = [witnessTxWorker, witnessBlkWorker]
 
 witnessTxWorker :: forall m. WitnessWorkMode m => Worker ZmqTcp m
-witnessTxWorker = Worker "txWorker" [msgType @PongTx] [] action
+witnessTxWorker =
+    Worker "txWorker" [msgType @PongTx] [] (\btq -> action btq `catchAny` handler)
   where
+    handler e = logError $ fromString $ "Exception in txWorker: " <> show e
     action :: ClientEnv ZmqTcp -> m ()
     action btq = do
       logInfo "Started witness tx worker"
       forever $ do
-        logInfo "txWorker: sending"
         cliSend btq Nothing PingTx
-        logInfo "txWorker: receiving"
         (nId,PongTx txt) <- cliRecvResp btq (-1)
         logInfo $ fromString $ "Heard pongtx: " <> show txt <> " from " <> show nId
+        liftIO $ threadDelay 1000000
 
 witnessBlkWorker :: forall m. WitnessWorkMode m => Worker ZmqTcp m
-witnessBlkWorker = Worker "blkWorker" [msgType @PongBlk] [] action
+witnessBlkWorker =
+    Worker "blkWorker" [msgType @PongBlk] [] (\btq -> action btq `catchAny` handler)
   where
+    handler e = logError $ fromString $ "Exception in txWorker: " <> show e
     action :: ClientEnv ZmqTcp -> m ()
     action btq = do
+      liftIO $ threadDelay 500000 -- for logs clarity
       logInfo "Started witness blk worker"
       forever $ do
         cliSend btq Nothing PingBlk
         (nId,PongBlk txt) <- cliRecvResp btq (-1)
         logInfo $ fromString $ "Heard pongblk: " <> show txt <> " from " <> show nId
+        liftIO $ threadDelay 1000000

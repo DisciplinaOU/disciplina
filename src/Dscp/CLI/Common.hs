@@ -21,7 +21,7 @@ import Data.Version (showVersion)
 import qualified Loot.Log as Log
 import Loot.Network.ZMQ.Common (ZTNodeId (..), parseZTNodeId)
 import Options.Applicative (Parser, eitherReader, help, infoOption, long, metavar, option, optional,
-                            strOption, value)
+                            strOption, switch, value)
 
 import Dscp.DB.Rocks.Real.Types (RocksDBParams (..))
 import Dscp.DB.SQLite.Types (SQLiteDBLocation (..), SQLiteParams (..))
@@ -31,10 +31,14 @@ import Paths_disciplina (version)
 
 logParamsParser :: Log.Name -> Parser LoggingParams
 logParamsParser lpDefaultName = do
+    lpDebug <- logDebugParser
     lpConfigPath <- logConfigParser
     lpDirectory <- logDirParser
     return LoggingParams {..}
   where
+    logDebugParser = switch $
+        long "debug" <>
+        help "Switch default logging level from Info to Debug"
     logConfigParser = optional $ strOption $
         long "log-config" <>
         metavar "FILEPATH" <>

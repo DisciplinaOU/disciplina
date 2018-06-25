@@ -43,6 +43,6 @@ instance AllocResource WitnessParams WitnessResources where
         _wrLogging <- allocResource wpLoggingParams
         _wrDB <- allocResource wpDBParams
         _wrNetwork <-
-            withNetLogging (NetLogging $ _wrLogging & logNameSelL . _GivenName .~ "network") $
+            withNetLogging (NetLogging $ _wrLogging & logNameSelL . _GivenName %~ (<> "network")) $
             allocResource wpNetworkParams
         return WitnessResources {..}

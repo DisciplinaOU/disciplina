@@ -39,7 +39,7 @@ import Universum
 
 import Codec.Serialise (serialise)
 import Control.Concurrent (threadDelay)
-import Control.Concurrent.STM (orElse)
+import Control.Concurrent.STM (orElse, retry)
 import Control.Concurrent.STM.TMVar (newEmptyTMVarIO, putTMVar, readTMVar)
 import qualified Data.ByteString.Char8 as BS8
 import qualified Data.ByteString.Lazy as BSL
@@ -91,15 +91,14 @@ data Listener t m = Listener
     }
 
 runListener ::
-       forall t m n. (NetworkingServ t n, MonadLogging n)
+       forall t m n. (NetworkingServ t n, MonadLogging n, MonadMask n)
     => (forall x. m x -> n x)
     -> Listener t m
     -> n ()
 runListener nat Listener{..} = do
-    logInfo "registering listener"
+    logDebug $ fromString $ "Launching listner " <> show lId
     (lEnv :: ListenerEnv t) <- registerListener @t lId lMsgTypes
-    logInfo "registering listener, running"
-    nat $ lAction lEnv
+    nat (lAction lEnv) `finally` (logDebug $ fromString $ "Listener " <> show lId <> " has exited")
 
 servSend :: forall t d. Message MsgK d => ListenerEnv t -> CliId t -> d -> STM ()
 servSend btq cliId msg =
@@ -123,7 +122,6 @@ simpleListener lId lMsgTypes getCallbacks =
         logDebug $ fromString $ "Listener " <> show lId <> " has started."
         forever $ action btq `catchAny` handler
     action btq = do
-        logInfo $ fromString $ "simpleListener " <> show lId <> ": receiving..."
         let callbacks = getCallbacks btq
         (cliId,msgT,content) <- atomically $ recvBtq btq
         case (fromMsgType msgT,content) of
@@ -157,10 +155,15 @@ data Worker t m = Worker
     , wAction   :: ClientEnv t -> m ()
     }
 
-runWorker :: forall t m n. (NetworkingCli t n) => (forall x. m x -> n x) -> Worker t m -> n ()
+runWorker ::
+       forall t m n. (NetworkingCli t n, MonadMask n, MonadLogging n)
+    => (forall x. m x -> n x)
+    -> Worker t m
+    -> n ()
 runWorker nat Worker{..} = do
+    logDebug $ fromString $ "Launching worker " <> show wId
     (cEnv :: ClientEnv t) <- registerClient @t wId wMsgTypes wSubs
-    nat $ wAction cEnv
+    nat (wAction cEnv) `finally` (logDebug $ fromString $ "Worker " <> show wId <> " has exited")
 
 cliSend ::
        forall t d m. (Message MsgK d, NetworkingCli t m, MonadIO m)
@@ -231,7 +234,7 @@ cliRecv btq timeout callbacks = withHandler $ withTimeout $ \tmAction -> do
 
     withTimeout :: (STM () -> m x) -> m x
     withTimeout action
-        | timeout < 0 = action pass
+        | timeout < 0 = action retry
         | otherwise = do
               timeoutVar <- liftIO newEmptyTMVarIO
               let timer = do
