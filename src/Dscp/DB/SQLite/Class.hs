@@ -6,7 +6,7 @@ import Database.SQLite.Simple (FromRow, Query, ToRow)
 -- to add them to typeclass below if there are needed.
 
 -- | Full interface to SQLite DB.
-class Monad m => MonadSQLiteDB m where
+class MonadIO m => MonadSQLiteDB m where
     -- | Make a simple @INSERT@ or other SQL query.
     query :: (FromRow row, ToRow params) => Query -> params -> m [row]
 

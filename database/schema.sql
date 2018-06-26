@@ -28,6 +28,7 @@ create table if not exists Courses (
 create table if not exists Subjects (
     id         INTEGER  not null,
     course_id  INTEGER  not null,
+    desc       TEXT     null,
 
     primary key (id, course_id),
     foreign key (course_id) references Courses (id)
@@ -71,7 +72,7 @@ create index if not exists StudentCourses_course_id    on StudentCourses (course
 create table if not exists Assignments (
     hash           BLOB     not null,
     course_id      INTEGER  not null,
-    contents_hash  BLOB  not null,
+    contents_hash  BLOB     not null,
     desc           TEXT     null,
 
     primary key (hash),
@@ -110,13 +111,11 @@ create table if not exists Submissions (
 
     primary key (hash),
 
-    foreign key (student_addr)    references Students (addr),
-    foreign key (assignment_hash) references Assignments (hash)
+    foreign key (student_addr, assignment_hash) references StudentsAssignments (student_addr, assignment_hash)
 
 ) without rowid;
 
-create index if not exists Submissions_student_addr    on Submissions (student_addr);
-create index if not exists Submissions_assignment_hash on Submissions (assignment_hash);
+create index if not exists Submissions_student_assignment_hash on Submissions (student_addr, assignment_hash);
 
 -- Creating 'Transactions' table.
 --
@@ -145,20 +144,12 @@ create table if not exists Blocks (
     mroot      BLOB     not null,
     mtree      BLOB     not null,
 
-    primary key (idx asc)
+    primary key (idx)
 
 ) without rowid;
 
 create index if not exists Blocks_hash on Blocks (hash);
 create index if not exists Blocks_prev_hash on Blocks (prev_hash);
-
--- Creating 'Educator' table.
---
-create table if not exists Educator (
-    signature  BLOB non null,
-
-    primary key (signature)
-) without rowid;
 
 -- Creating 'BlocksTxs' table.
 --
