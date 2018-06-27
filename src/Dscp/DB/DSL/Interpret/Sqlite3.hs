@@ -8,6 +8,7 @@ module Dscp.DB.DSL.Interpret.Sqlite3
 import Universum
 
 import qualified Data.Set as Set (Set, empty, member, singleton)
+import Data.Time.Clock (UTCTime)
 
 import Database.SQLite.Simple hiding (query)
 import Database.SQLite.Simple.FromField (FromField (..))
@@ -16,8 +17,8 @@ import Database.SQLite.Simple.ToField (ToField (..))
 import Text.InterpolatedString.Perl6 (q, qc, qq)
 
 import Dscp.Core.Types (Address (..), Assignment (..), AssignmentType (..), CourseId (..),
-                        Grade (..), SignedSubmission (..), Submission (..), SubmissionSig,
-                        SubmissionType (..), SubmissionWitness (..))
+                        Grade (..), SignedSubmission (..), StudentId, Submission (..),
+                        SubmissionSig, SubmissionType (..), SubmissionWitness (..))
 import Dscp.Crypto (Hash, PublicKey, Signature)
 import Dscp.DB.DSL.Class
 import Dscp.DB.SQLite
@@ -95,6 +96,7 @@ getPrivateTxsByFilter pk filterExpr = do
         |]
         ()
 
+buildWhereStatement :: TxsFilterExpr -> Text
 buildWhereStatement = go
   where
     go = \case
@@ -108,6 +110,7 @@ buildWhereStatement = go
         TxHasDescendantOfSubjectId _sid ->
             error "buildWhereStatement: TxHasDescendantOfSubjectId: not supported yet"
 
+getPrivateTxFromId :: MonadSQLiteDB m => PublicKey -> PrivateTxId -> m (Maybe PrivateTx)
 getPrivateTxFromId pk tid = do
     pack <- query
         [q|
@@ -136,6 +139,18 @@ getPrivateTxFromId pk tid = do
         [queryResult] -> Just (packPrivateTxQuery pk queryResult)
         _other        -> Nothing
 
+packPrivateTxQuery
+    :: PublicKey
+    ->  ( StudentId
+        , Integer
+        , CourseId
+        , Integer
+        , Text
+        , SubmissionSig
+        , Grade
+        , UTCTime
+        )
+    -> PrivateTx
 packPrivateTxQuery pk
     ( student_addr
     , sub_type
