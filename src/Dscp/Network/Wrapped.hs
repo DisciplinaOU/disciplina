@@ -43,6 +43,8 @@ import Control.Concurrent.STM (orElse, retry)
 import Control.Concurrent.STM.TMVar (newEmptyTMVarIO, putTMVar, readTMVar)
 import qualified Data.ByteString.Char8 as BS8
 import qualified Data.ByteString.Lazy as BSL
+import Fmt ((+|), (||+))
+import Formatting (Buildable)
 import Loot.Log (MonadLogging, logDebug, logError, logInfo, logWarning)
 import Loot.Network.BiTQueue (recvBtq, sendBtq)
 import Loot.Network.Class (CliId, ClientEnv, ClientId, ListenerEnv, ListenerId, MsgType (..),
@@ -101,9 +103,9 @@ runListener ::
     -> Listener t m
     -> n ()
 runListener nat Listener{..} = do
-    logDebug $ fromString $ "Launching listner " <> show lId
+    logDebug $ "Launching listner " +| lId ||+ ""
     (lEnv :: ListenerEnv t) <- registerListener @t lId lMsgTypes
-    nat (lAction lEnv) `finally` (logDebug $ fromString $ "Listener " <> show lId <> " has exited")
+    nat (lAction lEnv) `finally` (logDebug $ "Listener " +| lId ||+ " has exited")
 
 servSend :: forall t d. Message MsgK d => ListenerEnv t -> CliId t -> d -> STM ()
 servSend btq cliId msg =
@@ -124,21 +126,21 @@ simpleListener lId lMsgTypes getCallbacks =
   where
     -- todo use 'fmt' or something similar
     lAction btq = do
-        logDebug $ fromString $ "Listener " <> show lId <> " has started."
+        logDebug $ "Listener " +| lId ||+ " has started."
         forever $ action btq `catchAny` handler
     action btq = do
         let callbacks = getCallbacks btq
         (cliId,msgT,content) <- atomically $ recvBtq btq
         case (fromMsgType msgT,content) of
             (Just n,[d]) -> runCallbacksInt callbacks n d cliId >>= \case
-                Nothing -> logWarning $ fromString $ "Listener " <> show lId <>
-                                                     "couldn't match on type (runCallbacksInt)"
+                Nothing ->
+                    logWarning $ "Listener " +| lId ||+ "couldn't match on type (runCallbacksInt)"
                 _       -> pass
             _            -> pass
     handler e = do
-        logError $ fromString $
-            "Listener " <> show lId <> " has failed with an error: " <>
-            show e <> ". Recovering (in 2sec)."
+        logError $
+            "Listener " +| lId ||+ " has failed with an error: " +|
+            e ||+ ". Recovering (in 2sec)."
         liftIO $ threadDelay $ 2000000
 
 -- for server, we just skip the message if we can't decode it, since
@@ -170,9 +172,9 @@ runWorker ::
     -> Worker t m
     -> n ()
 runWorker nat Worker{..} = do
-    logDebug $ fromString $ "Launching worker " <> show wId
+    logDebug $ "Launching worker " +| wId ||+ ""
     (cEnv :: ClientEnv t) <- registerClient @t wId wMsgTypes wSubs
-    nat (wAction cEnv) `finally` (logDebug $ fromString $ "Worker " <> show wId <> " has exited")
+    nat (wAction cEnv) `finally` (logDebug $ "Worker " +| wId ||+ " has exited")
 
 cliSend ::
        forall t d m. (Message MsgK d, NetworkingCli t m, MonadIO m)
@@ -234,7 +236,7 @@ cliRecv btq timeout callbacks = withHandler $ withTimeout $ \tmAction -> do
   where
     withHandler x =
         catch x $ \(e :: CliRecvExcInternal) -> do
-            logWarning $ fromString $ "Could not receive: " <> show e <> ", retrying"
+            logWarning $ "Could not receive: " +| e ||+ ", retrying"
             case e of
                 CRENoCallback n -> throwM $ CREUnexpected $ "No callback for " <> show n
                 -- we ignore messages related to malformed input from
