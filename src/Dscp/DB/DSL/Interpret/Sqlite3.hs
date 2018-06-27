@@ -13,8 +13,8 @@ import qualified Data.Set as Set (Set, empty, member, singleton)
 import Data.Time.Clock (UTCTime)
 
 import Database.SQLite.Simple (Only (..))
-import Database.SQLite.Simple.Internal (Connection(..))
 import Database.SQLite.Simple.FromField (FromField (..))
+import Database.SQLite.Simple.Internal (Connection (..))
 import Database.SQLite.Simple.ToField (ToField (..))
 import Database.SQLite3 (exec)
 
