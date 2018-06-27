@@ -8,6 +8,7 @@ module Dscp.Listeners.Listener
 
 import Universum
 
+import Control.Concurrent (threadDelay)
 import Loot.Log (logInfo)
 
 import Dscp.Network.Messages (PingBlk (..), PingTx (..), PongBlk (..), PongTx (..))

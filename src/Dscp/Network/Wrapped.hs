@@ -69,9 +69,11 @@ msgType = MsgType $ BS8.pack $ show $ getMsgTag @MsgK @d
 fromMsgType :: MsgType -> Maybe Natural
 fromMsgType (MsgType bs) = readMaybe (BS8.unpack bs)
 
+-- | Same as 'msgType', but for subscriptions.
 subType :: forall d. (Message SubK d) => Subscription
 subType = Subscription $ BS8.pack $ show $ getMsgTag @SubK @d
 
+-- | Same as 'fromMsgType', but for subscriptions.
 fromSubType :: Subscription -> Maybe Natural
 fromSubType (Subscription bs) = readMaybe (BS8.unpack bs)
 
@@ -86,8 +88,11 @@ fromSubType (Subscription bs) = readMaybe (BS8.unpack bs)
 
 data Listener t m = Listener
     { lId       :: !ListenerId
+      -- ^ Listener id, should be unique.
     , lMsgTypes :: !(Set MsgType)
+      -- ^ Message types listener is supposed to receive.
     , lAction   :: !(ListenerEnv t -> m ())
+      -- ^ Listener's action.
     }
 
 runListener ::
@@ -150,9 +155,13 @@ lcallback foo = handlerDecoded $ \cId -> either (const $ pass) (foo cId)
 
 data Worker t m = Worker
     { wId       :: !ClientId
+      -- ^ Worker's identity.
     , wMsgTypes :: !(Set MsgType)
+      -- ^ Message types worker is supposed to receive.
     , wSubs     :: !(Set Subscription)
+      -- ^ Worker's subscriptions.
     , wAction   :: !(ClientEnv t -> m ())
+      -- ^ Worker's action.
     }
 
 runWorker ::
@@ -256,6 +265,7 @@ cliRecvOne btq timeout =
                      (pure . (nId,))
         ]
 
+-- | Receive a response.
 cliRecvResp ::
        forall t d m. SendConstraint MsgK t d m
     => ClientEnv t
@@ -263,6 +273,7 @@ cliRecvResp ::
     -> m (NodeId t, d)
 cliRecvResp = cliRecvOne @MsgK @t @d
 
+-- | Receive an update.
 cliRecvUpdate ::
        forall t d m. SendConstraint SubK t d m
     => ClientEnv t
@@ -274,10 +285,10 @@ cliRecvUpdate = cliRecvOne @SubK @t @d
 -- Launching
 ----------------------------------------------------------------------------
 
--- | Launch server on the background.
+-- | Launch client broker on the background.
 withClient :: (MonadUnliftIO m, NetworkingCli t m) => m a -> m a
 withClient = withAsync runClient . const
 
--- | Launch server on the background.
+-- | Launch server and client brokers on the background.
 withServer :: (MonadUnliftIO m, NetworkingServ t m, NetworkingCli t m) => m a -> m a
 withServer = withAsync runServer . const . withAsync runClient . const
