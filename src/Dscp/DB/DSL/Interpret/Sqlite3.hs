@@ -1,37 +1,28 @@
 
 {-# LANGUAGE QuasiQuotes #-}
 
-module Dscp.DB.DSL.Interpret.Sqlite3 where
+module Dscp.DB.DSL.Interpret.Sqlite3
+    ( -- Only instances are exported.
+    ) where
 
 import Universum
 
-import Control.Monad.Reader
-import Control.Monad.Trans
-
-import qualified Data.Set as Set (Set, singleton, member, empty)
+import qualified Data.Set as Set (Set, empty, member, singleton)
 
 import Database.SQLite.Simple hiding (query)
-import Database.SQLite.Simple.ToField (ToField(..))
-import Database.SQLite.Simple.FromField (FromField(..))
+import Database.SQLite.Simple.FromField (FromField (..))
+import Database.SQLite.Simple.ToField (ToField (..))
 
-import Text.InterpolatedString.Perl6
+import Text.InterpolatedString.Perl6 (q, qc, qq)
 
-import Dscp.Core.Types ( SignedSubmission(..)
-                       , Submission(..)
-                       , SubmissionType(..)
-                       , SubmissionWitness(..)
-                       , SubmissionSig
-                       , Assignment(..)
-                       , AssignmentType(..)
-                       , Address(..)
-                       , CourseId(..)
-                       , Grade(..)
-                       )
-import Dscp.Crypto (Hash, Signature, PublicKey)
+import Dscp.Core.Types (Address (..), Assignment (..), AssignmentType (..), CourseId (..),
+                        Grade (..), SignedSubmission (..), Submission (..), SubmissionSig,
+                        SubmissionType (..), SubmissionWitness (..))
+import Dscp.Crypto (Hash, PublicKey, Signature)
 import Dscp.DB.DSL.Class
 import Dscp.DB.SQLite
 import Dscp.DB.SQLite.Class
-import Dscp.Educator.Txs (PrivateTx(..), PrivateTxId)
+import Dscp.Educator.Txs (PrivateTx (..), PrivateTxId)
 
 -- TODO(kir): split into separate .Instances module.
 instance FromField Address
@@ -162,8 +153,7 @@ packPrivateTxQuery pk
                     (Assignment
                         course_id
                         (select assign_type Regular CourseFinal)
-                        assign_desc
-                    ))
+                        assign_desc))
                 (SubmissionWitness
                     pk
                     sub_sig))
