@@ -6,7 +6,8 @@ import Dscp.Core (ATGDelta (..), CourseId (..), Grade (..), _swKey, _swSig, ssSu
 import Dscp.Crypto (AbstractPK (..), AbstractSK (..), PublicKey, SecretKey,
                     hash, getMerkleRoot, fromFoldable)
 import Dscp.Educator (PrivateBlock (..), PrivateBlockBody (..), PrivateBlockHeader (..),
-                      PrivateTx (..), genesisHeaderHash, validatePrivateBlk, ValidationFailure (..))
+                      PrivateTx (..), BlockValidationFailure (..), SubmissionValidationFailure (..),
+                      genesisHeaderHash, validatePrivateBlk)
 
 import System.IO.Unsafe (unsafePerformIO)
 import qualified Crypto.PubKey.Ed25519 as Ed25519
@@ -57,16 +58,27 @@ spec_ValidateBlock = describe "Validate private block" $ do
         validatePrivateBlk (mkBlock txsValid) `shouldBe` Right ()
     it "do not validate non-valid transaction signatures " $ do
         validatePrivateBlk (mkBlock [tx2]) `shouldBe`
-          Left [TxSignatureMismatch (getTxKey tx2)
-                                    (getTxSig tx2)
-                                    (hashTxSub tx2)]
+          Left [SubmissionInvalid
+                 (SubmissionSignatureMismatch { svfSubmissionHash = hashTxSub tx2
+                                              , svfSubmissionSig = getTxSig tx2
+                                              , svfSubmissionSigKey = getTxKey tx2
+                                              })]
         validatePrivateBlk (mkBlock [tx3]) `shouldBe`
-          Left [TxPublicKeyMismatch (hash studentAPubKey) (hash (getTxKey tx3))
-               ,TxSignatureMismatch (getTxKey tx3) (getTxSig tx3) (hashTxSub tx3)]
+          Left [SubmissionInvalid
+                 (SubmissionPublicKeyMismatch { svfExpectedPubKey = hash studentAPubKey
+                                              , svfActualPubKey = hash (getTxKey tx3)
+                                              })
+               ,SubmissionInvalid
+                 (SubmissionSignatureMismatch { svfSubmissionHash = hashTxSub tx3
+                                              , svfSubmissionSig = getTxSig tx3
+                                              , svfSubmissionSigKey = getTxKey tx3
+                                              })]
     it "do not validate non-valid merkle root " $ do
         let block = mkBlock txsValid
         validatePrivateBlk (replaceMerkleRoot block [tx1, tx2, tx4]) `shouldBe`
-          Left [MerkleSignatureMismatch (mkBodyProof [tx1, tx2, tx4]) (_pbhBodyProof (_pbHeader block))]
+          Left [MerkleSignatureMismatch { bvfExpectedSig = mkBodyProof [tx1, tx2, tx4]
+                                        , bvfActualMerkleSig = _pbhBodyProof (_pbHeader block)
+                                        }]
   where getTxKey = _swKey . ssWitness . _ptxSignedSubmission
         getTxSig = _swSig . ssWitness . _ptxSignedSubmission
         hashTxSub = hash . ssSubmission . _ptxSignedSubmission
