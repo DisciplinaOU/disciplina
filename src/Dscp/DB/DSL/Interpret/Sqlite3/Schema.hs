@@ -21,6 +21,8 @@ schema = [q|
     --  non integer or integer desc PK is present, some of tables are created
     --  WITHOUT ROWID.
 
+    begin transaction;
+
     -- Creating 'Courses' table.
     --
     create table if not exists Courses (
@@ -178,5 +180,7 @@ schema = [q|
     ) without rowid;
 
     create index if not exists BlockTxs_blk_idx on BlockTxs (blk_idx);
+
+    commit;
 
 |]

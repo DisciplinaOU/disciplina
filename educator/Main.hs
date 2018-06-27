@@ -11,7 +11,7 @@ import Dscp.Educator (EducatorParams (..), educatorParamsParser, launchEducatorR
 main :: IO ()
 main = do
     educatorParams <- getEducatorParams
-    launchEducatorRealMode educatorParams $
+    launchEducatorRealMode educatorParams $ do
       modifyLogName (<> "node") $ do
         logInfo "This is the stub for Educator node executable"
         logWarning "Please don't forget to implement everything else!"

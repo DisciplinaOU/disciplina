@@ -21,3 +21,5 @@ cabal.project.local
 .HTF/
 .dir-locals.el
 tmp/
+educator-db
+witness-db

@@ -16,6 +16,7 @@ library:
     - componentm
     - cryptonite
     - data-default
+    - direct-sqlite
     - exceptions
     - formatting
     - fmt
