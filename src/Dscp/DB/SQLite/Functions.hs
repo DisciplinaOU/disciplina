@@ -4,9 +4,6 @@ module Dscp.DB.SQLite.Functions
        ( -- * Closing/opening
          openSQLiteDB
        , closeSQLiteDB
-
-         -- * For database initialisation
-       , ConnectionReader (..)
        ) where
 
 import qualified Database.SQLite.Simple as Lower
@@ -61,19 +58,3 @@ instance HasLens SQLiteDB ctx SQLiteDB => MonadSQLiteDB (RIO ctx) where
         rethrowSQLRequestError $ do
             SQLiteDB{..} <- view $ lensOf @SQLiteDB
             liftIO $ Lower.execute sdConn q params
-
--- Just 'ReaderT' overlaps with RIO instances.
-newtype ConnectionReader a = ConnectionReader
-    { getConnectionReader :: ReaderT SQLiteDB IO a
-    } deriving (Functor, Applicative, Monad, MonadIO)
-
-instance MonadSQLiteDB ConnectionReader where
-    query q params = ConnectionReader $ ReaderT $ \(SQLiteDB conn) -> do
-        liftIO $ Lower.query conn q params
-
-    queryStreamed q params acc f = ConnectionReader $ ReaderT $ \(SQLiteDB conn) ->
-        liftIO $ Lower.fold conn q params acc $ \acc row ->
-            getConnectionReader (f acc row) `runReaderT` SQLiteDB conn
-
-    execute q params = ConnectionReader $ ReaderT $ \(SQLiteDB conn) ->
-        liftIO $ Lower.execute conn q params

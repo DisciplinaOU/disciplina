@@ -9,7 +9,7 @@ import Control.Monad.Component (buildComponent)
 
 import Dscp.DB.DSL.Interpret.Sqlite3 (ensureSchemaIsSetUp)
 import Dscp.DB.Rocks.Real (RocksDB, RocksDBParams, closeNodeDB, openNodeDB)
-import Dscp.DB.SQLite (SQLiteDB (..), SQLiteParams, closeSQLiteDB, openSQLiteDB, ConnectionReader (..))
+import Dscp.DB.SQLite (SQLiteDB (..), SQLiteParams, closeSQLiteDB, openSQLiteDB)
 import Dscp.Resource.Class (AllocResource (..))
 
 ----------------------------------------------------------------------------
