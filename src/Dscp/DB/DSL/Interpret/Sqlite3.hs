@@ -2,7 +2,7 @@
 {-# LANGUAGE QuasiQuotes #-}
 
 module Dscp.DB.DSL.Interpret.Sqlite3
-    ( -- Only instances are exported.
+    ( ensureTheSchemaIsSetUp
     ) where
 
 import Universum
@@ -10,7 +10,7 @@ import Universum
 import qualified Data.Set as Set (Set, empty, member, singleton)
 import Data.Time.Clock (UTCTime)
 
-import Database.SQLite.Simple hiding (query)
+import Database.SQLite.Simple (Only (..))
 import Database.SQLite.Simple.FromField (FromField (..))
 import Database.SQLite.Simple.ToField (ToField (..))
 
@@ -21,6 +21,7 @@ import Dscp.Core.Types (Address (..), Assignment (..), AssignmentType (..), Cour
                         SubmissionSig, SubmissionType (..), SubmissionWitness (..))
 import Dscp.Crypto (Hash, PublicKey, Signature)
 import Dscp.DB.DSL.Class
+import Dscp.DB.DSL.Interpret.Sqlite3.Schema (schema)
 import Dscp.DB.SQLite
 import Dscp.DB.SQLite.Class
 import Dscp.Educator.Txs (PrivateTx (..), PrivateTxId)
@@ -31,6 +32,10 @@ instance FromField CourseId
 instance FromField Grade
 instance FromField SubmissionSig
 instance ToField   PrivateTxId
+
+ensureTheSchemaIsSetUp :: MonadSQLiteDB m => m ()
+ensureTheSchemaIsSetUp = do
+    execute schema ()
 
 instance
 --    v-- GHC says it cand "find" Monad in superclasses (wat).
