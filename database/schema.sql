@@ -111,11 +111,13 @@ create table if not exists Submissions (
 
     primary key (hash),
 
-    foreign key (student_addr, assignment_hash) references StudentsAssignments (student_addr, assignment_hash)
+    foreign key (student_addr)    references Students    (addr)
+    foreign key (assignment_hash) references Assignments (hash)
 
 ) without rowid;
 
-create index if not exists Submissions_student_assignment_hash on Submissions (student_addr, assignment_hash);
+create index if not exists Submissions_student_addr    on Submissions (student_addr);
+create index if not exists Submissions_assignment_hash on Submissions (assignment_hash);
 
 -- Creating 'Transactions' table.
 --
