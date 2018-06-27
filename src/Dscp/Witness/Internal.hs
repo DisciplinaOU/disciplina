@@ -1,4 +1,3 @@
-
 {-# LANGUAGE DeriveAnyClass #-}
 
 module Dscp.Witness.Internal where

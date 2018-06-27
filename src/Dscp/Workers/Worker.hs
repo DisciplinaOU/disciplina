@@ -1,66 +1,51 @@
+{-# LANGUAGE OverloadedLists #-}
+
 -- | Node workers
 
-module Dscp.Workers.Worker where
+module Dscp.Workers.Worker
+    ( witnessWorkers
+    ) where
 
 import Universum
 
-import UnliftIO.Async (forConcurrently_)
+import Control.Concurrent (threadDelay)
+import Fmt ((+|), (||+))
+import Loot.Log (logError, logInfo)
+import Loot.Network.Class (ClientEnv)
+import Loot.Network.ZMQ (ZmqTcp)
 
-import Loot.Log (logInfo)
-import Node (Conversation (..), ConversationActions, Converse, NodeId, converseWith, recv)
-
-import Dscp.Messages (Packing, PingBlk (..), PingTx (..), PongBlk (..), PongTx (..))
+import Dscp.Network.Messages (PingBlk (..), PingTx (..), PongBlk (..), PongTx (..))
+import Dscp.Network.Wrapped (Worker (..), cliRecvResp, cliSend, msgType)
 import Dscp.Witness.Launcher (WitnessWorkMode)
 
--- | Function which accepts current node ID and IDs of peers, a conversation object
--- and starts doing some network stuff.
-type WitnessWorker m =
-       NodeId
-    -> [NodeId]
-    -> Converse Packing ByteString m
-    -> m ()
+witnessWorkers :: WitnessWorkMode m => [Worker ZmqTcp m]
+witnessWorkers = [witnessTxWorker, witnessBlkWorker]
 
-witnessWorkers :: WitnessWorkMode m => [WitnessWorker m]
-witnessWorkers = [ witnessTxWorker
-                 , witnessBlkWorker
-                 ]
+witnessTxWorker :: forall m. WitnessWorkMode m => Worker ZmqTcp m
+witnessTxWorker =
+    Worker "txWorker" [msgType @PongTx] [] (\btq -> action btq `catchAny` handler)
+  where
+    handler e = logError $ fromString $ "Exception in txWorker: " <> show e
+    action :: ClientEnv ZmqTcp -> m ()
+    action btq = do
+      logInfo "Started witness tx worker"
+      forever $ do
+        cliSend btq Nothing PingTx
+        (nId,PongTx txt) <- cliRecvResp btq (-1)
+        logInfo $ "Heard pongtx: " +| txt ||+ " from " +| nId ||+ ""
+        liftIO $ threadDelay 1000000
 
-witnessTxWorker :: forall m. WitnessWorkMode m => WitnessWorker m
-witnessTxWorker _anId peerIds conv = logInfo "tx worker initialized" >> worker conv
-    where
-    worker
-        :: Converse Packing ByteString m
-        -> m ()
-    worker converse = loop
-        where
-        loop :: m ()
-        loop = do
-            let pongTx :: NodeId -> ConversationActions PingTx PongTx m -> m ()
-                pongTx _peerId cactions = do
-                    received <- recv cactions maxBound
-                    case received of
-                        Just (PongTx _) -> logInfo "heard Tx"
-                        Nothing         -> error "Unexpected end of input"
-            forConcurrently_ peerIds $ \peerId ->
-                converseWith converse peerId (\_ -> Conversation (pongTx peerId))
-            loop
-
-witnessBlkWorker :: forall m. WitnessWorkMode m => WitnessWorker m
-witnessBlkWorker _anId peerIds conv = logInfo "blk worker initialized" >> worker conv
-    where
-    worker
-        :: Converse Packing ByteString m
-        -> m ()
-    worker converse = loop
-        where
-        loop :: m ()
-        loop = do
-            let pongBlk :: NodeId -> ConversationActions PingBlk PongBlk m -> m ()
-                pongBlk _peerId cactions = do
-                    received <- recv cactions maxBound
-                    case received of
-                        Just (PongBlk _) -> logInfo "heard Blk"
-                        Nothing          -> error "Unexpected end of input"
-            forConcurrently_ peerIds $ \peerId ->
-                converseWith converse peerId (\_ -> Conversation (pongBlk peerId))
-            loop
+witnessBlkWorker :: forall m. WitnessWorkMode m => Worker ZmqTcp m
+witnessBlkWorker =
+    Worker "blkWorker" [msgType @PongBlk] [] (\btq -> action btq `catchAny` handler)
+  where
+    handler e = logError $ fromString $ "Exception in txWorker: " <> show e
+    action :: ClientEnv ZmqTcp -> m ()
+    action btq = do
+      liftIO $ threadDelay 500000 -- for clarity of wor
+      logInfo "Started witness blk worker"
+      forever $ do
+        cliSend btq Nothing PingBlk
+        (nId,PongBlk txt) <- cliRecvResp btq (-1)
+        logInfo $ "Heard pongblk: " +| txt ||+ " from " +| nId ||+ ""
+        liftIO $ threadDelay 1000000

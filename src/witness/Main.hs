@@ -1,47 +1,45 @@
-
 -- | Starting point for running a Witness node
 
 module Main where
 
 import Universum
 
+import Control.Concurrent (threadDelay)
 import qualified Data.ByteString.Char8 as B8
 import Loot.Log (logInfo, logWarning, modifyLogName)
-import qualified Network.Transport.TCP as TCP
-import Node (NodeAction (..), defaultNodeEnvironment, noReceiveDelay, node, nodeId,
-             simpleNodeEndPoint)
+import Options.Applicative (Parser, execParser, fullDesc, help, helper, info, long, progDesc)
 import System.IO (getChar)
 import System.Random (mkStdGen)
+import UnliftIO.Async (concurrently_)
 import UnliftIO.Async (async)
 
-import Dscp.DB (RocksDBParams (..))
+import Dscp.CLI (versionOption)
 import Dscp.Listeners (witnessListeners)
-import Dscp.Messages (serialisePacking)
-import Dscp.Transport (bracketTransportTCP)
-import Dscp.Witness (WitnessParams (..), launchWitnessRealMode)
+import Dscp.Network (runListener, runWorker, withServer)
+import Dscp.Witness (WitnessParams, launchWitnessRealMode, witnessParamsParser)
 import Dscp.Workers (witnessWorkers)
-import qualified WitnessParams as Params
+
 
 main :: IO ()
 main = do
-    Params.WitnessParams {..} <- Params.getWitnessParams
-    let witnessParams = WitnessParams
-            { wpLoggingParams = wpLogParams
-            , wpDBParams = RocksDBParams{ rdpPath = wpDbPath }
-            }
+    witnessParams <- getWitnessParams
     launchWitnessRealMode witnessParams $
-      modifyLogName (<> "node") $ do
-            logInfo "Starting node"
-            -- TODO: This networking can't live without Production and Mockables
-            --       so leaving it commented for now
-            -- node (simpleNodeEndPoint transport) (const noReceiveDelay) (const noReceiveDelay)
-            --      prng1 serialisePacking (B8.pack "I am node 1") defaultNodeEnvironment $ \node1 ->
-            --             NodeAction (witnessListeners . nodeId $ node1) $ \converse -> do
-            --                 mapM (\w -> async $ w (nodeId node1) [] converse) witnessWorkers
-            --                 logInfo "Hit return to stop"
-            --                 _ <- liftIO getChar
-            --                 logInfo "Stopping node"
-            logInfo "All done."
+        withServer $
+        modifyLogName (<> "node") $ do
+            logInfo "Starting node."
 
+            logInfo "Forking workers"
+            forM_ witnessWorkers $ void . async . runWorker identity
+
+            logInfo "Forking listeners"
+            forM_ witnessListeners $ void . async . runListener identity
+
+            logInfo "All done"
             logInfo "Hey, here log-warper works!"
             logWarning "Don't forget to implement everything else though!"
+            forever $ liftIO $ threadDelay 10000000
+
+getWitnessParams :: IO WitnessParams
+getWitnessParams =
+    execParser $ info (helper <*> versionOption <*> witnessParamsParser) $
+    fullDesc <> progDesc "Disciplina witness node."

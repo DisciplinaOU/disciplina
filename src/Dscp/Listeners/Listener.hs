@@ -1,27 +1,38 @@
+{-# LANGUAGE OverloadedLists #-}
 
 -- | Node Listeners
 
-module Dscp.Listeners.Listener where
+module Dscp.Listeners.Listener
+    ( witnessListeners
+    ) where
 
 import Universum
 
-import qualified Data.ByteString as BS
+import Control.Concurrent (threadDelay)
 import Loot.Log (logInfo)
-import Node (ConversationActions, Listener (..), NodeId, send)
 
-import Dscp.Messages (Packing, PingBlk, PingTx, PongBlk (..), PongTx (..))
+import Dscp.Network.Messages (PingBlk (..), PingTx (..), PongBlk (..), PongTx (..))
+import Dscp.Network.Wrapped (Listener, lcallback, msgType, servSend, simpleListener)
 import Dscp.Witness.Launcher (WitnessWorkMode)
 
+
 witnessListeners
-    :: forall m. WitnessWorkMode m
-    => NodeId -> BS.ByteString -> [Listener Packing BS.ByteString m]
-witnessListeners _anId _peerData = [blkListener, txListener]
-    where
-    blkListener :: Listener Packing BS.ByteString m
-    blkListener = Listener $ \_ _peerId (cactions :: ConversationActions PongBlk PingBlk m) -> do
-        logInfo "heard Blk"
-        send cactions (PongBlk "")
-    txListener :: Listener Packing BS.ByteString m
-    txListener = Listener $ \_ _peerId (cactions :: ConversationActions PongTx PingTx m) -> do
-        logInfo "heard Tx"
-        send cactions (PongTx "")
+    :: forall m t. WitnessWorkMode m
+    => [Listener t m]
+witnessListeners = [blkListener, txListener]
+   where
+     blkListener =
+         simpleListener "blkListener" [msgType @PingBlk] $ \btq ->
+         let blkCallback cId PingBlk = do
+                 logInfo "got PingBlk"
+                 atomically $ servSend @t btq cId (PongBlk "that was a great block")
+                 logInfo "got PingBlk, replied"
+         in [ lcallback @t blkCallback ]
+
+     txListener =
+         simpleListener "txListener" [msgType @PingTx] $ \btq ->
+         let txCallback cId PingTx = do
+                 logInfo "got PingTx"
+                 atomically $ servSend @t btq cId (PongTx "wonderful tx, thank you!")
+                 logInfo "got PingTx, replied"
+         in [ lcallback @t txCallback ]

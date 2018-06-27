@@ -8,10 +8,11 @@ module Dscp.Launcher.Rio
 import Universum
 
 import Control.Monad.Catch (MonadCatch, MonadMask, MonadThrow)
-import Ether.Internal (HasLens)
+import Loot.Base.HasLens (HasLens)
 import Loot.Log (ModifyLogName (..), MonadLogging (..))
 import Loot.Log.Rio (LoggingIO)
 import qualified Loot.Log.Rio as Rio
+import UnliftIO (MonadUnliftIO)
 
 {- | Conventional "ReaderT over IO" monad stack.
 
@@ -25,7 +26,7 @@ This also allows us to remorselessly define one global
 -}
 newtype RIO ctx a = RIO { unRIO :: ReaderT ctx IO a }
     deriving (Functor, Applicative, Monad, MonadIO, MonadReader ctx,
-              MonadThrow, MonadCatch, MonadMask)
+              MonadThrow, MonadCatch, MonadMask, MonadUnliftIO)
 
 runRIO :: MonadIO m => ctx -> RIO ctx a -> m a
 runRIO ctx (RIO act) = liftIO $ runReaderT act ctx

@@ -1,4 +1,3 @@
-
 module Dscp.Educator.Launcher (module M) where
 
 import Dscp.Educator.Launcher.Mode as M

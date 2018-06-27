@@ -5,7 +5,8 @@ module Dscp.Witness.Launcher.Params
 import Universum
 
 import Dscp.DB.Rocks.Real.Types (RocksDBParams)
-import Dscp.Launcher.Params (LoggingParams)
+import Dscp.Resource.Logging (LoggingParams)
+import Dscp.Resource.Network (NetServParams)
 
 -- | Contains all initialization parameters of Witness node.
 data WitnessParams = WitnessParams
@@ -13,4 +14,6 @@ data WitnessParams = WitnessParams
     -- ^ Basic parameters for any node
     , wpDBParams      :: !RocksDBParams
     -- ^ DB parameters
+    , wpNetworkParams :: !NetServParams
+    -- ^ Networking params.
     } deriving Show

@@ -9,7 +9,7 @@ module Dscp.DB.SQLite.Functions
 import Universum
 
 import qualified Database.SQLite.Simple as Lower
-import Ether.Internal (HasLens (..))
+import Loot.Base.HasLens (HasLens (..))
 
 import Dscp.DB.SQLite.Class (MonadSQLiteDB (..))
 import Dscp.DB.SQLite.Error (SQLConnectionOpenningError (..), rethrowSQLRequestError)

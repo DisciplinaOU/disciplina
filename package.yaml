@@ -12,31 +12,29 @@ library:
     - array
     - AVL
     - bytestring
-    - cardano-sl-networking
     - containers
     - componentm
     - cryptonite
     - data-default
-    - ether
     - exceptions
     - formatting
     - fmt
     - free
     - hashable
     - lens
-    - lifted-async
+    - loot-base
     - loot-log
+    - loot-network
     - log-warper
     - memory
     - monad-control
     - mtl
-    - network-transport
-    - network-transport-tcp
     - optparse-applicative
     - random
+    - reflection
     - rocksdb-haskell
-    - serokell-util
     - serialise
+    - serokell-util
     - snowdrop
     - sqlite-simple
     - stm
@@ -70,11 +68,9 @@ executables:
     source-dirs: src/witness
     dependencies:
       - bytestring
-      - cardano-sl-networking
       - disciplina
       - formatting
       - loot-log
-      - network-transport-tcp
       - time-units
       - optparse-applicative
       - random
