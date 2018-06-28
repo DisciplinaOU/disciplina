@@ -7,15 +7,11 @@ module Dscp.DB.DSL.Interpret.Sqlite3
 
 import Universum
 
-import Codec.Serialise (deserialise, serialise)
-
 import qualified Data.Set as Set (Set, empty, member, singleton)
 import Data.Time.Clock (UTCTime)
 
 import Database.SQLite.Simple (Only (..))
-import Database.SQLite.Simple.FromField (FromField (..))
 import Database.SQLite.Simple.Internal (Connection (..))
-import Database.SQLite.Simple.ToField (ToField (..))
 import Database.SQLite3 (exec)
 
 import Text.InterpolatedString.Perl6 (q, qc, qq)
@@ -26,24 +22,9 @@ import Dscp.Core.Types (Address (..), Assignment (..), AssignmentType (..), Cour
 import Dscp.Crypto (PublicKey)
 import Dscp.DB.DSL.Class
 import Dscp.DB.DSL.Interpret.Sqlite3.Schema (schema)
+import Dscp.DB.DSL.Interpret.Sqlite3.Instances ()
 import Dscp.DB.SQLite
 import Dscp.Educator.Txs (PrivateTx (..), PrivateTxId)
-
--- TODO(kir): split into separate .Instances module.
-instance FromField Address where
-    fromField f = deserialise <$> fromField f
-
-instance FromField CourseId where
-    fromField f = deserialise <$> fromField f
-
-instance FromField Grade where
-    fromField f = deserialise <$> fromField f
-
-instance FromField SubmissionSig where
-    fromField f = deserialise <$> fromField f
-
-instance ToField PrivateTxId where
-    toField = toField . serialise
 
 ensureSchemaIsSetUp :: Connection -> IO ()
 ensureSchemaIsSetUp (Connection db) = do
