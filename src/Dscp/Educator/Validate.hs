@@ -53,10 +53,13 @@ instance Buildable BlockValidationFailure where
     build (MerkleSignatureMismatch {..}) =
       "Merkle tree root signature mismatch. Expected " `mappend` show bvfExpectedSig
       `mappend` " got " `mappend` show bvfActualMerkleSig
-    build (SubmissionInvalid (SubmissionPublicKeyMismatch {..})) =
+    build (SubmissionInvalid x) = build x
+
+instance Buildable SubmissionValidationFailure where
+    build (SubmissionPublicKeyMismatch {..}) =
       "Submission public key address mismatch. Expected " `mappend` show svfExpectedPubKey `mappend`
       " got " `mappend` show svfActualPubKey
-    build (SubmissionInvalid (SubmissionSignatureMismatch {..})) =
+    build (SubmissionSignatureMismatch {..}) =
       "Submission signature mismatch. Submission data " `mappend` show svfSubmissionHash
       `mappend` " with signature " `mappend` show svfSubmissionSig
       `mappend` " does not correspond to public key " `mappend` show svfSubmissionSigKey
