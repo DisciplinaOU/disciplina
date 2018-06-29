@@ -71,14 +71,14 @@ evalSimpleTxsQuery (SELECTTxs _ (TxGradeEq grade)) = do
     db <- asks sdbGetSimpleObj
     return $ db ^.. traversed
                  . _SSTx
-                 . filtered ((== grade)._ptxGrade)
+                 . filtered ((== grade)._ptGrade)
 
 -- | Evaluator for query: find Txs in db with grade >= g
 evalSimpleTxsQuery (SELECTTxs _ (_ :>= grade)) = do
     db <- asks sdbGetSimpleObj
     return $ db ^.. traversed
                  . _SSTx
-                 . filtered ((>= grade)._ptxGrade)
+                 . filtered ((>= grade)._ptGrade)
 
 -- | Evaluator for AND query
 evalSimpleTxsQuery (SELECTTxs _ (a :& b)) =
@@ -143,4 +143,4 @@ runSimpleTxDBQuery dbTx dbObj query =
         cId5 = CourseId 5
 
 getTxCourseId :: PrivateTx -> CourseId
-getTxCourseId tx = aCourseId (sAssignment (ssSubmission (_ptxSignedSubmission tx)))
+getTxCourseId tx = _aCourseId (_sAssignment (_ssSubmission (_ptSignedSubmission tx)))

@@ -200,9 +200,9 @@ mkPrivateTx :: CourseId -- ^ course id
             -> (PublicKey, SecretKey) -- ^ witness key pair
             -> PrivateTx
 mkPrivateTx courseId grade addrKey (witnessPKey, witnessSKey) =
-    PrivateTx { _ptxSignedSubmission = mkSignedSubmission
-              , _ptxGrade = grade
-              , _ptxTime = time
+    PrivateTx { _ptSignedSubmission = mkSignedSubmission
+              , _ptGrade = grade
+              , _ptTime = time
               }
   where
      time :: UTCTime
@@ -210,15 +210,15 @@ mkPrivateTx courseId grade addrKey (witnessPKey, witnessSKey) =
 
      mkSignedSubmission :: SignedSubmission
      mkSignedSubmission = SignedSubmission
-       { ssSubmission = mkSubmission
-       , ssWitness = mkSubmissionWitness
+       { _ssSubmission = mkSubmission
+       , _ssWitness = mkSubmissionWitness
        }
 
      mkSubmission :: Submission
      mkSubmission = Submission
-       { sStudentId = mkAddr addrKey
-       , sType = Digital
-       , sAssignment = mkAssignment
+       { _sStudentId = mkAddr addrKey
+       , _sType = Digital
+       , _sAssignment = mkAssignment
        }
 
      mkSubmissionWitness :: SubmissionWitness
@@ -229,7 +229,7 @@ mkPrivateTx courseId grade addrKey (witnessPKey, witnessSKey) =
 
      mkAssignment :: Assignment
      mkAssignment = Assignment
-       { aCourseId = courseId
-       , aType = Regular
-       , aAssignment = ""
+       { _aCourseId = courseId
+       , _aType = Regular
+       , _aAssignment = ""
        }

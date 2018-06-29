@@ -21,6 +21,7 @@ library:
     - fmt
     - free
     - hashable
+    - interpolatedstring-perl6
     - lens
     - loot-base
     - loot-log

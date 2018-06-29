@@ -1,13 +1,15 @@
-module Test.Dscp.Educator.Validate where
+module Test.Dscp.Educator.BlockValidation where
 
 import Test.Common
 
-import Dscp.Core (ATGDelta (..), CourseId (..), Grade (..), _swKey, _swSig, ssSubmission, ssWitness)
+import Control.Lens (to)
+import Dscp.Core (ATGDelta (..), CourseId (..), Grade (..),
+                  swKey, swSig, ssSubmission, ssWitness)
 import Dscp.Crypto (AbstractPK (..), AbstractSK (..), PublicKey, SecretKey,
                     hash, getMerkleRoot, fromFoldable)
 import Dscp.Educator (PrivateBlock (..), PrivateBlockBody (..), PrivateBlockHeader (..),
                       PrivateTx (..), BlockValidationFailure (..), SubmissionValidationFailure (..),
-                      genesisHeaderHash, validatePrivateBlk)
+                      genesisHeaderHash, validatePrivateBlk, ptSignedSubmission)
 
 import System.IO.Unsafe (unsafePerformIO)
 import qualified Crypto.PubKey.Ed25519 as Ed25519
@@ -79,23 +81,23 @@ spec_ValidateBlock = describe "Validate private block" $ do
           Left [MerkleSignatureMismatch { bvfExpectedSig = mkBodyProof [tx1, tx2, tx4]
                                         , bvfActualMerkleSig = _pbhBodyProof (_pbHeader block)
                                         }]
-  where getTxKey = _swKey . ssWitness . _ptxSignedSubmission
-        getTxSig = _swSig . ssWitness . _ptxSignedSubmission
-        hashTxSub = hash . ssSubmission . _ptxSignedSubmission
-        mkBlock txs = PrivateBlock
-          { _pbHeader = mkBlockHeader txs
-          , _pbBody = mkBlockBody txs
-          }
-        mkBlockHeader txs = PrivateBlockHeader
-          { _pbhPrevBlock = genesisHeaderHash
-          , _pbhBodyProof = mkBodyProof txs
-          , _pbhAtgDelta = mkATGDelta
-          }
-        mkBlockBody txs = PrivateBlockBody
-          { _pbbTxs = txs
-          }
-        mkBodyProof txs = getMerkleRoot (fromFoldable txs)
-        mkATGDelta = ATGDelta M.empty
-        replaceMerkleRoot :: PrivateBlock -> [PrivateTx] -> PrivateBlock
-        replaceMerkleRoot block txs =
-          block { _pbHeader = (_pbHeader block) { _pbhBodyProof = mkBodyProof txs } }
+  where
+    getTxKey tx = tx^.ptSignedSubmission.ssWitness.swKey
+    getTxSig tx = tx^.ptSignedSubmission.ssWitness.swSig
+    hashTxSub tx = tx^.ptSignedSubmission.ssSubmission.to hash
+    mkBlock txs = PrivateBlock
+        { _pbHeader = mkBlockHeader txs
+        , _pbBody = mkBlockBody txs
+        }
+    mkBlockHeader txs = PrivateBlockHeader
+        { _pbhPrevBlock = genesisHeaderHash
+        , _pbhBodyProof = mkBodyProof txs
+        , _pbhAtgDelta = mkATGDelta
+        }
+    mkBlockBody txs = PrivateBlockBody
+        { _pbbTxs = txs }
+    mkBodyProof txs = getMerkleRoot (fromFoldable txs)
+    mkATGDelta = ATGDelta M.empty
+    replaceMerkleRoot :: PrivateBlock -> [PrivateTx] -> PrivateBlock
+    replaceMerkleRoot block txs =
+        block { _pbHeader = (_pbHeader block) { _pbhBodyProof = mkBodyProof txs } }

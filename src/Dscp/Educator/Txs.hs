@@ -6,10 +6,20 @@ module Dscp.Educator.Txs
        , PrivateTxId
        , PrivateTxWitness (..)
        , PrivateTxAux (..)
+
+       -- * Lenses
+       , ptaTx
+       , ptaWitness
+       , ptGrade
+       , ptSignedSubmission
+       , ptTime
+       , ptwKey
+       , ptwSig
        ) where
 
 import Universum
 
+import Control.Lens (makeLenses)
 import Data.Time.Clock (UTCTime)
 
 import Dscp.Core.Types (Grade, SignedSubmission (..))
@@ -17,11 +27,11 @@ import Dscp.Crypto (Hash, PublicKey, Signature)
 
 -- | Private transaction.
 data PrivateTx = PrivateTx
-    { _ptxSignedSubmission :: !SignedSubmission
+    { _ptSignedSubmission :: !SignedSubmission
     -- ^ Every transaction contains one signed student submission
-    , _ptxGrade            :: !Grade
+    , _ptGrade            :: !Grade
     -- ^ Grade for this submission
-    , _ptxTime             :: !UTCTime
+    , _ptTime             :: !UTCTime
     -- ^ Timestamp for this transaction
     } deriving (Show, Eq, Generic)
 
@@ -49,3 +59,7 @@ data PrivateTxAux = PrivateTxAux
     { _ptaTx      :: !PrivateTx
     , _ptaWitness :: !PrivateTxWitness
     } deriving (Show, Eq, Generic)
+
+makeLenses ''PrivateTx
+makeLenses ''PrivateTxWitness
+makeLenses ''PrivateTxAux

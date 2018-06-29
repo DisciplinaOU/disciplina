@@ -17,6 +17,16 @@ module Dscp.Core.Types
        , SignedSubmission (..)
        , SubmissionSig
        , SubmissionWitness (..)
+       , aCourseId
+       , aType
+       , aAssignment
+       , sStudentId
+       , sAssignment
+       , sType
+       , swKey
+       , swSig
+       , ssSubmission
+       , ssWitness
 
        -- * Activity Type Graph
        , ATGDelta (..)
@@ -74,11 +84,11 @@ data AssignmentType = Regular | CourseFinal
 
 -- | Assignment doesn't contain actual assignment contents - only hash of them.
 data Assignment = Assignment
-    { aCourseId   :: !CourseId
+    { _aCourseId   :: !CourseId
     -- ^ Course this assignement belongs to
-    , aType       :: !AssignmentType
+    , _aType       :: !AssignmentType
     -- ^ Assignment type
-    , aAssignment :: !Text
+    , _aAssignment :: !Text
     -- ^ Description of assignment
     } deriving (Eq, Show, Generic)
 
@@ -93,11 +103,11 @@ data SubmissionType = Digital | Offline
 
 -- | Student submissions
 data Submission = Submission
-    { sStudentId  :: !StudentId
+    { _sStudentId  :: !StudentId
     -- ^ Student who created this submission
-    , sType       :: !SubmissionType
+    , _sType       :: !SubmissionType
     -- ^ Submission type
-    , sAssignment :: !Assignment
+    , _sAssignment :: !Assignment
     -- ^ Assignment of this submission
     } deriving (Eq, Show, Generic)
 
@@ -115,12 +125,16 @@ data SubmissionWitness = SubmissionWitness
 
 -- | Datatype for verifiable transaction (transaction with a witness)
 data SignedSubmission = SignedSubmission
-    { ssSubmission :: !Submission
+    { _ssSubmission :: !Submission
     -- ^ Student submission
-    , ssWitness    :: !SubmissionWitness
+    , _ssWitness    :: !SubmissionWitness
     -- ^ Submission witness
     } deriving (Eq, Show, Generic)
 
+makeLenses ''Assignment
+makeLenses ''Submission
+makeLenses ''SubmissionWitness
+makeLenses ''SignedSubmission
 
 -- | ATGDelta is a diff for set of subjects which are taught by Educator.
 -- Implemented as 'Map SubjectId Bool' to avoid representing invalid diffs

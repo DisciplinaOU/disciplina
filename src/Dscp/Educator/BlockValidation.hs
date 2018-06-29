@@ -1,7 +1,7 @@
-
+{-# LANGUAGE QuasiQuotes #-}
 -- | Validation of private block
 
-module Dscp.Educator.Validate
+module Dscp.Educator.BlockValidation
        ( BlockValidationFailure (..)
        , SubmissionValidationFailure (..)
        , validatePrivateBlk
@@ -9,14 +9,16 @@ module Dscp.Educator.Validate
 
 import Universum
 
+import Control.Lens (to)
 import Data.Text.Buildable (build)
 
-import Dscp.Core (Address (..), SignedSubmission (..), Submission (..),
-                  SubmissionSig, SubmissionWitness (..))
+import Dscp.Core (Address (..), Submission (..), SubmissionSig, ssSubmission,
+                  ssWitness, sStudentId, swKey, swSig)
 import Dscp.Crypto (Hash, PublicKey, MerkleSignature, fromFoldable, getMerkleRoot, hash, verify)
 import Dscp.Educator.Block (PrivateBlock (..), PrivateBlockHeader (..), _pbBody, _pbbTxs)
 import Dscp.Educator.Serialise ()
 import Dscp.Educator.Txs (PrivateTx (..))
+import Text.InterpolatedString.Perl6 (qc)
 
 import qualified Text.Show
 import qualified Data.Text.Buildable ()
@@ -51,18 +53,19 @@ instance Show BlockValidationFailure where
 
 instance Buildable BlockValidationFailure where
     build (MerkleSignatureMismatch {..}) =
-      "Merkle tree root signature mismatch. Expected " `mappend` show bvfExpectedSig
-      `mappend` " got " `mappend` show bvfActualMerkleSig
+      [qc|Merkle tree root signature mismatch. Expected {bvfExpectedSig} got {bvfActualMerkleSig}|]
     build (SubmissionInvalid x) = build x
 
 instance Buildable SubmissionValidationFailure where
     build (SubmissionPublicKeyMismatch {..}) =
-      "Submission public key address mismatch. Expected " `mappend` show svfExpectedPubKey `mappend`
-      " got " `mappend` show svfActualPubKey
+      mconcat [ [qc|Submission public key address mismatch. |]
+              , [qc|Expected {svfExpectedPubKey} got {svfActualPubKey}|]
+              ]
     build (SubmissionSignatureMismatch {..}) =
-      "Submission signature mismatch. Submission data " `mappend` show svfSubmissionHash
-      `mappend` " with signature " `mappend` show svfSubmissionSig
-      `mappend` " does not correspond to public key " `mappend` show svfSubmissionSigKey
+      mconcat [ [qc|Submission signature mismatch.|]
+              , [qc| Submission data {svfSubmissionHash} with signature {svfSubmissionSig}|]
+              , [qc| does not correspond to public key {svfSubmissionSigKey}|]
+              ]
 
 -- | Validate private block.
 -- Private block is valid iff
@@ -79,27 +82,34 @@ validatePrivateBlk pb =
     in case blockValid of
          [] -> Right ()
          x  -> Left  (map snd x)
-  where validateHeader (PrivateBlockHeader {..}) merkleRoot =
-          [(_pbhBodyProof == merkleRoot,
-            MerkleSignatureMismatch { bvfExpectedSig     = _pbhBodyProof
-                                    , bvfActualMerkleSig =  merkleRoot
-                                    })]
-
-        validateSub (PrivateTx {..}) =
-          let submission = ssSubmission _ptxSignedSubmission
-              witnessKey = _swKey (ssWitness _ptxSignedSubmission)
-              witnessSign = _swSig (ssWitness _ptxSignedSubmission)
-              subAddrHash = addrHash (sStudentId submission)
-              witnessSigValid = verify witnessKey (hash submission) witnessSign
-              witnessKeyValid = hash witnessKey == subAddrHash
-          in [(witnessKeyValid,
-               SubmissionInvalid { bvfSubmissionFailure =
-                                     SubmissionPublicKeyMismatch { svfExpectedPubKey = subAddrHash
-                                                                 , svfActualPubKey   = hash witnessKey
-                                                                 }})
-             ,(witnessSigValid,
-               SubmissionInvalid { bvfSubmissionFailure =
-                                     SubmissionSignatureMismatch { svfSubmissionHash   = hash submission
-                                                                 , svfSubmissionSig    = witnessSign
-                                                                 , svfSubmissionSigKey = witnessKey
-                                                                 }})]
+  where
+    validateHeader (PrivateBlockHeader {..}) merkleRoot =
+        [ (_pbhBodyProof == merkleRoot,
+          MerkleSignatureMismatch { bvfExpectedSig     = _pbhBodyProof
+                                  , bvfActualMerkleSig =  merkleRoot
+                                  }
+          )
+        ]
+    validateSub (PrivateTx {..}) =
+        let submission = _ptSignedSubmission^.ssSubmission
+            witnessKey = _ptSignedSubmission^.ssWitness.swKey
+            witnessSign = _ptSignedSubmission^.ssWitness.swSig
+            subAddrHash = submission^.sStudentId.to addrHash
+            witnessSigValid = verify witnessKey (hash submission) witnessSign
+            witnessKeyValid = hash witnessKey == subAddrHash
+        in [ (witnessKeyValid,
+              SubmissionInvalid { bvfSubmissionFailure =
+                                    SubmissionPublicKeyMismatch { svfExpectedPubKey = subAddrHash
+                                                                , svfActualPubKey   = hash witnessKey
+                                                                }
+                                }
+             )
+           , (witnessSigValid,
+              SubmissionInvalid { bvfSubmissionFailure =
+                                    SubmissionSignatureMismatch { svfSubmissionHash   = hash submission
+                                                                , svfSubmissionSig    = witnessSign
+                                                                , svfSubmissionSigKey = witnessKey
+                                                                }
+                                }
+             )
+           ]
