@@ -16,6 +16,7 @@ module Dscp.Crypto.Encrypt
        , eCiphertext
 
          -- * Utility functions
+       , DecryptionError
        , encrypt
        , decrypt
        ) where
@@ -141,7 +142,20 @@ encrypt pp plaintext =
 
 -- | Decrypt given 'Encrypted' datatype or fail, if passphrase
 -- doesn't match.
-decrypt :: ByteArray ba => PassPhrase -> Encrypted ba -> Maybe ba
+decrypt :: ByteArray ba => PassPhrase -> Encrypted ba -> Either DecryptionError ba
 decrypt pp (Encrypted tag ciphertext) =
     let aead = prepareAEAD pp
-    in aeadSimpleDecrypt aead authHeader ciphertext tag
+    in maybeToRight PassPhraseInvalid $
+       aeadSimpleDecrypt aead authHeader ciphertext tag
+
+-- | Errors which might occur during decryption
+data DecryptionError = PassPhraseInvalid
+    deriving (Eq)
+
+instance Buildable DecryptionError where
+    build PassPhraseInvalid = "Invalid passphrase is used for decryption"
+
+instance Show DecryptionError where
+    show = toString . pretty
+
+instance Exception DecryptionError
