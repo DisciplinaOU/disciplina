@@ -37,9 +37,18 @@ import Dscp.Crypto.Impl (hash)
 -- Passphrases
 -------------------------------------------------------------
 
+-- | Newtype for passphrase. Uses blind instances for
+-- 'Buildable' and 'Show' in order to avoid accidental
+-- appearance of actual passphrases in logs.
 newtype PassPhrase = PassPhrase
     { getPassPhrase :: ByteString
-    } deriving (Eq, Ord, Show, Monoid, ByteArray, ByteArrayAccess)
+    } deriving (Eq, Ord, Monoid, ByteArray, ByteArrayAccess)
+
+instance Buildable PassPhrase where
+    build _ = "<passphrase>"
+
+instance Show PassPhrase where
+    show _ = "<passphrase>"
 
 -- | Minimum passphrase length. Should be enough.
 minPassPhraseLength :: Int
