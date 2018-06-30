@@ -21,6 +21,7 @@ library:
     - fmt
     - free
     - hashable
+    - interpolatedstring-perl6
     - lens
     - loot-base
     - loot-log
@@ -38,6 +39,8 @@ library:
     - snowdrop
     - sqlite-simple
     - stm
+    - text
+    - text-format
     - time
     - time-units
     - unliftio
