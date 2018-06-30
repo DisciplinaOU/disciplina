@@ -6,11 +6,11 @@ module Dscp.Resource.Logging
 import Control.Monad.Component (buildComponent)
 import Data.Aeson (encode)
 import Fmt ((+|), (|+))
-import Loot.Log (Name, NameSelector (GivenName), logDebug, logInfo, modifyLogName)
+import Loot.Log (Name, NameSelector (GivenName),  logInfo, modifyLogName)
 import Loot.Log.Rio (LoggingIO)
 import Loot.Log.Warper (LoggerConfig, prepareLogWarper)
-import System.Wlog (debugPlus, infoPlus, lcTree, ltSeverity, maybeLogsDirB, parseLoggerConfig,
-                    productionB, removeAllHandlers, showTidB, termSeveritiesErrB)
+import System.Wlog (debugPlus, lcTree, ltSeverity, maybeLogsDirB, parseLoggerConfig,
+                    productionB, removeAllHandlers, showTidB)
 
 import Dscp.Launcher.Rio (runRIO)
 import Dscp.Resource.Class (AllocResource (..))
