@@ -13,6 +13,7 @@ import Loot.Network.ZMQ (ZTGlobalEnv, ZTNetCliEnv, ZTNetServEnv)
 import Dscp.DB.Rocks.Real.Types (RocksDB)
 import Dscp.DB.SQLite (SQLiteDB)
 import Dscp.Educator.Launcher.Params (EducatorParams (..))
+import Dscp.Educator.Secret.Types (EducatorSecret)
 import Dscp.Resource (AllocResource (..))
 import qualified Dscp.Witness.Launcher.Resource as Witness
 
@@ -22,12 +23,15 @@ import qualified Dscp.Witness.Launcher.Resource as Witness
 data EducatorResources = EducatorResources
     { _erWitnessResources :: !Witness.WitnessResources
     , _erDB               :: !SQLiteDB
+    , _erSecret           :: !EducatorSecret
     }
 
 makeLenses ''EducatorResources
 
 instance HasLens SQLiteDB EducatorResources SQLiteDB where
     lensOf = erDB
+instance HasLens EducatorSecret EducatorResources EducatorSecret where
+    lensOf = erSecret
 instance HasLens LoggingIO EducatorResources LoggingIO where
     lensOf = erWitnessResources . lensOf @LoggingIO
 instance HasLens RocksDB EducatorResources RocksDB where
@@ -43,4 +47,5 @@ instance AllocResource EducatorParams EducatorResources where
     allocResource EducatorParams{..} = do
         _erWitnessResources <- allocResource epWitnessParams
         _erDB <- allocResource epDBParams
+        _erSecret <- allocResource epSecretParams
         return EducatorResources {..}
