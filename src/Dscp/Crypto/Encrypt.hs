@@ -4,9 +4,11 @@
 module Dscp.Crypto.Encrypt
        ( -- * Passphrases
          PassPhrase
+       , PassPhraseError (..)
        , getPassPhrase
        , mkPassPhrase
        , minPassPhraseLength
+       , maxPassPhraseLength
 
          -- * Encrypted bytearray
        , Encrypted
@@ -24,7 +26,9 @@ import Crypto.Cipher.Types (AEAD, AEADMode (AEAD_GCM), AuthTag, BlockCipher (aea
 import Crypto.Error (onCryptoFailure)
 import Data.ByteArray (ByteArray, ByteArrayAccess)
 import qualified Data.ByteArray as BA
+import Data.Text.Buildable (build)
 import Fmt ((+|), (|+))
+import Text.Show (show)
 
 import Dscp.Crypto.Impl (hash)
 
@@ -36,16 +40,43 @@ newtype PassPhrase = PassPhrase
     { getPassPhrase :: ByteString
     } deriving (Eq, Ord, Show, Monoid, ByteArray, ByteArrayAccess)
 
--- | Minimal passphrase length. Should be enough.
+-- | Minimum passphrase length. Should be enough.
 minPassPhraseLength :: Int
 minPassPhraseLength = 8
 
-mkPassPhrase :: ByteString -> Either Text PassPhrase
+-- | Maximum passphrase length. To keep it sane.
+maxPassPhraseLength :: Int
+maxPassPhraseLength = 128
+
+-- | Errors which might happen during passphrase construction.
+data PassPhraseError
+    = PassPhraseTooShort
+        { peLength :: !Int }
+    | PassPhraseTooLong
+        { peLength :: !Int }
+    deriving (Eq)
+
+instance Buildable PassPhraseError where
+    build PassPhraseTooShort {..} =
+        "Passphrase is too short ("+|peLength|+
+        " chars), minimum length is "+|minPassPhraseLength|+" chars."
+    build PassPhraseTooLong {..} =
+        "Passphrase is too long ("+|peLength|+
+        " chars), maximum length is "+|maxPassPhraseLength|+" chars."
+
+instance Show PassPhraseError where
+    show = toString . pretty
+
+instance Exception PassPhraseError
+
+-- | Smart constructor for a passphrase
+mkPassPhrase :: ByteString -> Either PassPhraseError PassPhrase
 mkPassPhrase bs
-    | length bs < minPassPhraseLength = Left shortPassErr
+    | lbs < minPassPhraseLength = Left $ PassPhraseTooShort lbs
+    | lbs > maxPassPhraseLength = Left $ PassPhraseTooLong lbs
     | otherwise = Right $ PassPhrase bs
   where
-    shortPassErr = "Passphrase is too short, minimal length is "+|minPassPhraseLength|+" chars."
+    lbs = length bs
 
 -------------------------------------------------------------
 -- Encryption/decryption
@@ -92,7 +123,7 @@ initIV = nullIV
 prepareAEAD :: PassPhrase -> AEAD CipherType
 prepareAEAD (PassPhrase pp) =
     let impossible err =
-            error $ "encrypt: impossible: " <> show err
+            error $ "encrypt: impossible: " <> Prelude.show err
         ppHashKey :: ByteString =
             BA.convert $ hash pp
         cipher :: CipherType =
