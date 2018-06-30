@@ -1,7 +1,5 @@
 module Dscp.DB.SQLite.Class where
 
-import Universum
-
 import Database.SQLite.Simple (FromRow, Query, ToRow)
 
 -- There are more functions in that library, feel free

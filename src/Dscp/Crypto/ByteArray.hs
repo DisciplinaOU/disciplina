@@ -7,8 +7,6 @@ module Dscp.Crypto.ByteArray
        , hashBytes
        ) where
 
-import Universum
-
 import Crypto.Error (CryptoFailable, eitherCryptoError)
 import qualified Crypto.Hash as Crypto
 import qualified Crypto.PubKey.Ed25519 as Ed25519

@@ -6,8 +6,6 @@ module Dscp.Educator.CLI
     ( educatorParamsParser
     ) where
 
-import Universum
-
 import Options.Applicative (Parser)
 
 import Dscp.CLI (sqliteParamsParser)

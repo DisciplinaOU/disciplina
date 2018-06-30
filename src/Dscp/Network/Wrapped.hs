@@ -35,8 +35,6 @@ module Dscp.Network.Wrapped
     ) where
 
 
-import Universum
-
 import Codec.Serialise (serialise)
 import Control.Concurrent (threadDelay)
 import Control.Concurrent.STM (orElse, retry)

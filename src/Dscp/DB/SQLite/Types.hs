@@ -4,8 +4,6 @@ module Dscp.DB.SQLite.Types
        , SQLiteParams (..)
        ) where
 
-import Universum
-
 import Database.SQLite.Simple (Connection)
 
 -- | Where database lies.

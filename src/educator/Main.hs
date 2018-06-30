@@ -2,8 +2,6 @@
 
 module Main where
 
-import Universum
-
 import Loot.Log (logInfo, logWarning, modifyLogName)
 import Options.Applicative (execParser, fullDesc, helper, info, progDesc)
 

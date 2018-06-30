@@ -12,8 +12,6 @@ module Dscp.Crypto.Signing.Class
        , AbstractSig (..)
        ) where
 
-import Universum
-
 import Data.ByteArray (ByteArrayAccess)
 
 -- | Class of signature schemes with defined format of keys and

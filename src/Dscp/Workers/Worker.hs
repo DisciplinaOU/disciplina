@@ -6,8 +6,6 @@ module Dscp.Workers.Worker
     ( witnessWorkers
     ) where
 
-import Universum
-
 import Control.Concurrent (threadDelay)
 import Fmt ((+|), (||+))
 import Loot.Log (logError, logInfo)

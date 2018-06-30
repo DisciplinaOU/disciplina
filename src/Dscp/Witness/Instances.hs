@@ -2,8 +2,6 @@
 
 module Dscp.Witness.Instances () where
 
-import Universum
-
 import Codec.Serialise (Serialise (..))
 import qualified Codec.Serialise as S
 import Control.Monad.Free (Free (..))

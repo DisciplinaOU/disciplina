@@ -21,8 +21,6 @@ module Dscp.Educator.Block
        , getPrevBlockRefMaybe
        ) where
 
-import Universum
-
 import Control.Lens (makeLenses)
 import Dscp.Core.Types (ATGDelta (..))
 import Dscp.Crypto (Hash, unsafeHash)

@@ -6,8 +6,6 @@ module Dscp.DB.SQLite.Error
     , rethrowSQLRequestError
     ) where
 
-import Universum
-
 import Database.SQLite.Simple as SQLite
 import Dscp.Util (wrapRethrow)
 

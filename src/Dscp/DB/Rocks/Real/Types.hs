@@ -6,8 +6,6 @@ module Dscp.DB.Rocks.Real.Types
        , rdDatabase
        ) where
 
-import Universum
-
 import Control.Lens (makeLenses)
 import qualified Database.RocksDB as Rocks
 import Loot.Base.HasLens (HasLens')

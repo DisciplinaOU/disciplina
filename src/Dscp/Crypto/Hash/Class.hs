@@ -10,8 +10,6 @@ module Dscp.Crypto.Hash.Class
        , abstractHash
        ) where
 
-import Universum
-
 import Data.ByteArray (ByteArrayAccess)
 
 -- | Class of algorithms which can produce some hash value.

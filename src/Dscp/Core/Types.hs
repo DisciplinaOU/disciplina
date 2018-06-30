@@ -39,8 +39,6 @@ module Dscp.Core.Types
        , ATG (..)
        ) where
 
-import Universum
-
 import Control.Lens (makeLenses)
 import Data.Map (Map)
 

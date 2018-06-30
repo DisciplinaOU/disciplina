@@ -4,8 +4,6 @@ module Dscp.Witness.Launcher.Resource
        ( WitnessResources (..)
        ) where
 
-import Universum
-
 import Loot.Log.Internal (logNameSelL, _GivenName)
 import Loot.Log.Rio (LoggingIO)
 

@@ -2,8 +2,6 @@ module Dscp.Witness.Launcher.Params
        ( WitnessParams (..)
        ) where
 
-import Universum
-
 import Dscp.DB.Rocks.Real.Types (RocksDBParams)
 import Dscp.Resource.Logging (LoggingParams)
 import Dscp.Resource.Network (NetServParams)

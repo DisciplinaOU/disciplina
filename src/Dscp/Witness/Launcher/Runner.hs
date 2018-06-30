@@ -2,8 +2,6 @@
 
 module Dscp.Witness.Launcher.Runner where
 
-import Universum
-
 import Control.Monad.Component (runComponentM)
 
 import Dscp.Launcher.Rio (runRIO)
