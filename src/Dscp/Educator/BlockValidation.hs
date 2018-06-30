@@ -7,21 +7,19 @@ module Dscp.Educator.BlockValidation
        , validatePrivateBlk
        ) where
 
-import Universum
-
 import Control.Lens (to)
 import Data.Text.Buildable (build)
 
-import Dscp.Core (Address (..), Submission (..), SubmissionSig, ssSubmission,
-                  ssWitness, sStudentId, swKey, swSig)
-import Dscp.Crypto (Hash, PublicKey, MerkleSignature, fromFoldable, getMerkleRoot, hash, verify)
+import Dscp.Core (Address (..), Submission (..), SubmissionSig, sStudentId, ssSubmission, ssWitness,
+                  swKey, swSig)
+import Dscp.Crypto (Hash, MerkleSignature, PublicKey, fromFoldable, getMerkleRoot, hash, verify)
 import Dscp.Educator.Block (PrivateBlock (..), PrivateBlockHeader (..), _pbBody, _pbbTxs)
 import Dscp.Educator.Serialise ()
 import Dscp.Educator.Txs (PrivateTx (..))
 import Text.InterpolatedString.Perl6 (qc)
 
-import qualified Text.Show
 import qualified Data.Text.Buildable ()
+import qualified Text.Show
 
 
 -- | Block validation failures
