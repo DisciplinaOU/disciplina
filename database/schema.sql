@@ -1,4 +1,3 @@
-
 -- Valid for squlite3 3.10+ (if not exists, without rowid).
 
 -- As sql keywords are composite and have spaces inside them,
@@ -9,6 +8,8 @@
 -- As the sqlite will create additional `rowid` unique PK even if another
 --  non integer or integer desc PK is present, some of tables are created
 --  WITHOUT ROWID.
+
+begin transaction;
 
 -- Creating 'Courses' table.
 --
@@ -167,3 +168,5 @@ create table if not exists BlockTxs (
 ) without rowid;
 
 create index if not exists BlockTxs_blk_idx on BlockTxs (blk_idx);
+
+commit;
