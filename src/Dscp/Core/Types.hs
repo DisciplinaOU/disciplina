@@ -14,8 +14,8 @@ module Dscp.Core.Types
        , AssignmentId
        , Submission (..)
        , SubmissionType (..)
-       , SignedSubmission (..)
        , SubmissionSig
+       , SignedSubmission (..)
        , SubmissionWitness (..)
        , aCourseId
        , aType

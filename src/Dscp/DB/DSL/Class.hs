@@ -20,16 +20,16 @@ import Dscp.Crypto (Hash)
 import qualified Dscp.Core as Core (Grade, SubjectId)
 import qualified Data.ByteString.Lazy as LBS
 
-data WHERE = WHERE
+data WHERE   = WHERE
 
-data TxIdEq = TxIdEq PrivateTxId
+data TxIdEq  = TxIdEq PrivateTxId
 
 data TxGrade = TxGrade
 
 data TxsFilterExpr = TxHasSubjectId Core.SubjectId
-                   | TxGradeEq Core.Grade
-                   | (:>=) TxGrade Core.Grade
-                   | (:&) TxsFilterExpr TxsFilterExpr
+                   | TxGradeEq      Core.Grade
+                   | (:>=) TxGrade       Core.Grade
+                   | (:&)  TxsFilterExpr TxsFilterExpr
                    | (:||) TxsFilterExpr TxsFilterExpr
                    | TxHasDescendantOfSubjectId Core.SubjectId
 
@@ -44,14 +44,12 @@ data ObjHashEq = ObjHashEq (Hash Obj)
 
 -- | DSL type is split into different data types
 -- so we can dispatch over interpreters
-data QueryTx = SELECTTx WHERE TxIdEq
-
+data QueryTx  = SELECTTx  WHERE TxIdEq
 data QueryObj = SELECTObj WHERE ObjHashEq
-
 data QueryTxs = SELECTTxs WHERE TxsFilterExpr
 
 class (Monad m) => MonadSearchTxObj m where
-    runTxQuery :: QueryTx -> m (Maybe PrivateTx)
+    runTxQuery  :: QueryTx  -> m (Maybe PrivateTx)
     runTxsQuery :: QueryTxs -> m [PrivateTx]
     runObjQuery :: QueryObj -> m (Maybe Obj)
 
