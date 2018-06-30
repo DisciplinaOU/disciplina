@@ -18,4 +18,4 @@ spec_encryption = describe "AES encryption functions" $ do
     it "should encrypt differently for different passphrases" $ property $
         \(pp, pp', bs :: ByteString) -> pp /= pp' ==> encrypt pp bs /= encrypt pp' bs
     it "should fail when trying to decrypt a ciphertext with wrong passphrase" $ property $
-        \(pp, pp', bs :: ByteString) -> decrypt pp (encrypt pp' bs) === Nothing
+        \(pp, pp', bs :: ByteString) -> pp /= pp' ==> decrypt pp (encrypt pp' bs) === Nothing
