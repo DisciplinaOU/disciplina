@@ -1,7 +1,7 @@
 {-# LANGUAGE LambdaCase   #-}
 {-# LANGUAGE TypeFamilies #-}
 
-import Prelude hiding (State)
+import Prelude hiding (State, list)
 
 import Control.Arrow ((&&&), (***))
 import Data.List ((!!))
@@ -50,34 +50,36 @@ allKindOf =
     subsequencesOfSize :: Int -> [a] -> [[a]]
     subsequencesOfSize n xs = let l = length xs
                             in if n>l then [] else subsequencesBySize xs !! (l-n)
-      where
-        subsequencesBySize [] = [[[]]]
-        subsequencesBySize (x:xs) = let next = subsequencesBySize xs
-                                    in zipWith (++) ([]:next) (map (map (x:)) next ++ [[]])
+    subsequencesBySize [] = [[[]]]
+    subsequencesBySize (x:xs) = let next = subsequencesBySize xs
+                                in zipWith (++) ([]:next) (map (map (x:)) next ++ [[]])
 
 -- | Scene I: test 'evilBuyer' against all possible problem sets.
+evilBuyerTrades :: [(State, [Outcome])]
 evilBuyerTrades =
     let
       outcomeOf = contract evilBuyer
       outcomes  = allKindOf |> map (id &&& id &&& outcomeOf)
       reports   = outcomes  |> map (id *** getMoral)
       reports'  = reports   |> map (id *** decide True)
-      badOnes   = reports'  |> filter (\(s, moral) -> not $ null moral)
+      badOnes   = reports'  |> filter (\(_, moral) -> not $ null moral)
     in
       badOnes
 
 -- | Scene II: test 'goodBuyer' against all possible problem sets.
+goodBuyerTrades :: [(State, [Outcome])]
 goodBuyerTrades =
     let
       outcomeOf = contract goodBuyer
       outcomes  = allKindOf |> map (id &&& id &&& outcomeOf)
       reports   = outcomes  |> map (id *** getMoral)
       reports'  = reports   |> map (id *** decide False)
-      badOnes   = reports'  |> filter (\(s, moral) -> not $ null moral)
+      badOnes   = reports'  |> filter (\(_, moral) -> not $ null moral)
     in
       badOnes
 
 -- | Derive moral choices from the outcome.
+getMoral :: ([Problem], Label) -> (Bool, Bool, Bool, Bool, Bool)
 getMoral (i, o) =
     (buyerGotData i, buyerLostFee o, sellerLostFee o, sellerGotMoney o, sellerWasEvil i)
 
@@ -91,6 +93,7 @@ data Outcome
   deriving (Eq, Show)
 
 -- | Get all things that are wrong.
+decide :: Eq a => Bool -> (a, Bool, Bool, a, Bool) -> [Outcome]
 decide evilB (dat, punB, punS, mon, evilS) =
     concat
         [ [EvilBuyerNotPunished  | evilB && not punB && dat /= mon]
@@ -101,6 +104,10 @@ decide evilB (dat, punB, punS, mon, evilS) =
         ]
 
 -- | Check if Seller had evil intent.
+sellerWasEvil ::
+  (Element t ~ Problem, Container t,
+   ElementConstraint t (Element t)) =>
+  t -> Bool
 sellerWasEvil list
   -- | These two terminate trade outright and can be connection failures.
   | DataNeverSent `elem` list = False
@@ -113,10 +120,12 @@ buyerGotData :: [Problem] -> Bool
 buyerGotData = null  -- any problem prevens for now
 
 -- | Check if buyer lost her fee.
+buyerLostFee :: Label -> Bool
 buyerLostFee SellerGetsAll = True
 buyerLostFee _             = False
 
 -- | Check if seller lost his fee.
+sellerLostFee :: Label -> Bool
 sellerLostFee BuyerGetsAll = True
 sellerLostFee _            = False
 
@@ -131,29 +140,33 @@ sellerGotMoney label =
 type AI = (Label, State) -> Input
 
 infixl 1 |>
+(|>) :: a -> (a -> c) -> c
 (|>) = flip ($)
 
 -- | Test some buyer AI against given set of problems.
 contract :: AI -> State -> Label
 contract buyer problems = loop Created
   where
-    loop state = case state of
+    loop st = case st of
       Created ->
-        buyer (state, problems) |> \case
+        buyer (st, problems) |> \case
           StartTrade -> loop Transmitted
+          _          -> error "Not implemented"
 
       Transmitted -> do
-        buyer (state, problems) |> \case
+        buyer (st, problems) |> \case
           AcceptEncrypted
             | Garbage `elem` problems ->      Cancelled
             | otherwise               -> loop KeySent
           Timeout -> Cancelled
+          _ -> error "Not implemented"
 
       KeySent -> do
-        buyer (state, problems) |> \case
+        buyer (st, problems) |> \case
           Reject    -> loop Arbitration
           Handshake ->      Agreed
           Timeout   ->      SellerGetsAll
+          _         -> error "Not implemented"
 
       Arbitration
         |  PlaintextWasGarbage `elem` problems
@@ -162,6 +175,8 @@ contract buyer problems = loop Created
 
         | otherwise ->
           SellerGetsAll
+
+      _ -> error "We didn't yet think so far"
 
 -- | An AI for good buyer.
 goodBuyer :: AI
@@ -178,6 +193,8 @@ goodBuyer (input, problems) = case input of
     | SecretKeyWasNotSent `elem` problems -> Timeout
     | otherwise                           -> Handshake
 
+  _ -> error "Not implemented"
+
 
 -- | An AI for evil buyer.
 evilBuyer :: AI
@@ -189,7 +206,9 @@ evilBuyer (input, problems) = case input of
     | otherwise                     -> AcceptEncrypted
 
   KeySent -> Reject
+  _ -> error "Not implemented"
 
+main :: IO ()
 main = do
     putTextLn "Good buyer:"
     forM_ goodBuyerTrades $ \(problems, badThings) -> do
