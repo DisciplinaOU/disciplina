@@ -42,8 +42,7 @@ import Control.Concurrent.STM.TMVar (newEmptyTMVarIO, putTMVar, readTMVar)
 import qualified Data.ByteString.Char8 as BS8
 import qualified Data.ByteString.Lazy as BSL
 import Fmt ((+|), (||+))
-import Formatting (Buildable)
-import Loot.Log (MonadLogging, logDebug, logError, logInfo, logWarning)
+import Loot.Log (MonadLogging, logDebug, logError, logWarning)
 import Loot.Network.BiTQueue (recvBtq, sendBtq)
 import Loot.Network.Class (CliId, ClientEnv, ClientId, ListenerEnv, ListenerId, MsgType (..),
                            NetworkingCli, NetworkingServ, NodeId, Subscription (..), registerClient,

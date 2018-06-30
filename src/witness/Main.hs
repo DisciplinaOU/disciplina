@@ -3,12 +3,8 @@
 module Main where
 
 import Control.Concurrent (threadDelay)
-import qualified Data.ByteString.Char8 as B8
 import Loot.Log (logInfo, logWarning, modifyLogName)
-import Options.Applicative (Parser, execParser, fullDesc, help, helper, info, long, progDesc)
-import System.IO (getChar)
-import System.Random (mkStdGen)
-import UnliftIO.Async (concurrently_)
+import Options.Applicative (execParser, fullDesc, helper, info,  progDesc)
 import UnliftIO.Async (async)
 
 import Dscp.CLI (versionOption)

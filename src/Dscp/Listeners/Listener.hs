@@ -6,7 +6,6 @@ module Dscp.Listeners.Listener
     ( witnessListeners
     ) where
 
-import Control.Concurrent (threadDelay)
 import Loot.Log (logInfo)
 
 import Dscp.Network.Messages (PingBlk (..), PingTx (..), PongBlk (..), PongTx (..))
