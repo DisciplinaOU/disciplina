@@ -16,7 +16,7 @@ module Dscp.Crypto.Encrypt
        , eCiphertext
 
          -- * Utility functions
-       , DecryptionError
+       , DecryptionError (..)
        , encrypt
        , decrypt
        ) where
