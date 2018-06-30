@@ -68,7 +68,7 @@ tests:
 executables:
   disciplina-witness:
     <<: *exec-common
-    source-dirs: src/witness
+    source-dirs: witness
     dependencies:
       - bytestring
       - disciplina
@@ -80,7 +80,7 @@ executables:
       - unliftio
   disciplina-educator:
     <<: *exec-common
-    source-dirs: src/educator
+    source-dirs: educator
     dependencies:
       - disciplina
       - formatting
