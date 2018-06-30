@@ -3,7 +3,7 @@ module Test.Dscp.Crypto.Encrypt where
 import qualified Data.ByteString as BS
 import Test.Common
 
-import Dscp.Crypto (Encrypted, PassPhrase, decrypt, encrypt, minPassPhraseLength, mkPassPhrase)
+import Dscp.Crypto (PassPhrase, decrypt, encrypt, minPassPhraseLength, mkPassPhrase)
 
 instance Arbitrary PassPhrase where
     arbitrary = either error identity . mkPassPhrase <$>
