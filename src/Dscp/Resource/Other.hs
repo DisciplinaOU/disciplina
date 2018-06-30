@@ -3,8 +3,6 @@
 
 module Dscp.Resource.Other () where
 
-import Universum
-
 import Control.Monad.Component (buildComponent)
 
 import Dscp.DB.SQLite (ensureSchemaIsSetUp)
@@ -22,7 +20,7 @@ instance AllocResource RocksDBParams RocksDB where
 instance AllocResource SQLiteParams SQLiteDB where
     allocResource p = buildComponent "SQLite DB" (openSQLiteDB' p) closeSQLiteDB
       where
-        openSQLiteDB' p = do
-            db@ (SQLiteDB conn) <- openSQLiteDB p
+        openSQLiteDB' p' = do
+            db@ (SQLiteDB conn) <- openSQLiteDB p'
             ensureSchemaIsSetUp conn
             return db

@@ -5,8 +5,6 @@ module Dscp.DB.SQLite.SchemaInit
     ( ensureSchemaIsSetUp
     ) where
 
-import Universum
-
 import Database.SQLite3 (exec)
 import Database.SQLite.Simple.Internal (Connection (..))
 

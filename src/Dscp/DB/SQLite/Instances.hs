@@ -1,20 +1,14 @@
 
 module Dscp.DB.SQLite.Instances where
 
-import Universum
-
 import Codec.Serialise as Codec (deserialise, serialise)
-
-import Data.ByteString.Lazy as Lazy (ByteString)
 
 import Database.SQLite.Simple.FromField (FromField (..))
 import Database.SQLite.Simple.ToField (ToField (..))
 
-import Dscp.Core.Types (Address (..), Assignment (..), AssignmentType (..), CourseId (..),
-                        Grade (..), SignedSubmission (..), StudentId, Submission (..),
-                        SubmissionSig, SubmissionType (..), SubmissionWitness (..))
+import Dscp.Core.Types (Address (..), CourseId (..), Grade (..), SubmissionSig)
 import Dscp.Core.Serialise ()
-import Dscp.Educator.Txs (PrivateTx (..), PrivateTxId)
+import Dscp.Educator.Txs (PrivateTxId)
 
 -- TODO(kir): split into separate .Instances module.
 instance FromField Address where

@@ -1,5 +1,5 @@
 module Dscp.DB.DSL.Interpret.SimpleTxDB
-       ( -- runSimpleTxDBQuery
+       ( runSimpleTxDBQuery
        ) where
 
 import Control.Lens (filtered, makePrisms, traversed)
@@ -142,7 +142,7 @@ runSimpleTxDBQuery dbTx dbObj query =
 
 getTxCourseId :: PrivateTx -> CourseId
 getTxCourseId tx = _aCourseId (_sAssignment (_ssSubmission (_ptSignedSubmission tx)))
-=======
+
 --import Universum
 
 --import Control.Lens (filtered, makePrisms, traversed)

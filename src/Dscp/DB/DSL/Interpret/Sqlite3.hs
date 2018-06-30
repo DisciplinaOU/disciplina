@@ -3,8 +3,6 @@
 
 module Dscp.DB.DSL.Interpret.Sqlite3 () where
 
-import Universum
-
 import qualified Data.Set as Set (Set, empty, member, singleton)
 import Data.Time.Clock (UTCTime)
 
@@ -12,7 +10,7 @@ import Database.SQLite.Simple (Only (..))
 
 import Text.InterpolatedString.Perl6 (q, qc, qq)
 
-import Dscp.Core.Types (Address (..), Assignment (..), AssignmentType (..), CourseId (..),
+import Dscp.Core.Types (Assignment (..), AssignmentType (..), CourseId (..),
                         Grade (..), SignedSubmission (..), StudentId, Submission (..),
                         SubmissionSig, SubmissionType (..), SubmissionWitness (..))
 import Dscp.Crypto (PublicKey)
