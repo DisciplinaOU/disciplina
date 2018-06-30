@@ -7,8 +7,6 @@ module Dscp.Crypto.Hash.Cryptonite
        ( CryptoniteFunc
        ) where
 
-import Universum
-
 import Crypto.Hash (Digest, HashAlgorithm)
 import qualified Crypto.Hash as Crypto
 import Data.ByteArray (ByteArrayAccess, Bytes)

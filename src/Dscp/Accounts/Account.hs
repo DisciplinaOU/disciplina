@@ -3,8 +3,6 @@
 
 module Dscp.Accounts.Account where
 
-import Universum
-
 import Codec.Serialise (Serialise)
 import Control.Lens (makeLenses)
 import Data.Default (Default)

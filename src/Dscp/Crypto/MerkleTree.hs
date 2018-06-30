@@ -24,8 +24,6 @@ module Dscp.Crypto.MerkleTree
        , mkLeaf
        ) where
 
-import Universum
-
 import Dscp.Crypto.Hash.Class (AbstractHash (..))
 import Dscp.Crypto.Impl (HasHash, Hash, hash, unsafeHash)
 import Dscp.Crypto.Serialise (Raw)

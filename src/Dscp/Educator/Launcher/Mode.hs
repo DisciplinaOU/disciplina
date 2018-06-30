@@ -15,8 +15,6 @@ module Dscp.Educator.Launcher.Mode
     , ecDB
     ) where
 
-import Universum
-
 import Control.Lens (makeLenses)
 import Loot.Base.HasLens (HasLens (..))
 import Loot.Log.Rio (LoggingIO)

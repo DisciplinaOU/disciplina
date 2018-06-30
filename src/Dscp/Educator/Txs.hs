@@ -17,8 +17,6 @@ module Dscp.Educator.Txs
        , ptwSig
        ) where
 
-import Universum
-
 import Control.Lens (makeLenses)
 import Data.Time.Clock (UTCTime)
 

@@ -15,12 +15,12 @@ module Test.Common
        ( module Test.Common
        , module Control.Lens
        , module T
-       , module Universum
        ) where
+
+import Prelude hiding (show, unlines)
 
 import Data.List (unlines)
 import GHC.Show (Show (show))
-import Universum hiding (show, unlines)
 
 import Data.Time.Clock (UTCTime)
 import Data.Time.Format (defaultTimeLocale, parseTimeOrError)

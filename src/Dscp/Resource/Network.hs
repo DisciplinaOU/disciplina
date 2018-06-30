@@ -14,8 +14,6 @@ module Dscp.Resource.Network
     , NetServResources(..)
     ) where
 
-import Universum
-
 import Control.Lens (makeLenses)
 import Control.Monad.Component (buildComponent)
 import Data.Reflection (Given (given), give)

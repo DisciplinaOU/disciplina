@@ -2,8 +2,6 @@
 
 module Main where
 
-import Universum
-
 import Control.Concurrent (threadDelay)
 import qualified Data.ByteString.Char8 as B8
 import Loot.Log (logInfo, logWarning, modifyLogName)

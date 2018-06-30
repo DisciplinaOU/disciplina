@@ -3,8 +3,6 @@ module Dscp.Resource.Logging
     ( LoggingParams(..)
     ) where
 
-import Universum
-
 import Control.Monad.Component (buildComponent)
 import Data.Aeson (encode)
 import Fmt ((+|), (|+))

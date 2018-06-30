@@ -14,8 +14,6 @@ module Dscp.DB.DSL.Class
        , WHERE (..)
        ) where
 
-import Universum
-
 import Dscp.Educator.Txs (PrivateTxId, PrivateTx(..))
 import Dscp.Crypto (Hash)
 

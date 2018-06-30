@@ -14,8 +14,6 @@ module Dscp.Network.Messages
     , PongTx(..)
     ) where
 
-import Universum
-
 import Codec.Serialise (Serialise)
 import Loot.Network.Message (Message (..))
 

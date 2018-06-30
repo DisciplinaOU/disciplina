@@ -2,8 +2,6 @@
 
 module Dscp.Educator.Launcher.Runner where
 
-import Universum
-
 import Control.Monad.Component (runComponentM)
 
 import Dscp.Educator.Launcher.Mode (EducatorContext (..), EducatorRealMode)

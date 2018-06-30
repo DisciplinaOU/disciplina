@@ -2,8 +2,6 @@ module Dscp.DB.DSL.Interpret.SimpleTxDB
        ( runSimpleTxDBQuery
        ) where
 
-import Universum
-
 import Control.Lens (filtered, makePrisms, traversed)
 import Data.List (intersect, union)
 import Data.Map.Strict (Map)

@@ -24,8 +24,6 @@ module Dscp.Launcher.Mode
          BasicWorkMode
        ) where
 
-import Universum
-
 import Loot.Log (WithLogging)
 import UnliftIO (MonadUnliftIO)
 

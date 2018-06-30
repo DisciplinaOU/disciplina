@@ -5,8 +5,6 @@ module Dscp.Launcher.Rio
     , runRIO
     ) where
 
-import Universum
-
 import Control.Monad.Catch (MonadCatch, MonadMask, MonadThrow)
 import Loot.Base.HasLens (HasLens)
 import Loot.Log (ModifyLogName (..), MonadLogging (..))

@@ -27,7 +27,6 @@ _definitions:
         - MultiParamTypeClasses
         - MultiWayIf
         - NamedFieldPuns
-        - NoImplicitPrelude
         - OverloadedStrings
         - RankNTypes
         - RecordWildCards

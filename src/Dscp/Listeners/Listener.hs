@@ -6,8 +6,6 @@ module Dscp.Listeners.Listener
     ( witnessListeners
     ) where
 
-import Universum
-
 import Control.Concurrent (threadDelay)
 import Loot.Log (logInfo)
 

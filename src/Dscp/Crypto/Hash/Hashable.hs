@@ -7,8 +7,6 @@ module Dscp.Crypto.Hash.Hashable
        ( HashableFunc
        ) where
 
-import Universum
-
 import Data.Hashable (Hashable)
 import qualified Data.Hashable as H
 

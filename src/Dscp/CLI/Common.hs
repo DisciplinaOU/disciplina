@@ -14,8 +14,6 @@ module Dscp.CLI.Common
        , netServParamsParser
        ) where
 
-import Universum
-
 import qualified Data.Set as Set
 import Data.Version (showVersion)
 import qualified Loot.Log as Log

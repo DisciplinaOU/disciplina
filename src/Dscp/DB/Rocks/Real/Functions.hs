@@ -12,8 +12,6 @@ module Dscp.DB.Rocks.Real.Functions
        , rocksDelete
        ) where
 
-import Universum
-
 import qualified Database.RocksDB as Rocks
 import Loot.Base.HasLens (HasLens (..), HasLens')
 

@@ -19,8 +19,6 @@ module Dscp.Crypto.Impl
        , unsafeVerify
        ) where
 
-import Universum
-
 import Crypto.Hash.Algorithms (Blake2sp_256)
 
 import Dscp.Crypto.Hash (AbstractHash (..), CryptoniteFunc, HasAbstractHash (..),

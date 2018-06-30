@@ -9,8 +9,6 @@ module Dscp.Util
        , module Snowdrop.Util
        ) where
 
-import Universum
-
 import Snowdrop.Util
 
 deriving instance Container (b a) => Container (OldestFirst b a)

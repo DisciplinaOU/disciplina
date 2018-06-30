@@ -6,8 +6,6 @@ module Dscp.DB.SQLite.Functions
        , closeSQLiteDB
        ) where
 
-import Universum
-
 import qualified Database.SQLite.Simple as Lower
 import Loot.Base.HasLens (HasLens (..))
 

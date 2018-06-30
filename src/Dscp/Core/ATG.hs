@@ -12,8 +12,6 @@ module Dscp.Core.ATG
        , activityTypeGraphIndexed
        ) where
 
-import Universum
-
 import Control.Lens (makeLenses)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M

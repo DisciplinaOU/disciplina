@@ -1,7 +1,5 @@
 module Dscp.DB.Rocks.Class where
 
-import Universum
-
 -- | Read-only interface to key-value DB storing serialized data.
 class Monad m => MonadDBRead m where
     dbGet :: ByteString -> m (Maybe ByteString)
