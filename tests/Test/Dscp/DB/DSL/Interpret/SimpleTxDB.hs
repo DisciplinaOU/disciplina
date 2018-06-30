@@ -5,7 +5,8 @@ import Test.Common
 import Dscp.Core (CourseId (..), Grade (..), SubjectId)
 import Dscp.Crypto (PublicKey, SecretKey, hash)
 import Dscp.DB (Obj, ObjHashEq (..), QueryObj (..), QueryTx (..), QueryTxs (..), TxGrade (..),
-                TxIdEq (..), TxsFilterExpr (..), WHERE (..), runSimpleTxDBQuery)
+                TxIdEq (..), TxsFilterExpr (..), WHERE (..))
+import Dscp.DB.DSL.Interpret.SimpleTxDB (runSimpleTxDBQuery)
 import Dscp.Educator (PrivateTx (..))
 
 -- | Made up courses
