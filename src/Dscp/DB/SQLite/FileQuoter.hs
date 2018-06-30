@@ -1,4 +1,4 @@
-module Dscp.DB.DSL.Interpret.Sqlite3.FileQuoter (qFile) where
+module Dscp.DB.SQLite.FileQuoter (qFile) where
 
 import Language.Haskell.TH.Quote (quoteFile, QuasiQuoter)
 

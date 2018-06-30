@@ -1,5 +1,5 @@
 
-module Dscp.DB.DSL.Interpret.Sqlite3.Instances where
+module Dscp.DB.SQLite.Instances where
 
 import Universum
 
