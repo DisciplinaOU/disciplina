@@ -12,7 +12,8 @@ import qualified Data.ByteString.Lazy as BSL
 
 import Dscp.Crypto.Hash.Class (AbstractHash (..))
 import Dscp.Crypto.Signing.Class (AbstractPK (..), AbstractSK (..), AbstractSig (..),
-                                        HasAbstractSignature (..), SignatureScheme (..))
+                                  HasAbstractSignature (..), SignatureScheme (..),
+                                  SignatureSchemeLengths (..))
 
 -- | Tag for 'Ed25519' signature scheme implementation from `crytonite`.
 data CryptoEd25519
@@ -22,6 +23,12 @@ instance SignatureScheme CryptoEd25519 where
     type PK CryptoEd25519  = Ed25519.PublicKey
     type SK CryptoEd25519  = Ed25519.SecretKey
     type Sig CryptoEd25519 = Ed25519.Signature
+
+    schemeLengths = SignatureSchemeLengths
+        { secretKeyLength = 32
+        , publicKeyLength = 32
+        , signatureLength = 64
+        }
 
     -- TODO: 'toPublic' isn't free in terms of performance; consider
     -- storing secret key as actual keypair.

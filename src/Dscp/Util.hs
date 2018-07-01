@@ -5,6 +5,10 @@ module Dscp.Util
        ( anyMapM
        , wrapRethrow
        , wrapRethrowIO
+       , leftToThrow
+       , leftToFail
+       , leftToPanic
+       , leftToPanicWith
          -- * Re-exports
        , module Snowdrop.Util
        ) where
@@ -32,3 +36,21 @@ wrapRethrowIO
     :: (Exception e1, Exception e2, MonadCatch m, MonadIO m)
     => (e1 -> e2) -> IO a -> m a
 wrapRethrowIO wrap action = wrapRethrow wrap (liftIO action)
+
+leftToThrow
+    :: (MonadThrow m, Exception e2)
+    => (e1 -> e2) -> Either e1 a -> m a
+leftToThrow wrapErr = either (throwM . wrapErr) pure
+
+leftToFail
+    :: (MonadFail m, ToString s) => Either s a -> m a
+leftToFail = either (fail . toString) pure
+
+leftToPanic
+    :: ToText s => Either s a -> a
+leftToPanic = either (error . toText) identity
+
+leftToPanicWith
+    :: ToText s => Text -> Either s a -> a
+leftToPanicWith prefix =
+    either error identity . first ((prefix <>) . toText)

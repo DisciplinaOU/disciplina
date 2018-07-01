@@ -4,15 +4,28 @@
 
 module Dscp.Crypto.Signing.Class
        ( SignatureScheme (..)
+       , SignatureSchemeLengths (..)
        , HasAbstractSignature (..)
        , abstractSign
        , abstractVerify
        , AbstractPK (..)
        , AbstractSK (..)
        , AbstractSig (..)
+       , keyGen
        ) where
 
-import Data.ByteArray (ByteArrayAccess)
+import Crypto.Random (MonadRandom (..))
+import Data.ByteArray (ByteArray, ByteArrayAccess)
+
+import Dscp.Crypto.ByteArray (FromByteArray (..))
+import Dscp.Util (leftToPanicWith)
+
+-- | Defines lengths of keys and signatures used by scheme.
+data SignatureSchemeLengths = SignatureSchemeLengths
+    { secretKeyLength
+    , publicKeyLength
+    , signatureLength :: Int
+    }
 
 -- | Class of signature schemes with defined format of keys and
 -- signatures.
@@ -20,6 +33,8 @@ class SignatureScheme ss where
     type PK ss  :: *
     type SK ss  :: *
     type Sig ss :: *
+
+    schemeLengths :: SignatureSchemeLengths
 
     unsafeSignBytes ::
         forall a b. ByteArrayAccess a =>
@@ -35,10 +50,15 @@ newtype AbstractPK ss = AbstractPK (PK ss)
 deriving instance Eq (PK ss) => Eq (AbstractPK ss)
 deriving instance Ord (PK ss) => Ord (AbstractPK ss)
 deriving instance Show (PK ss) => Show (AbstractPK ss)
+deriving instance Monoid (PK ss) => Monoid (AbstractPK ss)
 
--- | Wrapper for a secret key. 'Eq', 'Ord' and 'Show' instances
--- are not derived for security reasons.
+-- | Wrapper for a secret key. 'Show' instance is not derived for
+-- security reasons.
 newtype AbstractSK ss = AbstractSK (SK ss)
+
+deriving instance Eq (SK ss) => Eq (AbstractSK ss)
+deriving instance Ord (SK ss) => Ord (AbstractSK ss)
+deriving instance Monoid (SK ss) => Monoid (AbstractSK ss)
 
 -- | Wrapper for a signature. Phantom type parameter 'a' denotes
 -- the type of object being signed.
@@ -47,6 +67,7 @@ newtype AbstractSig ss a = AbstractSig (Sig ss)
 deriving instance Eq (Sig ss) => Eq (AbstractSig ss a)
 deriving instance Ord (Sig ss) => Ord (AbstractSig ss a)
 deriving instance Show (Sig ss) => Show (AbstractSig ss a)
+deriving instance Monoid (Sig ss) => Monoid (AbstractSig ss a)
 
 -- | Provide 'ByteArrayAccess' instances for signatures and keys.
 deriving instance ByteArrayAccess (PK ss) =>
@@ -55,6 +76,36 @@ deriving instance ByteArrayAccess (SK ss) =>
     ByteArrayAccess (AbstractSK ss)
 deriving instance ByteArrayAccess (Sig ss) =>
     ByteArrayAccess (AbstractSig ss a)
+
+-- | Provide 'ByteArray' instances for signatures and keys.
+-- They are used for desirisalisation.
+deriving instance ByteArray (PK ss) =>
+    ByteArray (AbstractPK ss)
+deriving instance ByteArray (SK ss) =>
+    ByteArray (AbstractSK ss)
+deriving instance ByteArray (Sig ss) =>
+    ByteArray (AbstractSig ss a)
+
+-- | Provide 'FromByteArray' instances for signatures and keys.
+-- They are used for desirisalisation.
+deriving instance FromByteArray (PK ss) =>
+    FromByteArray (AbstractPK ss)
+deriving instance FromByteArray (SK ss) =>
+    FromByteArray (AbstractSK ss)
+deriving instance FromByteArray (Sig ss) =>
+    FromByteArray (AbstractSig ss a)
+
+-- | Generate a secret key.
+keyGen
+    :: forall m ss.
+       (MonadRandom m, SignatureScheme ss, FromByteArray (AbstractSK ss))
+    => m (AbstractSK ss)
+keyGen = do
+    let n = secretKeyLength (schemeLengths @ss)
+    bs :: ByteString <- getRandomBytes n
+    let sk = fromByteArray bs
+           & leftToPanicWith "keyGen: impossible happened: "
+    return sk
 
 -- | For each `a`, provide a way to sign it using scheme `ss`.
 class SignatureScheme ss => HasAbstractSignature ss a where

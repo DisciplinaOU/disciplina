@@ -17,4 +17,4 @@ class MonadEducatorSecret m where
 
 instance HasLens' ctx EducatorSecret =>
          MonadEducatorSecret (RIO ctx) where
-    getEducatorSecret = views (lensOf @EducatorSecret) escSecretKey
+    getEducatorSecret = views (lensOf @EducatorSecret) esSecretKey

@@ -8,7 +8,8 @@ import Control.Monad.Component (buildComponent)
 import Dscp.DB.Rocks.Real (RocksDB, RocksDBParams, closeNodeDB, openNodeDB)
 import Dscp.DB.SQLite (ensureSchemaIsSetUp)
 import Dscp.DB.SQLite (SQLiteDB (..), SQLiteParams, closeSQLiteDB, openSQLiteDB)
-import Dscp.Educator.Secret (EducatorSecret, EducatorSecretParams, readEducatorSecret)
+import Dscp.Educator.Secret (EducatorSecret, EducatorSecretParams, linkStore)
+import Dscp.Resource.AppDir (AppDirectory)
 import Dscp.Resource.Class (AllocResource (..))
 
 ----------------------------------------------------------------------------
@@ -26,8 +27,8 @@ instance AllocResource SQLiteParams SQLiteDB where
             ensureSchemaIsSetUp conn
             return db
 
-instance AllocResource EducatorSecretParams EducatorSecret where
-    allocResource p =
+instance AllocResource (EducatorSecretParams, AppDirectory) EducatorSecret where
+    allocResource (params, appDir) =
         buildComponent "Educator secret key storage"
-            (readEducatorSecret p)
+            (linkStore params appDir)
             (\_ -> pass)
