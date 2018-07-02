@@ -14,6 +14,8 @@ import Dscp.Educator.Secret.Real.Error (EducatorSecretError (..), rewrapSecretIO
 import Dscp.Educator.Secret.Real.Types (EducatorSecret (..), EducatorSecretJson (..),
                                         EducatorSecretParams (..), KeyfileContent)
 import Dscp.Resource.AppDir (AppDirectory (..))
+import Dscp.System (whenPosix)
+import Dscp.System (ensureModeIs, mode600)
 import Dscp.Util (leftToThrow)
 import Dscp.Util.Aeson (Versioned (..))
 
@@ -57,15 +59,23 @@ readStore path pp = do
         & leftToThrow (SecretDeserialisationError . toText)
     fromEducatorSecretJson pp mid
 
--- | Write given content to store.
-writeStore
-    :: (MonadIO m, MonadCatch m)
-    => FilePath -> PassPhrase -> EducatorSecret -> m ()
-writeStore path pp store =
-    rewrapSecretIOError $
+-- | Write given secret to store.
+writeStoreDumb
+    :: FilePath -> PassPhrase -> EducatorSecret -> IO ()
+writeStoreDumb path pp store =
     LBS.writeFile path $
     encode @KeyfileContent $
     Versioned $ toEducatorSecretJson pp store
+
+-- | Write given secret to store, setting appropriate access mode.
+writeStore
+    :: (MonadIO m, MonadCatch m)
+    => FilePath -> PassPhrase -> EducatorSecret -> m ()
+writeStore path pp store = rewrapSecretIOError $ do
+    whenPosix $ do
+        LBS.writeFile path mempty
+        ensureModeIs mode600 path
+    writeStoreDumb path pp store
 
 -- | Creates new store under given path.
 -- If file already exists, error is thrown.

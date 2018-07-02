@@ -49,6 +49,7 @@ library:
     - text-format
     - time
     - time-units
+    - unix
     - unliftio
 
 tests:
