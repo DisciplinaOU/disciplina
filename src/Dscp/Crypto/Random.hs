@@ -6,10 +6,13 @@ module Dscp.Crypto.Random
        , secureRandomBS
 
        , deterministic
+       , generator
        , randomNumber
        , randomNumberInRange
        ) where
 
+import Test.QuickCheck (Gen, arbitrary)
+import Test.QuickCheck.Instances ()
 import Crypto.Number.Basic (numBytes)
 import Crypto.Number.Serialize (os2ip)
 import Crypto.OpenSSL.Random (randBytes)
@@ -39,6 +42,12 @@ deterministic :: ByteString -> MonadPseudoRandom ChaChaDRG a -> a
 deterministic seed gen = fst $ withDRG chachaSeed gen
   where
     chachaSeed = drgNewSeed . seedFromInteger . os2ip $ seed
+
+-- | Like 'deterministic', for 'Arbitrary'.
+-- Perhaps later we should refuse using with function for the sake of
+-- pregenerated lists of items.
+generator :: MonadPseudoRandom ChaChaDRG a -> Gen a
+generator rand = arbitrary <&> \seed -> deterministic seed rand
 
 -- | Generate a random number in range [0, n).
 --

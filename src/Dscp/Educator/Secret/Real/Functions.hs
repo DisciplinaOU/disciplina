@@ -9,7 +9,7 @@ import qualified Data.ByteString.Lazy as LBS
 import System.Directory (doesFileExist)
 import System.FilePath ((</>))
 
-import Dscp.Crypto (PassPhrase, decrypt, encrypt, keyGen, runSecureRandom)
+import Dscp.Crypto (PassPhrase, decrypt, encrypt, genSecretKey, runSecureRandom)
 import Dscp.Educator.Secret.Real.Error (EducatorSecretError (..), rewrapSecretIOError)
 import Dscp.Educator.Secret.Real.Types (EducatorSecret (..), EducatorSecretJson (..),
                                         EducatorSecretParams (..), KeyfileContent)
@@ -47,8 +47,8 @@ storePath EducatorSecretParams{..} (AppDirectory appDir) =
 
 -- | Generate store randomly.
 genStore :: MonadIO m => m EducatorSecret
-genStore = runSecureRandom $ do
-    esSecretKey <- keyGen
+genStore = do
+    esSecretKey <- runSecureRandom genSecretKey
     return EducatorSecret{..}
 
 -- | Read store under given path.

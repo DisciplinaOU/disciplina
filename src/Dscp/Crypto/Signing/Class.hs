@@ -4,32 +4,22 @@
 
 module Dscp.Crypto.Signing.Class
        ( SignatureScheme (..)
-       , SignatureSchemeLengths (..)
        , HasAbstractSignature (..)
        , abstractSign
        , abstractVerify
        , AbstractPK (..)
        , AbstractSK (..)
        , AbstractSig (..)
-       , keyGen
        ) where
 
-import Crypto.Random (MonadRandom (..))
+import Crypto.Random (MonadRandom)
 import Data.ByteArray (ByteArray, ByteArrayAccess)
-import qualified Data.ByteString as BS
 import qualified Data.Text.Buildable
-import Test.QuickCheck (Arbitrary (..), vector)
+import Test.QuickCheck (Arbitrary (..))
 import qualified Text.Show
 
 import Dscp.Crypto.ByteArray (FromByteArray (..))
-import Dscp.Util (leftToPanicWith)
-
--- | Defines lengths of keys and signatures used by scheme.
-data SignatureSchemeLengths = SignatureSchemeLengths
-    { secretKeyLength
-    , publicKeyLength
-    , signatureLength :: Int
-    }
+import Dscp.Crypto.Random (generator)
 
 -- | Class of signature schemes with defined format of keys and
 -- signatures.
@@ -38,14 +28,14 @@ class SignatureScheme ss where
     type SK ss  :: *
     type Sig ss :: *
 
-    schemeLengths :: SignatureSchemeLengths
-
     unsafeSignBytes ::
         forall a b. ByteArrayAccess a =>
         AbstractSK ss -> a -> AbstractSig ss b
     unsafeVerifyBytes ::
         forall a b. ByteArrayAccess a =>
         AbstractPK ss -> a -> AbstractSig ss b -> Bool
+
+    genSecretKey :: MonadRandom m => m (AbstractSK ss)
 
 -- | Wrapper for a public key.
 newtype AbstractPK ss = AbstractPK (PK ss)
@@ -58,9 +48,7 @@ deriving instance Monoid (PK ss) => Monoid (AbstractPK ss)
 
 instance (SignatureScheme ss, FromByteArray (AbstractSK ss)) =>
          Arbitrary (AbstractSK ss) where
-    arbitrary =
-        leftToPanicWith "arbitrary abstractSK" . fromByteArray . BS.pack <$>
-        vector (secretKeyLength $ schemeLengths @ss)
+    arbitrary = generator genSecretKey
 
 -- | Wrapper for a secret key. 'Show' instance is not derived for
 -- security reasons.
@@ -108,18 +96,6 @@ deriving instance FromByteArray (SK ss) =>
     FromByteArray (AbstractSK ss)
 deriving instance FromByteArray (Sig ss) =>
     FromByteArray (AbstractSig ss a)
-
--- | Generate a secret key.
-keyGen
-    :: forall m ss.
-       (MonadRandom m, SignatureScheme ss, FromByteArray (AbstractSK ss))
-    => m (AbstractSK ss)
-keyGen = do
-    let n = secretKeyLength (schemeLengths @ss)
-    bs :: ByteString <- getRandomBytes n
-    let sk = fromByteArray bs
-           & leftToPanicWith "keyGen: impossible happened: "
-    return sk
 
 -- | For each `a`, provide a way to sign it using scheme `ss`.
 class SignatureScheme ss => HasAbstractSignature ss a where
