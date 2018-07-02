@@ -50,13 +50,14 @@ instance (SignatureScheme ss, FromByteArray (AbstractSK ss)) =>
          Arbitrary (AbstractSK ss) where
     arbitrary = generator genSecretKey
 
--- | Wrapper for a secret key. 'Show' instance is not derived for
--- security reasons.
 newtype AbstractSK ss = AbstractSK (SK ss)
 
 deriving instance Eq (SK ss) => Eq (AbstractSK ss)
 deriving instance Ord (SK ss) => Ord (AbstractSK ss)
 deriving instance Monoid (SK ss) => Monoid (AbstractSK ss)
+
+-- | Existing 'Show' instance e.g. for Ed25519 Secret Key would produce
+-- "scrubbed-bytes", let's be more specific.
 instance Show (AbstractSK ss) where
     show _ = "<secret>"
 instance Buildable (AbstractSK ss) where
