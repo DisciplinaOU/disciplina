@@ -1,6 +1,6 @@
 swagger: "2.0"
 info:
-  description: "This is an HTTP API for interacting with Disciplina Educator node. It serves two purposes: integrating external systems, CRMs and CMSs with Disciplina and interacting between Student clients and Educator node."
+  description: "This is an HTTP API for interacting with Disciplina Educator node on Educator side. It is meant to be used for integrating external systems, CRMs and CMSs with Disciplina"
   version: "1.0.0"
   title: "Disciplina Educator API"
   termsOfService: "https://disciplina.io/tnc.pdf"
