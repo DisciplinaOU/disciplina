@@ -1,5 +1,5 @@
 
-module Dscp.Educator.Secret.Error
+module Dscp.Educator.Secret.Real.Error
     ( EducatorSecretError (..)
     , rewrapSecretIOError
     ) where
