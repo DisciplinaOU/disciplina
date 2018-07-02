@@ -5,49 +5,35 @@
 module Dscp.Resource.AppDir
     ( AppDirectoryParam (..)
     , AppDirectory (..)
-    , AppDirectoryCreationError (..)
     ) where
 
 import Control.Monad.Component (buildComponent)
-import qualified Data.Text.Buildable
-import Fmt ((+|), (|+))
-import System.Directory (createDirectoryIfMissing)
-import qualified Text.Show
+import System.Directory (XdgDirectory (XdgData), createDirectoryIfMissing, getXdgDirectory)
 
 import Dscp.Resource.Class (AllocResource (..))
-import Dscp.System (AppDirError (..), appDir)
-import Dscp.Util (leftToThrow)
+import Dscp.System (appName)
 
 -- | Which application directory to use.
 data AppDirectoryParam
-    = AppDirectoryAtHome  -- ^ Dedicated folder inside home dir
+    = AppDirectoryOS  -- ^ Dedicated folder inside OS directory for applications
 
 -- | If you hold this, you can assume that application dir exists.
 newtype AppDirectory = AppDirectory { unAppDirectory :: FilePath }
     deriving (IsString)
 
--- | App directory allocation error.
-data AppDirectoryCreationError
-    = AppDirectoryRecognitionError AppDirError
-
-instance Buildable AppDirectoryCreationError where
-    build = \case
-        AppDirectoryRecognitionError err ->
-            "Failed to discover app directory: "+|err|+""
-
-instance Show AppDirectoryCreationError where
-    show = toString . pretty
-
-instance Exception AppDirectoryCreationError
+-- | Return folder for this application, which will be within directory next to
+-- other applications in the system, e.g. "~/.local/share/disciplina".
+getOSAppDir :: MonadIO m => m FilePath
+getOSAppDir = liftIO $ getXdgDirectory XdgData appName
 
 -- | Create application directory if absent.
 ensureDirExists
     :: (MonadIO m, MonadThrow m)
     => AppDirectoryParam -> m AppDirectory
-ensureDirExists AppDirectoryAtHome = do
-    app <- leftToThrow AppDirectoryRecognitionError appDir
-    liftIO $ createDirectoryIfMissing False app
-    return $ AppDirectory app
+ensureDirExists AppDirectoryOS = do
+    appDir <- getOSAppDir
+    liftIO $ createDirectoryIfMissing False appDir
+    return $ AppDirectory appDir
 
 instance AllocResource AppDirectoryParam AppDirectory where
     allocResource p =

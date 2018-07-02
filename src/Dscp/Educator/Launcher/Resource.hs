@@ -14,7 +14,7 @@ import Dscp.DB.Rocks.Real.Types (RocksDB)
 import Dscp.DB.SQLite (SQLiteDB)
 import Dscp.Educator.Launcher.Params (EducatorParams (..))
 import Dscp.Educator.Secret.Types (EducatorSecret)
-import Dscp.Resource (AllocResource (..), AppDirectoryParam (AppDirectoryAtHome))
+import Dscp.Resource (AllocResource (..), AppDirectoryParam (AppDirectoryOS))
 import qualified Dscp.Witness.Launcher.Resource as Witness
 
 -- SQL resource should be here too (in the future).
@@ -45,7 +45,7 @@ instance HasLens ZTNetServEnv EducatorResources ZTNetServEnv where
 
 instance AllocResource EducatorParams EducatorResources where
     allocResource EducatorParams{..} = do
-        appDir <- allocResource AppDirectoryAtHome
+        appDir <- allocResource AppDirectoryOS
         _erWitnessResources <- allocResource epWitnessParams
         _erDB <- allocResource epDBParams
         _erSecret <- allocResource (epSecretParams, appDir)
