@@ -8,6 +8,7 @@ module Dscp.Util
        , leftToThrow
        , leftToFail
        , leftToPanic
+       , leftToFailWith
        , leftToPanicWith
          -- * Re-exports
        , module Snowdrop.Util
@@ -50,7 +51,15 @@ leftToPanic
     :: ToText s => Either s a -> a
 leftToPanic = either (error . toText) identity
 
+prefixed :: Semigroup a => a -> a -> a
+prefixed text prefix = prefix <> text
+
+leftToFailWith
+    :: (MonadFail m, ToString s) => String -> Either s a -> m a
+leftToFailWith prefix =
+    either (fail . prefixed (prefix <> ": ") . toString) pure
+
 leftToPanicWith
     :: ToText s => Text -> Either s a -> a
 leftToPanicWith prefix =
-    either error identity . first ((prefix <>) . toText)
+    either error identity . first (prefixed (prefix <> ": ") . toText)

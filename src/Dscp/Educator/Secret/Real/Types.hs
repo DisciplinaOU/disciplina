@@ -10,7 +10,7 @@ import Test.QuickCheck (Arbitrary (..))
 
 import Dscp.Crypto (Encrypted (..), PassPhrase, SecretKey)
 import Dscp.Educator.Secret.Types (EducatorSecret (..))
-import Dscp.Util.Aeson (AsByteString (..), Base64, Versioned)
+import Dscp.Util.Aeson (AsByteString (..), Base64Encoded, Versioned)
 
 -- | Contains all parameters required for manipulating with secret key.
 data EducatorSecretParams = EducatorSecretParams
@@ -42,11 +42,11 @@ type KeyfileContent = Versioned EducatorSecretJson
 
 instance ToJSON EducatorSecretJson where
     toJSON EducatorSecretJson{..} = object
-        [ "educator_secret" .= fmap (AsByteString @Base64) esjEncSecretKey
+        [ "educator_secret" .= fmap (AsByteString @Base64Encoded) esjEncSecretKey
         ]
 
 instance FromJSON EducatorSecretJson where
     parseJSON = withObject "educator secret storage" $ \o -> do
         rawESK <- o .: "educator_secret"
-        let esjEncSecretKey = fmap @Encrypted (getAsByteString @Base64) rawESK
+        let esjEncSecretKey = fmap @Encrypted (getAsByteString @Base64Encoded) rawESK
         return EducatorSecretJson{..}

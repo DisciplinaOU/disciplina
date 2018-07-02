@@ -2,7 +2,7 @@
 
 module Dscp.Util.Aeson
     ( AsByteString (..)
-    , Base64
+    , Base64Encoded
 
     , Versioned (..)
     ) where
@@ -15,24 +15,23 @@ import qualified Serokell.Util.Base64 as Base64
 import Test.QuickCheck (Arbitrary (..))
 
 import qualified Dscp.Crypto.ByteArray as BA
-import Dscp.Util (leftToFail)
+import Dscp.Util (leftToFailWith, leftToFail)
 
 -- | Often one wants to convert bytestring to JSON, but such convertion
--- is encoding-dependent so we have no such instance.
+-- is encoding-dependent so we have no corresponding instance.
 newtype AsByteString encoding a = AsByteString { getAsByteString :: a }
     deriving (Eq, Ord, Show, Arbitrary)
 
--- Text <-> ByteString conversion formats
-data Base64
+data Base64Encoded
 
-instance BA.ByteArrayAccess a => ToJSON (AsByteString Base64 a) where
+instance BA.ByteArrayAccess a => ToJSON (AsByteString Base64Encoded a) where
     toJSON a = String . Base64.encode . BA.convert $ getAsByteString a
-instance BA.FromByteArray a => FromJSON (AsByteString Base64 a) where
+instance BA.FromByteArray a => FromJSON (AsByteString Base64Encoded a) where
     parseJSON = withText "base64 text" $ \t -> do
         bs <- Base64.decode t
-            & leftToFail . first ("Invalid base64 string: " <>)
+            & leftToFailWith "Invalid base64 string"
         res <- BA.fromByteArray bs
-            & leftToFail . first ("Malformed object representation: " <>)
+            & leftToFailWith "Malformed object representation"
         return $ AsByteString res
 
 -- | Attaches version of JSON serialisation format.

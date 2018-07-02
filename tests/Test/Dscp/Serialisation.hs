@@ -7,14 +7,14 @@ import Data.Typeable (typeRep)
 import Test.Common
 
 import Dscp.Educator.Secret (EducatorSecretJson, KeyfileContent)
-import Dscp.Util.Aeson (AsByteString, Base64, Versioned)
+import Dscp.Util.Aeson (AsByteString, Base64Encoded, Versioned)
 
 spec_Serialisation :: Spec
 spec_Serialisation = describe "Serialisation" $ do
     describe "Aeson" $ do
         describe "roundtrip" $ do
             -- Aeson utils
-            aesonRoundtripProp @(AsByteString Base64 ByteString)
+            aesonRoundtripProp @(AsByteString Base64Encoded ByteString)
             aesonRoundtripProp @(Versioned ())
 
             -- Educator secret

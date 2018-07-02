@@ -14,8 +14,7 @@ import Dscp.Educator.Secret.Real.Error (EducatorSecretError (..), rewrapSecretIO
 import Dscp.Educator.Secret.Real.Types (EducatorSecret (..), EducatorSecretJson (..),
                                         EducatorSecretParams (..), KeyfileContent)
 import Dscp.Resource.AppDir (AppDirectory (..))
-import Dscp.System (whenPosix)
-import Dscp.System (ensureModeIs, mode600)
+import Dscp.System (ensureModeIs, mode600, whenPosix)
 import Dscp.Util (leftToThrow)
 import Dscp.Util.Aeson (Versioned (..))
 
@@ -54,7 +53,9 @@ genStore = do
 -- | Read store under given path.
 readStore :: (MonadIO m, MonadCatch m) => FilePath -> PassPhrase -> m EducatorSecret
 readStore path pp = do
-    content <- rewrapSecretIOError $ LBS.readFile path
+    content <- rewrapSecretIOError $ do
+        whenPosix $ ensureModeIs mode600 path
+        LBS.readFile path
     Versioned mid <- eitherDecode' @KeyfileContent content
         & leftToThrow (SecretDeserialisationError . toText)
     fromEducatorSecretJson pp mid

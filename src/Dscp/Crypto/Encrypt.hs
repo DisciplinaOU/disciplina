@@ -165,7 +165,7 @@ encrypt pp plaintext =
         (authtag, ciphertextBS :: ByteString) =
             aeadSimpleEncrypt aead authHeader plaintextBS authTagLength
         ciphertext =
-            leftToPanicWith "encrypt: got malformed item: " $
+            leftToPanicWith "encrypt: got malformed item" $
             fromByteArray ciphertextBS
     in  Encrypted authtag ciphertext
 
@@ -179,7 +179,7 @@ decrypt pp (Encrypted tag ciphertext) = do
           maybeToRight PassPhraseInvalid $
           aeadSimpleDecrypt aead authHeader ciphertextBS tag
     return $
-        leftToPanicWith "decrypt: got malformed item: " $
+        leftToPanicWith "decrypt: got malformed item" $
         fromByteArray plaintextBS
 
 instance Arbitrary a => Arbitrary (Encrypted a) where
