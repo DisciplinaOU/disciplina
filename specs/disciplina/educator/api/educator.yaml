@@ -379,37 +379,13 @@ paths:
             type: "array"
             items:
               $ref: "#/definitions/Submission"
-    post:
-      tags:
-      - "submissions"
-      summary: "Make a new submission"
-      description: "Posts a new submission with a given body. Request body should contain valid student's signature of submission contents, otherwise an error will be raised."
-      operationId: "makeSubmission"
-      produces:
-      - "application/json"
-      consumes:
-      - "application/json"
-      parameters:
-      - in: "body"
-        name: "submission"
-        description: "A submission"
-        required: true
-        schema:
-          $ref: "#/definitions/Submission"
-      responses:
-        200:
-          description: "successful operation"
-          schema:
-            $ref: "#/definitions/Submission"
-        403:
-          description: "Either submission body or submission signature is invalid"
 
   /submissions/{submissionHash}:
     get:
       tags:
       - "submissions"
       summary: "Get info about a submission"
-      description: "Gets a submission data by given submission hash. Returns a 404 if a student tries to get a submission which is not their own."
+      description: "Gets a submission data by given submission hash."
       operationId: "getSubmission"
       produces:
       - "application/json"
@@ -426,7 +402,7 @@ paths:
       tags:
       - "submissions"
       summary: "Delete a submission"
-      description: "Deletes a submission from a database. Only ungraded submissions can be deleted. Students can use this method too (though this is subject to discussion)."
+      description: "Deletes a submission from a database. Only ungraded submissions can be deleted."
       operationId: "deleteSubmission"
       produces:
       - "application/json"
