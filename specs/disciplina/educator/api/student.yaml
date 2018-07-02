@@ -1,0 +1,299 @@
+swagger: '2.0'
+info:
+  description: 'This is an HTTP API for interacting with Disciplina Educator node from Student side. It is used by Student application to receive info about assignments and grades, submit submissions and fetch proofs of grades from Educator.'
+  version: 1.0.0
+  title: Disciplina Student API
+  termsOfService: 'https://disciplina.io/tnc.pdf'
+  contact:
+    email: hi@serokell.io
+  license:
+    name: Apache 2.0
+    url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+host: 'localhost:8090'
+basePath: /v1
+tags:
+  - name: submissions
+    description: Methods for working with students' submissions.
+  - name: grades
+    description: Methods for working with students' grades.
+schemes:
+  - https
+  - http
+paths:
+  /submissions:
+    get:
+      tags:
+        - submissions
+      summary: Get all student's submissions
+      description: Gets a list of all student's submissions.
+      operationId: getSubmissions
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: successful operation
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/Submission'
+    post:
+      tags:
+        - submissions
+      summary: Make a new submission
+      description: Posts a new submission with a given body. Request body should contain valid student's signature of submission contents, otherwise an error will be raised.
+      operationId: makeSubmission
+      produces:
+        - application/json
+      consumes:
+        - application/json
+      parameters:
+        - in: body
+          name: submission
+          description: A submission
+          required: true
+          schema:
+            $ref: '#/definitions/Submission'
+      responses:
+        '200':
+          description: successful operation
+          schema:
+            $ref: '#/definitions/Submission'
+        '403':
+          description: Either submission body or submission signature is invalid
+  '/submissions/{submissionHash}':
+    get:
+      tags:
+        - submissions
+      summary: Get info about a submission
+      description: Gets a submission data by given submission hash. Returns a 404 if a student tries to get a submission which is not their own.
+      operationId: getSubmission
+      produces:
+        - application/json
+      parameters:
+        - $ref: '#/parameters/SubmissionHash'
+      responses:
+        '200':
+          description: successful operation
+          schema:
+            $ref: '#/definitions/Submission'
+        '404':
+          description: Submission with given hash not found (or a user has no rights to look it up)
+    delete:
+      tags:
+        - submissions
+      summary: Delete a submission
+      description: Deletes a submission from a database. Only ungraded submissions can be deleted.
+      operationId: deleteSubmission
+      produces:
+        - application/json
+      parameters:
+        - $ref: '#/parameters/SubmissionHash'
+      responses:
+        '200':
+          description: successful operation
+        '404':
+          description: Submission with given hash not found
+  /grades:
+    get:
+      tags:
+        - grades
+      summary: Get all grades
+      description: Gets a list of all grades performed by all students.
+      operationId: getGrades
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: successful operation
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/Grade'
+    post:
+      tags:
+        - grades
+      summary: Post a new grade
+      description: Posts a new grade with a given body.
+      operationId: postGrade
+      produces:
+        - application/json
+      consumes:
+        - application/json
+      parameters:
+        - in: body
+          name: grade
+          description: A grade
+          required: true
+          schema:
+            $ref: '#/definitions/Grade'
+      responses:
+        '200':
+          description: successful operation
+          schema:
+            $ref: '#/definitions/Grade'
+securityDefinitions:
+  petstore_auth:
+    type: oauth2
+    authorizationUrl: 'http://petstore.swagger.io/oauth/dialog'
+    flow: implicit
+    scopes:
+      'write:pets': modify pets in your account
+      'read:pets': read your pets
+  api_key:
+    type: apiKey
+    name: api_key
+    in: header
+definitions:
+  Hash:
+    type: string
+    format: byte
+  Address:
+    type: string
+    format: byte
+  Time:
+    type: string
+    format: date-time
+  Student:
+    type: object
+    required:
+      - addr
+    properties:
+      addr:
+        $ref: '#/definitions/Address'
+  CourseId:
+    type: integer
+    format: int32
+  Course:
+    type: object
+    required:
+      - id
+    properties:
+      id:
+        $ref: '#/definitions/CourseId'
+      desc:
+        type: string
+      subjects:
+        type: array
+        items:
+          $ref: '#/definitions/Subject'
+  Assignment:
+    type: object
+    required:
+      - hash
+    properties:
+      hash:
+        $ref: '#/definitions/Hash'
+      course_id:
+        $ref: '#/definitions/CourseId'
+      contents_hash:
+        $ref: '#/definitions/Hash'
+      desc:
+        type: string
+  Submission:
+    type: object
+    required:
+      - hash
+      - contents_hash
+      - assignment_hash
+      - student_addr
+      - witness
+    properties:
+      hash:
+        $ref: '#/definitions/Hash'
+      contents_hash:
+        $ref: '#/definitions/Hash'
+      assignment:
+        $ref: '#/definitions/Assignment'
+      student_addr:
+        $ref: '#/definitions/Address'
+      witness:
+        type: string
+        format: binary
+  Grade:
+    type: object
+    properties:
+      hash:
+        $ref: '#/definitions/Hash'
+      submission_hash:
+        $ref: '#/definitions/Hash'
+      grade:
+        type: integer
+        format: int32
+      timestamp:
+        $ref: '#/definitions/Time'
+  Transaction:
+    type: object
+    required:
+      - signed_submission
+      - grade
+      - timestamp
+    properties:
+      signed_submission:
+        $ref: '#/definitions/Submission'
+      grade:
+        type: integer
+        format: int32
+      timestamp:
+        $ref: '#/definitions/Time'
+  BlkProof:
+    type: object
+    required:
+      - mtree_serialized
+      - txs
+    properties:
+      mtree_serialized:
+        type: string
+        format: binary
+      txs:
+        type: array
+        items:
+          $ref: '#/definitions/Transaction'
+  Proofs:
+    type: array
+    items:
+      $ref: '#/definitions/BlkProof'
+  Subject:
+    type: integer
+    format: int32
+  ApiResponse:
+    type: object
+    properties:
+      code:
+        type: integer
+        format: int32
+      type:
+        type: string
+      message:
+        type: string
+parameters:
+  StudentAddr:
+    in: path
+    name: studentAddr
+    description: Student's Disciplina address
+    required: true
+    type: string
+    format: byte
+  CourseId:
+    in: path
+    name: courseId
+    description: Course ID
+    required: true
+    type: integer
+    format: int32
+  AssignmentHash:
+    in: path
+    name: assignmentHash
+    description: Assignment hash
+    required: true
+    type: string
+    format: byte
+  SubmissionHash:
+    in: path
+    name: submissionHash
+    description: Submission hash
+    required: true
+    type: string
+    format: byte
+externalDocs:
+  description: Find out more about Swagger
+  url: 'http://swagger.io'
