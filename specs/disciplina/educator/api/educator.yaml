@@ -56,7 +56,7 @@ paths:
       responses:
         405:
           description: "Invalid input"
-          
+
   /students/{studentAddr}:
     delete:
       tags:
@@ -79,7 +79,7 @@ paths:
           description: "Student cannot be deleted, as they are currently attending a course"
         404:
           description: "Student with given address not found"
-          
+
   /students/{studentAddr}/courses:
     get:
       tags:
@@ -102,7 +102,7 @@ paths:
           description: "Invalid address value"
         404:
           description: "Student with given address not found"
-          
+
     post:
       tags:
       - "students"
@@ -126,7 +126,7 @@ paths:
           description: "Course with given ID does not exist"
         404:
           description: "Student with given address not found"
-          
+
   /students/{studentAddr}/courses/{courseId}/assignments:
     get:
       tags:
@@ -148,7 +148,7 @@ paths:
               $ref: "#/definitions/Assignment"
         404:
           description: "Given student does not attend given course"
-  
+
   /students/{studentAddr}/courses/{courseId}/submissions:
     get:
       tags:
@@ -171,8 +171,8 @@ paths:
               $ref: "#/definitions/Submission"
         400:
           description: "Given student does not attend given course"
-          
-  /students/{studentAddr}/courses/{courseId}/grades:        
+
+  /students/{studentAddr}/courses/{courseId}/grades:
     get:
       tags:
       - "students"
@@ -193,7 +193,7 @@ paths:
               $ref: "#/definitions/Grade"
         400:
           description: "Given student does not attend given course"
-  
+
   /students/{studentAddr}/courses/{courseId}/proofs:
     get:
       tags:
@@ -213,7 +213,7 @@ paths:
             $ref: "#/definitions/Proofs"
         400:
           description: "Given student does not attend given course"
-  
+
   /students/{studentAddr}/assignments:
     get:
       tags:
@@ -259,7 +259,7 @@ paths:
           description: "Assignment with given hash does not exist"
         404:
           description: "Student with given address not found"
-          
+
   /students/{studentAddr}/assignments/{assignmentHash}:
     delete:
       tags:
@@ -277,7 +277,7 @@ paths:
           description: "Student address or assignment hash are invalid"
         404:
           description: "Given student didn't have given assignment"
-          
+
   /students/{studentAddr}/assignments/{assignmentHash}/submissions:
     get:
       tags:
@@ -300,7 +300,7 @@ paths:
               $ref: "#/definitions/Submission"
         400:
           description: "Given student didn't have given assignment"
-          
+
   /students/{studentAddr}/submissions:
     get:
       tags:
@@ -322,7 +322,7 @@ paths:
               $ref: "#/definitions/Submission"
         404:
           description: "Student with given address not found"
-    
+
   /students/{studentAddr}/grades:
     get:
       tags:
@@ -343,7 +343,7 @@ paths:
               $ref: "#/definitions/Grade"
         404:
           description: "Student with given address not found"
-  
+
   /students/{studentAddr}/proofs:
     get:
       tags:
@@ -362,7 +362,7 @@ paths:
             $ref: "#/definitions/Proofs"
         404:
           description: "Student with given address not found"
-  
+
   /submissions:
     get:
       tags:
@@ -403,9 +403,9 @@ paths:
             $ref: "#/definitions/Submission"
         403:
           description: "Either submission body or submission signature is invalid"
-  
+
   /submissions/{submissionHash}:
-    get:  
+    get:
       tags:
       - "submissions"
       summary: "Get info about a submission"
@@ -437,7 +437,7 @@ paths:
           description: "successful operation"
         404:
           description: "Submission with given hash not found"
-  
+
   /grades:
     get:
       tags:
@@ -476,20 +476,10 @@ paths:
           description: "successful operation"
           schema:
             $ref: "#/definitions/Grade"
-      
-  
+
 securityDefinitions:
-  petstore_auth:
-    type: "oauth2"
-    authorizationUrl: "http://petstore.swagger.io/oauth/dialog"
-    flow: "implicit"
-    scopes:
-      write:pets: "modify pets in your account"
-      read:pets: "read your pets"
-  api_key:
-    type: "apiKey"
-    name: "api_key"
-    in: "header"
+  # TODO: do we need authentication for Educator API?
+
 definitions:
   Hash:
     type: "string"
@@ -545,7 +535,7 @@ definitions:
     - "student_addr"
     - "witness"
     properties:
-      hash: 
+      hash:
         $ref: "#/definitions/Hash"
       contents_hash:
         $ref: "#/definitions/Hash"
@@ -568,7 +558,7 @@ definitions:
         format: "int32"
       timestamp:
         $ref: "#/definitions/Time"
-  
+
   Transaction:
     type: "object"
     required:
@@ -583,7 +573,7 @@ definitions:
         format: "int32"
       timestamp:
         $ref: "#/definitions/Time"
-      
+
   BlkProof:
     type: "object"
     required:
@@ -597,12 +587,12 @@ definitions:
         type: "array"
         items:
           $ref: "#/definitions/Transaction"
-          
+
   Proofs:
     type: "array"
     items:
       $ref: "#/definitions/BlkProof"
-          
+
   Subject:
     type: "integer"
     format: "int32"
