@@ -12,6 +12,7 @@ import qualified Data.ByteArray as BA
 import qualified Data.SemVer as SemVer
 import Fmt ((+||), (||+))
 import qualified Serokell.Util.Base64 as Base64
+import Test.QuickCheck (Arbitrary (..))
 
 import qualified Dscp.Crypto.ByteArray as BA
 import Dscp.Util (leftToFail)
@@ -19,6 +20,7 @@ import Dscp.Util (leftToFail)
 -- | Often one wants to convert bytestring to JSON, but such convertion
 -- is encoding-dependent so we have no such instance.
 newtype AsByteString encoding a = AsByteString { getAsByteString :: a }
+    deriving (Eq, Ord, Show, Arbitrary)
 
 -- Text <-> ByteString conversion formats
 data Base64
@@ -35,6 +37,7 @@ instance BA.FromByteArray a => FromJSON (AsByteString Base64 a) where
 
 -- | Attaches version of JSON serialisation format.
 newtype Versioned a = Versioned a
+    deriving (Eq, Show)
 
 -- | We have only one version. Till the moment proper JSON versioning framework
 -- is delivered.
@@ -55,6 +58,9 @@ instance FromJSON a => FromJSON (Versioned a) where
 
         content <- o .: "content"
         return $ Versioned content
+
+instance Arbitrary a => Arbitrary (Versioned a) where
+    arbitrary = Versioned <$> arbitrary
 
 ---------------------------------------------------------------------
 -- Instances

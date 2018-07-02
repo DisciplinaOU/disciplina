@@ -21,13 +21,16 @@ module Dscp.Crypto.Encrypt
        ) where
 
 import Crypto.Cipher.AES (AES256)
-import Crypto.Cipher.Types (AEAD, AEADMode (AEAD_GCM), AuthTag, BlockCipher (aeadInit),
+import Crypto.Cipher.Types (AEAD, AEADMode (AEAD_GCM), AuthTag (..), BlockCipher (aeadInit),
                             Cipher (cipherInit), IV, aeadSimpleDecrypt, aeadSimpleEncrypt, nullIV)
 import Crypto.Error (onCryptoFailure)
 import Data.ByteArray (ByteArray, ByteArrayAccess)
 import qualified Data.ByteArray as BA
+import qualified Data.ByteString as BS
 import Data.Text.Buildable (build)
 import Fmt ((+|), (|+))
+import Test.QuickCheck (Arbitrary (..), suchThatMap, vector)
+import Test.QuickCheck.Instances ()
 import Text.Show (show)
 
 import Dscp.Crypto.ByteArray (FromByteArray (..))
@@ -89,6 +92,9 @@ mkPassPhrase bs
   where
     lbs = length bs
 
+instance Arbitrary PassPhrase where
+    arbitrary = arbitrary `suchThatMap` (rightToMaybe . mkPassPhrase)
+
 -------------------------------------------------------------
 -- Encryption/decryption
 -------------------------------------------------------------
@@ -98,6 +104,12 @@ data Encrypted ba = Encrypted
     { eAuthTag    :: !AuthTag
     , eCiphertext :: !ba
     } deriving (Eq, Functor)
+
+instance Buildable ba => Show (Encrypted ba) where
+    show = toString . pretty
+
+instance Buildable ba => Buildable (Encrypted ba) where
+    build Encrypted{..} = "encrypted "+|eCiphertext|+""
 
 -- | Authentication tag length. Number 16 is the same as in the
 -- `Crypto.MAC.Poly1305.Auth` tag datatype.
@@ -169,6 +181,12 @@ decrypt pp (Encrypted tag ciphertext) = do
     return $
         leftToPanicWith "decrypt: got malformed item: " $
         fromByteArray plaintextBS
+
+instance Arbitrary a => Arbitrary (Encrypted a) where
+    arbitrary =
+        Encrypted
+        <$> (AuthTag . BA.convert . BS.pack <$> vector authTagLength)
+        <*> arbitrary
 
 -- | Errors which might occur during decryption
 data DecryptionError = PassPhraseInvalid

@@ -16,6 +16,10 @@ module Dscp.Crypto.Signing.Class
 
 import Crypto.Random (MonadRandom (..))
 import Data.ByteArray (ByteArray, ByteArrayAccess)
+import qualified Data.ByteString as BS
+import qualified Data.Text.Buildable
+import Test.QuickCheck (Arbitrary (..), vector)
+import qualified Text.Show
 
 import Dscp.Crypto.ByteArray (FromByteArray (..))
 import Dscp.Util (leftToPanicWith)
@@ -52,6 +56,12 @@ deriving instance Ord (PK ss) => Ord (AbstractPK ss)
 deriving instance Show (PK ss) => Show (AbstractPK ss)
 deriving instance Monoid (PK ss) => Monoid (AbstractPK ss)
 
+instance (SignatureScheme ss, FromByteArray (AbstractSK ss)) =>
+         Arbitrary (AbstractSK ss) where
+    arbitrary =
+        leftToPanicWith "arbitrary abstractSK" . fromByteArray . BS.pack <$>
+        vector (secretKeyLength $ schemeLengths @ss)
+
 -- | Wrapper for a secret key. 'Show' instance is not derived for
 -- security reasons.
 newtype AbstractSK ss = AbstractSK (SK ss)
@@ -59,6 +69,10 @@ newtype AbstractSK ss = AbstractSK (SK ss)
 deriving instance Eq (SK ss) => Eq (AbstractSK ss)
 deriving instance Ord (SK ss) => Ord (AbstractSK ss)
 deriving instance Monoid (SK ss) => Monoid (AbstractSK ss)
+instance Show (AbstractSK ss) where
+    show _ = "<secret>"
+instance Buildable (AbstractSK ss) where
+    build _ = "<secret>"
 
 -- | Wrapper for a signature. Phantom type parameter 'a' denotes
 -- the type of object being signed.

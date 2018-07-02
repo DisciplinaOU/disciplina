@@ -6,6 +6,7 @@ module Dscp.Educator.Secret.Real.Types
     ) where
 
 import Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.:), (.=))
+import Test.QuickCheck (Arbitrary (..))
 
 import Dscp.Crypto (Encrypted (..), PassPhrase, SecretKey)
 import Dscp.Educator.Secret.Types (EducatorSecret (..))
@@ -31,7 +32,10 @@ data EducatorSecretParams = EducatorSecretParams
 -- | Intermediate form of 'EducatorSecret' for JSON serialization.
 data EducatorSecretJson = EducatorSecretJson
     { esjEncSecretKey :: Encrypted SecretKey
-    }
+    } deriving (Eq, Show)
+
+instance Arbitrary EducatorSecretJson where
+    arbitrary = EducatorSecretJson <$> arbitrary
 
 -- | What exactly lies in the store.
 type KeyfileContent = Versioned EducatorSecretJson
