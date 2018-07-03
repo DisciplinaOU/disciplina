@@ -24,8 +24,11 @@ import Codec.Serialise.Decoding (decodeBytes)
 import Codec.Serialise.Encoding (encodeBytes)
 import Crypto.Cipher.AES (AES256)
 import Crypto.Cipher.Types (AEAD, AEADMode (AEAD_GCM), AuthTag (..), BlockCipher (aeadInit),
-                            Cipher (cipherInit), IV, aeadSimpleDecrypt, aeadSimpleEncrypt, nullIV)
+                            Cipher (cipherInit, cipherKeySize), IV, KeySizeSpecifier (..),
+                            aeadSimpleDecrypt, aeadSimpleEncrypt, nullIV)
 import Crypto.Error (onCryptoFailure)
+import Crypto.Hash.Algorithms (SHA512 (..))
+import qualified Crypto.KDF.PBKDF2 as PBKDF2
 import Data.ByteArray (ByteArray, ByteArrayAccess)
 import qualified Data.ByteArray as BA
 import Data.Text.Buildable (build)
@@ -33,7 +36,6 @@ import Fmt ((+|), (|+))
 import Text.Show (show)
 
 import Dscp.Crypto.ByteArray (FromByteArray (..))
-import Dscp.Crypto.Impl (hash)
 
 -------------------------------------------------------------
 -- Passphrases
@@ -91,7 +93,7 @@ mkPassPhrase bs
     lbs = length bs
 
 -------------------------------------------------------------
--- Encryption/decryption
+-- Encryption/decryption helper datatypes
 -------------------------------------------------------------
 
 -- | Datatype which combines ciphertext with cipher authentication tag.
@@ -111,6 +113,10 @@ instance FromByteArray ba => Serialise (Encrypted ba) where
         eCiphertext <- either fail pure . fromByteArray =<< decodeBytes
         return Encrypted {..}
 
+-------------------------------------------------------------
+-- Encryption/decryption constants/salts
+-------------------------------------------------------------
+
 -- | Authentication tag length. Number 16 is the same as in the
 -- `Crypto.MAC.Poly1305.Auth` tag datatype.
 -- TODO: probably it can be made shorter without any problems?
@@ -124,6 +130,10 @@ type CipherType = AES256
 -- | Authentication header used for our encryption (empty one).
 authHeader :: ByteString
 authHeader = ""
+
+-- | Salt used for key derivation from password.
+passGenSalt :: ByteString
+passGenSalt = "dscp-educator-pass-gen"
 
 -- | AEAD mode used for our encryption scheme.
 -- We use GCM mode, because it's the most modern and performant one
@@ -142,13 +152,39 @@ aeadMode = AEAD_GCM
 initIV :: IV CipherType
 initIV = nullIV
 
+-------------------------------------------------------------
+-- Encryption/decryption logic
+-------------------------------------------------------------
+
+-- | Get maximum key size allowed by chosen encryption scheme.
+maxKeySize :: Int
+maxKeySize = case cipherKeySize fakeCipher of
+    KeySizeFixed size      -> size
+    KeySizeRange _ maxSize -> maxSize
+    KeySizeEnum sizes      -> maximum sizes
+  where
+    fakeCipher :: CipherType
+    fakeCipher =
+        error "impossible: cipher constructor is evaluated in `cipherKeySize`"
+
+-- | Derive encryption key from passphrase using PBKDF2
+-- with SHA-512 hash function.
+keyFromPassPhrase :: PassPhrase -> ByteString
+keyFromPassPhrase (PassPhrase pp) = PBKDF2.generate
+    (PBKDF2.prfHMAC SHA512)
+    (PBKDF2.Parameters
+        500         -- Number of hash iterations
+        maxKeySize) -- Encryption key size
+    pp
+    passGenSalt
+
 -- | Prepare an AEAD context from a 'PassPhrase'.
 prepareAEAD :: PassPhrase -> AEAD CipherType
-prepareAEAD (PassPhrase pp) =
+prepareAEAD pp =
     let impossible err =
             error $ "encrypt: impossible: " <> Prelude.show err
-        ppHashKey :: ByteString =
-            BA.convert $ hash pp
+        ppHashKey =
+            keyFromPassPhrase pp
         cipher :: CipherType =
             onCryptoFailure impossible identity $
             cipherInit ppHashKey
