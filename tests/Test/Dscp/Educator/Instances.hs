@@ -7,4 +7,3 @@ import Test.Dscp.Crypto.Instances ()
 
 instance Arbitrary EducatorSecretJson where
     arbitrary = EducatorSecretJson <$> arbitrary
-

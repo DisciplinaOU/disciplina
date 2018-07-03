@@ -49,6 +49,7 @@ import Text.Show (show)
 
 import Dscp.Crypto.ByteArray (FromByteArray (..))
 import Dscp.Crypto.Impl (SecretKey)
+import Dscp.Crypto.Random (runSecureRandom)
 import Dscp.Util (leftToPanicWith, toBase64)
 
 -------------------------------------------------------------
@@ -224,11 +225,10 @@ prepareAEAD pp iv =
        aeadInit aeadMode cipher iv
 
 -- | Encrypt given 'ByteArray' with AES.
--- TODO: use Secure Random from OpenSSL for IV calculation instead.
 encryptBA :: ByteArray ba => PassPhrase -> ba -> Encrypted ba
 encryptBA pp plaintext =
     let eIV = fromMaybe (error "encrypt: impossible: random IV with invalid size") .
-              makeIV @ByteString . unsafePerformIO $
+              makeIV @ByteString . unsafePerformIO . runSecureRandom $
               getRandomBytes cipherBlkSize
         aead = prepareAEAD pp eIV
         (eAuthTag, eCiphertext) =

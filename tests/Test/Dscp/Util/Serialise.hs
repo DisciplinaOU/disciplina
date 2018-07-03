@@ -14,4 +14,3 @@ spec_Serialisation = describe "Serialisation" $ do
         describe "roundtrip" $ do
             aesonRoundtripProp @(AsByteString Base64Encoded ByteString)
             aesonRoundtripProp @(Versioned ())
-
