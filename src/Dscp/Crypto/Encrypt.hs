@@ -1,6 +1,12 @@
+{-|
+Module      : Dscp.Crypto.Encrypt
+Description : Functions and datatypes for symmetric encryption
+Copyright   : (c) Serokell, 2018
+Maintainer  : dimq@serokell.io
 
--- | Utilities for encrypting/decrypting byte arrays
-
+Functions and datatypes which wrap around `cryptonite` interface
+for authenticated AES encryption.
+-}
 module Dscp.Crypto.Encrypt
        ( -- * Passphrases
          PassPhrase
