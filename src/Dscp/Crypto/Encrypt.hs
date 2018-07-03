@@ -16,8 +16,9 @@ module Dscp.Crypto.Encrypt
 
          -- * Utility functions
        , DecryptionError (..)
-       , encrypt
-       , decrypt
+       , encryptBA
+       , decryptBA
+       , EncryptSafe (..)
        ) where
 
 import Crypto.Cipher.AES (AES256)
@@ -34,7 +35,7 @@ import Test.QuickCheck.Instances ()
 import Text.Show (show)
 
 import Dscp.Crypto.ByteArray (FromByteArray (..))
-import Dscp.Crypto.Impl (hash)
+import Dscp.Crypto.Impl (hash, SecretKey)
 import Dscp.Util (leftToPanicWith)
 
 -------------------------------------------------------------
@@ -156,31 +157,47 @@ prepareAEAD (PassPhrase pp) =
        aeadInit aeadMode cipher initIV
 
 -- | Encrypt given 'ByteArray' with AES.
-encrypt :: FromByteArray ba => PassPhrase -> ba -> Encrypted ba
-encrypt pp plaintext =
+encryptBA :: ByteArray ba => PassPhrase -> ba -> Encrypted ba
+encryptBA pp plaintext =
     let aead = prepareAEAD pp
-        -- TODO: Subject to optimization. For now using converion to bytestring
-        -- since @ba@ is not instance of 'ByteArray'.
-        plaintextBS = BA.convert plaintext
-        (authtag, ciphertextBS :: ByteString) =
-            aeadSimpleEncrypt aead authHeader plaintextBS authTagLength
-        ciphertext =
-            leftToPanicWith "encrypt: got malformed item" $
-            fromByteArray ciphertextBS
-    in  Encrypted authtag ciphertext
+    in uncurry Encrypted $
+       aeadSimpleEncrypt aead authHeader plaintext authTagLength
 
 -- | Decrypt given 'Encrypted' datatype or fail, if passphrase
 -- doesn't match.
-decrypt :: FromByteArray ba => PassPhrase -> Encrypted ba -> Either DecryptionError ba
-decrypt pp (Encrypted tag ciphertext) = do
+decryptBA :: ByteArray ba => PassPhrase -> Encrypted ba -> Either DecryptionError ba
+decryptBA pp (Encrypted tag ciphertext) =
     let aead = prepareAEAD pp
-        ciphertextBS = BA.convert ciphertext :: ByteString
-    plaintextBS <-
-          maybeToRight PassPhraseInvalid $
-          aeadSimpleDecrypt aead authHeader ciphertextBS tag
-    return $
-        leftToPanicWith "decrypt: got malformed item" $
-        fromByteArray plaintextBS
+    in maybeToRight PassPhraseInvalid $
+       aeadSimpleDecrypt aead authHeader ciphertext tag
+
+-- | 'FromByteArray' versions of 'encryptBA' and 'decryptBA'.
+-- Default implementation is correct if the following holds:
+--
+-- * If some @ba@ is valid, then any @ba'@ of the same length
+-- has to be also valid.
+class EncryptSafe ba where
+    encrypt
+        :: FromByteArray ba
+        => PassPhrase -> ba -> Encrypted ba
+    encrypt pp plaintext =
+        -- subject to optimisation
+        let plaintextBS = BA.convert plaintext :: ByteString
+            encryptedBS = encryptBA pp plaintextBS
+        in leftToPanicWith "encrypt: got malformed item" .
+           fromByteArray <$> encryptedBS
+
+    decrypt
+        :: FromByteArray ba
+        => PassPhrase -> Encrypted ba -> Either DecryptionError ba
+    decrypt pp encrypted = do
+        let encryptedBS = BA.convert <$> encrypted
+        plaintextBS :: ByteString <- decryptBA pp encryptedBS
+        return $
+            leftToPanicWith "decrypt: got malformed item" $
+            fromByteArray plaintextBS
+
+instance EncryptSafe SecretKey
 
 instance Arbitrary a => Arbitrary (Encrypted a) where
     arbitrary =

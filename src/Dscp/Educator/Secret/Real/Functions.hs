@@ -42,7 +42,7 @@ storePath :: EducatorSecretParams -> AppDirectory -> FilePath
 storePath EducatorSecretParams{..} (AppDirectory appDir) =
     fromMaybe defPath espPath
   where
-    defPath = appDir </> "secret.key"
+    defPath = appDir </> "educator.key"
 
 -- | Generate store randomly.
 genStore :: MonadIO m => m EducatorSecret
