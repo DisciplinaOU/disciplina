@@ -63,12 +63,14 @@ tests:
       - bytestring
       - containers
       - cryptonite
+      - directory
       - disciplina
       - data-default
       - hspec
       - lens
       - memory
       - serialise
+      - sqlite-simple
       - tasty
       - tasty-hspec
       - tasty-discover

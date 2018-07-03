@@ -4,7 +4,6 @@
 module Dscp.DB.DSL.Interpret.Sqlite3 () where
 
 import qualified Data.Set as Set (Set, empty, member, singleton)
-import Data.Time.Clock (UTCTime)
 
 import Database.SQLite.Simple (Only (..))
 
@@ -57,7 +56,7 @@ getPrivateTxsByFilter pk filterExpr = do
              |]
         else [qc||]
 
-    map (packPrivateTxQuery pk) <$> query
+    fmap ($ pk) <$> query
         [qc|
             select    Submissions.student_addr,
                       Submissions.contents_hash,
@@ -125,7 +124,7 @@ getPrivateTxFromId pk tid = do
         (Only tid)
 
     return $ case pack of
-        [queryResult] -> Just (packPrivateTxQuery pk queryResult)
+        [queryResult] -> Just (queryResult pk)
         _other        -> Nothing
 
 packPrivateTxQuery
