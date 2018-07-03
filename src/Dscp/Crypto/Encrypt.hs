@@ -19,7 +19,7 @@ module Dscp.Crypto.Encrypt
        , decrypt
        ) where
 
-import Codec.Serialise (Serialise (..))
+import Codec.Serialise (Serialise (..), serialise)
 import Codec.Serialise.Decoding (decodeBytes)
 import Codec.Serialise.Encoding (encodeBytes)
 import Crypto.Cipher.AES (AES256)
@@ -32,12 +32,14 @@ import qualified Crypto.KDF.PBKDF2 as PBKDF2
 import Crypto.Random (getRandomBytes)
 import Data.ByteArray (ByteArray, ByteArrayAccess)
 import qualified Data.ByteArray as BA
+import qualified Data.ByteString.Lazy as BSL
 import Data.Text.Buildable (build)
 import Fmt ((+|), (|+))
 import System.IO.Unsafe (unsafePerformIO)
 import Text.Show (show)
 
 import Dscp.Crypto.ByteArray (FromByteArray (..))
+import Dscp.Util (toBase64)
 
 -------------------------------------------------------------
 -- Passphrases
@@ -176,6 +178,12 @@ instance FromByteArray ba => Serialise (Encrypted ba) where
         eCiphertext <- either fail pure .
             fromByteArray =<< decodeBytes
         return Encrypted {..}
+
+instance FromByteArray ba => Buildable (Encrypted ba) where
+    build = build . toBase64 . BSL.toStrict . serialise
+
+instance FromByteArray ba => Show (Encrypted ba) where
+    show = toString . pretty
 
 -------------------------------------------------------------
 -- Encryption/decryption logic
