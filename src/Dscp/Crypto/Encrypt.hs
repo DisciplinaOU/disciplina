@@ -12,8 +12,6 @@ module Dscp.Crypto.Encrypt
 
          -- * Encrypted bytearray
        , Encrypted
-       , eAuthTag
-       , eCiphertext
 
          -- * Utility functions
        , DecryptionError (..)
@@ -146,16 +144,17 @@ prepareAEAD (PassPhrase pp) =
 encrypt :: ByteArray ba => PassPhrase -> ba -> Encrypted ba
 encrypt pp plaintext =
     let aead = prepareAEAD pp
-    in uncurry Encrypted $
-       aeadSimpleEncrypt aead authHeader plaintext authTagLength
+        (eAuthTag, eCiphertext) =
+            aeadSimpleEncrypt aead authHeader plaintext authTagLength
+    in Encrypted {..}
 
 -- | Decrypt given 'Encrypted' datatype or fail, if passphrase
 -- doesn't match.
 decrypt :: ByteArray ba => PassPhrase -> Encrypted ba -> Either DecryptionError ba
-decrypt pp (Encrypted tag ciphertext) =
+decrypt pp Encrypted {..} =
     let aead = prepareAEAD pp
     in maybeToRight PassPhraseInvalid $
-       aeadSimpleDecrypt aead authHeader ciphertext tag
+       aeadSimpleDecrypt aead authHeader eCiphertext eAuthTag
 
 -- | Errors which might occur during decryption
 data DecryptionError = PassPhraseInvalid
