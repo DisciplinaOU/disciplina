@@ -61,6 +61,8 @@ tests:
       - data-default
       - hspec
       - lens
+      - memory
+      - serialise
       - tasty
       - tasty-hspec
       - tasty-discover

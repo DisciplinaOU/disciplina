@@ -1,14 +1,9 @@
 module Test.Dscp.Crypto.Encrypt where
 
-import qualified Data.ByteString as BS
 import Test.Common
+import Test.Dscp.Crypto.Instances ()
 
-import Dscp.Crypto (DecryptionError (..), PassPhrase, decrypt, encrypt, maxPassPhraseLength,
-                    minPassPhraseLength, mkPassPhrase)
-
-instance Arbitrary PassPhrase where
-    arbitrary = either (error . show) identity . mkPassPhrase <$> arbitrary `suchThat`
-        (\bs -> BS.length bs >= minPassPhraseLength && BS.length bs <= maxPassPhraseLength)
+import Dscp.Crypto (DecryptionError (..), decrypt, encrypt)
 
 spec_encryption :: Spec
 spec_encryption = describe "AES encryption functions" $ do
