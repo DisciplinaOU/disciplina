@@ -19,8 +19,11 @@ module Dscp.Crypto.Encrypt
        , decrypt
        ) where
 
+import Codec.Serialise (Serialise (..))
+import Codec.Serialise.Decoding (decodeBytes)
+import Codec.Serialise.Encoding (encodeBytes)
 import Crypto.Cipher.AES (AES256)
-import Crypto.Cipher.Types (AEAD, AEADMode (AEAD_GCM), AuthTag, BlockCipher (aeadInit),
+import Crypto.Cipher.Types (AEAD, AEADMode (AEAD_GCM), AuthTag (..), BlockCipher (aeadInit),
                             Cipher (cipherInit), IV, aeadSimpleDecrypt, aeadSimpleEncrypt, nullIV)
 import Crypto.Error (onCryptoFailure)
 import Data.ByteArray (ByteArray, ByteArrayAccess)
@@ -29,6 +32,7 @@ import Data.Text.Buildable (build)
 import Fmt ((+|), (|+))
 import Text.Show (show)
 
+import Dscp.Crypto.ByteArray (FromByteArray (..))
 import Dscp.Crypto.Impl (hash)
 
 -------------------------------------------------------------
@@ -95,6 +99,17 @@ data Encrypted ba = Encrypted
     { eAuthTag    :: !AuthTag
     , eCiphertext :: !ba
     } deriving (Eq)
+
+-- | We have to define 'Serialise' instance for 'Encrypted' here,
+-- because we don't export its constructor and field accessors.
+instance FromByteArray ba => Serialise (Encrypted ba) where
+    encode Encrypted {..} =
+        encodeBytes (BA.convert eAuthTag) <>
+        encodeBytes (BA.convert eCiphertext)
+    decode = do
+        eAuthTag <- AuthTag . BA.convert <$> decodeBytes
+        eCiphertext <- either fail pure . fromByteArray =<< decodeBytes
+        return Encrypted {..}
 
 -- | Authentication tag length. Number 16 is the same as in the
 -- `Crypto.MAC.Poly1305.Auth` tag datatype.
