@@ -15,11 +15,9 @@ module Dscp.Crypto.Signing.Class
 import Crypto.Random (MonadRandom)
 import Data.ByteArray (ByteArray, ByteArrayAccess)
 import qualified Data.Text.Buildable
-import Test.QuickCheck (Arbitrary (..))
 import qualified Text.Show
 
 import Dscp.Crypto.ByteArray (FromByteArray (..))
-import Dscp.Crypto.Random (generator)
 
 -- | Class of signature schemes with defined format of keys and
 -- signatures.
@@ -45,10 +43,6 @@ deriving instance Eq (PK ss) => Eq (AbstractPK ss)
 deriving instance Ord (PK ss) => Ord (AbstractPK ss)
 deriving instance Show (PK ss) => Show (AbstractPK ss)
 deriving instance Monoid (PK ss) => Monoid (AbstractPK ss)
-
-instance (SignatureScheme ss, FromByteArray (AbstractSK ss)) =>
-         Arbitrary (AbstractSK ss) where
-    arbitrary = generator genSecretKey
 
 newtype AbstractSK ss = AbstractSK (SK ss)
 

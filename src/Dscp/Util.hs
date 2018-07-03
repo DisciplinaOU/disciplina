@@ -10,11 +10,25 @@ module Dscp.Util
        , leftToPanic
        , leftToFailWith
        , leftToPanicWith
+
+         -- * Formatting
+       , Base (..)
+       , toBase
+       , fromBase
+       , toBase64
+       , fromBase64
+       , toHex
+       , fromHex
+
          -- * Re-exports
        , module Snowdrop.Util
        ) where
 
+import Data.ByteArray (ByteArrayAccess)
+import Data.ByteArray.Encoding (Base (..), convertFromBase, convertToBase)
 import Snowdrop.Util
+
+import Dscp.Crypto.ByteArray (FromByteArray (..))
 
 deriving instance Container (b a) => Container (OldestFirst b a)
 deriving instance Container (b a) => Container (NewestFirst b a)
@@ -63,3 +77,23 @@ leftToPanicWith
     :: ToText s => Text -> Either s a -> a
 leftToPanicWith prefix =
     either error identity . first (prefixed (prefix <> ": ") . toText)
+
+-----------------------------------------------------------
+-- Bytestrings formatting
+-----------------------------------------------------------
+
+toBase :: ByteArrayAccess ba => Base -> ba -> Text
+toBase base = decodeUtf8 @Text @ByteString . convertToBase base
+
+fromBase :: forall ba. FromByteArray ba => Base -> Text -> Either String ba
+fromBase base =
+    convertFromBase base . encodeUtf8 @Text @ByteString >=>
+    fromByteArray @ba @ByteString
+
+toBase64, toHex :: ByteArrayAccess ba => ba -> Text
+toBase64 = toBase Base64
+toHex    = toBase Base16
+
+fromBase64, fromHex :: FromByteArray ba => Text -> Either String ba
+fromBase64 = fromBase Base64
+fromHex    = fromBase Base16

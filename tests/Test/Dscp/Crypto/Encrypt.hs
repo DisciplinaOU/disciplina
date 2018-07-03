@@ -1,6 +1,7 @@
 module Test.Dscp.Crypto.Encrypt where
 
 import Test.Common
+import Test.Dscp.Crypto.Instances ()
 
 import Dscp.Crypto (DecryptionError (..), decrypt, encrypt)
 

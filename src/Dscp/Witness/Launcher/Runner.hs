@@ -2,10 +2,8 @@
 
 module Dscp.Witness.Launcher.Runner where
 
-import Control.Monad.Component (runComponentM)
-
 import Dscp.Launcher.Rio (runRIO)
-import Dscp.Resource (AllocResource (..))
+import Dscp.Resource (tryRunComponentM, AllocResource (..))
 import Dscp.Witness.Launcher.Mode (WitnessContext (..), WitnessRealMode)
 import Dscp.Witness.Launcher.Params (WitnessParams (..))
 import Dscp.Witness.Launcher.Resource (WitnessResources (..))
@@ -21,10 +19,10 @@ runWitnessRealMode :: WitnessContext -> WitnessRealMode () -> IO ()
 runWitnessRealMode = runRIO
 
 -- | Given params, allocate resources, construct node context and run
--- `WitnessWorkMode` monad.
+-- `WitnessWorkMode` monad. Any synchronous exceptions are handled inside.
 launchWitnessRealMode ::WitnessParams -> WitnessRealMode () -> IO ()
 launchWitnessRealMode params action =
-    runComponentM "Witness (real mode)" (allocResource params) $
+    void . tryRunComponentM "Witness (real mode)" (allocResource params) $
       \resources ->
         let ctx = formWitnessContext resources
-        in            runWitnessRealMode ctx action
+        in runWitnessRealMode ctx action

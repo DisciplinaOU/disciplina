@@ -35,6 +35,7 @@ library:
     - monad-control
     - mtl
     - optparse-applicative
+    - prettyprinter
     - random
     - reflection
     - rocksdb-haskell
@@ -49,8 +50,6 @@ library:
     - text-format
     - time
     - time-units
-    - QuickCheck
-    - quickcheck-instances
     - unix
     - unliftio
 
@@ -68,6 +67,8 @@ tests:
       - data-default
       - hspec
       - lens
+      - memory
+      - serialise
       - tasty
       - tasty-hspec
       - tasty-discover
