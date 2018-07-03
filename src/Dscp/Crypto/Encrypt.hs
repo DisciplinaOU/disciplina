@@ -23,16 +23,18 @@ import Codec.Serialise (Serialise (..))
 import Codec.Serialise.Decoding (decodeBytes)
 import Codec.Serialise.Encoding (encodeBytes)
 import Crypto.Cipher.AES (AES256)
-import Crypto.Cipher.Types (AEAD, AEADMode (AEAD_GCM), AuthTag (..), BlockCipher (aeadInit),
-                            Cipher (cipherInit, cipherKeySize), IV, KeySizeSpecifier (..),
-                            aeadSimpleDecrypt, aeadSimpleEncrypt, nullIV)
+import Crypto.Cipher.Types (AEAD, AEADMode (AEAD_GCM), AuthTag (..),
+                            BlockCipher (aeadInit, blockSize), Cipher (cipherInit, cipherKeySize),
+                            IV, KeySizeSpecifier (..), aeadSimpleDecrypt, aeadSimpleEncrypt, makeIV)
 import Crypto.Error (onCryptoFailure)
 import Crypto.Hash.Algorithms (SHA512 (..))
 import qualified Crypto.KDF.PBKDF2 as PBKDF2
+import Crypto.Random (getRandomBytes)
 import Data.ByteArray (ByteArray, ByteArrayAccess)
 import qualified Data.ByteArray as BA
 import Data.Text.Buildable (build)
 import Fmt ((+|), (|+))
+import System.IO.Unsafe (unsafePerformIO)
 import Text.Show (show)
 
 import Dscp.Crypto.ByteArray (FromByteArray (..))
@@ -93,27 +95,6 @@ mkPassPhrase bs
     lbs = length bs
 
 -------------------------------------------------------------
--- Encryption/decryption helper datatypes
--------------------------------------------------------------
-
--- | Datatype which combines ciphertext with cipher authentication tag.
-data Encrypted ba = Encrypted
-    { eAuthTag    :: !AuthTag
-    , eCiphertext :: !ba
-    } deriving (Eq)
-
--- | We have to define 'Serialise' instance for 'Encrypted' here,
--- because we don't export its constructor and field accessors.
-instance FromByteArray ba => Serialise (Encrypted ba) where
-    encode Encrypted {..} =
-        encodeBytes (BA.convert eAuthTag) <>
-        encodeBytes (BA.convert eCiphertext)
-    decode = do
-        eAuthTag <- AuthTag . BA.convert <$> decodeBytes
-        eCiphertext <- either fail pure . fromByteArray =<< decodeBytes
-        return Encrypted {..}
-
--------------------------------------------------------------
 -- Encryption/decryption constants/salts
 -------------------------------------------------------------
 
@@ -148,15 +129,7 @@ passGenSalt = "dscp-educator-pass-gen"
 aeadMode :: AEADMode
 aeadMode = AEAD_GCM
 
--- | Initial vector for chosen cipher.
-initIV :: IV CipherType
-initIV = nullIV
-
--------------------------------------------------------------
--- Encryption/decryption logic
--------------------------------------------------------------
-
--- | Get maximum key size allowed by chosen encryption scheme.
+-- | Maximum key size allowed by chosen encryption scheme.
 maxKeySize :: Int
 maxKeySize = case cipherKeySize fakeCipher of
     KeySizeFixed size      -> size
@@ -166,6 +139,47 @@ maxKeySize = case cipherKeySize fakeCipher of
     fakeCipher :: CipherType
     fakeCipher =
         error "impossible: cipher constructor is evaluated in `cipherKeySize`"
+
+-- | Block size used by chosen encryption scheme.
+cipherBlkSize :: Int
+cipherBlkSize = blockSize fakeCipher
+  where
+    fakeCipher :: CipherType
+    fakeCipher =
+        error "impossible: cipher constructor is evaluated in `blockSize`"
+
+-------------------------------------------------------------
+-- Encryption/decryption helper datatypes
+-------------------------------------------------------------
+
+-- | Datatype which combines ciphertext with cipher authentication tag.
+data Encrypted ba = Encrypted
+    { eAuthTag    :: !AuthTag
+      -- ^ Authentication tag (to determine whether or not the password is valid)
+    , eIV         :: !(IV CipherType)
+      -- ^ Encryption initial vector (randomly generated during encryption for safety)
+    , eCiphertext :: !ba
+      -- ^ Ciphertext itself
+    } deriving (Eq)
+
+-- | We have to define 'Serialise' instance for 'Encrypted' here,
+-- because we don't export its constructor and field accessors.
+instance FromByteArray ba => Serialise (Encrypted ba) where
+    encode Encrypted {..} =
+        encodeBytes (BA.convert eAuthTag) <>
+        encodeBytes (BA.convert eIV) <>
+        encodeBytes (BA.convert eCiphertext)
+    decode = do
+        eAuthTag <- AuthTag . BA.convert <$> decodeBytes
+        eIV <- maybe (fail "Encrypted: invalid IV size") pure .
+            makeIV =<< decodeBytes
+        eCiphertext <- either fail pure .
+            fromByteArray =<< decodeBytes
+        return Encrypted {..}
+
+-------------------------------------------------------------
+-- Encryption/decryption logic
+-------------------------------------------------------------
 
 -- | Derive encryption key from passphrase using PBKDF2
 -- with SHA-512 hash function.
@@ -179,22 +193,26 @@ keyFromPassPhrase (PassPhrase pp) = PBKDF2.generate
     passGenSalt
 
 -- | Prepare an AEAD context from a 'PassPhrase'.
-prepareAEAD :: PassPhrase -> AEAD CipherType
-prepareAEAD pp =
+prepareAEAD :: PassPhrase -> IV CipherType -> AEAD CipherType
+prepareAEAD pp iv =
     let impossible err =
-            error $ "encrypt: impossible: " <> Prelude.show err
+            error $ "prepareAEAD: impossible: " <> Prelude.show err
         ppHashKey =
             keyFromPassPhrase pp
         cipher :: CipherType =
             onCryptoFailure impossible identity $
             cipherInit ppHashKey
     in onCryptoFailure impossible identity $
-       aeadInit aeadMode cipher initIV
+       aeadInit aeadMode cipher iv
 
 -- | Encrypt given 'ByteArray' with AES.
+-- TODO: use Secure Random from OpenSSL for IV calculation instead.
 encrypt :: ByteArray ba => PassPhrase -> ba -> Encrypted ba
 encrypt pp plaintext =
-    let aead = prepareAEAD pp
+    let eIV = fromMaybe (error "encrypt: impossible: random IV with invalid size") .
+              makeIV @ByteString . unsafePerformIO $
+              getRandomBytes cipherBlkSize
+        aead = prepareAEAD pp eIV
         (eAuthTag, eCiphertext) =
             aeadSimpleEncrypt aead authHeader plaintext authTagLength
     in Encrypted {..}
@@ -203,7 +221,7 @@ encrypt pp plaintext =
 -- doesn't match.
 decrypt :: ByteArray ba => PassPhrase -> Encrypted ba -> Either DecryptionError ba
 decrypt pp Encrypted {..} =
-    let aead = prepareAEAD pp
+    let aead = prepareAEAD pp eIV
     in maybeToRight PassPhraseInvalid $
        aeadSimpleDecrypt aead authHeader eCiphertext eAuthTag
 
