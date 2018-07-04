@@ -15,10 +15,13 @@ library:
     - containers
     - componentm
     - cryptonite
+    - cryptonite-openssl
     - data-default
+    - directory
     - direct-sqlite
     - exceptions
     - formatting
+    - filepath
     - fmt
     - free
     - hashable
@@ -36,6 +39,7 @@ library:
     - random
     - reflection
     - rocksdb-haskell
+    - semver
     - serialise
     - serokell-util
     - snowdrop
@@ -46,6 +50,7 @@ library:
     - text-format
     - time
     - time-units
+    - unix
     - unliftio
 
 tests:
@@ -53,6 +58,7 @@ tests:
     <<: *test-common
 
     dependencies:
+      - aeson
       - AVL
       - bytestring
       - containers

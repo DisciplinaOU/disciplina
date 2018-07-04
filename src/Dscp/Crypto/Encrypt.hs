@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveFunctor #-}
+
 {-|
 Module      : Dscp.Crypto.Encrypt
 Description : Functions and datatypes for symmetric encryption
@@ -36,7 +38,7 @@ import Crypto.Error (onCryptoFailure)
 import Crypto.Hash.Algorithms (SHA512 (..))
 import qualified Crypto.KDF.PBKDF2 as PBKDF2
 import Crypto.Random (getRandomBytes)
-import Data.ByteArray (ByteArray, ByteArrayAccess)
+import Data.ByteArray (ByteArray, ByteArrayAccess, ScrubbedBytes)
 import qualified Data.ByteArray as BA
 import qualified Data.ByteString.Lazy as BSL
 import Data.Text.Buildable (build)
@@ -45,6 +47,7 @@ import System.IO.Unsafe (unsafePerformIO)
 import Text.Show (show)
 
 import Dscp.Crypto.ByteArray (FromByteArray (..))
+import Dscp.Crypto.Random (runSecureRandom)
 import Dscp.Util (toBase64)
 
 -------------------------------------------------------------
@@ -55,7 +58,7 @@ import Dscp.Util (toBase64)
 -- 'Buildable' and 'Show' in order to avoid accidental
 -- appearance of actual passphrases in logs.
 newtype PassPhrase = PassPhrase
-    { getPassPhrase :: ByteString
+    { getPassPhrase :: ScrubbedBytes
     } deriving (Eq, Ord, Monoid, ByteArray, ByteArrayAccess)
 
 instance Buildable PassPhrase where
@@ -98,7 +101,7 @@ mkPassPhrase :: ByteString -> Either PassPhraseError PassPhrase
 mkPassPhrase bs
     | lbs < minPassPhraseLength = Left $ PassPhraseTooShort lbs
     | lbs > maxPassPhraseLength = Left $ PassPhraseTooLong lbs
-    | otherwise = Right $ PassPhrase bs
+    | otherwise = Right $ PassPhrase (BA.convert bs)
   where
     lbs = length bs
 
@@ -166,9 +169,9 @@ data Encrypted ba = Encrypted
       -- ^ Authentication tag (to determine whether or not the password is valid)
     , eIV         :: !(IV CipherType)
       -- ^ Encryption initial vector (randomly generated during encryption for safety)
-    , eCiphertext :: !ba
+    , eCiphertext :: !ByteString
       -- ^ Ciphertext itself
-    } deriving (Eq)
+    } deriving (Eq, Functor)
 
 -- | We have to define 'Serialise' instance for 'Encrypted' here,
 -- because we don't export its constructor and field accessors.
@@ -220,31 +223,41 @@ prepareAEAD pp iv =
        aeadInit aeadMode cipher iv
 
 -- | Encrypt given 'ByteArray' with AES.
--- TODO: use Secure Random from OpenSSL for IV calculation instead.
-encrypt :: ByteArray ba => PassPhrase -> ba -> Encrypted ba
+encrypt :: ByteArrayAccess ba => PassPhrase -> ba -> Encrypted ba
 encrypt pp plaintext =
     let eIV = fromMaybe (error "encrypt: impossible: random IV with invalid size") .
-              makeIV @ByteString . unsafePerformIO $
+              makeIV @ByteString . unsafePerformIO . runSecureRandom $
               getRandomBytes cipherBlkSize
         aead = prepareAEAD pp eIV
+        plaintextBS = BA.convert plaintext
         (eAuthTag, eCiphertext) =
-            aeadSimpleEncrypt aead authHeader plaintext authTagLength
+            aeadSimpleEncrypt aead authHeader plaintextBS authTagLength
     in Encrypted {..}
 
 -- | Decrypt given 'Encrypted' datatype or fail, if passphrase
 -- doesn't match.
-decrypt :: ByteArray ba => PassPhrase -> Encrypted ba -> Either DecryptionError ba
-decrypt pp Encrypted {..} =
+decrypt
+    :: FromByteArray ba
+    => PassPhrase -> Encrypted ba -> Either DecryptionError ba
+decrypt pp Encrypted {..} = do
     let aead = prepareAEAD pp eIV
-    in maybeToRight PassPhraseInvalid $
-       aeadSimpleDecrypt aead authHeader eCiphertext eAuthTag
+    plaintextBS <-
+        maybeToRight PassPhraseInvalid $
+        aeadSimpleDecrypt aead authHeader eCiphertext eAuthTag
+    first (MalformedObject . toText) $ fromByteArray plaintextBS
 
 -- | Errors which might occur during decryption
-data DecryptionError = PassPhraseInvalid
+data DecryptionError
+    = PassPhraseInvalid
+    | MalformedObject !Text
     deriving (Eq)
 
 instance Buildable DecryptionError where
-    build PassPhraseInvalid = "Invalid passphrase is used for decryption"
+    build = \case
+        PassPhraseInvalid ->
+            "Invalid passphrase is used for decryption"
+        MalformedObject err ->
+            "Result of encryption/decryption is malformed: "+|err|+""
 
 instance Show DecryptionError where
     show = toString . pretty
