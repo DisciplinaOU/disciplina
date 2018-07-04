@@ -23,9 +23,8 @@ module Dscp.Crypto.Encrypt
 
          -- * Utility functions
        , DecryptionError (..)
-       , encryptBA
-       , decryptBA
-       , EncryptSafe (..)
+       , encrypt
+       , decrypt
        ) where
 
 import Codec.Serialise (Serialise (..), serialise)
@@ -48,9 +47,8 @@ import System.IO.Unsafe (unsafePerformIO)
 import Text.Show (show)
 
 import Dscp.Crypto.ByteArray (FromByteArray (..))
-import Dscp.Crypto.Impl (SecretKey)
 import Dscp.Crypto.Random (runSecureRandom)
-import Dscp.Util (leftToPanicWith, toBase64)
+import Dscp.Util (toBase64)
 
 -------------------------------------------------------------
 -- Passphrases
@@ -171,7 +169,7 @@ data Encrypted ba = Encrypted
       -- ^ Authentication tag (to determine whether or not the password is valid)
     , eIV         :: !(IV CipherType)
       -- ^ Encryption initial vector (randomly generated during encryption for safety)
-    , eCiphertext :: !ba
+    , eCiphertext :: !ByteString
       -- ^ Ciphertext itself
     } deriving (Eq, Functor)
 
@@ -225,59 +223,41 @@ prepareAEAD pp iv =
        aeadInit aeadMode cipher iv
 
 -- | Encrypt given 'ByteArray' with AES.
-encryptBA :: ByteArray ba => PassPhrase -> ba -> Encrypted ba
-encryptBA pp plaintext =
+encrypt :: ByteArrayAccess ba => PassPhrase -> ba -> Encrypted ba
+encrypt pp plaintext =
     let eIV = fromMaybe (error "encrypt: impossible: random IV with invalid size") .
               makeIV @ByteString . unsafePerformIO . runSecureRandom $
               getRandomBytes cipherBlkSize
         aead = prepareAEAD pp eIV
+        plaintextBS = BA.convert plaintext
         (eAuthTag, eCiphertext) =
-            aeadSimpleEncrypt aead authHeader plaintext authTagLength
+            aeadSimpleEncrypt aead authHeader plaintextBS authTagLength
     in Encrypted {..}
 
 -- | Decrypt given 'Encrypted' datatype or fail, if passphrase
 -- doesn't match.
-decryptBA :: ByteArray ba => PassPhrase -> Encrypted ba -> Either DecryptionError ba
-decryptBA pp Encrypted {..} =
+decrypt
+    :: FromByteArray ba
+    => PassPhrase -> Encrypted ba -> Either DecryptionError ba
+decrypt pp Encrypted {..} = do
     let aead = prepareAEAD pp eIV
-    in maybeToRight PassPhraseInvalid $
-       aeadSimpleDecrypt aead authHeader eCiphertext eAuthTag
-
--- | 'FromByteArray' versions of 'encryptBA' and 'decryptBA'.
--- Default implementation is correct if the following holds:
---
--- * If some @ba@ is valid, then any @ba'@ of the same length
--- has to be also valid.
-class EncryptSafe ba where
-    encrypt
-        :: FromByteArray ba
-        => PassPhrase -> ba -> Encrypted ba
-    encrypt pp plaintext =
-        -- subject to optimisation
-        let plaintextBS = BA.convert plaintext :: ByteString
-            encryptedBS = encryptBA pp plaintextBS
-        in leftToPanicWith "encrypt: got malformed item" .
-           fromByteArray <$> encryptedBS
-
-    decrypt
-        :: FromByteArray ba
-        => PassPhrase -> Encrypted ba -> Either DecryptionError ba
-    decrypt pp encrypted = do
-        let encryptedBS = BA.convert <$> encrypted
-        plaintextBS :: ByteString <- decryptBA pp encryptedBS
-        return $
-            leftToPanicWith "decrypt: got malformed item" $
-            fromByteArray plaintextBS
-
-instance EncryptSafe ByteString
-instance EncryptSafe SecretKey
+    plaintextBS <-
+        maybeToRight PassPhraseInvalid $
+        aeadSimpleDecrypt aead authHeader eCiphertext eAuthTag
+    first (MalformedObject . toText) $ fromByteArray plaintextBS
 
 -- | Errors which might occur during decryption
-data DecryptionError = PassPhraseInvalid
+data DecryptionError
+    = PassPhraseInvalid
+    | MalformedObject !Text
     deriving (Eq)
 
 instance Buildable DecryptionError where
-    build PassPhraseInvalid = "Invalid passphrase is used for decryption"
+    build = \case
+        PassPhraseInvalid ->
+            "Invalid passphrase is used for decryption"
+        MalformedObject err ->
+            "Result of encryption/decryption is malformed: "+|err|+""
 
 instance Show DecryptionError where
     show = toString . pretty
