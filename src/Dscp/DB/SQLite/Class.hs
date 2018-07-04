@@ -18,3 +18,5 @@ class MonadIO m => MonadSQLiteDB m where
 
     -- | Perform a simple SQL query which does not return any result.
     execute :: ToRow q => Query -> q -> m ()
+
+    transaction :: m a -> m a

@@ -7,6 +7,9 @@ module Dscp.DB.SQLite.Functions
        ) where
 
 import qualified Database.SQLite.Simple as Lower
+
+import UnliftIO (UnliftIO(..), askUnliftIO)
+
 import Loot.Base.HasLens (HasLens (..))
 
 import Dscp.DB.SQLite.Class (MonadSQLiteDB (..))
@@ -58,3 +61,11 @@ instance HasLens SQLiteDB ctx SQLiteDB => MonadSQLiteDB (RIO ctx) where
         rethrowSQLRequestError $ do
             SQLiteDB{..} <- view $ lensOf @SQLiteDB
             liftIO $ Lower.execute sdConn q params
+
+    transaction action = do
+        UnliftIO unlift <- askUnliftIO
+        SQLiteDB conn <- view $ lensOf @SQLiteDB
+        liftIO $ do
+            conn `Lower.withTransaction` do
+                unlift action
+

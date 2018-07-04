@@ -1,7 +1,8 @@
 
 module Test.Dscp.DB.SQLite.Instances where
 
-import Dscp.DB.SQLite.Instances as DB
+import Dscp.DB.SQLite.Instances ()
+import Dscp.DB.SQLite.Queries as DB
 
 import Test.Dscp.DB.SQLite.Common
 
@@ -71,7 +72,24 @@ spec_Instances = do
                         _ <- DB.createSignedSubmission sigSubmission
                         return ()
 
-            it "Submission is not created unless Student exist" $
+            it "Submission is not created unless StudentAssignment exist" $
+                sqliteProperty $ \sigSubmission -> do
+
+                    throws @DomainError $ do
+                        let submission = sigSubmission^.ssSubmission
+                            assignment = submission^.sAssignment
+                            course     = assignment^.aCourseId
+                            _pk        = sigSubmission^.ssWitness^.swKey
+                            student    = submission^.sStudentId
+
+                        _ <- DB.createCourse           course Nothing
+                        _ <- DB.createStudent          student
+                        _ <- DB.createAssignment       assignment
+                        _ <- DB.createSignedSubmission sigSubmission
+
+                        return ()
+
+            it "Submission is created if all deps exist" $
                 sqliteProperty $ \sigSubmission -> do
 
                     let submission = sigSubmission^.ssSubmission
@@ -82,7 +100,8 @@ spec_Instances = do
 
                     _       <- DB.createCourse           course Nothing
                     _       <- DB.createStudent          student
-                    _       <- DB.createAssignment       assignment
+                    aHash   <- DB.createAssignment       assignment
+                    _       <- DB.setStudentAssignment   student aHash
                     subHash <- DB.createSignedSubmission sigSubmission
 
                     sub'    <- DB.getSignedSubmission pk subHash

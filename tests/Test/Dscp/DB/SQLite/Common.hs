@@ -20,48 +20,21 @@ module Test.Dscp.DB.SQLite.Common
 
 import Prelude hiding (fold)
 
-import Database.SQLite.Simple
+import Database.SQLite.Simple (Connection, execute, fold, query, setTrace, withConnection,
+                               withTransaction)
 
 import System.Directory (removeFile)
 import System.IO.Error (IOError, isDoesNotExistError)
 
 import Test.QuickCheck.Gen (generate)
 
-import Dscp.Core.Types (
-    Address (..),
-    Assignment (..),
-    AssignmentType (..),
-    CourseId (..),
-    --Grade (..),
-    SignedSubmission (..),
-    --StudentId (..),
-    --SubjectId,
-    Submission (..),
-    SubmissionType (..),
-    SubmissionSig,
-    SubmissionWitness (..),
-    --aAssignment,
-    aCourseId,
-    --aType,
-    sAssignment,
-    sStudentId,
-    --sType,
-    ssSubmission,
-    ssWitness,
-    swKey
-    --swSig
-  )
+import Dscp.Core.Types (Address (..), Assignment (..), AssignmentType (..), CourseId (..),
+                        SignedSubmission (..), Submission (..), SubmissionSig, SubmissionType (..),
+                        SubmissionWitness (..), aCourseId, sAssignment, sStudentId, ssSubmission,
+                        ssWitness, swKey)
+import Dscp.Crypto (HasHash, HasSignature, Hash, PublicKey, Signature, hash, sign)
 import qualified Dscp.DB.SQLite.Class as Adapter
 import Dscp.DB.SQLite.Schema (ensureSchemaIsSetUp)
-import Dscp.Crypto (
-    Hash,
-    PublicKey,
-    Signature,
-    HasSignature,
-    HasHash,
-    sign,
-    hash
-  )
 
 import Test.Common
 
@@ -71,7 +44,7 @@ newtype TestSQLiteM a
 
 runTestSQLiteM :: TestSQLiteM a -> IO a
 runTestSQLiteM action = do
-    let filename = "test.db"
+    let filename = ":memory:"
 
     removeFile filename `catch` \(e :: IOError) -> do
         if isDoesNotExistError e
@@ -106,6 +79,11 @@ instance Adapter.MonadSQLiteDB TestSQLiteM where
         TestSQLiteM $ ReaderT $ \conn ->
             fold conn theQuery args seed $ \a b ->
                 getTestSQLiteM (op a b) `runReaderT` conn
+
+    transaction (TestSQLiteM (ReaderT actor)) = do
+        TestSQLiteM $ ReaderT $ \conn ->
+            conn `withTransaction` do
+                actor conn
 
 instance Arbitrary CourseId where
     arbitrary = CourseId <$> arbitrary
