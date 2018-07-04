@@ -38,7 +38,7 @@ import Crypto.Error (onCryptoFailure)
 import Crypto.Hash.Algorithms (SHA512 (..))
 import qualified Crypto.KDF.PBKDF2 as PBKDF2
 import Crypto.Random (getRandomBytes)
-import Data.ByteArray (ByteArray, ByteArrayAccess)
+import Data.ByteArray (ByteArray, ByteArrayAccess, ScrubbedBytes)
 import qualified Data.ByteArray as BA
 import qualified Data.ByteString.Lazy as BSL
 import Data.Text.Buildable (build)
@@ -58,7 +58,7 @@ import Dscp.Util (toBase64)
 -- 'Buildable' and 'Show' in order to avoid accidental
 -- appearance of actual passphrases in logs.
 newtype PassPhrase = PassPhrase
-    { getPassPhrase :: ByteString
+    { getPassPhrase :: ScrubbedBytes
     } deriving (Eq, Ord, Monoid, ByteArray, ByteArrayAccess)
 
 instance Buildable PassPhrase where
@@ -101,7 +101,7 @@ mkPassPhrase :: ByteString -> Either PassPhraseError PassPhrase
 mkPassPhrase bs
     | lbs < minPassPhraseLength = Left $ PassPhraseTooShort lbs
     | lbs > maxPassPhraseLength = Left $ PassPhraseTooLong lbs
-    | otherwise = Right $ PassPhrase bs
+    | otherwise = Right $ PassPhrase (BA.convert bs)
   where
     lbs = length bs
 
