@@ -107,3 +107,25 @@ spec_Instances = do
                     sub'    <- DB.getSignedSubmission pk subHash
 
                     return (sub' == Just sigSubmission)
+
+        describe "Transactions" $ do
+            it "Submission is created if all deps exist" $
+                sqliteProperty $ \transaction -> do
+
+                    let sigSubmission = transaction^.ptSignedSubmission
+                        submission    = sigSubmission^.ssSubmission
+                        assignment    = submission^.sAssignment
+                        course        = assignment^.aCourseId
+                        pk            = sigSubmission^.ssWitness^.swKey
+                        student       = submission^.sStudentId
+
+                    _       <- DB.createCourse           course Nothing
+                    _       <- DB.createStudent          student
+                    aHash   <- DB.createAssignment       assignment
+                    _       <- DB.setStudentAssignment   student aHash
+                    subHash <- DB.createSignedSubmission sigSubmission
+
+                    sub'    <- DB.getSignedSubmission pk subHash
+
+                    return (sub' == Just sigSubmission)
+

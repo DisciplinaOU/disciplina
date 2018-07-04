@@ -16,7 +16,7 @@ import Dscp.Core.Types (Assignment (..), CourseId, Grade, SignedSubmission (..),
 import Dscp.Crypto (Hash, PublicKey, hash)
 import Dscp.DB.SQLite.Class
 import Dscp.DB.SQLite.Instances ()
-import Dscp.Educator.Txs (PrivateTx (..))
+import Dscp.Educator.Txs (PrivateTx (..), PrivateTxId)
 
 data DomainError
     = CourseDoesNotExist                  CourseId
@@ -27,7 +27,7 @@ data DomainError
 
 instance Exception DomainError
 
-type DBM m = (MonadSQLiteDB m, MonadCatch m)
+type DBM m = MonadSQLiteDB m
 
 getStudentCourses :: DBM m => StudentId -> m [CourseId]
 getStudentCourses student =
@@ -128,13 +128,21 @@ isAssignedToStudent student assignment = do
            and  assignment_hash = ?
     |]
 
-getGradesForCourseAssignments :: DBM m => StudentId -> CourseId -> m [Grade]
+getGradesForCourseAssignments :: DBM m => StudentId -> CourseId -> m [PrivateTx]
 getGradesForCourseAssignments student course = do
     query getGradesForCourseAssignmentsQuery (course, student)
   where
     getGradesForCourseAssignmentsQuery :: Query
     getGradesForCourseAssignmentsQuery = [q|
-        select     grade
+        select     Submissions.student_addr,
+                   Submissions.contents_hash,
+                   Assignments.course_id,
+                   Assignments.contents_hash,
+                   Assignments.desc,
+                   Submissions.signature
+                   grade
+                   time
+
         from       Transactions
 
         left join  Submissions
@@ -153,7 +161,15 @@ getStudentTransactions pk student = do
   where
     getStudentTransactionsQuery :: Query
     getStudentTransactionsQuery = [q|
-        select     *
+        select     Submissions.student_addr,
+                   Submissions.contents_hash,
+                   Assignments.course_id,
+                   Assignments.contents_hash,
+                   Assignments.desc,
+                   Submissions.signature
+                   grade
+                   time
+
         from       Transactions
 
         left join  Submissions
@@ -180,14 +196,14 @@ assert action message = do
     yes <- action
 
     unless yes $ do
-        throwM message
+        throwIO message
 
 assertJust :: DBM m => m (Maybe a) -> DomainError -> m a
 assertJust action message = do
     mb <- action
 
     whenNothing mb $ do
-        throwM message
+        throwIO message
 
 existsCourse :: DBM m => CourseId -> m Bool
 existsCourse course = do
@@ -272,6 +288,26 @@ getSignedSubmission pk submissionHash = do
         where      Submissions.hash = ?
     |]
 
+createTransaction :: DBM m => PublicKey -> PrivateTx -> m (PrivateTxId)
+createTransaction pk trans = do
+    transaction $ do
+        let ptid    = hash trans
+            subHash = trans^.ptSignedSubmission.to hash
+
+        _ <- getSignedSubmission pk ()
+
+        execute createTransactionRequest
+            ( ptid
+            , subHash
+            , trans^.ptGrade
+            , trans^.ptTime
+            , -1
+            )
+  where
+    createTransactionRequest :: Query
+    createTransactionRequest = [q|
+
+    |]
 
 exists :: ToRow a => DBM m => Query -> a -> m Bool
 exists theQuery args = (not . null :: [Only Int] -> Bool) <$> query theQuery args
