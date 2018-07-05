@@ -2,15 +2,11 @@ let
   overlay = import ''${builtins.fetchGit "ssh://git@github.com:/serokell/serokell-overlay.git"}/pkgs'';
   nixpkgs = import (builtins.fetchTarball "https://github.com/serokell/nixpkgs/archive/master.tar.gz") {
     overlays = [ overlay ];
-  };  
+  };
 in
 
 with nixpkgs;
 with haskell.lib;
-
-let
-  appendBuildFlag = drv: x: overrideCabal drv (drv: { buildFlags = (drv.buildFlags or []) ++ [x]; });
-in
 
 buildStackApplication {
   package = "disciplina";
