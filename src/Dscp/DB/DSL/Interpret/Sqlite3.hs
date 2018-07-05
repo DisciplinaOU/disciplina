@@ -5,8 +5,6 @@ module Dscp.DB.DSL.Interpret.Sqlite3 () where
 
 import qualified Data.Set as Set (Set, empty, member, singleton)
 
-import Database.SQLite.Simple (Only (..))
-
 import Text.InterpolatedString.Perl6 (q, qc, qq)
 
 import Dscp.Core.Types (Assignment (..), AssignmentType (..), CourseId (..), Grade (..),
@@ -15,7 +13,7 @@ import Dscp.Core.Types (Assignment (..), AssignmentType (..), CourseId (..), Gra
 import Dscp.Crypto (PublicKey, fromByteArray)
 import Dscp.DB.DSL.Class
 import Dscp.DB.SQLite
-import Dscp.Educator.Txs (PrivateTx (..), PrivateTxId)
+import Dscp.Educator.Txs (PrivateTx (..))
 
 instance
 --    v-- GHC says it cand "find" Monad in superclasses (wat).
@@ -25,21 +23,20 @@ instance
     => MonadSearchTxObj m
   where
     runTxQuery (SELECTTx WHERE (TxIdEq pid)) =
-        getPrivateTxFromId (error "get pk from keyring here") pid
+        getTransaction pid
 
     -- TODO (kir): find where the 'Obj'ects live.
     runObjQuery (SELECTObj WHERE (ObjHashEq _hash)) =
         return Nothing
 
     runTxsQuery (SELECTTxs WHERE txFilter) =
-        getPrivateTxsByFilter (error "get pk from keyring here") txFilter
+        getPrivateTxsByFilter txFilter
 
 getPrivateTxsByFilter
     :: MonadSQLiteDB m
-    => PublicKey
-    -> TxsFilterExpr
+    => TxsFilterExpr
     -> m [PrivateTx]
-getPrivateTxsByFilter pk filterExpr = do
+getPrivateTxsByFilter filterExpr = do
     let
       tables = requiredTables filterExpr
 
@@ -56,7 +53,7 @@ getPrivateTxsByFilter pk filterExpr = do
              |]
         else [qc||]
 
-    fmap ($ pk) <$> query
+    query
         [qc|
             select    Submissions.student_addr,
                       Submissions.contents_hash,

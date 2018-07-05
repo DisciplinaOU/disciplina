@@ -15,6 +15,7 @@ module Test.Dscp.DB.SQLite.Common
        ( module Test.Common
        , module Test.Dscp.DB.SQLite.Common
        , module Dscp.Core.Types
+       , module Dscp.Educator.Txs
        , hash
        ) where
 
@@ -29,12 +30,13 @@ import System.IO.Error (IOError, isDoesNotExistError)
 import Test.QuickCheck.Gen (generate)
 
 import Dscp.Core.Types (Address (..), Assignment (..), AssignmentType (..), CourseId (..),
-                        SignedSubmission (..), Submission (..), SubmissionSig, SubmissionType (..),
-                        SubmissionWitness (..), aCourseId, sAssignment, sStudentId, ssSubmission,
-                        ssWitness, swKey)
+                        Grade (..), SignedSubmission (..), Submission (..), SubmissionSig,
+                        SubmissionType (..), SubmissionWitness (..), aCourseId, sAssignment,
+                        sStudentId, ssSubmission, ssWitness, swKey)
 import Dscp.Crypto (HasHash, HasSignature, Hash, PublicKey, Signature, hash, sign)
 import qualified Dscp.DB.SQLite.Class as Adapter
 import Dscp.DB.SQLite.Schema (ensureSchemaIsSetUp)
+import Dscp.Educator.Txs (PrivateTx (..), ptSignedSubmission)
 
 import Test.Common
 
@@ -85,35 +87,21 @@ instance Adapter.MonadSQLiteDB TestSQLiteM where
             conn `withTransaction` do
                 actor conn
 
-instance Arbitrary CourseId where
-    arbitrary = CourseId <$> arbitrary
-
-instance Arbitrary Address where
-    arbitrary = (Address . hash . mkPubKey) <$> arbitrary
-
-instance Arbitrary Assignment where
-    arbitrary = Assignment <$> arbitrary <*> arbitrary <*> arbitrary
-
-instance Arbitrary AssignmentType where
-    arbitrary = elements [Regular, CourseFinal]
-
-instance Arbitrary SubmissionType where
-    arbitrary = elements [Digital, Offline]
-
-instance Arbitrary Submission where
-    arbitrary = Submission <$> arbitrary <*> arbitrary <*> arbitrary
-
-instance Arbitrary SubmissionWitness where
-    arbitrary = SubmissionWitness <$> arbitrary <*> arbitrary
-
-instance Arbitrary SignedSubmission where
-    arbitrary = SignedSubmission <$> arbitrary <*> arbitrary
-
-instance Arbitrary PublicKey where
-    arbitrary = mkPubKey <$> arbitrary
+instance Arbitrary AssignmentType    where arbitrary = elements [Regular, CourseFinal]
+instance Arbitrary SubmissionType    where arbitrary = elements [Digital, Offline]
+instance Arbitrary Grade             where arbitrary = elements [A, B, C, D, F]
+instance Arbitrary Address           where arbitrary = (Address . hash . mkPubKey) <$> arbitrary
+instance Arbitrary CourseId          where arbitrary = CourseId   <$> arbitrary
+instance Arbitrary Assignment        where arbitrary = Assignment <$> arbitrary <*> arbitrary <*> arbitrary
+instance Arbitrary Submission        where arbitrary = Submission <$> arbitrary <*> arbitrary <*> arbitrary
+instance Arbitrary PublicKey         where arbitrary = mkPubKey   <$> arbitrary
+instance Arbitrary PrivateTx         where arbitrary = PrivateTx  <$> arbitrary <*> arbitrary <*> arbitrary
+instance Arbitrary SubmissionWitness where arbitrary = SubmissionWitness <$> arbitrary <*> arbitrary
+instance Arbitrary SignedSubmission  where arbitrary = SignedSubmission  <$> arbitrary <*> arbitrary
 
 instance (Arbitrary a, HasSignature a) => Arbitrary (Signature a) where
     arbitrary = sign <$> (mkPrivKey <$> arbitrary) <*> arbitrary
 
 instance (Arbitrary a, HasHash a) => Arbitrary (Hash a) where
     arbitrary = hash <$> arbitrary
+

@@ -1,8 +1,7 @@
 
 module Test.Dscp.DB.SQLite.Instances where
 
-import Dscp.DB.SQLite.Instances ()
-import Dscp.DB.SQLite.Queries as DB
+import Dscp.DB.SQLite as DB
 
 import Test.Dscp.DB.SQLite.Common
 
@@ -39,7 +38,7 @@ spec_Instances = do
             it "Assignment is created and retrieved by hash" $
                 sqliteProperty $ \assignment -> do
 
-                    _              <- DB.createCourse     (assignment^.aCourseId) Nothing
+                    _              <- DB.createCourse    (assignment^.aCourseId) Nothing
                     assignmentHash <- DB.createAssignment assignment
                     assignment'    <- DB.getAssignment    assignmentHash
 
@@ -62,11 +61,11 @@ spec_Instances = do
                 sqliteProperty $ \sigSubmission -> do
 
                     let submission = sigSubmission^.ssSubmission
-                        assignment = submission^.sAssignment
-                        course     = assignment^.aCourseId
+                        assignment = submission   ^.sAssignment
+                        course     = assignment   ^.aCourseId
 
-                    _       <- DB.createCourse           course Nothing
-                    _       <- DB.createAssignment       assignment
+                    _ <- DB.createCourse           course Nothing
+                    _ <- DB.createAssignment       assignment
 
                     throws @DomainError $ do
                         _ <- DB.createSignedSubmission sigSubmission
@@ -79,7 +78,6 @@ spec_Instances = do
                         let submission = sigSubmission^.ssSubmission
                             assignment = submission^.sAssignment
                             course     = assignment^.aCourseId
-                            _pk        = sigSubmission^.ssWitness^.swKey
                             student    = submission^.sStudentId
 
                         _ <- DB.createCourse           course Nothing
@@ -93,10 +91,9 @@ spec_Instances = do
                 sqliteProperty $ \sigSubmission -> do
 
                     let submission = sigSubmission^.ssSubmission
-                        assignment = submission^.sAssignment
-                        course     = assignment^.aCourseId
-                        pk         = sigSubmission^.ssWitness^.swKey
-                        student    = submission^.sStudentId
+                        assignment = submission   ^.sAssignment
+                        course     = assignment   ^.aCourseId
+                        student    = submission   ^.sStudentId
 
                     _       <- DB.createCourse           course Nothing
                     _       <- DB.createStudent          student
@@ -104,28 +101,28 @@ spec_Instances = do
                     _       <- DB.setStudentAssignment   student aHash
                     subHash <- DB.createSignedSubmission sigSubmission
 
-                    sub'    <- DB.getSignedSubmission pk subHash
+                    sub'    <- DB.getSignedSubmission    subHash
 
                     return (sub' == Just sigSubmission)
 
         describe "Transactions" $ do
             it "Submission is created if all deps exist" $
-                sqliteProperty $ \transaction -> do
+                sqliteProperty $ \trans -> do
 
-                    let sigSubmission = transaction^.ptSignedSubmission
+                    let sigSubmission = trans        ^.ptSignedSubmission
                         submission    = sigSubmission^.ssSubmission
-                        assignment    = submission^.sAssignment
-                        course        = assignment^.aCourseId
-                        pk            = sigSubmission^.ssWitness^.swKey
-                        student       = submission^.sStudentId
+                        assignment    = submission   ^.sAssignment
+                        course        = assignment   ^.aCourseId
+                        student       = submission   ^.sStudentId
 
-                    _       <- DB.createCourse           course Nothing
-                    _       <- DB.createStudent          student
-                    aHash   <- DB.createAssignment       assignment
-                    _       <- DB.setStudentAssignment   student aHash
-                    subHash <- DB.createSignedSubmission sigSubmission
+                    _         <- DB.createCourse           course Nothing
+                    _         <- DB.createStudent          student
+                    aHash     <- DB.createAssignment       assignment
+                    _         <- DB.setStudentAssignment   student aHash
+                    _         <- DB.createSignedSubmission sigSubmission
+                    transHash <- DB.createTransaction      trans
 
-                    sub'    <- DB.getSignedSubmission pk subHash
+                    trans'    <- DB.getTransaction transHash
 
-                    return (sub' == Just sigSubmission)
+                    return (trans' == Just trans)
 

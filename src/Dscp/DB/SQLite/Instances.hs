@@ -21,43 +21,34 @@ instance FromField (Hash a)       where fromField f = Codec.deserialise <$> from
 instance FromField (Signature a)  where fromField f = Codec.deserialise <$> fromField f
 
 -- TODO(kir): use #define to generate macros
-instance FromField Address        where fromField f = Codec.deserialise <$> fromField f
-instance FromField PublicKey      where fromField f = Codec.deserialise <$> fromField f
-instance FromField SubjectId      where fromField f = SubjectId         <$> fromField f
-instance FromField CourseId       where fromField f = CourseId          <$> fromField f
-instance FromField Grade          where fromField f = Codec.deserialise <$> fromField f
-instance FromField AssignmentType where fromField f = Codec.deserialise <$> fromField f
-instance FromField SubmissionType where fromField f = Codec.deserialise <$> fromField f
+instance FromField Address           where fromField f = Codec.deserialise <$> fromField f
+instance FromField PublicKey         where fromField f = Codec.deserialise <$> fromField f
+instance FromField SubjectId         where fromField f = SubjectId         <$> fromField f
+instance FromField CourseId          where fromField f = CourseId          <$> fromField f
+instance FromField Grade             where fromField f = Codec.deserialise <$> fromField f
+instance FromField AssignmentType    where fromField f = Codec.deserialise <$> fromField f
+instance FromField SubmissionType    where fromField f = Codec.deserialise <$> fromField f
+instance FromField SubmissionWitness where fromField f = Codec.deserialise <$> fromField f
 
-instance ToField   (Hash a)       where toField     = toField . Codec.serialise
-instance ToField   (Signature a)  where toField     = toField . Codec.serialise
+instance ToField   (Hash a)          where toField = toField . Codec.serialise
+instance ToField   (Signature a)     where toField = toField . Codec.serialise
 
-instance ToField   Address        where toField     = toField . Codec.serialise
-instance ToField   CourseId       where toField     = toField . getCourseId
-instance ToField   AssignmentType where toField     = toField . Codec.serialise
-instance ToField   SubmissionType where toField     = toField . Codec.serialise
+instance ToField   Address           where toField = toField . Codec.serialise
+instance ToField   CourseId          where toField = toField . getCourseId
+instance ToField   AssignmentType    where toField = toField . Codec.serialise
+instance ToField   SubmissionType    where toField = toField . Codec.serialise
+instance ToField   Grade             where toField = toField . Codec.serialise
+instance ToField   SubmissionWitness where toField = toField . Codec.serialise
 
-instance FromRow   CourseId       where fromRow     = field
-instance FromRow   Grade          where fromRow     = field
+instance FromRow   CourseId       where fromRow = field
+instance FromRow   Grade          where fromRow = field
 
-instance FromRow Assignment where
-    fromRow = Assignment <$> field <*> field <*> field
+instance FromRow Assignment       where fromRow = Assignment       <$> field   <*> field <*> field
+instance FromRow Submission       where fromRow = Submission       <$> field   <*> field <*> fromRow
+instance FromRow SignedSubmission where fromRow = SignedSubmission <$> fromRow <*> field
+instance FromRow PrivateTx        where fromRow = PrivateTx        <$> fromRow <*> field <*> field
 
 instance ToRow Assignment where
     toRow task@ (Assignment course ty text) =
         [toField (hash task), toField course, toField ty, toField text]
-
-instance FromRow Submission where
-    fromRow = Submission <$> field <*> field <*> fromRow
-
--- These three structures depend on the public key, which is not in db.
--- Therefore, we have to plug it in somehow.
-instance FromRow (PublicKey -> SubmissionWitness) where
-    fromRow = (\sig pk -> SubmissionWitness pk sig) <$> field
-
-instance FromRow (PublicKey -> SignedSubmission) where
-    fromRow = (\sub wit pk -> SignedSubmission sub (wit pk)) <$> fromRow <*> fromRow
-
-instance FromRow (PublicKey -> PrivateTx) where
-    fromRow = (\sigSub grade time pk -> PrivateTx (sigSub pk) grade time) <$> fromRow <*> field <*> field
 

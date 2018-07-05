@@ -7,7 +7,7 @@ cabal-dev
 *.chs.h
 *.dyn_o
 *.dyn_hi
-*.cabal 
+*.cabal
 .hpc
 .hsenv
 .cabal-sandbox/
@@ -26,4 +26,3 @@ educator-db
 witness-db
 stylish-haskell.yaml
 test.db
-.stylish-haskell.yaml
