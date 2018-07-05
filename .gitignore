@@ -21,6 +21,7 @@ cabal.project.local
 .HTF/
 .dir-locals.el
 tmp/
+run/tmp/
 educator-db
 witness-db
 stylish-haskell.yaml
