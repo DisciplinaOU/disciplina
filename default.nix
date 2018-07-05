@@ -1,9 +1,4 @@
-with import <nixpkgs> {
-  overlays = [
-    (import ''${builtins.fetchGit "ssh://git@github.com:/serokell/serokell-overlay.git"}/pkgs'')
-  ];
-};
-
+with import <nixpkgs> { overlays = [ <serokell-overlay/pkgs> ]; };
 with haskell.lib;
 
 buildStackApplication {
