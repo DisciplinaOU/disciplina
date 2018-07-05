@@ -1,11 +1,9 @@
-let
-  overlay = import ''${builtins.fetchGit "ssh://git@github.com:/serokell/serokell-overlay.git"}/pkgs'';
-  nixpkgs = import (builtins.fetchTarball "https://github.com/serokell/nixpkgs/archive/master.tar.gz") {
-    overlays = [ overlay ];
-  };
-in
+with import <nixpkgs> {
+  overlays = [
+    (import ''${builtins.fetchGit "ssh://git@github.com:/serokell/serokell-overlay.git"}/pkgs'')
+  ];
+};
 
-with nixpkgs;
 with haskell.lib;
 
 buildStackApplication {
