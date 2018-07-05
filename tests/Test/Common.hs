@@ -25,6 +25,7 @@ import GHC.Show (Show (show))
 import Data.Time.Clock (UTCTime)
 import Data.Time.Format (defaultTimeLocale, parseTimeOrError)
 
+import qualified Crypto.Random as Crypto
 import Crypto.Error (CryptoFailable (..))
 import Dscp.Core (Assignment (..), AssignmentType (..), CourseId (..), Grade (..),
                   SignedSubmission (..), Submission (..), SubmissionType (..),
@@ -55,7 +56,7 @@ import qualified Dscp.Witness as Witness
 
 import Test.Hspec as T (Expectation, Spec, describe, it, shouldBe, shouldSatisfy, specify)
 import Test.QuickCheck as T (Arbitrary (..), Gen, Property, Testable (..), elements, expectFailure,
-                             ioProperty, oneof, suchThat, vectorOf, (===), (==>))
+                             ioProperty, oneof, suchThat, suchThatMap, vectorOf, (===), (==>))
 import Test.QuickCheck.Instances as T ()
 import Test.Tasty as T (TestName, TestTree, defaultMain, testGroup)
 
@@ -68,6 +69,12 @@ f .=. g = \a ->
   in  fa === ga
 
 infixr 5 .=.
+
+-- | Run 'Crypto.Random.MonadRandom' within 'Gen'.
+-- Perhaps later we should refuse using with function for the sake of
+-- pregenerated lists of items.
+genSecureRandom :: Crypto.MonadPseudoRandom Crypto.ChaChaDRG a -> Gen a
+genSecureRandom rand = arbitrary <&> \seed -> Crypto.deterministic seed rand
 
 data Sandbox = Sandbox
     { sWorld        :: Witness.WorldState

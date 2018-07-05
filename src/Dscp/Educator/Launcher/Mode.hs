@@ -22,6 +22,8 @@ import Loot.Network.ZMQ as Z
 
 import Dscp.DB.Rocks.Real.Types (RocksDB)
 import Dscp.DB.SQLite (MonadSQLiteDB, SQLiteDB)
+import Dscp.Educator.Secret (MonadEducatorSecret)
+import Dscp.Educator.Secret.Types (EducatorSecret)
 import qualified Dscp.Launcher.Mode as Basic
 import Dscp.Launcher.Rio (RIO)
 import qualified Dscp.Witness.Launcher as Witness
@@ -34,6 +36,7 @@ import qualified Dscp.Witness.Launcher as Witness
 type EducatorWorkMode m =
     ( Basic.BasicWorkMode m
     , MonadSQLiteDB m
+    , MonadEducatorSecret m
     )
 
 -- | Set of typeclasses which define capabilities both of Educator and Witness.
@@ -49,6 +52,7 @@ type CombinedWorkMode m =
 data EducatorContext = EducatorContext
     { _ecWitnessCtx :: Witness.WitnessContext
     , _ecDB         :: SQLiteDB
+    , _ecSecret     :: EducatorSecret
     }
 
 makeLenses ''EducatorContext
@@ -59,12 +63,14 @@ type EducatorRealMode = RIO EducatorContext
 -- HasLens
 ---------------------------------------------------------------------
 
+instance HasLens SQLiteDB EducatorContext SQLiteDB where
+    lensOf = ecDB
+instance HasLens EducatorSecret EducatorContext EducatorSecret where
+    lensOf = ecSecret
 instance HasLens LoggingIO EducatorContext LoggingIO where
     lensOf = ecWitnessCtx . lensOf @LoggingIO
 instance HasLens RocksDB EducatorContext RocksDB where
     lensOf = ecWitnessCtx . lensOf @RocksDB
-instance HasLens SQLiteDB EducatorContext SQLiteDB where
-    lensOf = ecDB
 instance HasLens Z.ZTGlobalEnv EducatorContext Z.ZTGlobalEnv where
     lensOf = ecWitnessCtx . lensOf @Z.ZTGlobalEnv
 instance HasLens Z.ZTNetCliEnv EducatorContext Z.ZTNetCliEnv where

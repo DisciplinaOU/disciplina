@@ -40,12 +40,15 @@ instance Crypto.HashAlgorithm algo =>
 cfToEither :: CryptoFailable a -> Either String a
 cfToEither = first show . eitherCryptoError
 
+-- | Fails if bytestring length is wrong.
 instance FromByteArray Ed25519.SecretKey where
     fromByteArray = cfToEither . Ed25519.secretKey
 
+-- | Fails if bytestring length is wrong.
 instance FromByteArray Ed25519.PublicKey where
     fromByteArray = cfToEither . Ed25519.publicKey
 
+-- | Fails if bytestring length is wrong.
 instance FromByteArray Ed25519.Signature where
     fromByteArray = cfToEither . Ed25519.signature
 

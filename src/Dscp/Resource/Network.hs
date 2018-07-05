@@ -20,7 +20,8 @@ import Data.Reflection (Given (given), give)
 import Loot.Base.HasLens (HasLens (..))
 import Loot.Log (Logging)
 import Loot.Network.ZMQ (ZTGlobalEnv, ZTNetCliEnv, ZTNetServEnv, ZTNodeId (..), createNetCliEnv,
-                         createNetServEnv, ztGlobalEnv, ztGlobalEnvRelease)
+                         createNetServEnv, termNetCliEnv, termNetServEnv, ztGlobalEnv,
+                         ztGlobalEnvRelease)
 import qualified Text.Show
 
 import Dscp.Resource.Class (AllocResource (..))
@@ -86,7 +87,9 @@ instance WithNetLogging => AllocResource NetCliParams NetCliResources where
             global <- ztGlobalEnv (unNetLogging netLogging)
             cli <- createNetCliEnv global ncPeers
             pure $ NetCliResources global cli
-        release = ztGlobalEnvRelease . view ncGlobalEnv
+        release NetCliResources{..} = do
+            termNetCliEnv _ncClientEnv
+            ztGlobalEnvRelease _ncGlobalEnv
 
 ----------------------------------------------------------------------------
 -- Full node
@@ -122,4 +125,7 @@ instance WithNetLogging => AllocResource NetServParams NetServResources where
             cli <- createNetCliEnv global nsPeers
             serv <- createNetServEnv global nsOurAddress
             pure $ NetServResources global cli serv
-        release = ztGlobalEnvRelease . view nsGlobalEnv
+        release NetServResources{..} = do
+            termNetCliEnv _nsClientEnv
+            termNetServEnv _nsServerEnv
+            ztGlobalEnvRelease _nsGlobalEnv

@@ -21,10 +21,9 @@ module Dscp.Crypto.Impl
 
 import Crypto.Hash.Algorithms (Blake2sp_256)
 
-import Dscp.Crypto.Hash (AbstractHash (..), CryptoniteFunc, HasAbstractHash (..),
-                               abstractHash)
+import Dscp.Crypto.Hash (AbstractHash (..), CryptoniteFunc, HasAbstractHash (..), abstractHash)
 import Dscp.Crypto.Signing (AbstractPK (..), AbstractSK (..), AbstractSig (..), CryptoEd25519,
-                                  HasAbstractSignature (..), abstractSign, abstractVerify)
+                            HasAbstractSignature (..), abstractSign, abstractVerify)
 
 ------------------------------------------------------
 -- Hashing

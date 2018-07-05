@@ -12,7 +12,8 @@ import qualified Data.ByteString.Lazy as BSL
 
 import Dscp.Crypto.Hash.Class (AbstractHash (..))
 import Dscp.Crypto.Signing.Class (AbstractPK (..), AbstractSK (..), AbstractSig (..),
-                                        HasAbstractSignature (..), SignatureScheme (..))
+                                  HasAbstractSignature (..), SignatureScheme (..)
+                                  )
 
 -- | Tag for 'Ed25519' signature scheme implementation from `crytonite`.
 data CryptoEd25519
@@ -30,6 +31,8 @@ instance SignatureScheme CryptoEd25519 where
 
     unsafeVerifyBytes (AbstractPK pk) a (AbstractSig sig) =
         Ed25519.verify pk a sig
+
+    genSecretKey = AbstractSK <$> Ed25519.generateSecretKey
 
 -- | Instances for interesting types with 'ByteArrayAccess'
 instance HasAbstractSignature CryptoEd25519 ByteString
