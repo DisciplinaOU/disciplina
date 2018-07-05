@@ -1,4 +1,4 @@
-with import <nixpkgs> { overlays = [ <serokell-overlay/pkgs> ]; };
+with import <nixpkgs> { overlays = [ (import <serokell-overlay/pkgs>) ]; };
 with haskell.lib;
 
 buildStackApplication {
