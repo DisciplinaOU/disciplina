@@ -14,6 +14,6 @@ buildStackApplication {
       configureFlags = [ "--ghc-option=-Werror" ];
       doCheck = true;
       preConfigure = "${hpack}/bin/hpack .";
-    }));
+    });
   };
 }
