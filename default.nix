@@ -9,6 +9,9 @@ buildStackApplication {
   overrides = final: previous: {
     rocksdb-haskell = dependCabal previous.rocksdb-haskell [ rocksdb ];
     cardano-sl-networking = appendConfigureFlag previous.cardano-sl-networking "--ghc-option=-fno-warn-redundant-constraints";
-    disciplina = doCheck ((appendConfigureFlag previous.disciplina "--ghc-option=-Werror").overrideAttrs (super: { preConfigure = "${final.hpack}/bin/hpack ."; }));
+    disciplina = doCheck (overrideCabal (appendConfigureFlag previous.disciplina "--ghc-option=-Werror") (super: with final; {
+      buildDepends = (super.buildDepends or []) ++ [ hspec tasty ];
+      preConfigure = "${hpack}/bin/hpack .";
+    }));
   };
 }
