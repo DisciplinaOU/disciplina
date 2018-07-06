@@ -1,11 +1,5 @@
-let
-  overlay = import ''${builtins.fetchGit "ssh://git@github.com:/serokell/serokell-overlay.git"}/pkgs'';
-  nixpkgs = import (builtins.fetchTarball "https://github.com/serokell/nixpkgs/archive/master.tar.gz") {
-    overlays = [ overlay ];
-  };
-in
-
-with nixpkgs;
+with import <nixpkgs> { overlays = [ (import <serokell-overlay/pkgs>) ]; };
+with haskell.lib;
 
 buildStackApplication {
   package = "disciplina";
@@ -14,7 +8,7 @@ buildStackApplication {
 
   overrides = final: previous: {
     rocksdb-haskell = dependCabal previous.rocksdb-haskell [ rocksdb ];
-    cardano-sl-networking = haskell.lib.appendConfigureFlag previous.cardano-sl-networking "--ghc-option=-fno-warn-redundant-constraints";
-    disciplina = previous.disciplina.overrideAttrs (super: { preConfigure = "${final.hpack}/bin/hpack ."; });
+    cardano-sl-networking = appendConfigureFlag previous.cardano-sl-networking "--ghc-option=-fno-warn-redundant-constraints";
+    disciplina = (appendConfigureFlag previous.disciplina "--ghc-option=-Werror").overrideAttrs (super: { preConfigure = "${final.hpack}/bin/hpack ."; });
   };
 }
