@@ -30,6 +30,7 @@ instance Exception DomainError
 
 type DBM m = MonadSQLiteDB m
 
+-- | How can a student get a list of courses?
 getStudentCourses :: DBM m => Id Student -> m [Id Course]
 getStudentCourses student =
     query getStudentCoursesQuery (Only student)
@@ -41,6 +42,7 @@ getStudentCourses student =
         where   student_addr = ?
     |]
 
+-- | How can a student enroll to a course?
 enrollStudentToCourse :: DBM m => Id Student -> Id Course -> m ()
 enrollStudentToCourse student course = do
     transaction $ do
@@ -55,6 +57,7 @@ enrollStudentToCourse student course = do
         values       (?, ?)
     |]
 
+-- | How can a student get a list of his current course assignments?
 getStudentAssignments :: DBM m => Id Student -> Id Course -> m [Assignment]
 getStudentAssignments student course = do
     query getStudentAssignmentsQuery (student, course)
@@ -69,8 +72,64 @@ getStudentAssignments student course = do
                and course_id       = ?
     |]
 
+-- | How can a student submit a submission for assignment?
 submitAssignment :: DBM m => SignedSubmission -> m (Id SignedSubmission)
 submitAssignment = createSignedSubmission
+
+-- How can a student see his grades for course assignments?
+getGradesForCourseAssignments :: DBM m => Id Student -> Id Course -> m [PrivateTx]
+getGradesForCourseAssignments student course = do
+    query getGradesForCourseAssignmentsQuery (course, student)
+  where
+    getGradesForCourseAssignmentsQuery :: Query
+    getGradesForCourseAssignmentsQuery = [q|
+        select     Submissions.student_addr,
+                   Submissions.contents_hash,
+                   Assignments.course_id,
+                   Assignments.contents_hash,
+                   Assignments.desc,
+                   Submissions.signature
+                   grade
+                   time
+
+        from       Transactions
+
+        left join  Submissions
+               on  submission_hash = Submissions.hash
+
+        left join  Assignments
+               on  sssignment_hash = Assignments.hash
+              and  Assignments.course_id = ?
+
+        where      student_addr = ?
+    |]
+
+-- | How can a student receive transactions with Merkle proofs which contain info about his grades and assignments?
+getStudentTransactions :: DBM m => Id Student -> m [PrivateTx]
+getStudentTransactions student = do
+    query getStudentTransactionsQuery (Only student)
+  where
+    getStudentTransactionsQuery :: Query
+    getStudentTransactionsQuery = [q|
+        select     Submissions.student_addr,
+                   Submissions.contents_hash,
+                   Assignments.course_id,
+                   Assignments.contents_hash,
+                   Assignments.desc,
+                   Submissions.signature
+                   grade
+                   time
+
+        from       Transactions
+
+        left join  Submissions
+               on  submission_hash = Submissions.hash
+
+        left join  Assignments
+               on  sssignment_hash = Assignments.hash
+
+        where      student_addr = ?
+    |]
 
 createSignedSubmission :: DBM m => SignedSubmission -> m (Id SignedSubmission)
 createSignedSubmission sigSub = do
@@ -129,58 +188,6 @@ isAssignedToStudent student assignment = do
            and  assignment_hash = ?
     |]
 
-getGradesForCourseAssignments :: DBM m => Id Student -> Id Course -> m [PrivateTx]
-getGradesForCourseAssignments student course = do
-    query getGradesForCourseAssignmentsQuery (course, student)
-  where
-    getGradesForCourseAssignmentsQuery :: Query
-    getGradesForCourseAssignmentsQuery = [q|
-        select     Submissions.student_addr,
-                   Submissions.contents_hash,
-                   Assignments.course_id,
-                   Assignments.contents_hash,
-                   Assignments.desc,
-                   Submissions.signature
-                   grade
-                   time
-
-        from       Transactions
-
-        left join  Submissions
-               on  submission_hash = Submissions.hash
-
-        left join  Assignments
-               on  sssignment_hash = Assignments.hash
-              and  Assignments.course_id = ?
-
-        where      student_addr = ?
-    |]
-
-getStudentTransactions :: DBM m => Id Student -> m [PrivateTx]
-getStudentTransactions student = do
-    query getStudentTransactionsQuery (Only student)
-  where
-    getStudentTransactionsQuery :: Query
-    getStudentTransactionsQuery = [q|
-        select     Submissions.student_addr,
-                   Submissions.contents_hash,
-                   Assignments.course_id,
-                   Assignments.contents_hash,
-                   Assignments.desc,
-                   Submissions.signature
-                   grade
-                   time
-
-        from       Transactions
-
-        left join  Submissions
-               on  submission_hash = Submissions.hash
-
-        left join  Assignments
-               on  sssignment_hash = Assignments.hash
-
-        where      student_addr = ?
-    |]
 
 createCourse :: DBM m => Course -> Maybe Text -> [Id Subject] -> m (Id Course)
 createCourse course desc subjects = do

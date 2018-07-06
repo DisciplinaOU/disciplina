@@ -50,7 +50,7 @@ import Data.Traversable (for)
 
 import System.IO.Unsafe
 
-import Dscp.Util (HasId (Id))
+import Dscp.Util (HasId (..))
 
 import qualified Data.Tree.AVL as AVL
 import qualified Dscp.Accounts as Accounts
@@ -245,3 +245,12 @@ mkPrivateTx courseId grade addrKey (witnessPKey, witnessSKey) =
        , _aType = Regular
        , _aAssignment = ""
        }
+
+data AssertionFailed = AssertionFailed String
+    deriving (Show, Typeable)
+
+instance Exception AssertionFailed
+
+assertThat :: MonadThrow m => Bool -> String -> m ()
+assertThat True _ = return ()
+assertThat _    e = throwM (AssertionFailed e)

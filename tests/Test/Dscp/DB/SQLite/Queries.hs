@@ -1,5 +1,5 @@
 
-module Test.Dscp.DB.SQLite.Instances where
+module Test.Dscp.DB.SQLite.Queries where
 
 import Dscp.DB.SQLite as DB
 
@@ -7,7 +7,7 @@ import Test.Dscp.DB.SQLite.Common
 
 spec_Instances :: Spec
 spec_Instances = do
-    describe "Database operations" $ do
+    describe "Basic database operations" $ do
         describe "Courses" $ do
             it "Course does not exist before it is created" $
                 sqliteProperty $ \courseId -> do
@@ -126,3 +126,21 @@ spec_Instances = do
 
                     return (trans' == Just trans)
 
+    describe "Concrete operations from domain" $ do
+        it "getStudentCourses/enrollStudentToCourse" $ do
+            sqliteProperty $ \(student, course1, course2, course3) -> do
+                let courses = [course1, course2, course3]
+
+                studentId <- DB.createStudent student
+                courseIds <- DB.getStudentCourses studentId
+
+                null courseIds `assertThat`
+                    "Student should be enrolled to no courses initially"
+
+                for_ courses $ \course -> do
+                    courseId <- DB.createCourse course (Just "foo") []
+                    DB.enrollStudentToCourse studentId courseId
+
+                courseIds' <- DB.getStudentCourses student
+
+                return (sort (map getId courses) == sort courseIds')
