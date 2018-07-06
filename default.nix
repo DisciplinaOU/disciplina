@@ -10,10 +10,10 @@ buildStackApplication {
     rocksdb-haskell = dependCabal previous.rocksdb-haskell [ rocksdb ];
     cardano-sl-networking = appendConfigureFlag previous.cardano-sl-networking "--ghc-option=-fno-warn-redundant-constraints";
     disciplina = overrideCabal previous.disciplina (super: with final; {
-      buildDepends = [ hspec tasty tasty-discover tasty-hspec ];
       configureFlags = [ "--ghc-option=-Werror" ];
       doCheck = true;
       preConfigure = "${hpack}/bin/hpack .";
+      testDepends = [ hspec tasty tasty-discover tasty-hspec ];
     });
   };
 }
