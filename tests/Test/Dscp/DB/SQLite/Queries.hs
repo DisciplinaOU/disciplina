@@ -1,5 +1,11 @@
 
+{-# LANGUAGE ViewPatterns #-}
+
 module Test.Dscp.DB.SQLite.Queries where
+
+import Prelude hiding (toList)
+
+import Data.List.NonEmpty (NonEmpty, toList)
 
 import Dscp.DB.SQLite as DB
 
@@ -106,7 +112,7 @@ spec_Instances = do
                     return (sub' == Just sigSubmission)
 
         describe "Transactions" $ do
-            it "Submission is created if all deps exist" $
+            it "Transaction is created if all deps exist" $
                 sqliteProperty $ \trans -> do
 
                     let sigSubmission = trans        ^.ptSignedSubmission
@@ -144,3 +150,43 @@ spec_Instances = do
                 courseIds' <- DB.getStudentCourses student
 
                 return (sort (map getId courses) == sort courseIds')
+
+        it "getStudentAssignments" $ do
+            sqliteProperty $ \
+                ( student
+                , course1
+                , course2
+                , (toList -> toHerCourse1)    :: NonEmpty Assignment
+                , (toList -> toHerCourse2)    :: NonEmpty Assignment
+                , (toList -> notToHerCourse1) :: NonEmpty Assignment
+                , (toList -> notToHerCourse2) :: NonEmpty Assignment
+                ) -> do
+
+                    studentId <- DB.createStudent student
+
+                    courseId1 <- DB.createCourse course1 Nothing []
+                    courseId2 <- DB.createCourse course2 Nothing []
+
+                    DB.enrollStudentToCourse studentId courseId1
+                    DB.enrollStudentToCourse studentId courseId2
+
+                    let toHer = (toHerCourse1 & mapped.aCourseId .~ courseId1)
+                             <> (toHerCourse2 & mapped.aCourseId .~ courseId2)
+
+                    let notToHer = (notToHerCourse1 & mapped.aCourseId .~ courseId1)
+                                <> (notToHerCourse2 & mapped.aCourseId .~ courseId2)
+
+                    for_ toHer $ \assignment -> do
+                        assignmentId <- DB.createAssignment assignment
+                        DB.setStudentAssignment studentId assignmentId
+
+                    for_ notToHer $ \assignment -> do
+                        _ <- DB.createAssignment assignment
+                        return ()
+
+                    assignments1 <- DB.getStudentAssignments studentId courseId1
+                    assignments2 <- DB.getStudentAssignments studentId courseId2
+
+                    let equal = (==) `on` sortBy (comparing getId)
+
+                    return $ (assignments1 <> assignments2) `equal` toHer

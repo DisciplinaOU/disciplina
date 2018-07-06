@@ -38,7 +38,7 @@ import qualified Crypto.PubKey.Ed25519 as Ed25519
 import qualified Data.ByteString.Char8 as C
 
 -- import Control.Arrow (second)
-import Control.Lens (each, to)
+import Control.Lens (each, to, mapped)
 
 -- import Data.Bits                                 (xor)
 import Data.Default as T (Default (def))

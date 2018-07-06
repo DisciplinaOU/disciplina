@@ -22,6 +22,7 @@ data DomainError
     = CourseDoesNotExist                  (Id Course)
     | StudentDoesNotExist                 (Id Student)
     | AssignmentDoesNotExist              (Id Assignment)
+    | StudentWasNotEnrolledOnTheCourse    (Id Student) (Id Course)
     | StudentWasNotSubscribedOnAssignment (Id Student) (Id Assignment)
     | SubmissionDoesNotExist              (Id Submission)
     deriving (Show, Typeable)
@@ -167,13 +168,33 @@ createSignedSubmission sigSub = do
     |]
 
 setStudentAssignment :: DBM m => Id Student -> Id Assignment -> m ()
-setStudentAssignment student assignment = do
-    execute setStudentAssignmentRequest (student, assignment)
+setStudentAssignment studentId assignmentId = do
+    transaction $ do
+      _          <- existsStudent studentId    `assert`     StudentDoesNotExist    studentId
+      assignment <- getAssignment assignmentId `assertJust` AssignmentDoesNotExist assignmentId
+
+      let courseId = assignment^.aCourseId
+
+      _ <- existsCourse            courseId `assert` CourseDoesNotExist                         courseId
+      _ <- isEnrolledTo  studentId courseId `assert` StudentWasNotEnrolledOnTheCourse studentId courseId
+
+      execute setStudentAssignmentRequest (studentId, assignmentId)
   where
     setStudentAssignmentRequest :: Query
     setStudentAssignmentRequest = [q|
         insert into  StudentAssignments
         values      (?, ?)
+    |]
+
+isEnrolledTo :: DBM m => Id Student -> Id Course -> m Bool
+isEnrolledTo studentId courseId = do
+    exists enrollmentQuery (studentId, courseId)
+  where
+    enrollmentQuery = [q|
+        select  1
+        from    StudentCourses
+        where   student_addr = ?
+           and  course_id    = ?
     |]
 
 isAssignedToStudent :: DBM m => Id Student -> Id Assignment -> m Bool
