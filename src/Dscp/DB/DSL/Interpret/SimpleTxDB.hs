@@ -6,12 +6,13 @@ import Control.Lens (filtered, makePrisms, traversed)
 import Data.List (intersect, union)
 import Data.Map.Strict (Map)
 
-import Dscp.Core (Assignment (..), CourseId (..), SignedSubmission (..), SubjectId, Submission (..),
+import Dscp.Core (Assignment (..), Course (..), SignedSubmission (..), Subject, Submission (..),
                   activityTypeGraphIndexed, hasPathFromTo)
 import Dscp.Crypto (hash)
 import Dscp.DB.DSL.Class (MonadSearchTxObj (..), Obj, ObjHashEq (..), QueryObj (..), QueryTx (..),
                           QueryTxs (..), RunQuery (..), TxIdEq (..), TxsFilterExpr (..), WHERE (..))
-import Dscp.Educator (PrivateTx (..), PrivateTxId)
+import Dscp.Educator (PrivateTx (..))
+import Dscp.Util (HasId (Id))
 
 import qualified Data.Map.Strict as Map hiding (Map)
 
@@ -25,7 +26,7 @@ makePrisms ''SimpleObj
 -- and a mapping of course id to subject ids.
 data SimpleDB = SimpleDB
     { sdbGetSimpleObj        :: ![SimpleObj]
-    , sdbCourseIdToSubjectId :: !(Map CourseId [SubjectId])
+    , sdbCourseIdToSubjectId :: !(Map (Id Course) [Id Subject])
     }
 
 -- | Database put in a reader environment
@@ -40,7 +41,7 @@ instance MonadSearchTxObj SimpleTxDB where
 
 -- | Evaluator for query: find Tx in db with hash == h
 evalSimpleTxQuery :: QueryTx -> SimpleTxDB (Maybe PrivateTx)
-evalSimpleTxQuery (SELECTTx _ (TxIdEq (h :: PrivateTxId))) = do
+evalSimpleTxQuery (SELECTTx _ (TxIdEq (h :: Id PrivateTx))) = do
     db <- asks sdbGetSimpleObj
     return $ db ^? traversed . _SSTx . filtered (((h==).hash))
 
@@ -65,7 +66,7 @@ evalSimpleTxsQuery (SELECTTxs _ (TxHasSubjectId sId)) = do
                  _         -> False
 
 -- | Evaluator for query: find Txs in db with grade == g
-evalSimpleTxsQuery (SELECTTxs _ (TxGradeEq grade)) = do
+evalSimpleTxsQuery (SELECTTxs _ (_ :== grade)) = do
     db <- asks sdbGetSimpleObj
     return $ db ^.. traversed
                  . _SSTx
@@ -134,11 +135,11 @@ runSimpleTxDBQuery dbTx dbObj query =
         sIdPiCalculus = 9
         sIdComputabilityTheory = 10
         -- Also some arbitrarly choosen course ids.
-        cId1 = CourseId 1
-        cId2 = CourseId 2
-        cId3 = CourseId 3
-        cId4 = CourseId 4
-        cId5 = CourseId 5
+        cId1 = Course 1
+        cId2 = Course 2
+        cId3 = Course 3
+        cId4 = Course 4
+        cId5 = Course 5
 
-getTxCourseId :: PrivateTx -> CourseId
+getTxCourseId :: PrivateTx -> Id Course
 getTxCourseId tx = _aCourseId (_sAssignment (_ssSubmission (_ptSignedSubmission tx)))

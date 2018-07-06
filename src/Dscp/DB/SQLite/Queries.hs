@@ -2,39 +2,35 @@
 
 module Dscp.DB.SQLite.Queries where
 
-import Control.Lens (to)
-
 import Database.SQLite.Simple (Only (..), Query)
 import Database.SQLite.Simple.ToRow (ToRow (..))
 
 import Text.InterpolatedString.Perl6 (q)
 
-import UnliftIO (throwIO)
-
 import Dscp.Core.Serialise ()
-import Dscp.Core.Types (Assignment (..), CourseId, SignedSubmission (..), StudentId,
+import Dscp.Core.Types (Assignment (..), Course, SignedSubmission (..), Student, Subject,
                         Submission (..), aAssignment, aCourseId, aType, sAssignment, sStudentId,
                         sType, ssSubmission, ssWitness)
-import Dscp.Crypto (Hash, hash)
 import Dscp.DB.SQLite.Class
 import Dscp.DB.SQLite.Instances ()
 
-import Dscp.Educator.Txs (PrivateTx (..), PrivateTxId, ptGrade, ptSignedSubmission, ptTime)
+import Dscp.Educator.Txs (PrivateTx (..), ptGrade, ptSignedSubmission, ptTime)
 import Dscp.Educator.Serialise ()
+import Dscp.Util (HasId (..), idOf, assert, assertJust)
 
 data DomainError
-    = CourseDoesNotExist                  CourseId
-    | StudentDoesNotExist                 StudentId
-    | AssignmentDoesNotExist              (Hash Assignment)
-    | StudentWasNotSubscribedOnAssignment StudentId (Hash Assignment)
-    | SubmissionDoesNotExist              (Hash Submission)
+    = CourseDoesNotExist                  (Id Course)
+    | StudentDoesNotExist                 (Id Student)
+    | AssignmentDoesNotExist              (Id Assignment)
+    | StudentWasNotSubscribedOnAssignment (Id Student) (Id Assignment)
+    | SubmissionDoesNotExist              (Id Submission)
     deriving (Show, Typeable)
 
 instance Exception DomainError
 
 type DBM m = MonadSQLiteDB m
 
-getStudentCourses :: DBM m => StudentId -> m [CourseId]
+getStudentCourses :: DBM m => Id Student -> m [Id Course]
 getStudentCourses student =
     query getStudentCoursesQuery (Only student)
   where
@@ -45,7 +41,7 @@ getStudentCourses student =
         where   student_addr = ?
     |]
 
-enrollStudentToCourse :: DBM m => StudentId -> CourseId -> m ()
+enrollStudentToCourse :: DBM m => Id Student -> Id Course -> m ()
 enrollStudentToCourse student course = do
     transaction $ do
         _ <- existsCourse  course  `assert` CourseDoesNotExist  course
@@ -59,7 +55,7 @@ enrollStudentToCourse student course = do
         values       (?, ?)
     |]
 
-getStudentAssignments :: DBM m => StudentId -> CourseId -> m [Assignment]
+getStudentAssignments :: DBM m => Id Student -> Id Course -> m [Assignment]
 getStudentAssignments student course = do
     query getStudentAssignmentsQuery (student, course)
   where
@@ -73,21 +69,21 @@ getStudentAssignments student course = do
                and course_id       = ?
     |]
 
-submitAssignment :: DBM m => SignedSubmission -> m (Hash Submission)
+submitAssignment :: DBM m => SignedSubmission -> m (Id SignedSubmission)
 submitAssignment = createSignedSubmission
 
-createSignedSubmission :: DBM m => SignedSubmission -> m (Hash Submission)
+createSignedSubmission :: DBM m => SignedSubmission -> m (Id SignedSubmission)
 createSignedSubmission sigSub = do
     let
         submission     = sigSub^.ssSubmission
         submissionSig  = sigSub^.ssWitness
 
         student        = submission^.sStudentId
-        submissionHash = submission^.to hash
+        submissionHash = submission^.idOf
         submissionType = submission^.sType
         assignment     = submission^.sAssignment
 
-        assignmentHash = assignment^.to hash
+        assignmentHash = assignment^.idOf
 
     transaction $ do
         _ <- existsStudent student        `assert`     StudentDoesNotExist    student
@@ -111,10 +107,9 @@ createSignedSubmission sigSub = do
         values       (?, ?, ?, ?, ?)
     |]
 
-setStudentAssignment :: DBM m => StudentId -> Hash Assignment -> m (StudentId, Hash Assignment)
+setStudentAssignment :: DBM m => Id Student -> Id Assignment -> m ()
 setStudentAssignment student assignment = do
     execute setStudentAssignmentRequest (student, assignment)
-    return (student, assignment)
   where
     setStudentAssignmentRequest :: Query
     setStudentAssignmentRequest = [q|
@@ -122,7 +117,7 @@ setStudentAssignment student assignment = do
         values      (?, ?)
     |]
 
-isAssignedToStudent :: DBM m => StudentId -> Hash Assignment -> m Bool
+isAssignedToStudent :: DBM m => Id Student -> Id Assignment -> m Bool
 isAssignedToStudent student assignment = do
     exists getStudentAssignmentQuery (student, assignment)
   where
@@ -134,7 +129,7 @@ isAssignedToStudent student assignment = do
            and  assignment_hash = ?
     |]
 
-getGradesForCourseAssignments :: DBM m => StudentId -> CourseId -> m [PrivateTx]
+getGradesForCourseAssignments :: DBM m => Id Student -> Id Course -> m [PrivateTx]
 getGradesForCourseAssignments student course = do
     query getGradesForCourseAssignmentsQuery (course, student)
   where
@@ -161,7 +156,7 @@ getGradesForCourseAssignments student course = do
         where      student_addr = ?
     |]
 
-getStudentTransactions :: DBM m => StudentId -> m [PrivateTx]
+getStudentTransactions :: DBM m => Id Student -> m [PrivateTx]
 getStudentTransactions student = do
     query getStudentTransactionsQuery (Only student)
   where
@@ -187,31 +182,25 @@ getStudentTransactions student = do
         where      student_addr = ?
     |]
 
-createCourse :: DBM m => CourseId -> Maybe Text -> m CourseId
-createCourse course desc = do
-    execute createCourseRequest (course, desc)
-    return course
+createCourse :: DBM m => Course -> Maybe Text -> [Id Subject] -> m (Id Course)
+createCourse course desc subjects = do
+    transaction $ do
+        execute createCourseRequest (course, desc)
+        for_ subjects $ \subject -> do
+            execute attachSubjectToCourseRequest (subject, course)
+        return course
   where
     createCourseRequest = [q|
         insert into  Courses
         values       (?, ?)
     |]
 
-assert :: DBM m => m Bool -> DomainError -> m ()
-assert action message = do
-    yes <- action
+    attachSubjectToCourseRequest = [q|
+        insert into  Subjects
+        values       (?, ?, "")
+    |]
 
-    unless yes $ do
-        throwIO message
-
-assertJust :: DBM m => m (Maybe a) -> DomainError -> m a
-assertJust action message = do
-    mb <- action
-
-    whenNothing mb $ do
-        throwIO message
-
-existsCourse :: DBM m => CourseId -> m Bool
+existsCourse :: DBM m => Id Course -> m Bool
 existsCourse course = do
     exists existsCourseQuery (Only course)
   where
@@ -221,7 +210,7 @@ existsCourse course = do
         where   id = ?
     |]
 
-existsStudent :: DBM m => StudentId -> m Bool
+existsStudent :: DBM m => Id Student -> m Bool
 existsStudent student = do
     exists existsCourseQuery (Only student)
   where
@@ -231,7 +220,7 @@ existsStudent student = do
         where   addr = ?
     |]
 
-createStudent :: DBM m => StudentId -> m StudentId
+createStudent :: DBM m => Student -> m (Id Student)
 createStudent student = do
     execute createStudentRequest (Only student)
     return student
@@ -241,7 +230,7 @@ createStudent student = do
         values       (?)
     |]
 
-createAssignment :: DBM m => Assignment -> m (Hash Assignment)
+createAssignment :: DBM m => Assignment -> m (Id Assignment)
 createAssignment assignment = do
     let courseId = assignment^.aCourseId
 
@@ -259,9 +248,9 @@ createAssignment assignment = do
         insert into  Assignments
         values       (?,?,?,?)
     |]
-    assignmentHash = hash assignment
+    assignmentHash = assignment^.idOf
 
-getAssignment :: DBM m => Hash Assignment -> m (Maybe Assignment)
+getAssignment :: DBM m => Id Assignment -> m (Maybe Assignment)
 getAssignment assignmentHash = do
     listToMaybe <$> query getAssignmentQuery (Only assignmentHash)
   where
@@ -271,7 +260,7 @@ getAssignment assignmentHash = do
         where   hash = ?
     |]
 
-getSignedSubmission :: DBM m => Hash Submission -> m (Maybe SignedSubmission)
+getSignedSubmission :: DBM m => Id SignedSubmission -> m (Maybe SignedSubmission)
 getSignedSubmission submissionHash = do
     listToMaybe <$> query getSignedSubmissionQuery (Only submissionHash)
   where
@@ -291,11 +280,11 @@ getSignedSubmission submissionHash = do
         where      Submissions.hash = ?
     |]
 
-createTransaction :: DBM m => PrivateTx -> m (PrivateTxId)
+createTransaction :: DBM m => PrivateTx -> m (Id PrivateTx)
 createTransaction trans = do
     transaction $ do
-        let ptid    = hash trans
-            subHash = trans^.ptSignedSubmission.ssSubmission.to hash
+        let ptid    = trans^.idOf
+            subHash = trans^.ptSignedSubmission.idOf
 
         _ <- getSignedSubmission subHash `assertJust`
             SubmissionDoesNotExist subHash
@@ -316,7 +305,7 @@ createTransaction trans = do
         values       (?, ?, ?, ?, ?)
     |]
 
-getTransaction :: DBM m => PrivateTxId -> m (Maybe PrivateTx)
+getTransaction :: DBM m => Id PrivateTx -> m (Maybe PrivateTx)
 getTransaction ptid = do
     listToMaybe <$> query getTransactionQuery (Only ptid)
   where

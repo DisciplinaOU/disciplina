@@ -15,6 +15,7 @@ module Test.Common
        ( module Test.Common
        , module Control.Lens
        , module T
+       , module Dscp.Util
        ) where
 
 import Prelude hiding (show, unlines)
@@ -27,7 +28,7 @@ import Data.Time.Format (defaultTimeLocale, parseTimeOrError)
 
 import Crypto.Error (CryptoFailable (..))
 import qualified Crypto.Random as Crypto
-import Dscp.Core (Assignment (..), AssignmentType (..), CourseId (..), Grade (..),
+import Dscp.Core (Assignment (..), AssignmentType (..), Course (..), Grade (..),
                   SignedSubmission (..), Submission (..), SubmissionWitness (..), mkAddr,
                   offlineHash)
 import Dscp.Crypto (AbstractPK (..), AbstractSK (..), PublicKey, SecretKey, hash, sign)
@@ -48,6 +49,8 @@ import Data.Default as T (Default (def))
 import Data.Traversable (for)
 
 import System.IO.Unsafe
+
+import Dscp.Util (HasId (Id))
 
 import qualified Data.Tree.AVL as AVL
 import qualified Dscp.Accounts as Accounts
@@ -202,7 +205,7 @@ mkKeyPair seed =
   in (AbstractPK (Ed25519.toPublic x), AbstractSK x)
 
 -- | Create a private transaction
-mkPrivateTx :: CourseId -- ^ course id
+mkPrivateTx :: Id Course -- ^ course id
             -> Grade -- ^ grade
             -> PublicKey -- ^ public key to derive address from
             -> (PublicKey, SecretKey) -- ^ witness key pair

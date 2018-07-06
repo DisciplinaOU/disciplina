@@ -85,7 +85,7 @@ buildWhereStatement = go
   where
     go = \case
         TxHasSubjectId sid   -> [qq| Subjects.id = $sid   |]
-        TxGradeEq      grade -> [qq| grade       = $grade |]
+        TxGrade :==    grade -> [qq| grade       = $grade |]
         TxGrade :>=    grade -> [qq| grade      >= $grade |]
 
         left :&  right       -> [qq| ({go left}) and ({go right}) |]

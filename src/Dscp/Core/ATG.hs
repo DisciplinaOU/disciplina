@@ -18,20 +18,20 @@ import qualified Data.Map.Strict as M
 import Data.Set (Set)
 import qualified Data.Set as S
 
-import Dscp.Core.Types (ATG (..), ATGEdge (..), ATGNode (..), SubjectId, atgeChild)
-import Dscp.Util (anyMapM)
+import Dscp.Core.Types (ATG (..), ATGEdge (..), ATGNode (..), Subject, atgeChild)
+import Dscp.Util (Id, anyMapM)
 
 -- | ATG with an index from subject IDs to nodes.
 -- Constructor is unsafe, because it's totally possible
 -- to construct invalid index manually.
 data ATGIndexed = UnsafeATGIndexed
     { _atgiGraph :: !ATG
-    , _atgiIndex :: !(Map SubjectId ATGNode)
+    , _atgiIndex :: !(Map (Id Subject) ATGNode)
     } deriving (Show, Eq, Generic)
 
 makeLenses ''ATGIndexed
 
-buildIndex :: ATG -> Map SubjectId ATGNode
+buildIndex :: ATG -> Map (Id Subject) ATGNode
 buildIndex = foldl' goNode mempty . getATGRoots
   where goNode mp node@(ATGNode sId es) =
             if M.member sId mp
@@ -42,10 +42,10 @@ buildIndex = foldl' goNode mempty . getATGRoots
 mkATGIndexed :: ATG -> ATGIndexed
 mkATGIndexed atg = UnsafeATGIndexed atg $ buildIndex atg
 
-type ATGTraverse = State (Set SubjectId)
+type ATGTraverse = State (Set (Id Subject))
 
 -- | Check reachability using DFS
-hasPathFromM :: SubjectId -> ATGNode -> ATGTraverse Bool
+hasPathFromM :: Id Subject -> ATGNode -> ATGTraverse Bool
 hasPathFromM sId (ATGNode sId' es)
     | sId == sId' = return True
     | otherwise = gets (S.member sId') >>= \case
@@ -56,7 +56,7 @@ hasPathFromM sId (ATGNode sId' es)
 -- there's a path from subject A to subject B.
 -- If either of given subjects are not present in ATG, then
 -- there's automatically no path.
-hasPathFromTo :: ATGIndexed -> SubjectId -> SubjectId -> Bool
+hasPathFromTo :: ATGIndexed -> Id Subject -> Id Subject -> Bool
 hasPathFromTo atgi sFrom sTo =
     case M.lookup sFrom (atgi^.atgiIndex) of
         Nothing   -> False
@@ -75,7 +75,7 @@ which was meant to be the common root for everything, but now we don't necessari
 need a common root.
 -}
 
-mkATGNode :: SubjectId -> [ATGNode] -> ATGNode
+mkATGNode :: Id Subject -> [ATGNode] -> ATGNode
 mkATGNode sId = ATGNode sId . map (ATGEdge 1)
 
 atgMathematics, atgComputerScience, atgElementary,

@@ -16,7 +16,7 @@ spec_Instances = do
 
             it "Course does exist after it is created" $
                 sqliteProperty $ \courseId -> do
-                    _       <- DB.createCourse courseId (Just "foo")
+                    _       <- DB.createCourse courseId (Just "foo") []
                     isThere <- DB.existsCourse courseId
 
                     return isThere
@@ -38,7 +38,7 @@ spec_Instances = do
             it "Assignment is created and retrieved by hash" $
                 sqliteProperty $ \assignment -> do
 
-                    _              <- DB.createCourse    (assignment^.aCourseId) Nothing
+                    _              <- DB.createCourse    (assignment^.aCourseId) Nothing []
                     assignmentHash <- DB.createAssignment assignment
                     assignment'    <- DB.getAssignment    assignmentHash
 
@@ -64,7 +64,7 @@ spec_Instances = do
                         assignment = submission   ^.sAssignment
                         course     = assignment   ^.aCourseId
 
-                    _ <- DB.createCourse           course Nothing
+                    _ <- DB.createCourse           course Nothing []
                     _ <- DB.createAssignment       assignment
 
                     throws @DomainError $ do
@@ -80,7 +80,7 @@ spec_Instances = do
                             course     = assignment^.aCourseId
                             student    = submission^.sStudentId
 
-                        _ <- DB.createCourse           course Nothing
+                        _ <- DB.createCourse           course Nothing []
                         _ <- DB.createStudent          student
                         _ <- DB.createAssignment       assignment
                         _ <- DB.createSignedSubmission sigSubmission
@@ -95,7 +95,7 @@ spec_Instances = do
                         course     = assignment   ^.aCourseId
                         student    = submission   ^.sStudentId
 
-                    _       <- DB.createCourse           course Nothing
+                    _       <- DB.createCourse           course Nothing []
                     _       <- DB.createStudent          student
                     aHash   <- DB.createAssignment       assignment
                     _       <- DB.setStudentAssignment   student aHash
@@ -115,7 +115,7 @@ spec_Instances = do
                         course        = assignment   ^.aCourseId
                         student       = submission   ^.sStudentId
 
-                    _         <- DB.createCourse           course Nothing
+                    _         <- DB.createCourse           course Nothing []
                     _         <- DB.createStudent          student
                     aHash     <- DB.createAssignment       assignment
                     _         <- DB.setStudentAssignment   student aHash

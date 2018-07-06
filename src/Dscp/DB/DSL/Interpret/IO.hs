@@ -5,11 +5,12 @@ module Dscp.DB.DSL.Interpret.IO
 
 import Data.List (intersect, union)
 
-import qualified Dscp.Core as Core (Grade (..), SubjectId (..))
+import qualified Dscp.Core as Core (Grade (..), Subject (..))
 import Dscp.DB.DSL.Class (MonadSearchTxObj (..), Obj, ObjHashEq (..), QueryObj (..),
                                 QueryTx (..), QueryTxs (..), TxIdEq (..),
                                 TxsFilterExpr (..), WHERE (..))
-import Dscp.Educator.Txs (PrivateTx (..), PrivateTxId)
+import Dscp.Educator.Txs (PrivateTx (..))
+import Dscp.Util (HasId (Id))
 
 -- | TODO, we should have a proper monad here, not IO
 instance MonadSearchTxObj IO where
@@ -19,13 +20,13 @@ instance MonadSearchTxObj IO where
 
 -- | TODO, implement real interpreters, these are just stubs
 runIOTxQuery :: QueryTx -> IO (Maybe PrivateTx)
-runIOTxQuery (SELECTTx _ (TxIdEq (_ :: PrivateTxId))) =
+runIOTxQuery (SELECTTx _ (TxIdEq (_ :: Id PrivateTx))) =
     return Nothing
 
 runIOTxsQuery :: QueryTxs -> IO [PrivateTx]
-runIOTxsQuery (SELECTTxs _ (TxHasSubjectId (_ :: Core.SubjectId))) =
+runIOTxsQuery (SELECTTxs _ (TxHasSubjectId (_ :: Id Core.Subject))) =
     return []
-runIOTxsQuery (SELECTTxs _ (TxGradeEq (_ :: Core.Grade))) =
+runIOTxsQuery (SELECTTxs _ ((:==) _ (_ :: Core.Grade))) =
     return []
 runIOTxsQuery (SELECTTxs _ ((:>=) _ (_ :: Core.Grade))) =
     return []

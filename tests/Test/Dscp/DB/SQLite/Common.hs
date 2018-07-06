@@ -24,12 +24,9 @@ import Prelude hiding (fold)
 import Database.SQLite.Simple (Connection, execute, fold, query, setTrace, withConnection,
                                withTransaction)
 
-import System.Directory (removeFile)
-import System.IO.Error (IOError, isDoesNotExistError)
-
 import Test.QuickCheck.Gen (generate)
 
-import Dscp.Core.Types (Address (..), Assignment (..), AssignmentType (..), CourseId (..),
+import Dscp.Core.Types (Address (..), Assignment (..), AssignmentType (..), Course (..),
                         Grade (..), SignedSubmission (..), Submission (..), SubmissionSig,
                         SubmissionType (..), SubmissionWitness (..), aCourseId, sAssignment,
                         sStudentId, ssSubmission, ssWitness, swKey)
@@ -46,14 +43,7 @@ newtype TestSQLiteM a
 
 runTestSQLiteM :: TestSQLiteM a -> IO a
 runTestSQLiteM action = do
-    let filename = ":memory:"
-
-    removeFile filename `catch` \(e :: IOError) -> do
-        if isDoesNotExistError e
-        then return ()
-        else throwM e
-
-    withConnection filename $ \conn -> do
+    withConnection ":memory:" $ \conn -> do
         ensureSchemaIsSetUp conn
         setTrace conn (Just print)
         getTestSQLiteM action `runReaderT` conn
@@ -91,7 +81,7 @@ instance Arbitrary AssignmentType    where arbitrary = elements [Regular, Course
 instance Arbitrary SubmissionType    where arbitrary = elements [Digital, Offline]
 instance Arbitrary Grade             where arbitrary = elements [A, B, C, D, F]
 instance Arbitrary Address           where arbitrary = (Address . hash . mkPubKey) <$> arbitrary
-instance Arbitrary CourseId          where arbitrary = CourseId   <$> arbitrary
+instance Arbitrary Course            where arbitrary = Course     <$> arbitrary
 instance Arbitrary Assignment        where arbitrary = Assignment <$> arbitrary <*> arbitrary <*> arbitrary
 instance Arbitrary Submission        where arbitrary = Submission <$> arbitrary <*> arbitrary <*> arbitrary
 instance Arbitrary PublicKey         where arbitrary = mkPubKey   <$> arbitrary

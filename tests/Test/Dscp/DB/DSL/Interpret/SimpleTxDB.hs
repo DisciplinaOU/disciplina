@@ -2,25 +2,26 @@ module Test.Dscp.DB.DSL.Interpret.SimpleTxDB where
 
 import Test.Common
 
-import Dscp.Core (CourseId (..), Grade (..), SubjectId)
+import Dscp.Core (Course (..), Grade (..), Subject)
 import Dscp.Crypto (PublicKey, SecretKey, hash)
 import Dscp.DB (Obj, ObjHashEq (..), QueryObj (..), QueryTx (..), QueryTxs (..), TxGrade (..),
                 TxIdEq (..), TxsFilterExpr (..), WHERE (..))
 import Dscp.DB.DSL.Interpret.SimpleTxDB (runSimpleTxDBQuery)
 import Dscp.Educator (PrivateTx (..))
+import Dscp.Util (HasId (Id))
 
 -- | Made up courses
-courseLinearAlg, courseCompScience1, courseCalculi, courseLogic :: CourseId
-courseLinearAlg = CourseId 2
-courseCompScience1 = CourseId 3
-courseCalculi = CourseId 4
-courseLogic = CourseId 5
+courseLinearAlg, courseCompScience1, courseCalculi, courseLogic :: Id Course
+courseLinearAlg = Course 2
+courseCompScience1 = Course 3
+courseCalculi = Course 4
+courseLogic = Course 5
 
 -- | SubjectIds are taken from Dscp.Core.ATG
 sIdMathematics, sIdComputerScience, sIdElementary
    ,sIdCalculi, sIdLogic, sIdEngineering
    ,sIdTheory, sIdHighSchoolAlgebra, sIdPiCalculus
-   ,sIdComputabilityTheory :: SubjectId
+   ,sIdComputabilityTheory :: Id Subject
 sIdMathematics = 1
 sIdComputerScience = 2
 sIdElementary = 3

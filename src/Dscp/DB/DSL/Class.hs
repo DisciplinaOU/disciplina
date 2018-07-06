@@ -14,26 +14,29 @@ module Dscp.DB.DSL.Class
        , WHERE (..)
        ) where
 
-import Dscp.Educator.Txs (PrivateTxId, PrivateTx(..))
+import Dscp.Educator.Txs (PrivateTx(..))
 import Dscp.Crypto (Hash)
+import Dscp.Util (HasId (Id))
 
-import qualified Dscp.Core as Core (Grade, SubjectId)
+import qualified Dscp.Core as Core (Grade, Subject)
 import qualified Data.ByteString.Lazy as LBS
 
 data WHERE   = WHERE
 
-data TxIdEq  = TxIdEq PrivateTxId
+data TxIdEq  = TxIdEq (Id PrivateTx)
 
 data TxGrade = TxGrade
 
-data TxsFilterExpr = TxHasSubjectId Core.SubjectId
-                   | TxGradeEq      Core.Grade
-                   | (:>=) TxGrade       Core.Grade
-                   | (:&)  TxsFilterExpr TxsFilterExpr
-                   | (:||) TxsFilterExpr TxsFilterExpr
-                   | TxHasDescendantOfSubjectId Core.SubjectId
+data TxsFilterExpr = TxHasSubjectId      (Id Core.Subject)
+                   | (:==) TxGrade        Core.Grade
+                   | (:>=) TxGrade        Core.Grade
+                   | (:&)  TxsFilterExpr  TxsFilterExpr
+                   | (:||) TxsFilterExpr  TxsFilterExpr
+                   | TxHasDescendantOfSubjectId (Id Core.Subject)
 
-infixr 4 :>=
+-- The comparison operators shouldn't be right or left associative.
+infix  4 :==
+infix  4 :>=
 infixr 4 :||
 infixr 3 :&
 
