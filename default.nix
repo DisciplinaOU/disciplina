@@ -8,7 +8,6 @@ buildStackApplication {
 
   overrides = final: previous: {
     rocksdb-haskell = dependCabal previous.rocksdb-haskell [ rocksdb ];
-    cardano-sl-networking = appendConfigureFlag previous.cardano-sl-networking "--ghc-option=-fno-warn-redundant-constraints";
     disciplina = overrideCabal previous.disciplina (super: with final; {
       configureFlags = [ "--ghc-option=-Werror" ];
       doCheck = true;
