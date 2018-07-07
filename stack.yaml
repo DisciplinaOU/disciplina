@@ -24,7 +24,7 @@ extra-deps:
   commit: f9a0cd66f443d7b0e04a3c8ae8d475f8344b823b
 
 - git: git@github.com:serokell/snowdrop.git
-  commit: 005b31d0c9d66d6f3e03e24182c5f01b1203acb2
+  commit: 5c966469e35270b95bef6624eba9c448dc005ecb # volhovm/dscp133-more-fixes
   subdirs:
     - snowdrop
 
