@@ -25,8 +25,8 @@ import GHC.Show (Show (show))
 import Data.Time.Clock (UTCTime)
 import Data.Time.Format (defaultTimeLocale, parseTimeOrError)
 
-import qualified Crypto.Random as Crypto
 import Crypto.Error (CryptoFailable (..))
+import qualified Crypto.Random as Crypto
 import Dscp.Core (Assignment (..), AssignmentType (..), CourseId (..), Grade (..),
                   SignedSubmission (..), Submission (..), SubmissionType (..),
                   SubmissionWitness (..), mkAddr)
@@ -50,6 +50,7 @@ import Data.Traversable (for)
 import System.IO.Unsafe
 
 import qualified Data.Tree.AVL as AVL
+import qualified Dscp.Accounts as Accounts
 import qualified Dscp.Crypto as Crypto
 import qualified Dscp.Witness as Witness
 --import qualified Debug.Trace           as Debug
@@ -82,7 +83,7 @@ data Sandbox = Sandbox
     , alice         :: Witness.Entity
     , eve           :: Witness.Entity
     , bob           :: Witness.Entity
-    , initialAmount :: Witness.Amount
+    , initialAmount :: Accounts.Amount
     }
 
 instance Show Sandbox where
@@ -136,7 +137,7 @@ instance Arbitrary Sandbox where
         --    rest   <- accountCreation (count - 1) (entity : excludedSet)
         --    return (Witness.CreateAccount entity def : rest)
 
-fairWorld :: Witness.Amount -> [Witness.Entity] -> Witness.WorldState
+fairWorld :: Accounts.Amount -> [Witness.Entity] -> Witness.WorldState
 fairWorld amount actors =
     let
       (world, _) = unsafePerformIO $ do
