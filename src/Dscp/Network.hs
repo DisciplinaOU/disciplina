@@ -1,9 +1,3 @@
--- | Reexports.
-
-module Dscp.Network
-    ( module M
-    ) where
-
-import Dscp.Network.Instances ()
-import Dscp.Network.Messages as M
-import Dscp.Network.Wrapped as M
+{-# OPTIONS_GHC -F -pgmF autoexporter #-}
+{-# OPTIONS_GHC -Wno-dodgy-exports #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
