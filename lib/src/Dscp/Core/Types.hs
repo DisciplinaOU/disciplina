@@ -1,10 +1,14 @@
-
 -- | Core types used across Disciplina codebase.
 
 module Dscp.Core.Types
-       ( Address (..)
+       (
+       -- * Addresses
+         Address (..)
        , mkAddr
-       , offlineHash
+       , StakeholderId (..)
+
+       -- * Private chain
+
        , Course (..)
        , Subject (..)
        , Student
@@ -14,6 +18,7 @@ module Dscp.Core.Types
        , Assignment (..)
        , AssignmentType (..)
        , Submission (..)
+       , offlineHash
        , DocumentType (..)
        , SubmissionSig
        , SignedSubmission (..)
@@ -44,13 +49,29 @@ module Dscp.Core.Types
        , atgeWeight
        , atgeChild
        , ATG (..)
+
+       -- * Blocks/txs
+       , Coin (..)
+       , TxElem (..)
+       , Tx (..)
+       , TxId
+       , TxWitness (..)
+       , TxWithWitness (..)
        ) where
 
 import Control.Lens (Getter, makeLenses, to)
 import Data.Map (Map)
+import qualified Data.Text.Buildable
+import Fmt (listF, (+||), (||+))
+
+import qualified Snowdrop.Model.State.Accounting.Account as SD
 
 import Dscp.Crypto (HasHash, Hash, PublicKey, Raw, Signature, hash, unsafeHash)
 import Dscp.Util (HasId (..))
+
+----------------------------------------------------------------------------
+-- General
+----------------------------------------------------------------------------
 
 -- | 'Address' datatype. Not 'newtype', because later it will
 -- inevitably become more complex.
@@ -61,6 +82,14 @@ data Address = Address
 
 mkAddr :: PublicKey -> Address
 mkAddr = Address . hash
+
+newtype StakeholderId = StakeholderId
+    { unStakeholderId :: PublicKey
+    } deriving (Eq, Show, Generic)
+
+----------------------------------------------------------------------------
+-- Private chain
+----------------------------------------------------------------------------
 
 -- | ID of particular subject.
 newtype Subject = Subject
@@ -236,3 +265,50 @@ newtype ATG = ATG
 makeLenses ''ATGNode
 makeLenses ''ATGEdge
 makeLenses ''ATG
+
+----------------------------------------------------------------------------
+-- Blocks/Transaction
+----------------------------------------------------------------------------
+
+-- This is all naive for now, should be moved to the separate module later
+
+-- | Coin amount.
+newtype Coin = Coin Word64
+    deriving (Eq, Ord, Show, Generic, Hashable, Num)
+
+instance Buildable Coin where
+    build (Coin c) = c ||+ " coin(s)"
+
+-- | Transaction element, is used both in inputs and in outputs.
+data TxElem = TxElem
+    { txInFrom  :: SD.Account
+    , txInValue :: Coin
+    } deriving (Eq, Ord, Generic, Show)
+
+instance Buildable TxElem where
+    build TxElem{..} = "<" +|| txInFrom ||+ ", " +|| txInValue ||+ ">"
+
+-- | Transaction. Accounting-style.
+data Tx = Tx
+    { txIns  :: [TxElem]
+    , txOuts :: [TxElem]
+    } deriving (Eq, Ord, Generic, Show)
+
+instance Buildable Tx where
+    build Tx{..} = "Tx { in: " +|| listF txIns ||+ "; outs:" +|| listF txOuts ||+ " }"
+
+type TxId = Hash Tx
+
+-- | Transaction witness.
+newtype TxWitness = TxWitness
+    { unTxWitness :: [Signature Tx]
+    } deriving (Eq, Show, Generic)
+
+instance Buildable TxWitness where
+    build (TxWitness w) = "TxWitness { " +|| listF w ||+ " }"
+
+-- | Transaction coupled with witness.
+data TxWithWitness = TxWithWitness
+    { twTx      :: Tx
+    , twWitness :: TxWitness
+    } deriving (Eq, Show, Generic)

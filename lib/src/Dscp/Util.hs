@@ -1,5 +1,4 @@
-
--- | Utilities
+-- | Utilities.
 
 module Dscp.Util
        ( anyMapM
@@ -141,7 +140,7 @@ mappendLefts (Right _) x       = x
 mappendLefts x (Right _)       = x
 
 -----------------------------------------------------------
--- Bytestrings formatting
+-- ByteArray-based types formatting/parsing
 -----------------------------------------------------------
 
 toBase :: ByteArrayAccess ba => Base -> ba -> Text
@@ -152,6 +151,7 @@ fromBase base =
     convertFromBase base . encodeUtf8 @Text @ByteString >=>
     fromByteArray @ba @ByteString
 
+-- These are compatible with fmt.
 toBase64, toHex :: ByteArrayAccess ba => ba -> Text
 toBase64 = toBase Base64
 toHex    = toBase Base16

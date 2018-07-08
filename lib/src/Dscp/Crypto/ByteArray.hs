@@ -1,4 +1,3 @@
-
 -- | Utilities for manipulating byte arrays.
 
 module Dscp.Crypto.ByteArray
@@ -78,4 +77,3 @@ hashBytesWithSalt s h = unsafeWithBytesAndLength h $ \len ptr ->
 hashBytes :: ByteArrayAccess ba => ba -> Int
 hashBytes h = unsafeWithBytesAndLength h $ \len ptr ->
     Hash.hashPtr ptr len
-

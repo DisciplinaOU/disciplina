@@ -29,6 +29,7 @@ import Dscp.Crypto.Signing (AbstractPK (..), AbstractSK (..), AbstractSig (..), 
 -- Hashing
 ------------------------------------------------------
 
+-- TODO Why not blake2b?
 -- | We choose `blake2sp-256`
 type HashFunc = CryptoniteFunc Blake2sp_256
 
@@ -46,12 +47,12 @@ unsafeHash = unsafeAbstractHash
 ------------------------------------------------------
 
 -- | We choose `ed25519`
-type SignatureScheme = CryptoEd25519
+type SigScheme = CryptoEd25519
 
-type HasSignature a = HasAbstractSignature SignatureScheme a
-type PublicKey = AbstractPK SignatureScheme
-type SecretKey = AbstractSK SignatureScheme
-type Signature a = AbstractSig SignatureScheme a
+type HasSignature a = HasAbstractSignature SigScheme a
+type PublicKey = AbstractPK SigScheme
+type SecretKey = AbstractSK SigScheme
+type Signature a = AbstractSig SigScheme a
 
 sign :: HasSignature a => SecretKey -> a -> Signature a
 sign = abstractSign
