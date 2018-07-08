@@ -1,19 +1,19 @@
 -- | Logging resource.
 module Dscp.Resource.Logging
     ( LoggingParams(..)
+    , allocLogging
     ) where
 
-import Control.Monad.Component (buildComponent)
+import Control.Monad.Component (ComponentM, buildComponent)
 import Data.Aeson (encode)
 import Fmt ((+|), (|+))
-import Loot.Log (Name, NameSelector (GivenName),  logInfo, modifyLogName)
+import Loot.Log (Name, NameSelector (GivenName), logInfo, modifyLogName)
 import Loot.Log.Rio (LoggingIO)
 import Loot.Log.Warper (LoggerConfig, prepareLogWarper)
-import System.Wlog (debugPlus, lcTree, ltSeverity, maybeLogsDirB, parseLoggerConfig,
-                    productionB, removeAllHandlers, showTidB)
+import System.Wlog (debugPlus, lcTree, ltSeverity, maybeLogsDirB, parseLoggerConfig, productionB,
+                    removeAllHandlers, showTidB)
 
 import Dscp.Launcher.Rio (runRIO)
-import Dscp.Resource.Class (AllocResource (..))
 
 ----------------------------------------------------------------------------
 -- Params
@@ -50,18 +50,18 @@ getRealLoggerConfig LoggingParams{..} = do
     cfg <- readLoggerConfig lpConfigPath
     pure $ cfg <> cfgBuilder
 
-instance AllocResource LoggingParams LoggingIO where
-    allocResource params = buildComponent "logging" pre fin
-      where
-        pre = do
-            config <- getRealLoggerConfig params
-            (config', logging) <-
-                prepareLogWarper config (GivenName $ lpDefaultName params)
-            printCfg logging config
-            printCfg logging config'
-            return logging
-        printCfg logging finalConfig =
-            runRIO logging $ modifyLogName (<> "init" <> "log") $ do
-                let configText = decodeUtf8 (encode finalConfig) :: Text
-                logInfo $ "Logging config: "+|configText|+""
-        fin _ = removeAllHandlers
+allocLogging :: LoggingParams -> ComponentM LoggingIO
+allocLogging params = buildComponent "logging" pre fin
+  where
+    pre = do
+        config <- getRealLoggerConfig params
+        (config', logging) <-
+            prepareLogWarper config (GivenName $ lpDefaultName params)
+        printCfg logging config
+        printCfg logging config'
+        return logging
+    printCfg logging finalConfig =
+        runRIO logging $ modifyLogName (<> "init" <> "log") $ do
+            let configText = decodeUtf8 (encode finalConfig) :: Text
+            logInfo $ "Logging config: "+|configText|+""
+    fin _ = removeAllHandlers

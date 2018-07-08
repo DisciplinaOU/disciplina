@@ -38,7 +38,7 @@ instance HasLens ZTNetServEnv WitnessResources ZTNetServEnv where
 
 instance AllocResource WitnessParams WitnessResources where
     allocResource WitnessParams{..} = do
-        _wrLogging <- allocResource wpLoggingParams
+        _wrLogging <- view (lensOf @LoggingIO)
         _wrDB <- allocResource wpDBParams
         _wrNetwork <-
             withNetLogging (NetLogging $ _wrLogging & logNameSelL . _GivenName %~ (<> "network")) $

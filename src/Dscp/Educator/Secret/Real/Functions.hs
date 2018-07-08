@@ -6,15 +6,17 @@ module Dscp.Educator.Secret.Real.Functions
 
 import Data.Aeson (eitherDecode', encode)
 import qualified Data.ByteString.Lazy as LBS
+import Fmt ((+|), (|+))
+import Loot.Log (MonadLogging, logInfo)
 import System.Directory (doesFileExist)
 import System.FilePath ((</>))
 
 import Dscp.Crypto (PassPhrase, decrypt, encrypt, genSecretKey, runSecureRandom)
-import Dscp.Educator.Secret.Real.Error (EducatorSecretError (..), rewrapSecretIOError)
+import Dscp.Educator.Secret.Real.Error (EducatorSecretError (..), rewrapSecretIOErrors)
 import Dscp.Educator.Secret.Real.Types (EducatorSecret (..), EducatorSecretJson (..),
                                         EducatorSecretParams (..), KeyfileContent)
 import Dscp.Resource.AppDir (AppDirectory (..))
-import Dscp.System (ensureModeIs, mode600, whenPosix)
+import Dscp.System (ensureModeIs, mode600, setMode, whenPosix)
 import Dscp.Util (leftToThrow)
 import Dscp.Util.Aeson (Versioned (..))
 
@@ -51,11 +53,13 @@ genStore = do
     return EducatorSecret{..}
 
 -- | Read store under given path.
-readStore :: (MonadIO m, MonadCatch m) => FilePath -> PassPhrase -> m EducatorSecret
+readStore
+    :: (MonadIO m, MonadCatch m, MonadLogging m)
+    => FilePath -> PassPhrase -> m EducatorSecret
 readStore path pp = do
-    content <- rewrapSecretIOError $ do
+    content <- rewrapSecretIOErrors $ do
         whenPosix $ ensureModeIs mode600 path
-        LBS.readFile path
+        liftIO $ LBS.readFile path
     Versioned mid <- eitherDecode' @KeyfileContent content
         & leftToThrow (SecretDeserialisationError . toText)
     fromEducatorSecretJson pp mid
@@ -72,22 +76,23 @@ writeStoreDumb path pp store =
 writeStore
     :: (MonadIO m, MonadCatch m)
     => FilePath -> PassPhrase -> EducatorSecret -> m ()
-writeStore path pp store = rewrapSecretIOError $ do
+writeStore path pp store = liftIO . rewrapSecretIOErrors $ do
     whenPosix $ do
         LBS.writeFile path mempty
-        ensureModeIs mode600 path
+        setMode mode600 path
     writeStoreDumb path pp store
 
 -- | Creates new store under given path.
 -- If file already exists, error is thrown.
-createStore :: (MonadIO m, MonadCatch m) => FilePath -> PassPhrase -> m EducatorSecret
+createStore
+    :: (MonadIO m, MonadCatch m, MonadLogging m)
+    => FilePath -> PassPhrase -> m EducatorSecret
 createStore path pp = do
-    exists <- rewrapSecretIOError $ doesFileExist path
+    exists <- liftIO . rewrapSecretIOErrors $ doesFileExist path
     if exists
         then throwM $ SecretFileExistsError path
         else do
-            -- TODO [DSCP-124]: Uncomment (and enjoy the challenge)
-            -- logInfo $ "Creating new educator secret key store under"+|path|+""
+            logInfo $ "Creating new educator secret key store under "+|path|+""
             store <- genStore
             writeStore path pp store
             return store
@@ -96,7 +101,7 @@ createStore path pp = do
 -- Store is also created (and assumed to be absent before this function call) if
 -- dedicated flag is passed.
 linkStore
-    :: (MonadIO m, MonadCatch m)
+    :: (MonadIO m, MonadCatch m, MonadLogging m)
     => EducatorSecretParams -> AppDirectory -> m EducatorSecret
 linkStore params@EducatorSecretParams{..} appDir = do
     let path = storePath params appDir

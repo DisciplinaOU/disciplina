@@ -26,12 +26,12 @@ openSQLiteDB SQLiteParams{..} = do
     path <- case sdpLocation of
         SQLiteInMemory ->
             return ":memory:"
-        SQLiteReal path ->
+        SQLiteReal path
             -- some paths produce db in memory, can't use them
-            if any (== path) ["", ":memory:"]
-            then throwM (SQLInvalidPathError path)
-            else return path
-
+            | any (== path) ["", ":memory:"] ->
+                throwM (SQLInvalidPathError path)
+            | otherwise ->
+                return path
     sdConn <-
         wrapRethrowIO @SomeException (SQLConnectionOpenningError . show) $
         Lower.open path

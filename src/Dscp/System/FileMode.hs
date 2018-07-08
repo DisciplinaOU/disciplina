@@ -8,6 +8,8 @@ module Dscp.System.FileMode
     , mode600
     ) where
 
+import Fmt (octF, (+|), (|+))
+import Loot.Log (MonadLogging, logWarning)
 import qualified System.Posix.Files as PSX
 import qualified System.Posix.Types as PSX (FileMode)
 
@@ -18,27 +20,24 @@ import Dscp.System.Other (IsPosix)
 mode600 :: PSX.FileMode
 mode600 = PSX.unionFileModes PSX.ownerReadMode PSX.ownerWriteMode
 
--- Note: these are 'IO' for purpose and that means that you may want to rethrow
--- I/O exceptions as something more sensible at call site.
--- Consider using 'Dscp.Util.wrapRethrowIO' instead of 'liftIO'.
-
 -- | Return only the access part of the file mode (like owner:rw-, etc).
-getAccessMode :: IsPosix => FilePath -> IO PSX.FileMode
+getAccessMode :: (IsPosix, MonadIO m) => FilePath -> m PSX.FileMode
 getAccessMode path = do
     mode <- liftIO $ PSX.fileMode <$> PSX.getFileStatus path
     return $ PSX.intersectFileModes mode PSX.accessModes
 
 -- | Set mode disregard current mode of the file.
-setMode :: IsPosix => FilePath -> PSX.FileMode -> IO ()
-setMode = PSX.setFileMode
+setMode :: (IsPosix, MonadIO m) => PSX.FileMode -> FilePath -> m ()
+setMode mode path = liftIO $ PSX.setFileMode path mode
 
 -- | Set given mode if needed.
-ensureModeIs :: IsPosix => PSX.FileMode -> FilePath -> IO ()
+ensureModeIs
+    :: (IsPosix, MonadIO m, MonadLogging m)
+    => PSX.FileMode -> FilePath -> m ()
 ensureModeIs mode path = do
     accessMode <- getAccessMode path
     unless (accessMode == mode) $ do
-        -- TODO [DSCP-122]: uncomment
-        -- logWarning $
-        --     sformat ("Key file at "%build%" has access mode "%oct%" instead of 600. Fixing it automatically.")
-        --     path accessMode
-        setMode path mode600
+        logWarning $
+            "Key file at "+|path|+" has access mode "+|octF accessMode|+
+            " instead of 600. Fixing it automatically."
+        setMode mode path
