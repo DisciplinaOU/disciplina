@@ -57,16 +57,21 @@ module Dscp.Core.Types
        , TxId
        , TxWitness (..)
        , TxWithWitness (..)
+
+       , BlockToSign (..)
+       , Header (..)
+       , Block (..)
+       , GlobalTx (..)
+       , BlockBody (..)
        ) where
 
 import Control.Lens (Getter, makeLenses, to)
 import Data.Map (Map)
-import qualified Data.Text.Buildable
-import Fmt (listF, (+||), (||+))
+import Fmt (blockListF, build, indentF, listF, nameF, (+|), (+||), (|+), (||+))
 
 import qualified Snowdrop.Model.State.Accounting.Account as SD
 
-import Dscp.Crypto (HasHash, Hash, PublicKey, Raw, Signature, hash, unsafeHash)
+import Dscp.Crypto (HasHash, Hash, PublicKey, Raw, Signature, hash, hashF, unsafeHash)
 import Dscp.Util (HasId (..))
 
 ----------------------------------------------------------------------------
@@ -288,7 +293,7 @@ data TxElem = TxElem
 instance Buildable TxElem where
     build TxElem{..} = "<" +|| txInFrom ||+ ", " +|| txInValue ||+ ">"
 
--- | Transaction. Accounting-style.
+-- | Transaction. Accounting-style. TODO add other types.
 data Tx = Tx
     { txIns  :: [TxElem]
     , txOuts :: [TxElem]
@@ -312,3 +317,56 @@ data TxWithWitness = TxWithWitness
     { twTx      :: Tx
     , twWitness :: TxWitness
     } deriving (Eq, Show, Generic)
+
+instance Buildable TxWithWitness where
+    build TxWithWitness {..} =
+        "TxWithWitness { " +| build twTx |+ ", " +| build twWitness |+  " }"
+
+newtype Difficulty = Difficulty Word64
+    deriving (Eq,Ord,Num,Show,Generic,Buildable)
+
+-- Part of the block we sign
+data BlockToSign =
+    BlockToSign Difficulty (Hash Header) BlockBody
+    deriving (Eq, Show, Generic)
+
+data Header = Header
+    { hSignature  :: Signature BlockToSign
+    , hIssuer     :: PublicKey
+    , hDifficulty :: Difficulty
+    , hPrevHash   :: Hash Header
+    } deriving (Eq, Show, Generic)
+
+instance Buildable Header where
+    build Header{..} =
+        "Header: " +|
+        indentF 2 (blockListF [ nameF "sig" $ build hSignature
+                              , nameF "issuer" $ build hIssuer
+                              , nameF "difficulty" $ build hDifficulty
+                              , nameF "prev" $ hashF hPrevHash ])
+
+-- | Generalised version of transaction, other types to appear
+-- here. Needs a better name.
+data GlobalTx =
+    MoneyTx TxWithWitness
+    deriving (Generic, Eq, Show)
+
+instance Buildable GlobalTx where
+    build (MoneyTx tw) = "MoneyTx: " +| build tw
+
+-- | Body of the block.
+data BlockBody = BlockBody
+    { rbbTxs :: [GlobalTx]
+    } deriving (Eq, Show, Generic)
+
+instance Buildable BlockBody where
+    build (BlockBody txs) = listF txs
+
+-- | Block.
+data Block = Block
+    { rbHeader :: Header
+    , rbBody   :: BlockBody
+    } deriving (Eq, Show, Generic)
+
+instance Buildable Block where
+    build = build . (show :: Block -> Text)
