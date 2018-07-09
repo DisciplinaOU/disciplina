@@ -1,7 +1,7 @@
 
 module Dscp.Educator.Secret.Real.Error
     ( EducatorSecretError (..)
-    , rewrapSecretIOError
+    , rewrapSecretIOErrors
     ) where
 
 import qualified Data.Text.Buildable
@@ -9,7 +9,7 @@ import Fmt ((+|), (|+))
 import qualified Text.Show
 
 import Dscp.Crypto (DecryptionError)
-import Dscp.Util (wrapRethrowIO)
+import Dscp.Util (wrapRethrow)
 
 -- | Exception during secret key extraction from storage.
 data EducatorSecretError
@@ -39,5 +39,5 @@ instance Buildable EducatorSecretError where
 
 instance Exception EducatorSecretError
 
-rewrapSecretIOError :: (MonadIO m, MonadCatch m) => IO a -> m a
-rewrapSecretIOError = wrapRethrowIO @SomeException (SecretIOError . show)
+rewrapSecretIOErrors :: MonadCatch m => m a -> m a
+rewrapSecretIOErrors = wrapRethrow @SomeException (SecretIOError . show)

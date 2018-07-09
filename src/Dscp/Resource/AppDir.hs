@@ -7,10 +7,11 @@ module Dscp.Resource.AppDir
     , AppDirectory (..)
     ) where
 
-import Control.Monad.Component (buildComponent)
+import Fmt ((+|), (|+))
+import Loot.Log (MonadLogging, logInfo)
 import System.Directory (XdgDirectory (XdgData), createDirectoryIfMissing, getXdgDirectory)
 
-import Dscp.Resource.Class (AllocResource (..))
+import Dscp.Resource.Class (AllocResource (..), buildComponentR)
 import Dscp.System (appName)
 
 -- | Which application directory to use.
@@ -28,15 +29,16 @@ getOSAppDir = liftIO $ getXdgDirectory XdgData appName
 
 -- | Create application directory if absent.
 ensureDirExists
-    :: (MonadIO m, MonadThrow m)
+    :: (MonadIO m, MonadLogging m)
     => AppDirectoryParam -> m AppDirectory
 ensureDirExists AppDirectoryOS = do
     appDir <- getOSAppDir
+    logInfo $ "Application home directory will be at "+|appDir|+""
     liftIO $ createDirectoryIfMissing False appDir
     return $ AppDirectory appDir
 
 instance AllocResource AppDirectoryParam AppDirectory where
     allocResource p =
-        buildComponent "Application directory"
+        buildComponentR "Application directory"
             (ensureDirExists p)
             (\_ -> pass)

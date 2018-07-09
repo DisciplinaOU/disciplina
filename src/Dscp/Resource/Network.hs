@@ -15,7 +15,6 @@ module Dscp.Resource.Network
     ) where
 
 import Control.Lens (makeLenses)
-import Control.Monad.Component (buildComponent)
 import Data.Reflection (Given (given), give)
 import Loot.Base.HasLens (HasLens (..))
 import Loot.Log (Logging)
@@ -24,7 +23,7 @@ import Loot.Network.ZMQ (ZTGlobalEnv, ZTNetCliEnv, ZTNetServEnv, ZTNodeId (..), 
                          ztGlobalEnvRelease)
 import qualified Text.Show
 
-import Dscp.Resource.Class (AllocResource (..))
+import Dscp.Resource.Class (AllocResource (..), buildComponentR)
 
 ----------------------------------------------------------------------------
 -- Common
@@ -81,7 +80,7 @@ instance HasLens ZTNetCliEnv NetCliResources ZTNetCliEnv where lensOf = ncClient
 
 instance WithNetLogging => AllocResource NetCliParams NetCliResources where
     allocResource NetCliParams {..} =
-        buildComponent "netcli" allocate release
+        buildComponentR "netcli" allocate release
       where
         allocate = do
             global <- ztGlobalEnv (unNetLogging netLogging)
@@ -118,7 +117,7 @@ instance HasLens ZTNetServEnv NetServResources ZTNetServEnv where lensOf = nsSer
 
 instance WithNetLogging => AllocResource NetServParams NetServResources where
     allocResource NetServParams {..} =
-        buildComponent "netcli" allocate release
+        buildComponentR "netcli" allocate release
       where
         allocate = do
             global <- ztGlobalEnv (unNetLogging netLogging)
