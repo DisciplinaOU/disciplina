@@ -93,24 +93,6 @@ spec_Instances = do
 
                         return ()
 
-            it "Submission is created if all deps exist" $
-                sqliteProperty $ \sigSubmission -> do
-
-                    let submission = sigSubmission^.ssSubmission
-                        assignment = submission   ^.sAssignment
-                        course     = assignment   ^.aCourseId
-                        student    = submission   ^.sStudentId
-
-                    _       <- DB.createCourse           course Nothing []
-                    _       <- DB.createStudent          student
-                    aHash   <- DB.createAssignment       assignment
-                    _       <- DB.setStudentAssignment   student aHash
-                    subHash <- DB.createSignedSubmission sigSubmission
-
-                    sub'    <- DB.getSignedSubmission    subHash
-
-                    return (sub' == Just sigSubmission)
-
         describe "Transactions" $ do
             it "Transaction is created if all deps exist" $
                 sqliteProperty $ \trans -> do
@@ -121,8 +103,9 @@ spec_Instances = do
                         course        = assignment   ^.aCourseId
                         student       = submission   ^.sStudentId
 
-                    _         <- DB.createCourse           course Nothing []
-                    _         <- DB.createStudent          student
+                    courseId  <- DB.createCourse           course Nothing []
+                    studentId <- DB.createStudent          student
+                    _         <- DB.enrollStudentToCourse  studentId courseId
                     aHash     <- DB.createAssignment       assignment
                     _         <- DB.setStudentAssignment   student aHash
                     _         <- DB.createSignedSubmission sigSubmission
@@ -176,6 +159,8 @@ spec_Instances = do
                     let notToHer = (notToHerCourse1 & mapped.aCourseId .~ courseId1)
                                 <> (notToHerCourse2 & mapped.aCourseId .~ courseId2)
 
+
+                    --_ <- error "stahp!"
                     for_ toHer $ \assignment -> do
                         assignmentId <- DB.createAssignment assignment
                         DB.setStudentAssignment studentId assignmentId
@@ -184,9 +169,67 @@ spec_Instances = do
                         _ <- DB.createAssignment assignment
                         return ()
 
+                    --_ <- error "stahp!"
                     assignments1 <- DB.getStudentAssignments studentId courseId1
                     assignments2 <- DB.getStudentAssignments studentId courseId2
 
                     let equal = (==) `on` sortBy (comparing getId)
 
                     return $ (assignments1 <> assignments2) `equal` toHer
+
+        it "submitAssignment" $
+            sqliteProperty $ \sigSubmission -> do
+
+                let submission = sigSubmission^.ssSubmission
+                    assignment = submission   ^.sAssignment
+                    course     = assignment   ^.aCourseId
+                    student    = submission   ^.sStudentId
+
+                courseId  <- DB.createCourse           course Nothing []
+                studentId <- DB.createStudent          student
+                _         <- DB.enrollStudentToCourse  studentId courseId
+                aHash     <- DB.createAssignment       assignment
+                _         <- DB.setStudentAssignment   student aHash
+                subHash   <- DB.submitAssignment       sigSubmission
+
+                sub'      <- DB.getSignedSubmission    subHash
+
+                return (sub' == Just sigSubmission)
+
+        it "getGradesForCourseAssignments" $
+            sqliteProperty $ \(trans, course2) -> do
+
+                let sigSubmission = trans        ^.ptSignedSubmission
+                    submission    = sigSubmission^.ssSubmission
+                    assignment    = submission   ^.sAssignment
+                    course        = assignment   ^.aCourseId
+                    student       = submission   ^.sStudentId
+
+                    sigSubmission2 = sigSubmission & ssSubmission.sAssignment .~ assignment2
+                    assignment2    = assignment    & aCourseId                .~ getId course2
+                    trans2         = trans         & ptSignedSubmission       .~ sigSubmission2
+
+                _studentId <- DB.createStudent          student
+
+                courseId   <- DB.createCourse           course Nothing []
+                courseId2  <- DB.createCourse           course2 Nothing []
+
+                _          <- DB.enrollStudentToCourse  student courseId
+                _          <- DB.enrollStudentToCourse  student courseId2
+
+                aHash      <- DB.createAssignment       assignment
+                aHash2     <- DB.createAssignment       assignment2
+
+                _          <- DB.setStudentAssignment   student aHash
+                _          <- DB.setStudentAssignment   student aHash2
+
+                _          <- DB.createSignedSubmission sigSubmission
+                _          <- DB.createSignedSubmission sigSubmission2
+
+                _          <- DB.createTransaction      trans
+                _          <- DB.createTransaction      trans2
+
+                transs2    <- DB.getGradesForCourseAssignments student courseId2
+                transs1    <- DB.getGradesForCourseAssignments student courseId
+
+                return (transs2 == [trans2] && transs1 == [trans])

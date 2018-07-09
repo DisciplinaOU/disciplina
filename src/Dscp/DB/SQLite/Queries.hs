@@ -10,7 +10,7 @@ import Text.InterpolatedString.Perl6 (q)
 import Dscp.Core.Serialise ()
 import Dscp.Core.Types (Assignment (..), Course, SignedSubmission (..), Student, Subject,
                         Submission (..), aAssignment, aCourseId, aType, sAssignment, sStudentId,
-                        sType, ssSubmission, ssWitness)
+                        ssSubmission, ssWitness, sContentsHash, aContentsHash)
 import Dscp.DB.SQLite.Class
 import Dscp.DB.SQLite.Instances ()
 
@@ -65,7 +65,7 @@ getStudentAssignments student course = do
   where
     getStudentAssignmentsQuery :: Query
     getStudentAssignmentsQuery = [q|
-        select     course_id, student_addr, desc
+        select     course_id, contents_hash, type, desc
         from       StudentAssignments
         left join  Assignments
                on  assignment_hash = Assignments.hash
@@ -80,17 +80,22 @@ submitAssignment = createSignedSubmission
 -- How can a student see his grades for course assignments?
 getGradesForCourseAssignments :: DBM m => Id Student -> Id Course -> m [PrivateTx]
 getGradesForCourseAssignments student course = do
-    query getGradesForCourseAssignmentsQuery (course, student)
+    query getGradesForCourseAssignmentsQuery (student, course)
   where
     getGradesForCourseAssignmentsQuery :: Query
     getGradesForCourseAssignmentsQuery = [q|
+        -- getGradesForCourseAssignments
+
         select     Submissions.student_addr,
                    Submissions.contents_hash,
                    Assignments.course_id,
+
                    Assignments.contents_hash,
+                   Assignments.type,
                    Assignments.desc,
-                   Submissions.signature
-                   grade
+
+                   Submissions.signature,
+                   grade,
                    time
 
         from       Transactions
@@ -99,10 +104,10 @@ getGradesForCourseAssignments student course = do
                on  submission_hash = Submissions.hash
 
         left join  Assignments
-               on  sssignment_hash = Assignments.hash
-              and  Assignments.course_id = ?
+               on  assignment_hash = Assignments.hash
 
         where      student_addr = ?
+              and  Assignments.course_id = ?
     |]
 
 -- | How can a student receive transactions with Merkle proofs which contain info about his grades and assignments?
@@ -112,13 +117,16 @@ getStudentTransactions student = do
   where
     getStudentTransactionsQuery :: Query
     getStudentTransactionsQuery = [q|
+        -- getStudentTransactions
+
         select     Submissions.student_addr,
                    Submissions.contents_hash,
                    Assignments.course_id,
                    Assignments.contents_hash,
+                   Assignments.type,
                    Assignments.desc,
-                   Submissions.signature
-                   grade
+                   Submissions.signature,
+                   grade,
                    time
 
         from       Transactions
@@ -127,7 +135,7 @@ getStudentTransactions student = do
                on  submission_hash = Submissions.hash
 
         left join  Assignments
-               on  sssignment_hash = Assignments.hash
+               on  assignment_hash = Assignments.hash
 
         where      student_addr = ?
     |]
@@ -140,7 +148,7 @@ createSignedSubmission sigSub = do
 
         student        = submission^.sStudentId
         submissionHash = submission^.idOf
-        submissionType = submission^.sType
+        submissionCont = submission^.sContentsHash
         assignment     = submission^.sAssignment
 
         assignmentHash = assignment^.idOf
@@ -155,7 +163,7 @@ createSignedSubmission sigSub = do
             ( submissionHash
             , student
             , assignmentHash
-            , submissionType
+            , submissionCont
             , submissionSig
             )
 
@@ -191,7 +199,7 @@ isEnrolledTo studentId courseId = do
     exists enrollmentQuery (studentId, courseId)
   where
     enrollmentQuery = [q|
-        select  1
+        select  count(*)
         from    StudentCourses
         where   student_addr = ?
            and  course_id    = ?
@@ -203,7 +211,7 @@ isAssignedToStudent student assignment = do
   where
     getStudentAssignmentQuery :: Query
     getStudentAssignmentQuery = [q|
-        select  1
+        select  count(*)
         from    StudentAssignments
         where   student_addr = ?
            and  assignment_hash = ?
@@ -233,7 +241,7 @@ existsCourse course = do
     exists existsCourseQuery (Only course)
   where
     existsCourseQuery = [q|
-        select  1
+        select  count(*)
         from    Courses
         where   id = ?
     |]
@@ -243,7 +251,7 @@ existsStudent student = do
     exists existsCourseQuery (Only student)
   where
     existsCourseQuery = [q|
-        select  1
+        select  count(*)
         from    Students
         where   addr = ?
     |]
@@ -267,6 +275,7 @@ createAssignment assignment = do
     execute createAssignmentRequest
         ( assignmentHash
         , assignment^.aCourseId
+        , assignment^.aContentsHash
         , assignment^.aType
         , assignment^.aAssignment
         )
@@ -274,7 +283,7 @@ createAssignment assignment = do
   where
     createAssignmentRequest = [q|
         insert into  Assignments
-        values       (?,?,?,?)
+        values       (?,?,?,?,?)
     |]
     assignmentHash = assignment^.idOf
 
@@ -283,7 +292,7 @@ getAssignment assignmentHash = do
     listToMaybe <$> query getAssignmentQuery (Only assignmentHash)
   where
     getAssignmentQuery = [q|
-        select  course_id, contents_hash, desc
+        select  course_id, contents_hash, type, desc
         from    Assignments
         where   hash = ?
     |]
@@ -293,10 +302,12 @@ getSignedSubmission submissionHash = do
     listToMaybe <$> query getSignedSubmissionQuery (Only submissionHash)
   where
     getSignedSubmissionQuery = [q|
+        -- from 'getSignedSubmission'
         select     student_addr,
                    Submissions.contents_hash,
                    Assignments.course_id,
                    Assignments.contents_hash,
+                   Assignments.type,
                    Assignments.desc,
                    Submissions.signature
 
@@ -344,6 +355,7 @@ getTransaction ptid = do
                    Submissions.contents_hash,
                    Assignments.course_id,
                    Assignments.contents_hash,
+                   Assignments.type,
                    Assignments.desc,
                    Submissions.signature,
                    grade,
@@ -361,4 +373,4 @@ getTransaction ptid = do
     |]
 
 exists :: ToRow a => DBM m => Query -> a -> m Bool
-exists theQuery args = (not . null :: [Only Int] -> Bool) <$> query theQuery args
+exists theQuery args = ((/= [[0]]) :: [[Int]] -> Bool) <$> query theQuery args

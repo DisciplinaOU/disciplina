@@ -4,7 +4,7 @@ import Codec.Serialise (Serialise (..))
 
 import Dscp.Core.Types (ATG (..), ATGDelta (..), ATGEdge (..), ATGNode (..), Address (..),
                         Assignment (..), AssignmentType (..), Course (..), Grade (..),
-                        SignedSubmission (..), Subject (..), Submission (..), SubmissionType,
+                        SignedSubmission (..), Subject (..), Submission (..),
                         SubmissionWitness (..))
 
 -- TODO: move to well-specified serialisation instead of generic one.

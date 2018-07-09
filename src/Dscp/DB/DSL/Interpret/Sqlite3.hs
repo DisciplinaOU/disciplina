@@ -5,12 +5,8 @@ module Dscp.DB.DSL.Interpret.Sqlite3 () where
 
 import qualified Data.Set as Set (Set, empty, member, singleton)
 
-import Text.InterpolatedString.Perl6 (q, qc, qq)
+import Text.InterpolatedString.Perl6 (qc, qq)
 
-import Dscp.Core.Types (Assignment (..), AssignmentType (..), CourseId (..), Grade (..),
-                        SignedSubmission (..), StudentId, Submission (..), SubmissionSig,
-                        SubmissionWitness (..))
-import Dscp.Crypto (PublicKey, fromByteArray)
 import Dscp.DB.DSL.Class
 import Dscp.DB.SQLite
 import Dscp.Educator.Txs (PrivateTx (..))
@@ -93,81 +89,6 @@ buildWhereStatement = go
 
         TxHasDescendantOfSubjectId _sid ->
             error "buildWhereStatement: TxHasDescendantOfSubjectId: not supported yet"
-
-getPrivateTxFromId :: MonadSQLiteDB m => PublicKey -> PrivateTxId -> m (Maybe PrivateTx)
-getPrivateTxFromId pk tid = do
-    pack <- query
-        [q|
-            select    Submissions.student_addr,
-                      Submissions.contents_hash,
-
-                      Assignments.course_id,
-                      Assignments.contents_hash,
-                      Assignments.type,
-                      Assignments.desc,
-
-                      Submissions.signature,
-
-                      Transactions.grade,
-                      Transactions.time
-
-            from      Transactions
-
-            left join Submissions on             submission_hash = Submissions.hash
-            left join Assignments on Submissions.assignment_hash = Assignments.hash
-
-            where     Transactions.hash = ?;
-        |]
-        (Only tid)
-
-    return $ case pack of
-        [queryResult] -> Just (queryResult pk)
-        _other        -> Nothing
-
-packPrivateTxQuery
-    :: PublicKey
-    ->  ( StudentId
-        , ByteString
-        , CourseId
-        , ByteString
-        , Integer
-        , Text
-        , SubmissionSig
-        , Grade
-        , UTCTime
-        )
-    -> PrivateTx
-packPrivateTxQuery pk
-    ( student_addr
-    , sub_contents_hash
-    , course_id
-    , assign_contents_hash
-    , assign_type
-    , assign_desc
-    , sub_sig
-    , grade
-    , time
-    ) = PrivateTx
-            (SignedSubmission
-                (Submission
-                    student_addr
-                    (mkHash sub_contents_hash)
-                    (Assignment
-                        course_id
-                        (mkHash assign_contents_hash)
-                        (select assign_type Regular CourseFinal)
-                        assign_desc))
-                (SubmissionWitness
-                    pk
-                    sub_sig))
-            grade
-            time
-  where
-    select i left right =
-        if i == (0 :: Integer)
-        then left
-        else right
-    mkHash = either (error . toText) identity . fromByteArray
 
 data RequiredTables
     = Subject

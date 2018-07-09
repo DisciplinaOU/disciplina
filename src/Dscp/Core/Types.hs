@@ -5,7 +5,6 @@ module Dscp.Core.Types
        ( Address (..)
        , mkAddr
        , offlineHash
-       , SubjectId (..)
        , Course (..)
        , Subject (..)
        , Student
@@ -49,7 +48,6 @@ import Control.Lens (Getter, makeLenses, to)
 import Data.Map (Map)
 
 import Dscp.Crypto (Hash, HasHash, PublicKey, Raw, Signature, hash, unsafeHash)
-import Dscp.Crypto (Hash, HasHash, PublicKey, Signature, hash)
 import Dscp.Util (HasId (..))
 
 -- | 'Address' datatype. Not 'newtype', because later it will

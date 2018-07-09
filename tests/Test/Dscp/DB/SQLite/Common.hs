@@ -28,7 +28,7 @@ import Test.QuickCheck.Gen (generate)
 
 import Dscp.Core.Types (Address (..), Assignment (..), AssignmentType (..), Course (..),
                         Grade (..), SignedSubmission (..), Submission (..), SubmissionSig,
-                        SubmissionType (..), SubmissionWitness (..), aCourseId, sAssignment,
+                        SubmissionWitness (..), aCourseId, sAssignment,
                         sStudentId, ssSubmission, ssWitness, swKey)
 import Dscp.Crypto (HasHash, HasSignature, Hash, PublicKey, Signature, hash, sign)
 import qualified Dscp.DB.SQLite.Class as Adapter
@@ -37,15 +37,27 @@ import Dscp.Educator.Txs (PrivateTx (..), ptSignedSubmission)
 
 import Test.Common
 
+--import System.Directory (removeFile)
+--import System.IO.Error (IOError, isDoesNotExistError)
+
 newtype TestSQLiteM a
     = TestSQLiteM { getTestSQLiteM :: ReaderT Connection IO a }
     deriving (Functor, Applicative, Monad, MonadIO, MonadThrow, MonadCatch)
 
 runTestSQLiteM :: TestSQLiteM a -> IO a
 runTestSQLiteM action = do
-    withConnection ":memory:" $ \conn -> do
+    let filename = ":memory:"
+
+    --removeFile filename `catch` \(e :: IOError) -> do
+    --    if isDoesNotExistError e
+    --    then return ()
+    --    else throwM e
+
+    withConnection filename $ \conn -> do
         ensureSchemaIsSetUp conn
-        setTrace conn (Just print)
+        -- It stays here, so next time something breaks I don't have to
+        -- add it to imports again.
+        setTrace conn (Just putStrLn)
         getTestSQLiteM action `runReaderT` conn
 
 sqliteProperty
@@ -78,11 +90,10 @@ instance Adapter.MonadSQLiteDB TestSQLiteM where
                 actor conn
 
 instance Arbitrary AssignmentType    where arbitrary = elements [Regular, CourseFinal]
-instance Arbitrary SubmissionType    where arbitrary = elements [Digital, Offline]
 instance Arbitrary Grade             where arbitrary = elements [A, B, C, D, F]
 instance Arbitrary Address           where arbitrary = (Address . hash . mkPubKey) <$> arbitrary
 instance Arbitrary Course            where arbitrary = Course     <$> arbitrary
-instance Arbitrary Assignment        where arbitrary = Assignment <$> arbitrary <*> arbitrary <*> arbitrary
+instance Arbitrary Assignment        where arbitrary = Assignment <$> arbitrary <*> arbitrary <*> arbitrary <*> elements ["2+2=?", "pV=?"]
 instance Arbitrary Submission        where arbitrary = Submission <$> arbitrary <*> arbitrary <*> arbitrary
 instance Arbitrary PublicKey         where arbitrary = mkPubKey   <$> arbitrary
 instance Arbitrary PrivateTx         where arbitrary = PrivateTx  <$> arbitrary <*> arbitrary <*> arbitrary
