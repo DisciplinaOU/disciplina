@@ -11,7 +11,7 @@
     value ~assignment_offline_hash~. An assignment is considered _online_
     otherwise.
   - A submission is _offline_, if the hash of its contents has the special value
-    ~submission_offline_hash~. A submission is considered _offline_ otherwise.
+    ~submission_offline_hash~. A submission is considered _online_ otherwise.
 
 * Beginning of the interaction
 ** Identify the student
@@ -79,10 +79,11 @@
    1) *Offline submissions*. If a course is meant to be offline (e. g. it's a
       classic university course with course assignments done on paper) and there
       are no actual digital _content_ of submissions, then submissions in
-      Disciplina system become effectively fictional. This means that these
-      _offline_ submissions can be sent immediately and automatically after
-      receiving an assignment. These submissions remain ungraded until
-      *Educator* checks them offline and submits a grade for them in the system.
+      Disciplina system only serve as signals of student's readiness to complete
+      the assignment. This means that these _offline_ submissions can be sent
+      immediately and automatically after receiving an assignment. These
+      submissions remain ungraded until *Educator* checks them offline and
+      submits a grade for them in the system.
    2) *Online submissions*. If a course is meant to be online (e. g. it's a
       MOOC) and every submission is digital, then submissions in Disciplina
       should refer to actual contents of submissions via _contents hash_.
