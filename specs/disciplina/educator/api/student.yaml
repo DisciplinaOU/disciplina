@@ -1,32 +1,128 @@
-swagger: '2.0'
+swagger: "2.0"
 info:
-  description: 'This is an HTTP API for interacting with Disciplina Educator node from Student side. It is used by Student application to receive info about assignments and grades, submit submissions and fetch proofs of grades from Educator.'
-  version: 1.0.0
+  description: "This is an HTTP API for interacting with Disciplina Educator node from Student side. It is used by Student application to receive info about assignments and grades, submit submissions and fetch proofs of grades from Educator."
+  version: 0.1.0
   title: Disciplina Student API
-  termsOfService: 'https://disciplina.io/tnc.pdf'
+  termsOfService: "https://disciplina.io/tnc.pdf"
   contact:
     email: hi@serokell.io
   license:
     name: Apache 2.0
-    url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
-host: 'localhost:8090'
+    url: "http://www.apache.org/licenses/LICENSE-2.0.html"
+host: "localhost:8090"
 basePath: /v1
 tags:
+  - name: courses
+    description: "Methods for working with student's courses."
+  - name: assignments
+    description: "Methods for working with student's assignments."
   - name: submissions
-    description: Methods for working with students' submissions.
-  - name: grades
-    description: Methods for working with students' grades.
+    description: "Methods for working with student's submissions."
+  - name: proofs
+    description: "Methods for working with private transactions and grade's proofs"
 schemes:
   - https
   - http
 paths:
+  /courses:
+    get:
+      tags:
+        - courses
+      summary: Get Educator\'s courses
+      description: Gets a list of Educator\'s courses, both enrolled and available.
+      operationId: getCourses
+      parameters:
+        - in: query
+          name: enrolled
+          required: false
+          description: Is a student already enrolled in a course?
+          type: boolean
+      produces: 
+        - application/json
+      responses:
+        200:
+          description: successful operation
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/Course'
+  
+  /courses/{courseId}:
+    get:
+      tags:
+        - courses
+      summary: Get info about the course
+      description: Gets all info about the given course.
+      operationId: getCourse
+      parameters:
+        - $ref: '#/parameters/CourseIdPath'
+      produces: 
+        - application/json
+      responses:
+        200:
+          description: successful operation
+          schema:
+            $ref: '#/definitions/Course'
+        404:
+          description: Course with given ID not found
+  
+  /assignments:
+    get:
+      tags:
+        - assignments
+      summary: Get student\'s assignments
+      description: Gets a list of student\'s assignments. Filter parameters are used to specify
+        specific course, type, etc.
+      operationId: getAssignments
+      parameters: 
+        - $ref: '#/parameters/CourseId'
+        - $ref: '#/parameters/DocumentType'
+        - in: query
+          name: final
+          required: false
+          description: Select only final assignments
+          type: boolean
+      produces:
+        - application/json
+      responses:
+        200:
+          description: successful operation
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/Assignment'
+
+  /assignments/{assignmentHash}:
+    get:
+      tags:
+        - assignments
+      summary: Get info about an assignment
+      description: Gets an assignment info by given submission hash. Returns 404 if a student tries to get an assignment which is not assigned to them.
+      operationId: getAsssignment
+      parameters:
+        - $ref: '#/parameters/AssignmentHashPath'
+      produces:
+        - application/json
+      responses:
+        200:
+          description: successful operation
+          schema:
+            $ref: '#/definitions/Assignment'
+        404:
+          description: Assignment with given wasn not found (or a user has no rights to look it up)
+
   /submissions:
     get:
       tags:
         - submissions
-      summary: Get all student's submissions
-      description: Gets a list of all student's submissions.
+      summary: Get student\'s submissions
+      description: Gets a list of student\'s submissions. Filter parameters are used to specify
+        specific course, assignment, etc.
       operationId: getSubmissions
+      parameters: 
+        - $ref: '#/parameters/CourseId'
+        - $ref: '#/parameters/AssignmentHash'
+        - $ref: '#/parameters/DocumentType'
       produces:
         - application/json
       responses:
@@ -40,7 +136,7 @@ paths:
       tags:
         - submissions
       summary: Make a new submission
-      description: Posts a new submission with a given body. Request body should contain valid student's signature of submission contents, otherwise an error will be raised.
+      description: Posts a new submission with a given body. Request body should contain valid student\'s signature of submission contents, otherwise an error will be raised.
       operationId: makeSubmission
       produces:
         - application/json
@@ -60,7 +156,8 @@ paths:
             $ref: '#/definitions/Submission'
         '403':
           description: Either submission body or submission signature is invalid
-  '/submissions/{submissionHash}':
+          
+  /submissions/{submissionHash}:
     get:
       tags:
         - submissions
@@ -70,14 +167,14 @@ paths:
       produces:
         - application/json
       parameters:
-        - $ref: '#/parameters/SubmissionHash'
+        - $ref: '#/parameters/SubmissionHashPath'
       responses:
         '200':
           description: successful operation
           schema:
             $ref: '#/definitions/Submission'
         '404':
-          description: Submission with given hash not found (or a user has no rights to look it up)
+          description: Submission with given wasn not found (or a user has no rights to look it up)
     delete:
       tags:
         - submissions
@@ -87,82 +184,64 @@ paths:
       produces:
         - application/json
       parameters:
-        - $ref: '#/parameters/SubmissionHash'
+        - $ref: '#/parameters/SubmissionHashPath'
       responses:
         '200':
           description: successful operation
+        '403':
+          description: Cannot delete a graded submission
         '404':
           description: Submission with given hash not found
-  /grades:
+    
+  /proofs:
     get:
       tags:
-        - grades
-      summary: Get all grades
-      description: Gets a list of all grades performed by all students.
-      operationId: getGrades
+        - proofs
+      summary: Get available proofs for student
+      description: Gets private transactions together with corresponding Merkle subtrees. Transactions from same blocks are grouped together and each group has one proof, which is a corresponding Merkle subtree.
+      operationId: getProofs
       produces:
-        - application/json
-      responses:
-        '200':
-          description: successful operation
-          schema:
-            type: array
-            items:
-              $ref: '#/definitions/Grade'
-    post:
-      tags:
-        - grades
-      summary: Post a new grade
-      description: Posts a new grade with a given body.
-      operationId: postGrade
-      produces:
-        - application/json
-      consumes:
         - application/json
       parameters:
-        - in: body
-          name: grade
-          description: A grade
-          required: true
-          schema:
-            $ref: '#/definitions/Grade'
+        - in: query
+          name: since
+          description: Do not include transactions which were created earlier this time
+          required: false
+          type: string
+          format: date-time
       responses:
-        '200':
-          description: successful operation
+        200:
+          description: successfull operation
           schema:
-            $ref: '#/definitions/Grade'
-securityDefinitions:
-  petstore_auth:
-    type: oauth2
-    authorizationUrl: 'http://petstore.swagger.io/oauth/dialog'
-    flow: implicit
-    scopes:
-      'write:pets': modify pets in your account
-      'read:pets': read your pets
-  api_key:
-    type: apiKey
-    name: api_key
-    in: header
+            $ref: '#/definitions/Proofs'
+
+#securityDefinitions:
+  # api_key:
+  #   type: apiKey
+  #   name: api_key
+  #   in: header
+  
 definitions:
   Hash:
     type: string
     format: byte
+    
   Address:
     type: string
     format: byte
+    
   Time:
     type: string
     format: date-time
-  Student:
-    type: object
-    required:
-      - addr
-    properties:
-      addr:
-        $ref: '#/definitions/Address'
+    
+  Subject:
+    type: integer
+    format: int32
+    
   CourseId:
     type: integer
     format: int32
+    
   Course:
     type: object
     required:
@@ -176,10 +255,17 @@ definitions:
         type: array
         items:
           $ref: '#/definitions/Subject'
+      is_enrolled:
+        type: boolean
+        
   Assignment:
     type: object
     required:
       - hash
+      - course_id
+      - contents_hash
+      - is_final
+      - desc
     properties:
       hash:
         $ref: '#/definitions/Hash'
@@ -187,49 +273,77 @@ definitions:
         $ref: '#/definitions/CourseId'
       contents_hash:
         $ref: '#/definitions/Hash'
+      is_final:
+        type: boolean
       desc:
         type: string
+      last_submission:
+        $ref: '#/definitions/Submission'
+        
   Submission:
     type: object
     required:
       - hash
       - contents_hash
       - assignment_hash
-      - student_addr
-      - witness
     properties:
       hash:
         $ref: '#/definitions/Hash'
       contents_hash:
         $ref: '#/definitions/Hash'
-      assignment:
-        $ref: '#/definitions/Assignment'
-      student_addr:
-        $ref: '#/definitions/Address'
-      witness:
-        type: string
-        format: binary
+      assignment_hash:
+        $ref: '#/definitions/Hash'
+      grade:
+        $ref: '#/definitions/Grade'
+        
   Grade:
     type: object
+    required:
+      - grade
+      - timestamp
+      - has_proof
     properties:
-      hash:
-        $ref: '#/definitions/Hash'
-      submission_hash:
-        $ref: '#/definitions/Hash'
       grade:
         type: integer
         format: int32
       timestamp:
         $ref: '#/definitions/Time'
+      has_proof:
+        type: boolean
+        
+  SignedSubmission:
+    type: object
+    required:
+      - hash
+      - student_addr
+      - contents_hash
+      - assignment
+      - witness
+    properties:
+      hash:
+        $ref: '#/definitions/Hash'
+      student_addr:
+        $ref: '#/definitions/Address'
+      contents_hash:
+        $ref: '#/definitions/Hash'
+      assignment:
+        $ref: '#/definitions/Assignment'
+      witness:
+        type: string
+        format: binary
+        
   Transaction:
     type: object
     required:
+      - hash
       - signed_submission
       - grade
       - timestamp
     properties:
+      hash:
+        $ref: '#/definitions/Hash'
       signed_submission:
-        $ref: '#/definitions/Submission'
+        $ref: '#/definitions/SignedSubmission'
       grade:
         type: integer
         format: int32
@@ -252,42 +366,43 @@ definitions:
     type: array
     items:
       $ref: '#/definitions/BlkProof'
-  Subject:
+parameters:
+  CourseId:
+    in: query
+    name: course
+    description: Course ID
+    required: false
     type: integer
     format: int32
-  ApiResponse:
-    type: object
-    properties:
-      code:
-        type: integer
-        format: int32
-      type:
-        type: string
-      message:
-        type: string
-parameters:
-  StudentAddr:
-    in: path
-    name: studentAddr
-    description: Student's Disciplina address
-    required: true
-    type: string
-    format: byte
-  CourseId:
+  CourseIdPath:
     in: path
     name: courseId
     description: Course ID
     required: true
     type: integer
     format: int32
+  DocumentType:
+    in: query
+    name: type
+    description: Type of assignment or submission
+    required: false
+    type: string
+    enum: ["online", "offline"]
   AssignmentHash:
+    in: query
+    name: assignment
+    description: Assignment hash
+    type: string
+    format: byte
+    required: false
+  AssignmentHashPath:
     in: path
     name: assignmentHash
     description: Assignment hash
     required: true
     type: string
     format: byte
-  SubmissionHash:
+  SubmissionHashPath:
     in: path
     name: submissionHash
     description: Submission hash
