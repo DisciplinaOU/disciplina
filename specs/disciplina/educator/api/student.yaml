@@ -35,7 +35,7 @@ paths:
         - in: query
           name: enrolled
           required: false
-          description: Is a student already enrolled in a course?
+          description: If set to `true`, show only courses in which student is currently enrolled, if set to `false` - show only available courses, otherwise should all of them.
           type: boolean
       produces: 
         - application/json
@@ -148,7 +148,7 @@ paths:
           description: A submission
           required: true
           schema:
-            $ref: '#/definitions/Submission'
+            $ref: '#/definitions/SignedSubmission'
       responses:
         '200':
           description: successful operation
@@ -156,6 +156,8 @@ paths:
             $ref: '#/definitions/Submission'
         '403':
           description: Either submission body or submission signature is invalid
+          schema:
+            $ref: '#/definitions/ErrResponse'
           
   /submissions/{submissionHash}:
     get:
@@ -190,6 +192,8 @@ paths:
           description: successful operation
         '403':
           description: Cannot delete a graded submission
+          schema:
+            $ref: '#/definitions/ErrResponse'
         '404':
           description: Submission with given hash not found
     
@@ -246,6 +250,9 @@ definitions:
     type: object
     required:
       - id
+      - desc
+      - subjects
+      - is_enrolled
     properties:
       id:
         $ref: '#/definitions/CourseId'
@@ -331,7 +338,17 @@ definitions:
       witness:
         type: string
         format: binary
-        
+    example:
+      hash: "8ec778bf20bbc5596ae6b22352b6f91fb44274acac91f6b7ede45fe29da215e9"
+      student_addr: "1Nh7uHdvY6fNwtQtM1G5EZAFPLC33B59rB"
+      contents_hash: "c52b4484433160146ec1f56fa18440399ac0c35487b8daecff1553f9f490fff6"
+      assignment:
+        hash: "8ec778bf20bbc5596ae6b22352b6f91fb44274bcbc91f6b7ede45fe29da215e9"
+        course_id: 4
+        contents_hash: "c52b4484433160146ec1f56fa18440399ac0c35487b8daecff1553f9f490fff6"
+        is_final: false
+        desc: "mda"
+
   Transaction:
     type: object
     required:
@@ -366,6 +383,15 @@ definitions:
     type: array
     items:
       $ref: '#/definitions/BlkProof'
+ 
+  ErrResponse:
+    type: object
+    required:
+      - error
+    properties:
+      error:
+        type: string
+        enum: [SubmissionInvalid, SubmissionSignatureInvalid, DeletingGradedSubmission]
 parameters:
   CourseId:
     in: query
