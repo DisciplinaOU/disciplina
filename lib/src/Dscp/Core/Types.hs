@@ -58,6 +58,7 @@ module Dscp.Core.Types
        , TxWitness (..)
        , TxWithWitness (..)
 
+       , HeaderHash
        , BlockToSign (..)
        , Header (..)
        , Block (..)
@@ -325,16 +326,20 @@ instance Buildable TxWithWitness where
 newtype Difficulty = Difficulty Word64
     deriving (Eq,Ord,Num,Show,Generic,Buildable)
 
+
+-- | Blocks are indexed by their headers' hashes.
+type HeaderHash = Hash Header
+
 -- Part of the block we sign
 data BlockToSign =
-    BlockToSign Difficulty (Hash Header) BlockBody
+    BlockToSign Difficulty HeaderHash BlockBody
     deriving (Eq, Show, Generic)
 
 data Header = Header
     { hSignature  :: Signature BlockToSign
     , hIssuer     :: PublicKey
     , hDifficulty :: Difficulty
-    , hPrevHash   :: Hash Header
+    , hPrevHash   :: HeaderHash
     } deriving (Eq, Show, Generic)
 
 instance Buildable Header where

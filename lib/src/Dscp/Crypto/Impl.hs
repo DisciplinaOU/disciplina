@@ -4,11 +4,14 @@
 
 module Dscp.Crypto.Impl
        ( -- * Hashing
-         Hash
+         HashScheme
+       , Hash
        , HasHash
        , hash
        , unsafeHash
+
          -- * Signing
+       , SigScheme
        , PublicKey
        , SecretKey
        , Signature
@@ -19,7 +22,7 @@ module Dscp.Crypto.Impl
        , unsafeVerify
        ) where
 
-import Crypto.Hash.Algorithms (Blake2sp_256)
+import Crypto.Hash.Algorithms (Blake2b_256)
 
 import Dscp.Crypto.Hash (AbstractHash (..), CryptoniteFunc, HasAbstractHash (..), abstractHash)
 import Dscp.Crypto.Signing (AbstractPK (..), AbstractSK (..), AbstractSig (..), CryptoEd25519,
@@ -29,12 +32,11 @@ import Dscp.Crypto.Signing (AbstractPK (..), AbstractSK (..), AbstractSig (..), 
 -- Hashing
 ------------------------------------------------------
 
--- TODO Why not blake2b?
--- | We choose `blake2sp-256`
-type HashFunc = CryptoniteFunc Blake2sp_256
+-- | We choose `blake2b-256`
+type HashScheme = CryptoniteFunc Blake2b_256
 
-type HasHash a = HasAbstractHash HashFunc a
-type Hash a = AbstractHash HashFunc a
+type HasHash a = HasAbstractHash HashScheme a
+type Hash a = AbstractHash HashScheme a
 
 hash :: forall a. HasHash a => a -> Hash a
 hash = abstractHash

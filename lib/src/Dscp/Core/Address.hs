@@ -1,4 +1,3 @@
-
 -- | Utils and formatting for addresses.
 
 module Dscp.Core.Address

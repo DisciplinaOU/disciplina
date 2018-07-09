@@ -19,9 +19,10 @@ import System.IO.Unsafe (unsafeDupablePerformIO)
 class ByteArrayAccess ba => FromByteArray ba where
     fromByteArray :: ByteArrayAccess ba' => ba' -> Either String ba
 
-instance {-# OVERLAPPABLE #-}
-    (ByteArrayAccess ba, ByteArray ba) => FromByteArray ba where
+    default fromByteArray :: (ByteArrayAccess ba', ByteArray ba) => ba' -> Either String ba
     fromByteArray = pure . BA.convert
+
+instance FromByteArray ByteString
 
 ----------------------------------------------------------
 -- Hashes
