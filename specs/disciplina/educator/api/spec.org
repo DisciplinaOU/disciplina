@@ -1,0 +1,121 @@
+#+TITLE: Description of interaction between Student and Educator through Student API
+#+AUTHOR: Dmitry Mukhutdinov (dimq@serokell.io)
+#+DATE: 2018-07-03
+
+* Definitions
+  - *Student* is _identified_ by Educator, if *Student*'s address is included in
+    *Educator*'s database.
+  - *Student* is _studying_ at *Educator*, if *Student* is _known_ to *Educator*
+    and there is at least one _course_ in which student is enrolled.
+  - An assignment is _offline_, if the hash of its contents has the special
+    value ~assignment_offline_hash~. An assignment is considered _online_
+    otherwise.
+  - A submission is _offline_, if the hash of its contents has the special value
+    ~submission_offline_hash~. A submission is considered _online_ otherwise.
+
+* Beginning of the interaction
+** Identify the student
+   In the very beginning a *Student* is not _identified_ by *Educator*. A *Student*
+   can be _identified_ by *Educator* only through *Educator*'s own actions (i. e.
+   through Educator API).
+  
+   It is assumed that a Student does something _off-chain_ in order to identify
+   themselves (e. g. registers on Educator's website and provides their
+   Disciplina address in a form).
+  
+   No API methods are available to *Student* until they are _known_ to
+   *Educator*.
+  
+** Enroll in a course 
+   As soon as *Student* is _known_ to *Educator*, the *Student* is able to
+   _enroll_ in a course. There are two possible ways of enrolling a student
+   into a course:
+   
+   1) *Default courses*. As soon as *Student* becomes _known_ to *Educator*, the
+      *Educator* automatically _enrolls_ *Student* to a particular set of
+      courses. It is assumed that this set of courses is defined outside of
+      Disciplina system (e. g. in the integrated CRM). Therefore, as soon as
+      *Student* becomes known to *Educator*, the *Student* becomes automatically
+      enrolled to these courses and can interact with the course content (Section
+      3).
+   2) *Student-chosen courses*. As soon as *Student* becomes _known_ to
+      *Educator*, they can query the *Educator* for a list of _available
+      courses_, and selectively _enroll_ to these courses (using Student API).
+      Later a student should still be able to see both a list of courses they're
+      enrolled in and a list of courses still available for enrollment.
+      
+   These two ways can be _combined_: there can be a set of obligatory default
+   courses together with additional facultative courses.
+
+* Studying the course
+  A course consists of _assignments_, for which *Student* should provide
+  _submissions_. Submissions later receive _grades_ from the *Educator*. _Grades_
+  are put into private chain _transactions_, which are periodically (once in
+  _block issue period_) combined into private _blocks_.
+  
+  Once a _grade_ has been added into a _block_, there exists a cryptographic
+  _proof_ for this grade, which can be fetched by a _Student_.
+
+** Assignments
+  There are two modes of operation for assigning _assignments_ to students:
+
+  1) *Default course assignments*. As soon as *Student* enrolls into a _course_,
+     *Educator* automatically assigns a particular set of the course's
+     _assignments_ to the *Student*. It is assumed that this set of assignments
+     is defined outside of Disciplina system (e. g. in the integrated CRM).
+     Therefore, as soon as *Student* enrolls to a course, they can submit
+     submissions for these default assignments.
+  2) *On-demand assignments*. *Educator* assigns assignments to students as the
+     course goes by. In the beginning of the course, there might be no course
+     assignments assigned to a *Student*. A *Student* should poll Student API to
+     check for updates regarding course assignments.
+     
+  These two modes can be _combined_: there can be a set of default course
+  assignments, and students can also receive additional ones during
+  the course.
+** Submissions
+   There are two modes of operations of submitting _submissions_ to assignments:
+   
+   1) *Offline submissions*. If a course is meant to be offline (e. g. it's a
+      classic university course with course assignments done on paper) and there
+      are no actual digital _content_ of submissions, then submissions in
+      Disciplina system only serve as signals of student's readiness to complete
+      the assignment. This means that these _offline_ submissions can be sent
+      immediately and automatically after receiving an assignment. These
+      submissions remain ungraded until *Educator* checks them offline and
+      submits a grade for them in the system.
+   2) *Online submissions*. If a course is meant to be online (e. g. it's a
+      MOOC) and every submission is digital, then submissions in Disciplina
+      should refer to actual contents of submissions via _contents hash_.
+      These _online_ submissions are submitted as the *Student* completes them. 
+
+   These two modes can be _combined_: a course can have both _online_ and
+   _offline_ assignments, and submissions for these assignments are sent,
+   accordingly, manually or automatically.
+
+* Completing the course
+  There are special type of _assignments_ which denote course finals. A course
+  is considered _completed_ if and only if there is a graded submission for a course
+  final assignment. Each student can have at most one course final assignment
+  assigned to them.
+
+  There are two types of course final assignments:
+  1) *No final assignment/offline finals*. Treated similarly to _default course
+     assignments_: these types of course finals get assigned to a student as
+     soon as the student enrolls in the course.
+  2) *Online finals*. Treated similarly to _on-demand course assignments_: is
+     assigned to a student at some moment during the course. Different students
+     can possibly have different final assignments, so we cannot automatically
+     assign these at the beginning of the course as well.
+
+  Also, there are two ways of completing the final assignment:
+  1) *Fictional/offline final submission*. Similarly to _offline course
+     submissions_, they are submitted automatically as soon as the final assignment
+     is assigned.
+  2) *Online final submission*. Similarly to _online course submissions_, these
+     should refer to some actual submission contents via _contents hash_
+     and are submitted manually by *Student*.
+
+  As there can be only one final course submission per course, any particular
+  final assignment can be either _online_ or _offline_ and accept either
+  _online_ or _offline_ submissions, but not both.

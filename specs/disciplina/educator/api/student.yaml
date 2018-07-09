@@ -1,0 +1,440 @@
+swagger: "2.0"
+info:
+  description: "This is an HTTP API for interacting with Disciplina Educator node from Student side. It is used by Student application to receive info about assignments and grades, submit submissions and fetch proofs of grades from Educator."
+  version: 0.1.0
+  title: Disciplina Student API
+  termsOfService: "https://disciplina.io/tnc.pdf"
+  contact:
+    email: hi@serokell.io
+  license:
+    name: Apache 2.0
+    url: "http://www.apache.org/licenses/LICENSE-2.0.html"
+host: "localhost:8090"
+basePath: /v1
+tags:
+  - name: courses
+    description: "Methods for working with student's courses."
+  - name: assignments
+    description: "Methods for working with student's assignments."
+  - name: submissions
+    description: "Methods for working with student's submissions."
+  - name: proofs
+    description: "Methods for working with private transactions and grade's proofs"
+schemes:
+  - https
+  - http
+paths:
+  /courses:
+    get:
+      tags:
+        - courses
+      summary: Get Educator\'s courses
+      description: Gets a list of Educator\'s courses, both enrolled and available.
+      operationId: getCourses
+      parameters:
+        - in: query
+          name: enrolled
+          required: false
+          description: If set to `true`, show only courses in which student is currently enrolled, if set to `false` - show only available courses, otherwise should all of them.
+          type: boolean
+      produces: 
+        - application/json
+      responses:
+        200:
+          description: successful operation
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/Course'
+  
+  /courses/{courseId}:
+    get:
+      tags:
+        - courses
+      summary: Get info about the course
+      description: Gets all info about the given course.
+      operationId: getCourse
+      parameters:
+        - $ref: '#/parameters/CourseIdPath'
+      produces: 
+        - application/json
+      responses:
+        200:
+          description: successful operation
+          schema:
+            $ref: '#/definitions/Course'
+        404:
+          description: Course with given ID not found
+  
+  /assignments:
+    get:
+      tags:
+        - assignments
+      summary: Get student\'s assignments
+      description: Gets a list of student\'s assignments. Filter parameters are used to specify
+        specific course, type, etc.
+      operationId: getAssignments
+      parameters: 
+        - $ref: '#/parameters/CourseId'
+        - $ref: '#/parameters/DocumentType'
+        - in: query
+          name: final
+          required: false
+          description: Select only final assignments
+          type: boolean
+      produces:
+        - application/json
+      responses:
+        200:
+          description: successful operation
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/Assignment'
+
+  /assignments/{assignmentHash}:
+    get:
+      tags:
+        - assignments
+      summary: Get info about an assignment
+      description: Gets an assignment info by given submission hash. Returns 404 if a student tries to get an assignment which is not assigned to them.
+      operationId: getAsssignment
+      parameters:
+        - $ref: '#/parameters/AssignmentHashPath'
+      produces:
+        - application/json
+      responses:
+        200:
+          description: successful operation
+          schema:
+            $ref: '#/definitions/Assignment'
+        404:
+          description: Assignment with given wasn not found (or a user has no rights to look it up)
+
+  /submissions:
+    get:
+      tags:
+        - submissions
+      summary: Get student\'s submissions
+      description: Gets a list of student\'s submissions. Filter parameters are used to specify
+        specific course, assignment, etc.
+      operationId: getSubmissions
+      parameters: 
+        - $ref: '#/parameters/CourseId'
+        - $ref: '#/parameters/AssignmentHash'
+        - $ref: '#/parameters/DocumentType'
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: successful operation
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/Submission'
+    post:
+      tags:
+        - submissions
+      summary: Make a new submission
+      description: Posts a new submission with a given body. Request body should contain valid student\'s signature of submission contents, otherwise an error will be raised.
+      operationId: makeSubmission
+      produces:
+        - application/json
+      consumes:
+        - application/json
+      parameters:
+        - in: body
+          name: submission
+          description: A submission
+          required: true
+          schema:
+            $ref: '#/definitions/SignedSubmission'
+      responses:
+        '200':
+          description: successful operation
+          schema:
+            $ref: '#/definitions/Submission'
+        '403':
+          description: Either submission body or submission signature is invalid
+          schema:
+            $ref: '#/definitions/ErrResponse'
+          
+  /submissions/{submissionHash}:
+    get:
+      tags:
+        - submissions
+      summary: Get info about a submission
+      description: Gets a submission data by given submission hash. Returns a 404 if a student tries to get a submission which is not their own.
+      operationId: getSubmission
+      produces:
+        - application/json
+      parameters:
+        - $ref: '#/parameters/SubmissionHashPath'
+      responses:
+        '200':
+          description: successful operation
+          schema:
+            $ref: '#/definitions/Submission'
+        '404':
+          description: Submission with given wasn not found (or a user has no rights to look it up)
+    delete:
+      tags:
+        - submissions
+      summary: Delete a submission
+      description: Deletes a submission from a database. Only ungraded submissions can be deleted.
+      operationId: deleteSubmission
+      produces:
+        - application/json
+      parameters:
+        - $ref: '#/parameters/SubmissionHashPath'
+      responses:
+        '200':
+          description: successful operation
+        '403':
+          description: Cannot delete a graded submission
+          schema:
+            $ref: '#/definitions/ErrResponse'
+        '404':
+          description: Submission with given hash not found
+    
+  /proofs:
+    get:
+      tags:
+        - proofs
+      summary: Get available proofs for student
+      description: Gets private transactions together with corresponding Merkle subtrees. Transactions from same blocks are grouped together and each group has one proof, which is a corresponding Merkle subtree.
+      operationId: getProofs
+      produces:
+        - application/json
+      parameters:
+        - in: query
+          name: since
+          description: Do not include transactions which were created earlier this time
+          required: false
+          type: string
+          format: date-time
+      responses:
+        200:
+          description: successfull operation
+          schema:
+            $ref: '#/definitions/Proofs'
+
+#securityDefinitions:
+  # api_key:
+  #   type: apiKey
+  #   name: api_key
+  #   in: header
+  
+definitions:
+  Hash:
+    type: string
+    format: byte
+    
+  Address:
+    type: string
+    format: byte
+    
+  Time:
+    type: string
+    format: date-time
+    
+  Subject:
+    type: integer
+    format: int32
+    
+  CourseId:
+    type: integer
+    format: int32
+    
+  Course:
+    type: object
+    required:
+      - id
+      - desc
+      - subjects
+      - is_enrolled
+    properties:
+      id:
+        $ref: '#/definitions/CourseId'
+      desc:
+        type: string
+      subjects:
+        type: array
+        items:
+          $ref: '#/definitions/Subject'
+      is_enrolled:
+        type: boolean
+        
+  Assignment:
+    type: object
+    required:
+      - hash
+      - course_id
+      - contents_hash
+      - is_final
+      - desc
+    properties:
+      hash:
+        $ref: '#/definitions/Hash'
+      course_id:
+        $ref: '#/definitions/CourseId'
+      contents_hash:
+        $ref: '#/definitions/Hash'
+      is_final:
+        type: boolean
+      desc:
+        type: string
+      last_submission:
+        $ref: '#/definitions/Submission'
+        
+  Submission:
+    type: object
+    required:
+      - hash
+      - contents_hash
+      - assignment_hash
+    properties:
+      hash:
+        $ref: '#/definitions/Hash'
+      contents_hash:
+        $ref: '#/definitions/Hash'
+      assignment_hash:
+        $ref: '#/definitions/Hash'
+      grade:
+        $ref: '#/definitions/Grade'
+        
+  Grade:
+    type: object
+    required:
+      - grade
+      - timestamp
+      - has_proof
+    properties:
+      grade:
+        type: integer
+        format: int32
+      timestamp:
+        $ref: '#/definitions/Time'
+      has_proof:
+        type: boolean
+        
+  SignedSubmission:
+    type: object
+    required:
+      - hash
+      - student_addr
+      - contents_hash
+      - assignment
+      - witness
+    properties:
+      hash:
+        $ref: '#/definitions/Hash'
+      student_addr:
+        $ref: '#/definitions/Address'
+      contents_hash:
+        $ref: '#/definitions/Hash'
+      assignment:
+        $ref: '#/definitions/Assignment'
+      witness:
+        type: string
+        format: binary
+    example:
+      hash: "8ec778bf20bbc5596ae6b22352b6f91fb44274acac91f6b7ede45fe29da215e9"
+      student_addr: "1Nh7uHdvY6fNwtQtM1G5EZAFPLC33B59rB"
+      contents_hash: "c52b4484433160146ec1f56fa18440399ac0c35487b8daecff1553f9f490fff6"
+      assignment:
+        hash: "8ec778bf20bbc5596ae6b22352b6f91fb44274bcbc91f6b7ede45fe29da215e9"
+        course_id: 4
+        contents_hash: "c52b4484433160146ec1f56fa18440399ac0c35487b8daecff1553f9f490fff6"
+        is_final: false
+        desc: "mda"
+
+  Transaction:
+    type: object
+    required:
+      - hash
+      - signed_submission
+      - grade
+      - timestamp
+    properties:
+      hash:
+        $ref: '#/definitions/Hash'
+      signed_submission:
+        $ref: '#/definitions/SignedSubmission'
+      grade:
+        type: integer
+        format: int32
+      timestamp:
+        $ref: '#/definitions/Time'
+  BlkProof:
+    type: object
+    required:
+      - mtree_serialized
+      - txs
+    properties:
+      mtree_serialized:
+        type: string
+        format: binary
+      txs:
+        type: array
+        items:
+          $ref: '#/definitions/Transaction'
+  Proofs:
+    type: array
+    items:
+      $ref: '#/definitions/BlkProof'
+ 
+  ErrResponse:
+    type: object
+    required:
+      - error
+    properties:
+      error:
+        type: string
+        enum: [SubmissionInvalid, SubmissionSignatureInvalid, DeletingGradedSubmission]
+parameters:
+  CourseId:
+    in: query
+    name: course
+    description: Course ID
+    required: false
+    type: integer
+    format: int32
+  CourseIdPath:
+    in: path
+    name: courseId
+    description: Course ID
+    required: true
+    type: integer
+    format: int32
+  DocumentType:
+    in: query
+    name: type
+    description: Type of assignment or submission
+    required: false
+    type: string
+    enum: ["online", "offline"]
+  AssignmentHash:
+    in: query
+    name: assignment
+    description: Assignment hash
+    type: string
+    format: byte
+    required: false
+  AssignmentHashPath:
+    in: path
+    name: assignmentHash
+    description: Assignment hash
+    required: true
+    type: string
+    format: byte
+  SubmissionHashPath:
+    in: path
+    name: submissionHash
+    description: Submission hash
+    required: true
+    type: string
+    format: byte
+externalDocs:
+  description: Find out more about Swagger
+  url: 'http://swagger.io'
