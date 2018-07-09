@@ -14,18 +14,18 @@ module Dscp.Core.Types
        , AssignmentType (..)
        , AssignmentId
        , Submission (..)
-       , IntegrationType (..)
+       , DocumentType (..)
        , SubmissionSig
        , SignedSubmission (..)
        , SubmissionWitness (..)
-       , _aIntegrationType
-       , aIntegrationType
+       , _aDocumentType
+       , aDocumentType
        , aCourseId
        , aContentsHash
        , aType
        , aAssignment
-       , _sIntegrationType
-       , sIntegrationType
+       , _sDocumentType
+       , sDocumentType
        , sStudentId
        , sContentsHash
        , sAssignment
@@ -120,26 +120,25 @@ offlineHash = unsafeHash ("offline" :: ByteString)
 
 -- | Datatype to represent the notion of "offline"- and "online"-ness
 -- of assignments and submissions.
--- TODO: come up with a better name maybe?
-data IntegrationType = Online | Offline
+data DocumentType = Online | Offline
     deriving (Eq, Show, Generic)
 
-integrationType :: Hash Raw -> IntegrationType
-integrationType h
+documentType :: Hash Raw -> DocumentType
+documentType h
     | h == offlineHash = Offline
     | otherwise        = Online
 
-_aIntegrationType :: Assignment -> IntegrationType
-_aIntegrationType = integrationType . _aContentsHash
+_aDocumentType :: Assignment -> DocumentType
+_aDocumentType = documentType . _aContentsHash
 
-aIntegrationType :: Getter Assignment IntegrationType
-aIntegrationType = to _aIntegrationType
+aDocumentType :: Getter Assignment DocumentType
+aDocumentType = to _aDocumentType
 
-_sIntegrationType :: Submission -> IntegrationType
-_sIntegrationType = integrationType . _sContentsHash
+_sDocumentType :: Submission -> DocumentType
+_sDocumentType = documentType . _sContentsHash
 
-sIntegrationType :: Getter Submission IntegrationType
-sIntegrationType = to _sIntegrationType
+sDocumentType :: Getter Submission DocumentType
+sDocumentType = to _sDocumentType
 
 -- | Type alias for Submission hash
 type SubmissionId = Hash Submission
