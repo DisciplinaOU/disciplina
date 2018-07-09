@@ -4,6 +4,7 @@
 module Dscp.Core.Types
        ( Address (..)
        , mkAddr
+       , offlineHash
        , SubjectId (..)
        , Grade (..)
        , StudentId
