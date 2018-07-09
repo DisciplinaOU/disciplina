@@ -75,7 +75,7 @@ deriving instance ByteArrayAccess (Sig ss) =>
     ByteArrayAccess (AbstractSig ss a)
 
 -- | Provide 'ByteArray' instances for signatures and keys.
--- They are used for desirisalisation.
+-- They are used for deserisalisation.
 deriving instance ByteArray (PK ss) =>
     ByteArray (AbstractPK ss)
 deriving instance ByteArray (SK ss) =>
@@ -84,7 +84,7 @@ deriving instance ByteArray (Sig ss) =>
     ByteArray (AbstractSig ss a)
 
 -- | Provide 'FromByteArray' instances for signatures and keys.
--- They are used for desirisalisation.
+-- They are used for deserisalisation.
 deriving instance FromByteArray (PK ss) =>
     FromByteArray (AbstractPK ss)
 deriving instance FromByteArray (SK ss) =>

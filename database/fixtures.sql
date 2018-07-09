@@ -70,18 +70,18 @@ insert into   StudentCourses (student_addr, course_id)
     where     desc = "Physics"
           and addr = "Petua";
 
-insert into   Assignments (hash, course_id, contents_hash, desc)
-    select    "Add two nums", Courses.id, "2+2=?", "addition"
+insert into   Assignments (hash, course_id, contents_hash, type, desc)
+    select    "Add two nums", Courses.id, "2+2=?", 0, "addition"
     from      Courses
     where     Courses.desc = "Math";
 
-insert into   Assignments (hash, course_id, contents_hash, desc)
-    select    "Solve eq", Courses.id, "pV=?", "gases"
+insert into   Assignments (hash, course_id, contents_hash, type, desc)
+    select    "Solve eq", Courses.id, "pV=?", 0, "gases"
     from      Courses
     where     Courses.desc = "Physics";
 
-insert into   Assignments (hash, course_id, contents_hash, desc)
-    select    "make poem", Courses.id, "poem=?", "writting"
+insert into   Assignments (hash, course_id, contents_hash, type, desc)
+    select    "make poem", Courses.id, "poem=?", 0, "writting"
     from      Courses
     where     Courses.desc = "Poetry";
 

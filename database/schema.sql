@@ -74,6 +74,7 @@ create table if not exists Assignments (
     hash           BLOB     not null,
     course_id      INTEGER  not null,
     contents_hash  BLOB     not null,
+    type           INTEGER  not null,
     desc           TEXT     null,
 
     primary key (hash),

@@ -28,8 +28,8 @@ import Data.Time.Format (defaultTimeLocale, parseTimeOrError)
 import Crypto.Error (CryptoFailable (..))
 import qualified Crypto.Random as Crypto
 import Dscp.Core (Assignment (..), AssignmentType (..), CourseId (..), Grade (..),
-                  SignedSubmission (..), Submission (..), SubmissionType (..),
-                  SubmissionWitness (..), mkAddr)
+                  SignedSubmission (..), Submission (..), SubmissionWitness (..), mkAddr,
+                  offlineHash)
 import Dscp.Crypto (AbstractPK (..), AbstractSK (..), PublicKey, SecretKey, hash, sign)
 import Dscp.Educator (PrivateTx (..))
 
@@ -225,7 +225,7 @@ mkPrivateTx courseId grade addrKey (witnessPKey, witnessSKey) =
      mkSubmission :: Submission
      mkSubmission = Submission
        { _sStudentId = mkAddr addrKey
-       , _sType = Digital
+       , _sContentsHash = offlineHash
        , _sAssignment = mkAssignment
        }
 
@@ -238,6 +238,7 @@ mkPrivateTx courseId grade addrKey (witnessPKey, witnessSKey) =
      mkAssignment :: Assignment
      mkAssignment = Assignment
        { _aCourseId = courseId
+       , _aContentsHash = offlineHash
        , _aType = Regular
        , _aAssignment = ""
        }
