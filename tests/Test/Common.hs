@@ -28,8 +28,7 @@ import Data.Time.Format (defaultTimeLocale, parseTimeOrError)
 import Crypto.Error (CryptoFailable (..))
 import qualified Crypto.Random as Crypto
 import Dscp.Core (Assignment (..), AssignmentType (..), CourseId (..), Grade (..),
-                  SignedSubmission (..), Submission (..), SubmissionType (..),
-                  SubmissionWitness (..), mkAddr)
+                  SignedSubmission (..), Submission (..), SubmissionWitness (..), mkAddr)
 import Dscp.Crypto (AbstractPK (..), AbstractSK (..), PublicKey, SecretKey, hash, sign)
 import Dscp.Educator (PrivateTx (..))
 

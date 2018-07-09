@@ -10,10 +10,10 @@ import Database.SQLite.Simple (Only (..))
 
 import Text.InterpolatedString.Perl6 (q, qc, qq)
 
-import Dscp.Core.Types (Assignment (..), AssignmentType (..), CourseId (..),
-                        Grade (..), SignedSubmission (..), StudentId, Submission (..),
-                        SubmissionSig, SubmissionType (..), SubmissionWitness (..))
-import Dscp.Crypto (PublicKey)
+import Dscp.Core.Types (Assignment (..), AssignmentType (..), CourseId (..), Grade (..),
+                        SignedSubmission (..), StudentId, Submission (..), SubmissionSig,
+                        SubmissionWitness (..))
+import Dscp.Crypto (PublicKey, fromByteArray)
 import Dscp.DB.DSL.Class
 import Dscp.DB.SQLite
 import Dscp.Educator.Txs (PrivateTx (..), PrivateTxId)
@@ -64,6 +64,7 @@ getPrivateTxsByFilter pk filterExpr = do
 
                       Assignments.course_id,
                       Assignments.contents_hash,
+                      Assignments.type
                       Assignments.desc,
 
                       Submissions.signature,
@@ -106,6 +107,7 @@ getPrivateTxFromId pk tid = do
 
                       Assignments.course_id,
                       Assignments.contents_hash,
+                      Assignments.type,
                       Assignments.desc,
 
                       Submissions.signature,
@@ -129,8 +131,9 @@ getPrivateTxFromId pk tid = do
 packPrivateTxQuery
     :: PublicKey
     ->  ( StudentId
-        , Integer
+        , ByteString
         , CourseId
+        , ByteString
         , Integer
         , Text
         , SubmissionSig
@@ -140,8 +143,9 @@ packPrivateTxQuery
     -> PrivateTx
 packPrivateTxQuery pk
     ( student_addr
-    , sub_type
+    , sub_contents_hash
     , course_id
+    , assign_contents_hash
     , assign_type
     , assign_desc
     , sub_sig
@@ -151,9 +155,10 @@ packPrivateTxQuery pk
             (SignedSubmission
                 (Submission
                     student_addr
-                    (select sub_type Digital Offline)
+                    (mkHash sub_contents_hash)
                     (Assignment
                         course_id
+                        (mkHash assign_contents_hash)
                         (select assign_type Regular CourseFinal)
                         assign_desc))
                 (SubmissionWitness
@@ -166,6 +171,7 @@ packPrivateTxQuery pk
         if i == (0 :: Integer)
         then left
         else right
+    mkHash = either (error . toText) identity . fromByteArray
 
 data RequiredTables
     = Subject

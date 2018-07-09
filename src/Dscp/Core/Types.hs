@@ -13,16 +13,21 @@ module Dscp.Core.Types
        , AssignmentType (..)
        , AssignmentId
        , Submission (..)
-       , SubmissionType (..)
+       , IntegrationType (..)
        , SubmissionSig
        , SignedSubmission (..)
        , SubmissionWitness (..)
+       , _aIntegrationType
+       , aIntegrationType
        , aCourseId
+       , aContentsHash
        , aType
        , aAssignment
+       , _sIntegrationType
+       , sIntegrationType
        , sStudentId
+       , sContentsHash
        , sAssignment
-       , sType
        , swKey
        , swSig
        , ssSubmission
@@ -39,10 +44,10 @@ module Dscp.Core.Types
        , ATG (..)
        ) where
 
-import Control.Lens (makeLenses)
+import Control.Lens (Getter, makeLenses, to)
 import Data.Map (Map)
 
-import Dscp.Crypto (Hash, PublicKey, Signature, hash)
+import Dscp.Crypto (Hash, PublicKey, Raw, Signature, hash, unsafeHash)
 
 -- | 'Address' datatype. Not 'newtype', because later it will
 -- inevitably become more complex.
@@ -82,11 +87,13 @@ data AssignmentType = Regular | CourseFinal
 
 -- | Assignment doesn't contain actual assignment contents - only hash of them.
 data Assignment = Assignment
-    { _aCourseId   :: !CourseId
+    { _aCourseId     :: !CourseId
     -- ^ Course this assignement belongs to
-    , _aType       :: !AssignmentType
+    , _aContentsHash :: !(Hash Raw)
+    -- ^ Hash of assignment contents
+    , _aType         :: !AssignmentType
     -- ^ Assignment type
-    , _aAssignment :: !Text
+    , _aAssignment   :: !Text
     -- ^ Description of assignment
     } deriving (Eq, Show, Generic)
 
@@ -94,20 +101,44 @@ data Assignment = Assignment
 -- which are stored off-chain.
 type AssignmentId = Hash Assignment
 
--- | Submission can be digital or offline
--- TODO, better description of how these differs
-data SubmissionType = Digital | Offline
-    deriving (Eq, Show, Generic)
-
 -- | Student submissions
 data Submission = Submission
-    { _sStudentId  :: !StudentId
+    { _sStudentId    :: !StudentId
     -- ^ Student who created this submission
-    , _sType       :: !SubmissionType
-    -- ^ Submission type
-    , _sAssignment :: !Assignment
+    , _sContentsHash :: !(Hash Raw)
+    -- ^ Hash of submission contents
+    , _sAssignment   :: !Assignment
     -- ^ Assignment of this submission
     } deriving (Eq, Show, Generic)
+
+-- | A hash which indicates that a submission or an assignment
+-- are offline.
+-- TODO: make a more comprehensible and easily documentable value?...
+offlineHash :: Hash Raw
+offlineHash = unsafeHash ("offline" :: ByteString)
+
+-- | Datatype to represent the notion of "offline"- and "online"-ness
+-- of assignments and submissions.
+-- TODO: come up with a better name maybe?
+data IntegrationType = Online | Offline
+    deriving (Eq, Show, Generic)
+
+integrationType :: Hash Raw -> IntegrationType
+integrationType h
+    | h == offlineHash = Offline
+    | otherwise        = Online
+
+_aIntegrationType :: Assignment -> IntegrationType
+_aIntegrationType = integrationType . _aContentsHash
+
+aIntegrationType :: Getter Assignment IntegrationType
+aIntegrationType = to _aIntegrationType
+
+_sIntegrationType :: Submission -> IntegrationType
+_sIntegrationType = integrationType . _sContentsHash
+
+sIntegrationType :: Getter Submission IntegrationType
+sIntegrationType = to _sIntegrationType
 
 -- | Type alias for Submission hash
 type SubmissionId = Hash Submission
