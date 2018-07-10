@@ -16,6 +16,7 @@ module Test.Dscp.DB.SQLite.Common
        , module Test.Dscp.DB.SQLite.Common
        , module Dscp.Core.Types
        , module Dscp.Educator.Txs
+       , module Dscp.Util
        , hash
        ) where
 
@@ -34,6 +35,7 @@ import Dscp.Crypto (HasHash, HasSignature, Hash, PublicKey, Signature, hash, sig
 import qualified Dscp.DB.SQLite.Class as Adapter
 import Dscp.DB.SQLite.Schema (ensureSchemaIsSetUp)
 import Dscp.Educator.Txs (PrivateTx (..), ptSignedSubmission)
+import Dscp.Util (idOf)
 
 import Test.Common
 
@@ -93,7 +95,7 @@ instance Arbitrary AssignmentType    where arbitrary = elements [Regular, Course
 instance Arbitrary Grade             where arbitrary = elements [A, B, C, D, F]
 instance Arbitrary Address           where arbitrary = (Address . hash . mkPubKey) <$> arbitrary
 instance Arbitrary Course            where arbitrary = Course     <$> arbitrary
-instance Arbitrary Assignment        where arbitrary = Assignment <$> arbitrary <*> arbitrary <*> arbitrary <*> elements ["2+2=?", "pV=?"]
+instance Arbitrary Assignment        where arbitrary = Assignment <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
 instance Arbitrary Submission        where arbitrary = Submission <$> arbitrary <*> arbitrary <*> arbitrary
 instance Arbitrary PublicKey         where arbitrary = mkPubKey   <$> arbitrary
 instance Arbitrary PrivateTx         where arbitrary = PrivateTx  <$> arbitrary <*> arbitrary <*> arbitrary

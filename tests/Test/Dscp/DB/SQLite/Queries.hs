@@ -209,27 +209,31 @@ spec_Instances = do
                     assignment2    = assignment    & aCourseId                .~ getId course2
                     trans2         = trans         & ptSignedSubmission       .~ sigSubmission2
 
-                _studentId <- DB.createStudent          student
+                if  (assignment^.idOf /= assignment2^.idOf)
+                then do
+                    _studentId <- DB.createStudent          student
 
-                courseId   <- DB.createCourse           course Nothing []
-                courseId2  <- DB.createCourse           course2 Nothing []
+                    courseId   <- DB.createCourse           course Nothing []
+                    courseId2  <- DB.createCourse           course2 Nothing []
 
-                _          <- DB.enrollStudentToCourse  student courseId
-                _          <- DB.enrollStudentToCourse  student courseId2
+                    _          <- DB.enrollStudentToCourse  student courseId
+                    _          <- DB.enrollStudentToCourse  student courseId2
 
-                aHash      <- DB.createAssignment       assignment
-                aHash2     <- DB.createAssignment       assignment2
+                    aHash      <- DB.createAssignment       assignment
+                    aHash2     <- DB.createAssignment       assignment2
 
-                _          <- DB.setStudentAssignment   student aHash
-                _          <- DB.setStudentAssignment   student aHash2
+                    _          <- DB.setStudentAssignment   student aHash
+                    _          <- DB.setStudentAssignment   student aHash2
 
-                _          <- DB.createSignedSubmission sigSubmission
-                _          <- DB.createSignedSubmission sigSubmission2
+                    _          <- DB.createSignedSubmission sigSubmission
+                    _          <- DB.createSignedSubmission sigSubmission2
 
-                _          <- DB.createTransaction      trans
-                _          <- DB.createTransaction      trans2
+                    _          <- DB.createTransaction      trans
+                    _          <- DB.createTransaction      trans2
 
-                transs2    <- DB.getGradesForCourseAssignments student courseId2
-                transs1    <- DB.getGradesForCourseAssignments student courseId
+                    transs2    <- DB.getGradesForCourseAssignments student courseId2
+                    transs1    <- DB.getGradesForCourseAssignments student courseId
 
-                return (transs2 == [trans2] && transs1 == [trans])
+                    return (transs2 == [trans2] && transs1 == [trans])
+                else do
+                    return True
