@@ -20,15 +20,27 @@ module Dscp.Util
        , toHex
        , fromHex
 
+         -- * Error handling
+       , assert
+       , assertJust
+
+         -- * Ids for databases
+       , HasId (..)
+       , idOf
+
          -- * Re-exports
        , module Snowdrop.Util
        ) where
 
+import Control.Lens (Getter, to)
+
 import Data.ByteArray (ByteArrayAccess)
 import Data.ByteArray.Encoding (Base (..), convertFromBase, convertToBase)
-import Snowdrop.Util
+import Snowdrop.Util hiding (getId)
 
 import Dscp.Crypto.ByteArray (FromByteArray (..))
+
+import qualified UnliftIO as UIO
 
 deriving instance Container (b a) => Container (OldestFirst b a)
 deriving instance Container (b a) => Container (NewestFirst b a)
@@ -97,3 +109,37 @@ toHex    = toBase Base16
 fromBase64, fromHex :: FromByteArray ba => Text -> Either String ba
 fromBase64 = fromBase Base64
 fromHex    = fromBase Base16
+
+-----------------------------------------------------------
+-- Do-or-throw error handlers
+-----------------------------------------------------------
+
+assert :: (MonadIO m, Exception e) => m Bool -> e -> m ()
+assert action message = do
+    yes <- action
+
+    unless yes $ do
+        UIO.throwIO message
+
+assertJust :: (MonadIO m, Exception e) => m (Maybe a) -> e -> m a
+assertJust action message = do
+    mb <- action
+
+    whenNothing mb $ do
+        UIO.throwIO message
+
+-----------------------------------------------------------
+-- Helper to establish notion of SQLite/db ID
+-----------------------------------------------------------
+
+class HasId s where
+    type Id s :: *
+    type Id s = s
+
+    getId :: s -> Id s
+
+    default getId :: (Id s ~ s) => s -> Id s
+    getId = id
+
+idOf :: HasId s => Getter s (Id s)
+idOf = to getId

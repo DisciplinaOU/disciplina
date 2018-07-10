@@ -15,6 +15,7 @@ module Test.Common
        ( module Test.Common
        , module Control.Lens
        , module T
+       , module Dscp.Util
        ) where
 
 import Prelude hiding (show, unlines)
@@ -27,7 +28,7 @@ import Data.Time.Format (defaultTimeLocale, parseTimeOrError)
 
 import Crypto.Error (CryptoFailable (..))
 import qualified Crypto.Random as Crypto
-import Dscp.Core (Assignment (..), AssignmentType (..), CourseId (..), Grade (..),
+import Dscp.Core (Assignment (..), AssignmentType (..), Course (..), Grade (..),
                   SignedSubmission (..), Submission (..), SubmissionWitness (..), mkAddr,
                   offlineHash)
 import Dscp.Crypto (AbstractPK (..), AbstractSK (..), PublicKey, SecretKey, hash, sign)
@@ -37,7 +38,7 @@ import qualified Crypto.PubKey.Ed25519 as Ed25519
 import qualified Data.ByteString.Char8 as C
 
 -- import Control.Arrow (second)
-import Control.Lens (each, to)
+import Control.Lens (each, to, mapped)
 
 -- import Data.Bits                                 (xor)
 import Data.Default as T (Default (def))
@@ -48,6 +49,8 @@ import Data.Default as T (Default (def))
 import Data.Traversable (for)
 
 import System.IO.Unsafe
+
+import Dscp.Util (HasId (..))
 
 import qualified Data.Tree.AVL as AVL
 import qualified Dscp.Accounts as Accounts
@@ -202,7 +205,7 @@ mkKeyPair seed =
   in (AbstractPK (Ed25519.toPublic x), AbstractSK x)
 
 -- | Create a private transaction
-mkPrivateTx :: CourseId -- ^ course id
+mkPrivateTx :: Id Course -- ^ course id
             -> Grade -- ^ grade
             -> PublicKey -- ^ public key to derive address from
             -> (PublicKey, SecretKey) -- ^ witness key pair
@@ -242,3 +245,12 @@ mkPrivateTx courseId grade addrKey (witnessPKey, witnessSKey) =
        , _aType = Regular
        , _aAssignment = ""
        }
+
+data AssertionFailed = AssertionFailed String
+    deriving (Show, Typeable)
+
+instance Exception AssertionFailed
+
+assertThat :: MonadThrow m => Bool -> String -> m ()
+assertThat True _ = return ()
+assertThat _    e = throwM (AssertionFailed e)

@@ -2,16 +2,16 @@ module Test.Dscp.Core.ATG where
 
 import Test.Common
 
-import Dscp.Core (SubjectId)
+import Dscp.Core (Subject)
 import qualified Dscp.Core as Core
 
-pathFromTo :: SubjectId -> SubjectId -> Bool
+pathFromTo :: Id Subject -> Id Subject -> Bool
 pathFromTo = Core.hasPathFromTo Core.activityTypeGraphIndexed
 
-(~~>) :: SubjectId -> SubjectId -> Expectation
+(~~>) :: Id Subject -> Id Subject -> Expectation
 a ~~> b = pathFromTo a b `shouldBe` True
 
-(!~>) :: SubjectId -> SubjectId -> Expectation
+(!~>) :: Id Subject -> Id Subject -> Expectation
 a !~> b = pathFromTo a b `shouldBe` False
 
 spec_validPaths :: Spec

@@ -5,14 +5,13 @@ module Dscp.Core.Types
        ( Address (..)
        , mkAddr
        , offlineHash
-       , SubjectId (..)
+       , Course (..)
+       , Subject (..)
+       , Student
        , Grade (..)
-       , StudentId
        , EducatorId
-       , CourseId (..)
        , Assignment (..)
        , AssignmentType (..)
-       , AssignmentId
        , Submission (..)
        , DocumentType (..)
        , SubmissionSig
@@ -48,7 +47,8 @@ module Dscp.Core.Types
 import Control.Lens (Getter, makeLenses, to)
 import Data.Map (Map)
 
-import Dscp.Crypto (Hash, PublicKey, Raw, Signature, hash, unsafeHash)
+import Dscp.Crypto (Hash, HasHash, PublicKey, Raw, Signature, hash, unsafeHash)
+import Dscp.Util (HasId (..))
 
 -- | 'Address' datatype. Not 'newtype', because later it will
 -- inevitably become more complex.
@@ -61,9 +61,11 @@ mkAddr :: PublicKey -> Address
 mkAddr = Address . hash
 
 -- | ID of particular subject.
-newtype SubjectId = SubjectId
+newtype Subject = Subject
     { getSubjectId :: Word32
     } deriving (Eq, Ord, Show, Num)
+
+instance HasId Subject
 
 -- | Assignment/course grade.
 -- TODO: decide on final format of the grade.
@@ -71,16 +73,20 @@ data Grade = F | D | C | B | A
     deriving (Eq, Ord, Enum, Bounded, Show, Generic)
 
 -- | Student is identified by their public address.
-type StudentId = Address
+type Student = Address
+
+instance HasId Student
 
 -- | Educator is identified by their public adddress.
 type EducatorId = Address
 
 -- | Educator's course ID is simply a 'Word32' too.
 -- There's a mapping from course ID to a set of associated subject IDs.
-newtype CourseId = CourseId
+newtype Course = Course
     { getCourseId :: Word32
     } deriving (Eq, Ord, Show, Num)
+
+instance HasId Course
 
 -- | Assignment can be either regular of final
 data AssignmentType = Regular | CourseFinal
@@ -88,7 +94,7 @@ data AssignmentType = Regular | CourseFinal
 
 -- | Assignment doesn't contain actual assignment contents - only hash of them.
 data Assignment = Assignment
-    { _aCourseId     :: !CourseId
+    { _aCourseId     :: !(Id Course)
     -- ^ Course this assignement belongs to
     , _aContentsHash :: !(Hash Raw)
     -- ^ Hash of assignment contents
@@ -98,13 +104,18 @@ data Assignment = Assignment
     -- ^ Description of assignment
     } deriving (Eq, Show, Generic)
 
--- | 'AssignmentId' is a hash of assignment contents,
--- which are stored off-chain.
-type AssignmentId = Hash Assignment
+-- | We cannot make it do 'hash' on 'Assignment' direclty, because 'Serialisable' instance
+--   is required for that. And when we `import Dscp.Educator.Serialise ()` we get dependency
+--   loop.
+--
+--   That's why we do "late binding" here.
+instance HasHash Assignment => HasId Assignment where
+    type Id Assignment = Hash Assignment
+    getId = hash
 
 -- | Student submissions
 data Submission = Submission
-    { _sStudentId    :: !StudentId
+    { _sStudentId    :: !(Id Student)
     -- ^ Student who created this submission
     , _sContentsHash :: !(Hash Raw)
     -- ^ Hash of submission contents
@@ -140,11 +151,12 @@ _sDocumentType = documentType . _sContentsHash
 sDocumentType :: Getter Submission DocumentType
 sDocumentType = to _sDocumentType
 
--- | Type alias for Submission hash
-type SubmissionId = Hash Submission
+instance HasHash Submission => HasId Submission where
+    type Id Submission = Hash Submission
+    getId = hash
 
 -- | Type alias for Submission signature.
-type SubmissionSig = Signature SubmissionId
+type SubmissionSig = Signature (Id Submission)
 
 -- | Witness contains data required to verify transaction.
 data SubmissionWitness = SubmissionWitness
@@ -160,6 +172,10 @@ data SignedSubmission = SignedSubmission
     -- ^ Submission witness
     } deriving (Eq, Show, Generic)
 
+instance HasHash Submission => HasId SignedSubmission where
+    type Id SignedSubmission = Hash Submission
+    getId = hash . _ssSubmission
+
 makeLenses ''Assignment
 makeLenses ''Submission
 makeLenses ''SubmissionWitness
@@ -171,7 +187,7 @@ makeLenses ''SignedSubmission
 -- TODO: maybe we should separately make up a library for such stuff,
 -- like 'MapModifier'?
 newtype ATGDelta = ATGDelta
-    { getATGDelta :: Map SubjectId Bool
+    { getATGDelta :: Map (Id Subject) Bool
     } deriving (Show, Eq, Ord, Generic)
 
 ---------------------------------------------------------------------
@@ -189,7 +205,7 @@ because I don't quite see the reason for having them.
 -- TODO: should we use 'Vector' for more efficient indexing? or we don't
 -- care, because it should be in DB somehow anyway?
 data ATGNode = ATGNode
-    { _atgnSubjectId :: !SubjectId
+    { _atgnSubjectId :: !(Id Subject)
     , _atgnChildren  :: ![ATGEdge]
     } deriving (Show, Eq, Generic)
 

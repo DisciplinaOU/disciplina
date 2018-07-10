@@ -3,7 +3,6 @@
 
 module Dscp.Educator.Txs
        ( PrivateTx (..)
-       , PrivateTxId
        , PrivateTxWitness (..)
        , PrivateTxAux (..)
 
@@ -21,7 +20,8 @@ import Control.Lens (makeLenses)
 import Data.Time.Clock (UTCTime)
 
 import Dscp.Core.Types (Grade, SignedSubmission (..))
-import Dscp.Crypto (Hash, PublicKey, Signature)
+import Dscp.Crypto (Hash, HasHash, PublicKey, Signature, hash)
+import Dscp.Util (HasId (..))
 
 -- | Private transaction.
 data PrivateTx = PrivateTx
@@ -32,6 +32,10 @@ data PrivateTx = PrivateTx
     , _ptTime             :: !UTCTime
     -- ^ Timestamp for this transaction
     } deriving (Show, Eq, Generic)
+
+instance HasHash PrivateTx => HasId PrivateTx where
+    type Id PrivateTx = Hash PrivateTx
+    getId = hash
 
 type PrivateTxId = Hash PrivateTx
 

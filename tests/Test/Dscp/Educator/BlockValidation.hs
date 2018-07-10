@@ -3,7 +3,7 @@ module Test.Dscp.Educator.BlockValidation where
 import Test.Common
 
 import Control.Lens (to)
-import Dscp.Core (ATGDelta (..), CourseId (..), Grade (..),
+import Dscp.Core (ATGDelta (..), Course (..), Grade (..),
                   swKey, swSig, ssSubmission, ssWitness)
 import Dscp.Crypto (AbstractPK (..), AbstractSK (..), PublicKey, SecretKey,
                     hash, getMerkleRoot, fromFoldable)
@@ -15,8 +15,8 @@ import System.IO.Unsafe (unsafePerformIO)
 import qualified Crypto.PubKey.Ed25519 as Ed25519
 import qualified Data.Map.Strict as M
 
-courseCompScience1 :: CourseId
-courseCompScience1 = CourseId 3
+courseCompScience1 :: Id Course
+courseCompScience1 = Course 3
 
 studentAPubKey, studentBPubKey :: PublicKey
 studentAPubKey = mkPubKey 'a'
