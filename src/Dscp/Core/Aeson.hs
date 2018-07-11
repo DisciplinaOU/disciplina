@@ -3,14 +3,14 @@
 
 module Dscp.Core.Aeson () where
 
-import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), withText)
+import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), withScientific, withText)
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
 
 import Dscp.Core.Address (addrFromText)
 import Dscp.Core.Types (Address (..), Assignment (..), AssignmentType (..), Course (..),
-                        DocumentType (..), SignedSubmission (..), Subject (..), Submission (..),
-                        SubmissionWitness (..))
+                        DocumentType (..), Grade (..), SignedSubmission (..), Subject (..),
+                        Submission (..), SubmissionWitness (..), mkGrade)
 import Dscp.Crypto.Aeson ()
 import Dscp.Util (Base (Base64), leftToFail)
 import Dscp.Util.Aeson (parseJSONSerialise, toJSONSerialise)
@@ -42,6 +42,13 @@ instance ToJSON Address where
     toJSON = String . toText
 instance FromJSON Address where
     parseJSON = withText "Address" $ leftToFail . addrFromText
+
+instance ToJSON Grade where
+    toJSON = Number . fromIntegral . getGrade
+instance FromJSON Grade where
+    parseJSON = withScientific "Grade" $
+        maybe (fail "value is outside [0, 100] range") pure .
+        mkGrade . round
 
 instance ToJSON SubmissionWitness where
     toJSON = toJSONSerialise Base64
