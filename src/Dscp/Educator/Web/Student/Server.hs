@@ -29,9 +29,7 @@ convertHandler
 convertHandler ctx handler =
     liftIO (runRIO ctx handler) `catch` throwError
 
-serveStudentAPIReal
-    :: EducatorWorkMode m
-    => NetworkAddress -> EducatorRealMode ()
+serveStudentAPIReal :: NetworkAddress -> EducatorRealMode ()
 serveStudentAPIReal addr = do
     logInfo $ "Serving Student API on "+|addr|+""
     eCtx <- ask
