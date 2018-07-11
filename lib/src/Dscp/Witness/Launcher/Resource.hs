@@ -12,7 +12,8 @@ import Loot.Base.HasLens (HasLens (..))
 import Loot.Network.ZMQ (ZTGlobalEnv, ZTNetCliEnv, ZTNetServEnv)
 
 import Dscp.DB.Rocks.Real (RocksDB)
-import Dscp.Resource (AllocResource (..), NetLogging (..), NetServResources, withNetLogging)
+import Dscp.Resource (AllocResource (..), KeyResources (..), NetLogging (..), NetServResources,
+                      withNetLogging)
 import Dscp.Witness.Launcher.Params (WitnessParams (..))
 
 -- | Datatype which contains resources required by witness node to start
@@ -21,6 +22,7 @@ data WitnessResources = WitnessResources
     { _wrLogging :: !LoggingIO
     , _wrDB      :: !RocksDB
     , _wrNetwork :: !NetServResources
+    , _wrKey     :: !KeyResources
     }
 
 makeLenses ''WitnessResources
@@ -35,6 +37,8 @@ instance HasLens ZTNetCliEnv WitnessResources ZTNetCliEnv where
     lensOf = wrNetwork . lensOf @ZTNetCliEnv
 instance HasLens ZTNetServEnv WitnessResources ZTNetServEnv where
     lensOf = wrNetwork . lensOf @ZTNetServEnv
+instance HasLens KeyResources WitnessResources KeyResources where
+    lensOf = wrKey
 
 instance AllocResource WitnessParams WitnessResources where
     allocResource WitnessParams{..} = do
@@ -43,4 +47,5 @@ instance AllocResource WitnessParams WitnessResources where
         _wrNetwork <-
             withNetLogging (NetLogging $ _wrLogging & logNameSelL . _GivenName %~ (<> "network")) $
             allocResource wpNetworkParams
+        _wrKey <- allocResource wpKeyParams
         return WitnessResources {..}

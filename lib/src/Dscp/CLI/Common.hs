@@ -7,6 +7,7 @@ module Dscp.CLI.Common
        , rocksParamsParser
        , sqliteParamsParser
        , versionOption
+       , keyParamsParser
 
        , peersParser
        , ourZTNodeIdParser
@@ -25,6 +26,7 @@ import Options.Applicative (Parser, eitherReader, help, infoOption, long, metava
 
 import Dscp.DB.Rocks.Real.Types (RocksDBParams (..))
 import Dscp.DB.SQLite.Types (SQLiteDBLocation (..), SQLiteParams (..))
+import Dscp.Resource.Keys (KeyParams (..))
 import Dscp.Resource.Logging (LoggingParams (..))
 import Dscp.Resource.Network (NetCliParams (..), NetServParams (..))
 import Dscp.Web (NetworkAddress (..))
@@ -67,6 +69,17 @@ versionOption :: Parser (a -> a)
 versionOption = infoOption ("disciplina-" <> (showVersion version)) $
     long "version" <>
     help "Show version."
+
+keyParamsParser :: Parser KeyParams
+keyParamsParser = do
+    kpKeyPath <- kpKeyPathParser
+    kpGenKey <- kpGenKeyParser
+    pure KeyParams{..}
+  where
+    kpKeyPathParser =
+        strOption $ long "key" <> help "Path to the secret key" <> metavar "FILEPATH"
+    kpGenKeyParser =
+        switch $ long "key-gen" <> help "Generate the key and write it to 'key' path"
 
 ----------------------------------------------------------------------------
 -- ZMQ TCP

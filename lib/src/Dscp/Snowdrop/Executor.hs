@@ -11,7 +11,7 @@ import Snowdrop.Model.Execution (DbModifyActions)
 import Snowdrop.Util (gett)
 
 import Dscp.AVL (AvlHash)
-import Dscp.Crypto (PublicKey)
+import Dscp.Crypto (PublicKey, genSecretKey, toPublic, withIntSeed)
 import Dscp.Snowdrop.Configuration (Ids, Values)
 import Dscp.Snowdrop.Serialise ()
 import Dscp.Snowdrop.Storage.Avlp (ClientError (..), RootHash (..), avlClientDbActions,
@@ -50,4 +50,4 @@ executor = do
     initAccounts :: Map Ids Values
     initAccounts = mempty -- TODO fill initial map with something
 
-    blockPK = error "TBD DSCP-133"
+    blockPK = toPublic $ withIntSeed 0 genSecretKey
