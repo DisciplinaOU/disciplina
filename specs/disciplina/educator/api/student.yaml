@@ -321,44 +321,58 @@ definitions:
   SignedSubmission:
     type: object
     required:
-      - hash
-      - studentAddr
-      - contentsHash
-      - assignment
+      - submission
       - witness
     properties:
-      hash:
-        $ref: '#/definitions/Hash'
-      studentAddr:
-        $ref: '#/definitions/Address'
-      contentsHash:
-        $ref: '#/definitions/Hash'
-      assignment:
-        $ref: '#/definitions/Assignment'
+      submission:
+        type: object
+        required:
+          - studentId
+          - contentsHash
+          - assignment
+        properties:
+          studentId:
+            $ref: '#/definitions/Address'
+          contentsHash:
+            $ref: '#/definitions/Hash'
+          assignment:
+            type: object
+            required:
+              - courseId
+              - contentsHash
+              - type
+              - desc
+            properties:
+              courseId:
+                $ref: '#/definitions/CourseId'
+              contentsHash: 
+                $ref: '#/definitions/Hash'
+              type:
+                type: string
+                enum: [regular, courseFinal]
+              desc:
+                type: string
       witness:
         type: string
         format: binary
     example:
-      hash: "8ec778bf20bbc5596ae6b22352b6f91fb44274acac91f6b7ede45fe29da215e9"
-      studentAddr: "1Nh7uHdvY6fNwtQtM1G5EZAFPLC33B59rB"
-      contentsHash: "c52b4484433160146ec1f56fa18440399ac0c35487b8daecff1553f9f490fff6"
-      assignment:
-        hash: "8ec778bf20bbc5596ae6b22352b6f91fb44274bcbc91f6b7ede45fe29da215e9"
-        courseId: 4
+      submission:
+        studentId: "1Nh7uHdvY6fNwtQtM1G5EZAFPLC33B59rB"
         contentsHash: "c52b4484433160146ec1f56fa18440399ac0c35487b8daecff1553f9f490fff6"
-        isFinal: false
-        desc: "mda"
+        assignment:
+          courseId: 4
+          contentsHash: "c52b4484433160146ec1f56fa18440399ac0c35487b8daecff1553f9f490fff6"
+          type: "regular"
+          desc: "mda"
+      witness: "c52b4484433160146ec1f56fa18440399ac0c35487b8daecff1553f9f490fff6c52b4484433160146ec1f56fa18440399ac0c35487b8daecff1553f9f490fff6"
 
   Transaction:
     type: object
     required:
-      - hash
       - signedSubmission
       - grade
       - timestamp
     properties:
-      hash:
-        $ref: '#/definitions/Hash'
       signedSubmission:
         $ref: '#/definitions/SignedSubmission'
       grade:
