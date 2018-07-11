@@ -25,14 +25,15 @@ instance SignatureScheme CryptoEd25519 where
 
     -- TODO: 'toPublic' isn't free in terms of performance; consider
     -- storing secret key as actual keypair.
-    unsafeSignBytes (AbstractSK sk) =
+    ssSignBytes (AbstractSK sk) =
         AbstractSig . Ed25519.sign sk (Ed25519.toPublic sk)
 
-    unsafeVerifyBytes (AbstractPK pk) a (AbstractSig sig) =
+    ssVerifyBytes (AbstractPK pk) a (AbstractSig sig) =
         Ed25519.verify pk a sig
 
-    toPublic (AbstractSK sk) = AbstractPK $ Ed25519.toPublic sk
-    genSecretKey = AbstractSK <$> Ed25519.generateSecretKey
+    ssToPublic = AbstractPK . Ed25519.toPublic . unAbstractSk
+
+    ssGenSecret = AbstractSK <$> Ed25519.generateSecretKey
 
 -- | Instances for interesting types with 'ByteArrayAccess'
 instance HasAbstractSignature CryptoEd25519 ByteString

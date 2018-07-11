@@ -10,6 +10,7 @@ module Dscp.Crypto.Signing.Class
        , AbstractPK (..)
        , AbstractSK (..)
        , AbstractSig (..)
+       , MonadRandom
        ) where
 
 import Crypto.Random (MonadRandom)
@@ -27,19 +28,26 @@ class (Eq (PK ss), Eq (SK ss), Eq (Sig ss)) => SignatureScheme ss where
     type SK ss  :: *
     type Sig ss :: *
 
-    unsafeSignBytes ::
+    -- | Sign raw bytes.
+    ssSignBytes ::
         forall a b. ByteArrayAccess a =>
         AbstractSK ss -> a -> AbstractSig ss b
-    unsafeVerifyBytes ::
+
+    -- | Verify raw bytes.
+    ssVerifyBytes ::
         forall a b. ByteArrayAccess a =>
         AbstractPK ss -> a -> AbstractSig ss b -> Bool
 
-    toPublic :: AbstractSK ss -> AbstractPK ss
-    genSecretKey :: MonadRandom m => m (AbstractSK ss)
+    -- | Convert secret key to public.
+    ssToPublic :: AbstractSK ss -> AbstractPK ss
+
+    -- | Generate secret key. Note: deterministic derival is also
+    -- possible using 'withDRG' cryptonite function.
+    ssGenSecret :: MonadRandom m => m (AbstractSK ss)
 
 
 -- | Wrapper for a public key.
-newtype AbstractPK ss = AbstractPK (PK ss)
+newtype AbstractPK ss = AbstractPK { unAbstractPk :: PK ss }
 
 -- | 'GeneralizedNewtypeDeriving' cannot into type families.
 deriving instance Eq (PK ss) => Eq (AbstractPK ss)
@@ -51,7 +59,7 @@ instance ByteArrayAccess (PK ss) => Buildable (AbstractPK ss) where
     build pk = "PK: " +| build (toHex pk)
 
 -- | Wrapper for a secret key.
-newtype AbstractSK ss = AbstractSK (SK ss)
+newtype AbstractSK ss = AbstractSK { unAbstractSk :: SK ss }
 
 deriving instance Eq (SK ss) => Eq (AbstractSK ss)
 deriving instance Ord (SK ss) => Ord (AbstractSK ss)
@@ -67,7 +75,7 @@ instance Buildable (AbstractSK ss) where
 
 -- | Wrapper for a signature. Phantom type parameter 'a' denotes
 -- the type of object being signed.
-newtype AbstractSig ss a = AbstractSig (Sig ss)
+newtype AbstractSig ss a = AbstractSig { unAbstractSig :: Sig ss }
 
 instance ByteArrayAccess (Sig ss) => Buildable (AbstractSig ss a) where
     build sig = "Sig: " +| build (toHex sig)
@@ -103,14 +111,14 @@ class SignatureScheme ss => HasAbstractSignature ss a where
     default unsafeAbstractSign ::
         forall b. ByteArrayAccess a =>
         AbstractSK ss -> a -> AbstractSig ss b
-    unsafeAbstractSign = unsafeSignBytes @ss
+    unsafeAbstractSign = ssSignBytes @ss
 
     unsafeAbstractVerify ::
         forall b. AbstractPK ss -> a -> AbstractSig ss b -> Bool
     default unsafeAbstractVerify ::
         forall b. ByteArrayAccess a =>
         AbstractPK ss -> a -> AbstractSig ss b -> Bool
-    unsafeAbstractVerify = unsafeVerifyBytes @ss
+    unsafeAbstractVerify = ssVerifyBytes @ss
 
 -- | Type-safe function for signing.
 abstractSign ::

@@ -21,7 +21,6 @@ instance Serialise SD.Account
 instance Serialise SD.TipKey
 instance Serialise a => Serialise (SD.Author a)
 
-instance Serialise Address
 instance Serialise Coin
 instance Serialise TxElem
 instance Serialise Tx
