@@ -291,4 +291,4 @@ spec_Instances = do
 
                     let equal = (==) `on` sortWith getId
 
-                    return (transSince `equal` rest)
+                    return ((DB._wbdiPayload <$> transSince) `equal` rest)

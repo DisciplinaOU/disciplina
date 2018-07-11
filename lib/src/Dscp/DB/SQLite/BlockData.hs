@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveAnyClass #-}
 
-module Dscp.DB.SQLite.BlockData (BlockData (..)) where
+module Dscp.DB.SQLite.BlockData (BlockData (..), WithBlockDataId (..)) where
 
 import Codec.Serialise (Serialise)
 
@@ -27,3 +27,9 @@ instance HasId BlockData where
     type Id BlockData = Word32
 
     getId = _bdIndex
+
+data WithBlockDataId a = WithBlockDataId
+    { _wbdiPayload     :: a
+    , _wbdiBlockDataId :: Id BlockData
+    }
+    deriving (Eq, Show, Generic, Serialise)

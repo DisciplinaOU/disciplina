@@ -17,7 +17,7 @@ import Dscp.Core.Serialise ()
 import Dscp.Core.Types (Assignment (..), Course, SignedSubmission (..), Student, Subject,
                         Submission (..), aContentsHash, aCourseId, aDesc, aType, sAssignment,
                         sContentsHash, sStudentId, ssSubmission, ssWitness)
-import Dscp.DB.SQLite.BlockData (BlockData)
+import Dscp.DB.SQLite.BlockData (BlockData (..), WithBlockDataId (..))
 import Dscp.DB.SQLite.Class (MonadSQLiteDB (..))
 import Dscp.DB.SQLite.Instances ()
 import Dscp.DB.SQLite.Types (TxBlockIdx (TxInMempool))
@@ -160,7 +160,7 @@ getStudentTransactions student = do
     |]
 
 getStudentTransactionsSince
-    :: DBM m => Id Student -> UTCTime -> m [PrivateTx]
+    :: DBM m => Id Student -> UTCTime -> m [WithBlockDataId PrivateTx]
 getStudentTransactionsSince studentId sinceTime = do
     query getStudentTransactionsSinceQuery (studentId, sinceTime)
   where
@@ -175,7 +175,8 @@ getStudentTransactionsSince studentId sinceTime = do
                    Assignments.desc,
                    Submissions.signature,
                    grade,
-                   time
+                   time,
+                   idx
 
         from       Transactions
 
@@ -212,6 +213,14 @@ getBlocksData blockDataIds = do
     generateOrChain = foldr generateOr "False"
       where
         generateOr _ rest =  rest
+
+getProvenStudentTransactionsSince
+    :: DBM m => Id Student -> UTCTime -> m [(MerkleProof, [PrivateTx])]
+getProvenStudentTransactionsSince studentId sinceTime = do
+    transactions <- getStudentTransactionsSince studentId sinceTime
+    blocksData   <- getBlocksData (_wbdiBlockDataId <$> transactions)
+
+    let blocks = groupWith _wbdiBlockDataId transactions
 
 createSignedSubmission :: DBM m => SignedSubmission -> m (Id SignedSubmission)
 createSignedSubmission sigSub = do

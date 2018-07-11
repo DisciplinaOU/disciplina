@@ -15,7 +15,7 @@ import Dscp.Core.Types (Address (..), Assignment (..), AssignmentType, Course (.
                         Grade (..), SignedSubmission (..), Subject (..), Submission (..),
                         SubmissionWitness (..), ATGDelta)
 import Dscp.Crypto (Hash, PublicKey, Signature, MerkleSignature, MerkleTree, hash)
-import Dscp.DB.SQLite.BlockData (BlockData (..))
+import Dscp.DB.SQLite.BlockData (BlockData (..), WithBlockDataId (..))
 import Dscp.DB.SQLite.Types (TxBlockIdx, intTxBlockIdx)
 import Dscp.Educator.Txs (PrivateTx (..))
 import Dscp.Util (leftToPanic)
@@ -68,3 +68,6 @@ instance ToRow Assignment where
 
 instance FromRow BlockData where
     fromRow = BlockData <$> field <*> field <*> field <*> field <*> field <*> field <*> field
+
+instance FromRow a => FromRow (WithBlockDataId a) where
+    fromRow = WithBlockDataId <$> fromRow <*> field
