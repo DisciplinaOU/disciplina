@@ -22,7 +22,7 @@ module Dscp.Core.Types
        , aCourseId
        , aContentsHash
        , aType
-       , aAssignment
+       , aDesc
        , _sDocumentType
        , sDocumentType
        , sStudentId
@@ -47,7 +47,7 @@ module Dscp.Core.Types
 import Control.Lens (Getter, makeLenses, to)
 import Data.Map (Map)
 
-import Dscp.Crypto (Hash, HasHash, PublicKey, Raw, Signature, hash, unsafeHash)
+import Dscp.Crypto (HasHash, Hash, PublicKey, Raw, Signature, hash, unsafeHash)
 import Dscp.Util (HasId (..))
 
 -- | 'Address' datatype. Not 'newtype', because later it will
@@ -100,7 +100,7 @@ data Assignment = Assignment
     -- ^ Hash of assignment contents
     , _aType         :: !AssignmentType
     -- ^ Assignment type
-    , _aAssignment   :: !Text
+    , _aDesc         :: !Text
     -- ^ Description of assignment
     } deriving (Eq, Show, Generic)
 

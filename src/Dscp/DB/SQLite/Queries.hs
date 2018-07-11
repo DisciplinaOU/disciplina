@@ -9,14 +9,14 @@ import Text.InterpolatedString.Perl6 (q)
 
 import Dscp.Core.Serialise ()
 import Dscp.Core.Types (Assignment (..), Course, SignedSubmission (..), Student, Subject,
-                        Submission (..), aAssignment, aCourseId, aType, sAssignment, sStudentId,
-                        ssSubmission, ssWitness, sContentsHash, aContentsHash)
+                        Submission (..), aContentsHash, aCourseId, aDesc, aType, sAssignment,
+                        sContentsHash, sStudentId, ssSubmission, ssWitness)
 import Dscp.DB.SQLite.Class
 import Dscp.DB.SQLite.Instances ()
 
-import Dscp.Educator.Txs (PrivateTx (..), ptGrade, ptSignedSubmission, ptTime)
 import Dscp.Educator.Serialise ()
-import Dscp.Util (HasId (..), idOf, assert, assertJust)
+import Dscp.Educator.Txs (PrivateTx (..), ptGrade, ptSignedSubmission, ptTime)
+import Dscp.Util (HasId (..), assert, assertJust, idOf)
 
 data DomainError
     = CourseDoesNotExist                  (Id Course)
@@ -277,7 +277,7 @@ createAssignment assignment = do
         , assignment^.aCourseId
         , assignment^.aContentsHash
         , assignment^.aType
-        , assignment^.aAssignment
+        , assignment^.aDesc
         )
     return assignmentHash
   where

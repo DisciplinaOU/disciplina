@@ -38,7 +38,7 @@ import qualified Crypto.PubKey.Ed25519 as Ed25519
 import qualified Data.ByteString.Char8 as C
 
 -- import Control.Arrow (second)
-import Control.Lens (each, to, mapped)
+import Control.Lens (each, mapped, to)
 
 -- import Data.Bits                                 (xor)
 import Data.Default as T (Default (def))
@@ -243,7 +243,7 @@ mkPrivateTx courseId grade addrKey (witnessPKey, witnessSKey) =
        { _aCourseId = courseId
        , _aContentsHash = offlineHash
        , _aType = Regular
-       , _aAssignment = ""
+       , _aDesc = ""
        }
 
 data AssertionFailed = AssertionFailed String
