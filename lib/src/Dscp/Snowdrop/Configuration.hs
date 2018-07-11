@@ -63,7 +63,7 @@ type instance SValue (Author Address) = Account
 data Values
     = TipValueVal (TipValue HeaderHash)
     | BlundVal SBlund
-    | AccountOutVal (Account)
+    | AccountOutVal Account
     deriving (Eq, Show, Generic)
 
 ----------------------------------------------------------------------------

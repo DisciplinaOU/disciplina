@@ -175,10 +175,7 @@ type KVConstraint k v
      = ( IdSumPrefixed k
        , Serialisable v
        , Typeable k
-       , Hashable k
-       , Hashable v
        , Ord k
-       , Bounded k
        , Show k
        , Serialise k
        , Serialise v
@@ -276,7 +273,7 @@ avlServerDbActions ::
 avlServerDbActions = fmap mkActions . newTVarIO
   where
     retrieveHash var h = atomically $ M.lookup h . unAVLPureStorage . amsState <$> readTVar var
-    mkActions var =
+    mkActions (var :: TVar (AVLServerState k)) =
         (\recForProof -> DbModifyActions (mkAccessActions var recForProof)
                                          (reThrowAVLEx @k . apply var)
         , retrieveHash var)

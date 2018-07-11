@@ -59,6 +59,7 @@ module Dscp.Core.Types
        , TxWithWitness (..)
 
        , HeaderHash
+       , Difficulty (..)
        , BlockToSign (..)
        , Header (..)
        , Block (..)
