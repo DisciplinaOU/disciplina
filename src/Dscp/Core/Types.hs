@@ -9,6 +9,7 @@ module Dscp.Core.Types
        , Subject (..)
        , Student
        , Grade (..)
+       , mkGrade
        , EducatorId
        , Assignment (..)
        , AssignmentType (..)
@@ -68,9 +69,20 @@ newtype Subject = Subject
 instance HasId Subject
 
 -- | Assignment/course grade.
--- TODO: decide on final format of the grade.
-data Grade = F | D | C | B | A
-    deriving (Eq, Ord, Enum, Bounded, Show, Generic)
+-- An integer from 0 to 100. Constructor is unsafe, because it's possible
+-- to make a grade outside these bounds.
+newtype Grade = UnsafeGrade
+    { getGrade :: Word8
+    } deriving (Eq, Ord, Num, Show, Generic)
+
+instance Bounded Grade where
+    minBound = 0
+    maxBound = 100
+
+mkGrade :: Word8 -> Maybe Grade
+mkGrade a
+    | a >= minBound && a <= maxBound = Just $ UnsafeGrade a
+    | otherwise                      = Nothing
 
 -- | Student is identified by their public address.
 type Student = Address
