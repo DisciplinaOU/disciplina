@@ -2,6 +2,7 @@
 
 module Dscp.AVL
     ( AvlHash (..)
+    , AvlProof
     ) where
 
 import Codec.Serialise (Serialise (..))
@@ -11,6 +12,7 @@ import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Tree.AVL as AVL
 
 import Dscp.Crypto (Hash, hash, unsafeHash)
+import Dscp.Snowdrop.Configuration (Ids, Values)
 
 
 -- We use 'serialise'/'Serialise' only.
@@ -23,6 +25,9 @@ instance Serialise x => AVL.Serialisable x where
 -- | Hashes used in avl+ are technically not related to any data.
 newtype AvlHash = AvlHash { unAvlHash :: Hash () } deriving (Eq, Ord, Show, Generic)
 instance Serialise AvlHash
+
+-- Should it be a newtype?
+type AvlProof = AVL.Proof AvlHash Ids Values
 
 instance (Serialise (f (Free f a)), Serialise a) => Serialise (Free f a)
 

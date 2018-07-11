@@ -11,13 +11,12 @@ import Dscp.Witness.Launcher.Params (wpLoggingParams)
 import Dscp.Witness.Launcher.Runner (formWitnessContext)
 
 -- | Make up Educator context from dedicated pack of allocated resources.
-formEducatorContext :: EducatorResources -> EducatorContext
-formEducatorContext EducatorResources{..} =
-    EducatorContext
-    { _ecWitnessCtx = formWitnessContext _erWitnessResources
-    , _ecDB = _erDB
-    , _ecSecret = _erSecret
-    }
+formEducatorContext :: EducatorResources -> IO EducatorContext
+formEducatorContext EducatorResources{..} = do
+    let _ecDB = _erDB
+    let _ecSecret = _erSecret
+    _ecWitnessCtx <- formWitnessContext _erWitnessResources
+    pure EducatorContext {..}
 
 runEducatorRealMode :: EducatorContext -> EducatorRealMode a -> IO a
 runEducatorRealMode = runRIO
@@ -28,9 +27,9 @@ launchEducatorRealMode :: EducatorParams -> EducatorRealMode () -> IO ()
 launchEducatorRealMode params@EducatorParams{..} action =
     void $
     runResourceAllocation appDesc initParams (allocResource params) $
-      \resources ->
-        let ctx = formEducatorContext resources
-        in runEducatorRealMode ctx action
+        \resources -> do
+            ctx <- formEducatorContext resources
+            runEducatorRealMode ctx action
   where
     appDesc = "Educator (real mode)"
     initParams = InitParams{ ipLoggingParams = wpLoggingParams epWitnessParams }

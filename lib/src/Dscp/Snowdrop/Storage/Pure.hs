@@ -50,8 +50,10 @@ _getterLogger impl accum reqIds = do
     putTextLn $ "   getter: response " <> show resp
     pure resp
 
-blockDbActions :: IO (DbModifyActions (SumChangeSet Ids Values) Ids Values IO ())
-blockDbActions = mkActions <$> newTVarIO emptyBlockStorage
+blockDbActions ::
+       (MonadIO m, MonadIO n)
+    => m (DbModifyActions (SumChangeSet Ids Values) Ids Values n ())
+blockDbActions = mkActions <$> liftIO (newTVarIO emptyBlockStorage)
   where
     mkActions var =
         DbModifyActions (mkAccessActions var) (atomically . apply var)
@@ -90,7 +92,10 @@ blockDbActions = mkActions <$> newTVarIO emptyBlockStorage
 
     setTip var newTip = modifyTVar var (\bs -> bs { _bsTip = newTip })
 
-simpleStateDbActions :: AddrMap -> IO (DbModifyActions (SumChangeSet Ids Values) Ids Values IO ())
+simpleStateDbActions ::
+       (MonadIO m, MonadIO n)
+    => AddrMap
+    -> m (DbModifyActions (SumChangeSet Ids Values) Ids Values n ())
 simpleStateDbActions initAddrMap =
     mkActions <$> newTVarIO (StateStorage initAddrMap)
   where

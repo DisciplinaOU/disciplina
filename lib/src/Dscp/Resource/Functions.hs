@@ -1,3 +1,4 @@
+-- | Resources allocation helpers.
 
 module Dscp.Resource.Functions
        ( handleComponentErrors

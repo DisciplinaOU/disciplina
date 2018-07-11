@@ -49,6 +49,7 @@ type CombinedWorkMode m =
 -- WorkMode implementation
 ---------------------------------------------------------------------
 
+-- TODO Separate resources and non-resources.
 data EducatorContext = EducatorContext
     { _ecWitnessCtx :: Witness.WitnessContext
     , _ecDB         :: SQLiteDB

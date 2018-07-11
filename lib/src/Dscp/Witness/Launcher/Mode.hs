@@ -11,7 +11,11 @@ module Dscp.Witness.Launcher.Mode
     , WitnessContext (..)
     , wcResources
 
+      -- * RealMode
     , WitnessRealMode
+
+      -- * Other
+    , SDActions
     ) where
 
 import Control.Lens (makeLenses)
@@ -25,7 +29,9 @@ import Dscp.DB.Rocks.Real.Types (RocksDB)
 import qualified Dscp.Launcher.Mode as Basic
 import Dscp.Launcher.Rio (RIO)
 import Dscp.Network ()
+import Dscp.Snowdrop.Actions (SDActionsM)
 import Dscp.Witness.Launcher.Resource (WitnessResources)
+import Dscp.Witness.Mempool (MempoolVar)
 
 ---------------------------------------------------------------------
 -- WorkMode class
@@ -43,10 +49,15 @@ type WitnessWorkMode m =
 -- WorkMode implementation
 ---------------------------------------------------------------------
 
+type SDActions =  SDActionsM (RIO WitnessContext)
+
 -- | Context is resources plus some runtime variables.
 data WitnessContext = WitnessContext
-    { _wcResources  :: WitnessResources
+    { _wcResources :: !WitnessResources
+    , _wcMempool   :: !MempoolVar
+    , _wcSDActions :: !SDActions
     }
+
 
 makeLenses ''WitnessContext
 
@@ -66,6 +77,10 @@ instance HasLens Z.ZTNetCliEnv WitnessContext Z.ZTNetCliEnv where
     lensOf = wcResources . lensOf @Z.ZTNetCliEnv
 instance HasLens Z.ZTNetServEnv WitnessContext Z.ZTNetServEnv where
     lensOf = wcResources . lensOf @Z.ZTNetServEnv
+instance HasLens MempoolVar WitnessContext MempoolVar where
+    lensOf = wcMempool
+instance HasLens SDActions WitnessContext SDActions where
+    lensOf = wcSDActions
 
 ----------------------------------------------------------------------------
 -- Sanity check
