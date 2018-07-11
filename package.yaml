@@ -46,6 +46,7 @@ library:
     - semver
     - serialise
     - serokell-util
+    - servant
     - snowdrop
     - sqlite-simple
     - stm
