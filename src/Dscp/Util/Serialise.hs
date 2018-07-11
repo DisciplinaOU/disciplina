@@ -39,7 +39,6 @@ encodeCrcProtected a =
   where
     body = serialise' a
 
--- TODO: don't do serialisation again only to compute CRC32 (somehow)
 decodeCrcProtected :: Serialise a => D.Decoder s a
 decodeCrcProtected = do
     bs <- D.decodeBytes

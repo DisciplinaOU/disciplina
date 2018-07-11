@@ -33,6 +33,7 @@ class SignatureScheme ss where
         forall a b. ByteArrayAccess a =>
         AbstractPK ss -> a -> AbstractSig ss b -> Bool
 
+    toPublic :: AbstractSK ss -> AbstractPK ss
     genSecretKey :: MonadRandom m => m (AbstractSK ss)
 
 -- | Wrapper for a public key.

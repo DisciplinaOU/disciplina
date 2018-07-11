@@ -144,7 +144,7 @@ offlineHash = unsafeHash ("offline" :: ByteString)
 -- | Datatype to represent the notion of "offline"- and "online"-ness
 -- of assignments and submissions.
 data DocumentType = Online | Offline
-    deriving (Eq, Show, Generic)
+    deriving (Eq, Ord, Show, Enum, Generic)
 
 documentType :: Hash Raw -> DocumentType
 documentType h
