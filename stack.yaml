@@ -8,6 +8,8 @@ nix:
   shell-file: shell.nix
 
 extra-deps:
+- aeson-options-0.0.0
+- base58-bytestring-0.1.0
 - log-warper-1.8.11
 - pretty-tree-0.1.0.0
 - time-units-1.0.0

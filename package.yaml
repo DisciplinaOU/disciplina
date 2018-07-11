@@ -8,15 +8,19 @@ library:
 
   dependencies:
     - aeson
+    - aeson-options
     - autoexporter
     - array
     - AVL
     - bytestring
+    - base58-bytestring
+    - cborg
     - containers
     - componentm
     - cryptonite
     - cryptonite-openssl
     - data-default
+    - digest
     - directory
     - direct-sqlite
     - exceptions
