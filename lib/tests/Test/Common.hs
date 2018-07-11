@@ -18,47 +18,21 @@ module Test.Common
        , module Dscp.Util
        ) where
 
-import Prelude hiding (show, unlines)
+import Prelude hiding (show)
 
 import Control.Exception.Safe (catchJust)
 import Control.Lens (Prism')
-import Data.List (unlines)
-import GHC.Show (Show (show))
-
+import Crypto.Random (ChaChaDRG, MonadPseudoRandom)
 import Data.Time.Clock (UTCTime)
 import Data.Time.Format (defaultTimeLocale, parseTimeOrError)
+import GHC.Show (Show (show))
 
-import Crypto.Error (CryptoFailable (..))
-import qualified Crypto.Random as Crypto
-import Dscp.Core (Assignment (..), AssignmentType (..), Course (..), Grade (..),
-                  SignedSubmission (..), Submission (..), SubmissionWitness (..), mkAddr,
-                  offlineHash)
-import Dscp.Crypto (AbstractPK (..), AbstractSK (..), PublicKey, SecretKey, hash, sign)
-import Dscp.Educator (PrivateTx (..))
-
-import qualified Crypto.PubKey.Ed25519 as Ed25519
-import qualified Data.ByteString.Char8 as C
-
--- import Control.Arrow (second)
-import Control.Lens (each, mapped, to)
-
--- import Data.Bits                                 (xor)
-import Data.Default as T (Default (def))
--- import Data.Function                             (on)
--- import Data.List                                 (sortBy, nubBy)
--- import Data.Monoid                               ((<>))
--- import Data.Ord                                  (comparing)
-import Data.Traversable (for)
-
-import System.IO.Unsafe
-
-import Dscp.Util (HasId (..))
-
-import qualified Data.Tree.AVL as AVL
-import qualified Dscp.Accounts as Accounts
+import Dscp.Core (Assignment (..), AssignmentType (..), Course, Grade, SignedSubmission (..),
+                  Submission (..), SubmissionWitness (..), mkAddr, offlineHash)
+import Dscp.Crypto (PublicKey, SecretKey, hash, keyGen, sign, withIntSeed)
 import qualified Dscp.Crypto as Crypto
-import qualified Dscp.Witness as Witness
---import qualified Debug.Trace           as Debug
+import Dscp.Educator (PrivateTx (..))
+import Dscp.Util (HasId (..))
 
 import Test.Hspec as T (Expectation, Spec, describe, it, shouldBe, shouldSatisfy, specify)
 import Test.QuickCheck as T (Arbitrary (..), Gen, Property, Testable (..), choose, elements,
@@ -85,8 +59,8 @@ infixr 5 .=.
 -- | Run 'Crypto.Random.MonadRandom' within 'Gen'.
 -- Perhaps later we should refuse using with function for the sake of
 -- pregenerated lists of items.
-genSecureRandom :: Crypto.MonadPseudoRandom Crypto.ChaChaDRG a -> Gen a
-genSecureRandom rand = arbitrary <&> \seed -> Crypto.deterministic seed rand
+genSecureRandom :: MonadPseudoRandom ChaChaDRG a -> Gen a
+genSecureRandom rand = arbitrary <&> \seed -> Crypto.withIntSeed seed rand
 
 data GenCtx = GenCtx QCGen Int
 
@@ -105,6 +79,8 @@ instance Show GenCtx where
 -- | Run 'Gen' with seed.
 detGen :: Int -> Gen a -> a
 detGen seed gen = unGen gen (mkQCGen seed) 100
+
+{-
 
 data Sandbox = Sandbox
     { sWorld        :: Witness.WorldState
@@ -187,6 +163,23 @@ unsafePerformPureWorldT who side action =
     in
         a
 
+instance Arbitrary Witness.Entity where
+  arbitrary = Witness.Entity <$> (noneof [0] arbitrary)
+
+instance Arbitrary Witness.Publication where
+  arbitrary = Crypto.unsafeHash <$> (arbitrary :: Gen Int)
+
+worldTProperty
+    :: Testable prop
+    => side
+    -> Witness.WorldT side (AVL.HashMapStore Witness.Hash' AVL.NullStore) prop
+    -> Property
+worldTProperty side what = ioProperty $ do
+    (prop, _) <- AVL.runOnEmptyCache $ Witness.evalWorldT def side what
+    return prop
+
+-}
+
 noneof :: (Arbitrary a, Eq a, Show a) => [a] -> Gen a -> Gen a
 noneof set' gen = do
     res <- gen `suchThat` (`notElem` set')
@@ -209,21 +202,6 @@ listUnique = sized $ \n -> do
     k <- choose (0, n)
     vectorUniqueOf k arbitrary
 
-instance Arbitrary Witness.Entity where
-  arbitrary = Witness.Entity <$> (noneof [0] arbitrary)
-
-instance Arbitrary Witness.Publication where
-  arbitrary = Crypto.unsafeHash <$> (arbitrary :: Gen Int)
-
-worldTProperty
-    :: Testable prop
-    => side
-    -> Witness.WorldT side (AVL.HashMapStore Witness.Hash' AVL.NullStore) prop
-    -> Property
-worldTProperty side what = ioProperty $ do
-    (prop, _) <- AVL.runOnEmptyCache $ Witness.evalWorldT def side what
-    return prop
-
 -- | Create public key from seed
 mkPubKey :: Char -> PublicKey
 mkPubKey seed = fst (mkKeyPair seed)
@@ -234,9 +212,7 @@ mkPrivKey seed = snd (mkKeyPair seed)
 
 -- | Create key pair from seed
 mkKeyPair :: Char -> (PublicKey, SecretKey)
-mkKeyPair seed =
-  let (CryptoPassed x) = Ed25519.secretKey (C.replicate 32 seed)
-  in (AbstractPK (Ed25519.toPublic x), AbstractSK x)
+mkKeyPair seed = swap $ withIntSeed (fromIntegral $ ord seed) keyGen
 
 -- | Create a private transaction
 mkPrivateTx :: Id Course -- ^ course id

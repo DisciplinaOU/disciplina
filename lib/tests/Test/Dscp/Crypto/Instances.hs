@@ -3,8 +3,7 @@ module Test.Dscp.Crypto.Instances () where
 import Test.Common
 
 import Dscp.Crypto (AbstractHash, AbstractPK, AbstractSK, AbstractSig, Encrypted, FromByteArray,
-                    HashFunc (..), PassPhrase, SignatureScheme (..), encrypt, genSecretKey,
-                    mkPassPhrase, toPublic)
+                    HashFunc (..), PassPhrase, SignatureScheme (..), encrypt, mkPassPhrase)
 
 ----------------------------------------------------------------------------
 -- Hashing
@@ -18,13 +17,13 @@ instance HashFunc hf => Arbitrary (AbstractHash hf a) where
 ----------------------------------------------------------------------------
 
 instance SignatureScheme ss => Arbitrary (AbstractSK ss) where
-    arbitrary = genSecureRandom genSecretKey
+    arbitrary = genSecureRandom ssGenSecret
 
 instance SignatureScheme ss => Arbitrary (AbstractPK ss) where
-    arbitrary = toPublic <$> arbitrary
+    arbitrary = ssToPublic <$> arbitrary
 
 instance SignatureScheme ss => Arbitrary (AbstractSig ss a) where
-    arbitrary = unsafeSignBytes <$> arbitrary <*> arbitrary @ByteString
+    arbitrary = ssSignBytes <$> arbitrary <*> arbitrary @ByteString
 
 ----------------------------------------------------------------------------
 -- Symmetric encryption
