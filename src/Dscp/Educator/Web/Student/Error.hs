@@ -9,7 +9,7 @@ import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), withText)
 import Data.Data (Data (..), toConstr)
 
 data APIError
-    = SubmissionInvalid
+    = SubmissionMalformed
     | SubmissionSignatureInvalid
     | DeletingGradedSubmission
     deriving (Show, Eq, Generic, Data, Typeable)
@@ -20,7 +20,7 @@ instance Exception APIError
 -- constructors automatically.
 instance FromJSON APIError where
     parseJSON = withText "APIError" $ \case
-        "SubmissionInvalid"          -> pure SubmissionInvalid
+        "SubmissionMalformed"        -> pure SubmissionMalformed
         "SubmissionSignatureInvalid" -> pure SubmissionSignatureInvalid
         "DeletingGradedSubmission"   -> pure DeletingGradedSubmission
         other -> fail $ "invalid error constructor: " ++ toString other

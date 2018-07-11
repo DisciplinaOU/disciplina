@@ -405,7 +405,7 @@ definitions:
     properties:
       error:
         type: string
-        enum: [SubmissionInvalid, SubmissionSignatureInvalid, DeletingGradedSubmission]
+        enum: [SubmissionMalformed, SubmissionSignatureInvalid, DeletingGradedSubmission]
 parameters:
   CourseId:
     in: query
