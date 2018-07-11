@@ -150,7 +150,7 @@ paths:
           schema:
             $ref: '#/definitions/SignedSubmission'
       responses:
-        '200':
+        '201':
           description: successful operation
           schema:
             $ref: '#/definitions/Submission'

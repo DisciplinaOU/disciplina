@@ -97,7 +97,7 @@ type MakeSubmission
                    \contain valid student's signature of submission contents, \
                    \otherwise an error will be raised."
     :> ReqBody '[JSON] Core.SignedSubmission
-    :> Verb 'POST 200 '[JSON] Submission
+    :> Verb 'POST 201 '[JSON] Submission
 
 type DeleteSubmission
     = "submissions" :> Capture "submissionHash" (Hash Core.Submission)
