@@ -4,7 +4,8 @@
 -- | Student HTTP API definition.
 
 module Dscp.Educator.Web.Student.API
-       ( API
+       ( StudentAPI
+       , studentAPI
        ) where
 
 import Data.Time.Clock (UTCTime)
@@ -15,7 +16,7 @@ import Dscp.Crypto (Hash)
 import Dscp.Educator.Web.Student.Types (Assignment, BlkProof, Course, Submission)
 
 -- TODO: migrate to newer Servant which has `Summary` and `Description` combinators
-type API
+type StudentAPI
     =    GetCourses
     :<|> GetCourse
     :<|> GetAssignments
@@ -25,6 +26,9 @@ type API
     :<|> MakeSubmission
     :<|> DeleteSubmission
     :<|> GetProofs
+
+studentAPI :: Proxy StudentAPI
+studentAPI = Proxy
 
 ---------------------------------------------------------------------------
 -- Courses
@@ -75,7 +79,7 @@ type GetSubmissions
                    \used to specify specific course, assignment, etc."
     :> QueryParam "course" Core.Course
     :> QueryParam "assignment" (Hash Core.Assignment)
-    :> QueryParam "type" Text
+    :> QueryParam "type" Core.DocumentType
     :> Verb 'GET 200 '[JSON] [Submission]
 
 type GetSubmission
