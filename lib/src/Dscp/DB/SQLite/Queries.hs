@@ -159,13 +159,13 @@ getStudentTransactions student = do
         where      student_addr = ?
     |]
 
-getTransactionsOfTheStudentSince
+getStudentTransactionsSince
     :: DBM m => Id Student -> UTCTime -> m [PrivateTx]
-getTransactionsOfTheStudentSince studentId sinceTime = do
-    query getTransactionsOfTheStudentSinceQuery (studentId, sinceTime)
+getStudentTransactionsSince studentId sinceTime = do
+    query getStudentTransactionsSinceQuery (studentId, sinceTime)
   where
-    getTransactionsOfTheStudentSinceQuery = [q|
-        -- getTransactionsOfTheStudentSince
+    getStudentTransactionsSinceQuery = [q|
+        -- getStudentTransactionsSince
 
         select     Submissions.student_addr,
                    Submissions.contents_hash,

@@ -249,7 +249,7 @@ spec_Instances = do
                     return True
 
     describe "Retrieval of proven transactions" $ do
-        it "allTransactionsOfTheStudentSince" $
+        it "getProvenStudentTransactionsSince" $
             sqliteProperty $ \
                 ( trans1
                 , trans2
@@ -287,7 +287,7 @@ spec_Instances = do
                         ptId <- DB.createTransaction trans
                         return ptId
 
-                    transSince <- DB.getTransactionsOfTheStudentSince studentId pointSince
+                    transSince <- DB.getStudentTransactionsSince studentId pointSince
 
                     let equal = (==) `on` sortWith getId
 
