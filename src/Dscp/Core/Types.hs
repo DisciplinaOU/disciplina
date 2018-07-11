@@ -73,11 +73,11 @@ instance HasId Subject
 -- to make a grade outside these bounds.
 newtype Grade = UnsafeGrade
     { getGrade :: Word8
-    } deriving (Eq, Ord, Num, Show, Generic)
+    } deriving (Eq, Ord, Show, Generic)
 
 instance Bounded Grade where
-    minBound = 0
-    maxBound = 100
+    minBound = UnsafeGrade 0
+    maxBound = UnsafeGrade 100
 
 mkGrade :: Word8 -> Maybe Grade
 mkGrade a

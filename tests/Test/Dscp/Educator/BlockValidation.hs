@@ -3,7 +3,7 @@ module Test.Dscp.Educator.BlockValidation where
 import Test.Common
 
 import Control.Lens (to)
-import Dscp.Core (ATGDelta (..), Course (..), ssSubmission, ssWitness, swKey, swSig)
+import Dscp.Core (ATGDelta (..), Course (..), gB, ssSubmission, ssWitness, swKey, swSig)
 import Dscp.Crypto (AbstractPK (..), AbstractSK (..), PublicKey, SecretKey, fromFoldable,
                     getMerkleRoot, hash)
 import Dscp.Educator (BlockValidationFailure (..), PrivateBlock (..), PrivateBlockBody (..),
@@ -31,15 +31,15 @@ studentAKeyPair = mkKeyPair 'a'
 -- | Educator 'k' grade student a an B in course Computer science
 -- transaction is signed by student a
 tx1, tx2, tx3, tx4 :: PrivateTx
-tx1 = mkPrivateTx courseCompScience1 80 studentAPubKey studentAKeyPair
+tx1 = mkPrivateTx courseCompScience1 gB studentAPubKey studentAKeyPair
 
 -- | Educator 'k' grade student a an B in course Computer science
 -- transaction is signed by student b
-tx2 = mkPrivateTx courseCompScience1 80 studentAPubKey (studentAPubKey, studentBPrivKey)
+tx2 = mkPrivateTx courseCompScience1 gB studentAPubKey (studentAPubKey, studentBPrivKey)
 
-tx3 = mkPrivateTx courseCompScience1 80 studentAPubKey (studentBPubKey, studentAPrivKey)
+tx3 = mkPrivateTx courseCompScience1 gB studentAPubKey (studentBPubKey, studentAPrivKey)
 
-tx4 = mkPrivateTx courseCompScience1 80 studentBPubKey (studentBPubKey, studentBPrivKey)
+tx4 = mkPrivateTx courseCompScience1 gB studentBPubKey (studentBPubKey, studentBPrivKey)
 
 -- | unsafePerformIO create bunch of PrivateTx.
 -- Use map instead of replicate here to force
@@ -49,7 +49,7 @@ txsValid = map generateKeyPair [1..(100 :: Int)]
   where generateKeyPair _ =
           let key = unsafePerformIO Ed25519.generateSecretKey
               kp@(pubKey, _) = (AbstractPK (Ed25519.toPublic key), AbstractSK key)
-          in mkPrivateTx courseCompScience1 80 pubKey kp
+          in mkPrivateTx courseCompScience1 gB pubKey kp
 
 spec_ValidateBlock :: Spec
 spec_ValidateBlock = describe "Validate private block" $ do
