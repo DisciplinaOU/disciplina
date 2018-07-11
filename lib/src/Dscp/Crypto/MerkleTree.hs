@@ -51,7 +51,7 @@ data MerkleSignature a = MerkleSignature
 data MerkleTree a
     = MerkleEmpty
     | MerkleTree !(MerkleNode a)
-    deriving (Eq, Show, Generic)
+    deriving (Eq, Show, Generic, Serialise)
 
 
 instance Foldable MerkleTree where
@@ -77,7 +77,7 @@ data MerkleNode a
        { mRoot  :: !(MerkleSignature a)
        , mIndex :: !LeafIndex
        , mVal   :: !a }
-    deriving (Eq, Show, Functor, Generic)
+    deriving (Eq, Show, Functor, Generic, Serialise)
 
 instance Foldable MerkleNode where
     foldMap f x = case x of

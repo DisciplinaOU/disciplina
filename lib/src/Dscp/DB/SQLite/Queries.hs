@@ -17,10 +17,11 @@ import Dscp.Core.Serialise ()
 import Dscp.Core.Types (Assignment (..), Course, SignedSubmission (..), Student, Subject,
                         Submission (..), aContentsHash, aCourseId, aDesc, aType, sAssignment,
                         sContentsHash, sStudentId, ssSubmission, ssWitness)
+import Dscp.DB.SQLite.BlockData (BlockData)
 import Dscp.DB.SQLite.Class (MonadSQLiteDB (..))
 import Dscp.DB.SQLite.Instances ()
 import Dscp.DB.SQLite.Types (TxBlockIdx (TxInMempool))
-import Dscp.Educator.Serialise ()
+
 import Dscp.Educator.Txs (PrivateTx (..), ptGrade, ptSignedSubmission, ptTime)
 import Dscp.Util (HasId (..), assert, assertJust, idOf)
 
@@ -186,6 +187,25 @@ getTransactionsOfTheStudentSince studentId sinceTime = do
 
         where      student_addr  = ?
               and  time         >= ?
+              and  idx          <> -1
+    |]
+
+getBlocksData :: DBM m => [Id BlockData] -> m [BlockData]
+getBlocksData blockDataIds = do
+    query getBlocksDataQuery (blockDataIds)
+  where
+    getBlocksDataQuery = [q|
+        select  idx
+                hash
+                time
+                prev_hash
+                atg_delta
+                mroot
+                mtree
+        from    Blocks
+        where   {
+            foldr (\_ -> ("idx = ? or " <>)) "False" blockDataIds
+        }
     |]
 
 createSignedSubmission :: DBM m => SignedSubmission -> m (Id SignedSubmission)
