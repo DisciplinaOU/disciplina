@@ -9,7 +9,6 @@ module Dscp.Util.Serialise
        , decodeCrcProtected
        ) where
 
-import Codec.CBOR.Write (toStrictByteString)
 import Codec.Serialise (DeserialiseFailure, Serialise (..), deserialise, deserialiseOrFail,
                         serialise)
 import qualified Codec.Serialise.Decoding as D
@@ -34,21 +33,19 @@ deserialiseOrFail' = deserialiseOrFail . LBS.fromStrict
 -- CRC protection
 ---------------------------------------------------------------------------
 
-encodeCrcProtected :: (a -> E.Encoding) -> a -> E.Encoding
-encodeCrcProtected coder a =
-    body <> encode (crc32 $ toStrictByteString body)
+encodeCrcProtected :: Serialise a => a -> E.Encoding
+encodeCrcProtected a =
+    E.encodeBytes body <> E.encodeWord32 (crc32 body)
   where
-    body = coder a
+    body = serialise' a
 
 -- TODO: don't do serialisation again only to compute CRC32 (somehow)
-decodeCrcProtected :: Serialise a => D.Decoder s a -> D.Decoder s a
-decodeCrcProtected decoder = do
-    res <- decoder
-    expectedCrc <- decode
-    let bs = serialise res
-        actualCrc = crc32 bs
+decodeCrcProtected :: Serialise a => D.Decoder s a
+decodeCrcProtected = do
+    bs <- D.decodeBytes
+    expectedCrc <- D.decodeWord32
+    let actualCrc = crc32 bs
     when (actualCrc /= expectedCrc) . fail $
         "decodeCrcProtected: invalid CRC, expected " ++ show expectedCrc ++
         ", actual " ++ show actualCrc
-    return res
-
+    either (fail . show) pure $ deserialiseOrFail' bs

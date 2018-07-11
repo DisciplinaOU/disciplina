@@ -2,7 +2,7 @@ module Test.Dscp.DB.DSL.Interpret.SimpleTxDB where
 
 import Test.Common
 
-import Dscp.Core (Course (..), Grade (..), Subject)
+import Dscp.Core (Course (..), Subject)
 import Dscp.Crypto (PublicKey, SecretKey, hash)
 import Dscp.DB (Obj, ObjHashEq (..), QueryObj (..), QueryTx (..), QueryTxs (..), TxGrade (..),
                 TxIdEq (..), TxsFilterExpr (..), WHERE (..))
@@ -48,27 +48,27 @@ mkLinAlgPrivateTx :: StudentKeySeed -> EducatorKeySeed -> PrivateTx
 mkLinAlgPrivateTx sKeySeed eKeySeed =
     let studentKey = mkPubKey sKeySeed
         educatorKeyPair = mkKeyPair eKeySeed
-    in mkPrivateTx courseLinearAlg C studentKey educatorKeyPair
+    in mkPrivateTx courseLinearAlg 60 studentKey educatorKeyPair
 
 -- | Educator 'k' grade student 'a' an A in course Computer science
 tx1 :: PrivateTx
-tx1 = mkPrivateTx courseCompScience1 B studentAPubKey educatorKKeyPair
+tx1 = mkPrivateTx courseCompScience1 80 studentAPubKey educatorKKeyPair
 
 -- | Educator 'k' grade student 'a' an D by in course Computer science
 tx2 :: PrivateTx
-tx2 = mkPrivateTx courseCompScience1 D studentAPubKey educatorKKeyPair
+tx2 = mkPrivateTx courseCompScience1 40 studentAPubKey educatorKKeyPair
 
 -- | Educator 'k' grade student 'b' an D in course Calculi
 tx3 :: PrivateTx
-tx3 = mkPrivateTx courseCalculi D studentAPubKey educatorKKeyPair
+tx3 = mkPrivateTx courseCalculi 40 studentAPubKey educatorKKeyPair
 
 -- | Educator 'k' grade studet 'b' a C in course Calculi
 tx4 :: PrivateTx
-tx4 = mkPrivateTx courseCalculi C studentAPubKey educatorKKeyPair
+tx4 = mkPrivateTx courseCalculi 60 studentAPubKey educatorKKeyPair
 
 -- | Educator 'k' grade student 'a' an D in course logic
 tx5 :: PrivateTx
-tx5 = mkPrivateTx courseLogic D studentAPubKey educatorKKeyPair
+tx5 = mkPrivateTx courseLogic 40 studentAPubKey educatorKKeyPair
 
 -- | Create a bunch of transactions where student gets graded D in course Linear alg
 txs :: [PrivateTx]
@@ -145,45 +145,45 @@ testQuery22 = runSimpleTxDBQuery simpleTxDB simpleObjDB query
 -- | Query transactions which have grade >= B
 testQuery30 :: [PrivateTx]
 testQuery30 = runSimpleTxDBQuery simpleTxDB simpleObjDB query
-  where query= SELECTTxs WHERE (TxGrade :>= B)
+  where query= SELECTTxs WHERE (TxGrade :>= 80)
 
 -- | Query transactions which have grade >= A
 testQuery31 :: [PrivateTx]
 testQuery31 = runSimpleTxDBQuery simpleTxDB simpleObjDB query
-  where query= SELECTTxs WHERE (TxGrade :>= A)
+  where query= SELECTTxs WHERE (TxGrade :>= 100)
 
 -- | Query transactions which have grade >= B and have subject id sIdComputerScience
 testQuery40 :: [PrivateTx]
 testQuery40 = runSimpleTxDBQuery simpleTxDB simpleObjDB query
-  where query= SELECTTxs WHERE (TxHasSubjectId sIdComputerScience :& TxGrade :>= B)
+  where query= SELECTTxs WHERE (TxHasSubjectId sIdComputerScience :& TxGrade :>= 80)
 
 -- | Query transactions which have grade >= B and subject id sIdElementary
 testQuery41 :: [PrivateTx]
 testQuery41 = runSimpleTxDBQuery simpleTxDB simpleObjDB query
-  where query= SELECTTxs WHERE (TxHasSubjectId sIdElementary :& TxGrade :>= B)
+  where query= SELECTTxs WHERE (TxHasSubjectId sIdElementary :& TxGrade :>= 80)
 
 -- | Query transactions which have grade >= D and have subject id sIdElementary
 testQuery42 :: [PrivateTx]
 testQuery42 = runSimpleTxDBQuery simpleTxDB simpleObjDB query
-  where query= SELECTTxs WHERE (TxHasSubjectId sIdElementary :& TxGrade :>= D)
+  where query= SELECTTxs WHERE (TxHasSubjectId sIdElementary :& TxGrade :>= 40)
 
 -- | Query transactions which have grade >= A and subject id sIdComputerScience
 testQuery43 :: [PrivateTx]
 testQuery43 = runSimpleTxDBQuery simpleTxDB simpleObjDB query
-  where query = SELECTTxs WHERE (TxHasSubjectId sIdComputerScience :& TxGrade :>= A)
+  where query = SELECTTxs WHERE (TxHasSubjectId sIdComputerScience :& TxGrade :>= 100)
 
 -- | Query transactions which have subject id sIdComputerScience
 -- and grade >= B or subject id sIdCalculi
 testQuery50 :: [PrivateTx]
 testQuery50 = runSimpleTxDBQuery simpleTxDB simpleObjDB query
   where query = SELECTTxs WHERE (TxHasSubjectId sIdComputerScience
-                                 :& ((TxGrade :>= B) :|| TxHasSubjectId sIdCalculi))
+                                 :& ((TxGrade :>= 80) :|| TxHasSubjectId sIdCalculi))
 
 -- | Query transactions which have subject id sIdComputerScience
 -- |and grade >= D or subject id sIdEngineering
 testQuery60 :: [PrivateTx]
 testQuery60 = runSimpleTxDBQuery simpleTxDB simpleObjDB query
-  where query = SELECTTxs WHERE ((TxHasSubjectId sIdComputerScience :& TxGrade :>= D)
+  where query = SELECTTxs WHERE ((TxHasSubjectId sIdComputerScience :& TxGrade :>= 40)
                                  :|| TxHasSubjectId sIdEngineering)
 
 -- | Query transactions which subject id sIdEngineering in its spine

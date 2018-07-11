@@ -13,8 +13,8 @@ deriving instance Serialise Course
 deriving instance Serialise Subject
 
 instance Serialise Address where
-    encode = encodeCrcProtected $ encode . addrHash
-    decode = decodeCrcProtected $ Address <$> decode
+    encode = encodeCrcProtected . addrHash
+    decode = Address <$> decodeCrcProtected
 
 instance Serialise Grade
 instance Serialise ATGNode

@@ -27,10 +27,10 @@ import Database.SQLite.Simple (Connection, execute, fold, query, setTrace, withC
 
 import Test.QuickCheck.Gen (generate)
 
-import Dscp.Core.Types (Address (..), Assignment (..), AssignmentType (..), Course (..),
-                        Grade (..), SignedSubmission (..), Submission (..), SubmissionSig,
-                        SubmissionWitness (..), aCourseId, sAssignment,
-                        sStudentId, ssSubmission, ssWitness, swKey)
+import Dscp.Core.Types (Address (..), Assignment (..), AssignmentType (..), Course (..), Grade (..),
+                        SignedSubmission (..), Submission (..), SubmissionSig,
+                        SubmissionWitness (..), aCourseId, mkGrade, sAssignment, sStudentId,
+                        ssSubmission, ssWitness, swKey)
 import Dscp.Crypto (HasHash, HasSignature, Hash, PublicKey, Signature, hash, sign)
 import qualified Dscp.DB.SQLite.Class as Adapter
 import Dscp.DB.SQLite.Schema (ensureSchemaIsSetUp)
@@ -92,7 +92,7 @@ instance Adapter.MonadSQLiteDB TestSQLiteM where
                 actor conn
 
 instance Arbitrary AssignmentType    where arbitrary = elements [Regular, CourseFinal]
-instance Arbitrary Grade             where arbitrary = elements [A, B, C, D, F]
+instance Arbitrary Grade             where arbitrary = arbitrary `suchThatMap` mkGrade
 instance Arbitrary Address           where arbitrary = (Address . hash . mkPubKey) <$> arbitrary
 instance Arbitrary Course            where arbitrary = Course     <$> arbitrary
 instance Arbitrary Assignment        where arbitrary = Assignment <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
