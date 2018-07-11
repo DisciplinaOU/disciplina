@@ -15,9 +15,9 @@ import qualified Dscp.Core.Types as Core
 import Dscp.Crypto (Hash)
 import Dscp.Educator.Web.Student.Types (Assignment, BlkProof, Course, Submission)
 
--- TODO: migrate to newer Servant which has `Summary` and `Description` combinators
 type StudentAPI
-    =    GetCourses
+    = "v1"
+    :> ( GetCourses
     :<|> GetCourse
     :<|> GetAssignments
     :<|> GetAssignment
@@ -26,6 +26,7 @@ type StudentAPI
     :<|> MakeSubmission
     :<|> DeleteSubmission
     :<|> GetProofs
+       )
 
 studentAPI :: Proxy StudentAPI
 studentAPI = Proxy
