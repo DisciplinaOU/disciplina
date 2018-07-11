@@ -11,7 +11,7 @@ import Database.SQLite.Simple (Only (..), Query)
 import Database.SQLite.Simple.ToField (ToField)
 import Database.SQLite.Simple.ToRow (ToRow (..))
 
-import Text.InterpolatedString.Perl6 (q)
+import Text.InterpolatedString.Perl6 (q, qc)
 
 import Dscp.Core.Serialise ()
 import Dscp.Core.Types (Assignment (..), Course, SignedSubmission (..), Student, Subject,
@@ -194,7 +194,7 @@ getBlocksData :: DBM m => [Id BlockData] -> m [BlockData]
 getBlocksData blockDataIds = do
     query getBlocksDataQuery (blockDataIds)
   where
-    getBlocksDataQuery = [q|
+    getBlocksDataQuery = [qc|
         select  idx
                 hash
                 time
@@ -204,9 +204,14 @@ getBlocksData blockDataIds = do
                 mtree
         from    Blocks
         where   {
-            foldr (\_ -> ("idx = ? or " <>)) "False" blockDataIds
+            generateOrChain blockDataIds
         }
     |]
+
+    generateOrChain :: [a] -> Text
+    generateOrChain = foldr generateOr "False"
+      where
+        generateOr _ rest =  rest
 
 createSignedSubmission :: DBM m => SignedSubmission -> m (Id SignedSubmission)
 createSignedSubmission sigSub = do
