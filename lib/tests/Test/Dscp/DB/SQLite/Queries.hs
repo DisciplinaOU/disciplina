@@ -113,7 +113,7 @@ spec_Instances = do
 
                     trans'    <- DB.getTransaction transHash
 
-                    return (trans' == Just trans)
+                    return (trans' == Just trans && (getId <$> trans') == (getId <$> Just trans))
 
     describe "Concrete operations from domain" $ do
         it "getStudentCourses/enrollStudentToCourse" $ do
@@ -247,3 +247,48 @@ spec_Instances = do
                     return (transs2 == [trans2] && transs1 == [trans])
                 else do
                     return True
+
+    describe "Retrieval of proven transactions" $ do
+        it "allTransactionsOfTheStudentSince" $
+            sqliteProperty $ \
+                ( trans1
+                , trans2
+                , trans3
+                , student
+                ) -> do
+                    studentId <- DB.createStudent student
+
+                    let transactions'          = [trans1, trans2, trans3]
+                    let transactions           = transactions' & mapped.ptSignedSubmission.ssSubmission.sStudentId .~ studentId
+                    let (_ : rest@ (next : _)) = sortWith _ptTime transactions
+                        pointSince             = next^.ptTime
+
+                    for_ transactions $ \trans -> do
+                        let sigSubmission = trans        ^.ptSignedSubmission
+                            submission    = sigSubmission^.ssSubmission
+                            assignment    = submission   ^.sAssignment
+                            course        = assignment   ^.aCourseId
+
+                        courseId <- DB.createCourse course Nothing []
+                            `orIfItFails` getId course
+
+                        _ <- DB.enrollStudentToCourse studentId courseId
+                            `orIfItFails` ()
+
+                        assignmentId <- DB.createAssignment assignment
+                            `orIfItFails` getId assignment
+
+                        _ <- DB.setStudentAssignment studentId assignmentId
+                            `orIfItFails` ()
+
+                        _ <- DB.createSignedSubmission sigSubmission
+                            `orIfItFails` getId sigSubmission
+
+                        ptId <- DB.createTransaction trans
+                        return ptId
+
+                    transSince <- DB.getTransactionsOfTheStudentSince studentId pointSince
+
+                    let equal = (==) `on` sortWith getId
+
+                    return (transSince `equal` rest)

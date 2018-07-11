@@ -33,7 +33,7 @@ import Dscp.Core.Types (Address (..), Assignment (..), AssignmentType (..), Cour
 import Dscp.Crypto (hash)
 import qualified Dscp.DB.SQLite.Class as Adapter
 import Dscp.DB.SQLite.Schema (ensureSchemaIsSetUp)
-import Dscp.Educator.Txs (PrivateTx (..), ptSignedSubmission)
+import Dscp.Educator.Txs (PrivateTx (..), ptSignedSubmission, ptTime)
 import Dscp.Util (idOf)
 
 import Test.Common
@@ -63,6 +63,7 @@ runTestSQLiteM action = do
         -- It stays here, so next time something breaks I don't have to
         -- add it to imports again.
         setTrace conn Nothing
+        setTrace conn Nothing -- (Just putStrLn)
         getTestSQLiteM action `runReaderT` conn
 
 sqliteProperty
@@ -92,3 +93,25 @@ instance Adapter.MonadSQLiteDB TestSQLiteM where
 instance Adapter.MonadLogging TestSQLiteM where
     log _ _ _ = pass
     logName = return $ error "Logger name requested in test"
+
+instance Arbitrary AssignmentType    where arbitrary = elements [Regular, CourseFinal]
+instance Arbitrary Grade             where arbitrary = elements [A, B, C, D, F]
+instance Arbitrary Address           where arbitrary = (Address . hash . mkPubKey) <$> arbitrary
+instance Arbitrary Course            where arbitrary = Course     <$> arbitrary
+instance Arbitrary Assignment        where arbitrary = Assignment <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
+instance Arbitrary Submission        where arbitrary = Submission <$> arbitrary <*> arbitrary <*> arbitrary
+instance Arbitrary PublicKey         where arbitrary = mkPubKey   <$> arbitrary
+instance Arbitrary PrivateTx         where arbitrary = PrivateTx  <$> arbitrary <*> arbitrary <*> arbitrary
+instance Arbitrary SubmissionWitness where arbitrary = SubmissionWitness <$> arbitrary <*> arbitrary
+instance Arbitrary SignedSubmission  where arbitrary = SignedSubmission  <$> arbitrary <*> arbitrary
+
+instance (Arbitrary a, HasSignature a) => Arbitrary (Signature a) where
+    arbitrary = sign <$> (mkPrivKey <$> arbitrary) <*> arbitrary
+
+instance (Arbitrary a, HasHash a) => Arbitrary (Hash a) where
+    arbitrary = hash <$> arbitrary
+
+orIfItFails :: MonadCatch m => m a -> a -> m a
+orIfItFails action instead = do
+    action `catch` \(_e :: SomeException) -> do
+        return instead

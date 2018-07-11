@@ -3,7 +3,10 @@
 module Dscp.DB.SQLite.Queries where
 
 import Control.Lens (makePrisms)
+
 import Data.Coerce (coerce)
+import Data.Time.Clock (UTCTime)
+
 import Database.SQLite.Simple (Only (..), Query)
 import Database.SQLite.Simple.ToField (ToField)
 import Database.SQLite.Simple.ToRow (ToRow (..))
@@ -153,6 +156,36 @@ getStudentTransactions student = do
                on  assignment_hash = Assignments.hash
 
         where      student_addr = ?
+    |]
+
+getTransactionsOfTheStudentSince
+    :: DBM m => Id Student -> UTCTime -> m [PrivateTx]
+getTransactionsOfTheStudentSince studentId sinceTime = do
+    query getTransactionsOfTheStudentSinceQuery (studentId, sinceTime)
+  where
+    getTransactionsOfTheStudentSinceQuery = [q|
+        -- getTransactionsOfTheStudentSince
+
+        select     Submissions.student_addr,
+                   Submissions.contents_hash,
+                   Assignments.course_id,
+                   Assignments.contents_hash,
+                   Assignments.type,
+                   Assignments.desc,
+                   Submissions.signature,
+                   grade,
+                   time
+
+        from       Transactions
+
+        left join  Submissions
+               on  submission_hash = Submissions.hash
+
+        left join  Assignments
+               on  assignment_hash = Assignments.hash
+
+        where      student_addr  = ?
+              and  time         >= ?
     |]
 
 createSignedSubmission :: DBM m => SignedSubmission -> m (Id SignedSubmission)
