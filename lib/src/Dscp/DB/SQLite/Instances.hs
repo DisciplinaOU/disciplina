@@ -11,11 +11,11 @@ import Database.SQLite.Simple.ToField (ToField (..))
 import Database.SQLite.Simple.ToRow (ToRow (..))
 
 import Dscp.Core.Serialise ()
-import Dscp.Core.Types (Address (..), Assignment (..), AssignmentType, Course (..), DocumentType,
-                        Grade (..), SignedSubmission (..), Subject (..), Submission (..),
-                        SubmissionWitness (..), ATGDelta)
-import Dscp.Crypto (Hash, PublicKey, Signature, MerkleSignature, MerkleTree, hash)
-import Dscp.DB.SQLite.BlockData (BlockData (..), WithBlockDataId (..))
+import Dscp.Core.Types (ATGDelta, Address (..), Assignment (..), AssignmentType, Course (..),
+                        DocumentType, Grade (..), SignedSubmission (..), Subject (..),
+                        Submission (..), SubmissionWitness (..))
+import Dscp.Crypto (Hash, MerkleSignature, MerkleTree, PublicKey, Signature, hash)
+import Dscp.DB.SQLite.BlockData (BlockData (..), TxInBlock (..), TxWithIdx (..))
 import Dscp.DB.SQLite.Types (TxBlockIdx, intTxBlockIdx)
 import Dscp.Educator.Txs (PrivateTx (..))
 import Dscp.Util (leftToPanic)
@@ -62,12 +62,12 @@ instance FromRow   Submission        where fromRow = Submission       <$> field 
 instance FromRow   SignedSubmission  where fromRow = SignedSubmission <$> fromRow <*> field
 instance FromRow   PrivateTx         where fromRow = PrivateTx        <$> fromRow <*> field <*> field
 
+instance FromRow   TxInBlock         where fromRow = TxInBlock        <$> fromRow <*> field
+instance FromRow   TxWithIdx         where fromRow = TxWithIdx        <$> fromRow <*> field
+
 instance ToRow Assignment where
     toRow task@ (Assignment course contentsHash ty text) =
         [toField (hash task), toField course, toField contentsHash, toField ty, toField text]
 
 instance FromRow BlockData where
     fromRow = BlockData <$> field <*> field <*> field <*> field <*> field <*> field <*> field
-
-instance FromRow a => FromRow (WithBlockDataId a) where
-    fromRow = WithBlockDataId <$> fromRow <*> field

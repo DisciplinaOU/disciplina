@@ -183,17 +183,15 @@ getMerkleProofRoot = pnSig
 
 mkMerkleProofSingle :: forall a. MerkleTree a -- ^ merkle tree we want to construct a proof from
                               -> LeafIndex -- ^ leaf index used for proof
-                              -> Maybe (MerkleProof a)
+                              -> MerkleProof a
 mkMerkleProofSingle t n = mkMerkleProof t (Set.fromList [n])
 
 mkMerkleProof :: forall a. MerkleTree a -- ^ merkle tree we want to construct a proof from
                         -> Set LeafIndex -- ^ leaf index used for proof
-                        -> Maybe (MerkleProof a)
-mkMerkleProof MerkleEmpty _ = Nothing
+                        -> MerkleProof a
+mkMerkleProof MerkleEmpty _ = ProofPruned (getMerkleRoot MerkleEmpty)
 mkMerkleProof (MerkleTree rootNode) n =
-    case constructProof rootNode of
-      ProofPruned _ -> Nothing
-      x             -> Just x
+    constructProof rootNode
   where
     constructProof :: MerkleNode a -> MerkleProof a
     constructProof (MerkleLeaf {..})

@@ -5,41 +5,52 @@ module Dscp.DB.SQLite.Queries where
 import Control.Lens (makePrisms)
 
 import Data.Coerce (coerce)
+import Data.List (groupBy)
+import qualified Data.Set as Set (fromList)
 import Data.Time.Clock (UTCTime)
 
 import Database.SQLite.Simple (Only (..), Query)
 import Database.SQLite.Simple.ToField (ToField)
 import Database.SQLite.Simple.ToRow (ToRow (..))
 
-import Text.InterpolatedString.Perl6 (q, qc)
+import Text.InterpolatedString.Perl6 (q)
 
 import Dscp.Core.Serialise ()
 import Dscp.Core.Types (Assignment (..), Course, SignedSubmission (..), Student, Subject,
                         Submission (..), aContentsHash, aCourseId, aDesc, aType, sAssignment,
                         sContentsHash, sStudentId, ssSubmission, ssWitness)
-import Dscp.DB.SQLite.BlockData (BlockData (..), WithBlockDataId (..))
+
+import Dscp.Crypto (MerkleProof, mkMerkleProof)
+import Dscp.DB.SQLite.BlockData (BlockData (..), TxInBlock (..), TxWithIdx (..))
 import Dscp.DB.SQLite.Class (MonadSQLiteDB (..))
 import Dscp.DB.SQLite.Instances ()
 import Dscp.DB.SQLite.Types (TxBlockIdx (TxInMempool))
+import Dscp.Educator.Block (PrivateBlock (..))
 
 import Dscp.Educator.Txs (PrivateTx (..), ptGrade, ptSignedSubmission, ptTime)
 import Dscp.Util (HasId (..), assert, assertJust, idOf)
 
 data DomainError
     = CourseDoesNotExist
-      { deCourseId :: Id Course }
+        { deCourseId :: Id Course }
+
     | StudentDoesNotExist
-      { deStudentId :: Id Student }
+        { deStudentId :: Id Student }
+
     | AssignmentDoesNotExist
-      { deAssignmentId :: Id Assignment }
+        { deAssignmentId :: Id Assignment }
+
     | StudentWasNotEnrolledOnTheCourse
-      { deStudentId :: Id Student
-      , deCourseId  :: Id Course }
+        { deStudentId :: Id Student
+        , deCourseId  :: Id Course }
+
     | StudentWasNotSubscribedOnAssignment
-      { deStudentId    :: Id Student
-      , deAssignmentId :: Id Assignment }
+        { deStudentId    :: Id Student
+        , deAssignmentId :: Id Assignment }
+
     | SubmissionDoesNotExist
-      { deSubmissionId :: Id Submission }
+        { deSubmissionId :: Id Submission }
+
     deriving (Show, Typeable, Eq)
 
 -- Using records ^ to get sensible autoderived json instances.
@@ -159,68 +170,136 @@ getStudentTransactions student = do
         where      student_addr = ?
     |]
 
-getStudentTransactionsSince
-    :: DBM m => Id Student -> UTCTime -> m [WithBlockDataId PrivateTx]
-getStudentTransactionsSince studentId sinceTime = do
-    query getStudentTransactionsSinceQuery (studentId, sinceTime)
-  where
-    getStudentTransactionsSinceQuery = [q|
-        -- getStudentTransactionsSince
+--getStudentTransactionsSince
+--    :: DBM m => Id Student -> UTCTime -> m [WithBlockDataId PrivateTx]
+--getStudentTransactionsSince studentId sinceTime = do
+--    query getStudentTransactionsSinceQuery (studentId, sinceTime)
+--  where
+--    getStudentTransactionsSinceQuery = [q|
+--        -- getStudentTransactionsSince
 
-        select     Submissions.student_addr,
-                   Submissions.contents_hash,
-                   Assignments.course_id,
-                   Assignments.contents_hash,
-                   Assignments.type,
-                   Assignments.desc,
-                   Submissions.signature,
-                   grade,
-                   time,
-                   idx
+--        select     Submissions.student_addr,
+--                   Submissions.contents_hash,
+--                   Assignments.course_id,
+--                   Assignments.contents_hash,
+--                   Assignments.type,
+--                   Assignments.desc,
+--                   Submissions.signature,
+--                   grade,
+--                   time,
+--                   idx
 
-        from       Transactions
+--        from       Transactions
 
-        left join  Submissions
-               on  submission_hash = Submissions.hash
+--        left join  Submissions
+--               on  submission_hash = Submissions.hash
 
-        left join  Assignments
-               on  assignment_hash = Assignments.hash
+--        left join  Assignments
+--               on  assignment_hash = Assignments.hash
 
-        where      student_addr  = ?
-              and  time         >= ?
-              and  idx          <> -1
-    |]
+--        where      student_addr  = ?
+--              and  time         >= ?
+--              and  idx          <> -1
+--    |]
 
-getBlocksData :: DBM m => [Id BlockData] -> m [BlockData]
-getBlocksData blockDataIds = do
-    query getBlocksDataQuery (blockDataIds)
-  where
-    getBlocksDataQuery = [qc|
-        select  idx
-                hash
-                time
-                prev_hash
-                atg_delta
-                mroot
-                mtree
-        from    Blocks
-        where   {
-            generateOrChain blockDataIds
-        }
-    |]
+--getBlocksData :: DBM m => [Id PrivateTx] -> m [BlockData]
+--getBlocksData blockDataIds = do
+--    query getBlocksDataQuery (blockDataIds)
+--  where
+--    getBlocksDataQuery = [qc|
+--        select distinct
+--                   idx
+--                   hash
+--                   time
+--                   prev_hash
+--                   atg_delta
+--                   mroot
+--                   mtree
+--        from       BlockTxs
+--        left join  Blocks
+--               on  idx = block_idx
+--        unique
+--        where   {
+--            generateOrChain blockDataIds
+--        }
+--    |]
 
-    generateOrChain :: [a] -> Text
-    generateOrChain = foldr generateOr "False"
-      where
-        generateOr _ rest =  rest
+--    generateOrChain :: [a] -> Text
+--    generateOrChain = foldr generateOr "False"
+--      where
+--        generateOr _ rest = "tx_hash = ? OR " <> rest
 
-getProvenStudentTransactionsSince
-    :: DBM m => Id Student -> UTCTime -> m [(MerkleProof, [PrivateTx])]
+getProvenStudentTransactionsSince :: DBM m => Id Student -> UTCTime -> m [(MerkleProof PrivateTx, [PrivateTx])]
 getProvenStudentTransactionsSince studentId sinceTime = do
-    transactions <- getStudentTransactionsSince studentId sinceTime
-    blocksData   <- getBlocksData (_wbdiBlockDataId <$> transactions)
+    txsBlockList <- getTxsBlockMap
 
-    let blocks = groupWith _wbdiBlockDataId transactions
+    let txsBlockMap = groupToAssocWith (_tibBlockId, _tibTx) txsBlockList
+
+    forM txsBlockMap $ \(blockId, transactions) -> do
+        blockData <- getBlockData blockId
+
+        let indices = _twiTxIdx <$> transactions & Set.fromList
+        let bodies  = _twiTx    <$> transactions
+        let tree    = _bdTree blockData
+        let pruned  = mkMerkleProof tree indices
+
+        return (pruned, bodies)
+
+  where
+    groupToAssocWith (key, value)
+        = map      (\every@ (selected : _) -> (key selected, map value every))
+        . groupBy  ((==) `on` key)
+        . sortWith  key
+
+    getTxsBlockMap :: DBM m => m [TxInBlock]
+    getTxsBlockMap = query getTxsBlockMapQuery (studentId, sinceTime)
+      where
+        getTxsBlockMapQuery = [q|
+            -- getTxsBlockMapQuery
+
+            select     Submissions.student_addr,
+                       Submissions.contents_hash,
+                       Assignments.course_id,
+                       Assignments.contents_hash,
+                       Assignments.type,
+                       Assignments.desc,
+                       Submissions.signature,
+                       Transactions.grade,
+                       Transactions.time,
+                       Transactions.idx
+                       BlockTxs.blk_idx
+
+            from       BlockTxs
+            left join  Transactions
+                   on  tx_hash = Transactions.hash
+
+            left join  Submissions
+                   on  Transactions.submission_hash = Submissions.hash
+
+            left join  Assignments
+                   on  Submissions .assignment_hash = Assignments.hash
+
+            where      student_addr  = ?
+                  and  time         >= ?
+                  and  idx          <> -1
+        |]
+
+    getBlockData :: DBM m => Id PrivateBlock -> m BlockData
+    getBlockData blockId = do
+        (listToMaybe <$> query getBlockDataQuery (Only blockId))
+            `assertJust` BlockDoesNotExist blockId
+      where
+        getBlockDataQuery = [q|
+            select  idx
+                    hash
+                    time
+                    prev_hash
+                    atg_delta
+                    mroot
+                    mtree
+            from    Blocks
+            where   idx = ?
+        |]
 
 createSignedSubmission :: DBM m => SignedSubmission -> m (Id SignedSubmission)
 createSignedSubmission sigSub = do
