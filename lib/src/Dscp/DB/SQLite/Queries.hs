@@ -231,8 +231,10 @@ getStudentTransactions student = do
 
 getProvenStudentTransactionsSince :: DBM m => Id Student -> UTCTime -> m [(MerkleProof PrivateTx, [PrivateTx])]
 getProvenStudentTransactionsSince studentId sinceTime = do
+    -- Contains `(tx, idx, blockId)` map.
     txsBlockList <- getTxsBlockMap
 
+    -- Bake `blockId -> [(tx, idx)]` map.
     let txsBlockMap = groupToAssocWith (_tibBlockId, _tibTx) txsBlockList
 
     forM txsBlockMap $ \(blockId, transactions) -> do
@@ -246,11 +248,14 @@ getProvenStudentTransactionsSince studentId sinceTime = do
         return (pruned, bodies)
 
   where
+    groupToAssocWith :: Eq k => Ord k => (a -> k, a -> v) -> [a] -> [(k, [v])]
     groupToAssocWith (key, value)
+        -- The `groupBy` should return `[NonEmpty a]`.
         = map      (\every@ (selected : _) -> (key selected, map value every))
         . groupBy  ((==) `on` key)
         . sortWith  key
 
+    -- Returns, effectively, `[((PrivateTx, Idx), Id PrivateBlock)]`.
     getTxsBlockMap :: DBM m => m [TxInBlock]
     getTxsBlockMap = query getTxsBlockMapQuery (studentId, sinceTime)
       where
@@ -284,11 +289,13 @@ getProvenStudentTransactionsSince studentId sinceTime = do
                   and  idx          <> -1
         |]
 
+    -- Returns `PrivateBlock` in normalized format, with metadata.
     getBlockData :: DBM m => Id PrivateBlock -> m BlockData
     getBlockData blockId = do
         (listToMaybe <$> query getBlockDataQuery (Only blockId))
             `assertJust` BlockDoesNotExist blockId
       where
+        -- TODO: prune fields that aren't needed.
         getBlockDataQuery = [q|
             select  idx
                     hash
