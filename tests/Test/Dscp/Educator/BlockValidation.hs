@@ -3,17 +3,16 @@ module Test.Dscp.Educator.BlockValidation where
 import Test.Common
 
 import Control.Lens (to)
-import Dscp.Core (ATGDelta (..), Course (..), Grade (..),
-                  swKey, swSig, ssSubmission, ssWitness)
-import Dscp.Crypto (AbstractPK (..), AbstractSK (..), PublicKey, SecretKey,
-                    hash, getMerkleRoot, fromFoldable)
-import Dscp.Educator (PrivateBlock (..), PrivateBlockBody (..), PrivateBlockHeader (..),
-                      PrivateTx (..), BlockValidationFailure (..), SubmissionValidationFailure (..),
-                      genesisHeaderHash, validatePrivateBlk, ptSignedSubmission)
+import Dscp.Core (ATGDelta (..), Course (..), gB, ssSubmission, ssWitness, swKey, swSig)
+import Dscp.Crypto (AbstractPK (..), AbstractSK (..), PublicKey, SecretKey, fromFoldable,
+                    getMerkleRoot, hash)
+import Dscp.Educator (BlockValidationFailure (..), PrivateBlock (..), PrivateBlockBody (..),
+                      PrivateBlockHeader (..), PrivateTx (..), SubmissionValidationFailure (..),
+                      genesisHeaderHash, ptSignedSubmission, validatePrivateBlk)
 
-import System.IO.Unsafe (unsafePerformIO)
 import qualified Crypto.PubKey.Ed25519 as Ed25519
 import qualified Data.Map.Strict as M
+import System.IO.Unsafe (unsafePerformIO)
 
 courseCompScience1 :: Id Course
 courseCompScience1 = Course 3
@@ -32,15 +31,15 @@ studentAKeyPair = mkKeyPair 'a'
 -- | Educator 'k' grade student a an B in course Computer science
 -- transaction is signed by student a
 tx1, tx2, tx3, tx4 :: PrivateTx
-tx1 = mkPrivateTx courseCompScience1 B studentAPubKey studentAKeyPair
+tx1 = mkPrivateTx courseCompScience1 gB studentAPubKey studentAKeyPair
 
 -- | Educator 'k' grade student a an B in course Computer science
 -- transaction is signed by student b
-tx2 = mkPrivateTx courseCompScience1 B studentAPubKey (studentAPubKey, studentBPrivKey)
+tx2 = mkPrivateTx courseCompScience1 gB studentAPubKey (studentAPubKey, studentBPrivKey)
 
-tx3 = mkPrivateTx courseCompScience1 B studentAPubKey (studentBPubKey, studentAPrivKey)
+tx3 = mkPrivateTx courseCompScience1 gB studentAPubKey (studentBPubKey, studentAPrivKey)
 
-tx4 = mkPrivateTx courseCompScience1 B studentBPubKey (studentBPubKey, studentBPrivKey)
+tx4 = mkPrivateTx courseCompScience1 gB studentBPubKey (studentBPubKey, studentBPrivKey)
 
 -- | unsafePerformIO create bunch of PrivateTx.
 -- Use map instead of replicate here to force
@@ -50,7 +49,7 @@ txsValid = map generateKeyPair [1..(100 :: Int)]
   where generateKeyPair _ =
           let key = unsafePerformIO Ed25519.generateSecretKey
               kp@(pubKey, _) = (AbstractPK (Ed25519.toPublic key), AbstractSK key)
-          in mkPrivateTx courseCompScience1 B pubKey kp
+          in mkPrivateTx courseCompScience1 gB pubKey kp
 
 spec_ValidateBlock :: Spec
 spec_ValidateBlock = describe "Validate private block" $ do

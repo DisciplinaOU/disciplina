@@ -1,4 +1,4 @@
-resolver: lts-10.7
+resolver: lts-11.17
 
 packages:
 - '.'
@@ -8,18 +8,22 @@ nix:
   shell-file: shell.nix
 
 extra-deps:
+- aeson-options-0.0.0
+- base58-bytestring-0.1.0
 - log-warper-1.8.11
 - pretty-tree-0.1.0.0
 - time-units-1.0.0
 - componentm-0.0.0.2
 - rio-0.1.2.0
 - serokell-util-0.8.0
+- formatting-6.2.5
 - typed-process-0.2.2.0
 - teardown-0.5.0.0
 - unliftio-0.2.7.0
+- yaml-0.8.32
 
 - git: https://github.com/serokell/auth-data-structures.git
-  commit: 3bd0cbc7ac0408f897f11746dbd245e3f8437bbb
+  commit: f9a0cd66f443d7b0e04a3c8ae8d475f8344b823b
 
 - git: git@github.com:serokell/snowdrop.git
   commit: ac5c7cf3cff367982c4f973c15472b2cc2209186

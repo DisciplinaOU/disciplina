@@ -164,7 +164,11 @@ data Block trans = Block
     }
     deriving (Show, Generic, Serialise)
 
-type CanStore = AVL.KVStoreMonad Hash'
+type CanStore m =
+    ( AVL.KVStoreMonad Hash' m
+    , MonadIO m
+    , MonadCatch m
+    )
 
 -- | Monad for operations.
 type WorldT side m = RWST Environment DiffSets side m

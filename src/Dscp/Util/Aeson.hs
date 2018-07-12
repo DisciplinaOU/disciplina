@@ -10,18 +10,18 @@ module Dscp.Util.Aeson
     , parseJSONSerialise
     ) where
 
-import Data.ByteArray (ByteArray, ByteArrayAccess)
-import Codec.Serialise (Serialise, serialise, deserialiseOrFail)
-import qualified Data.ByteString.Lazy as LBS
+import Codec.Serialise (Serialise, deserialiseOrFail, serialise)
 import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), object, withObject, withText, (.:), (.=))
 import Data.Aeson.Types (Parser)
+import Data.ByteArray (ByteArray, ByteArrayAccess)
 import qualified Data.ByteArray as BA
+import qualified Data.ByteString.Lazy as LBS
 import qualified Data.SemVer as SemVer
 import Fmt ((+||), (||+))
 import qualified Serokell.Util.Base64 as Base64
 
 import qualified Dscp.Crypto.ByteArray as BA
-import Dscp.Util (Base, toBase, fromBase, leftToFailWith, leftToFail)
+import Dscp.Util (Base, fromBase, leftToFail, leftToFailWith, toBase)
 
 -- | Often one wants to convert bytestring to JSON, but such convertion
 -- is encoding-dependent so we have no corresponding instance.
@@ -31,7 +31,7 @@ newtype AsByteString encoding a = AsByteString { getAsByteString :: a }
 data Base64Encoded
 
 instance BA.ByteArrayAccess a => ToJSON (AsByteString Base64Encoded a) where
-    toJSON a = String . Base64.encode . BA.convert $ getAsByteString a
+    toJSON = String . Base64.encode . BA.convert . getAsByteString
 instance BA.FromByteArray a => FromJSON (AsByteString Base64Encoded a) where
     parseJSON = withText "base64 text" $ \t -> do
         bs <- Base64.decode t

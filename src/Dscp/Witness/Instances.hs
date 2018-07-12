@@ -21,6 +21,8 @@ instance Serialise a => AVL.Serialisable a where
 -- 'Serialise' instances for AVL types. Temporary.
 instance Serialise AVL.Tilt
 
+instance Serialise b => Serialise (AVL.WithBounds b)
+
 instance (Serialise h, Serialise k, Serialise v, Serialise t) =>
     Serialise (AVL.MapLayer h k v t)
 
@@ -41,8 +43,7 @@ instance
   ( Show k
   , Show v
   , Ord k
-  , Bounded k
-  , HasHash k
+  , HasHash (AVL.WithBounds k)
   , HasHash v
   , Typeable a
   )
@@ -66,6 +67,8 @@ instance
 
       AVL.MLEmpty _ ->
         def
+
+    defHash = unsafeHash ("pvaforever" :: ByteString)
 
 combineAll :: [Hash a] -> Hash b
 combineAll = unsafeHash @ByteString . BA.concat

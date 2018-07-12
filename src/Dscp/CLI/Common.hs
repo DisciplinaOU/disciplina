@@ -12,6 +12,8 @@ module Dscp.CLI.Common
        , ourZTNodeIdParser
        , netCliParamsParser
        , netServParamsParser
+
+       , networkAddressParser
        ) where
 
 import qualified Data.Set as Set
@@ -25,6 +27,7 @@ import Dscp.DB.Rocks.Real.Types (RocksDBParams (..))
 import Dscp.DB.SQLite.Types (SQLiteDBLocation (..), SQLiteParams (..))
 import Dscp.Resource.Logging (LoggingParams (..))
 import Dscp.Resource.Network (NetCliParams (..), NetServParams (..))
+import Dscp.Web (NetworkAddress (..))
 import Paths_disciplina (version)
 
 logParamsParser :: Log.Name -> Parser LoggingParams
@@ -88,3 +91,22 @@ netCliParamsParser = NetCliParams <$> peersParser
 
 netServParamsParser :: Parser NetServParams
 netServParamsParser = NetServParams <$> peersParser <*> ourZTNodeIdParser
+
+---------------------------------------------------------------------------
+-- Utils
+---------------------------------------------------------------------------
+
+parseNetAddr :: String -> Either String NetworkAddress
+parseNetAddr str =
+    let host = toText $ takeWhile (/= ':') str
+        portS = drop (length host + 1) str
+    in case readMaybe portS of
+        Just port -> Right $ NetworkAddress host port
+        Nothing   -> Left "Invalid network address"
+
+networkAddressParser :: String -> String -> Parser NetworkAddress
+networkAddressParser pName helpTxt =
+    option (eitherReader parseNetAddr) $
+    long pName <>
+    metavar "HOST:PORT" <>
+    help helpTxt

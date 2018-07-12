@@ -1,5 +1,4 @@
 {-# LANGUAGE QuasiQuotes #-}
-{-# LANGUAGE BangPatterns #-}
 
 module Dscp.DB.SQLite.Instances () where
 
@@ -26,7 +25,7 @@ instance FromField Address           where fromField f = Codec.deserialise <$> f
 instance FromField PublicKey         where fromField f = Codec.deserialise <$> fromField f
 instance FromField Subject           where fromField f = Subject           <$> fromField f
 instance FromField Course            where fromField f = Course            <$> fromField f
-instance FromField Grade             where fromField f = toEnum            <$> fromField f
+instance FromField Grade             where fromField f = UnsafeGrade       <$> fromField f
 instance FromField AssignmentType    where fromField f = Codec.deserialise <$> fromField f
 instance FromField SubmissionWitness where fromField f = Codec.deserialise <$> fromField f
 
@@ -37,7 +36,7 @@ instance ToField   Address           where toField = toField . Codec.serialise
 instance ToField   Course            where toField = toField . getCourseId
 instance ToField   Subject           where toField = toField . getSubjectId
 instance ToField   AssignmentType    where toField = toField . Codec.serialise
-instance ToField   Grade             where toField = toField . fromEnum
+instance ToField   Grade             where toField = toField . getGrade
 instance ToField   SubmissionWitness where toField = toField . Codec.serialise
 
 instance FromRow   Course            where fromRow = field

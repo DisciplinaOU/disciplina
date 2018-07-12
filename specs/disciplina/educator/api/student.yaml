@@ -150,7 +150,7 @@ paths:
           schema:
             $ref: '#/definitions/SignedSubmission'
       responses:
-        '200':
+        '201':
           description: successful operation
           schema:
             $ref: '#/definitions/Submission'
@@ -252,7 +252,7 @@ definitions:
       - id
       - desc
       - subjects
-      - is_enrolled
+      - isEnrolled
     properties:
       id:
         $ref: '#/definitions/CourseId'
@@ -262,43 +262,43 @@ definitions:
         type: array
         items:
           $ref: '#/definitions/Subject'
-      is_enrolled:
+      isEnrolled:
         type: boolean
         
   Assignment:
     type: object
     required:
       - hash
-      - course_id
-      - contents_hash
-      - is_final
+      - courseId
+      - contentsHash
+      - isFinal
       - desc
     properties:
       hash:
         $ref: '#/definitions/Hash'
-      course_id:
+      courseId:
         $ref: '#/definitions/CourseId'
-      contents_hash:
+      contentsHash:
         $ref: '#/definitions/Hash'
-      is_final:
+      isFinal:
         type: boolean
       desc:
         type: string
-      last_submission:
+      lastSubmission:
         $ref: '#/definitions/Submission'
         
   Submission:
     type: object
     required:
       - hash
-      - contents_hash
-      - assignment_hash
+      - contentsHash
+      - assignmentHash
     properties:
       hash:
         $ref: '#/definitions/Hash'
-      contents_hash:
+      contentsHash:
         $ref: '#/definitions/Hash'
-      assignment_hash:
+      assignmentHash:
         $ref: '#/definitions/Hash'
       grade:
         $ref: '#/definitions/Grade'
@@ -308,58 +308,72 @@ definitions:
     required:
       - grade
       - timestamp
-      - has_proof
+      - hasProof
     properties:
       grade:
         type: integer
         format: int32
       timestamp:
         $ref: '#/definitions/Time'
-      has_proof:
+      hasProof:
         type: boolean
         
   SignedSubmission:
     type: object
     required:
-      - hash
-      - student_addr
-      - contents_hash
-      - assignment
+      - submission
       - witness
     properties:
-      hash:
-        $ref: '#/definitions/Hash'
-      student_addr:
-        $ref: '#/definitions/Address'
-      contents_hash:
-        $ref: '#/definitions/Hash'
-      assignment:
-        $ref: '#/definitions/Assignment'
+      submission:
+        type: object
+        required:
+          - studentId
+          - contentsHash
+          - assignment
+        properties:
+          studentId:
+            $ref: '#/definitions/Address'
+          contentsHash:
+            $ref: '#/definitions/Hash'
+          assignment:
+            type: object
+            required:
+              - courseId
+              - contentsHash
+              - type
+              - desc
+            properties:
+              courseId:
+                $ref: '#/definitions/CourseId'
+              contentsHash: 
+                $ref: '#/definitions/Hash'
+              type:
+                type: string
+                enum: [regular, courseFinal]
+              desc:
+                type: string
       witness:
         type: string
         format: binary
     example:
-      hash: "8ec778bf20bbc5596ae6b22352b6f91fb44274acac91f6b7ede45fe29da215e9"
-      student_addr: "1Nh7uHdvY6fNwtQtM1G5EZAFPLC33B59rB"
-      contents_hash: "c52b4484433160146ec1f56fa18440399ac0c35487b8daecff1553f9f490fff6"
-      assignment:
-        hash: "8ec778bf20bbc5596ae6b22352b6f91fb44274bcbc91f6b7ede45fe29da215e9"
-        course_id: 4
-        contents_hash: "c52b4484433160146ec1f56fa18440399ac0c35487b8daecff1553f9f490fff6"
-        is_final: false
-        desc: "mda"
+      submission:
+        studentId: "1Nh7uHdvY6fNwtQtM1G5EZAFPLC33B59rB"
+        contentsHash: "c52b4484433160146ec1f56fa18440399ac0c35487b8daecff1553f9f490fff6"
+        assignment:
+          courseId: 4
+          contentsHash: "c52b4484433160146ec1f56fa18440399ac0c35487b8daecff1553f9f490fff6"
+          type: "regular"
+          desc: "mda"
+      witness: "c52b4484433160146ec1f56fa18440399ac0c35487b8daecff1553f9f490fff6c52b4484433160146ec1f56fa18440399ac0c35487b8daecff1553f9f490fff6"
 
   Transaction:
     type: object
     required:
-      - hash
-      - signed_submission
+      - signedSubmission
       - grade
       - timestamp
     properties:
-      hash:
-        $ref: '#/definitions/Hash'
-      signed_submission:
+      signedSubmission:
         $ref: '#/definitions/SignedSubmission'
       grade:
         type: integer
@@ -369,10 +383,10 @@ definitions:
   BlkProof:
     type: object
     required:
-      - mtree_serialized
+      - mtreeSerialized
       - txs
     properties:
-      mtree_serialized:
+      mtreeSerialized:
         type: string
         format: binary
       txs:
@@ -391,7 +405,7 @@ definitions:
     properties:
       error:
         type: string
-        enum: [SubmissionInvalid, SubmissionSignatureInvalid, DeletingGradedSubmission]
+        enum: [SubmissionMalformed, SubmissionSignatureInvalid, DeletingGradedSubmission]
 parameters:
   CourseId:
     in: query

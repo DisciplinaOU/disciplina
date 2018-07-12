@@ -9,10 +9,11 @@ module Dscp.Educator.CLI
 import Options.Applicative (Parser, ReadM, help, long, metavar, option, optional, str, strOption,
                             switch)
 
-import Dscp.CLI (sqliteParamsParser)
+import Dscp.CLI (networkAddressParser, sqliteParamsParser)
 import Dscp.Crypto (PassPhrase, mkPassPhrase)
 import Dscp.Educator.Launcher.Params (EducatorParams (..))
 import Dscp.Educator.Secret (EducatorSecretParams (..))
+import Dscp.Educator.Web.Params (EducatorWebParams (..))
 import Dscp.Util (leftToFail)
 import Dscp.Witness.CLI (witnessParamsParser)
 
@@ -34,9 +35,16 @@ educatorSecretParamsParser = do
          help "Password from secret key."
     return EducatorSecretParams{..}
 
+educatorWebParamsParser :: Parser EducatorWebParams
+educatorWebParamsParser = do
+    ewpStudentApiAddr <- networkAddressParser "student-listen"
+        "Host/port for serving Student API"
+    return EducatorWebParams{..}
+
 educatorParamsParser :: Parser EducatorParams
 educatorParamsParser = do
     epWitnessParams <- witnessParamsParser
     epDBParams <- sqliteParamsParser
     epSecretParams <- educatorSecretParamsParser
+    epWebParams <- educatorWebParamsParser
     return EducatorParams{..}

@@ -9,6 +9,7 @@ module Dscp.Core.Types
        , Subject (..)
        , Student
        , Grade (..)
+       , mkGrade
        , EducatorId
        , Assignment (..)
        , AssignmentType (..)
@@ -22,7 +23,7 @@ module Dscp.Core.Types
        , aCourseId
        , aContentsHash
        , aType
-       , aAssignment
+       , aDesc
        , _sDocumentType
        , sDocumentType
        , sStudentId
@@ -47,7 +48,7 @@ module Dscp.Core.Types
 import Control.Lens (Getter, makeLenses, to)
 import Data.Map (Map)
 
-import Dscp.Crypto (Hash, HasHash, PublicKey, Raw, Signature, hash, unsafeHash)
+import Dscp.Crypto (HasHash, Hash, PublicKey, Raw, Signature, hash, unsafeHash)
 import Dscp.Util (HasId (..))
 
 -- | 'Address' datatype. Not 'newtype', because later it will
@@ -68,9 +69,20 @@ newtype Subject = Subject
 instance HasId Subject
 
 -- | Assignment/course grade.
--- TODO: decide on final format of the grade.
-data Grade = F | D | C | B | A
-    deriving (Eq, Ord, Enum, Bounded, Show, Generic)
+-- An integer from 0 to 100. Constructor is unsafe, because it's possible
+-- to make a grade outside these bounds.
+newtype Grade = UnsafeGrade
+    { getGrade :: Word8
+    } deriving (Eq, Ord, Show, Generic)
+
+instance Bounded Grade where
+    minBound = UnsafeGrade 0
+    maxBound = UnsafeGrade 100
+
+mkGrade :: Word8 -> Maybe Grade
+mkGrade a
+    | a >= minBound && a <= maxBound = Just $ UnsafeGrade a
+    | otherwise                      = Nothing
 
 -- | Student is identified by their public address.
 type Student = Address
@@ -100,7 +112,7 @@ data Assignment = Assignment
     -- ^ Hash of assignment contents
     , _aType         :: !AssignmentType
     -- ^ Assignment type
-    , _aAssignment   :: !Text
+    , _aDesc         :: !Text
     -- ^ Description of assignment
     } deriving (Eq, Show, Generic)
 
@@ -132,7 +144,7 @@ offlineHash = unsafeHash ("offline" :: ByteString)
 -- | Datatype to represent the notion of "offline"- and "online"-ness
 -- of assignments and submissions.
 data DocumentType = Online | Offline
-    deriving (Eq, Show, Generic)
+    deriving (Eq, Ord, Show, Enum, Generic)
 
 documentType :: Hash Raw -> DocumentType
 documentType h

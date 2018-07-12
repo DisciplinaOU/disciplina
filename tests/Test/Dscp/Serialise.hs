@@ -1,5 +1,5 @@
 
--- | Utils for roundtrip tests for binary serialisation.
+-- | Utils for roundtrip tests for binary and JSON serialisation.
 
 module Test.Dscp.Serialise
     ( serialiseRoundtrip
@@ -8,7 +8,7 @@ module Test.Dscp.Serialise
     , aesonRoundtripProp
     ) where
 
-import Codec.Serialise (Serialise, deserialiseOrFail, serialise)
+import Codec.Serialise (Serialise, deserialise, serialise)
 import Data.Aeson (FromJSON, ToJSON, eitherDecode, encode)
 import Data.Typeable (typeRep)
 
@@ -18,7 +18,7 @@ serialiseRoundtrip
     :: forall a. (Arbitrary a, Serialise a, Eq a, Show a)
     => Property
 serialiseRoundtrip = property $ \(s :: a) ->
-    first (show @Text) (deserialiseOrFail (serialise s)) === Right s
+    deserialise (serialise s) === s
 
 serialiseRoundtripProp
     :: forall a. (Arbitrary a, Serialise a, Eq a, Show a, Typeable a)
@@ -36,4 +36,4 @@ aesonRoundtripProp
     :: forall a. (Arbitrary a, ToJSON a, FromJSON a, Eq a, Show a, Typeable a)
     => Spec
 aesonRoundtripProp =
-    it (show (typeRep $ Proxy @a)) $ aesonRoundtrip @a
+    it (show $ typeRep $ Proxy @a) $ aesonRoundtrip @a
