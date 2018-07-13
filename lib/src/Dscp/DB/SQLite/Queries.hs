@@ -279,6 +279,7 @@ createBlock block = do
         _    <- execute createBlockRequest
             ( bid
             , time
+            , block^.pbHeader.pbhPrevBlock
             , block^.pbHeader.pbhAtgDelta
             , root
             , tree
@@ -295,9 +296,7 @@ createBlock block = do
     createBlockRequest = [q|
         insert into Blocks
         from
-        select      idx + 1, ?, ?, hash, ?, ?, ?
-        from        Blocks
-        limit       1
+        select      (select max(idx) from Blocks) + 1, ?, ?, ?, ?, ?, ?
     |]
 
     setTxIndexRequest = [q|
