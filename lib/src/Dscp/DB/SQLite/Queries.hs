@@ -54,6 +54,15 @@ data DomainError
     | SubmissionDoesNotExist
         { deSubmissionId :: Id Submission }
 
+    | TransactionDoesNotExist
+        { deTransactionId :: Id PrivateTx }
+
+    | BlockDoesNotExist
+        { deBlockId :: Id PrivateBlock }
+
+    | BlockProofIsCorrupted
+        { deBlockId :: Id PrivateBlock }
+
     deriving (Show, Typeable, Eq)
 
 -- Using records ^ to get sensible autoderived json instances.
@@ -261,6 +270,8 @@ createBlock block txs = do
 
             txs' = zip [1..] txs
             bid  = block^.idOf
+
+        return (root == block^.pbHeader.pbhBodyProof) `assert` BlockProofIsCorrupted bid
 
         time <- liftIO getCurrentTime
 
