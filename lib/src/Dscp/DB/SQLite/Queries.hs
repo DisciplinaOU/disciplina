@@ -29,7 +29,7 @@ import Dscp.DB.SQLite.BlockData (BlockData (..), TxInBlock (..), TxWithIdx (..))
 import Dscp.DB.SQLite.Class (MonadSQLiteDB (..))
 import Dscp.DB.SQLite.Instances ()
 import Dscp.DB.SQLite.Types (TxBlockIdx (TxInMempool))
-import Dscp.Educator.Block (PrivateBlock (..), pbHeader, pbhAtgDelta)
+import Dscp.Educator.Block (PrivateBlock (..), pbBody, pbHeader, pbbTxs, pbhAtgDelta, pbhBodyProof)
 import Dscp.Educator.Txs (PrivateTx (..), ptGrade, ptSignedSubmission, ptTime)
 import Dscp.Util (HasId (..), assert, assertJust, idOf)
 
@@ -262,13 +262,14 @@ getProvenStudentTransactionsSince studentId sinceTime = do
             where   idx = ?
         |]
 
-createBlock :: DBM m => PrivateBlock -> [Id PrivateTx] -> m (Id PrivateBlock)
-createBlock block txs = do
+createBlock :: DBM m => PrivateBlock -> m (Id PrivateBlock)
+createBlock block = do
     transaction $ do
         let tree = MerkleTree.fromList txs
             root = getMerkleRoot tree
 
-            txs' = zip [1..] txs
+            txs  = block^.pbBody.pbbTxs
+            txs' = zip [1..] (getId <$> txs)
             bid  = block^.idOf
 
         return (root == block^.pbHeader.pbhBodyProof) `assert` BlockProofIsCorrupted bid
