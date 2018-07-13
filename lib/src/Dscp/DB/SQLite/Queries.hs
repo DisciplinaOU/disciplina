@@ -19,7 +19,8 @@ import Dscp.Core.Serialise ()
 import Dscp.Core.Types (Assignment (..), Course, SignedSubmission (..), Student, Subject,
                         Submission (..), aContentsHash, aCourseId, aDesc, aType, sAssignment,
                         sContentsHash, sStudentId, ssSubmission, ssWitness)
-
+import Dscp.DB.SQLite.Class (MonadSQLiteDB (..), transaction)
+import Dscp.DB.SQLite.Instances ()
 import Dscp.Crypto (MerkleProof, mkMerkleProof)
 import Dscp.DB.SQLite.BlockData (BlockData (..), TxInBlock (..), TxWithIdx (..))
 import Dscp.DB.SQLite.Class (MonadSQLiteDB (..))
