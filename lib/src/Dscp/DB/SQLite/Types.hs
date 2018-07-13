@@ -1,10 +1,20 @@
 module Dscp.DB.SQLite.Types
-       ( SQLiteDBLocation (..)
+       ( -- * SQLite bindings
+         SQLiteDBLocation (..)
        , SQLiteDB (..)
        , SQLiteParams (..)
+
+         -- * Educator schema
+       , TxBlockIdx (..)
+       , intTxBlockIdx
        ) where
 
+import Control.Lens (Prism', prism)
 import Database.SQLite.Simple (Connection)
+
+----------------------------------------------------------
+-- SQLite bindings
+----------------------------------------------------------
 
 -- | Where database lies.
 data SQLiteDBLocation
@@ -16,3 +26,25 @@ data SQLiteParams = SQLiteParams
     }
 
 newtype SQLiteDB = SQLiteDB { sdConn :: Connection }
+
+----------------------------------------------------------
+-- Educator schema
+----------------------------------------------------------
+
+-- | Schema internal: idx of transaction within block.
+data TxBlockIdx
+    = TxBlockIdx Word32
+    | TxInMempool
+    deriving (Eq)
+
+-- | Convert between 'TxBlockIdx' and true index which can be used in database.
+intTxBlockIdx :: Prism' Int TxBlockIdx
+intTxBlockIdx = prism toInt fromInt
+  where
+    toInt = \case
+        TxBlockIdx idx -> fromIntegral idx
+        TxInMempool    -> -1
+    fromInt idx
+        | idx >= 0 = Right $ TxBlockIdx (fromIntegral idx)
+        | idx == -1 = Right $ TxInMempool
+        | otherwise = Left idx

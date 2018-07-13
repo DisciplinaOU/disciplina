@@ -3,19 +3,20 @@
 module Dscp.DB.SQLite.Instances () where
 
 import Codec.Serialise as Codec (deserialise, serialise)
-
+import Control.Lens (matching, review)
 import Database.SQLite.Simple.FromField (FromField (..))
 import Database.SQLite.Simple.FromRow (FromRow (..), field)
 import Database.SQLite.Simple.ToField (ToField (..))
 import Database.SQLite.Simple.ToRow (ToRow (..))
 
-
 import Dscp.Core.Serialise ()
-import Dscp.Core.Types (Address (..), Assignment (..), AssignmentType, Course (..), Grade (..),
-                        SignedSubmission (..), Subject (..), Submission (..),
+import Dscp.Core.Types (Address (..), Assignment (..), AssignmentType, Course (..), DocumentType,
+                        Grade (..), SignedSubmission (..), Subject (..), Submission (..),
                         SubmissionWitness (..))
 import Dscp.Crypto (Hash, PublicKey, Signature, hash)
+import Dscp.DB.SQLite.Types (TxBlockIdx, intTxBlockIdx)
 import Dscp.Educator.Txs (PrivateTx (..))
+import Dscp.Util (leftToPanic)
 
 instance FromField (Hash a)       where fromField f = Codec.deserialise <$> fromField f
 instance FromField (Signature a)  where fromField f = Codec.deserialise <$> fromField f
@@ -28,6 +29,11 @@ instance FromField Course            where fromField f = Course            <$> f
 instance FromField Grade             where fromField f = UnsafeGrade       <$> fromField f
 instance FromField AssignmentType    where fromField f = Codec.deserialise <$> fromField f
 instance FromField SubmissionWitness where fromField f = Codec.deserialise <$> fromField f
+instance FromField DocumentType      where fromField f = toEnum <$> fromField f
+instance FromField TxBlockIdx        where
+    fromField f = leftToPanic . first mkError . matching intTxBlockIdx <$> fromField f
+      where
+        mkError idx = "Bad transaction index within block: " <> pretty idx
 
 instance ToField   (Hash a)          where toField = toField . Codec.serialise
 instance ToField   (Signature a)     where toField = toField . Codec.serialise
@@ -38,6 +44,8 @@ instance ToField   Subject           where toField = toField . getSubjectId
 instance ToField   AssignmentType    where toField = toField . Codec.serialise
 instance ToField   Grade             where toField = toField . getGrade
 instance ToField   SubmissionWitness where toField = toField . Codec.serialise
+instance ToField   DocumentType      where toField = toField . fromEnum
+instance ToField   TxBlockIdx        where toField = toField . review intTxBlockIdx
 
 instance FromRow   Course            where fromRow = field
 instance FromRow   Grade             where fromRow = field
@@ -50,4 +58,3 @@ instance FromRow   PrivateTx         where fromRow = PrivateTx        <$> fromRo
 instance ToRow Assignment where
     toRow task@ (Assignment course contentsHash ty text) =
         [toField (hash task), toField course, toField contentsHash, toField ty, toField text]
-

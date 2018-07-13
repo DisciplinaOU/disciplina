@@ -3,8 +3,17 @@
 
 module Dscp.Util
        ( anyMapM
+       , listToMaybeWarn
+       
+         -- * Exceptions processing
        , wrapRethrow
        , wrapRethrowIO
+
+         -- * Error handling
+       , assert
+       , assertJust
+
+         -- * Either conversions
        , leftToThrow
        , leftToFail
        , leftToPanic
@@ -20,10 +29,6 @@ module Dscp.Util
        , toHex
        , fromHex
 
-         -- * Error handling
-       , assert
-       , assertJust
-
          -- * Ids for databases
        , HasId (..)
        , idOf
@@ -33,7 +38,8 @@ module Dscp.Util
        ) where
 
 import Control.Lens (Getter, to)
-
+import Loot.Log (MonadLogging, logWarning)
+import Fmt ((|+), (+|))
 import Data.ByteArray (ByteArrayAccess)
 import Data.ByteArray.Encoding (Base (..), convertFromBase, convertToBase)
 import Snowdrop.Util hiding (getId)
@@ -51,6 +57,21 @@ anyMapM f (a:as) = f a >>= \case
     True -> return True
     False -> anyMapM f as
 
+prefixed :: Semigroup a => a -> a -> a
+prefixed text prefix = prefix <> text
+
+listToMaybeWarn :: (Monad m, MonadLogging m) => Text -> [a] -> m (Maybe a)
+listToMaybeWarn msg = \case
+    [] -> pure Nothing
+    [x] -> pure (Just x)
+    (x:_) -> do
+        logWarning $ "listToMaybeWarn: to many entries ("+|msg|+")"
+        return (Just x)
+
+-----------------------------------------------------------
+-- Exceptions processing
+-----------------------------------------------------------
+
 -- | Converts a possible error, used for wrapping exceptions using given
 -- constructor into ADT-sum of exceptions.
 wrapRethrow
@@ -64,6 +85,28 @@ wrapRethrowIO
     => (e1 -> e2) -> IO a -> m a
 wrapRethrowIO wrap action = wrapRethrow wrap (liftIO action)
 
+-----------------------------------------------------------
+-- Do-or-throw error handlers
+-----------------------------------------------------------
+
+assert :: (MonadIO m, Exception e) => m Bool -> e -> m ()
+assert action message = do
+    yes <- action
+
+    unless yes $ do
+        UIO.throwIO message
+
+assertJust :: (MonadIO m, Exception e) => m (Maybe a) -> e -> m a
+assertJust action message = do
+    mb <- action
+
+    whenNothing mb $ do
+        UIO.throwIO message
+
+-----------------------------------------------------------
+-- Either conversions
+-----------------------------------------------------------
+
 leftToThrow
     :: (MonadThrow m, Exception e2)
     => (e1 -> e2) -> Either e1 a -> m a
@@ -76,9 +119,6 @@ leftToFail = either (fail . toString) pure
 leftToPanic
     :: ToText s => Either s a -> a
 leftToPanic = either (error . toText) identity
-
-prefixed :: Semigroup a => a -> a -> a
-prefixed text prefix = prefix <> text
 
 leftToFailWith
     :: (MonadFail m, ToString s) => String -> Either s a -> m a
@@ -109,24 +149,6 @@ toHex    = toBase Base16
 fromBase64, fromHex :: FromByteArray ba => Text -> Either String ba
 fromBase64 = fromBase Base64
 fromHex    = fromBase Base16
-
------------------------------------------------------------
--- Do-or-throw error handlers
------------------------------------------------------------
-
-assert :: (MonadIO m, Exception e) => m Bool -> e -> m ()
-assert action message = do
-    yes <- action
-
-    unless yes $ do
-        UIO.throwIO message
-
-assertJust :: (MonadIO m, Exception e) => m (Maybe a) -> e -> m a
-assertJust action message = do
-    mb <- action
-
-    whenNothing mb $ do
-        UIO.throwIO message
 
 -----------------------------------------------------------
 -- Helper to establish notion of SQLite/db ID

@@ -7,14 +7,19 @@ module Dscp.Educator.Web.Student.Handlers
 
 import Data.Time.Clock (UTCTime)
 import Servant
-import qualified UnliftIO as UIO
 
 import qualified Dscp.Core.Types as Core
-import Dscp.Crypto (Hash)
-
+import Dscp.Crypto (Hash, deterministic, genSecretKey, toPublic)
+import Dscp.DB.SQLite (sqlTransaction)
+import qualified Dscp.DB.SQLite.Queries as CoreQueries
 import Dscp.Educator.Launcher (EducatorWorkMode)
 import Dscp.Educator.Web.Student.API (StudentAPI)
-import Dscp.Educator.Web.Student.Types (Assignment, BlkProof, Course, Submission)
+import qualified Dscp.Educator.Web.Student.Queries as Queries
+import Dscp.Util (leftToThrow)
+
+import Dscp.Educator.Web.Student.Types (Assignment, BlkProof, Course, IsEnrolled (..), IsFinal (..),
+                                        Student, Submission)
+import Dscp.Educator.Web.Student.Util (verifySignedSubmission)
 
 servantHandlers :: EducatorWorkMode m => ServerT StudentAPI m
 servantHandlers
@@ -28,54 +33,78 @@ servantHandlers
     :<|> deleteSubmission
     :<|> getProofs
 
-notImplemented :: MonadIO m => m a
-notImplemented = UIO.throwIO $ err500 { errBody = "Not implemented" }
+-- TODO [DSCP-141]: remove
+student :: Student
+student = Core.mkAddr . toPublic $ deterministic "" genSecretKey
+
+{- GRAND TODO LIST
+
+1. Student authentication ([DSCP-141]).
+
+2. Errors:
+2.1. Catch and rethrow SQL DomainErrors?
+2.2. Where are exceptions turned into 'ServantErr'?
+
+
+-}
 
 getCourses
     :: EducatorWorkMode m
-    => Maybe Bool -> m [Course]
-getCourses _ = notImplemented
+    => Maybe IsEnrolled -> m [Course]
+getCourses isEnrolled =
+    sqlTransaction $ Queries.getCourses student isEnrolled
 
 getCourse
     :: EducatorWorkMode m
     => Core.Course -> m Course
-getCourse _ = notImplemented
+getCourse courseId =
+    Queries.getCourse student courseId
 
 getAssignments
     :: EducatorWorkMode m
-    => Maybe Core.Course -> Maybe Core.DocumentType -> Maybe Bool
+    => Maybe Core.Course -> Maybe Core.DocumentType -> Maybe IsFinal
     -> m [Assignment]
-getAssignments _ _ _ = notImplemented
+getAssignments mcourseId mdocType mIsFinal =
+    sqlTransaction $ Queries.getAssignments student mcourseId mdocType mIsFinal
 
 getAssignment
     :: EducatorWorkMode m
     => Hash Core.Assignment -> m Assignment
-getAssignment _ = notImplemented
+getAssignment assignH =
+    sqlTransaction $ Queries.getAssignment student assignH
 
 getSubmissions
     :: EducatorWorkMode m
     => Maybe Core.Course -> Maybe (Hash Core.Assignment) -> Maybe Core.DocumentType
     -> m [Submission]
-getSubmissions _ _ _ = notImplemented
+getSubmissions mcourseId massignH mdocType =
+    sqlTransaction $ Queries.getSubmissions student mcourseId massignH mdocType
 
 getSubmission
     :: EducatorWorkMode m
     => Hash Core.Submission
     -> m Submission
-getSubmission _ = notImplemented
+getSubmission submissionH =
+    sqlTransaction $ Queries.getSubmission student submissionH
 
 makeSubmission
     :: EducatorWorkMode m
     => Core.SignedSubmission -> m Submission
-makeSubmission _ = notImplemented
+makeSubmission signedSubmission = do
+    verifySignedSubmission student signedSubmission
+        & leftToThrow id
+    submissionId <- CoreQueries.submitAssignment signedSubmission
+    getSubmission submissionId
 
 deleteSubmission
     :: EducatorWorkMode m
     => Hash Core.Submission
     -> m ()
-deleteSubmission _ = notImplemented
+deleteSubmission submissionH =
+    sqlTransaction $ Queries.deleteSubmission student submissionH
 
 getProofs
     :: EducatorWorkMode m
     => Maybe UTCTime -> m [BlkProof]
-getProofs _ = notImplemented
+getProofs sinceF =
+    sqlTransaction $ Queries.getProofs student sinceF
