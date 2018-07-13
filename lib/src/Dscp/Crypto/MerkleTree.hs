@@ -10,6 +10,7 @@ module Dscp.Crypto.MerkleTree
        , getMerkleRoot
        , fromFoldable
        , fromContainer
+       , fromList
 
        , MerkleProof (..)
        , drawProofNode

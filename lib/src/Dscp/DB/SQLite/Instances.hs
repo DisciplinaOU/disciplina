@@ -44,6 +44,9 @@ instance FromField TxBlockIdx        where
 
 instance ToField   (Hash a)          where toField = toField . Codec.serialise
 instance ToField   (Signature a)     where toField = toField . Codec.serialise
+instance ToField (MerkleSignature a) where toField = toField . Codec.serialise
+instance Serialise a =>
+         ToField   (MerkleTree a)    where toField = toField . Codec.serialise
 
 instance ToField   Address           where toField = toField . Codec.serialise
 instance ToField   Course            where toField = toField . getCourseId
@@ -53,6 +56,7 @@ instance ToField   Grade             where toField = toField . getGrade
 instance ToField   SubmissionWitness where toField = toField . Codec.serialise
 instance ToField   DocumentType      where toField = toField . fromEnum
 instance ToField   TxBlockIdx        where toField = toField . review intTxBlockIdx
+instance ToField   ATGDelta          where toField = toField . Codec.serialise
 
 instance FromRow   Course            where fromRow = field
 instance FromRow   Grade             where fromRow = field

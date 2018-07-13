@@ -7,7 +7,7 @@ import Control.Lens (makePrisms)
 import Data.Coerce (coerce)
 import Data.List (groupBy)
 import qualified Data.Set as Set (fromList)
-import Data.Time.Clock (UTCTime)
+import Data.Time.Clock (UTCTime, getCurrentTime)
 
 import Database.SQLite.Simple (Only (..), Query)
 import Database.SQLite.Simple.ToField (ToField)
@@ -19,6 +19,9 @@ import Dscp.Core.Serialise ()
 import Dscp.Core.Types (Assignment (..), Course, SignedSubmission (..), Student, Subject,
                         Submission (..), aContentsHash, aCourseId, aDesc, aType, sAssignment,
                         sContentsHash, sStudentId, ssSubmission, ssWitness)
+import Dscp.Crypto (MerkleProof, getMerkleRoot, mkMerkleProof)
+import qualified Dscp.Crypto.MerkleTree as MerkleTree (fromList)
+import Dscp.DB.SQLite.BlockData (BlockData (..), TxInBlock (..), TxWithIdx (..))
 import Dscp.DB.SQLite.Class (MonadSQLiteDB (..), transaction)
 import Dscp.DB.SQLite.Instances ()
 import Dscp.Crypto (MerkleProof, mkMerkleProof)
@@ -26,8 +29,7 @@ import Dscp.DB.SQLite.BlockData (BlockData (..), TxInBlock (..), TxWithIdx (..))
 import Dscp.DB.SQLite.Class (MonadSQLiteDB (..))
 import Dscp.DB.SQLite.Instances ()
 import Dscp.DB.SQLite.Types (TxBlockIdx (TxInMempool))
-import Dscp.Educator.Block (PrivateBlock (..))
-
+import Dscp.Educator.Block (PrivateBlock (..), pbHeader, pbhAtgDelta)
 import Dscp.Educator.Txs (PrivateTx (..), ptGrade, ptSignedSubmission, ptTime)
 import Dscp.Util (HasId (..), assert, assertJust, idOf)
 
@@ -171,82 +173,24 @@ getStudentTransactions student = do
         where      student_addr = ?
     |]
 
---getStudentTransactionsSince
---    :: DBM m => Id Student -> UTCTime -> m [WithBlockDataId PrivateTx]
---getStudentTransactionsSince studentId sinceTime = do
---    query getStudentTransactionsSinceQuery (studentId, sinceTime)
---  where
---    getStudentTransactionsSinceQuery = [q|
---        -- getStudentTransactionsSince
-
---        select     Submissions.student_addr,
---                   Submissions.contents_hash,
---                   Assignments.course_id,
---                   Assignments.contents_hash,
---                   Assignments.type,
---                   Assignments.desc,
---                   Submissions.signature,
---                   grade,
---                   time,
---                   idx
-
---        from       Transactions
-
---        left join  Submissions
---               on  submission_hash = Submissions.hash
-
---        left join  Assignments
---               on  assignment_hash = Assignments.hash
-
---        where      student_addr  = ?
---              and  time         >= ?
---              and  idx          <> -1
---    |]
-
---getBlocksData :: DBM m => [Id PrivateTx] -> m [BlockData]
---getBlocksData blockDataIds = do
---    query getBlocksDataQuery (blockDataIds)
---  where
---    getBlocksDataQuery = [qc|
---        select distinct
---                   idx
---                   hash
---                   time
---                   prev_hash
---                   atg_delta
---                   mroot
---                   mtree
---        from       BlockTxs
---        left join  Blocks
---               on  idx = block_idx
---        unique
---        where   {
---            generateOrChain blockDataIds
---        }
---    |]
-
---    generateOrChain :: [a] -> Text
---    generateOrChain = foldr generateOr "False"
---      where
---        generateOr _ rest = "tx_hash = ? OR " <> rest
-
 getProvenStudentTransactionsSince :: DBM m => Id Student -> UTCTime -> m [(MerkleProof PrivateTx, [PrivateTx])]
 getProvenStudentTransactionsSince studentId sinceTime = do
-    -- Contains `(tx, idx, blockId)` map.
-    txsBlockList <- getTxsBlockMap
+    transaction $ do
+        -- Contains `(tx, idx, blockId)` map.
+        txsBlockList <- getTxsBlockMap
 
-    -- Bake `blockId -> [(tx, idx)]` map.
-    let txsBlockMap = groupToAssocWith (_tibBlockId, _tibTx) txsBlockList
+        -- Bake `blockId -> [(tx, idx)]` map.
+        let txsBlockMap = groupToAssocWith (_tibBlockId, _tibTx) txsBlockList
 
-    forM txsBlockMap $ \(blockId, transactions) -> do
-        blockData <- getBlockData blockId
+        forM txsBlockMap $ \(blockId, transactions) -> do
+            blockData <- getBlockData blockId
 
-        let indices = _twiTxIdx <$> transactions & Set.fromList
-        let bodies  = _twiTx    <$> transactions
-        let tree    = _bdTree blockData
-        let pruned  = mkMerkleProof tree indices
+            let indices = _twiTxIdx <$> transactions & Set.fromList
+            let bodies  = _twiTx    <$> transactions
+            let tree    = _bdTree blockData
+            let pruned  = mkMerkleProof tree indices
 
-        return (pruned, bodies)
+            return (pruned, bodies)
 
   where
     groupToAssocWith :: Eq k => Ord k => (a -> k, a -> v) -> [a] -> [(k, [v])]
@@ -308,6 +252,52 @@ getProvenStudentTransactionsSince studentId sinceTime = do
             from    Blocks
             where   idx = ?
         |]
+
+createBlock :: DBM m => PrivateBlock -> [Id PrivateTx] -> m (Id PrivateBlock)
+createBlock block txs = do
+    transaction $ do
+        let tree = MerkleTree.fromList txs
+            root = getMerkleRoot tree
+
+            txs' = zip [1..] txs
+            bid  = block^.idOf
+
+        time <- liftIO getCurrentTime
+
+        _    <- execute createBlockRequest
+            ( bid
+            , time
+            , block^.pbHeader.pbhAtgDelta
+            , root
+            , tree
+            )
+
+        for_ txs' $ \(idx, tid) -> do
+            _ <- getTransaction tid `assertJust` TransactionDoesNotExist tid
+
+            execute setTxIndexRequest    (idx :: Word32, tid)
+            execute assignToBlockRequest (bid, tid)
+
+        return bid
+  where
+    createBlockRequest = [q|
+        insert into Blocks
+        from
+        select      idx + 1, ?, ?, hash, ?, ?, ?
+        from        Blocks
+        limit       1
+    |]
+
+    setTxIndexRequest = [q|
+        update  Transactions
+        set     idx  = ?
+        where   hash = ?
+    |]
+
+    assignToBlockRequest = [q|
+        insert into BlockTxs
+        values      (?, ?)
+    |]
 
 createSignedSubmission :: DBM m => SignedSubmission -> m (Id SignedSubmission)
 createSignedSubmission sigSub = do
