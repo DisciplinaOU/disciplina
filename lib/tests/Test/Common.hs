@@ -60,8 +60,12 @@ import qualified Dscp.Witness as Witness
 
 import Test.Hspec as T (Expectation, Spec, describe, it, shouldBe, shouldSatisfy, specify)
 import Test.QuickCheck as T (Arbitrary (..), Gen, Property, Testable (..), elements, expectFailure,
-                             ioProperty, oneof, suchThat, suchThatMap, vectorOf, (===), (==>))
+                             forAll, ioProperty, label, listOf1, oneof, property, suchThat,
+                             suchThatMap, vectorOf, (.&&.), (===), (==>))
+import Test.QuickCheck.Gen (Gen (..))
 import Test.QuickCheck.Instances as T ()
+import Test.QuickCheck.Property as T (rejected)
+import Test.QuickCheck.Random (QCGen)
 import Test.Tasty as T (TestName, TestTree, defaultMain, testGroup)
 
 -- | Extensional equality combinator.
@@ -79,6 +83,20 @@ infixr 5 .=.
 -- pregenerated lists of items.
 genSecureRandom :: Crypto.MonadPseudoRandom Crypto.ChaChaDRG a -> Gen a
 genSecureRandom rand = arbitrary <&> \seed -> Crypto.deterministic seed rand
+
+data GenCtx = GenCtx QCGen Int
+
+-- | Allows to use given generator when all you have is opportunity to produce
+-- 'Arbitrary' values.
+-- Use it when really necesssary, produced values won't be displayed on faliure.
+delayedGen :: Gen a -> GenCtx -> a
+delayedGen gen (GenCtx seed size) = unGen gen seed size
+
+instance Arbitrary GenCtx where
+    arbitrary = MkGen GenCtx
+
+instance Show GenCtx where
+    show _ = "<some generated values>"
 
 data Sandbox = Sandbox
     { sWorld        :: Witness.WorldState
@@ -109,7 +127,7 @@ instance Show Sandbox where
 
 instance Arbitrary Sandbox where
     arbitrary = do
-        actors <- vectorUniqueOf 3
+        actors <- vectorUnique 3
 
         let [alice', eve', bob'] = actors
 
@@ -161,22 +179,25 @@ unsafePerformPureWorldT who side action =
     in
         a
 
-noneof :: (Arbitrary a, Eq a, Show a) => [a] -> Gen a
-noneof set' = do
-    res <- arbitrary `suchThat` (`notElem` set')
+noneof :: (Arbitrary a, Eq a, Show a) => [a] -> Gen a -> Gen a
+noneof set' gen = do
+    res <- gen `suchThat` (`notElem` set')
     -- Debug.traceShow (res, "<-/-", set) $
     return res
 
-vectorUniqueOf :: (Arbitrary a, Eq a, Show a) => Int -> Gen [a]
-vectorUniqueOf = loop []
+vectorUniqueOf :: (Arbitrary a, Eq a, Show a) => Int -> Gen a -> Gen [a]
+vectorUniqueOf n gen = loop [] n
   where
     loop acc 0 = return acc
-    loop acc n = do
-        next <- noneof acc
-        loop (next : acc) (n - 1)
+    loop acc k = do
+        next <- noneof acc gen
+        loop (next : acc) (k - 1)
+
+vectorUnique :: (Arbitrary a, Eq a, Show a) => Int -> Gen [a]
+vectorUnique n = vectorUniqueOf n arbitrary
 
 instance Arbitrary Witness.Entity where
-  arbitrary = Witness.Entity <$> (noneof [0])
+  arbitrary = Witness.Entity <$> (noneof [0] arbitrary)
 
 instance Arbitrary Witness.Publication where
   arbitrary = Crypto.unsafeHash <$> (arbitrary :: Gen Int)

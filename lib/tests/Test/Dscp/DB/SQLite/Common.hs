@@ -25,8 +25,6 @@ import Prelude hiding (fold)
 import Database.SQLite.Simple (Connection, execute, fold, query, setTrace, withConnection,
                                withTransaction)
 
-import Test.QuickCheck.Gen (generate)
-
 import Dscp.Core.Types (Address (..), Assignment (..), AssignmentType (..), Course (..), Grade (..),
                         SignedSubmission (..), Submission (..), SubmissionSig,
                         SubmissionWitness (..), aCourseId, mkGrade, sAssignment, sStudentId,
@@ -47,7 +45,8 @@ import Test.Dscp.Educator.Instances ()
 
 newtype TestSQLiteM a
     = TestSQLiteM { getTestSQLiteM :: ReaderT Connection IO a }
-    deriving (Functor, Applicative, Monad, MonadIO, MonadThrow, MonadCatch)
+    deriving (Functor, Applicative, Monad, MonadIO, MonadThrow, MonadCatch,
+              MonadReader Connection)
 
 runTestSQLiteM :: TestSQLiteM a -> IO a
 runTestSQLiteM action = do
@@ -62,17 +61,17 @@ runTestSQLiteM action = do
         ensureSchemaIsSetUp conn
         -- It stays here, so next time something breaks I don't have to
         -- add it to imports again.
-        setTrace conn (Just putStrLn)
+        setTrace conn Nothing
         getTestSQLiteM action `runReaderT` conn
 
 sqliteProperty
-    :: Testable prop
+    :: (Testable prop, Show a)
     => Arbitrary a
     => (a -> TestSQLiteM prop)
     -> Property
 sqliteProperty action =
+    property $ \input ->
     ioProperty $ do
-        input <- generate arbitrary
         runTestSQLiteM (action input)
 
 throws :: forall e m . (MonadCatch m, Exception e) => m () -> m Bool

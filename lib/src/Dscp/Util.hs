@@ -4,7 +4,8 @@
 module Dscp.Util
        ( anyMapM
        , listToMaybeWarn
-       
+       , allUniqueOrd
+
          -- * Exceptions processing
        , wrapRethrow
        , wrapRethrowIO
@@ -39,10 +40,10 @@ module Dscp.Util
        ) where
 
 import Control.Lens (Getter, to)
-import Loot.Log (MonadLogging, logWarning)
-import Fmt ((|+), (+|))
 import Data.ByteArray (ByteArrayAccess)
 import Data.ByteArray.Encoding (Base (..), convertFromBase, convertToBase)
+import Fmt ((+|), (|+))
+import Loot.Log (MonadLogging, logWarning)
 import Snowdrop.Util hiding (getId)
 
 import Dscp.Crypto.ByteArray (FromByteArray (..))
@@ -68,6 +69,9 @@ listToMaybeWarn msg = \case
     (x:_) -> do
         logWarning $ "listToMaybeWarn: to many entries ("+|msg|+")"
         return (Just x)
+
+allUniqueOrd :: Ord a => [a] -> Bool
+allUniqueOrd = all (null . drop 1) . group . sort
 
 -----------------------------------------------------------
 -- Exceptions processing
