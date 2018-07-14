@@ -50,20 +50,23 @@ module Dscp.Core.Types
        , atgeChild
        , ATG (..)
 
-       -- * Blocks/txs
+       -- * Transaction
        , Coin (..)
-       , TxElem (..)
+       , TxIn (..)
+       , TxOut (..)
        , Tx (..)
        , TxId
        , TxWitness (..)
-       , TxWithWitness (..)
+       , TxWitnessed (..)
+       , GTx (..)
+       , GTxWitnessed (..)
 
+       -- * Block
        , HeaderHash
        , Difficulty (..)
        , BlockToSign (..)
        , Header (..)
        , Block (..)
-       , GlobalTx (..)
        , BlockBody (..)
        ) where
 
@@ -71,9 +74,7 @@ import Control.Lens (Getter, makeLenses, to)
 import Data.Map (Map)
 import Fmt (blockListF, build, indentF, listF, nameF, (+|), (+||), (|+), (||+))
 
-import qualified Snowdrop.Model.State.Accounting.Account as SD
-
-import Dscp.Crypto (HasHash, Hash, PublicKey, Raw, Signature, hash, hashF, unsafeHash)
+import Dscp.Crypto (HasHash, Hash, PublicKey, Raw, Signature, Signed, hash, hashF, unsafeHash)
 import Dscp.Util (HasId (..))
 
 ----------------------------------------------------------------------------
@@ -93,6 +94,15 @@ mkAddr = Address . hash
 newtype StakeholderId = StakeholderId
     { unStakeholderId :: PublicKey
     } deriving (Eq, Show, Generic)
+
+-- This is all naive for now, should be moved to the separate module later
+
+-- | Coin amount.
+newtype Coin = Coin Word64
+    deriving (Eq, Ord, Show, Generic, Hashable, Num)
+
+instance Buildable Coin where
+    build (Coin c) = c ||+ " coin(s)"
 
 ----------------------------------------------------------------------------
 -- Private chain
@@ -273,32 +283,39 @@ makeLenses ''ATGNode
 makeLenses ''ATGEdge
 makeLenses ''ATG
 
+
 ----------------------------------------------------------------------------
--- Blocks/Transaction
+-- Transactions
 ----------------------------------------------------------------------------
 
--- This is all naive for now, should be moved to the separate module later
+-- We have several different types of "transactions". Money
+-- transactions, delegation transactions (in the future). Money
+-- transactions are the most popular, so we'll call them just
+-- "transactions".
 
--- | Coin amount.
-newtype Coin = Coin Word64
-    deriving (Eq, Ord, Show, Generic, Hashable, Num)
-
-instance Buildable Coin where
-    build (Coin c) = c ||+ " coin(s)"
-
--- | Transaction element, is used both in inputs and in outputs.
-data TxElem = TxElem
-    { txInFrom  :: SD.Account
+-- | Money transaction input.
+data TxIn = TxIn
+    { txInAcc   :: Address
+    , txInNonce :: Word64
     , txInValue :: Coin
     } deriving (Eq, Ord, Generic, Show)
 
-instance Buildable TxElem where
-    build TxElem{..} = "<" +|| txInFrom ||+ ", " +|| txInValue ||+ ">"
+instance Buildable TxIn where
+    build TxIn{..} = "<" +|| txInAcc ||+ " w nonce " +|| txInNonce ||+ ", " +|| txInValue ||+ ">"
+
+-- | Money transaction output.
+data TxOut = TxOut
+    { txOutAcc   :: Address
+    , txOutValue :: Coin
+    } deriving (Eq, Ord, Generic, Show)
+
+instance Buildable TxOut where
+    build TxOut{..} = "<" +|| txOutAcc ||+ ", " +|| txOutValue ||+ ">"
 
 -- | Transaction. Accounting-style. TODO add other types.
 data Tx = Tx
-    { txIns  :: [TxElem]
-    , txOuts :: [TxElem]
+    { txIns  :: [TxIn]
+    , txOuts :: [TxOut]
     } deriving (Eq, Ord, Generic, Show)
 
 instance Buildable Tx where
@@ -308,25 +325,45 @@ type TxId = Hash Tx
 
 -- | Transaction witness.
 newtype TxWitness = TxWitness
-    { unTxWitness :: [Signature Tx]
+    { unTxWitness :: [Signed Tx]
     } deriving (Eq, Show, Generic)
 
 instance Buildable TxWitness where
     build (TxWitness w) = "TxWitness { " +|| listF w ||+ " }"
 
 -- | Transaction coupled with witness.
-data TxWithWitness = TxWithWitness
+data TxWitnessed = TxWitnessed
     { twTx      :: Tx
     , twWitness :: TxWitness
     } deriving (Eq, Show, Generic)
 
-instance Buildable TxWithWitness where
-    build TxWithWitness {..} =
-        "TxWithWitness { " +| build twTx |+ ", " +| build twWitness |+  " }"
+instance Buildable TxWitnessed where
+    build TxWitnessed {..} =
+        "TxWitnessed { " +| build twTx |+ ", " +| build twWitness |+  " }"
+
+
+-- | Generalised version of transaction, other types to appear
+-- here.
+data GTx =
+    GMoneyTx Tx
+    deriving (Generic, Eq, Show)
+
+instance Buildable GTx where
+    build (GMoneyTx tw) = "GMoneyTx: " +| build tw
+
+data GTxWitnessed =
+    GMoneyTxWitnessed TxWitnessed
+    deriving (Generic, Eq, Show)
+
+instance Buildable GTxWitnessed where
+    build (GMoneyTxWitnessed tw) = "GMoneyTxWitnessed: " +| build tw
+
+----------------------------------------------------------------------------
+-- Blocks/Transaction
+----------------------------------------------------------------------------
 
 newtype Difficulty = Difficulty Word64
     deriving (Eq,Ord,Num,Show,Generic,Buildable)
-
 
 -- | Blocks are indexed by their headers' hashes.
 type HeaderHash = Hash Header
@@ -351,18 +388,9 @@ instance Buildable Header where
                               , nameF "difficulty" $ build hDifficulty
                               , nameF "prev" $ hashF hPrevHash ])
 
--- | Generalised version of transaction, other types to appear
--- here. Needs a better name.
-data GlobalTx =
-    MoneyTx TxWithWitness
-    deriving (Generic, Eq, Show)
-
-instance Buildable GlobalTx where
-    build (MoneyTx tw) = "MoneyTx: " +| build tw
-
 -- | Body of the block.
 data BlockBody = BlockBody
-    { rbbTxs :: [GlobalTx]
+    { rbbTxs :: [GTxWitnessed]
     } deriving (Eq, Show, Generic)
 
 instance Buildable BlockBody where

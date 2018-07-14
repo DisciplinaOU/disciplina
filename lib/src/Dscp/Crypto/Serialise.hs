@@ -17,6 +17,7 @@ import qualified Data.ByteString.Lazy as LBS
 
 import Dscp.Crypto.ByteArray (FromByteArray (..))
 import Dscp.Crypto.Hash (AbstractHash (..), HasAbstractHash (..), HashFunc (..))
+import Dscp.Crypto.Impl (Signed (..))
 import Dscp.Crypto.Signing (AbstractPK (..), AbstractSK (..), AbstractSig (..),
                             HasAbstractSignature (..), SignatureScheme (..))
 
@@ -49,6 +50,8 @@ instance FromByteArray (AbstractPK ss) => Serialise (AbstractPK ss) where
 instance FromByteArray (AbstractSig ss a) => Serialise (AbstractSig ss a) where
     encode = encodeBA
     decode = decodeBA
+
+instance Serialise msg => Serialise (Signed msg)
 
 -- If 'LByteString' can be signed/verified via signature scheme `ss`,
 -- then every 'Serialise' instance can.

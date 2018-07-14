@@ -22,18 +22,22 @@ instance Serialise SD.TipKey
 instance Serialise a => Serialise (SD.Author a)
 
 instance Serialise Coin
-instance Serialise TxElem
+instance Serialise TxIn
+instance Serialise TxOut
 instance Serialise Tx
 instance Serialise TxWitness
-instance Serialise TxWithWitness
+instance Serialise TxWitnessed
+instance Serialise GTx
+instance Serialise GTxWitnessed
 instance Serialise BlockToSign
 instance Serialise Difficulty
 instance Serialise Header
 instance Serialise Block
-instance Serialise GlobalTx
 instance Serialise BlockBody
 
 instance Serialise Ids
-instance Serialise Values
-instance Serialise SBlock
-instance Serialise SBlund
+--instance Serialise Values
+instance Serialise Proofs
+--instance Serialise StateTx
+--instance Serialise SBlock
+--instance Serialise SBlund

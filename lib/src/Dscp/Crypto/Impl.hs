@@ -25,6 +25,7 @@ module Dscp.Crypto.Impl
        , unsafeSign
        , verify
        , unsafeVerify
+       , Signed (..)
        ) where
 
 import Crypto.Error (CryptoFailable (..))
@@ -32,6 +33,7 @@ import Crypto.Hash.Algorithms (Blake2b_256)
 import Crypto.Random (ChaChaDRG, MonadPseudoRandom, drgNewSeed, seedFromBinary, seedFromInteger,
                       withDRG)
 import qualified Data.ByteString as BS
+import Fmt (build, (+|), (|+))
 
 import Dscp.Crypto.Hash (AbstractHash (..), CryptoniteFunc, HasAbstractHash (..), abstractHash)
 import Dscp.Crypto.Signing (AbstractPK (..), AbstractSK (..), AbstractSig (..), CryptoEd25519,
@@ -113,3 +115,13 @@ verify = abstractVerify
 
 unsafeVerify :: HasSignature a => PublicKey -> a -> Signature b -> Bool
 unsafeVerify = unsafeAbstractVerify
+
+data Signed msg = Signed
+    { sgMessage   :: msg
+    , sgPublicKey :: PublicKey
+    , sgSignature :: Signature msg
+    } deriving (Eq, Show, Generic)
+
+instance Buildable msg => Buildable (Signed msg) where
+    build Signed{..} = "Signed { sig: " +| build sgSignature |+
+                       "; pk: " +| build sgPublicKey |+ " }"
