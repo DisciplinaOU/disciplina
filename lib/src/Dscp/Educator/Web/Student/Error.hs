@@ -4,11 +4,16 @@
 module Dscp.Educator.Web.Student.Error
        ( APIError (..)
        , WrongSubmissionSignature (..)
+       , _SubmissionMalformed
+       , _BadSubmissionSignature
+       , _DeletingGradedSubmission
+       , _EntityAbsent
 
        , toServantErr
        , unexpectedToServantErr
        ) where
 
+import Control.Lens (makePrisms)
 import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), encode, object, withObject, (.:), (.=))
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
@@ -32,6 +37,8 @@ data APIError
     | DeletingGradedSubmission
     | EntityAbsent DomainError
     deriving (Show, Eq, Generic, Typeable)
+
+makePrisms ''APIError
 
 instance Exception APIError
 

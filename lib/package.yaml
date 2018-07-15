@@ -73,7 +73,9 @@ tests:
       - data-default
       - hspec
       - lens
+      - loot-log
       - memory
+      - safe-exceptions >= 0.1.4
       - serialise
       - sqlite-simple
       - tasty

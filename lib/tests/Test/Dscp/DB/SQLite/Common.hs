@@ -24,6 +24,7 @@ import Prelude hiding (fold)
 
 import Database.SQLite.Simple (Connection, execute, fold, query, setTrace, withConnection,
                                withTransaction)
+import qualified Loot.Log as Adapter
 
 import Dscp.Core.Types (Address (..), Assignment (..), AssignmentType (..), Course (..), Grade (..),
                         SignedSubmission (..), Submission (..), SubmissionSig,
@@ -46,7 +47,7 @@ import Test.Dscp.Educator.Instances ()
 newtype TestSQLiteM a
     = TestSQLiteM { getTestSQLiteM :: ReaderT Connection IO a }
     deriving (Functor, Applicative, Monad, MonadIO, MonadThrow, MonadCatch,
-              MonadReader Connection)
+              MonadFail, MonadReader Connection)
 
 runTestSQLiteM :: TestSQLiteM a -> IO a
 runTestSQLiteM action = do
@@ -74,11 +75,6 @@ sqliteProperty action =
     ioProperty $ do
         runTestSQLiteM (action input)
 
-throws :: forall e m . (MonadCatch m, Exception e) => m () -> m Bool
-throws action = do
-    (action >> return False) `catch` \(_ :: e) ->
-        return True
-
 instance Adapter.MonadSQLiteDB TestSQLiteM where
     query   theQuery   args = TestSQLiteM $ ReaderT $ \conn -> query   conn theQuery   args
     execute theRequest args = TestSQLiteM $ ReaderT $ \conn -> execute conn theRequest args
@@ -92,3 +88,7 @@ instance Adapter.MonadSQLiteDB TestSQLiteM where
         TestSQLiteM $ ReaderT $ \conn ->
             conn `withTransaction` do
                 actor conn
+
+instance Adapter.MonadLogging TestSQLiteM where
+    log _ _ _ = pass
+    logName = return $ error "Logger name requested in test"

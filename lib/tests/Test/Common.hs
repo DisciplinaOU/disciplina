@@ -20,6 +20,8 @@ module Test.Common
 
 import Prelude hiding (show, unlines)
 
+import Control.Exception.Safe (catchJust)
+import Control.Lens (Prism')
 import Data.List (unlines)
 import GHC.Show (Show (show))
 
@@ -59,13 +61,15 @@ import qualified Dscp.Witness as Witness
 --import qualified Debug.Trace           as Debug
 
 import Test.Hspec as T (Expectation, Spec, describe, it, shouldBe, shouldSatisfy, specify)
-import Test.QuickCheck as T (Arbitrary (..), Gen, Property, Testable (..), elements, expectFailure,
-                             forAll, ioProperty, label, listOf1, oneof, property, suchThat,
-                             suchThatMap, vectorOf, (.&&.), (===), (==>))
+import Test.QuickCheck as T (Arbitrary (..), Gen, Property, Testable (..), choose, elements,
+                             expectFailure, forAll, infiniteList, ioProperty, label, listOf,
+                             listOf1, oneof, property, suchThat, suchThatMap, vectorOf, (.&&.),
+                             (===), (==>))
+import Test.QuickCheck (sized)
 import Test.QuickCheck.Gen (Gen (..))
 import Test.QuickCheck.Instances as T ()
 import Test.QuickCheck.Property as T (rejected)
-import Test.QuickCheck.Random (QCGen)
+import Test.QuickCheck.Random (QCGen, mkQCGen)
 import Test.Tasty as T (TestName, TestTree, defaultMain, testGroup)
 
 -- | Extensional equality combinator.
@@ -97,6 +101,10 @@ instance Arbitrary GenCtx where
 
 instance Show GenCtx where
     show _ = "<some generated values>"
+
+-- | Run 'Gen' with seed.
+detGen :: Int -> Gen a -> a
+detGen seed gen = unGen gen (mkQCGen seed) 100
 
 data Sandbox = Sandbox
     { sWorld        :: Witness.WorldState
@@ -196,6 +204,11 @@ vectorUniqueOf n gen = loop [] n
 vectorUnique :: (Arbitrary a, Eq a, Show a) => Int -> Gen [a]
 vectorUnique n = vectorUniqueOf n arbitrary
 
+listUnique :: (Arbitrary a, Eq a, Show a) => Gen [a]
+listUnique = sized $ \n -> do
+    k <- choose (0, n)
+    vectorUniqueOf k arbitrary
+
 instance Arbitrary Witness.Entity where
   arbitrary = Witness.Entity <$> (noneof [0] arbitrary)
 
@@ -275,3 +288,15 @@ instance Exception AssertionFailed
 assertThat :: MonadThrow m => Bool -> String -> m ()
 assertThat True _ = return ()
 assertThat _    e = throwM (AssertionFailed e)
+
+throws :: forall e m . (MonadCatch m, Exception e) => m () -> m Bool
+throws action = do
+    (action >> return False) `catch` \(_ :: e) ->
+        return True
+
+throwsPrism
+    :: forall e m a b.
+      (MonadCatch m, Exception e)
+    => Prism' e a -> m b -> m Bool
+throwsPrism excL action = do
+    catchJust (^? excL) (action $> False) (\_ -> return True)

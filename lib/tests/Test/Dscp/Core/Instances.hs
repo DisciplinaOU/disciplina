@@ -1,9 +1,11 @@
-module Test.Dscp.Core.Instances () where
+module Test.Dscp.Core.Instances
+    ( genStudentSignedSubmissions
+    ) where
 
 import Dscp.Core.Serialise ()
 import Dscp.Core.Types (Address (..), Assignment (..), AssignmentType (..), Course (..),
-                        DocumentType (..), Grade, SignedSubmission (..), Subject (..),
-                        Submission (..), SubmissionWitness (..), mkGrade)
+                        DocumentType (..), Grade, SignedSubmission (..), Student, Subject (..),
+                        Submission (..), SubmissionWitness (..), mkAddr, mkGrade, sStudentId)
 import Dscp.Crypto (hash, sign, toPublic, unsafeSign)
 
 import Test.Common
@@ -40,6 +42,21 @@ instance Arbitrary SignedSubmission where
         let pk = toPublic sk
             sig = sign sk $ hash sub
         pure $ SignedSubmission sub $ SubmissionWitness pk sig
+
+-- | Generate several submissions of same student.
+genStudentSignedSubmissions
+    :: Gen Submission
+    -> Gen (Student, NonEmpty SignedSubmission)
+genStudentSignedSubmissions genSubmission = do
+    sk <- arbitrary
+    subs <- listOf1 genSubmission `suchThatMap` nonEmpty
+    let pk = toPublic sk
+        studentId = mkAddr pk
+    ss <- forM subs $ \sub -> do
+        let sub' = sub & sStudentId .~ studentId
+            sig = sign sk $ hash sub'
+        pure $ SignedSubmission sub' $ SubmissionWitness pk sig
+    return (studentId, ss)
 
 instance Arbitrary AssignmentType where
     arbitrary = elements [Regular, CourseFinal]

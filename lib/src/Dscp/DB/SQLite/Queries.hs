@@ -2,6 +2,7 @@
 
 module Dscp.DB.SQLite.Queries where
 
+import Control.Lens (makePrisms)
 import Data.Coerce (coerce)
 import Database.SQLite.Simple (Only (..), Query)
 import Database.SQLite.Simple.ToField (ToField)
@@ -38,6 +39,8 @@ data DomainError
     deriving (Show, Typeable, Eq)
 
 -- Using records ^ to get sensible autoderived json instances.
+
+makePrisms ''DomainError
 
 instance Exception DomainError
 

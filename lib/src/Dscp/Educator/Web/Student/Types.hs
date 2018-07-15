@@ -16,6 +16,7 @@ module Dscp.Educator.Web.Student.Types
        , _IsFinal
        , assignmentTypeRaw
        , liftAssignment
+       , liftSubmission
        , aDocumentType
        ) where
 
@@ -112,6 +113,15 @@ liftAssignment a lastSubmission =
     , aIsFinal = Core._aType a ^. assignmentTypeRaw . _IsFinal
     , aDesc = Core._aDesc a
     , aLastSubmission = lastSubmission
+    }
+
+liftSubmission :: Core.Submission -> Maybe Grade -> Submission
+liftSubmission s sGrade =
+    Submission
+    { sHash = hash s
+    , sContentsHash = Core._sContentsHash s
+    , sAssignmentHash = hash (Core._sAssignment s)
+    , ..
     }
 
 aDocumentType :: Assignment -> Core.DocumentType
