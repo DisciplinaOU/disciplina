@@ -52,10 +52,12 @@ module Dscp.Core.Types
 
        -- * Transaction
        , Coin (..)
-       , TxIn (..)
+       , coinToInteger
+       , TxInAcc (..)
        , TxOut (..)
        , Tx (..)
        , TxId
+       , txId
        , TxWitness (..)
        , TxWitnessed (..)
        , GTx (..)
@@ -70,11 +72,12 @@ module Dscp.Core.Types
        , BlockBody (..)
        ) where
 
+import Codec.Serialise (Serialise)
 import Control.Lens (Getter, makeLenses, to)
 import Data.Map (Map)
 import Fmt (blockListF, build, indentF, listF, nameF, (+|), (+||), (|+), (||+))
 
-import Dscp.Crypto (HasHash, Hash, PublicKey, Raw, Signature, Signed, hash, hashF, unsafeHash)
+import Dscp.Crypto (HasHash, Hash, PublicKey, Raw, Signature, hash, hashF, unsafeHash)
 import Dscp.Util (HasId (..))
 
 ----------------------------------------------------------------------------
@@ -98,8 +101,12 @@ newtype StakeholderId = StakeholderId
 -- This is all naive for now, should be moved to the separate module later
 
 -- | Coin amount.
-newtype Coin = Coin Word64
+newtype Coin = Coin { unCoin :: Word64 }
     deriving (Eq, Ord, Show, Generic, Hashable, Num)
+
+-- | Safely convert coin to integer.
+coinToInteger :: Coin -> Integer
+coinToInteger = toInteger . unCoin
 
 instance Buildable Coin where
     build (Coin c) = c ||+ " coin(s)"
@@ -293,43 +300,54 @@ makeLenses ''ATG
 -- transactions are the most popular, so we'll call them just
 -- "transactions".
 
--- | Money transaction input.
-data TxIn = TxIn
-    { txInAcc   :: Address
-    , txInNonce :: Word64
-    , txInValue :: Coin
+-- | Tx input account. Can be used for other tx types too.
+data TxInAcc = TxInAcc
+    { tiaAddr  :: Address
+    , tiaNonce :: Integer
     } deriving (Eq, Ord, Generic, Show)
 
-instance Buildable TxIn where
-    build TxIn{..} = "<" +|| txInAcc ||+ " w nonce " +|| txInNonce ||+ ", " +|| txInValue ||+ ">"
+instance Buildable TxInAcc where
+    build TxInAcc{..} = "TxInnAcc {" +|| tiaAddr ||+ " nonce " +|| tiaNonce ||+ "}"
 
 -- | Money transaction output.
 data TxOut = TxOut
-    { txOutAcc   :: Address
+    { txOutAddr  :: Address
     , txOutValue :: Coin
     } deriving (Eq, Ord, Generic, Show)
 
 instance Buildable TxOut where
-    build TxOut{..} = "<" +|| txOutAcc ||+ ", " +|| txOutValue ||+ ">"
+    build TxOut{..} = "<" +|| txOutAddr ||+ ", " +|| txOutValue ||+ ">"
 
--- | Transaction. Accounting-style. TODO add other types.
+-- | Transaction. Accounting-style money transfer.
 data Tx = Tx
-    { txIns  :: [TxIn]
-    , txOuts :: [TxOut]
+    { txInAcc   :: TxInAcc
+    , txInValue :: Coin
+    , txOuts    :: [TxOut]
     } deriving (Eq, Ord, Generic, Show)
 
 instance Buildable Tx where
-    build Tx{..} = "Tx { in: " +|| listF txIns ||+ "; outs:" +|| listF txOuts ||+ " }"
+    build Tx{..} =
+        "Tx { from: " +|| build txInAcc ||+ "; inValue: " +||
+        build txInValue ||+ "; outs:" +|| listF txOuts ||+ " }"
 
 type TxId = Hash Tx
 
--- | Transaction witness.
-newtype TxWitness = TxWitness
-    { unTxWitness :: [Signed Tx]
+-- | Compute tx id.
+txId :: (Serialise Tx) => Tx -> TxId
+txId = hash
+
+-- | Transaction witness. We sign a pair of transaction hash and input
+-- account. The second element of the pair is redundand, and only
+-- included to speed up and simplify transaction validation
+-- (@volhovm). Public key should correspond to the input address.
+data TxWitness = TxWitness
+    { txwSig :: Signature (TxId, TxInAcc)
+    , txwPk  :: PublicKey
     } deriving (Eq, Show, Generic)
 
 instance Buildable TxWitness where
-    build (TxWitness w) = "TxWitness { " +|| listF w ||+ " }"
+    build TxWitness {..} =
+        "TxWitness { " +|| build txwSig ||+ ", pk: " +|| build txwPk ||+ " }"
 
 -- | Transaction coupled with witness.
 data TxWitnessed = TxWitnessed

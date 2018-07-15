@@ -6,10 +6,10 @@ module Dscp.Witness.Mempool
     , newMempoolVar
     ) where
 
-import Dscp.Core (GlobalTx)
+import Dscp.Core (GTxWitnessed)
 
 data Mempool = Mempool
-    { mpTxs :: [GlobalTx]
+    { mpTxs :: [GTxWitnessed]
     } deriving (Eq,Show)
 
 type MempoolVar = TVar Mempool

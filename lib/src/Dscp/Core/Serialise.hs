@@ -2,10 +2,7 @@ module Dscp.Core.Serialise () where
 
 import Codec.Serialise (Serialise (..))
 
-import Dscp.Core.Types (ATG (..), ATGDelta (..), ATGEdge (..), ATGNode (..), Address (..),
-                        Assignment (..), AssignmentType (..), Course (..), DocumentType (..),
-                        Grade (..), SignedSubmission (..), Subject (..), Submission (..),
-                        SubmissionWitness (..))
+import Dscp.Core.Types
 import Dscp.Util.Serialise (decodeCrcProtected, encodeCrcProtected)
 
 -- TODO: move to well-specified serialisation instead of generic one.
@@ -29,3 +26,17 @@ instance Serialise Submission
 instance Serialise SubmissionWitness
 instance Serialise SignedSubmission
 instance Serialise DocumentType
+
+instance Serialise Coin
+instance Serialise TxInAcc
+instance Serialise TxOut
+instance Serialise Tx
+instance Serialise TxWitness
+instance Serialise TxWitnessed
+instance Serialise GTx
+instance Serialise GTxWitnessed
+instance Serialise BlockToSign
+instance Serialise Difficulty
+instance Serialise Header
+instance Serialise Block
+instance Serialise BlockBody

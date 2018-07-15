@@ -3,14 +3,15 @@ module Dscp.Snowdrop.Configuration where
 import Fmt (build, (+|))
 
 import Snowdrop.Model.Block (Block, BlockRef (..), Blund, TipKey, TipValue)
-import Snowdrop.Model.State.Accounting.Account (Account, Author (..))
-import Snowdrop.Model.State.Core (SValue, StateTx (..))
+import Snowdrop.Model.State.Accounting.Account (Account)
+import Snowdrop.Model.State.Core (SValue, StatePException, StateTx (..))
 import Snowdrop.Model.State.Restrict (RestrictionInOutException)
-import Snowdrop.Util
+import Snowdrop.Util (CSMappendException, ChangeSet, IdStorage, IdSumPrefixed (..), Prefix (..),
+                      WithSignature (..), deriveIdView, deriveView, withInj, withInjProj)
 
 import Dscp.Core (Address, HeaderHash)
 import qualified Dscp.Core.Types as T
-import Dscp.Crypto (Signed, hashF)
+import Dscp.Crypto (PublicKey, Signature, hashF)
 
 ----------------------------------------------------------------------------
 -- Snowdrop block-related types
@@ -39,7 +40,7 @@ accountPrefix = Prefix 3
 data Ids
     = TipKeyIds TipKey
     | BlockRefIds (BlockRef HeaderHash)
-    | AccountInIds (Author Address)
+    | AccountInIds Address
     deriving (Eq, Ord, Show, Generic)
 
 instance Buildable Ids where
@@ -55,7 +56,7 @@ instance IdSumPrefixed Ids where
 
 type instance SValue TipKey = TipValue HeaderHash
 type instance SValue (BlockRef HeaderHash) = SBlund
-type instance SValue (Author Address) = Account
+type instance SValue Address = Account
 
 ----------------------------------------------------------------------------
 -- Values
@@ -71,18 +72,33 @@ data Values
 -- Proofs
 ----------------------------------------------------------------------------
 
+deriving instance (Eq pk, Eq sig, Eq a) => Eq (WithSignature pk sig a)
+deriving instance (Show pk, Show sig, Show a) => Show (WithSignature pk sig a)
+
+type AddrTxProof =
+    WithSignature PublicKey
+                  (Signature (T.TxId, T.TxInAcc))
+                  (T.TxId, T.TxInAcc)
+
 data Proofs =
-    AddressTxWitness (Map T.TxIn (Signed T.Tx))
-    deriving (Eq,Show,Generic)
+    AddressTxWitness AddrTxProof
     -- ^ Money transaction witness
+    deriving (Eq, Show, Generic)
 
 ----------------------------------------------------------------------------
 -- Exceptions
 ----------------------------------------------------------------------------
 
+data ExpanderException =
+    MTxDuplicateOutputs
+    | CantResolveSender
+    deriving (Show)
+
 data Exceptions
     = ExpanderRestrictionError RestrictionInOutException
     | CSMappendError (CSMappendException Ids)
+    | StatePError StatePException
+    | ExpanderError ExpanderException
     deriving (Show)
 
 instance Exception Exceptions

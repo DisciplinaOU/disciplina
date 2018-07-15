@@ -1,70 +1,113 @@
 module Dscp.Snowdrop.Expanders
-    ( expandRawBlock
-    , expandGlobalTxs'
+    ( expandBlock
+    , expandGTxs
     ) where
 
-import Control.Exception (Exception)
 import Control.Lens (contramap)
 import Data.Default (Default)
+import qualified Data.List as L
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
 
 import qualified Snowdrop.Model.Block as SD
-import Snowdrop.Model.Expander (DiffChangeSet (..), Expander (..), SeqExpanders (..),
-                                expandUnionRawTxs, mkDiffCS)
-import Snowdrop.Model.State.Accounting.Utxo (MoneyTx (..), TxIn (..), UtxoTxIn (..))
+import Snowdrop.Model.Expander (Expander (..), SeqExpanders (..), expandUnionRawTxs, mkDiffCS)
+import Snowdrop.Model.State.Accounting.Account (Account (..))
 import Snowdrop.Model.State.Core (ChgAccum, ChgAccumCtx, ERoComp, StateTxType (..), queryOne)
-import Snowdrop.Model.State.Dlg (HeavyDlgCertProof (..), HeavyDlgDelegateId (..),
-                                 HeavyDlgIssuerId (..), HeavyDlgTxId (..))
 import Snowdrop.Model.State.Restrict (RestrictCtx)
 import Snowdrop.Util
 
-import Dscp.Core.Types (Block (..), GlobalTx (..), StakeholderId, Tx (..), TxWithWitness (..),
-                        TxWitness (..), rbbTxs)
-import Dscp.Crypto (hash)
+import Dscp.Core
 import Dscp.Snowdrop.Configuration
 
+----------------------------------------------------------------------------
+-- Top-level expanders
+----------------------------------------------------------------------------
 
-expandRawBlock
-  :: (Default (ChgAccum ctx), HasLens ctx RestrictCtx, HasLens ctx (ChgAccumCtx ctx))
-  => Block
-  -> ERoComp Exceptions Ids Values ctx SBlock
-expandRawBlock rb@Block{..} =
-    SD.Block rbHeader <$> expandGlobalTxs' (rbbTxs rbBody)
+-- | Expand block.
+expandBlock ::
+       ( Default (ChgAccum ctx)
+       , HasLens ctx RestrictCtx
+       , HasLens ctx (ChgAccumCtx ctx)
+       )
+    => Block
+    -> ERoComp Exceptions Ids Values ctx SBlock
+expandBlock Block{..} = SD.Block rbHeader <$> expandGTxs (rbbTxs rbBody)
 
-expandGlobalTxs'
-  :: (Default (ChgAccum ctx), HasLens ctx RestrictCtx, HasLens ctx (ChgAccumCtx ctx))
-  => [GlobalTx]
-  -> ERoComp Exceptions Ids Values ctx SPayload
-expandGlobalTxs' txs = expandUnionRawTxs getByGlobalTx txs
+-- | Expand list of global txs.
+expandGTxs ::
+       ( Default (ChgAccum ctx)
+       , HasLens ctx RestrictCtx
+       , HasLens ctx (ChgAccumCtx ctx)
+       )
+    => [GTxWitnessed]
+    -> ERoComp Exceptions Ids Values ctx SPayload
+expandGTxs txs = expandUnionRawTxs getByGTx txs
 
-getByGlobalTx ::
-       GlobalTx
+getByGTx ::
+       GTxWitnessed
     -> ( StateTxType
        , Proofs
-       , SeqExpanders Exceptions Ids Proofs Values ctx GlobalTx)
-getByGlobalTx t@(MoneyTx tx) = let (a, b) = toProofBalanceTx tx in (a, b, seqExpandersGlobalTx t)
+       , SeqExpanders Exceptions Ids Proofs Values ctx GTxWitnessed)
+getByGTx t@(GMoneyTxWitnessed tx) =
+    let (a, b) = toProofBalanceTx tx in (a, b, seqExpandersGTx t)
 
-seqExpandersGlobalTx ::
-       GlobalTx -> SeqExpanders Exceptions Ids Proofs Values ctx GlobalTx
-seqExpandersGlobalTx (MoneyTx _) = contramap (\(MoneyTx tx) -> tx) seqExpandersBalanceTx
+seqExpandersGTx ::
+       GTxWitnessed -> SeqExpanders Exceptions Ids Proofs Values ctx GTxWitnessed
+seqExpandersGTx (GMoneyTxWitnessed _) =
+    contramap (\(GMoneyTxWitnessed tx) -> tx) seqExpandersBalanceTx
 
--- Money Tx
-toProofBalanceTx :: TxWithWitness -> (StateTxType, Proofs)
-toProofBalanceTx (TxWithWitness (Tx ins _) (TxWitness wit)) =
-    (txType, AddressTxWitness $ M.fromList $ zip ins wit)
+----------------------------------------------------------------------------
+-- Money tx
+----------------------------------------------------------------------------
+
+toProofBalanceTx :: TxWitnessed -> (StateTxType, Proofs)
+toProofBalanceTx (TxWitnessed tx (TxWitness {..})) =
+    (txType, AddressTxWitness $ WithSignature {..})
   where
     txType = StateTxType $ getId (Proxy @TxIds) MoneyTxId
+    wsSignature = txwSig
+    wsPublicKey = txwPk
+    wsBody = (txId tx, txInAcc tx)
 
-seqExpandersBalanceTx :: SeqExpanders Exceptions Ids Proofs Values ctx TxWithWitness
+seqExpandersBalanceTx :: SeqExpanders Exceptions Ids Proofs Values ctx TxWitnessed
 seqExpandersBalanceTx =
-    SeqExpanders $ one $ Expander inP outP $ \txw@TxWithWitness{..} -> do
-        let txId = hash twTx
-        let getCurBalance (from ::  =
-        inps <- map (\txin -> (AccountInIds (UtxoTxIn txin), Rem)) (txIns twTx)
-        let createTxIn = UtxoTxInIds . UtxoTxIn . TxIn txId
-        let outs = zip (map createTxIn [0..]) (map (New . TxOutVal) txOuts)
-        pure $ mkDiffCS $ M.fromList $ inps ++ outs
+    SeqExpanders $ one $ Expander inP outP $ \TxWitnessed{..} -> do
+        let outputs = txOuts twTx
+        -- check for output duplicates
+        let uniqOutAddrs = ordNub $ map txOutAddr outputs
+        when (length outputs > 1 && length uniqOutAddrs /= length outputs) $
+            throwLocalError MTxDuplicateOutputs
+
+        -- Account we transfer money from
+        let inAddr = tiaAddr $ txInAcc twTx
+        let getCurAcc (from :: Address) = do
+                (acc :: Maybe Account) <- queryOne from
+                pure acc
+        let outSame = find ((== inAddr) . txOutAddr) (txOuts twTx)
+        let outOther = maybe outputs (`L.delete` outputs) outSame
+
+        -- How much money user has sent to himself back.
+        let inputBack :: Integer
+            inputBack = maybe 0 (coinToInteger . txOutValue) outSame
+        -- How much money user has spent as the tx input.
+        let inputSent :: Integer
+            inputSent = coinToInteger $ txInValue twTx
+
+        inpPrevAcc <- maybe (throwLocalError CantResolveSender) pure =<< getCurAcc inAddr
+        let inpNewBal = aBalance inpPrevAcc + inputBack - inputSent
+        let newInpAccount = Account { aBalance = inpNewBal
+                                    , aNonce = tiaNonce (txInAcc twTx) + 1 }
+        let inp = (AccountInIds inAddr, Upd $ AccountOutVal newInpAccount)
+
+        outs <- forM outOther $ \TxOut{..} -> do
+            prevAcc <- getCurAcc txOutAddr
+            let outVal = coinToInteger txOutValue
+            let newAcc = Account { aBalance = outVal , aNonce = 0 }
+            let updAcc a0 = Account { aBalance = aBalance a0 + outVal, aNonce = aNonce a0 }
+            let ch = maybe (New $ AccountOutVal newAcc) (Upd . AccountOutVal . updAcc) prevAcc
+            pure (AccountInIds txOutAddr, ch)
+
+        pure $ mkDiffCS $ M.fromList $ inp : outs
   where
     -- Account prefixes are used during the computation to access current balance
     inP = (S.singleton accountPrefix)

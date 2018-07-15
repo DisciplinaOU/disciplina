@@ -12,7 +12,7 @@ import qualified Data.Map as M
 import Snowdrop.Model.Block (BlockRef (..), TipKey (..), TipValue (..))
 import Snowdrop.Model.Execution (DbActionsException (..), DbModifyActions (..), SumChangeSet,
                                  accumToDiff, sumChangeSetDBA)
-import Snowdrop.Model.State.Accounting.Account (Account, Author (..))
+import Snowdrop.Model.State.Accounting.Account (Account)
 import Snowdrop.Model.State.Core (HasKeyValue, SValue)
 import Snowdrop.Util
 
@@ -28,7 +28,7 @@ data BlockStorage = BlockStorage
     }
 makeLenses ''BlockStorage
 
-type AddrMap = Map (Author Address) Account
+type AddrMap = Map Address Account
 
 data StateStorage = StateStorage
     { _ssAddrMap        :: AddrMap
@@ -125,7 +125,7 @@ simpleStateDbActions initAddrMap =
     applyOne :: TVar StateStorage -> Ids -> ValueOp Values -> STM ()
     applyOne var (AccountInIds a) =
         performActionWithTVar var (ssAddrMap . at a) (applyException a) <=<
-        projValOp @(Author Address)
+        projValOp @(Address)
     applyOne _ i = applyException i '-'
 
     iterHelper :: (id' -> Ids)
