@@ -1,11 +1,46 @@
 {-# LANGUAGE QuasiQuotes #-}
 
-module Dscp.DB.SQLite.Queries where
+module Dscp.DB.SQLite.Queries
+       ( -- * Domain-level database errors (missing entites, mostly)
+         DomainError(..)
+
+         -- * Synonym for MonadSQLiteDB
+       , DBM
+
+         -- * Readonly actions
+       , getStudentCourses
+       , getStudentAssignments
+       , getGradesForCourseAssignments
+       , getStudentTransactions
+       , getProvenStudentTransactionsSince
+       , getAssignment
+       , getSignedSubmission
+       , getTransaction
+
+         -- * Readonly predicates
+       , isEnrolledTo
+       , isAssignedToStudent
+       , existsCourse
+       , existsStudent
+
+         -- * Destructive actions
+       , enrollStudentToCourse
+       , submitAssignment
+       , createBlock
+       , createSignedSubmission
+       , setStudentAssignment
+       , createCourse
+       , createStudent
+       , createAssignment
+       , createTransaction
+       ) where
+
 
 import Control.Lens (makePrisms)
 
 import Data.Coerce (coerce)
 import Data.List (groupBy)
+import qualified Data.Map as Map (empty, fromList, insertWith, toList)
 import qualified Data.Set as Set (fromList)
 import Data.Time.Clock (UTCTime, getCurrentTime)
 
@@ -19,17 +54,18 @@ import Dscp.Core.Serialise ()
 import Dscp.Core.Types (Assignment (..), Course, SignedSubmission (..), Student, Subject,
                         Submission (..), aContentsHash, aCourseId, aDesc, aType, sAssignment,
                         sContentsHash, sStudentId, ssSubmission, ssWitness)
-import Dscp.Crypto (MerkleProof, getMerkleRoot, mkMerkleProof)
+import Dscp.Crypto (MerkleProof, fillEmptyMerkleTree, getEmptyMerkleTree, getMerkleRoot)
+import Dscp.Crypto (MerkleProof, mkMerkleProof)
 import qualified Dscp.Crypto.MerkleTree as MerkleTree (fromList)
 import Dscp.DB.SQLite.BlockData (BlockData (..), TxInBlock (..), TxWithIdx (..))
-import Dscp.DB.SQLite.Class (MonadSQLiteDB (..), transaction)
-import Dscp.DB.SQLite.Instances ()
-import Dscp.Crypto (MerkleProof, mkMerkleProof)
 import Dscp.DB.SQLite.BlockData (BlockData (..), TxInBlock (..), TxWithIdx (..))
+import Dscp.DB.SQLite.Class (MonadSQLiteDB (..), transaction)
 import Dscp.DB.SQLite.Class (MonadSQLiteDB (..))
 import Dscp.DB.SQLite.Instances ()
+import Dscp.DB.SQLite.Instances ()
 import Dscp.DB.SQLite.Types (TxBlockIdx (TxInMempool))
-import Dscp.Educator.Block (PrivateBlock (..), pbBody, pbHeader, pbbTxs, pbhAtgDelta, pbhBodyProof)
+import Dscp.Educator.Block (PrivateBlock (..), pbBody, pbHeader, pbbTxs, pbhAtgDelta, pbhBodyProof,
+                            pbhPrevBlock)
 import Dscp.Educator.Txs (PrivateTx (..), ptGrade, ptSignedSubmission, ptTime)
 import Dscp.Util (HasId (..), assert, assertJust, idOf)
 
@@ -182,6 +218,7 @@ getStudentTransactions student = do
         where      student_addr = ?
     |]
 
+-- | Returns list of transaction blocks along with block-proof of a student since given moment.
 getProvenStudentTransactionsSince :: DBM m => Id Student -> UTCTime -> m [(MerkleProof PrivateTx, [PrivateTx])]
 getProvenStudentTransactionsSince studentId sinceTime = do
     transaction $ do
@@ -194,22 +231,23 @@ getProvenStudentTransactionsSince studentId sinceTime = do
         forM txsBlockMap $ \(blockId, transactions) -> do
             blockData <- getBlockData blockId
 
-            let indices = _twiTxIdx <$> transactions & Set.fromList
-            let bodies  = _twiTx    <$> transactions
-            let tree    = _bdTree blockData
-            let pruned  = mkMerkleProof tree indices
+            let bodies  = _twiTx <$> transactions
+                tree    = _bdTree blockData
+
+                mapping = Map.fromList [(idx, tx) | TxWithIdx tx idx <- transactions]
+
+                pruned  = fillEmptyMerkleTree mapping tree
 
             return (pruned, bodies)
 
   where
-    groupToAssocWith :: Eq k => Ord k => (a -> k, a -> v) -> [a] -> [(k, [v])]
-    groupToAssocWith (key, value)
-        -- The `groupBy` should return `[NonEmpty a]`.
-        = map      (\every@ (selected : _) -> (key selected, map value every))
-        . groupBy  ((==) `on` key)
-        . sortWith  key
+    groupToAssocWith :: Ord k => Ord k => (a -> k, a -> v) -> [a] -> [(k, [v])]
+    groupToAssocWith (key, value) =
+        Map.toList . foldr' push Map.empty
+      where
+        push a = Map.insertWith (++) (key a) [value a]
 
-    -- Returns, effectively, `[((PrivateTx, Idx), Id PrivateBlock)]`.
+    -- Returns, effectively, `[(tx, idx, blockId)]`.
     getTxsBlockMap :: DBM m => m [TxInBlock]
     getTxsBlockMap = query getTxsBlockMapQuery (studentId, sinceTime)
       where
@@ -282,7 +320,7 @@ createBlock block = do
             , block^.pbHeader.pbhPrevBlock
             , block^.pbHeader.pbhAtgDelta
             , root
-            , tree
+            , getEmptyMerkleTree tree
             )
 
         for_ txs' $ \(idx, tid) -> do

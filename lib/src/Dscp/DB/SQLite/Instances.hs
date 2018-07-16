@@ -14,7 +14,7 @@ import Dscp.Core.Serialise ()
 import Dscp.Core.Types (ATGDelta, Address (..), Assignment (..), AssignmentType, Course (..),
                         DocumentType, Grade (..), SignedSubmission (..), Subject (..),
                         Submission (..), SubmissionWitness (..))
-import Dscp.Crypto (Hash, MerkleSignature, MerkleTree, PublicKey, Signature, hash)
+import Dscp.Crypto (EmptyMerkleTree, Hash, MerkleSignature, MerkleTree, PublicKey, Signature, hash)
 import Dscp.DB.SQLite.BlockData (BlockData (..), TxInBlock (..), TxWithIdx (..))
 import Dscp.DB.SQLite.Types (TxBlockIdx, intTxBlockIdx)
 import Dscp.Educator.Txs (PrivateTx (..))
@@ -25,7 +25,7 @@ instance FromField (Hash a)            where fromField f = Codec.deserialise <$>
 instance FromField (Signature a)       where fromField f = Codec.deserialise <$> fromField f
 instance FromField (MerkleSignature a) where fromField f = Codec.deserialise <$> fromField f
 instance Serialise a =>
-         FromField (MerkleTree      a) where fromField f = Codec.deserialise <$> fromField f
+         FromField (EmptyMerkleTree a) where fromField f = Codec.deserialise <$> fromField f
 
 -- TODO(kir): use #define to generate macros
 instance FromField Address           where fromField f = Codec.deserialise <$> fromField f
@@ -46,7 +46,7 @@ instance ToField   (Hash a)          where toField = toField . Codec.serialise
 instance ToField   (Signature a)     where toField = toField . Codec.serialise
 instance ToField (MerkleSignature a) where toField = toField . Codec.serialise
 instance Serialise a =>
-         ToField   (MerkleTree a)    where toField = toField . Codec.serialise
+         ToField (EmptyMerkleTree a) where toField = toField . Codec.serialise
 
 instance ToField   Address           where toField = toField . Codec.serialise
 instance ToField   Course            where toField = toField . getCourseId

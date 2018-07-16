@@ -1,7 +1,8 @@
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveFoldable #-}
-{-# LANGUAGE DeriveFunctor  #-}
-{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE DeriveAnyClass    #-}
+{-# LANGUAGE DeriveFoldable    #-}
+{-# LANGUAGE DeriveFunctor     #-}
+{-# LANGUAGE DeriveTraversable #-}
+{-# LANGUAGE NamedFieldPuns    #-}
 
 -- | Sized Merkle tree implementation.
 module Dscp.Crypto.MerkleTree
@@ -23,6 +24,10 @@ module Dscp.Crypto.MerkleTree
        , drawMerkleTree
        , mkBranch
        , mkLeaf
+
+       , EmptyMerkleTree
+       , getEmptyMerkleTree
+       , fillEmptyMerkleTree
        ) where
 
 import Dscp.Crypto.Hash.Class (AbstractHash (..))
@@ -34,6 +39,7 @@ import Data.Array (array, (!))
 import Data.Bits (Bits (..))
 import Data.ByteArray (convert)
 import Data.ByteString.Builder (Builder, byteString)
+import qualified Data.Map as Map ((!))
 import qualified Data.Set as Set
 import Data.Tree as Tree (Tree (Node), drawTree)
 
@@ -46,13 +52,12 @@ data MerkleSignature a = MerkleSignature
     { mrHash :: !(Hash Raw)  -- ^ returns root 'Hash' of Merkle Tree
     , mrSize :: !Word8 -- ^ size of root node,
                        -- size is defined as number of leafs in this subtree
-    } deriving (Show, Eq, Ord, Generic, Serialise, Functor, Typeable)
-
+    } deriving (Show, Eq, Ord, Generic, Serialise, Functor, Foldable, Traversable, Typeable)
 
 data MerkleTree a
     = MerkleEmpty
     | MerkleTree !(MerkleNode a)
-    deriving (Eq, Show, Generic, Serialise)
+    deriving (Eq, Show, Functor, Generic, Serialise)
 
 
 instance Foldable MerkleTree where
@@ -172,12 +177,13 @@ data MerkleProof a
         , pnLeft  :: !(MerkleProof a)
         , pnRight :: !(MerkleProof a) }
     | ProofLeaf
-        { pnSig :: !(MerkleSignature a)
-        , pnVal :: !a
+        { pnSig   :: !(MerkleSignature a)
+        , pnIndex :: !LeafIndex
+        , pnVal   :: !a
         }
     | ProofPruned
         { pnSig :: !(MerkleSignature a) }
-    deriving (Eq, Show, Functor, Generic)
+    deriving (Eq, Show, Functor, Foldable, Traversable, Generic)
 
 getMerkleProofRoot :: MerkleProof a -> MerkleSignature a
 getMerkleProofRoot = pnSig
@@ -196,7 +202,7 @@ mkMerkleProof (MerkleTree rootNode) n =
   where
     constructProof :: MerkleNode a -> MerkleProof a
     constructProof (MerkleLeaf {..})
-      | Set.member mIndex n = ProofLeaf mRoot mVal
+      | Set.member mIndex n = ProofLeaf mRoot mIndex mVal
       | otherwise = ProofPruned mRoot
     constructProof (MerkleBranch mRoot' mLeft' mRight') =
       case (constructProof mLeft', constructProof mRight') of
@@ -239,3 +245,32 @@ drawProofNode (Just p) = Tree.drawTree (asTree p)
     asTree (ProofLeaf {..}) = Tree.Node ("leaf, " <> show pnSig) []
     asTree (ProofBranch {..}) = Tree.Node ("branch, " <> show pnSig) [asTree pnLeft, asTree pnRight]
     asTree (ProofPruned {..}) = Tree.Node ("pruned, " <> show pnSig) []
+
+-- | Not a `newtype`, because DeriveAnyClass and GeneralizedNewtypeDeriving
+--   are in conflict here.
+data EmptyMerkleTree a = Empty (MerkleTree ())
+    deriving (Eq, Show, Generic, Serialise)
+
+-- | Replaces all values in the tree with '()'.
+getEmptyMerkleTree :: MerkleTree a -> EmptyMerkleTree a
+getEmptyMerkleTree = Empty . (() <$)
+
+fillEmptyMerkleTree :: Map LeafIndex a -> EmptyMerkleTree a -> MerkleProof a
+fillEmptyMerkleTree plugs (Empty sieve) =
+    if length plugs /= length sieve
+    then do
+        error "fillEmptyMerkleTree: Tree and filler are of different size"
+    else
+        let
+            keySet = Set.fromList (keys plugs)
+            proof  = mkMerkleProof sieve keySet
+            filled = fill proof
+        in
+            filled
+  where
+    fill = \case
+        ProofBranch sig left right -> ProofBranch (coerseSig sig) (fill left) (fill right)
+        ProofLeaf   sig idx  ()    -> ProofLeaf   (coerseSig sig) idx (plugs Map.! idx)
+        ProofPruned sig            -> ProofPruned (coerseSig sig)
+
+    coerseSig sig = error "coerseSig: 'MerkleSignature a' has 'a' inside!" <$> sig

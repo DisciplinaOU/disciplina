@@ -7,14 +7,14 @@ import Codec.Serialise (Serialise)
 import Data.Time.Clock (UTCTime)
 
 import Dscp.Core.Types (ATGDelta)
-import Dscp.Crypto (Hash, MerkleSignature, MerkleTree)
+import Dscp.Crypto (EmptyMerkleTree, Hash, MerkleSignature)
 import Dscp.Educator.Block (PrivateBlock)
 import Dscp.Educator.Txs (PrivateTx (..))
 import Dscp.Util (HasId (..))
 
 data BlockData = BlockData
     { _bdIndex    :: ! Word32
-    , _bdTree     :: !(MerkleTree PrivateTx)
+    , _bdTree     :: !(EmptyMerkleTree PrivateTx)
     , _bdRoot     :: !(MerkleSignature PrivateTx)
     , _bdTime     :: ! UTCTime
     , _bdPrevHash :: !(Hash PrivateBlock)
