@@ -16,7 +16,7 @@ instance Serialise PrivateBlockBody
 instance Serialise PrivateBlock
 
 instance HasId PrivateBlock where
-    type Id PrivateBlock = Hash PrivateBlock
+    type Id PrivateBlock = Hash PrivateBlockHeader
 
-    getId = hash
+    getId = hash . _pbHeader
 

@@ -51,11 +51,9 @@ import Database.SQLite.Simple.ToRow (ToRow (..))
 import Text.InterpolatedString.Perl6 (q)
 
 import Dscp.Core.Serialise ()
-import Dscp.Core.Types (Assignment (..), Course, SignedSubmission (..), Student, Subject,
+import Dscp.Core.Types (ATGDelta, Assignment (..), Course, SignedSubmission (..), Student, Subject,
                         Submission (..), aContentsHash, aCourseId, aDesc, aType, sAssignment,
-                        sContentsHash, sStudentId, ssSubmission, ssWitness)
-import Dscp.Crypto (MerkleProof, fillEmptyMerkleTree, getEmptyMerkleTree, getMerkleRoot)
-import Dscp.Crypto (MerkleProof, mkMerkleProof)
+import Dscp.Crypto (MerkleProof, Hash, fillEmptyMerkleTree, getEmptyMerkleTree, getMerkleRoot, mkMerkleProof)
 import qualified Dscp.Crypto.MerkleTree as MerkleTree (fromList)
 import Dscp.DB.SQLite.BlockData (BlockData (..), TxInBlock (..), TxWithIdx (..))
 import Dscp.DB.SQLite.BlockData (BlockData (..), TxInBlock (..), TxWithIdx (..))
@@ -65,7 +63,7 @@ import Dscp.DB.SQLite.Instances ()
 import Dscp.DB.SQLite.Instances ()
 import Dscp.DB.SQLite.Types (TxBlockIdx (TxInMempool))
 import Dscp.Educator.Block (PrivateBlock (..), pbBody, pbHeader, pbbTxs, pbhAtgDelta, pbhBodyProof,
-                            pbhPrevBlock)
+                            pbhPrevBlock, genesisHeaderHash, PrivateBlockHeader)
 import Dscp.Educator.Txs (PrivateTx (..), ptGrade, ptSignedSubmission, ptTime)
 import Dscp.Util (HasId (..), assert, assertJust, idOf)
 
@@ -300,36 +298,72 @@ getProvenStudentTransactionsSince studentId sinceTime = do
             where   idx = ?
         |]
 
-createBlock :: DBM m => PrivateBlock -> m (Id PrivateBlock)
-createBlock block = do
+getAllNonChainedTransactions :: DBM m => m [PrivateTx]
+getAllNonChainedTransactions = do
+    query getAllNonChainedTransactionsQuery ()
+  where
+    getAllNonChainedTransactionsQuery = [q|
+        select     Submissions.student_addr,
+                   Submissions.contents_hash,
+                   Assignments.course_id,
+                   Assignments.contents_hash,
+                   Assignments.type,
+                   Assignments.desc,
+                   Submissions.signature,
+                   grade,
+                   time
+
+        from       Transactions
+
+        left join  Submissions
+               on  submission_hash = Submissions.hash
+
+        left join  Assignments
+               on  assignment_hash = Assignments.hash
+
+        where  blk_idx = -1
+    |]
+
+getLastBlockIdAndIdx :: DBM m => m (Hash PrivateBlockHeader, Word32)
+getLastBlockIdAndIdx = do
+    fromMaybe (genesisHeaderHash, 1) . listToMaybe <$> query [q|
+        select    hash,
+                  idx
+        from      Blocks
+        order by  idx desc
+        limit     1
+    |] ()
+
+createBlock :: DBM m => Maybe ATGDelta -> m ()
+createBlock delta = do
+    (prev, idx) <- getLastBlockIdAndIdx
+    txs         <- getAllNonChainedTransactions
+
     transaction $ do
         let tree = MerkleTree.fromList txs
             root = getMerkleRoot tree
 
-            txs  = block^.pbBody.pbbTxs
             txs' = zip [1..] (getId <$> txs)
-            bid  = block^.idOf
-
-        return (root == block^.pbHeader.pbhBodyProof) `assert` BlockProofIsCorrupted bid
+            bid  = idx + 1
 
         time <- liftIO getCurrentTime
 
-        _    <- execute createBlockRequest
+        _ <- execute createBlockRequest
             ( bid
             , time
-            , block^.pbHeader.pbhPrevBlock
-            , block^.pbHeader.pbhAtgDelta
+            , prev
+            , mempty `fromMaybe` delta
             , root
             , getEmptyMerkleTree tree
             )
 
-        for_ txs' $ \(idx, tid) -> do
+        for_ txs' $ \(txIdx, tid) -> do
             _ <- getTransaction tid `assertJust` TransactionDoesNotExist tid
 
-            execute setTxIndexRequest    (idx :: Word32, tid)
+            execute setTxIndexRequest    (txIdx :: Word32, tid)
             execute assignToBlockRequest (bid, tid)
 
-        return bid
+        return ()
   where
     createBlockRequest = [q|
         insert into Blocks

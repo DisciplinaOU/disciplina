@@ -246,7 +246,7 @@ makeLenses ''SignedSubmission
 -- like 'MapModifier'?
 newtype ATGDelta = ATGDelta
     { getATGDelta :: Map (Id Subject) Bool
-    } deriving (Show, Eq, Ord, Generic)
+    } deriving (Show, Eq, Ord, Monoid, Generic)
 
 ---------------------------------------------------------------------
 -- Activity Type Graph
