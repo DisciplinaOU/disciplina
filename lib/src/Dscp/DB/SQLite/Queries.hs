@@ -19,13 +19,23 @@ import Dscp.Educator.Txs (PrivateTx (..), ptGrade, ptSignedSubmission, ptTime)
 import Dscp.Util (HasId (..), assert, assertJust, idOf)
 
 data DomainError
-    = CourseDoesNotExist                  (Id Course)
-    | StudentDoesNotExist                 (Id Student)
-    | AssignmentDoesNotExist              (Id Assignment)
-    | StudentWasNotEnrolledOnTheCourse    (Id Student) (Id Course)
-    | StudentWasNotSubscribedOnAssignment (Id Student) (Id Assignment)
-    | SubmissionDoesNotExist              (Id Submission)
-    deriving (Show, Typeable)
+    = CourseDoesNotExist
+      { deCourseId :: Id Course }
+    | StudentDoesNotExist
+      { deStudentId :: Id Student }
+    | AssignmentDoesNotExist
+      { deAssignmentId :: Id Assignment }
+    | StudentWasNotEnrolledOnTheCourse
+      { deStudentId :: Id Student
+      , deCourseId  :: Id Course }
+    | StudentWasNotSubscribedOnAssignment
+      { deStudentId    :: Id Student
+      , deAssignmentId :: Id Assignment }
+    | SubmissionDoesNotExist
+      { deSubmissionId :: Id Submission }
+    deriving (Show, Typeable, Eq)
+
+-- Using records ^ to get sensible autoderived json instances.
 
 instance Exception DomainError
 

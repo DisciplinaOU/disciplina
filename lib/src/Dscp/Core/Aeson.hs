@@ -12,6 +12,7 @@ import Dscp.Core.Types (Address (..), Assignment (..), AssignmentType (..), Cour
                         DocumentType (..), Grade (..), SignedSubmission (..), Subject (..),
                         Submission (..), SubmissionWitness (..), mkGrade)
 import Dscp.Crypto.Aeson ()
+import Dscp.DB.SQLite (DomainError (..))
 import Dscp.Util (Base (Base64), leftToFail)
 import Dscp.Util.Aeson (parseJSONSerialise, toJSONSerialise)
 
@@ -72,3 +73,4 @@ deriving instance FromJSON Subject
 deriveJSON defaultOptions ''Assignment
 deriveJSON defaultOptions ''Submission
 deriveJSON defaultOptions ''SignedSubmission
+deriveJSON defaultOptions ''DomainError
