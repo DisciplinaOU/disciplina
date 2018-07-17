@@ -4,14 +4,17 @@
 module Dscp.Educator.BlockValidation
        ( BlockValidationFailure (..)
        , SubmissionValidationFailure (..)
+       , validateSubmission
        , validatePrivateBlk
        ) where
 
 import Control.Lens (to)
+import Data.Aeson.Options (defaultOptions)
+import Data.Aeson.TH (deriveJSON)
 import Data.Text.Buildable (build)
 
-import Dscp.Core (Address (..), Submission (..), SubmissionSig, sStudentId, ssSubmission, ssWitness,
-                  swKey, swSig)
+import Dscp.Core (Address (..), SignedSubmission (..), Submission (..), SubmissionSig, sStudentId,
+                  ssSubmission, ssWitness, swKey, swSig)
 import Dscp.Crypto (Hash, MerkleSignature, PublicKey, fromFoldable, getMerkleRoot, hash, verify)
 import Dscp.Educator.Block (PrivateBlock (..), PrivateBlockHeader (..), _pbBody, _pbbTxs)
 import Dscp.Educator.Serialise ()
@@ -21,6 +24,7 @@ import Text.InterpolatedString.Perl6 (qc)
 import qualified Data.Text.Buildable ()
 import qualified Text.Show
 
+import Dscp.Util (mappendLefts)
 
 -- | Block validation failures
 data BlockValidationFailure
@@ -44,7 +48,7 @@ data SubmissionValidationFailure
         { svfSubmissionHash   :: !(Hash Submission)
         , svfSubmissionSigKey :: !PublicKey
         , svfSubmissionSig    :: !SubmissionSig }
-    deriving (Eq)
+    deriving (Eq, Show)
 
 instance Show BlockValidationFailure where
     show = toString . pretty
@@ -65,6 +69,42 @@ instance Buildable SubmissionValidationFailure where
               , [qc| does not correspond to public key {svfSubmissionSigKey}|]
               ]
 
+deriveJSON defaultOptions ''SubmissionValidationFailure
+
+verifyGeneric :: [(Bool, e)] -> Either [e] ()
+verifyGeneric checks = case filter ((==False) . fst) checks of
+    [] -> Right ()
+    x  -> Left  (map snd x)
+
+-- | Validate signed submission.
+-- Signed submission is valid iff
+-- 1. It has valid signatures
+-- 2. Signature public key corresponds to student public key
+--    for given submission
+validateSubmission
+    :: SignedSubmission
+    -> Either [SubmissionValidationFailure] ()
+validateSubmission ss =
+    let submission = ss^.ssSubmission
+        witnessKey = ss^.ssWitness.swKey
+        witnessSign = ss^.ssWitness.swSig
+        subAddrHash = submission^.sStudentId.to addrHash
+        witnessSigValid = verify witnessKey (hash submission) witnessSign
+        witnessKeyValid = hash witnessKey == subAddrHash
+    in verifyGeneric
+        [ (witnessKeyValid,
+            SubmissionPublicKeyMismatch { svfExpectedPubKey = subAddrHash
+                                        , svfActualPubKey   = hash witnessKey
+                                        }
+          )
+        , (witnessSigValid,
+            SubmissionSignatureMismatch { svfSubmissionHash   = hash submission
+                                        , svfSubmissionSig    = witnessSign
+                                        , svfSubmissionSigKey = witnessKey
+                                        }
+          )
+        ]
+
 -- | Validate private block.
 -- Private block is valid iff
 -- 1. Header merkle signature matches computed body merkle signature
@@ -76,10 +116,10 @@ validatePrivateBlk pb =
     let subs =_pbbTxs (_pbBody pb)
         merkleRoot = getMerkleRoot (fromFoldable subs)
         headerVer = validateHeader (_pbHeader pb) merkleRoot
-        blockValid = filter ((==False) . fst) (headerVer <> concatMap validateSub subs)
-    in case blockValid of
-         [] -> Right ()
-         x  -> Left  (map snd x)
+        headerValid = verifyGeneric headerVer
+        subValid = foldl' (\acc sub -> validateSub sub `mappendLefts` acc)
+                   pass subs
+    in headerValid `mappendLefts` subValid
   where
     validateHeader (PrivateBlockHeader {..}) merkleRoot =
         [ (_pbhBodyProof == merkleRoot,
@@ -88,26 +128,6 @@ validatePrivateBlk pb =
                                   }
           )
         ]
-    validateSub (PrivateTx {..}) =
-        let submission = _ptSignedSubmission^.ssSubmission
-            witnessKey = _ptSignedSubmission^.ssWitness.swKey
-            witnessSign = _ptSignedSubmission^.ssWitness.swSig
-            subAddrHash = submission^.sStudentId.to addrHash
-            witnessSigValid = verify witnessKey (hash submission) witnessSign
-            witnessKeyValid = hash witnessKey == subAddrHash
-        in [ (witnessKeyValid,
-              SubmissionInvalid { bvfSubmissionFailure =
-                                    SubmissionPublicKeyMismatch { svfExpectedPubKey = subAddrHash
-                                                                , svfActualPubKey   = hash witnessKey
-                                                                }
-                                }
-             )
-           , (witnessSigValid,
-              SubmissionInvalid { bvfSubmissionFailure =
-                                    SubmissionSignatureMismatch { svfSubmissionHash   = hash submission
-                                                                , svfSubmissionSig    = witnessSign
-                                                                , svfSubmissionSigKey = witnessKey
-                                                                }
-                                }
-             )
-           ]
+    validateSub sub =
+        first (map SubmissionInvalid) $
+        validateSubmission (_ptSignedSubmission sub)

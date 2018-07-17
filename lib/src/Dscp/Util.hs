@@ -19,6 +19,7 @@ module Dscp.Util
        , leftToPanic
        , leftToFailWith
        , leftToPanicWith
+       , mappendLefts
 
          -- * Formatting
        , Base (..)
@@ -129,6 +130,11 @@ leftToPanicWith
     :: ToText s => Text -> Either s a -> a
 leftToPanicWith prefix =
     either error identity . first (prefixed (prefix <> ": ") . toText)
+
+mappendLefts :: Monoid m => Either m () -> Either m () -> Either m ()
+mappendLefts (Left a) (Left b) = Left (mappend a b)
+mappendLefts (Right _) x       = x
+mappendLefts x (Right _)       = x
 
 -----------------------------------------------------------
 -- Bytestrings formatting

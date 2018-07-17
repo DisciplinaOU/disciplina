@@ -14,12 +14,13 @@ import Dscp.DB.SQLite (sqlTransaction)
 import qualified Dscp.DB.SQLite.Queries as CoreQueries
 import Dscp.Educator.Launcher (EducatorWorkMode)
 import Dscp.Educator.Web.Student.API (StudentAPI)
+import Dscp.Educator.Web.Student.Error (APIError (..))
 import qualified Dscp.Educator.Web.Student.Queries as Queries
 import Dscp.Util (leftToThrow)
 
 import Dscp.Educator.Web.Student.Types (Assignment, BlkProof, Course, IsEnrolled (..), IsFinal (..),
                                         Student, Submission)
-import Dscp.Educator.Web.Student.Util (verifySignedSubmission)
+import Dscp.Educator.Web.Student.Util (verifyStudentSubmission)
 
 servantHandlers :: EducatorWorkMode m => ServerT StudentAPI m
 servantHandlers
@@ -36,17 +37,6 @@ servantHandlers
 -- TODO [DSCP-141]: remove
 student :: Student
 student = Core.mkAddr . toPublic $ deterministic "" genSecretKey
-
-{- GRAND TODO LIST
-
-1. Student authentication ([DSCP-141]).
-
-2. Errors:
-2.1. Catch and rethrow SQL DomainErrors?
-2.2. Where are exceptions turned into 'ServantErr'?
-
-
--}
 
 getCourses
     :: EducatorWorkMode m
@@ -91,8 +81,8 @@ makeSubmission
     :: EducatorWorkMode m
     => Core.SignedSubmission -> m Submission
 makeSubmission signedSubmission = do
-    verifySignedSubmission student signedSubmission
-        & leftToThrow id
+    verifyStudentSubmission student signedSubmission
+        & leftToThrow BadSubmissionSignature
     submissionId <- CoreQueries.submitAssignment signedSubmission
     getSubmission submissionId
 
