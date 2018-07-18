@@ -34,13 +34,17 @@ spec_merkleTree = describe "Merkle Tree Tests" $ do
     it "can construct and verify single proofs " $ property $
        \(xs :: [Int], leafIdx) ->
         let tree = fromFoldable xs
-        in (mkMerkleProofSingle tree leafIdx `validateMerkleProof` getMerkleRoot tree)
-            `shouldBe` leafIdx < length xs && leafIdx >= 0
+        in (validateMerkleProof <$> mkMerkleProofSingle tree leafIdx <*> Just (getMerkleRoot tree))
+            `shouldBe` case leafIdx < length xs && leafIdx >= 0 of
+                         True -> Just True
+                         False -> Nothing
 
     it "can construct and verify Set proofs " $ property $
        \(treeLeafs :: [Int], proofIndicies' :: [Int]) ->
         let tree = fromFoldable treeLeafs
             proofIndicies = Set.fromList proofIndicies'
             haveLeafIndex = any (\x -> x < length treeLeafs && x >= 0) proofIndicies'
-        in (mkMerkleProof tree proofIndicies `validateMerkleProof` getMerkleRoot tree)
-            `shouldBe` haveLeafIndex
+        in (validateMerkleProof <$> mkMerkleProof tree proofIndicies <*> Just (getMerkleRoot tree))
+            `shouldBe` case haveLeafIndex of
+                         True -> Just True
+                         False -> Nothing

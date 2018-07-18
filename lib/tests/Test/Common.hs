@@ -275,3 +275,9 @@ throwsPrism
     => Prism' e a -> m b -> m Bool
 throwsPrism excL action = do
     catchJust (^? excL) (action $> False) (\_ -> return True)
+
+puts :: MonadIO m => String -> m ()
+puts = liftIO . putStrLn
+
+put' :: MonadIO m => Show a => a -> m ()
+put' = liftIO . print

@@ -11,6 +11,8 @@ import Dscp.Util (allUniqueOrd)
 
 import Test.Dscp.DB.SQLite.Common
 
+-- import qualified Debug.Trace as Debug
+
 spec_Instances :: Spec
 spec_Instances = do
     describe "Basic database operations" $ do
@@ -287,8 +289,18 @@ spec_Instances = do
                         ptId <- DB.createTransaction trans
                         return ptId
 
-                    transSince <- DB.getStudentTransactionsSince studentId pointSince
+                    DB.createBlock Nothing
+
+                    transPacksSince <- DB.getProvenStudentTransactionsSince studentId pointSince
+
+                    let transSince = join . map snd $ transPacksSince
 
                     let equal = (==) `on` sortWith getId
 
-                    return ((DB._wbdiPayload <$> transSince) `equal` rest)
+                    puts "first pack is"
+                    put' (map hash transSince)
+                    puts "and the second one is"
+                    put' (map hash rest)
+                    puts "that all, folks!"
+                    
+                    return (transSince `equal` rest)

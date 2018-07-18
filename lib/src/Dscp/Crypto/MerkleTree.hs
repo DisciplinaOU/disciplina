@@ -190,15 +190,17 @@ getMerkleProofRoot = pnSig
 
 mkMerkleProofSingle :: forall a. MerkleTree a -- ^ merkle tree we want to construct a proof from
                               -> LeafIndex -- ^ leaf index used for proof
-                              -> MerkleProof a
+                              -> Maybe (MerkleProof a)
 mkMerkleProofSingle t n = mkMerkleProof t (Set.fromList [n])
 
 mkMerkleProof :: forall a. MerkleTree a -- ^ merkle tree we want to construct a proof from
                         -> Set LeafIndex -- ^ leaf index used for proof
-                        -> MerkleProof a
-mkMerkleProof MerkleEmpty _ = ProofPruned (getMerkleRoot MerkleEmpty)
+                        -> Maybe (MerkleProof a)
+mkMerkleProof MerkleEmpty _ = Nothing
 mkMerkleProof (MerkleTree rootNode) n =
-    constructProof rootNode
+    case constructProof rootNode of
+      ProofPruned _ -> Nothing
+      x             -> Just x
   where
     constructProof :: MerkleNode a -> MerkleProof a
     constructProof (MerkleLeaf {..})
@@ -255,7 +257,7 @@ data EmptyMerkleTree a = Empty (MerkleTree ())
 getEmptyMerkleTree :: MerkleTree a -> EmptyMerkleTree a
 getEmptyMerkleTree = Empty . (() <$)
 
-fillEmptyMerkleTree :: Map LeafIndex a -> EmptyMerkleTree a -> MerkleProof a
+fillEmptyMerkleTree :: Map LeafIndex a -> EmptyMerkleTree a -> Maybe (MerkleProof a)
 fillEmptyMerkleTree plugs (Empty sieve) =
     if length plugs /= length sieve
     then do
@@ -264,7 +266,7 @@ fillEmptyMerkleTree plugs (Empty sieve) =
         let
             keySet = Set.fromList (keys plugs)
             proof  = mkMerkleProof sieve keySet
-            filled = fill proof
+            filled = fill <$> proof
         in
             filled
   where

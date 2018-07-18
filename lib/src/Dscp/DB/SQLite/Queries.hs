@@ -53,17 +53,15 @@ import Text.InterpolatedString.Perl6 (q)
 import Dscp.Core.Serialise ()
 import Dscp.Core.Types (ATGDelta, Assignment (..), Course, SignedSubmission (..), Student, Subject,
                         Submission (..), aContentsHash, aCourseId, aDesc, aType, sAssignment,
-import Dscp.Crypto (MerkleProof, Hash, fillEmptyMerkleTree, getEmptyMerkleTree, getMerkleRoot, mkMerkleProof)
+                        sContentsHash, sStudentId, ssSubmission, ssWitness, ATGDelta)
+import Dscp.Crypto (MerkleProof, Hash, hash, fillEmptyMerkleTree, getEmptyMerkleTree, getMerkleRoot, mkMerkleProof)
 import qualified Dscp.Crypto.MerkleTree as MerkleTree (fromList)
 import Dscp.DB.SQLite.BlockData (BlockData (..), TxInBlock (..), TxWithIdx (..))
-import Dscp.DB.SQLite.BlockData (BlockData (..), TxInBlock (..), TxWithIdx (..))
 import Dscp.DB.SQLite.Class (MonadSQLiteDB (..), transaction)
-import Dscp.DB.SQLite.Class (MonadSQLiteDB (..))
-import Dscp.DB.SQLite.Instances ()
 import Dscp.DB.SQLite.Instances ()
 import Dscp.DB.SQLite.Types (TxBlockIdx (TxInMempool))
 import Dscp.Educator.Block (PrivateBlock (..), pbBody, pbHeader, pbbTxs, pbhAtgDelta, pbhBodyProof,
-                            pbhPrevBlock, genesisHeaderHash, PrivateBlockHeader)
+                            pbhPrevBlock, genesisHeaderHash, PrivateBlockHeader (..))
 import Dscp.Educator.Txs (PrivateTx (..), ptGrade, ptSignedSubmission, ptTime)
 import Dscp.Util (HasId (..), assert, assertJust, idOf)
 
@@ -114,6 +112,7 @@ getStudentCourses student =
   where
     getStudentCoursesQuery :: Query
     getStudentCoursesQuery = [q|
+        -- getStudentCourses
         select  course_id
         from    StudentCourses
         where   student_addr = ?
@@ -130,6 +129,7 @@ enrollStudentToCourse student course = do
   where
     enrollStudentToCourseRequest :: Query
     enrollStudentToCourseRequest = [q|
+        -- enrollStudentToCourse
         insert into  StudentCourses
         values       (?, ?)
     |]
@@ -141,6 +141,7 @@ getStudentAssignments student course = do
   where
     getStudentAssignmentsQuery :: Query
     getStudentAssignmentsQuery = [q|
+        -- getStudentAssignments
         select     course_id, contents_hash, type, desc
         from       StudentAssignments
         left join  Assignments
@@ -216,6 +217,12 @@ getStudentTransactions student = do
         where      student_addr = ?
     |]
 
+puts :: MonadIO m => String -> m ()
+puts = liftIO . putStrLn
+
+put' :: MonadIO m => Show a => a -> m ()
+put' = liftIO . print
+
 -- | Returns list of transaction blocks along with block-proof of a student since given moment.
 getProvenStudentTransactionsSince :: DBM m => Id Student -> UTCTime -> m [(MerkleProof PrivateTx, [PrivateTx])]
 getProvenStudentTransactionsSince studentId sinceTime = do
@@ -223,10 +230,13 @@ getProvenStudentTransactionsSince studentId sinceTime = do
         -- Contains `(tx, idx, blockId)` map.
         txsBlockList <- getTxsBlockMap
 
+        puts "txsBlockList"
+        put' txsBlockList
+
         -- Bake `blockId -> [(tx, idx)]` map.
         let txsBlockMap = groupToAssocWith (_tibBlockId, _tibTx) txsBlockList
 
-        forM txsBlockMap $ \(blockId, transactions) -> do
+        results <- forM txsBlockMap $ \(blockId, transactions) -> do
             blockData <- getBlockData blockId
 
             let bodies  = _twiTx <$> transactions
@@ -237,6 +247,8 @@ getProvenStudentTransactionsSince studentId sinceTime = do
                 pruned  = fillEmptyMerkleTree mapping tree
 
             return (pruned, bodies)
+
+        return [(proof, txs) | (Just proof, txs) <- results]
 
   where
     groupToAssocWith :: Ord k => Ord k => (a -> k, a -> v) -> [a] -> [(k, [v])]
@@ -261,7 +273,7 @@ getProvenStudentTransactionsSince studentId sinceTime = do
                        Submissions.signature,
                        Transactions.grade,
                        Transactions.time,
-                       Transactions.idx
+                       Transactions.idx,
                        BlockTxs.blk_idx
 
             from       BlockTxs
@@ -276,7 +288,7 @@ getProvenStudentTransactionsSince studentId sinceTime = do
 
             where      student_addr  = ?
                   and  time         >= ?
-                  and  idx          <> -1
+                  and  idx           = -1
         |]
 
     -- Returns `PrivateBlock` in normalized format, with metadata.
@@ -287,6 +299,7 @@ getProvenStudentTransactionsSince studentId sinceTime = do
       where
         -- TODO: prune fields that aren't needed.
         getBlockDataQuery = [q|
+            -- getBlockData
             select  idx
                     hash
                     time
@@ -303,6 +316,7 @@ getAllNonChainedTransactions = do
     query getAllNonChainedTransactionsQuery ()
   where
     getAllNonChainedTransactionsQuery = [q|
+        -- getAllNonChainedTransactions
         select     Submissions.student_addr,
                    Submissions.contents_hash,
                    Assignments.course_id,
@@ -314,6 +328,9 @@ getAllNonChainedTransactions = do
                    time
 
         from       Transactions
+
+        left join  BlockTxs
+               on  Transactions.hash = BlockTxs.tx_hash
 
         left join  Submissions
                on  submission_hash = Submissions.hash
@@ -327,6 +344,7 @@ getAllNonChainedTransactions = do
 getLastBlockIdAndIdx :: DBM m => m (Hash PrivateBlockHeader, Word32)
 getLastBlockIdAndIdx = do
     fromMaybe (genesisHeaderHash, 1) . listToMaybe <$> query [q|
+        -- getLastBlockIdAndIdx
         select    hash,
                   idx
         from      Blocks
@@ -346,13 +364,18 @@ createBlock delta = do
             txs' = zip [1..] (getId <$> txs)
             bid  = idx + 1
 
+            trueDelta = mempty `fromMaybe` delta
+
+            hdr = PrivateBlockHeader prev root trueDelta
+
         time <- liftIO getCurrentTime
 
         _ <- execute createBlockRequest
             ( bid
+            , hash hdr
             , time
             , prev
-            , mempty `fromMaybe` delta
+            , trueDelta
             , root
             , getEmptyMerkleTree tree
             )
@@ -366,18 +389,20 @@ createBlock delta = do
         return ()
   where
     createBlockRequest = [q|
+        -- createBlock
         insert into Blocks
-        from
-        select      (select max(idx) from Blocks) + 1, ?, ?, ?, ?, ?, ?
+        values      (?, ?, ?, ?, ?, ?, ?)
     |]
 
     setTxIndexRequest = [q|
+        -- setTxIndex
         update  Transactions
         set     idx  = ?
         where   hash = ?
     |]
 
     assignToBlockRequest = [q|
+        -- assignToBlock
         insert into BlockTxs
         values      (?, ?)
     |]
@@ -413,6 +438,7 @@ createSignedSubmission sigSub = do
   where
     generateSubmissionRequest :: Query
     generateSubmissionRequest = [q|
+        -- generateSubmission
         insert into  Submissions
         values       (?, ?, ?, ?, ?, null)
     |]
@@ -432,6 +458,7 @@ setStudentAssignment studentId assignmentId = do
   where
     setStudentAssignmentRequest :: Query
     setStudentAssignmentRequest = [q|
+        -- setStudentAssignment
         insert into  StudentAssignments
         values      (?, ?)
     |]
@@ -441,6 +468,7 @@ isEnrolledTo studentId courseId = do
     exists enrollmentQuery (studentId, courseId)
   where
     enrollmentQuery = [q|
+        -- isEnrolledTo
         select  count(*)
         from    StudentCourses
         where   student_addr = ?
@@ -453,6 +481,7 @@ isAssignedToStudent student assignment = do
   where
     getStudentAssignmentQuery :: Query
     getStudentAssignmentQuery = [q|
+        -- isAssignedToStudent
         select  count(*)
         from    StudentAssignments
         where   student_addr = ?
@@ -469,11 +498,13 @@ createCourse course desc subjects = do
         return course
   where
     createCourseRequest = [q|
+        -- createCourse
         insert into  Courses
         values       (?, ?)
     |]
 
     attachSubjectToCourseRequest = [q|
+        -- attachSubjectToCourse
         insert into  Subjects
         values       (?, ?, "")
     |]
@@ -494,6 +525,7 @@ existsCourse course = do
     exists existsCourseQuery (Only course)
   where
     existsCourseQuery = [q|
+        -- existsCourse
         select  count(*)
         from    Courses
         where   id = ?
