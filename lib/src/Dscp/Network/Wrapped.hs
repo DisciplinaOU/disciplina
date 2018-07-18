@@ -50,8 +50,21 @@ import Loot.Network.Class (CliId, ClientEnv, ClientId, ListenerEnv, ListenerId, 
 import qualified Loot.Network.Class as L
 import Loot.Network.Message (CallbackWrapper, Message (..), getMsgTag, handlerDecoded,
                              runCallbacksInt)
+import Loot.Network.ZMQ.Common (ZmqTcp)
 import UnliftIO (MonadUnliftIO)
 import UnliftIO.Async (withAsync)
+
+----------------------------------------------------------------------------
+-- Common
+----------------------------------------------------------------------------
+
+-- | We use ZmqTcp all over the project. If one wants to change it,
+-- they should change 'NetTag' first.
+type NetTag = ZmqTcp
+
+----------------------------------------------------------------------------
+-- Messages
+----------------------------------------------------------------------------
 
 -- | Tag for messages which are "real communication messages".
 data MsgK
@@ -85,39 +98,39 @@ fromSubType (Subscription bs) = readMaybe (BS8.unpack bs)
 -- forked and this thread is allowed to send multiple messages
 -- (directly, or publish).
 
-data Listener t m = Listener
+data Listener m = Listener
     { lId       :: !ListenerId
       -- ^ Listener id, should be unique.
     , lMsgTypes :: !(Set MsgType)
       -- ^ Message types listener is supposed to receive.
-    , lAction   :: !(ListenerEnv t -> m ())
+    , lAction   :: !(ListenerEnv NetTag -> m ())
       -- ^ Listener's action.
     }
 
 runListener ::
-       forall t m n. (NetworkingServ t n, MonadLogging n, MonadMask n)
+       forall m n. (NetworkingServ NetTag n, MonadLogging n, MonadMask n)
     => (forall x. m x -> n x)
-    -> Listener t m
+    -> Listener m
     -> n ()
 runListener nat Listener{..} = do
     logDebug $ "Launching listner " +| lId ||+ ""
-    (lEnv :: ListenerEnv t) <- registerListener @t lId lMsgTypes
+    (lEnv :: ListenerEnv NetTag) <- registerListener @NetTag lId lMsgTypes
     nat (lAction lEnv) `finally` (logDebug $ "Listener " +| lId ||+ " has exited")
 
-servSend :: forall t d. Message MsgK d => ListenerEnv t -> CliId t -> d -> STM ()
+servSend :: forall d. Message MsgK d => ListenerEnv NetTag -> CliId NetTag -> d -> STM ()
 servSend btq cliId msg =
     sendBtq btq $ L.Reply cliId (msgType @d) [BSL.toStrict $ serialise msg]
 
-servPub :: forall t d. Message SubK d => ListenerEnv t -> d -> STM ()
+servPub :: forall d. Message SubK d => ListenerEnv NetTag -> d -> STM ()
 servPub btq msg =
     sendBtq btq $ L.Publish (subType @d) [BSL.toStrict $ serialise msg]
 
 simpleListener ::
-       forall t m. (MonadIO m, MonadCatch m, MonadLogging m)
+       forall m. (MonadIO m, MonadCatch m, MonadLogging m)
     => ListenerId
     -> Set MsgType
-    -> (ListenerEnv t -> [CallbackWrapper (CliId t) m ()])
-    -> Listener t m
+    -> (ListenerEnv NetTag -> [CallbackWrapper (CliId NetTag) m ()])
+    -> Listener m
 simpleListener lId lMsgTypes getCallbacks =
     Listener {..}
   where
@@ -143,40 +156,40 @@ simpleListener lId lMsgTypes getCallbacks =
 -- for server, we just skip the message if we can't decode it, since
 -- we have only one dispatcher.
 lcallback ::
-       forall t d m. (Message MsgK d, Monad m)
-    => (CliId t -> d -> m ())
-    -> CallbackWrapper (CliId t) m ()
+       forall d m. (Message MsgK d, Monad m)
+    => (CliId NetTag -> d -> m ())
+    -> CallbackWrapper (CliId NetTag) m ()
 lcallback foo = handlerDecoded $ \cId -> either (const $ pass) (foo cId)
 
 ----------------------------------------------------------------------------
 -- Workers
 ----------------------------------------------------------------------------
 
-data Worker t m = Worker
+data Worker m = Worker
     { wId       :: !ClientId
       -- ^ Worker's identity.
     , wMsgTypes :: !(Set MsgType)
       -- ^ Message types worker is supposed to receive.
     , wSubs     :: !(Set Subscription)
       -- ^ Worker's subscriptions.
-    , wAction   :: !(ClientEnv t -> m ())
+    , wAction   :: !(ClientEnv NetTag -> m ())
       -- ^ Worker's action.
     }
 
 runWorker ::
-       forall t m n. (NetworkingCli t n, MonadMask n, MonadLogging n)
+       forall m n. (NetworkingCli NetTag n, MonadMask n, MonadLogging n)
     => (forall x. m x -> n x)
-    -> Worker t m
+    -> Worker m
     -> n ()
 runWorker nat Worker{..} = do
     logDebug $ "Launching worker " +| wId ||+ ""
-    (cEnv :: ClientEnv t) <- registerClient @t wId wMsgTypes wSubs
+    (cEnv :: ClientEnv NetTag) <- registerClient @NetTag wId wMsgTypes wSubs
     nat (wAction cEnv) `finally` (logDebug $ "Worker " +| wId ||+ " has exited")
 
 cliSend ::
-       forall t d m. (Message MsgK d, NetworkingCli t m, MonadIO m)
-    => ClientEnv t
-    -> Maybe (NodeId t)
+       forall d m. (Message MsgK d, NetworkingCli NetTag m, MonadIO m)
+    => ClientEnv NetTag
+    -> Maybe (NodeId NetTag)
     -> d
     -> m ()
 cliSend btq nId msg =
@@ -198,9 +211,9 @@ data CliRecvExcInternal
 
 instance Exception CliRecvExcInternal
 
-type SendConstraint k t d m
+type SendConstraint k d m
      = ( Message k d
-       , NetworkingCli t m
+       , NetworkingCli NetTag m
        , MonadUnliftIO m
        , MonadCatch m
        , MonadLogging m)
@@ -211,10 +224,10 @@ type SendConstraint k t d m
 -- Callback takes care of decoding itself because we might want to
 -- propagate data first (before decoding the message).
 cliRecv ::
-       forall t k d m a. SendConstraint k t d m
-    => ClientEnv t
+       forall k d m a. SendConstraint k d m
+    => ClientEnv NetTag
     -> Int
-    -> [CallbackWrapper (NodeId t) m a]
+    -> [CallbackWrapper (NodeId NetTag) m a]
     -> m a
 cliRecv btq timeout callbacks = withHandler $ withTimeout $ \tmAction -> do
     res <- atomically $ (Right <$> recvBtq btq) `orElse` (Left <$> tmAction)
@@ -251,43 +264,43 @@ cliRecv btq timeout callbacks = withHandler $ withTimeout $ \tmAction -> do
               withAsync timer $ \_async -> action (readTMVar timeoutVar)
 
 cliRecvOne ::
-       forall k t d m. SendConstraint k t d m
-    => ClientEnv t
+       forall k d m. SendConstraint k d m
+    => ClientEnv NetTag
     -> Int
-    -> m (NodeId t, d)
+    -> m (NodeId NetTag, d)
 cliRecvOne btq timeout =
-    cliRecv @t @k @d
+    cliRecv @k @d
         btq
         timeout
-        [ handlerDecoded $ \(nId :: NodeId t) ->
+        [ handlerDecoded $ \(nId :: NodeId NetTag) ->
               either (\e -> throwM $ CREMalformed $ "cliRecvOne parse error " <> show e)
                      (pure . (nId,))
         ]
 
 -- | Receive a response.
 cliRecvResp ::
-       forall t d m. SendConstraint MsgK t d m
-    => ClientEnv t
+       forall d m. SendConstraint MsgK d m
+    => ClientEnv NetTag
     -> Int
-    -> m (NodeId t, d)
-cliRecvResp = cliRecvOne @MsgK @t @d
+    -> m (NodeId NetTag, d)
+cliRecvResp = cliRecvOne @MsgK @d
 
 -- | Receive an update.
 cliRecvUpdate ::
-       forall t d m. SendConstraint SubK t d m
-    => ClientEnv t
+       forall d m. SendConstraint SubK d m
+    => ClientEnv NetTag
     -> Int
-    -> m (NodeId t, d)
-cliRecvUpdate = cliRecvOne @SubK @t @d
+    -> m (NodeId NetTag, d)
+cliRecvUpdate = cliRecvOne @SubK @d
 
 ----------------------------------------------------------------------------
 -- Launching
 ----------------------------------------------------------------------------
 
 -- | Launch client broker on the background.
-withClient :: (MonadUnliftIO m, NetworkingCli t m) => m a -> m a
+withClient :: (MonadUnliftIO m, NetworkingCli NetTag m) => m a -> m a
 withClient = withAsync runClient . const
 
 -- | Launch server and client brokers on the background.
-withServer :: (MonadUnliftIO m, NetworkingServ t m, NetworkingCli t m) => m a -> m a
+withServer :: (MonadUnliftIO m, NetworkingServ NetTag m, NetworkingCli NetTag m) => m a -> m a
 withServer = withAsync runServer . const . withAsync runClient . const

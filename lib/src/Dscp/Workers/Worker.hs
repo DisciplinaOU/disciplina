@@ -16,10 +16,10 @@ import Dscp.Network.Messages (PingBlk (..), PingTx (..), PongBlk (..), PongTx (.
 import Dscp.Network.Wrapped (Worker (..), cliRecvResp, cliSend, msgType)
 import Dscp.Witness.Launcher (WitnessWorkMode)
 
-witnessWorkers :: WitnessWorkMode m => [Worker ZmqTcp m]
+witnessWorkers :: WitnessWorkMode m => [Worker m]
 witnessWorkers = [witnessTxWorker, witnessBlkWorker]
 
-witnessTxWorker :: forall m. WitnessWorkMode m => Worker ZmqTcp m
+witnessTxWorker :: forall m. WitnessWorkMode m => Worker m
 witnessTxWorker =
     Worker "txWorker" [msgType @PongTx] [] (\btq -> action btq `catchAny` handler)
   where
@@ -33,7 +33,7 @@ witnessTxWorker =
         logInfo $ "Heard pongtx: " +| txt ||+ " from " +| nId ||+ ""
         liftIO $ threadDelay 1000000
 
-witnessBlkWorker :: forall m. WitnessWorkMode m => Worker ZmqTcp m
+witnessBlkWorker :: forall m. WitnessWorkMode m => Worker m
 witnessBlkWorker =
     Worker "blkWorker" [msgType @PongBlk] [] (\btq -> action btq `catchAny` handler)
   where
