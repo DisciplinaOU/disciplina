@@ -39,6 +39,7 @@ educator_params="
 --keyfile-password 12345678
 --keyfile-path $files/educator.key
 --sql-path $tmp_files/educator.db
+--student-listen 127.0.0.1:8090
 "
 
 # witness params (and educator's as well)
