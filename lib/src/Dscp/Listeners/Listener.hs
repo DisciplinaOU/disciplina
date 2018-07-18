@@ -14,7 +14,7 @@ import Dscp.Witness.Launcher (WitnessWorkMode)
 
 
 witnessListeners
-    :: forall m. WitnessWorkMode m
+    :: forall ctx m. WitnessWorkMode ctx m
     => [Listener m]
 witnessListeners = [blkListener, txListener]
    where

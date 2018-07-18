@@ -16,7 +16,7 @@ module Dscp.Educator.Launcher.Mode
     ) where
 
 import Control.Lens (makeLenses)
-import Loot.Base.HasLens (HasLens (..))
+import Loot.Base.HasLens (HasLens (..), HasLens')
 import Loot.Log.Rio (LoggingIO)
 import Loot.Network.ZMQ as Z
 
@@ -27,23 +27,30 @@ import Dscp.Educator.Secret (MonadEducatorSecret)
 import Dscp.Educator.Secret.Types (EducatorSecret)
 import qualified Dscp.Launcher.Mode as Basic
 import Dscp.Launcher.Rio (RIO)
-import qualified Dscp.Witness.Launcher as Witness
+import qualified Dscp.Witness as W
+import Dscp.Witness.Mempool (MempoolVar)
 
 ---------------------------------------------------------------------
 -- WorkMode class
 ---------------------------------------------------------------------
 
 -- | Set of typeclasses which define capabilities of bare Educator node.
-type EducatorWorkMode m =
+type EducatorWorkMode ctx m =
     ( Basic.BasicWorkMode m
     , MonadSQLiteDB m
     , MonadEducatorSecret m
+
+    , MonadReader ctx m
+
+    , HasLens' ctx EducatorParams
+    , HasLens' ctx SQLiteDB
+    , HasLens' ctx EducatorSecret
     )
 
--- | Set of typeclasses which define capabilities both of Educator and Witness.
-type CombinedWorkMode m =
-    ( EducatorWorkMode m
-    , Witness.WitnessWorkMode m
+-- | Set of typeclasses which define capabilities both of Educator and W.
+type CombinedWorkMode ctx m =
+    ( EducatorWorkMode ctx m
+    , W.WitnessWorkMode ctx m
     )
 
 ---------------------------------------------------------------------
@@ -58,7 +65,7 @@ data EducatorContext = EducatorContext
     , _ecDB         :: SQLiteDB
     , _ecSecret     :: EducatorSecret
 
-    , _ecWitnessCtx :: Witness.WitnessContext
+    , _ecWitnessCtx :: W.WitnessContext
     }
 
 makeLenses ''EducatorContext
@@ -76,8 +83,8 @@ instance HasLens SQLiteDB EducatorContext SQLiteDB where
 instance HasLens EducatorSecret EducatorContext EducatorSecret where
     lensOf = ecSecret
 
-instance HasLens Witness.WitnessParams EducatorContext Witness.WitnessParams where
-    lensOf = ecWitnessCtx . lensOf @Witness.WitnessParams
+instance HasLens W.WitnessParams EducatorContext W.WitnessParams where
+    lensOf = ecWitnessCtx . lensOf @W.WitnessParams
 instance HasLens LoggingIO EducatorContext LoggingIO where
     lensOf = ecWitnessCtx . lensOf @LoggingIO
 instance HasLens RocksDB EducatorContext RocksDB where
@@ -88,6 +95,10 @@ instance HasLens Z.ZTNetCliEnv EducatorContext Z.ZTNetCliEnv where
     lensOf = ecWitnessCtx . lensOf @Z.ZTNetCliEnv
 instance HasLens Z.ZTNetServEnv EducatorContext Z.ZTNetServEnv where
     lensOf = ecWitnessCtx . lensOf @Z.ZTNetServEnv
+instance HasLens MempoolVar EducatorContext MempoolVar where
+    lensOf = ecWitnessCtx . lensOf @MempoolVar
+instance HasLens W.SDActions EducatorContext W.SDActions where
+    lensOf = ecWitnessCtx . lensOf @W.SDActions
 
 ----------------------------------------------------------------------------
 -- Sanity check
@@ -96,5 +107,5 @@ instance HasLens Z.ZTNetServEnv EducatorContext Z.ZTNetServEnv where
 _sanity :: EducatorRealMode ()
 _sanity = _sanityCallee
   where
-    _sanityCallee :: CombinedWorkMode m => m ()
+    _sanityCallee :: CombinedWorkMode ctx m => m ()
     _sanityCallee = pass

@@ -26,3 +26,5 @@ educator-db
 witness-db
 stylish-haskell.yaml
 test.db
+*~
+*#

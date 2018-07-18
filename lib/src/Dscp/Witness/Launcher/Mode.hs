@@ -19,7 +19,7 @@ module Dscp.Witness.Launcher.Mode
     ) where
 
 import Control.Lens (makeLenses)
-import Loot.Base.HasLens (HasLens (..))
+import Loot.Base.HasLens (HasLens (..), HasLens')
 import Loot.Log.Rio (LoggingIO)
 import Loot.Network.Class (NetworkingCli, NetworkingServ)
 import Loot.Network.ZMQ as Z
@@ -39,11 +39,22 @@ import Dscp.Witness.Mempool (MempoolVar)
 ---------------------------------------------------------------------
 
 -- | Set of typeclasses which define capabilities of Witness node.
-type WitnessWorkMode m =
+type WitnessWorkMode ctx m =
     ( Basic.BasicWorkMode m
     , MonadDB m
     , NetworkingCli ZmqTcp m
     , NetworkingServ ZmqTcp m
+
+    , MonadReader ctx m
+    , HasLens' ctx WitnessParams
+    , HasLens' ctx LoggingIO
+    , HasLens' ctx RocksDB
+    , HasLens' ctx Z.ZTGlobalEnv
+    , HasLens' ctx Z.ZTNetCliEnv
+    , HasLens' ctx Z.ZTNetServEnv
+    , HasLens' ctx MempoolVar
+    , HasLens' ctx SDActions
+
     )
 
 ---------------------------------------------------------------------
@@ -95,5 +106,5 @@ instance HasLens SDActions WitnessContext SDActions where
 _sanity :: WitnessRealMode ()
 _sanity = _sanityCallee
   where
-    _sanityCallee :: WitnessWorkMode m => m ()
+    _sanityCallee :: WitnessWorkMode ctx m => m ()
     _sanityCallee = pass
