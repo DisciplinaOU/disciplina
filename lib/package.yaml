@@ -1,4 +1,4 @@
-<<: !include "./hpack/module.yaml"
+<<: !include "../hpack/module.yaml"
 
 name: disciplina
 description: A blockchain system for education
