@@ -22,6 +22,7 @@ import Loot.Network.ZMQ as Z
 
 import Dscp.DB.Rocks.Real.Types (RocksDB)
 import Dscp.DB.SQLite (MonadSQLiteDB, SQLiteDB)
+import Dscp.Educator.Launcher.Params (EducatorParams)
 import Dscp.Educator.Secret (MonadEducatorSecret)
 import Dscp.Educator.Secret.Types (EducatorSecret)
 import qualified Dscp.Launcher.Mode as Basic
@@ -49,11 +50,15 @@ type CombinedWorkMode m =
 -- WorkMode implementation
 ---------------------------------------------------------------------
 
+-- TODO add parameters
 -- TODO Separate resources and non-resources.
 data EducatorContext = EducatorContext
-    { _ecWitnessCtx :: Witness.WitnessContext
+    {
+      _ecParams     :: EducatorParams
     , _ecDB         :: SQLiteDB
     , _ecSecret     :: EducatorSecret
+
+    , _ecWitnessCtx :: Witness.WitnessContext
     }
 
 makeLenses ''EducatorContext
@@ -64,10 +69,15 @@ type EducatorRealMode = RIO EducatorContext
 -- HasLens
 ---------------------------------------------------------------------
 
+instance HasLens EducatorParams EducatorContext EducatorParams where
+    lensOf = ecParams
 instance HasLens SQLiteDB EducatorContext SQLiteDB where
     lensOf = ecDB
 instance HasLens EducatorSecret EducatorContext EducatorSecret where
     lensOf = ecSecret
+
+instance HasLens Witness.WitnessParams EducatorContext Witness.WitnessParams where
+    lensOf = ecWitnessCtx . lensOf @Witness.WitnessParams
 instance HasLens LoggingIO EducatorContext LoggingIO where
     lensOf = ecWitnessCtx . lensOf @LoggingIO
 instance HasLens RocksDB EducatorContext RocksDB where

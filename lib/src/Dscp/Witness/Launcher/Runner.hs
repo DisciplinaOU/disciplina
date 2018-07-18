@@ -11,11 +11,10 @@ import Dscp.Witness.Launcher.Resource (WitnessResources (..))
 import Dscp.Witness.Mempool (newMempoolVar)
 
 -- | Make up Witness context from dedicated pack of allocated resources.
-formWitnessContext :: WitnessResources -> IO WitnessContext
-formWitnessContext res@WitnessResources{..} = do
+formWitnessContext :: WitnessParams -> WitnessResources -> IO WitnessContext
+formWitnessContext _wcParams _wcResources = do
     _wcMempool <- newMempoolVar
     _wcSDActions <- initSDActions
-    let _wcResources = res
     pure $ WitnessContext {..}
 
 runWitnessRealMode :: WitnessContext -> WitnessRealMode () -> IO ()
@@ -28,7 +27,7 @@ launchWitnessRealMode params@WitnessParams{..} action =
     void $
     runResourceAllocation appDesc initParams (allocResource params) $
         \resources -> do
-            ctx <- formWitnessContext resources
+            ctx <- formWitnessContext params resources
             runWitnessRealMode ctx action
   where
     appDesc = "Witness (real mode)"

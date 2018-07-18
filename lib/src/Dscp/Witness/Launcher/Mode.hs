@@ -30,6 +30,7 @@ import qualified Dscp.Launcher.Mode as Basic
 import Dscp.Launcher.Rio (RIO)
 import Dscp.Network ()
 import Dscp.Snowdrop.Actions (SDActionsM)
+import Dscp.Witness.Launcher.Params (WitnessParams)
 import Dscp.Witness.Launcher.Resource (WitnessResources)
 import Dscp.Witness.Mempool (MempoolVar)
 
@@ -49,11 +50,14 @@ type WitnessWorkMode m =
 -- WorkMode implementation
 ---------------------------------------------------------------------
 
-type SDActions =  SDActionsM (RIO WitnessContext)
+type SDActions = SDActionsM (RIO WitnessContext)
 
 -- | Context is resources plus some runtime variables.
 data WitnessContext = WitnessContext
-    { _wcResources :: !WitnessResources
+    { _wcParams    :: !WitnessParams
+      -- ^ Parameters witness was started with.
+    , _wcResources :: !WitnessResources
+      -- ^ Resources, allocated from params.
     , _wcMempool   :: !MempoolVar
     , _wcSDActions :: !SDActions
     }
@@ -67,6 +71,8 @@ type WitnessRealMode = RIO WitnessContext
 -- HasLens
 ---------------------------------------------------------------------
 
+instance HasLens WitnessParams WitnessContext WitnessParams where
+    lensOf = wcParams
 instance HasLens LoggingIO WitnessContext LoggingIO where
     lensOf = wcResources . lensOf @LoggingIO
 instance HasLens RocksDB WitnessContext RocksDB where
