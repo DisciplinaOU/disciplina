@@ -22,9 +22,9 @@ module Test.Dscp.DB.SQLite.Common
 
 import Prelude hiding (fold)
 
-import Database.SQLite.Simple (Connection, execute, fold, query, setTrace, withConnection,
-                               withTransaction, setTrace)
-import qualified Loot.Log as Adapter
+import Database.SQLite.Simple (Connection, execute, fold, query, setTrace, setTrace, withConnection,
+                               withTransaction)
+
 
 import Test.QuickCheck.Gen (generate)
 
@@ -37,6 +37,8 @@ import qualified Dscp.DB.SQLite.Class as Adapter
 import Dscp.DB.SQLite.Schema (ensureSchemaIsSetUp)
 import Dscp.Educator.Txs (PrivateTx (..), ptSignedSubmission, ptTime)
 import Dscp.Util (idOf)
+
+import qualified Loot.Log as Adapter
 
 import Test.Common
 import Test.Dscp.Core.Instances ()

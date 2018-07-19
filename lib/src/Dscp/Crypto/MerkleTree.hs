@@ -19,6 +19,7 @@ module Dscp.Crypto.MerkleTree
        , mkMerkleProofSingle
        , validateMerkleProof
        , getMerkleProofRoot
+       , lookup
 
        , MerkleNode (..)
        , drawMerkleTree
@@ -38,7 +39,7 @@ import Codec.Serialise (Serialise (..))
 import Data.Array (array, (!))
 import Data.Bits (Bits (..))
 import Data.ByteArray (convert)
-import Data.ByteString.Builder (Builder, byteString)
+import Data.ByteString.Builder (Builder, byteString, word32LE)
 import qualified Data.Map as Map ((!))
 import qualified Data.Set as Set
 import Data.Tree as Tree (Tree (Node), drawTree)
@@ -50,8 +51,8 @@ import qualified Data.Foldable as F (Foldable (..))
 -- | Data type for root of sized merkle tree.
 data MerkleSignature a = MerkleSignature
     { mrHash :: !(Hash Raw)  -- ^ returns root 'Hash' of Merkle Tree
-    , mrSize :: !Word8 -- ^ size of root node,
-                       -- size is defined as number of leafs in this subtree
+    , mrSize :: !Word32      -- ^ size of root node,
+                             -- size is defined as number of leafs in this subtree
     } deriving (Show, Eq, Ord, Generic, Serialise, Functor, Foldable, Traversable, Typeable)
 
 data MerkleTree a
@@ -72,7 +73,7 @@ instance Foldable MerkleTree where
 
 deriving instance Container (MerkleTree a)
 
-type LeafIndex = Int
+type LeafIndex = Word32
 
 data MerkleNode a
     = MerkleBranch
@@ -112,8 +113,8 @@ mkBranchRootHash (MerkleSignature (AbstractHash hl) sl)
                  (MerkleSignature (AbstractHash hr) sr)
    = MerkleSignature
    (hash $ toLazyByteString $ mconcat
-      [ byteString (one sl)
-      , byteString (one sr)
+      [ word32LE sl
+      , word32LE sr
       , byteString (convert hl)
       , byteString (convert hr) ])
    (sl + sr)
@@ -131,12 +132,12 @@ fromContainer = fromList . toList
 
 fromList :: HasHash a => [a] -> MerkleTree a
 fromList [] = MerkleEmpty
-fromList ls = MerkleTree (go' 1 (length lsIndexed))
+fromList ls = MerkleTree (go' 1 (fromIntegral $ length lsIndexed))
   where
     lsIndexed = zip [1,2..] ls
     arr = array (1, length lsIndexed) lsIndexed
     go' lo hi = if lo == hi
-                then mkLeaf (lo - 1, arr ! lo)
+                then mkLeaf (lo - 1, arr ! fromIntegral lo)
                 else mkBranch (go' loL hiL) (go' loR hiR)
       where
         -- new borders
@@ -210,6 +211,28 @@ mkMerkleProof (MerkleTree rootNode) n =
       case (constructProof mLeft', constructProof mRight') of
         (ProofPruned _, ProofPruned _) -> ProofPruned mRoot'
         (pL, pR)                       -> ProofBranch mRoot' pL pR
+
+lookup :: forall a . HasHash a => LeafIndex -> MerkleProof a -> Maybe a
+lookup index = \case
+  ProofPruned {}      -> Nothing
+  ProofLeaf   {pnVal, pnIndex}
+    | pnIndex /= index ->
+      error $ show (pnIndex, "/=" :: String, index)
+    | otherwise ->
+      return pnVal
+
+  ProofBranch
+    { pnSig = MerkleSignature { mrSize }
+    , pnLeft
+    , pnRight
+    } -> do
+      let border = powerOfTwo mrSize
+      if border >= index
+      then do
+          lookup (border - index) pnLeft
+
+      else do
+          lookup (index - border) pnRight
 
 -- | Validate a merkle tree proof.
 validateMerkleProof :: forall a. HasHash a => MerkleProof a -> MerkleSignature a -> Bool

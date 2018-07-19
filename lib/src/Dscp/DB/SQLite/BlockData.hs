@@ -31,7 +31,7 @@ data TxInBlock = TxInBlock
 
 data TxWithIdx = TxWithIdx
     { _twiTx    :: PrivateTx
-    , _twiTxIdx :: Int
+    , _twiTxIdx :: Word32
     }
     deriving (Eq, Show, Generic, Serialise)
 
