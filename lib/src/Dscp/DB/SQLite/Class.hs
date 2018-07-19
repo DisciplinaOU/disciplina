@@ -35,6 +35,11 @@ class MonadIO m => MonadSQLiteDB m where
     -- and then wrap all SQL operations with 'sqlTransaction'.
     transaction :: m a -> m a
 
+    -- | Enables SQLite tracing locally. For debug purposes.
+    --
+    -- Note: is any trace handler was set globally, it will be lost after that.
+    traced :: m a -> m a
+
 ----------------------------------------------------------
 -- Nested transactions
 ----------------------------------------------------------

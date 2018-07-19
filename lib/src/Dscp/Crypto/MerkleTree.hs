@@ -259,16 +259,12 @@ getEmptyMerkleTree = Empty . (() <$)
 
 fillEmptyMerkleTree :: Map LeafIndex a -> EmptyMerkleTree a -> Maybe (MerkleProof a)
 fillEmptyMerkleTree plugs (Empty sieve) =
-    if length plugs /= length sieve
-    then do
-        error "fillEmptyMerkleTree: Tree and filler are of different size"
-    else
-        let
-            keySet = Set.fromList (keys plugs)
-            proof  = mkMerkleProof sieve keySet
-            filled = fill <$> proof
-        in
-            filled
+    let
+        keySet = Set.fromList (keys plugs)
+        proof  = mkMerkleProof sieve keySet
+        filled = fill <$> proof
+    in
+        filled
   where
     fill = \case
         ProofBranch sig left right -> ProofBranch (coerseSig sig) (fill left) (fill right)

@@ -14,18 +14,18 @@ import Dscp.Util (HasId (..))
 
 data BlockData = BlockData
     { _bdIndex    :: ! Word32
-    , _bdTree     :: !(EmptyMerkleTree PrivateTx)
-    , _bdRoot     :: !(MerkleSignature PrivateTx)
+    , _bdHash     :: !(Hash PrivateBlock)
     , _bdTime     :: ! UTCTime
     , _bdPrevHash :: !(Hash PrivateBlock)
-    , _bdHash     :: !(Hash PrivateBlock)
     , _bdAtgDelta :: ! ATGDelta
+    , _bdRoot     :: !(MerkleSignature PrivateTx)
+    , _bdTree     :: !(EmptyMerkleTree PrivateTx)
     }
     deriving (Eq, Show, Generic, Serialise)
 
 data TxInBlock = TxInBlock
     { _tibTx      :: TxWithIdx
-    , _tibBlockId :: Id PrivateBlock
+    , _tibBlockId :: Word32
     }
     deriving (Eq, Show, Generic, Serialise)
 

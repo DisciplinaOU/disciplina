@@ -23,8 +23,10 @@ module Test.Dscp.DB.SQLite.Common
 import Prelude hiding (fold)
 
 import Database.SQLite.Simple (Connection, execute, fold, query, setTrace, withConnection,
-                               withTransaction)
+                               withTransaction, setTrace)
 import qualified Loot.Log as Adapter
+
+import Test.QuickCheck.Gen (generate)
 
 import Dscp.Core.Types (Address (..), Assignment (..), AssignmentType (..), Course (..), Grade (..),
                         SignedSubmission (..), Submission (..), SubmissionSig,
@@ -41,8 +43,8 @@ import Test.Dscp.Core.Instances ()
 import Test.Dscp.Crypto.Instances ()
 import Test.Dscp.Educator.Instances ()
 
---import System.Directory (removeFile)
---import System.IO.Error (IOError, isDoesNotExistError)
+-- import System.Directory (removeFile)
+-- import System.IO.Error (IOError, isDoesNotExistError)
 
 newtype TestSQLiteM a
     = TestSQLiteM { getTestSQLiteM :: ReaderT Connection IO a }
@@ -53,17 +55,13 @@ runTestSQLiteM :: TestSQLiteM a -> IO a
 runTestSQLiteM action = do
     let filename = ":memory:"
 
-    --removeFile filename `catch` \(e :: IOError) -> do
+    -- removeFile filename `catch` \(e :: IOError) -> do
     --    if isDoesNotExistError e
     --    then return ()
     --    else throwM e
 
     withConnection filename $ \conn -> do
         ensureSchemaIsSetUp conn
-        -- It stays here, so next time something breaks I don't have to
-        -- add it to imports again.
-        setTrace conn Nothing
-        setTrace conn Nothing -- (Just putStrLn)
         getTestSQLiteM action `runReaderT` conn
 
 sqliteProperty
@@ -89,6 +87,13 @@ instance Adapter.MonadSQLiteDB TestSQLiteM where
         TestSQLiteM $ ReaderT $ \conn ->
             conn `withTransaction` do
                 actor conn
+
+    traced (TestSQLiteM (ReaderT actor)) = do
+        TestSQLiteM $ ReaderT $ \conn -> do
+            setTrace conn (Just putStrLn)
+            res <- actor conn
+            setTrace conn (Nothing)
+            return res
 
 instance Adapter.MonadLogging TestSQLiteM where
     log _ _ _ = pass

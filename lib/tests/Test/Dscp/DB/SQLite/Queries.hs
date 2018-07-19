@@ -297,10 +297,10 @@ spec_Instances = do
 
                     let equal = (==) `on` sortWith getId
 
-                    puts "first pack is"
-                    put' (map hash transSince)
-                    puts "and the second one is"
-                    put' (map hash rest)
-                    puts "that all, folks!"
-                    
-                    return (transSince `equal` rest)
+                    (transSince `equal` rest) `assertThat`
+                        "Correct set of transactions is returned"
+
+                    -- for_ transPacksSince $ \(proof, txSet) -> do
+                    --     for_ txSet $ \tx -> do
+
+                    return True

@@ -89,8 +89,8 @@ data DomainError
     | TransactionDoesNotExist
         { deTransactionId :: Id PrivateTx }
 
-    | BlockDoesNotExist
-        { deBlockId :: Id PrivateBlock }
+    | BlockWithIndexDoesNotExist
+        { deBlockIdx :: Word32 }
 
     | BlockProofIsCorrupted
         { deBlockId :: Id PrivateBlock }
@@ -259,7 +259,8 @@ getProvenStudentTransactionsSince studentId sinceTime = do
 
     -- Returns, effectively, `[(tx, idx, blockId)]`.
     getTxsBlockMap :: DBM m => m [TxInBlock]
-    getTxsBlockMap = query getTxsBlockMapQuery (studentId, sinceTime)
+    getTxsBlockMap = do
+        query getTxsBlockMapQuery (studentId, sinceTime)
       where
         getTxsBlockMapQuery = [q|
             -- getTxsBlockMapQuery
@@ -283,29 +284,34 @@ getProvenStudentTransactionsSince studentId sinceTime = do
             left join  Submissions
                    on  Transactions.submission_hash = Submissions.hash
 
-            left join  Assignments
-                   on  Submissions .assignment_hash = Assignments.hash
+            left join  StudentAssignments
+                   on  StudentAssignments.assignment_hash = Submissions.assignment_hash
 
-            where      student_addr  = ?
-                  and  time         >= ?
-                  and  idx           = -1
+            left join  Assignments
+                   on  StudentAssignments.assignment_hash = Assignments.hash
+
+            where      StudentAssignments.student_addr  =  ?
+                  and  time                            >=  ?
+                  and  Transactions.idx                <> -1
         |]
 
     -- Returns `PrivateBlock` in normalized format, with metadata.
-    getBlockData :: DBM m => Id PrivateBlock -> m BlockData
-    getBlockData blockId = do
-        (listToMaybe <$> query getBlockDataQuery (Only blockId))
-            `assertJust` BlockDoesNotExist blockId
+    getBlockData :: DBM m => Word32 -> m BlockData
+    getBlockData blockIdx = do
+        puts "BlockData?"
+        (listToMaybe <$> query getBlockDataQuery (Only blockIdx))
+            `assertJust` BlockWithIndexDoesNotExist blockIdx
+            <* puts "BlockData."
       where
         -- TODO: prune fields that aren't needed.
         getBlockDataQuery = [q|
             -- getBlockData
-            select  idx
-                    hash
-                    time
-                    prev_hash
-                    atg_delta
-                    mroot
+            select  idx,
+                    hash,
+                    time,
+                    prev_hash,
+                    atg_delta,
+                    mroot,
                     mtree
             from    Blocks
             where   idx = ?
@@ -329,16 +335,13 @@ getAllNonChainedTransactions = do
 
         from       Transactions
 
-        left join  BlockTxs
-               on  Transactions.hash = BlockTxs.tx_hash
-
         left join  Submissions
                on  submission_hash = Submissions.hash
 
         left join  Assignments
                on  assignment_hash = Assignments.hash
 
-        where  blk_idx = -1
+        where  idx = -1
     |]
 
 getLastBlockIdAndIdx :: DBM m => m (Hash PrivateBlockHeader, Word32)
@@ -380,12 +383,14 @@ createBlock delta = do
             , getEmptyMerkleTree tree
             )
 
-        for_ txs' $ \(txIdx, tid) -> do
-            _ <- getTransaction tid `assertJust` TransactionDoesNotExist tid
+        puts "F O R   T R A N S A C T I O N S"
+        put' (txs')
 
-            execute setTxIndexRequest    (txIdx :: Word32, tid)
-            execute assignToBlockRequest (bid, tid)
+        for_ txs' $ \(txIdx, txId) -> do
+            execute setTxIndexRequest    (txIdx :: Word32, txId)
+            execute assignToBlockRequest (bid, txId)
 
+        puts "WE DON'T ROLLBACK, DO WE?"
         return ()
   where
     createBlockRequest = [q|
