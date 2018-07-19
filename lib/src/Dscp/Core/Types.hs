@@ -77,6 +77,7 @@ import Control.Lens (Getter, makeLenses, to)
 import Data.Map (Map)
 import Fmt (blockListF, build, indentF, listF, nameF, (+|), (+||), (|+), (||+))
 
+import Dscp.Core.Address
 import Dscp.Crypto (HasHash, Hash, PublicKey, Raw, Signature, hash, hashF, unsafeHash)
 import Dscp.Util (HasId (..))
 
@@ -84,15 +85,6 @@ import Dscp.Util (HasId (..))
 -- General
 ----------------------------------------------------------------------------
 
--- | 'Address' datatype. Not 'newtype', because later it will
--- inevitably become more complex.
--- TODO: maybe we should use a shorter hash for address, like in Cardano?
-data Address = Address
-    { addrHash :: !(Hash PublicKey)
-    } deriving (Eq, Ord, Show, Generic)
-
-mkAddr :: PublicKey -> Address
-mkAddr = Address . hash
 
 newtype StakeholderId = StakeholderId
     { unStakeholderId :: PublicKey
@@ -307,7 +299,7 @@ data TxInAcc = TxInAcc
     } deriving (Eq, Ord, Generic, Show)
 
 instance Buildable TxInAcc where
-    build TxInAcc{..} = "TxInnAcc {" +|| tiaAddr ||+ " nonce " +|| tiaNonce ||+ "}"
+    build TxInAcc{..} = "TxInnAcc {" +| tiaAddr |+ " nonce " +|| tiaNonce ||+ "}"
 
 -- | Money transaction output.
 data TxOut = TxOut
@@ -316,7 +308,7 @@ data TxOut = TxOut
     } deriving (Eq, Ord, Generic, Show)
 
 instance Buildable TxOut where
-    build TxOut{..} = "<" +|| txOutAddr ||+ ", " +|| txOutValue ||+ ">"
+    build TxOut{..} = "<" +| txOutAddr |+ ", " +| txOutValue |+ ">"
 
 -- | Transaction. Accounting-style money transfer.
 data Tx = Tx
@@ -327,8 +319,7 @@ data Tx = Tx
 
 instance Buildable Tx where
     build Tx{..} =
-        "Tx { from: " +|| build txInAcc ||+ "; inValue: " +||
-        build txInValue ||+ "; outs:" +|| listF txOuts ||+ " }"
+        "Tx { from: " +| txInAcc |+ "; inValue: " +| txInValue |+ "; outs:" +| listF txOuts |+ " }"
 
 type TxId = Hash Tx
 
@@ -347,7 +338,7 @@ data TxWitness = TxWitness
 
 instance Buildable TxWitness where
     build TxWitness {..} =
-        "TxWitness { " +|| build txwSig ||+ ", pk: " +|| build txwPk ||+ " }"
+        "TxWitness { " +| txwSig |+ ", pk: " +| txwPk |+ " }"
 
 -- | Transaction coupled with witness.
 data TxWitnessed = TxWitnessed
@@ -357,7 +348,7 @@ data TxWitnessed = TxWitnessed
 
 instance Buildable TxWitnessed where
     build TxWitnessed {..} =
-        "TxWitnessed { " +| build twTx |+ ", " +| build twWitness |+  " }"
+        "TxWitnessed { " +| twTx |+ ", " +| twWitness |+  " }"
 
 
 -- | Generalised version of transaction, other types to appear
@@ -367,14 +358,14 @@ data GTx =
     deriving (Generic, Eq, Show)
 
 instance Buildable GTx where
-    build (GMoneyTx tw) = "GMoneyTx: " +| build tw
+    build (GMoneyTx tw) = "GMoneyTx: " +| tw |+ ""
 
 data GTxWitnessed =
     GMoneyTxWitnessed TxWitnessed
     deriving (Generic, Eq, Show)
 
 instance Buildable GTxWitnessed where
-    build (GMoneyTxWitnessed tw) = "GMoneyTxWitnessed: " +| build tw
+    build (GMoneyTxWitnessed tw) = "GMoneyTxWitnessed: " +| tw |+ ""
 
 ----------------------------------------------------------------------------
 -- Blocks/Transaction

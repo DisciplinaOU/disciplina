@@ -8,7 +8,7 @@ import Data.Time.Clock (UTCTime)
 import Servant
 
 import qualified Dscp.Core.Types as Core
-import Dscp.Crypto (Hash, deterministic, genSecretKey, toPublic)
+import Dscp.Crypto (Hash, genSecretKey, toPublic, withIntSeed)
 import Dscp.DB.SQLite (sqlTransaction)
 import Dscp.Educator.Launcher (EducatorWorkMode)
 import Dscp.Educator.Web.Student.API (StudentAPI)
@@ -32,7 +32,7 @@ servantHandlers
 
 -- TODO [DSCP-141]: remove
 student :: Student
-student = Core.mkAddr . toPublic $ deterministic "" genSecretKey
+student = Core.mkAddr . toPublic $ withIntSeed 123 genSecretKey
 
 getCourses
     :: EducatorWorkMode ctx m

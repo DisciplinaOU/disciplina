@@ -30,7 +30,6 @@ import GHC.Show (Show (show))
 import Dscp.Core (Assignment (..), AssignmentType (..), Course, Grade, SignedSubmission (..),
                   Submission (..), SubmissionWitness (..), mkAddr, offlineHash)
 import Dscp.Crypto (PublicKey, SecretKey, hash, keyGen, sign, withIntSeed)
-import qualified Dscp.Crypto as Crypto
 import Dscp.Educator (PrivateTx (..))
 import Dscp.Util (HasId (..))
 
@@ -60,7 +59,7 @@ infixr 5 .=.
 -- Perhaps later we should refuse using with function for the sake of
 -- pregenerated lists of items.
 genSecureRandom :: MonadPseudoRandom ChaChaDRG a -> Gen a
-genSecureRandom rand = arbitrary <&> \seed -> Crypto.withIntSeed seed rand
+genSecureRandom rand = arbitrary <&> \seed -> withIntSeed seed rand
 
 data GenCtx = GenCtx QCGen Int
 

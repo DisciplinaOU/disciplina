@@ -47,6 +47,8 @@ witness_params="
 --bind 127.0.0.1:4010:4011
 --db-path $tmp_files/witness.db
 --log-dir $tmp_files/logs
+--key $tmp_files/witness.key
+--key-gen
 "
 
 if [[ "$node" == "educator" ]]; then

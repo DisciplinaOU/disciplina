@@ -3,15 +3,11 @@ module Dscp.Core.Serialise () where
 import Codec.Serialise (Serialise (..))
 
 import Dscp.Core.Types
-import Dscp.Util.Serialise (decodeCrcProtected, encodeCrcProtected)
 
 -- TODO: move to well-specified serialisation instead of generic one.
 deriving instance Serialise Course
 deriving instance Serialise Subject
 
-instance Serialise Address where
-    encode = encodeCrcProtected . addrHash
-    decode = Address <$> decodeCrcProtected
 
 instance Serialise Grade
 instance Serialise ATGNode

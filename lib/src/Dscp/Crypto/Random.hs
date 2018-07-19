@@ -5,7 +5,6 @@ module Dscp.Crypto.Random
        , runSecureRandom
        , secureRandomBS
 
-       , deterministic
        , randomNumber
        , randomNumberInRange
        ) where
@@ -13,8 +12,7 @@ module Dscp.Crypto.Random
 import Crypto.Number.Basic (numBytes)
 import Crypto.Number.Serialize (os2ip)
 import Crypto.OpenSSL.Random (randBytes)
-import Crypto.Random (ChaChaDRG, MonadPseudoRandom, MonadRandom, drgNewSeed, getRandomBytes,
-                      seedFromInteger, withDRG)
+import Crypto.Random (MonadRandom, getRandomBytes)
 import qualified Data.ByteArray as ByteArray (convert)
 
 -- | Generate a cryptographically random 'ByteString' of specific length.
@@ -31,14 +29,6 @@ runSecureRandom = liftIO . runSecureRandomIO
 
 instance MonadRandom SecureRandomM where
     getRandomBytes n = SecureRandomM (ByteArray.convert <$> secureRandomBS n)
-
--- | You can use 'deterministic' on any 'MonadRandom' computation to make it
--- use a seed (hopefully produced by a Really Secure™ randomness source). The
--- seed has to have enough entropy to make this function secure.
-deterministic :: ByteString -> MonadPseudoRandom ChaChaDRG a -> a
-deterministic seed gen = fst $ withDRG chachaSeed gen
-  where
-    chachaSeed = drgNewSeed . seedFromInteger . os2ip $ seed
 
 -- | Generate a random number in range [0, n).
 --
