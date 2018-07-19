@@ -2,6 +2,10 @@
 
 module Dscp.Witness.Launcher.Resource
        ( WitnessResources (..)
+       , wrLogging
+       , wrDB
+       , wrNetwork
+       , wrKey
        ) where
 
 import Loot.Log.Internal (logNameSelL, _GivenName)
@@ -37,8 +41,6 @@ instance HasLens ZTNetCliEnv WitnessResources ZTNetCliEnv where
     lensOf = wrNetwork . lensOf @ZTNetCliEnv
 instance HasLens ZTNetServEnv WitnessResources ZTNetServEnv where
     lensOf = wrNetwork . lensOf @ZTNetServEnv
-instance HasLens KeyResources WitnessResources KeyResources where
-    lensOf = wrKey
 
 instance AllocResource WitnessParams WitnessResources where
     allocResource WitnessParams{..} = do

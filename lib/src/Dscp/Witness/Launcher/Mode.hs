@@ -13,9 +13,6 @@ module Dscp.Witness.Launcher.Mode
 
       -- * RealMode
     , WitnessRealMode
-
-      -- * Other
-    , SDActions
     ) where
 
 import Control.Lens (makeLenses)
@@ -29,9 +26,10 @@ import Dscp.DB.Rocks.Real.Types (RocksDB)
 import qualified Dscp.Launcher.Mode as Basic
 import Dscp.Launcher.Rio (RIO)
 import Dscp.Network ()
-import Dscp.Snowdrop.Actions (SDActionsM)
+import Dscp.Resource.Keys (KeyResources)
+import Dscp.Snowdrop.Actions (SDActions)
 import Dscp.Witness.Launcher.Params (WitnessParams)
-import Dscp.Witness.Launcher.Resource (WitnessResources)
+import Dscp.Witness.Launcher.Resource (WitnessResources, wrDB, wrKey, wrLogging, wrNetwork)
 import Dscp.Witness.Mempool (MempoolVar)
 
 ---------------------------------------------------------------------
@@ -54,14 +52,13 @@ type WitnessWorkMode ctx m =
     , HasLens' ctx Z.ZTNetServEnv
     , HasLens' ctx MempoolVar
     , HasLens' ctx SDActions
+    , HasLens' ctx KeyResources
 
     )
 
 ---------------------------------------------------------------------
 -- WorkMode implementation
 ---------------------------------------------------------------------
-
-type SDActions = SDActionsM (RIO WitnessContext)
 
 -- | Context is resources plus some runtime variables.
 data WitnessContext = WitnessContext
@@ -85,15 +82,17 @@ type WitnessRealMode = RIO WitnessContext
 instance HasLens WitnessParams WitnessContext WitnessParams where
     lensOf = wcParams
 instance HasLens LoggingIO WitnessContext LoggingIO where
-    lensOf = wcResources . lensOf @LoggingIO
+    lensOf = wcResources . wrLogging
 instance HasLens RocksDB WitnessContext RocksDB where
-    lensOf = wcResources . lensOf @RocksDB
+    lensOf = wcResources . wrDB
 instance HasLens Z.ZTGlobalEnv WitnessContext Z.ZTGlobalEnv where
-    lensOf = wcResources . lensOf @Z.ZTGlobalEnv
+    lensOf = wcResources . wrNetwork . lensOf @Z.ZTGlobalEnv
 instance HasLens Z.ZTNetCliEnv WitnessContext Z.ZTNetCliEnv where
-    lensOf = wcResources . lensOf @Z.ZTNetCliEnv
+    lensOf = wcResources . wrNetwork . lensOf @Z.ZTNetCliEnv
 instance HasLens Z.ZTNetServEnv WitnessContext Z.ZTNetServEnv where
-    lensOf = wcResources . lensOf @Z.ZTNetServEnv
+    lensOf = wcResources . wrNetwork . lensOf @Z.ZTNetServEnv
+instance HasLens KeyResources WitnessContext KeyResources where
+    lensOf = wcResources . wrKey
 instance HasLens MempoolVar WitnessContext MempoolVar where
     lensOf = wcMempool
 instance HasLens SDActions WitnessContext SDActions where

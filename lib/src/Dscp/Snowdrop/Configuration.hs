@@ -2,7 +2,7 @@ module Dscp.Snowdrop.Configuration where
 
 import Fmt (build, (+|))
 
-import Snowdrop.Model.Block (Block, BlockRef (..), Blund, TipKey, TipValue)
+import Snowdrop.Model.Block (Block, BlockRef (..), BlockStateException, Blund, TipKey, TipValue)
 import Snowdrop.Model.State.Accounting.Account (Account)
 import Snowdrop.Model.State.Core (SValue, StatePException, StateTx (..))
 import Snowdrop.Model.State.Restrict (RestrictionInOutException)
@@ -19,8 +19,8 @@ import Dscp.Crypto (PublicKey, Signature, hashF)
 
 type SHeader = T.Header
 type SPayload = [StateTx Ids Proofs Values]
-type SUndo = ChangeSet Ids Values
 type SBlock = Block SHeader SPayload
+type SUndo = ChangeSet Ids Values
 type SBlund = Blund SHeader SPayload SUndo
 
 ----------------------------------------------------------------------------
@@ -54,10 +54,6 @@ instance IdSumPrefixed Ids where
     idSumPrefix (BlockRefIds _)  = blockPrefix
     idSumPrefix (AccountInIds _) = accountPrefix
 
-type instance SValue TipKey = TipValue HeaderHash
-type instance SValue (BlockRef HeaderHash) = SBlund
-type instance SValue Address = Account
-
 ----------------------------------------------------------------------------
 -- Values
 ----------------------------------------------------------------------------
@@ -67,6 +63,10 @@ data Values
     | BlundVal SBlund
     | AccountOutVal Account
     deriving (Eq, Show, Generic)
+
+type instance SValue TipKey = TipValue HeaderHash
+type instance SValue (BlockRef HeaderHash) = SBlund
+type instance SValue Address = Account
 
 ----------------------------------------------------------------------------
 -- Proofs
@@ -96,6 +96,7 @@ data ExpanderException =
 
 data Exceptions
     = ExpanderRestrictionError RestrictionInOutException
+    | BlockStateError (BlockStateException Ids)
     | CSMappendError (CSMappendException Ids)
     | StatePError StatePException
     | ExpanderError ExpanderException

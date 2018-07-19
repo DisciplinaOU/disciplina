@@ -27,6 +27,8 @@ import Dscp.Educator.Secret (MonadEducatorSecret)
 import Dscp.Educator.Secret.Types (EducatorSecret)
 import qualified Dscp.Launcher.Mode as Basic
 import Dscp.Launcher.Rio (RIO)
+import Dscp.Resource.Keys (KeyResources)
+import Dscp.Snowdrop.Actions (SDActions)
 import qualified Dscp.Witness as W
 import Dscp.Witness.Mempool (MempoolVar)
 
@@ -47,7 +49,7 @@ type EducatorWorkMode ctx m =
     , HasLens' ctx EducatorSecret
     )
 
--- | Set of typeclasses which define capabilities both of Educator and W.
+-- | Set of typeclasses which define capabilities both of Educator and Witness.
 type CombinedWorkMode ctx m =
     ( EducatorWorkMode ctx m
     , W.WitnessWorkMode ctx m
@@ -95,10 +97,12 @@ instance HasLens Z.ZTNetCliEnv EducatorContext Z.ZTNetCliEnv where
     lensOf = ecWitnessCtx . lensOf @Z.ZTNetCliEnv
 instance HasLens Z.ZTNetServEnv EducatorContext Z.ZTNetServEnv where
     lensOf = ecWitnessCtx . lensOf @Z.ZTNetServEnv
+instance HasLens KeyResources EducatorContext KeyResources where
+    lensOf = ecWitnessCtx . lensOf @KeyResources
 instance HasLens MempoolVar EducatorContext MempoolVar where
     lensOf = ecWitnessCtx . lensOf @MempoolVar
-instance HasLens W.SDActions EducatorContext W.SDActions where
-    lensOf = ecWitnessCtx . lensOf @W.SDActions
+instance HasLens SDActions EducatorContext SDActions where
+    lensOf = ecWitnessCtx . lensOf @SDActions
 
 ----------------------------------------------------------------------------
 -- Sanity check

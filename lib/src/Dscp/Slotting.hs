@@ -15,7 +15,7 @@ newtype SlotId = SlotId Integer deriving (Eq, Ord, Show, Generic)
 -- TODO pass it instead of fixing.
 -- In microseconds.
 slotLength :: Integer
-slotLength = 20000000 -- 20 sec
+slotLength = 30000000 -- 30 sec
 
 getTimeMcs :: MonadIO m => m Integer
 getTimeMcs = floor . (*1000000) . toRational <$> liftIO getPOSIXTime

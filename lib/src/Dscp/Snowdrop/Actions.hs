@@ -1,7 +1,8 @@
 -- | DB-related actions.
 
 module Dscp.Snowdrop.Actions
-    ( SDActionsM (..)
+    ( SDActions
+    , SDActionsM (..)
     , initSDActions
     ) where
 
@@ -18,6 +19,8 @@ import Dscp.Snowdrop.Storage.Avlp (AVLChgAccum, ClientError (..), RememberForPro
                                    initAVLPureStorage)
 import Dscp.Snowdrop.Storage.Pure (blockDbActions)
 
+-- It should be something more complex than IO.
+type SDActions = SDActionsM IO
 
 -- Parameter m will be instantiated with RIO Context when the context is defined.
 data SDActionsM m = SDActionsM
