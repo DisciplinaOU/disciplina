@@ -13,7 +13,8 @@ import Servant
 
 import qualified Dscp.Core.Types as Core
 import Dscp.Crypto (Hash)
-import Dscp.Educator.Web.Student.Types (Assignment, BlkProof, Course, Submission)
+import Dscp.Educator.Web.Student.Types (Assignment, BlkProof, Course, IsEnrolled, IsFinal,
+                                        Submission)
 
 type StudentAPI
     = "v1"
@@ -39,7 +40,7 @@ type GetCourses
     = "courses"
     :> Summary "Get Educator's courses"
     :> Description "Gets a list of Educator's courses, both enrolled and available."
-    :> QueryParam "enrolled" Bool
+    :> QueryParam "enrolled" IsEnrolled
     :> Verb 'GET 200 '[JSON] [Course]
 
 type GetCourse
@@ -59,7 +60,7 @@ type GetAssignments
                    \used to specify specific course, type, etc."
     :> QueryParam "course" Core.Course
     :> QueryParam "type" Core.DocumentType
-    :> QueryParam "final" Bool
+    :> QueryParam "final" IsFinal
     :> Verb 'GET 200 '[JSON] [Assignment]
 
 type GetAssignment

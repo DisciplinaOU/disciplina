@@ -18,6 +18,7 @@ module Dscp.Core.Types
        , SubmissionSig
        , SignedSubmission (..)
        , SubmissionWitness (..)
+       , documentType
        , _aDocumentType
        , aDocumentType
        , aCourseId
@@ -102,7 +103,7 @@ instance HasId Course
 
 -- | Assignment can be either regular of final
 data AssignmentType = Regular | CourseFinal
-    deriving (Eq, Show, Generic)
+    deriving (Eq, Ord, Show, Generic)
 
 -- | Assignment doesn't contain actual assignment contents - only hash of them.
 data Assignment = Assignment
@@ -114,7 +115,7 @@ data Assignment = Assignment
     -- ^ Assignment type
     , _aDesc         :: !Text
     -- ^ Description of assignment
-    } deriving (Eq, Show, Generic)
+    } deriving (Eq, Ord, Show, Generic)
 
 -- | We cannot make it do 'hash' on 'Assignment' direclty, because 'Serialisable' instance
 --   is required for that. And when we `import Dscp.Educator.Serialise ()` we get dependency
@@ -133,7 +134,7 @@ data Submission = Submission
     -- ^ Hash of submission contents
     , _sAssignment   :: !Assignment
     -- ^ Assignment of this submission
-    } deriving (Eq, Show, Generic)
+    } deriving (Eq, Ord, Show, Generic)
 
 -- | A hash which indicates that a submission or an assignment
 -- are offline.

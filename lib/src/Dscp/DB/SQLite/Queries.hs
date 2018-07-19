@@ -2,7 +2,10 @@
 
 module Dscp.DB.SQLite.Queries where
 
+import Control.Lens (makePrisms)
+import Data.Coerce (coerce)
 import Database.SQLite.Simple (Only (..), Query)
+import Database.SQLite.Simple.ToField (ToField)
 import Database.SQLite.Simple.ToRow (ToRow (..))
 
 import Text.InterpolatedString.Perl6 (q)
@@ -11,21 +14,33 @@ import Dscp.Core.Serialise ()
 import Dscp.Core.Types (Assignment (..), Course, SignedSubmission (..), Student, Subject,
                         Submission (..), aContentsHash, aCourseId, aDesc, aType, sAssignment,
                         sContentsHash, sStudentId, ssSubmission, ssWitness)
-import Dscp.DB.SQLite.Class
+import Dscp.DB.SQLite.Class (MonadSQLiteDB (..))
 import Dscp.DB.SQLite.Instances ()
-
+import Dscp.DB.SQLite.Types (TxBlockIdx (TxInMempool))
 import Dscp.Educator.Serialise ()
 import Dscp.Educator.Txs (PrivateTx (..), ptGrade, ptSignedSubmission, ptTime)
 import Dscp.Util (HasId (..), assert, assertJust, idOf)
 
 data DomainError
-    = CourseDoesNotExist                  (Id Course)
-    | StudentDoesNotExist                 (Id Student)
-    | AssignmentDoesNotExist              (Id Assignment)
-    | StudentWasNotEnrolledOnTheCourse    (Id Student) (Id Course)
-    | StudentWasNotSubscribedOnAssignment (Id Student) (Id Assignment)
-    | SubmissionDoesNotExist              (Id Submission)
-    deriving (Show, Typeable)
+    = CourseDoesNotExist
+      { deCourseId :: Id Course }
+    | StudentDoesNotExist
+      { deStudentId :: Id Student }
+    | AssignmentDoesNotExist
+      { deAssignmentId :: Id Assignment }
+    | StudentWasNotEnrolledOnTheCourse
+      { deStudentId :: Id Student
+      , deCourseId  :: Id Course }
+    | StudentWasNotSubscribedOnAssignment
+      { deStudentId    :: Id Student
+      , deAssignmentId :: Id Assignment }
+    | SubmissionDoesNotExist
+      { deSubmissionId :: Id Submission }
+    deriving (Show, Typeable, Eq)
+
+-- Using records ^ to get sensible autoderived json instances.
+
+makePrisms ''DomainError
 
 instance Exception DomainError
 
@@ -172,7 +187,7 @@ createSignedSubmission sigSub = do
     generateSubmissionRequest :: Query
     generateSubmissionRequest = [q|
         insert into  Submissions
-        values       (?, ?, ?, ?, ?)
+        values       (?, ?, ?, ?, ?, null)
     |]
 
 setStudentAssignment :: DBM m => Id Student -> Id Assignment -> m ()
@@ -234,6 +249,17 @@ createCourse course desc subjects = do
     attachSubjectToCourseRequest = [q|
         insert into  Subjects
         values       (?, ?, "")
+    |]
+
+getCourseSubjects :: DBM m => Course -> m [Subject]
+getCourseSubjects course = do
+    subjects :: [Only Subject] <- query getCourceSubjectsQuery (Only course)
+    return (coerce subjects)
+  where
+    getCourceSubjectsQuery = [q|
+        select id
+        from   Subjects
+        where  course_id = ?
     |]
 
 existsCourse :: DBM m => Id Course -> m Bool
@@ -319,7 +345,7 @@ getSignedSubmission submissionHash = do
         where      Submissions.hash = ?
     |]
 
-createTransaction :: DBM m => PrivateTx -> m (Id PrivateTx)
+createTransaction :: (DBM m, ToField TxBlockIdx) => PrivateTx -> m (Id PrivateTx)
 createTransaction trans = do
     transaction $ do
         let ptid    = trans^.idOf
@@ -333,7 +359,7 @@ createTransaction trans = do
             , subHash
             , trans^.ptGrade
             , trans^.ptTime
-            , (-1 :: Int)
+            , TxInMempool
             )
 
         return ptid

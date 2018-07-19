@@ -11,6 +11,7 @@ import Servant (Handler, Server, hoistServer, serve, throwError)
 
 import Dscp.Educator.Launcher (EducatorContext, EducatorRealMode, EducatorWorkMode)
 import Dscp.Educator.Web.Student.API (StudentAPI, studentAPI)
+import Dscp.Educator.Web.Student.Error (toServantErr, unexpectedToServantErr)
 import Dscp.Educator.Web.Student.Handlers (servantHandlers)
 import Dscp.Launcher.Rio (runRIO)
 import Dscp.Web (NetworkAddress, serveWeb)
@@ -27,7 +28,9 @@ convertHandler
     -> EducatorRealMode a
     -> Handler a
 convertHandler ctx handler =
-    liftIO (runRIO ctx handler) `catch` throwError
+    liftIO (runRIO ctx handler)
+        `catch` (throwError . toServantErr)
+        `catchAny` (throwError . unexpectedToServantErr)
 
 serveStudentAPIReal :: NetworkAddress -> EducatorRealMode ()
 serveStudentAPIReal addr = do

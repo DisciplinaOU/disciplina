@@ -5,9 +5,8 @@ module Test.Dscp.DB.SQLite.Queries where
 
 import Prelude hiding (toList)
 
-import Data.List.NonEmpty (NonEmpty, toList)
-
 import Dscp.DB.SQLite as DB
+import Dscp.Util (allUniqueOrd)
 
 import Test.Dscp.DB.SQLite.Common
 
@@ -117,7 +116,11 @@ spec_Instances = do
 
     describe "Concrete operations from domain" $ do
         it "getStudentCourses/enrollStudentToCourse" $ do
-            sqliteProperty $ \(student, course1, course2, course3) -> do
+            sqliteProperty $ \
+                (student,
+                 delayedGen (vectorUnique 3)
+                    -> [course1, course2, course3]
+                ) -> do
                 let courses = [course1, course2, course3]
 
                 studentId <- DB.createStudent student
@@ -137,12 +140,11 @@ spec_Instances = do
         it "getStudentAssignments" $ do
             sqliteProperty $ \
                 ( student
-                , course1
-                , course2
-                , (toList -> toHerCourse1)    :: NonEmpty Assignment
-                , (toList -> toHerCourse2)    :: NonEmpty Assignment
-                , (toList -> notToHerCourse1) :: NonEmpty Assignment
-                , (toList -> notToHerCourse2) :: NonEmpty Assignment
+                , (delayedGen (vectorUnique 2)
+                    -> [course1, course2])
+                , (delayedGen (vectorUniqueOf 4 $ listOf1 @Assignment arbitrary)
+                    -> [toHerCourse1, toHerCourse2,
+                        notToHerCourse1, notToHerCourse2])
                 ) -> do
 
                     studentId <- DB.createStudent student
@@ -159,23 +161,30 @@ spec_Instances = do
                     let notToHer = (notToHerCourse1 & mapped.aCourseId .~ courseId1)
                                 <> (notToHerCourse2 & mapped.aCourseId .~ courseId2)
 
+                    -- TODO: use PropertyM in base to write proper preconditions?
+                    if not $ allUniqueOrd @(Id Assignment) $
+                         map getId $ toHer <> notToHer
+                    then return $ property rejected
+                    else do
+                        --_ <- error "stahp!"
+                        for_ toHer $ \assignment -> do
+                            assignmentId <- DB.createAssignment assignment
+                            DB.setStudentAssignment studentId assignmentId
 
-                    --_ <- error "stahp!"
-                    for_ toHer $ \assignment -> do
-                        assignmentId <- DB.createAssignment assignment
-                        DB.setStudentAssignment studentId assignmentId
+                        for_ notToHer $ \assignment -> do
+                            _ <- DB.createAssignment assignment
+                            return ()
 
-                    for_ notToHer $ \assignment -> do
-                        _ <- DB.createAssignment assignment
-                        return ()
+                        --_ <- error "stahp!"
+                        assignments1 <-
+                            DB.getStudentAssignments studentId courseId1
+                        assignments2 <-
+                            DB.getStudentAssignments studentId courseId2
 
-                    --_ <- error "stahp!"
-                    assignments1 <- DB.getStudentAssignments studentId courseId1
-                    assignments2 <- DB.getStudentAssignments studentId courseId2
+                        let equal = (==) `on` sortBy (comparing getId)
 
-                    let equal = (==) `on` sortBy (comparing getId)
-
-                    return $ (assignments1 <> assignments2) `equal` toHer
+                        return $ property $
+                            (assignments1 <> assignments2) `equal` toHer
 
         it "submitAssignment" $
             sqliteProperty $ \sigSubmission -> do

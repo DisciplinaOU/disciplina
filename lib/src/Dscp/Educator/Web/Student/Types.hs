@@ -2,14 +2,25 @@
 -- | Datatypes for Student HTTP API
 
 module Dscp.Educator.Web.Student.Types
-       ( Course (..)
+       ( Student
+       , IsFinal (..)
+       , IsEnrolled (..)
+       , HasProof (..)
+       , Course (..)
        , Assignment (..)
        , Submission (..)
        , Grade (..)
        , BlkProof (..)
        , ErrResponse (..)
+
+       , _IsFinal
+       , assignmentTypeRaw
+       , liftAssignment
+       , liftSubmission
+       , aDocumentType
        ) where
 
+import Control.Lens (Iso', iso, makePrisms)
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
 import Data.Time.Clock (UTCTime)
@@ -18,11 +29,28 @@ import Servant (FromHttpApiData (..))
 import Dscp.Core.Address (addrFromText)
 import Dscp.Core.Aeson ()
 import qualified Dscp.Core.Types as Core
+import Dscp.Crypto (hash)
 import Dscp.Crypto (Hash, Raw)
 import Dscp.Educator.Txs (PrivateTx (..))
 import Dscp.Educator.Web.Student.Error (APIError)
 import Dscp.Util (fromBase64)
 import Dscp.Util.Aeson (AsByteString, Base64Encoded)
+
+type Student = Core.Student
+
+-- | Whether assignment is final in course.
+newtype IsFinal = IsFinal { unIsFinal :: Bool }
+    deriving (Eq, Show)
+
+makePrisms ''IsFinal
+
+-- | Whether student is enrolled into a course.
+newtype IsEnrolled = IsEnrolled { unIsEnrolled :: Bool }
+    deriving (Eq, Show)
+
+-- | Whether transaction has been published into public chain.
+newtype HasProof = HasProof { unHasProof :: Bool }
+    deriving (Eq, Show)
 
 data Course = Course
     { cId         :: !Core.Course
@@ -63,11 +91,51 @@ data ErrResponse = ErrResponse
     } deriving (Show, Eq, Generic)
 
 ---------------------------------------------------------------------------
+-- Simple functions
+---------------------------------------------------------------------------
+
+assignmentTypeRaw :: Iso' Core.AssignmentType IsFinal
+assignmentTypeRaw = iso forth back
+  where
+    back = \case
+        IsFinal False -> Core.Regular
+        IsFinal True  -> Core.CourseFinal
+    forth = \case
+        Core.Regular     -> IsFinal False
+        Core.CourseFinal -> IsFinal True
+
+liftAssignment :: Core.Assignment -> Maybe Submission -> Assignment
+liftAssignment a lastSubmission =
+    Assignment
+    { aHash = hash a
+    , aCourseId = Core._aCourseId a
+    , aContentsHash = Core._aContentsHash a
+    , aIsFinal = Core._aType a ^. assignmentTypeRaw . _IsFinal
+    , aDesc = Core._aDesc a
+    , aLastSubmission = lastSubmission
+    }
+
+liftSubmission :: Core.Submission -> Maybe Grade -> Submission
+liftSubmission s sGrade =
+    Submission
+    { sHash = hash s
+    , sContentsHash = Core._sContentsHash s
+    , sAssignmentHash = hash (Core._sAssignment s)
+    , ..
+    }
+
+aDocumentType :: Assignment -> Core.DocumentType
+aDocumentType = Core.documentType . aContentsHash
+
+---------------------------------------------------------------------------
 -- JSON instances
 ---------------------------------------------------------------------------
 
 deriveJSON defaultOptions ''PrivateTx
 
+deriveJSON defaultOptions ''IsFinal
+deriveJSON defaultOptions ''IsEnrolled
+deriveJSON defaultOptions ''HasProof
 deriveJSON defaultOptions ''Course
 deriveJSON defaultOptions ''Assignment
 deriveJSON defaultOptions ''Submission
@@ -82,6 +150,8 @@ deriveJSON defaultOptions ''ErrResponse
 deriving instance FromHttpApiData Core.Course
 deriving instance FromHttpApiData Core.Subject
 deriving instance FromHttpApiData Core.Grade
+deriving instance FromHttpApiData IsEnrolled
+deriving instance FromHttpApiData IsFinal
 
 instance FromHttpApiData Core.DocumentType where
     parseQueryParam "offline" = Right Core.Offline

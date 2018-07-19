@@ -24,8 +24,7 @@ import Prelude hiding (fold)
 
 import Database.SQLite.Simple (Connection, execute, fold, query, setTrace, withConnection,
                                withTransaction)
-
-import Test.QuickCheck.Gen (generate)
+import qualified Loot.Log as Adapter
 
 import Dscp.Core.Types (Address (..), Assignment (..), AssignmentType (..), Course (..), Grade (..),
                         SignedSubmission (..), Submission (..), SubmissionSig,
@@ -47,7 +46,8 @@ import Test.Dscp.Educator.Instances ()
 
 newtype TestSQLiteM a
     = TestSQLiteM { getTestSQLiteM :: ReaderT Connection IO a }
-    deriving (Functor, Applicative, Monad, MonadIO, MonadThrow, MonadCatch)
+    deriving (Functor, Applicative, Monad, MonadIO, MonadThrow, MonadCatch,
+              MonadFail, MonadReader Connection)
 
 runTestSQLiteM :: TestSQLiteM a -> IO a
 runTestSQLiteM action = do
@@ -62,23 +62,18 @@ runTestSQLiteM action = do
         ensureSchemaIsSetUp conn
         -- It stays here, so next time something breaks I don't have to
         -- add it to imports again.
-        setTrace conn (Just putStrLn)
+        setTrace conn Nothing
         getTestSQLiteM action `runReaderT` conn
 
 sqliteProperty
-    :: Testable prop
+    :: (Testable prop, Show a)
     => Arbitrary a
     => (a -> TestSQLiteM prop)
     -> Property
 sqliteProperty action =
+    property $ \input ->
     ioProperty $ do
-        input <- generate arbitrary
         runTestSQLiteM (action input)
-
-throws :: forall e m . (MonadCatch m, Exception e) => m () -> m Bool
-throws action = do
-    (action >> return False) `catch` \(_ :: e) ->
-        return True
 
 instance Adapter.MonadSQLiteDB TestSQLiteM where
     query   theQuery   args = TestSQLiteM $ ReaderT $ \conn -> query   conn theQuery   args
@@ -93,3 +88,7 @@ instance Adapter.MonadSQLiteDB TestSQLiteM where
         TestSQLiteM $ ReaderT $ \conn ->
             conn `withTransaction` do
                 actor conn
+
+instance Adapter.MonadLogging TestSQLiteM where
+    log _ _ _ = pass
+    logName = return $ error "Logger name requested in test"
