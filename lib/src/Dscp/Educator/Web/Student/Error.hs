@@ -3,11 +3,14 @@
 
 module Dscp.Educator.Web.Student.Error
        ( APIError (..)
-       , WrongSubmissionSignature (..)
        , _SubmissionMalformed
        , _BadSubmissionSignature
        , _DeletingGradedSubmission
        , _EntityAbsent
+       , _EntityAlreadyPresent
+       , WrongSubmissionSignature (..)
+       , ObjectAlreadyExistsError (..)
+       , _SubmissionAlreadyExists
 
        , toServantErr
        , unexpectedToServantErr
@@ -18,9 +21,11 @@ import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), encode, object, withO
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
 import Data.Aeson.Types (typeMismatch)
-import Servant (ServantErr (..), err403, err404)
+import Servant (ServantErr (..), err403, err404, err409, err500)
 
 import Dscp.Core.Aeson ()
+import qualified Dscp.Core.Types as Core
+import Dscp.Crypto (Hash)
 import Dscp.DB.SQLite.Queries (DomainError (..))
 import Dscp.Educator.BlockValidation (SubmissionValidationFailure)
 
@@ -31,11 +36,18 @@ data WrongSubmissionSignature
       -- ^ Submission is invalid on itself.
     deriving (Eq, Show)
 
+data ObjectAlreadyExistsError
+    = SubmissionAlreadyExists { saeSubmissionId :: !(Hash Core.Submission) }
+    deriving (Show, Eq)
+
+makePrisms ''ObjectAlreadyExistsError
+
 data APIError
     = SubmissionMalformed
     | BadSubmissionSignature WrongSubmissionSignature
     | DeletingGradedSubmission
     | EntityAbsent DomainError
+    | EntityAlreadyPresent ObjectAlreadyExistsError
     deriving (Show, Eq, Generic, Typeable)
 
 makePrisms ''APIError
@@ -46,6 +58,7 @@ instance Exception APIError
 -- JSON instances
 ---------------------------------------------------------------------------
 
+deriveJSON defaultOptions ''ObjectAlreadyExistsError
 deriveJSON defaultOptions ''WrongSubmissionSignature
 
 instance FromJSON APIError where
@@ -71,6 +84,9 @@ instance ToJSON APIError where
         EntityAbsent err -> object
             [ "missing_entity" .= err
             ]
+        EntityAlreadyPresent err -> object
+            [ "already_present" .= err
+            ]
 
 ---------------------------------------------------------------------------
 -- Functions
@@ -83,6 +99,7 @@ toServantErrNoReason = \case
     BadSubmissionSignature{}   -> err403
     DeletingGradedSubmission{} -> err403
     EntityAbsent{}             -> err404
+    EntityAlreadyPresent{}     -> err409
 
 -- | Make up error which will be returned to client.
 toServantErr :: APIError -> ServantErr

@@ -11,16 +11,13 @@ import Servant
 import qualified Dscp.Core.Types as Core
 import Dscp.Crypto (Hash, deterministic, genSecretKey, toPublic)
 import Dscp.DB.SQLite (sqlTransaction)
-import qualified Dscp.DB.SQLite.Queries as CoreQueries
 import Dscp.Educator.Launcher (EducatorWorkMode)
 import Dscp.Educator.Web.Student.API (StudentAPI)
-import Dscp.Educator.Web.Student.Error (APIError (..))
+import Dscp.Educator.Web.Student.Logic (makeSubmissionVerified)
 import qualified Dscp.Educator.Web.Student.Queries as Queries
-import Dscp.Util (leftToThrow)
 
 import Dscp.Educator.Web.Student.Types (Assignment, BlkProof, Course, IsEnrolled (..), IsFinal (..),
                                         Student, Submission)
-import Dscp.Educator.Web.Student.Util (verifyStudentSubmission)
 
 servantHandlers :: EducatorWorkMode m => ServerT StudentAPI m
 servantHandlers
@@ -80,11 +77,8 @@ getSubmission submissionH =
 makeSubmission
     :: EducatorWorkMode m
     => Core.SignedSubmission -> m Submission
-makeSubmission signedSubmission = do
-    verifyStudentSubmission student signedSubmission
-        & leftToThrow BadSubmissionSignature
-    submissionId <- CoreQueries.submitAssignment signedSubmission
-    getSubmission submissionId
+makeSubmission signedSubmission =
+    makeSubmissionVerified student signedSubmission
 
 deleteSubmission
     :: EducatorWorkMode m

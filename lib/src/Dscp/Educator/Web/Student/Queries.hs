@@ -7,6 +7,7 @@ module Dscp.Educator.Web.Student.Queries
     ( module Dscp.Educator.Web.Student.Queries
     ) where
 
+import Control.Exception.Safe (catchJust)
 import Control.Lens (from, mapping)
 import Data.Coerce (coerce)
 import Data.Time.Clock (UTCTime)
@@ -17,16 +18,17 @@ import Text.InterpolatedString.Perl6 (q)
 
 import Dscp.Core.Serialise ()
 import qualified Dscp.Core.Types as Core
-import Dscp.Crypto (Hash)
+import Dscp.Crypto (Hash, hash)
 import Dscp.DB.SQLite (DomainError (..), MonadSQLiteDB (..), TxBlockIdx (TxInMempool),
                        WithinSQLTransaction)
 import qualified Dscp.DB.SQLite.Queries as Base
+import Dscp.DB.SQLite.Types (asAlreadyExistsError)
 import Dscp.Educator.Txs (PrivateTx)
 import Dscp.Util (Id, assertJust, listToMaybeWarn)
 import Dscp.Util.Aeson (AsByteString (..))
 
 import Dscp.Educator.Serialise ()
-import Dscp.Educator.Web.Student.Error (APIError (..))
+import Dscp.Educator.Web.Student.Error (APIError (..), ObjectAlreadyExistsError (..))
 import Dscp.Educator.Web.Student.Types (Assignment (..), BlkProof (..), Course (..), Grade (..),
                                         IsEnrolled (..), IsFinal (..), Student, Submission (..),
                                         assignmentTypeRaw)
@@ -78,7 +80,7 @@ infixl 1 `filterClauses`
 type MonadStudentAPIQuery m =
     ( MonadSQLiteDB m
     , MonadLogging m
-    , MonadThrow m
+    , MonadCatch m
     )
 
 getCourse
@@ -309,6 +311,18 @@ deleteSubmission student submissionH = do
        where    hash = ?
             and student_addr = ?
     |]
+
+makeSubmission
+    :: MonadStudentAPIQuery m
+    => Core.SignedSubmission -> m (Id Core.Submission)
+makeSubmission signedSubmission =
+    Base.submitAssignment signedSubmission
+        & handleAlreadyPresent
+  where
+    handleAlreadyPresent action =
+        catchJust asAlreadyExistsError action $ \_ -> do
+            let subH = hash (Core._ssSubmission signedSubmission)
+            throwM $ EntityAlreadyPresent (SubmissionAlreadyExists subH)
 
 getBlockTxs
     :: MonadStudentAPIQuery m

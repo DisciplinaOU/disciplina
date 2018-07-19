@@ -42,6 +42,7 @@ library:
     - random
     - reflection
     - rocksdb-haskell
+    - safe-exceptions >= 0.1.4
     - semver
     - serialise
     - serokell-util
