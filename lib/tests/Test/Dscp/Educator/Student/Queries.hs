@@ -13,7 +13,10 @@ import Dscp.Educator.Txs (PrivateTx (..))
 import Dscp.Educator.Web.Student (Assignment (..), Course (..), Grade (..), IsEnrolled (..),
                                   IsFinal (..), MonadStudentAPIQuery, Student, Submission (..),
                                   aDocumentType, assignmentTypeRaw, liftAssignment, liftSubmission,
-                                  _DeletingGradedSubmission, _IsFinal)
+                                  _BadSubmissionSignature, _DeletingGradedSubmission,
+                                  _EntityAlreadyPresent, _FakeSubmissionSignature, _IsFinal,
+                                  _SubmissionAlreadyExists)
+import qualified Dscp.Educator.Web.Student.Logic as Logic
 import qualified Dscp.Educator.Web.Student.Queries as DB
 
 import Test.Common
@@ -69,10 +72,10 @@ getAllSubmissions student =
 
 -- | For advanced queries. Puts SignedSubmissions in db, tolerates repeating
 -- entities.
-prepareAndCreateSubmissions
+prepareForSubmissions
     :: (MonadSQLiteDB m, Container l, Element l ~ Core.SignedSubmission)
     => l -> m ()
-prepareAndCreateSubmissions (toList -> sigSubmissions) = do
+prepareForSubmissions (toList -> sigSubmissions) = do
     let submissions = map Core._ssSubmission sigSubmissions
         assignments = map Core._sAssignment submissions
         courses = map Core._aCourseId assignments
@@ -87,6 +90,14 @@ prepareAndCreateSubmissions (toList -> sigSubmissions) = do
           forM_ (ordNub owners) $ \owner ->
               CoreDB.setStudentAssignment owner
                                           (getId assignment)
+
+-- | For advanced queries. Puts SignedSubmissions in db, tolerates repeating
+-- entities.
+prepareAndCreateSubmissions
+    :: (MonadSQLiteDB m, Container l, Element l ~ Core.SignedSubmission)
+    => l -> m ()
+prepareAndCreateSubmissions (toList -> sigSubmissions) = do
+    prepareForSubmissions sigSubmissions
     mapM_ CoreDB.submitAssignment (nub sigSubmissions)
 
 applyFilterOn :: Eq f => (a -> f) -> (Maybe f) -> [a] -> [a]
@@ -516,7 +527,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                   return $ sortOn sHash submissions == sortOn sHash submissions'
 
     describe "deleteSubmission" $ do
-        it "Deleting of non-existing submission throws" $
+        it "Deletion of non-existing submission throws" $
             sqliteProperty $ \submission -> do
                 _ <- CoreDB.createStudent student1
                 throwsPrism _SubmissionDoesNotExist $
@@ -560,3 +571,31 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
 
                 throwsPrism _SubmissionDoesNotExist $
                     sqlTx $ DB.deleteSubmission otherStudent (hash submission)
+
+    describe "makeSubmission" $ do
+        it "Making same submission twice throws" $
+            sqliteProperty $ \sigSubmission -> do
+                prepareAndCreateSubmissions [sigSubmission]
+                throwsPrism (_EntityAlreadyPresent . _SubmissionAlreadyExists) $
+                    DB.makeSubmission sigSubmission
+
+        it "Pretending to be another student is bad" $
+            sqliteProperty $ \(sigSubmission, badStudent) -> do
+                if Core._sStudentId (Core._ssSubmission sigSubmission) == badStudent
+                then return $ property rejected
+                else do
+                    prepareForSubmissions [sigSubmission]
+                    fmap property $ throwsPrism (_BadSubmissionSignature . _FakeSubmissionSignature) $
+                        Logic.makeSubmissionVerified badStudent sigSubmission
+
+  describe "Transactions" $ do
+    describe "getProofs" $ do
+         let getAllProofs student = sqlTx $ DB.getProofs student Nothing
+
+         it "Returns nothing initially" $
+             sqliteProperty $ \() -> do
+                 _ <- CoreDB.createStudent student1
+                 proofs <- getAllProofs student1
+                 return $ proofs === []
+
+         -- TODO: more tests

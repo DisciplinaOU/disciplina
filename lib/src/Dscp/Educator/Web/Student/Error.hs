@@ -9,6 +9,8 @@ module Dscp.Educator.Web.Student.Error
        , _EntityAbsent
        , _EntityAlreadyPresent
        , WrongSubmissionSignature (..)
+       , _FakeSubmissionSignature
+       , _SubmissionSignatureInvalid
        , ObjectAlreadyExistsError (..)
        , _SubmissionAlreadyExists
 
@@ -35,6 +37,10 @@ data WrongSubmissionSignature
     | SubmissionSignatureInvalid [SubmissionValidationFailure]
       -- ^ Submission is invalid on itself.
     deriving (Eq, Show)
+
+makePrisms ''WrongSubmissionSignature
+
+instance Exception WrongSubmissionSignature
 
 data ObjectAlreadyExistsError
     = SubmissionAlreadyExists { saeSubmissionId :: !(Hash Core.Submission) }
