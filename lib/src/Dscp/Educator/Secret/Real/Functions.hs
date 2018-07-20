@@ -11,11 +11,11 @@ import Loot.Log (MonadLogging, logInfo)
 import System.Directory (doesFileExist)
 import System.FilePath ((</>))
 
+import Dscp.Config (HasBaseConfig, baseConfig, bcAppDirectory)
 import Dscp.Crypto (PassPhrase, decrypt, encrypt, genSecretKey, runSecureRandom)
 import Dscp.Educator.Secret.Real.Error (EducatorSecretError (..), rewrapSecretIOErrors)
 import Dscp.Educator.Secret.Real.Types (EducatorSecret (..), EducatorSecretJson (..),
                                         EducatorSecretParams (..), KeyfileContent)
-import Dscp.Resource.AppDir (AppDirectory (..))
 import Dscp.System (ensureModeIs, mode600, setMode, whenPosix)
 import Dscp.Util (leftToThrow)
 import Dscp.Util.Aeson (Versioned (..))
@@ -40,11 +40,11 @@ fromEducatorSecretJson pp EducatorSecretJson{..} = do
 ---------------------------------------------------------------------
 
 -- | Where keyfile would lie.
-storePath :: EducatorSecretParams -> AppDirectory -> FilePath
-storePath EducatorSecretParams{..} (AppDirectory appDir) =
+storePath :: HasBaseConfig => EducatorSecretParams -> FilePath
+storePath EducatorSecretParams{..} =
     fromMaybe defPath espPath
   where
-    defPath = appDir </> "educator.key"
+    defPath = bcAppDirectory baseConfig </> "educator.key"
 
 -- | Generate store randomly.
 genStore :: MonadIO m => m EducatorSecret
@@ -101,10 +101,10 @@ createStore path pp = do
 -- Store is also created (and assumed to be absent before this function call) if
 -- dedicated flag is passed.
 linkStore
-    :: (MonadIO m, MonadCatch m, MonadLogging m)
-    => EducatorSecretParams -> AppDirectory -> m EducatorSecret
-linkStore params@EducatorSecretParams{..} appDir = do
-    let path = storePath params appDir
+    :: (HasBaseConfig, MonadIO m, MonadCatch m, MonadLogging m)
+    => EducatorSecretParams -> m EducatorSecret
+linkStore params@EducatorSecretParams{..} = do
+    let path = storePath params
     if espGenNew
         then createStore path espPassphrase
         else readStore path espPassphrase

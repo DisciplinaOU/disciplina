@@ -31,6 +31,7 @@ library:
     - interpolatedstring-perl6
     - lens
     - loot-base
+    - loot-config
     - loot-log
     - loot-network
     - log-warper
@@ -58,6 +59,7 @@ library:
     - unix
     - unliftio
     - warp
+    - yaml
 
 tests:
   disciplina-test:

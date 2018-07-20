@@ -12,9 +12,10 @@ import Loot.Network.ZMQ (ZTGlobalEnv, ZTNetCliEnv, ZTNetServEnv)
 
 import Dscp.DB.Rocks.Real.Types (RocksDB)
 import Dscp.DB.SQLite (SQLiteDB)
+import Dscp.Educator.Config (HasEducatorConfig)
 import Dscp.Educator.Launcher.Params (EducatorParams (..))
 import Dscp.Educator.Secret.Types (EducatorSecret)
-import Dscp.Resource (AllocResource (..), AppDirectoryParam (AppDirectoryOS))
+import Dscp.Resource (AllocResource (..))
 import qualified Dscp.Witness.Launcher.Resource as Witness
 
 -- SQL resource should be here too (in the future).
@@ -43,10 +44,9 @@ instance HasLens ZTNetCliEnv EducatorResources ZTNetCliEnv where
 instance HasLens ZTNetServEnv EducatorResources ZTNetServEnv where
     lensOf = erWitnessResources . lensOf @ZTNetServEnv
 
-instance AllocResource EducatorParams EducatorResources where
+instance HasEducatorConfig => AllocResource EducatorParams EducatorResources where
     allocResource EducatorParams{..} = do
-        appDir <- allocResource AppDirectoryOS
         _erWitnessResources <- allocResource epWitnessParams
         _erDB <- allocResource epDBParams
-        _erSecret <- allocResource (epSecretParams, appDir)
+        _erSecret <- allocResource epSecretParams
         return EducatorResources {..}

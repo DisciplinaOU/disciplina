@@ -6,13 +6,14 @@ import Loot.Log (logInfo, logWarning, modifyLogName)
 import Options.Applicative (execParser, fullDesc, helper, info, progDesc)
 
 import Dscp.CLI (versionOption)
-import Dscp.Educator (EducatorParams (..), EducatorWebParams (..), educatorParamsParser,
-                      launchEducatorRealMode, serveStudentAPIReal)
+import Dscp.Config (buildBaseConfig, configPathParser)
+import Dscp.Educator (EducatorConfig, EducatorParams (..), EducatorWebParams (..),
+                      educatorParamsParser, launchEducatorRealMode, serveStudentAPIReal)
 
 main :: IO ()
 main = do
-    educatorParams <- getEducatorParams
-    launchEducatorRealMode educatorParams $
+    (educatorParams, educatorConfig) <- getEducatorParams
+    launchEducatorRealMode educatorConfig educatorParams $
       modifyLogName (<> "node") $ do
         logInfo "This is the stub for Educator node executable"
         logWarning "Please don't forget to implement everything else!"
@@ -20,7 +21,11 @@ main = do
         let apiAddr = ewpStudentApiAddr $ epWebParams educatorParams
         serveStudentAPIReal apiAddr
 
-getEducatorParams :: IO EducatorParams
-getEducatorParams =
-    execParser $ info (helper <*> versionOption <*> educatorParamsParser) $
-    fullDesc <> progDesc "Disciplina educator node."
+getEducatorParams :: IO (EducatorParams, EducatorConfig)
+getEducatorParams = do
+    let parser = (,) <$> educatorParamsParser <*> configPathParser
+    (params, configPath) <- execParser $
+        info (helper <*> versionOption <*> parser) $
+        fullDesc <> progDesc "Disciplina educator node."
+    config <- buildBaseConfig configPath
+    return (params, config)

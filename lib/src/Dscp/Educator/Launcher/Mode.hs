@@ -22,6 +22,7 @@ import Loot.Network.ZMQ as Z
 
 import Dscp.DB.Rocks.Real.Types (RocksDB)
 import Dscp.DB.SQLite (MonadSQLiteDB, SQLiteDB)
+import Dscp.Educator.Config (HasEducatorConfig, withEducatorConfig)
 import Dscp.Educator.Launcher.Params (EducatorParams)
 import Dscp.Educator.Secret (MonadEducatorSecret)
 import Dscp.Educator.Secret.Types (EducatorSecret)
@@ -41,6 +42,8 @@ type EducatorWorkMode ctx m =
     ( Basic.BasicWorkMode m
     , MonadSQLiteDB m
     , MonadEducatorSecret m
+
+    , HasEducatorConfig
 
     , MonadReader ctx m
 
@@ -109,7 +112,7 @@ instance HasLens SDActions EducatorContext SDActions where
 ----------------------------------------------------------------------------
 
 _sanity :: EducatorRealMode ()
-_sanity = _sanityCallee
+_sanity = withEducatorConfig (error "") _sanityCallee
   where
     _sanityCallee :: CombinedWorkMode ctx m => m ()
     _sanityCallee = pass
