@@ -6,12 +6,13 @@ import Prelude hiding (toList)
 
 import Control.Lens (mapped)
 
+import qualified Dscp.Crypto.MerkleTree as MerkleTree
 import Dscp.DB.SQLite as DB
 import Dscp.Util (allUniqueOrd)
 
 import Test.Dscp.DB.SQLite.Common
 
--- import qualified Debug.Trace as Debug
+import qualified Debug.Trace as Debug
 
 spec_Instances :: Spec
 spec_Instances = do
@@ -271,20 +272,11 @@ spec_Instances = do
                             assignment    = submission   ^.sAssignment
                             course        = assignment   ^.aCourseId
 
-                        courseId <- DB.createCourse course Nothing []
-                            `orIfItFails` getId course
-
-                        _ <- DB.enrollStudentToCourse studentId courseId
-                            `orIfItFails` ()
-
-                        assignmentId <- DB.createAssignment assignment
-                            `orIfItFails` getId assignment
-
-                        _ <- DB.setStudentAssignment studentId assignmentId
-                            `orIfItFails` ()
-
-                        _ <- DB.createSignedSubmission sigSubmission
-                            `orIfItFails` getId sigSubmission
+                        cId <- DB.createCourse           course Nothing [] `orIfItFails` getId course
+                        _   <- DB.enrollStudentToCourse  studentId cId     `orIfItFails` ()
+                        aId <- DB.createAssignment       assignment        `orIfItFails` getId assignment
+                        _   <- DB.setStudentAssignment   studentId aId     `orIfItFails` ()
+                        _   <- DB.createSignedSubmission sigSubmission     `orIfItFails` getId sigSubmission
 
                         ptId <- DB.createTransaction trans
                         return ptId
@@ -293,14 +285,15 @@ spec_Instances = do
 
                     transPacksSince <- DB.getProvenStudentTransactionsSince studentId pointSince
 
-                    let transSince = join . map snd $ transPacksSince
+                    let transSince = join . map (map snd . snd) $ transPacksSince
 
                     let equal = (==) `on` sortWith getId
 
                     (transSince `equal` rest) `assertThat`
-                        "Correct set of transactions is returned"
+                        "Incorrect set of transactions is returned"
 
-                    -- for_ transPacksSince $ \(proof, txSet) -> do
-                    --     for_ txSet $ \tx -> do
-
-                    return True
+                    return $ flip all transPacksSince $ \(proof, txSet) ->
+                        Debug.trace (MerkleTree.drawProofNode (Just proof)) $
+                        flip all txSet $ \(idx, tx) ->
+                            Debug.traceShow (idx, MerkleTree.validateElementExistAt idx tx proof, tx, MerkleTree.lookup idx proof) $
+                            MerkleTree.validateElementExistAt idx tx proof

@@ -2,12 +2,11 @@ module Test.Dscp.Crypto.MerkleTree where
 
 import qualified Data.List as List
 import qualified Data.Set as Set
-import Dscp.Crypto (MerkleTree (..), drawProofNode, fromContainer, fromFoldable, fromList,
-                    getMerkleRoot, lookup, mkMerkleProof, mkMerkleProofSingle, mrSize,
-                    validateMerkleProof)
+import Dscp.Crypto (MerkleTree (..), fromContainer, fromFoldable, fromList, getMerkleRoot, lookup,
+                    mkMerkleProof, mkMerkleProofSingle, mrSize, validateMerkleProof)
 import Test.Common
 
-import qualified Debug.Trace as Debug
+-- import qualified Debug.Trace as Debug
 
 spec_merkleTree :: Spec
 spec_merkleTree = describe "Merkle Tree Tests" $ do
@@ -54,23 +53,24 @@ spec_merkleTree = describe "Merkle Tree Tests" $ do
                          False -> Nothing
 
     it "performs lookup correctly" $ property $
-      \(xs' :: [ByteString], indices :: [Word32]) ->
+      \(Fixed (xs' :: [ByteString], indices :: [Word32])) ->
         let xs          = List.nub xs'
-            withIndices = zip [1..] xs
+            withIndices = zip [0..] xs
             tree        = fromList xs
             count       = fromIntegral $ length tree
             uniqIndices = Set.fromList $ map (`mod` count) $ List.nub indices
             proof'      = mkMerkleProof tree uniqIndices
 
-            (pairsToLook, _pairsToFail) =
+            (pairsToLook, pairsToFail) =
                 List.partition
                     ((`elem` uniqIndices) . fst)
                     withIndices
 
             shouldBeFoundIn    proof (index, value) = Just value == lookup index proof
-            -- shouldBeNotFoundIn proof (index, _    ) = Nothing    == lookup index proof
-        in  Debug.trace (drawProofNode proof') $
-            case proof' of
+            shouldBeNotFoundIn proof (index, _    ) = Nothing    == lookup index proof
+
+        in  case proof' of
                 Nothing    -> True
-                Just proof -> all (shouldBeFoundIn    proof) pairsToLook
-                           -- && all (shouldBeNotFoundIn proof) pairsToFail
+                Just proof ->
+                       all (shouldBeFoundIn    proof) pairsToLook
+                    && all (shouldBeNotFoundIn proof) pairsToFail

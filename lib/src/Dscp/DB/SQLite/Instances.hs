@@ -14,7 +14,7 @@ import Dscp.Core.Serialise ()
 import Dscp.Core.Types (ATGDelta, Address (..), Assignment (..), AssignmentType, Course (..),
                         DocumentType, Grade (..), SignedSubmission (..), Subject (..),
                         Submission (..), SubmissionWitness (..))
-import Dscp.Crypto (EmptyMerkleTree, Hash, MerkleSignature, MerkleTree, PublicKey, Signature, hash)
+import Dscp.Crypto (EmptyMerkleTree, Hash, MerkleSignature, PublicKey, Signature, hash)
 import Dscp.DB.SQLite.BlockData (BlockData (..), TxInBlock (..), TxWithIdx (..))
 import Dscp.DB.SQLite.Types (TxBlockIdx, intTxBlockIdx)
 import Dscp.Educator.Txs (PrivateTx (..))

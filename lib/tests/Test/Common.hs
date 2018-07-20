@@ -34,10 +34,10 @@ import Dscp.Educator (PrivateTx (..))
 import Dscp.Util (HasId (..))
 
 import Test.Hspec as T (Expectation, Spec, describe, it, shouldBe, shouldSatisfy, specify)
-import Test.QuickCheck as T (Arbitrary (..), Gen, Property, Testable (..), choose, elements,
-                             expectFailure, forAll, infiniteList, ioProperty, label, listOf,
-                             listOf1, oneof, property, suchThat, suchThatMap, vectorOf, (.&&.),
-                             (===), (==>))
+import Test.QuickCheck as T (Arbitrary (..), Fixed (..), Gen, Property, Testable (..), choose,
+                             elements, expectFailure, forAll, infiniteList, ioProperty, label,
+                             listOf, listOf1, oneof, property, suchThat, suchThatMap, vectorOf,
+                             (.&&.), (===), (==>))
 import Test.QuickCheck (sized)
 import Test.QuickCheck.Gen (Gen (..))
 import Test.QuickCheck.Instances as T ()

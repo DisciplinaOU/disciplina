@@ -20,6 +20,7 @@ module Dscp.Crypto.MerkleTree
        , validateMerkleProof
        , getMerkleProofRoot
        , lookup
+       , validateElementExistAt
 
        , MerkleNode (..)
        , drawMerkleTree
@@ -36,8 +37,6 @@ import Dscp.Crypto.Impl (HasHash, Hash, hash, unsafeHash)
 import Dscp.Crypto.Serialise (Raw)
 
 import Codec.Serialise (Serialise (..))
-import Data.Array (array, (!))
-import Data.Bits (Bits (..))
 import Data.ByteArray (convert)
 import Data.ByteString.Builder (Builder, byteString, word32LE)
 import qualified Data.Map as Map ((!))
@@ -52,7 +51,7 @@ import qualified Data.Foldable as F (Foldable (..))
 data MerkleSignature a = MerkleSignature
     { mrHash :: !(Hash Raw)  -- ^ returns root 'Hash' of Merkle Tree
     , mrSize :: !Word32      -- ^ size of root node,
-                             -- size is defined as number of leafs in this subtree
+                             --   size is defined as number of leafs in this subtree
     } deriving (Show, Eq, Ord, Generic, Serialise, Functor, Foldable, Traversable, Typeable)
 
 data MerkleTree a
@@ -91,12 +90,12 @@ instance Foldable MerkleNode where
       MerkleLeaf {mVal}            -> f mVal
       MerkleBranch {mLeft, mRight} -> F.foldMap f mLeft `mappend` F.foldMap f mRight
 
-mkLeaf :: HasHash a => (LeafIndex, a) -> MerkleNode a
-mkLeaf (i, a) = MerkleLeaf
-    { mVal  = a
+mkLeaf :: HasHash a => LeafIndex -> a -> MerkleNode a
+mkLeaf i a = MerkleLeaf
+    { mVal   = a
     , mIndex = i
-    , mRoot = MerkleSignature (unsafeHash a) -- unsafeHash since we need to hash to ByteString
-                              1 -- size of leaf node is 1
+    , mRoot  = MerkleSignature (unsafeHash a) -- unsafeHash since we need to hash to ByteString
+                                1 -- size of leaf node is 1
     }
 
 mkBranch :: MerkleNode a -> MerkleNode a -> MerkleNode a
@@ -132,17 +131,24 @@ fromContainer = fromList . toList
 
 fromList :: HasHash a => [a] -> MerkleTree a
 fromList [] = MerkleEmpty
-fromList ls = MerkleTree (go' 1 (fromIntegral $ length lsIndexed))
+fromList ls = MerkleTree (nodeFromList ls)
+
+nodeFromList :: HasHash a => [a] -> MerkleNode a
+nodeFromList lst = tree
   where
-    lsIndexed = zip [1,2..] ls
-    arr = array (1, length lsIndexed) lsIndexed
-    go' lo hi = if lo == hi
-                then mkLeaf (lo - 1, arr ! fromIntegral lo)
-                else mkBranch (go' loL hiL) (go' loR hiR)
+    (tree, []) = go (0, uLen - 1) `runState` lst
+
+    uLen = fromIntegral $ length lst
+
+    go (lo, hi)
+        | lo == hi  = mkLeaf lo <$> pop
+        | otherwise = mkBranch <$> go (lo, mid) <*> go (mid + 1, hi)
       where
-        -- new borders
-        (!loL, !hiL, !loR, !hiR) = (lo, lo + i, lo + i + 1, hi)
-        i = powerOfTwo (hi - lo)
+        mid = (lo + hi) `div` 2
+
+    pop = state $ \case
+        []    -> error "nodeFromList: impossible"
+        c : s -> (c, s)
 
 -- | Returns root of merkle tree.
 getMerkleRoot :: MerkleTree a -> MerkleSignature a
@@ -158,19 +164,19 @@ emptyHash = MerkleSignature (hash mempty) 0
 -- 32
 -- >>> powerOfTwo 65
 -- 64
-powerOfTwo :: (Bits a, Num a) => a -> a
-powerOfTwo n
-    | n .&. (n - 1) == 0 = n `shiftR` 1
-    | otherwise = go n
- where
-    {- “x .&. (x - 1)” clears the least significant bit:
-           ↓
-       01101000     x
-       01100111     x - 1
-       --------
-       01100000     x .&. (x - 1)
-     -}
-    go w = if w .&. (w - 1) == 0 then w else go (w .&. (w - 1))
+-- powerOfTwo :: (Bits a, Num a) => a -> a
+-- powerOfTwo n
+--     | n .&. (n - 1) == 0 = n `shiftR` 1
+--     | otherwise = go n
+--  where
+--      “x .&. (x - 1)” clears the least significant bit:
+--            ↓
+--        01101000     x
+--        01100111     x - 1
+--        --------
+--        01100000     x .&. (x - 1)
+
+--     go w = if w .&. (w - 1) == 0 then w else go (w .&. (w - 1))
 
 data MerkleProof a
     = ProofBranch
@@ -178,13 +184,18 @@ data MerkleProof a
         , pnLeft  :: !(MerkleProof a)
         , pnRight :: !(MerkleProof a) }
     | ProofLeaf
-        { pnSig   :: !(MerkleSignature a)
-        , pnIndex :: !LeafIndex
-        , pnVal   :: !a
+        { pnSig :: !(MerkleSignature a)
+        , pnVal :: !a
         }
     | ProofPruned
         { pnSig :: !(MerkleSignature a) }
     deriving (Eq, Show, Functor, Foldable, Traversable, Generic)
+
+-- proofToList :: MerkleProof a -> [Maybe (LeafIndex, a)]
+-- proofToList = \case
+--     ProofBranch _ l r -> proofToList l <> proofToList r
+--     ProofLeaf   _ i v -> [Just (i, v)]
+--     ProofPruned s     -> fromIntegral (mrSize s) `replicate` Nothing
 
 getMerkleProofRoot :: MerkleProof a -> MerkleSignature a
 getMerkleProofRoot = pnSig
@@ -205,34 +216,30 @@ mkMerkleProof (MerkleTree rootNode) n =
   where
     constructProof :: MerkleNode a -> MerkleProof a
     constructProof (MerkleLeaf {..})
-      | Set.member mIndex n = ProofLeaf mRoot mIndex mVal
+      | Set.member mIndex n = ProofLeaf mRoot mVal
       | otherwise = ProofPruned mRoot
     constructProof (MerkleBranch mRoot' mLeft' mRight') =
       case (constructProof mLeft', constructProof mRight') of
         (ProofPruned _, ProofPruned _) -> ProofPruned mRoot'
         (pL, pR)                       -> ProofBranch mRoot' pL pR
 
-lookup :: forall a . HasHash a => LeafIndex -> MerkleProof a -> Maybe a
+lookup :: LeafIndex -> MerkleProof a -> Maybe a
 lookup index = \case
-  ProofPruned {}      -> Nothing
-  ProofLeaf   {pnVal, pnIndex}
-    | pnIndex /= index ->
-      error $ show (pnIndex, "/=" :: String, index)
-    | otherwise ->
-      return pnVal
+    ProofPruned {}        -> Nothing
+    ProofLeaf   { pnVal } -> return pnVal
 
-  ProofBranch
-    { pnSig = MerkleSignature { mrSize }
-    , pnLeft
-    , pnRight
-    } -> do
-      let border = powerOfTwo mrSize
-      if border >= index
-      then do
-          lookup (border - index) pnLeft
+    ProofBranch { pnSig, pnLeft, pnRight } -> do
+        let size = mrSize pnSig
+        let border
+              | odd size  = (size `div` 2) + 1
+              | otherwise =  size `div` 2
 
-      else do
-          lookup (index - border) pnRight
+        if   border > index
+        then lookup  index           pnLeft
+        else lookup (index - border) pnRight
+
+validateElementExistAt :: Eq a => LeafIndex -> a -> MerkleProof a -> Bool
+validateElementExistAt index value proof = lookup index proof == Just value
 
 -- | Validate a merkle tree proof.
 validateMerkleProof :: forall a. HasHash a => MerkleProof a -> MerkleSignature a -> Bool
@@ -259,7 +266,7 @@ drawMerkleTree (MerkleTree n) = Tree.drawTree (asTree n)
   where
     asTree :: (Show a) => MerkleNode a -> Tree.Tree String
     asTree (MerkleBranch {..}) = Tree.Node (show mRoot) [asTree mLeft, asTree mRight]
-    asTree leaf                = Tree.Node (show leaf) []
+    asTree  leaf               = Tree.Node (show leaf) []
 
 -- | Debug print of proof tree.
 drawProofNode :: (Show a) => Maybe (MerkleProof a) -> String
@@ -267,7 +274,7 @@ drawProofNode Nothing = "empty proof"
 drawProofNode (Just p) = Tree.drawTree (asTree p)
   where
     asTree :: (Show a) => MerkleProof a -> Tree.Tree String
-    asTree (ProofLeaf {..}) = Tree.Node ("leaf, " <> show pnSig) []
+    asTree (ProofLeaf   {..}) = Tree.Node ("leaf, "   <> show pnSig) []
     asTree (ProofBranch {..}) = Tree.Node ("branch, " <> show pnSig) [asTree pnLeft, asTree pnRight]
     asTree (ProofPruned {..}) = Tree.Node ("pruned, " <> show pnSig) []
 
@@ -289,9 +296,19 @@ fillEmptyMerkleTree plugs (Empty sieve) =
     in
         filled
   where
-    fill = \case
-        ProofBranch sig left right -> ProofBranch (coerseSig sig) (fill left) (fill right)
-        ProofLeaf   sig idx  ()    -> ProofLeaf   (coerseSig sig) idx (plugs Map.! idx)
-        ProofPruned sig            -> ProofPruned (coerseSig sig)
+    fill it = evalState (aux it) 0
+      where
+        aux = \case
+          ProofBranch sig left right ->
+              ProofBranch (coerseSig sig) <$> aux left <*> aux right
+
+          ProofLeaf sig () ->
+              ProofLeaf (coerseSig sig) . (plugs Map.!) <$> next
+
+          ProofPruned sig ->
+              ProofPruned (coerseSig sig) <$ skip (mrSize sig)
+
+        next   = state $ \i -> (i,  i + 1)
+        skip n = state $ \i -> ((), i + n)
 
     coerseSig sig = error "coerseSig: 'MerkleSignature a' has 'a' inside!" <$> sig

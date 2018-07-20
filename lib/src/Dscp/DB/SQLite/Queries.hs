@@ -4,10 +4,21 @@ module Dscp.DB.SQLite.Queries
        ( -- * Domain-level database errors (missing entites, mostly)
          DomainError(..)
 
+         -- * Prisms for constructors
+       , _CourseDoesNotExist
+       , _StudentDoesNotExist
+       , _AssignmentDoesNotExist
+       , _StudentWasNotEnrolledOnTheCourse
+       , _StudentWasNotSubscribedOnAssignment
+       , _SubmissionDoesNotExist
+       , _TransactionDoesNotExist
+       , _BlockWithIndexDoesNotExist
+       , _BlockProofIsCorrupted
          -- * Synonym for MonadSQLiteDB
        , DBM
 
          -- * Readonly actions
+       , getCourseSubjects
        , getStudentCourses
        , getStudentAssignments
        , getGradesForCourseAssignments
@@ -39,9 +50,7 @@ module Dscp.DB.SQLite.Queries
 import Control.Lens (makePrisms)
 
 import Data.Coerce (coerce)
-import Data.List (groupBy)
 import qualified Data.Map as Map (empty, fromList, insertWith, toList)
-import qualified Data.Set as Set (fromList)
 import Data.Time.Clock (UTCTime, getCurrentTime)
 
 import Database.SQLite.Simple (Only (..), Query)
@@ -50,18 +59,16 @@ import Database.SQLite.Simple.ToRow (ToRow (..))
 
 import Text.InterpolatedString.Perl6 (q)
 
-import Dscp.Core.Serialise ()
 import Dscp.Core.Types (ATGDelta, Assignment (..), Course, SignedSubmission (..), Student, Subject,
                         Submission (..), aContentsHash, aCourseId, aDesc, aType, sAssignment,
-                        sContentsHash, sStudentId, ssSubmission, ssWitness, ATGDelta)
-import Dscp.Crypto (MerkleProof, Hash, hash, fillEmptyMerkleTree, getEmptyMerkleTree, getMerkleRoot, mkMerkleProof)
+                        sContentsHash, sStudentId, ssSubmission, ssWitness)
+import Dscp.Crypto (Hash, MerkleProof, fillEmptyMerkleTree, getEmptyMerkleTree, getMerkleRoot, hash)
 import qualified Dscp.Crypto.MerkleTree as MerkleTree (fromList)
 import Dscp.DB.SQLite.BlockData (BlockData (..), TxInBlock (..), TxWithIdx (..))
 import Dscp.DB.SQLite.Class (MonadSQLiteDB (..), transaction)
 import Dscp.DB.SQLite.Instances ()
 import Dscp.DB.SQLite.Types (TxBlockIdx (TxInMempool))
-import Dscp.Educator.Block (PrivateBlock (..), pbBody, pbHeader, pbbTxs, pbhAtgDelta, pbhBodyProof,
-                            pbhPrevBlock, genesisHeaderHash, PrivateBlockHeader (..))
+import Dscp.Educator.Block (PrivateBlock (..), PrivateBlockHeader (..), genesisHeaderHash)
 import Dscp.Educator.Txs (PrivateTx (..), ptGrade, ptSignedSubmission, ptTime)
 import Dscp.Util (HasId (..), assert, assertJust, idOf)
 
@@ -224,7 +231,7 @@ put' :: MonadIO m => Show a => a -> m ()
 put' = liftIO . print
 
 -- | Returns list of transaction blocks along with block-proof of a student since given moment.
-getProvenStudentTransactionsSince :: DBM m => Id Student -> UTCTime -> m [(MerkleProof PrivateTx, [PrivateTx])]
+getProvenStudentTransactionsSince :: DBM m => Id Student -> UTCTime -> m [(MerkleProof PrivateTx, [(Word32, PrivateTx)])]
 getProvenStudentTransactionsSince studentId sinceTime = do
     transaction $ do
         -- Contains `(tx, idx, blockId)` map.
@@ -239,14 +246,12 @@ getProvenStudentTransactionsSince studentId sinceTime = do
         results <- forM txsBlockMap $ \(blockId, transactions) -> do
             blockData <- getBlockData blockId
 
-            let bodies  = _twiTx <$> transactions
-                tree    = _bdTree blockData
-
-                mapping = Map.fromList [(idx, tx) | TxWithIdx tx idx <- transactions]
-
+            let tree    = _bdTree blockData
+                indiced = [(idx, tx) | TxWithIdx tx idx <- transactions]
+                mapping = Map.fromList indiced
                 pruned  = fillEmptyMerkleTree mapping tree
 
-            return (pruned, bodies)
+            return (pruned, indiced)
 
         return [(proof, txs) | (Just proof, txs) <- results]
 
@@ -364,7 +369,7 @@ createBlock delta = do
         let tree = MerkleTree.fromList txs
             root = getMerkleRoot tree
 
-            txs' = zip [1..] (getId <$> txs)
+            txs' = zip [0..] (getId <$> txs)
             bid  = idx + 1
 
             trueDelta = mempty `fromMaybe` delta
