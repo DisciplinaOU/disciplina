@@ -2,9 +2,11 @@ module Dscp.Snowdrop.Configuration where
 
 import Fmt (build, (+|))
 
-import Snowdrop.Model.Block (Block, BlockRef (..), BlockStateException, Blund, TipKey, TipValue)
+import Snowdrop.Model.Block (Block, BlockApplicationException, BlockRef (..), BlockStateException,
+                             Blund, TipKey, TipValue)
 import Snowdrop.Model.State.Accounting.Account (Account)
-import Snowdrop.Model.State.Core (SValue, StatePException, StateTx (..))
+import Snowdrop.Model.State.Core (SValue, StateModificationException, StatePException, StateTx (..),
+                                  ValidatorExecException)
 import Snowdrop.Model.State.Restrict (RestrictionInOutException)
 import Snowdrop.Util (CSMappendException, ChangeSet, IdStorage, IdSumPrefixed (..), Prefix (..),
                       WithSignature (..), deriveIdView, deriveView, withInj, withInjProj)
@@ -97,6 +99,9 @@ data ExpanderException =
 data Exceptions
     = ExpanderRestrictionError RestrictionInOutException
     | BlockStateError (BlockStateException Ids)
+    | BlockApplicationError (BlockApplicationException HeaderHash)
+    | StateModificationError (StateModificationException Ids)
+    | ValidatorExecError ValidatorExecException
     | CSMappendError (CSMappendException Ids)
     | StatePError StatePException
     | ExpanderError ExpanderException

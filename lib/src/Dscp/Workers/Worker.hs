@@ -9,6 +9,8 @@ module Dscp.Workers.Worker
 import Control.Concurrent (threadDelay)
 import Control.Lens (views)
 import Data.Default (def)
+import Data.Reflection (reify)
+import qualified Data.Set as S
 import Fmt ((+||), (||+))
 import Loot.Base.HasLens (lensOf)
 import Loot.Log (logError, logInfo)
@@ -19,14 +21,18 @@ import qualified Snowdrop.Model.Execution as SD
 import qualified Snowdrop.Model.State.Core as SD
 import qualified Snowdrop.Util as SD
 
+import Dscp.AVL (AvlProof)
 import Dscp.Core
-import Dscp.Crypto (hash, keyGen, sign, toPublic, unsafeHash, withIntSeed)
+import Dscp.Crypto (sign, toPublic)
 import Dscp.Network.Messages (PingBlk (..), PingTx (..), PongBlk (..), PongTx (..))
 import Dscp.Network.Wrapped (Worker (..), cliRecvResp, cliSend, msgType)
-import Dscp.Resource.Keys (ourSecretKey)
+import Dscp.Resource.Keys (ourPublicKey, ourSecretKey)
 import Dscp.Slotting (waitUntilNextSlot)
-import Dscp.Snowdrop.Actions (SDActions, nsBlockDBActions)
-import Dscp.Snowdrop.Configuration (Exceptions, Ids)
+import Dscp.Snowdrop.Actions (SDActions, nsBlockDBActions, nsStateDBActions)
+import Dscp.Snowdrop.Configuration (Exceptions, Ids, blockPrefix, tipPrefix)
+import Dscp.Snowdrop.Expanders (expandBlock)
+import Dscp.Snowdrop.Storage.Avlp (RememberForProof (..))
+import Dscp.Snowdrop.Validators (blkStateConfig)
 import Dscp.Witness.Launcher (WitnessWorkMode)
 import Dscp.Witness.Mempool (MempoolVar, swapTxsMempool)
 
@@ -37,22 +43,6 @@ witnessWorkers = [blockIssuingWorker, witnessTxWorker, witnessBlkWorker]
 ----------------------------------------------------------------------------
 -- Block creation
 ----------------------------------------------------------------------------
-
-genesisBlock :: Block
-genesisBlock = Block header payload
-  where
-    (sk,pk) = withIntSeed 12345 keyGen
-    payload = BlockBody []
-    prevHash = unsafeHash ("gromak & rechka" :: Text)
-    toSign = BlockToSign 0 prevHash payload
-    header = Header { hSignature = sign sk toSign
-                    , hIssuer = pk
-                    , hDifficulty = 0
-                    , hPrevHash = prevHash
-                    }
-
-genesisHash :: HeaderHash
-genesisHash = hash (rbHeader genesisBlock)
 
 createPayload :: MonadIO m => MempoolVar -> m BlockBody
 createPayload v = BlockBody <$> swapTxsMempool v
@@ -84,8 +74,28 @@ createBlock = do
             (SD.queryOne SD.TipKey >>=
              maybe (SD.throwLocalError @(SD.BlockStateException Ids) SD.TipNotFound) pure)
 
-applyBlock :: WitnessWorkMode ctx m => Block -> m ()
-applyBlock = const pass
+applyBlock :: WitnessWorkMode ctx m => Block -> m AvlProof
+applyBlock block = do
+    (sdActions :: SDActions) <- view (lensOf @SDActions)
+    let blockDBM = nsBlockDBActions sdActions
+    let stateDBM = nsStateDBActions sdActions (RememberForProof True)
+
+    pk <- ourPublicKey
+
+    (blockCS, stateCS) <- reify blockPrefixes $ \(_ :: Proxy ps) ->
+        let actions = SD.constructCompositeActions @ps (SD.dmaAccessActions blockDBM)
+                                                       (SD.dmaAccessActions stateDBM)
+            rwComp = do
+              sblock <- SD.liftERoComp $ expandBlock block
+              SD.applyBlock (blkStateConfig pk) sblock
+         in liftIO $
+            SD.runERwCompIO actions def rwComp >>=
+                \((), (SD.CompositeChgAccum blockCS_ stateCS_)) -> pure (blockCS_, stateCS_)
+    proof <- liftIO $ SD.dmaApply stateDBM stateCS
+    liftIO $ SD.dmaApply blockDBM blockCS
+    pure proof
+  where
+    blockPrefixes = S.fromList [tipPrefix, blockPrefix]
 
 blockIssuingWorker :: forall ctx m. WitnessWorkMode ctx m => Worker m
 blockIssuingWorker =
@@ -98,8 +108,8 @@ blockIssuingWorker =
         logInfo $ "New slot has just started: " +|| slotId ||+ ""
         block <- createBlock
         logInfo "Created a new block"
-        applyBlock block
-        logInfo "Applied block"
+        proof <- applyBlock block
+        logInfo $ "Applied block, proof: " +|| proof ||+ ""
 
 ----------------------------------------------------------------------------
 -- Pinging
