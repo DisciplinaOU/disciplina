@@ -224,21 +224,12 @@ getStudentTransactions student = do
         where      student_addr = ?
     |]
 
-puts :: MonadIO m => String -> m ()
-puts = liftIO . putStrLn
-
-put' :: MonadIO m => Show a => a -> m ()
-put' = liftIO . print
-
 -- | Returns list of transaction blocks along with block-proof of a student since given moment.
 getProvenStudentTransactionsSince :: DBM m => Id Student -> UTCTime -> m [(MerkleProof PrivateTx, [(Word32, PrivateTx)])]
 getProvenStudentTransactionsSince studentId sinceTime = do
     transaction $ do
         -- Contains `(tx, idx, blockId)` map.
         txsBlockList <- getTxsBlockMap
-
-        puts "txsBlockList"
-        put' txsBlockList
 
         -- Bake `blockId -> [(tx, idx)]` map.
         let txsBlockMap = groupToAssocWith (_tibBlockId, _tibTx) txsBlockList
@@ -303,10 +294,8 @@ getProvenStudentTransactionsSince studentId sinceTime = do
     -- Returns `PrivateBlock` in normalized format, with metadata.
     getBlockData :: DBM m => Word32 -> m BlockData
     getBlockData blockIdx = do
-        puts "BlockData?"
         (listToMaybe <$> query getBlockDataQuery (Only blockIdx))
             `assertJust` BlockWithIndexDoesNotExist blockIdx
-            <* puts "BlockData."
       where
         -- TODO: prune fields that aren't needed.
         getBlockDataQuery = [q|
@@ -388,14 +377,10 @@ createBlock delta = do
             , getEmptyMerkleTree tree
             )
 
-        puts "F O R   T R A N S A C T I O N S"
-        put' (txs')
-
         for_ txs' $ \(txIdx, txId) -> do
             execute setTxIndexRequest    (txIdx :: Word32, txId)
             execute assignToBlockRequest (bid, txId)
 
-        puts "WE DON'T ROLLBACK, DO WE?"
         return ()
   where
     createBlockRequest = [q|

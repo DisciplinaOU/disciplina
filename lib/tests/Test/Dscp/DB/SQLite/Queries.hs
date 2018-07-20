@@ -12,8 +12,6 @@ import Dscp.Util (allUniqueOrd)
 
 import Test.Dscp.DB.SQLite.Common
 
-import qualified Debug.Trace as Debug
-
 spec_Instances :: Spec
 spec_Instances = do
     describe "Basic database operations" $ do
@@ -293,7 +291,5 @@ spec_Instances = do
                         "Incorrect set of transactions is returned"
 
                     return $ flip all transPacksSince $ \(proof, txSet) ->
-                        Debug.trace (MerkleTree.drawProofNode (Just proof)) $
                         flip all txSet $ \(idx, tx) ->
-                            Debug.traceShow (idx, MerkleTree.validateElementExistAt idx tx proof, tx, MerkleTree.lookup idx proof) $
                             MerkleTree.validateElementExistAt idx tx proof
