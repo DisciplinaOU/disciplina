@@ -158,26 +158,6 @@ getMerkleRoot (MerkleTree x) = mRoot x
 emptyHash :: MerkleSignature a
 emptyHash = MerkleSignature (hash mempty) 0
 
--- | Return the largest power of two such that it's smaller than X.
---
--- >>> powerOfTwo 64
--- 32
--- >>> powerOfTwo 65
--- 64
--- powerOfTwo :: (Bits a, Num a) => a -> a
--- powerOfTwo n
---     | n .&. (n - 1) == 0 = n `shiftR` 1
---     | otherwise = go n
---  where
---      “x .&. (x - 1)” clears the least significant bit:
---            ↓
---        01101000     x
---        01100111     x - 1
---        --------
---        01100000     x .&. (x - 1)
-
---     go w = if w .&. (w - 1) == 0 then w else go (w .&. (w - 1))
-
 data MerkleProof a
     = ProofBranch
         { pnSig   :: !(MerkleSignature a)
@@ -190,12 +170,6 @@ data MerkleProof a
     | ProofPruned
         { pnSig :: !(MerkleSignature a) }
     deriving (Eq, Show, Functor, Foldable, Traversable, Generic)
-
--- proofToList :: MerkleProof a -> [Maybe (LeafIndex, a)]
--- proofToList = \case
---     ProofBranch _ l r -> proofToList l <> proofToList r
---     ProofLeaf   _ i v -> [Just (i, v)]
---     ProofPruned s     -> fromIntegral (mrSize s) `replicate` Nothing
 
 getMerkleProofRoot :: MerkleProof a -> MerkleSignature a
 getMerkleProofRoot = pnSig
