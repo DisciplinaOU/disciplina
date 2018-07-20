@@ -91,9 +91,6 @@ instance HasGetter (AVLServerState k) RootHash where
 instance HasGetter (AVLServerState k) AVLPureStorage where
     gett = amsState
 
-instance HasGetter RootHash RootHash where
-    gett = id
-
 -- | Pure implementation of permanent storage
 newtype AVLPureStorage = AVLPureStorage { unAVLPureStorage :: Map AvlHash ByteString }
 

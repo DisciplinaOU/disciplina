@@ -4,8 +4,8 @@ import Fmt (build, (+|))
 
 import Snowdrop.Model.Block (Block, BlockApplicationException, BlockRef (..), BlockStateException,
                              Blund, TipKey, TipValue)
-import Snowdrop.Model.State.Accounting.Account (Account)
-import Snowdrop.Model.State.Core (SValue, StateModificationException, StatePException, StateTx (..),
+import Snowdrop.Model.State.Core (RedundantIdException, SValue, StateModificationException,
+                                  StatePException, StateTx (..), TxValidationException,
                                   ValidatorExecException)
 import Snowdrop.Model.State.Restrict (RestrictionInOutException)
 import Snowdrop.Util (CSMappendException, ChangeSet, IdStorage, IdSumPrefixed (..), Prefix (..),
@@ -14,6 +14,8 @@ import Snowdrop.Util (CSMappendException, ChangeSet, IdStorage, IdSumPrefixed (.
 import Dscp.Core (Address, HeaderHash)
 import qualified Dscp.Core.Types as T
 import Dscp.Crypto (PublicKey, Signature, hashF)
+import Dscp.Snowdrop.AccountValidation (Account, AccountId (..), AccountTx (..),
+                                        AccountValidationException)
 
 ----------------------------------------------------------------------------
 -- Snowdrop block-related types
@@ -42,14 +44,14 @@ accountPrefix = Prefix 3
 data Ids
     = TipKeyIds TipKey
     | BlockRefIds (BlockRef HeaderHash)
-    | AccountInIds Address
+    | AccountInIds (AccountId Address)
     deriving (Eq, Ord, Show, Generic)
 
 instance Buildable Ids where
     build = ("Key" <>) . \case
         TipKeyIds t -> build t
         BlockRefIds (BlockRef r) -> "block ref " +| hashF r
-        AccountInIds a -> build a
+        AccountInIds (AccountId a) -> build a
 
 instance IdSumPrefixed Ids where
     idSumPrefix (TipKeyIds _)    = tipPrefix
@@ -68,7 +70,7 @@ data Values
 
 type instance SValue TipKey = TipValue HeaderHash
 type instance SValue (BlockRef HeaderHash) = SBlund
-type instance SValue Address = Account
+type instance SValue (AccountId Address) = Account
 
 ----------------------------------------------------------------------------
 -- Proofs
@@ -101,8 +103,11 @@ data Exceptions
     | BlockStateError (BlockStateException Ids)
     | BlockApplicationError (BlockApplicationException HeaderHash)
     | StateModificationError (StateModificationException Ids)
+    | AccountValidationError AccountValidationException
+    | RedundantIdError RedundantIdException
     | ValidatorExecError ValidatorExecException
     | CSMappendError (CSMappendException Ids)
+    | TxValidationError TxValidationException
     | StatePError StatePException
     | ExpanderError ExpanderException
     deriving (Show)
@@ -113,15 +118,15 @@ instance Exception Exceptions
 -- TxIds
 ----------------------------------------------------------------------------
 
-data MoneyTxId = MoneyTxId deriving (Eq,Show,Enum)
-
-data TxIds = MoneyTxIds MoneyTxId deriving (Eq,Show)
+data TxIds = MoneyTxIds AccountTx deriving (Eq,Show)
 
 instance Enum TxIds where
-    toEnum = MoneyTxIds . toEnum
-    fromEnum (MoneyTxIds MoneyTxId) = 0
+    toEnum = \case
+        0 -> MoneyTxIds AccountTxId
+        _ -> error "instance Enum TxIds"
+    fromEnum (MoneyTxIds AccountTxId) = 0
 
-instance IdStorage TxIds MoneyTxId
+instance IdStorage TxIds AccountTx
 
 ----------------------------------------------------------------------------
 -- HasReview
@@ -133,6 +138,7 @@ deriveIdView withInjProj ''Ids
 deriveView withInjProj ''Values
 deriveIdView withInjProj ''Values
 
+deriveView withInjProj ''Proofs
 
 deriveView withInjProj ''TxIds
 deriveView withInj ''Exceptions

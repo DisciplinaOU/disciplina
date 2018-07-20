@@ -4,11 +4,11 @@ module Dscp.Snowdrop.Serialise () where
 
 import Codec.Serialise (Serialise (..))
 import qualified Snowdrop.Model.Block as SD
-import qualified Snowdrop.Model.State.Accounting.Account as SD
 import qualified Snowdrop.Model.State.Core as SD
 import qualified Snowdrop.Util as SD
 
 import Dscp.Core.Serialise ()
+import Dscp.Snowdrop.AccountValidation as A
 import Dscp.Snowdrop.Configuration
 
 
@@ -23,9 +23,10 @@ instance Serialise a => Serialise (SD.TipValue a)
 instance Serialise a => Serialise (SD.BlockRef a)
 instance Serialise SD.StateTxType
 instance (Serialise id, Ord id, Serialise v, Serialise proof) => Serialise (SD.StateTx id proof v)
-instance Serialise SD.Account
+instance Serialise A.Account
+instance Serialise a => Serialise (A.Author a)
+instance Serialise a => Serialise (A.AccountId a)
 instance Serialise SD.TipKey
-instance Serialise a => Serialise (SD.Author a)
 
 instance Serialise Ids
 instance Serialise Proofs

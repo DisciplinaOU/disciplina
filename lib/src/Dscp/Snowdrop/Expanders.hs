@@ -11,12 +11,12 @@ import qualified Data.Set as S
 
 import qualified Snowdrop.Model.Block as SD
 import Snowdrop.Model.Expander (Expander (..), SeqExpanders (..), expandUnionRawTxs, mkDiffCS)
-import Snowdrop.Model.State.Accounting.Account (Account (..))
 import Snowdrop.Model.State.Core (ChgAccum, ChgAccumCtx, ERoComp, StateTxType (..), queryOne)
 import Snowdrop.Model.State.Restrict (RestrictCtx)
 import Snowdrop.Util
 
 import Dscp.Core
+import Dscp.Snowdrop.AccountValidation (Account (..), AccountId (..), AccountTx (..))
 import Dscp.Snowdrop.Configuration
 
 ----------------------------------------------------------------------------
@@ -64,7 +64,7 @@ toProofBalanceTx :: TxWitnessed -> (StateTxType, Proofs)
 toProofBalanceTx (TxWitnessed tx (TxWitness {..})) =
     (txType, AddressTxWitness $ WithSignature {..})
   where
-    txType = StateTxType $ getId (Proxy @TxIds) MoneyTxId
+    txType = StateTxType $ getId (Proxy @TxIds) AccountTxId
     wsSignature = txwSig
     wsPublicKey = txwPk
     wsBody = (txId tx, txInAcc tx)
@@ -80,8 +80,8 @@ seqExpandersBalanceTx =
 
         -- Account we transfer money from
         let inAddr = tiaAddr $ txInAcc twTx
-        let getCurAcc (from :: Address) = do
-                (acc :: Maybe Account) <- queryOne from
+        let getCurAcc (fromAddr :: Address) = do
+                (acc :: Maybe Account) <- queryOne (AccountId fromAddr)
                 pure acc
         let outSame = find ((== inAddr) . txOutAddr) (txOuts twTx)
         let outOther = maybe outputs (`L.delete` outputs) outSame
@@ -97,7 +97,7 @@ seqExpandersBalanceTx =
         let inpNewBal = aBalance inpPrevAcc + inputBack - inputSent
         let newInpAccount = Account { aBalance = inpNewBal
                                     , aNonce = tiaNonce (txInAcc twTx) + 1 }
-        let inp = (AccountInIds inAddr, Upd $ AccountOutVal newInpAccount)
+        let inp = (AccountInIds (AccountId inAddr), Upd $ AccountOutVal newInpAccount)
 
         outs <- forM outOther $ \TxOut{..} -> do
             prevAcc <- getCurAcc txOutAddr
@@ -105,7 +105,7 @@ seqExpandersBalanceTx =
             let newAcc = Account { aBalance = outVal , aNonce = 0 }
             let updAcc a0 = Account { aBalance = aBalance a0 + outVal, aNonce = aNonce a0 }
             let ch = maybe (New $ AccountOutVal newAcc) (Upd . AccountOutVal . updAcc) prevAcc
-            pure (AccountInIds txOutAddr, ch)
+            pure (AccountInIds (AccountId txOutAddr), ch)
 
         pure $ mkDiffCS $ M.fromList $ inp : outs
   where
