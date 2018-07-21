@@ -1,10 +1,14 @@
-
 -- | Core types used across Disciplina codebase.
 
 module Dscp.Core.Types
-       ( Address (..)
+       (
+       -- * Addresses
+         Address (..)
        , mkAddr
-       , offlineHash
+       , StakeholderId (..)
+
+       -- * Private chain
+
        , Course (..)
        , Subject (..)
        , Student
@@ -14,6 +18,7 @@ module Dscp.Core.Types
        , Assignment (..)
        , AssignmentType (..)
        , Submission (..)
+       , offlineHash
        , DocumentType (..)
        , SubmissionSig
        , SignedSubmission (..)
@@ -44,23 +49,63 @@ module Dscp.Core.Types
        , atgeWeight
        , atgeChild
        , ATG (..)
+
+       -- * Transaction
+       , Coin (..)
+       , coinToInteger
+       , TxInAcc (..)
+       , TxOut (..)
+       , Tx (..)
+       , TxId
+       , txId
+       , TxWitness (..)
+       , TxWitnessed (..)
+       , GTx (..)
+       , GTxWitnessed (..)
+
+       -- * Block
+       , HeaderHash
+       , Difficulty (..)
+       , BlockToSign (..)
+       , Header (..)
+       , Block (..)
+       , BlockBody (..)
        ) where
 
+import Codec.Serialise (Serialise)
 import Control.Lens (Getter, makeLenses, to)
 import Data.Map (Map)
+import Fmt (blockListF, build, indentF, listF, nameF, (+|), (+||), (|+), (||+))
 
-import Dscp.Crypto (HasHash, Hash, PublicKey, Raw, Signature, hash, unsafeHash)
+import Dscp.Core.Address
+import Dscp.Crypto (HasHash, Hash, PublicKey, Raw, Signature, hash, hashF, unsafeHash)
 import Dscp.Util (HasId (..))
 
--- | 'Address' datatype. Not 'newtype', because later it will
--- inevitably become more complex.
--- TODO: maybe we should use a shorter hash for address, like in Cardano?
-data Address = Address
-    { addrHash :: !(Hash PublicKey)
-    } deriving (Eq, Ord, Show, Generic)
+----------------------------------------------------------------------------
+-- General
+----------------------------------------------------------------------------
 
-mkAddr :: PublicKey -> Address
-mkAddr = Address . hash
+
+newtype StakeholderId = StakeholderId
+    { unStakeholderId :: PublicKey
+    } deriving (Eq, Show, Generic)
+
+-- This is all naive for now, should be moved to the separate module later
+
+-- | Coin amount.
+newtype Coin = Coin { unCoin :: Word64 }
+    deriving (Eq, Ord, Show, Generic, Hashable, Num)
+
+-- | Safely convert coin to integer.
+coinToInteger :: Coin -> Integer
+coinToInteger = toInteger . unCoin
+
+instance Buildable Coin where
+    build (Coin c) = c ||+ " coin(s)"
+
+----------------------------------------------------------------------------
+-- Private chain
+----------------------------------------------------------------------------
 
 -- | ID of particular subject.
 newtype Subject = Subject
@@ -236,3 +281,135 @@ newtype ATG = ATG
 makeLenses ''ATGNode
 makeLenses ''ATGEdge
 makeLenses ''ATG
+
+
+----------------------------------------------------------------------------
+-- Transactions
+----------------------------------------------------------------------------
+
+-- We have several different types of "transactions". Money
+-- transactions, delegation transactions (in the future). Money
+-- transactions are the most popular, so we'll call them just
+-- "transactions".
+
+-- | Tx input account. Can be used for other tx types too.
+data TxInAcc = TxInAcc
+    { tiaAddr  :: Address
+    , tiaNonce :: Integer
+    } deriving (Eq, Ord, Generic, Show)
+
+instance Buildable TxInAcc where
+    build TxInAcc{..} = "TxInnAcc {" +| tiaAddr |+ " nonce " +|| tiaNonce ||+ "}"
+
+-- | Money transaction output.
+data TxOut = TxOut
+    { txOutAddr  :: Address
+    , txOutValue :: Coin
+    } deriving (Eq, Ord, Generic, Show)
+
+instance Buildable TxOut where
+    build TxOut{..} = "<" +| txOutAddr |+ ", " +| txOutValue |+ ">"
+
+-- | Transaction. Accounting-style money transfer.
+data Tx = Tx
+    { txInAcc   :: TxInAcc
+    , txInValue :: Coin
+    , txOuts    :: [TxOut]
+    } deriving (Eq, Ord, Generic, Show)
+
+instance Buildable Tx where
+    build Tx{..} =
+        "Tx { from: " +| txInAcc |+ "; inValue: " +| txInValue |+ "; outs:" +| listF txOuts |+ " }"
+
+type TxId = Hash Tx
+
+-- | Compute tx id.
+txId :: (Serialise Tx) => Tx -> TxId
+txId = hash
+
+-- | Transaction witness. We sign a pair of transaction hash and input
+-- account. The second element of the pair is redundand, and only
+-- included to speed up and simplify transaction validation
+-- (@volhovm). Public key should correspond to the input address.
+data TxWitness = TxWitness
+    { txwSig :: Signature (TxId, TxInAcc)
+    , txwPk  :: PublicKey
+    } deriving (Eq, Show, Generic)
+
+instance Buildable TxWitness where
+    build TxWitness {..} =
+        "TxWitness { " +| txwSig |+ ", pk: " +| txwPk |+ " }"
+
+-- | Transaction coupled with witness.
+data TxWitnessed = TxWitnessed
+    { twTx      :: Tx
+    , twWitness :: TxWitness
+    } deriving (Eq, Show, Generic)
+
+instance Buildable TxWitnessed where
+    build TxWitnessed {..} =
+        "TxWitnessed { " +| twTx |+ ", " +| twWitness |+  " }"
+
+
+-- | Generalised version of transaction, other types to appear
+-- here.
+data GTx =
+    GMoneyTx Tx
+    deriving (Generic, Eq, Show)
+
+instance Buildable GTx where
+    build (GMoneyTx tw) = "GMoneyTx: " +| tw |+ ""
+
+data GTxWitnessed =
+    GMoneyTxWitnessed TxWitnessed
+    deriving (Generic, Eq, Show)
+
+instance Buildable GTxWitnessed where
+    build (GMoneyTxWitnessed tw) = "GMoneyTxWitnessed: " +| tw |+ ""
+
+----------------------------------------------------------------------------
+-- Blocks/Transaction
+----------------------------------------------------------------------------
+
+newtype Difficulty = Difficulty Word64
+    deriving (Eq,Ord,Num,Show,Generic,Buildable)
+
+-- | Blocks are indexed by their headers' hashes.
+type HeaderHash = Hash Header
+
+-- Part of the block we sign
+data BlockToSign =
+    BlockToSign Difficulty HeaderHash BlockBody
+    deriving (Eq, Show, Generic)
+
+data Header = Header
+    { hSignature  :: Signature BlockToSign
+    , hIssuer     :: PublicKey
+    , hDifficulty :: Difficulty
+    , hPrevHash   :: HeaderHash
+    } deriving (Eq, Show, Generic)
+
+instance Buildable Header where
+    build Header{..} =
+        "Header: " +|
+        indentF 2 (blockListF [ nameF "sig" $ build hSignature
+                              , nameF "issuer" $ build hIssuer
+                              , nameF "difficulty" $ build hDifficulty
+                              , nameF "prev" $ hashF hPrevHash ])
+
+-- | Body of the block.
+data BlockBody = BlockBody
+    { rbbTxs :: [GTxWitnessed]
+    } deriving (Eq, Show, Generic)
+
+instance Buildable BlockBody where
+    build (BlockBody txs) = listF txs
+
+-- | Block.
+data Block = Block
+    { rbHeader :: Header
+    , rbBody   :: BlockBody
+    } deriving (Eq, Show, Generic)
+
+instance Buildable Block where
+    build = build . (show :: Block -> Text)

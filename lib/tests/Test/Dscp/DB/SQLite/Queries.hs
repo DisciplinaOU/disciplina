@@ -1,9 +1,10 @@
-
 {-# LANGUAGE ViewPatterns #-}
 
 module Test.Dscp.DB.SQLite.Queries where
 
 import Prelude hiding (toList)
+
+import Control.Lens (mapped)
 
 import Dscp.DB.SQLite as DB
 import Dscp.Util (allUniqueOrd)

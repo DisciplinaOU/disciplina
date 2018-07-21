@@ -1,4 +1,3 @@
-
 -- | Functions to serve Student HTTP API
 
 module Dscp.Educator.Web.Student.Server
@@ -17,7 +16,7 @@ import Dscp.Launcher.Rio (runRIO)
 import Dscp.Web (NetworkAddress, serveWeb)
 
 studentAPIServer
-    :: forall m. EducatorWorkMode m
+    :: forall ctx m. EducatorWorkMode ctx m
     => (forall x. m x -> Handler x)
     -> Server StudentAPI
 studentAPIServer nat =

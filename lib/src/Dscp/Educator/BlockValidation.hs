@@ -1,4 +1,5 @@
 {-# LANGUAGE QuasiQuotes #-}
+
 -- | Validation of private block
 
 module Dscp.Educator.BlockValidation

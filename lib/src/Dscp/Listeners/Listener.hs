@@ -14,22 +14,22 @@ import Dscp.Witness.Launcher (WitnessWorkMode)
 
 
 witnessListeners
-    :: forall m t. WitnessWorkMode m
-    => [Listener t m]
+    :: forall ctx m. WitnessWorkMode ctx m
+    => [Listener m]
 witnessListeners = [blkListener, txListener]
    where
      blkListener =
          simpleListener "blkListener" [msgType @PingBlk] $ \btq ->
          let blkCallback cId PingBlk = do
                  logInfo "got PingBlk"
-                 atomically $ servSend @t btq cId (PongBlk "that was a great block")
+                 atomically $ servSend btq cId (PongBlk "that was a great block")
                  logInfo "got PingBlk, replied"
-         in [ lcallback @t blkCallback ]
+         in [ lcallback blkCallback ]
 
      txListener =
          simpleListener "txListener" [msgType @PingTx] $ \btq ->
          let txCallback cId PingTx = do
                  logInfo "got PingTx"
-                 atomically $ servSend @t btq cId (PongTx "wonderful tx, thank you!")
+                 atomically $ servSend btq cId (PongTx "wonderful tx, thank you!")
                  logInfo "got PingTx, replied"
-         in [ lcallback @t txCallback ]
+         in [ lcallback txCallback ]

@@ -8,11 +8,14 @@ module Dscp.Crypto.Hash.Class
        , HasAbstractHash (..)
        , AbstractHash (..)
        , abstractHash
+       , hashF
        ) where
 
 import Data.ByteArray (ByteArray, ByteArrayAccess)
+import Fmt (Builder, build)
 
-import Dscp.Crypto.ByteArray (FromByteArray (..))
+import Dscp.Crypto.ByteArray (FromByteArray)
+import Dscp.Util (toHex)
 
 -- | Class of algorithms which can produce some hash value.
 -- It's assumed that every hash algorithm should be able to
@@ -26,6 +29,10 @@ class HashFunc hf where
 -- the type of object being hashed.
 newtype AbstractHash hf a = AbstractHash (HashResult hf)
 
+-- | Hash builder.
+hashF :: ByteArrayAccess (HashResult hf) => AbstractHash hf a -> Builder
+hashF = build . toHex
+
 -- | 'GeneralizedNewtypeDeriving' cannot into type families,
 -- so we do this.
 deriving instance Eq (HashResult hf) => Eq (AbstractHash hf a)
@@ -33,12 +40,9 @@ deriving instance Ord (HashResult hf) => Ord (AbstractHash hf a)
 deriving instance Show (HashResult hf) => Show (AbstractHash hf a)
 deriving instance Monoid (HashResult hf) => Monoid (AbstractHash hf a)
 
-deriving instance ByteArrayAccess (HashResult hf) =>
-    ByteArrayAccess (AbstractHash hf a)
-deriving instance ByteArray (HashResult hf) =>
-    ByteArray (AbstractHash hf a)
-deriving instance FromByteArray (HashResult hf) =>
-    FromByteArray (AbstractHash hf a)
+deriving instance ByteArrayAccess (HashResult hf) => ByteArrayAccess (AbstractHash hf a)
+deriving instance ByteArray (HashResult hf) => ByteArray (AbstractHash hf a)
+deriving instance FromByteArray (HashResult hf) => FromByteArray (AbstractHash hf a)
 
 -- | For each `a`, provide a way to apply hash function `hf` to it.
 -- Types with 'ByteArrayAccess' have a free pass.

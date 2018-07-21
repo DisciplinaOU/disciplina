@@ -1,11 +1,13 @@
 module Test.Dscp.Witness where
 
+{-
 import Test.Common
 
 import qualified Dscp.Witness as Witness
 
-spec_Transactions :: Spec
-spec_Transactions = describe "Transactions" $ do
+
+_spec_Transactions :: Spec
+_spec_Transactions = describe "Transactions" $ do
     it "can be applied by another server node" $ property $
         \(Sandbox world (transaction : _) _ _ _ _) ->
             Witness.Server world `worldTProperty` do
@@ -39,8 +41,8 @@ spec_Transactions = describe "Transactions" $ do
                         _ <- Witness.playTransaction transaction
                         return False
 
-spec_Blocks :: Spec
-spec_Blocks = describe "Blocks" $ do
+_spec_Blocks :: Spec
+_spec_Blocks = describe "Blocks" $ do
     it "can be added by a client to the blockchain" $ property $
         \(Sandbox world transactions _ _ _ _) -> do
             Witness.Server world `worldTProperty` do
@@ -53,11 +55,13 @@ spec_Blocks = describe "Blocks" $ do
                 return True
 
     it "can be added by another server node to the blockchain" $ property $
-        \(Sandbox world transactions _ _ _ _) -> do
-            Witness.Server world `worldTProperty` do
-                block <- Witness.dryRun $ do
-                    Witness.generateBlock $ (^.Witness.wpBody) <$> transactions
+       \(Sandbox world transactions _ _ _ _) -> do
+           Witness.Server world `worldTProperty` do
+               block <- Witness.dryRun $ do
+                   Witness.generateBlock $ (^.Witness.wpBody) <$> transactions
 
-                Witness.replayBlock block
+               Witness.replayBlock block
 
-                return True
+               return True
+
+-}

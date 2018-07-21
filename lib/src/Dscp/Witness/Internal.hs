@@ -1,7 +1,9 @@
 {-# LANGUAGE DeriveAnyClass #-}
 
+-- This module is deprecated, but maybe it'll appear to be useful in the future.
 module Dscp.Witness.Internal where
 
+{-
 import Prelude hiding (Hashable, get, trace, use)
 
 import Codec.Serialise (Serialise (..))
@@ -14,12 +16,17 @@ import qualified Data.Tree.AVL as AVL
 import qualified Debug.Trace as Debug
 
 import Dscp.Accounts
+import Dscp.AVL
 import Dscp.Crypto (Hash, unsafeHash)
-import Dscp.Witness.Instances ()
 
--- | Hash without a phantom type parameter. Temporary.
-type Hash' = Hash ()
+-- | Our instantiation of AVL+.
+type AVLMap v = AVL.Map AvlHash Entity v
 
+-- I don't know what semantic does it suppose to have.
+emptyHash :: AvlHash
+emptyHash = AVL.defHash @AvlHash @Entity @()
+
+-- It should be 'Ids'.
 -- | Stub representation of entity.
 data Entity = Entity Int
     deriving (Show, Eq, Ord, Bounded, Generic, Serialise, Default)
@@ -27,25 +34,23 @@ data Entity = Entity Int
 -- | Global state of the network, maintained by each server node.
 data WorldState
   = WorldState
-    { _accounts       :: AVLMap (Account Hash')
+    { _accounts       :: AVLMap (Account AvlHash)
     , _publications   :: AVLMap Publication
     , _specalizations :: AVLMap DAG
     , _storage        :: AVLMap Storage
     , _code           :: AVLMap Code
-    , _prevBlockHash  :: Hash'
+    , _prevBlockHash  :: AvlHash
     }
-
-type AVLMap v = AVL.Map Hash' Entity v
 
 -- | Proof of any action on global data.
 data WorldStateProof
     = WorldStateProof
-        { _accountsProof      :: Proof (Account Hash')
+        { _accountsProof      :: Proof (Account AvlHash)
         , _publicationsProof  :: Proof Publication
         , _specalizatiosProof :: Proof DAG
         , _storageProof       :: Proof Storage
         , _codeProof          :: Proof Code
-        , _prevBlockHashProof :: Hash'
+        , _prevBlockHashProof :: AvlHash
         }
     deriving (Show, Generic, Serialise)
 
@@ -61,12 +66,12 @@ instance Eq WorldStateProof where
             ^.   AVL._Proof    -- get the tree
              .to AVL.rootHash  -- reduce to hash
 
-type Proof = AVL.Proof Hash' Entity
+type Proof = AVL.Proof AvlHash Entity
 
-type DAG         = Hash'
-type Publication = Hash'
-type Storage     = Hash'
-type Code        = Hash'
+type DAG         = AvlHash
+type Publication = AvlHash
+type Storage     = AvlHash
+type Code        = AvlHash
 
 -- | The changes the transaction consists from.
 data Change
@@ -98,8 +103,8 @@ instance Show Transaction where
 data WithProof a = WithProof
     { _wpBody      :: a
     , _wpProof     :: WorldStateProof
-    , _wpEndHash   :: Hash'
-    , _wpBeginHash :: Hash'
+    , _wpEndHash   :: AvlHash
+    , _wpBeginHash :: AvlHash
     }
     deriving (Show)
 
@@ -115,11 +120,11 @@ data Client = Client
 
 -- | Set of node identities to generate proof from. Proof prefab.
 data DiffSets = DiffSets
-    { _accountRevSet       :: Set Hash'
-    , _publicationRevSet   :: Set Hash'
-    , _specalizationRevSet :: Set Hash'
-    , _storageRevSet       :: Set Hash'
-    , _codeRevSet          :: Set Hash'
+    { _accountRevSet       :: Set AvlHash
+    , _publicationRevSet   :: Set AvlHash
+    , _specalizationRevSet :: Set AvlHash
+    , _storageRevSet       :: Set AvlHash
+    , _codeRevSet          :: Set AvlHash
     }
     deriving (Default, Generic)
 
@@ -160,7 +165,7 @@ data Side = Sender | Receiver
 
 data Block trans = Block
     { _bTransactions  :: [trans]
-    , _bPrevBlockHash :: Hash'
+    , _bPrevBlockHash :: AvlHash
     }
     deriving (Show, Generic, Serialise)
 
@@ -226,14 +231,14 @@ execWorldT ent serverState action = do
     return side
 
 emptyWorldState :: WorldState
-emptyWorldState = WorldState AVL.empty AVL.empty AVL.empty AVL.empty AVL.empty def
+emptyWorldState = WorldState AVL.empty AVL.empty AVL.empty AVL.empty AVL.empty emptyHash
 
 -- | Generate a 'WorldState' for testing where given entites each have
 --   the same amount of tokens.
 giveEach :: CanStore m => [Entity] -> Amount -> WorldT side m WorldState
 giveEach ents amount = do
     let emptyWorld  = emptyWorldState
-    let initalState = def & aBalance .~ amount
+    let initalState = emptyHash & aBalance .~ amount
 
     distribution <- AVL.fromList $ zip ents (repeat initalState)
     return $ emptyWorld & accounts .~ distribution
@@ -249,11 +254,11 @@ instance Monoid DiffSets where
         DiffSets (a <> a1) (b <> b1) (c <> c1) (d <> d1) (e <> e1)
 
 -- | Smart constructors for change reports.
-accountsChanged        :: Set Hash' -> DiffSets
-publicationsChanged    :: Set Hash' -> DiffSets
-specializationsChanged :: Set Hash' -> DiffSets
-storagesChanged        :: Set Hash' -> DiffSets
-codesChanged           :: Set Hash' -> DiffSets
+accountsChanged        :: Set AvlHash -> DiffSets
+publicationsChanged    :: Set AvlHash -> DiffSets
+specializationsChanged :: Set AvlHash -> DiffSets
+storagesChanged        :: Set AvlHash -> DiffSets
+codesChanged           :: Set AvlHash -> DiffSets
 accountsChanged        set' = def & accountRevSet       .~ set'
 publicationsChanged    set' = def & publicationRevSet   .~ set'
 specializationsChanged set' = def & specalizationRevSet .~ set'
@@ -312,7 +317,7 @@ assertAuthorExists = do
     sender <- view eAuthor
     assertExistence (Sided sender Sender)
 
-lookupAccount :: CanStore m => Sided Entity -> WorldT Server m (Maybe (Account Hash'))
+lookupAccount :: CanStore m => Sided Entity -> WorldT Server m (Maybe (Account AvlHash))
 lookupAccount entity = do
     -- TODO(kirill.andreev):
     --   Fix 'Data.Tree.AVL.Zipper.up' so that it doesn't rehash root
@@ -337,7 +342,7 @@ dryRun action = do
     return res
 
 -- | Retrieves an account. Fail if account does not exist.
-requireAccount :: CanStore m => Sided Entity -> WorldT Server m (Account Hash')
+requireAccount :: CanStore m => Sided Entity -> WorldT Server m (Account AvlHash)
 requireAccount entity = do
     mAcc <- lookupAccount entity
     case mAcc of
@@ -345,7 +350,7 @@ requireAccount entity = do
       Nothing -> throwM $ AccountDoesNotExist entity
 
 -- | Retrieves account of author.
-getAuthorAccount :: CanStore m => WorldT Server m (Account Hash')
+getAuthorAccount :: CanStore m => WorldT Server m (Account AvlHash)
 getAuthorAccount = do
     sender <- view eAuthor
     requireAccount (Sided sender Sender)
@@ -388,7 +393,7 @@ createAccount whom code' = do
     tell $ accountsChanged trails
 
 -- | Upsert an (entity, account) into 'accounts' map.
-unsafeSetAccount :: CanStore m => Entity -> Account Hash' -> WorldT Server m ()
+unsafeSetAccount :: CanStore m => Entity -> Account AvlHash -> WorldT Server m ()
 unsafeSetAccount entity account = do
     trails <- zoom (sWorld.accounts) $ do
         accs            <- get
@@ -404,7 +409,7 @@ unsafeSetAccount entity account = do
 modifyAccount
     ::  CanStore m
     =>  Sided Entity
-    -> (Account Hash' -> Account Hash')
+    -> (Account AvlHash -> Account AvlHash)
     ->  WorldT Server m ()
 modifyAccount entity f = do
     mAccount <- lookupAccount entity
@@ -515,7 +520,7 @@ proving (WithProof body proof idealEndHash proposedBeginHash) action = do
 
 -- | Ability to retrieve hash of current state.
 class CanGetHash side where
-    getCurrentHash :: CanStore m => WorldT side m Hash'
+    getCurrentHash :: CanStore m => WorldT side m AvlHash
 
 instance CanGetHash Server where
     getCurrentHash = do
@@ -557,7 +562,7 @@ instance CanReplayTransaction Server where
         return ()
 
 class CanSetPrevBlockHash side where
-    setPrevBlockHash :: CanStore m => Hash' -> WorldT side m ()
+    setPrevBlockHash :: CanStore m => AvlHash -> WorldT side m ()
 
 instance CanSetPrevBlockHash Client where
     setPrevBlockHash hash' = do
@@ -622,3 +627,4 @@ trace :: CanStore m => Show a => a -> WorldT side m ()
 trace a = do
     () <- Debug.traceShow a $ return ()
     return ()
+-}

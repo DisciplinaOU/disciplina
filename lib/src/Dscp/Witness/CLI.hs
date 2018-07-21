@@ -8,7 +8,7 @@ module Dscp.Witness.CLI
 
 import Options.Applicative (Parser)
 
-import Dscp.CLI.Common (logParamsParser, netServParamsParser, rocksParamsParser)
+import Dscp.CLI.Common (keyParamsParser, logParamsParser, netServParamsParser, rocksParamsParser)
 import Dscp.Witness.Launcher.Params (WitnessParams (..))
 
 witnessParamsParser :: Parser WitnessParams
@@ -16,4 +16,5 @@ witnessParamsParser = do
     wpLoggingParams <- logParamsParser "witness"
     wpDBParams <- rocksParamsParser
     wpNetworkParams <- netServParamsParser
+    wpKeyParams <- keyParamsParser
     pure $ WitnessParams {..}

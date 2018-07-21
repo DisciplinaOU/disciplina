@@ -1,4 +1,3 @@
-
 -- | JSON insances for core types
 
 module Dscp.Core.Aeson () where
@@ -8,6 +7,7 @@ import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
 
 import Dscp.Core.Address (addrFromText)
+import Dscp.Core.Serialise ()
 import Dscp.Core.Types (Address (..), Assignment (..), AssignmentType (..), Course (..),
                         DocumentType (..), Grade (..), SignedSubmission (..), Subject (..),
                         Submission (..), SubmissionWitness (..), mkGrade)

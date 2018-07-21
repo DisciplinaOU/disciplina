@@ -25,21 +25,22 @@ instance SignatureScheme CryptoEd25519 where
 
     -- TODO: 'toPublic' isn't free in terms of performance; consider
     -- storing secret key as actual keypair.
-    unsafeSignBytes (AbstractSK sk) =
+    ssSignBytes (AbstractSK sk) =
         AbstractSig . Ed25519.sign sk (Ed25519.toPublic sk)
 
-    unsafeVerifyBytes (AbstractPK pk) a (AbstractSig sig) =
+    ssVerifyBytes (AbstractPK pk) a (AbstractSig sig) =
         Ed25519.verify pk a sig
 
-    toPublic (AbstractSK sk) = AbstractPK $ Ed25519.toPublic sk
-    genSecretKey = AbstractSK <$> Ed25519.generateSecretKey
+    ssToPublic = AbstractPK . Ed25519.toPublic . unAbstractSk
+
+    ssGenSecret = AbstractSK <$> Ed25519.generateSecretKey
 
 -- | Instances for interesting types with 'ByteArrayAccess'
 instance HasAbstractSignature CryptoEd25519 ByteString
 instance HasAbstractSignature CryptoEd25519 Bytes
 
 #define BA_INSTANCE_SIG(t)                                         \
-instance ByteArrayAccess t => HasAbstractSignature CryptoEd25519 t \
+instance {-# OVERLAPPING #-} ByteArrayAccess t => HasAbstractSignature CryptoEd25519 t \
 
 BA_INSTANCE_SIG((AbstractHash hf t))
 BA_INSTANCE_SIG((AbstractPK ss))
@@ -48,7 +49,7 @@ BA_INSTANCE_SIG((AbstractSig ss a))
 
 -- | Separate instance for 'LByteString' (useful for integration with
 -- serialisation libs).
-instance (SignatureScheme ss, HasAbstractSignature ss ByteString) =>
+instance {-# OVERLAPPING #-} (SignatureScheme ss, HasAbstractSignature ss ByteString) =>
          HasAbstractSignature ss LByteString where
     unsafeAbstractSign sk = unsafeAbstractSign sk . BSL.toStrict
     unsafeAbstractVerify pk = unsafeAbstractVerify pk . BSL.toStrict

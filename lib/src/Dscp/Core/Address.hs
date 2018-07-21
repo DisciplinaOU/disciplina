@@ -1,19 +1,34 @@
-
--- | Utils and formatting for addresses.
+-- | Address and related.
 
 module Dscp.Core.Address
-       ( addrToBase58
+       ( Address (..)
+       , mkAddr
+       , addrToBase58
        , addrFromBase58
        , addrFromText
        ) where
 
+import Codec.Serialise (Serialise (..))
 import Data.ByteString.Base58 (Alphabet, bitcoinAlphabet, decodeBase58, encodeBase58)
 import Fmt (build)
--- import qualified Text.Show
 
-import Dscp.Core.Serialise ()
-import Dscp.Core.Types (Address (..))
-import Dscp.Util.Serialise (deserialiseOrFail', serialise')
+import Dscp.Crypto (Hash, PublicKey, hash)
+import Dscp.Util.Serialise (decodeCrcProtected, deserialiseOrFail', encodeCrcProtected, serialise')
+
+-- | 'Address' datatype. Not 'newtype', because later it will
+-- inevitably become more complex.
+-- TODO: maybe we should use a shorter hash for address, like in Cardano?
+data Address = Address
+    { addrHash :: !(Hash PublicKey)
+    } deriving (Eq, Ord, Show, Generic)
+
+-- | Address constructor from public key.
+mkAddr :: PublicKey -> Address
+mkAddr = Address . hash
+
+instance Serialise Address where
+    encode = encodeCrcProtected . addrHash
+    decode = Address <$> decodeCrcProtected
 
 -- | Address encoding alphabet. Should not contain characters
 -- which are too similar to one another, to prevent accidental
