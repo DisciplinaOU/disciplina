@@ -48,7 +48,7 @@ data Ids
     deriving (Eq, Ord, Show, Generic)
 
 instance Buildable Ids where
-    build = ("Key" <>) . \case
+    build = ("Key " <>) . \case
         TipKeyIds t -> build t
         BlockRefIds (BlockRef r) -> "block ref " +| hashF r
         AccountInIds (AccountId a) -> build a

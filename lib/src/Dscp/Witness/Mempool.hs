@@ -5,7 +5,7 @@ module Dscp.Witness.Mempool
     , MempoolVar
     , newMempoolVar
     , addTxToMempool
-    , swapTxsMempool
+    , takeTxsMempool
     ) where
 
 import Control.Concurrent.STM.TVar (modifyTVar, swapTVar)
@@ -26,5 +26,5 @@ newMempoolVar = liftIO $ newTVarIO (Mempool mempty)
 addTxToMempool :: MonadIO m => MempoolVar -> GTxWitnessed -> m ()
 addTxToMempool var tx = atomically $ modifyTVar var $ mpTxs %~ ((:) tx)
 
-swapTxsMempool :: MonadIO m => MempoolVar -> m [GTxWitnessed]
-swapTxsMempool var = fmap (view mpTxs) $ atomically $ swapTVar var $ Mempool []
+takeTxsMempool :: MonadIO m => MempoolVar -> m [GTxWitnessed]
+takeTxsMempool var = fmap (view mpTxs) $ atomically $ swapTVar var $ Mempool []

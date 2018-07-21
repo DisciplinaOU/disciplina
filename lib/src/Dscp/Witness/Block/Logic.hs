@@ -25,14 +25,13 @@ import Dscp.Snowdrop.Expanders (expandBlock)
 import Dscp.Snowdrop.Storage.Avlp (RememberForProof (..))
 import Dscp.Snowdrop.Validators (blkStateConfig)
 import Dscp.Witness.Launcher (WitnessWorkMode)
-import Dscp.Witness.Mempool (MempoolVar, swapTxsMempool)
+import Dscp.Witness.Mempool (MempoolVar, takeTxsMempool)
 
-
-
+-- | Empty mempool(s), create block body.
 createPayload :: MonadIO m => MempoolVar -> m BlockBody
-createPayload v = BlockBody <$> swapTxsMempool v
+createPayload v = BlockBody <$> takeTxsMempool v
 
-
+-- | Create a public block.
 createBlock :: WitnessWorkMode ctx m => m Block
 createBlock = do
     blockDBA <- views (lensOf @SDActions) (SD.dmaAccessActions . nsBlockDBActions)
@@ -60,7 +59,7 @@ createBlock = do
             (SD.queryOne SD.TipKey >>=
              maybe (SD.throwLocalError @(SD.BlockStateException Ids) SD.TipNotFound) pure)
 
-
+-- | Apply verified block.
 applyBlock :: WitnessWorkMode ctx m => Block -> m AvlProof
 applyBlock block = do
     (sdActions :: SDActions) <- view (lensOf @SDActions)
