@@ -3,8 +3,8 @@ module Dscp.Educator.Launcher.Params
        ) where
 
 import Dscp.DB.SQLite (SQLiteParams)
-import Dscp.Educator.Secret.Real.Types (EducatorSecretParams)
 import Dscp.Educator.Web.Params (EducatorWebParams)
+import Dscp.Resource.Keys.Types (KeyParams)
 import Dscp.Witness.Launcher.Params (WitnessParams)
 
 -- | Contains all initialization parameters of Educator node.
@@ -13,7 +13,7 @@ data EducatorParams = EducatorParams
     -- ^ Witness parameters
     , epDBParams      :: !SQLiteParams
     -- ^ Parameters for SQLite database
-    , epSecretParams  :: !EducatorSecretParams
+    , epKeyParams     :: !KeyParams
     -- ^ Parameters for educator secret key storage.
     , epWebParams     :: !EducatorWebParams
     -- ^ Parameters for HTTP APIs

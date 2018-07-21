@@ -3,12 +3,9 @@
 
 module Dscp.Resource.Other () where
 
-
-import Dscp.Config (HasBaseConfig)
 import Dscp.DB.Rocks.Real (RocksDB, RocksDBParams, closeNodeDB, openNodeDB)
-import Dscp.DB.SQLite (ensureSchemaIsSetUp)
-import Dscp.DB.SQLite (SQLiteDB (..), SQLiteParams, closeSQLiteDB, openSQLiteDB)
-import Dscp.Educator.Secret (EducatorSecret, EducatorSecretParams, linkStore)
+import Dscp.DB.SQLite (SQLiteDB (..), SQLiteParams, closeSQLiteDB, ensureSchemaIsSetUp,
+                       openSQLiteDB)
 import Dscp.Resource.Class (AllocResource (..), buildComponentR)
 
 ----------------------------------------------------------------------------
@@ -25,9 +22,3 @@ instance AllocResource SQLiteParams SQLiteDB where
             db@ (SQLiteDB conn) <- openSQLiteDB p'
             ensureSchemaIsSetUp conn
             return db
-
-instance HasBaseConfig => AllocResource EducatorSecretParams EducatorSecret where
-    allocResource params =
-        buildComponentR "Educator secret key storage"
-            (linkStore params)
-            (\_ -> pass)

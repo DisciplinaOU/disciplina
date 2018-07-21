@@ -4,7 +4,7 @@ module Test.Dscp.Educator.Serialise
 
 import Test.Common
 
-import Dscp.Educator.Secret (EducatorSecretJson, KeyfileContent)
+import Dscp.Resource.Keys (KeyJson (..), KeyfileContent)
 import Test.Dscp.Educator.Instances ()
 import Test.Dscp.Serialise (aesonRoundtripProp)
 import Test.Dscp.Util.Instances ()
@@ -13,5 +13,5 @@ spec_Serialisation :: Spec
 spec_Serialisation = describe "Serialisation" $ do
     describe "Aeson" $ do
         describe "roundtrip" $ do
-            aesonRoundtripProp @EducatorSecretJson
+            aesonRoundtripProp @KeyJson
             aesonRoundtripProp @KeyfileContent

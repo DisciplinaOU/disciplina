@@ -4,8 +4,11 @@
 
 module Dscp.Educator.Launcher.Mode
     (
+      -- * Markers
+      EducatorNode
+
       -- * Constraints
-      EducatorWorkMode
+    , EducatorWorkMode
     , CombinedWorkMode
 
       -- * Implementations
@@ -23,9 +26,8 @@ import Loot.Network.ZMQ as Z
 import Dscp.DB.Rocks.Real.Types (RocksDB)
 import Dscp.DB.SQLite (MonadSQLiteDB, SQLiteDB)
 import Dscp.Educator.Config (HasEducatorConfig, withEducatorConfig)
+import Dscp.Educator.Launcher.Marker (EducatorNode)
 import Dscp.Educator.Launcher.Params (EducatorParams)
-import Dscp.Educator.Secret (MonadEducatorSecret)
-import Dscp.Educator.Secret.Types (EducatorSecret)
 import qualified Dscp.Launcher.Mode as Basic
 import Dscp.Launcher.Rio (RIO)
 import Dscp.Resource.Keys (KeyResources)
@@ -41,7 +43,6 @@ import Dscp.Witness.Mempool (MempoolVar)
 type EducatorWorkMode ctx m =
     ( Basic.BasicWorkMode m
     , MonadSQLiteDB m
-    , MonadEducatorSecret m
 
     , HasEducatorConfig
 
@@ -49,7 +50,7 @@ type EducatorWorkMode ctx m =
 
     , HasLens' ctx EducatorParams
     , HasLens' ctx SQLiteDB
-    , HasLens' ctx EducatorSecret
+    , HasLens' ctx (KeyResources EducatorNode)
     )
 
 -- | Set of typeclasses which define capabilities both of Educator and Witness.
@@ -66,11 +67,11 @@ type CombinedWorkMode ctx m =
 -- TODO Separate resources and non-resources.
 data EducatorContext = EducatorContext
     {
-      _ecParams     :: EducatorParams
-    , _ecDB         :: SQLiteDB
-    , _ecSecret     :: EducatorSecret
+      _ecParams     :: !EducatorParams
+    , _ecDB         :: !SQLiteDB
+    , _ecKeys       :: !(KeyResources EducatorNode)
 
-    , _ecWitnessCtx :: W.WitnessContext
+    , _ecWitnessCtx :: !W.WitnessContext
     }
 
 makeLenses ''EducatorContext
@@ -85,8 +86,8 @@ instance HasLens EducatorParams EducatorContext EducatorParams where
     lensOf = ecParams
 instance HasLens SQLiteDB EducatorContext SQLiteDB where
     lensOf = ecDB
-instance HasLens EducatorSecret EducatorContext EducatorSecret where
-    lensOf = ecSecret
+instance HasLens (KeyResources EducatorNode) EducatorContext (KeyResources EducatorNode) where
+    lensOf = ecKeys
 
 instance HasLens W.WitnessParams EducatorContext W.WitnessParams where
     lensOf = ecWitnessCtx . lensOf @W.WitnessParams
@@ -100,8 +101,8 @@ instance HasLens Z.ZTNetCliEnv EducatorContext Z.ZTNetCliEnv where
     lensOf = ecWitnessCtx . lensOf @Z.ZTNetCliEnv
 instance HasLens Z.ZTNetServEnv EducatorContext Z.ZTNetServEnv where
     lensOf = ecWitnessCtx . lensOf @Z.ZTNetServEnv
-instance HasLens KeyResources EducatorContext KeyResources where
-    lensOf = ecWitnessCtx . lensOf @KeyResources
+instance HasLens (KeyResources W.WitnessNode) EducatorContext (KeyResources W.WitnessNode) where
+    lensOf = ecWitnessCtx . lensOf @(KeyResources W.WitnessNode)
 instance HasLens MempoolVar EducatorContext MempoolVar where
     lensOf = ecWitnessCtx . lensOf @MempoolVar
 instance HasLens SDActions EducatorContext SDActions where

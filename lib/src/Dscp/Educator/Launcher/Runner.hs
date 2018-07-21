@@ -15,7 +15,7 @@ import Dscp.Witness.Launcher.Runner (formWitnessContext)
 formEducatorContext :: EducatorParams -> EducatorResources -> IO EducatorContext
 formEducatorContext _ecParams EducatorResources{..} = do
     let _ecDB = _erDB
-    let _ecSecret = _erSecret
+    let _ecKeys = _erKeys
     _ecWitnessCtx <- formWitnessContext (epWitnessParams _ecParams) _erWitnessResources
     pure EducatorContext {..}
 
