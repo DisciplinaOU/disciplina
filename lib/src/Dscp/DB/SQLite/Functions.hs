@@ -6,7 +6,7 @@ module Dscp.DB.SQLite.Functions
        , closeSQLiteDB
        ) where
 
-import qualified Database.SQLite.Simple as Lower
+import qualified Database.SQLite.Simple as Backend
 
 import UnliftIO (UnliftIO(..), askUnliftIO)
 
@@ -37,11 +37,11 @@ openSQLiteDB SQLiteParams{..} = do
                 return path
     sdConn <-
         wrapRethrowIO @SomeException (SQLConnectionOpenningError . show) $
-        Lower.open path
+        Backend.open path
     return SQLiteDB {..}
 
 closeSQLiteDB :: MonadIO m => SQLiteDB -> m ()
-closeSQLiteDB = liftIO . Lower.close . sdConn
+closeSQLiteDB = liftIO . Backend.close . sdConn
 
 ------------------------------------------------------------
 -- Instances
@@ -51,21 +51,29 @@ instance HasLens SQLiteDB ctx SQLiteDB => MonadSQLiteDB (RIO ctx) where
     query q params =
         rethrowSQLRequestError $ do
             SQLiteDB{..} <- view $ lensOf @SQLiteDB
-            liftIO $ Lower.query sdConn q params
+            liftIO $ Backend.query sdConn q params
     queryStreamed q params acc f =
         rethrowSQLRequestError $ do
             ctx <- ask
             let SQLiteDB{..} = ctx ^. lensOf @SQLiteDB
-            liftIO $ Lower.fold sdConn q params acc (runRIO ctx ... f)
+            liftIO $ Backend.fold sdConn q params acc (runRIO ctx ... f)
     execute q params = do
         rethrowSQLRequestError $ do
             SQLiteDB{..} <- view $ lensOf @SQLiteDB
-            liftIO $ Lower.execute sdConn q params
+            liftIO $ Backend.execute sdConn q params
 
     transaction action = do
         UnliftIO unlift <- askUnliftIO
         SQLiteDB conn <- view $ lensOf @SQLiteDB
         liftIO $ do
-            conn `Lower.withTransaction` do
+            conn `Backend.withTransaction` do
                 unlift action
 
+    traced action = do
+        UnliftIO unlift <- askUnliftIO
+        SQLiteDB conn <- view $ lensOf @SQLiteDB
+        liftIO $ do
+            Backend.setTrace conn (Just print)
+            res <- unlift action
+            Backend.setTrace conn Nothing
+            return res

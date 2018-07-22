@@ -2,24 +2,30 @@
 
 module Dscp.DB.SQLite.Instances () where
 
-import Codec.Serialise as Codec (deserialise, serialise)
+import Codec.Serialise as Codec (Serialise, deserialise, serialise)
 import Control.Lens (matching, review)
+
 import Database.SQLite.Simple.FromField (FromField (..))
 import Database.SQLite.Simple.FromRow (FromRow (..), field)
 import Database.SQLite.Simple.ToField (ToField (..))
 import Database.SQLite.Simple.ToRow (ToRow (..))
 
 import Dscp.Core.Serialise ()
-import Dscp.Core.Types (Address (..), Assignment (..), AssignmentType, Course (..), DocumentType,
-                        Grade (..), SignedSubmission (..), Subject (..), Submission (..),
-                        SubmissionWitness (..))
-import Dscp.Crypto (Hash, PublicKey, Signature, hash)
+import Dscp.Core.Types (ATGDelta, Address (..), Assignment (..), AssignmentType, Course (..),
+                        DocumentType, Grade (..), SignedSubmission (..), Subject (..),
+                        Submission (..), SubmissionWitness (..))
+import Dscp.Crypto (EmptyMerkleTree, Hash, MerkleSignature, PublicKey, Signature, hash)
+import Dscp.DB.SQLite.BlockData (BlockData (..), TxInBlock (..), TxWithIdx (..))
 import Dscp.DB.SQLite.Types (TxBlockIdx, intTxBlockIdx)
 import Dscp.Educator.Txs (PrivateTx (..))
 import Dscp.Util (leftToPanic)
 
-instance FromField (Hash a)       where fromField f = Codec.deserialise <$> fromField f
-instance FromField (Signature a)  where fromField f = Codec.deserialise <$> fromField f
+
+instance FromField (Hash a)            where fromField f = Codec.deserialise <$> fromField f
+instance FromField (Signature a)       where fromField f = Codec.deserialise <$> fromField f
+instance FromField (MerkleSignature a) where fromField f = Codec.deserialise <$> fromField f
+instance Serialise a =>
+         FromField (EmptyMerkleTree a) where fromField f = Codec.deserialise <$> fromField f
 
 -- TODO(kir): use #define to generate macros
 instance FromField Address           where fromField f = Codec.deserialise <$> fromField f
@@ -30,6 +36,7 @@ instance FromField Grade             where fromField f = UnsafeGrade       <$> f
 instance FromField AssignmentType    where fromField f = Codec.deserialise <$> fromField f
 instance FromField SubmissionWitness where fromField f = Codec.deserialise <$> fromField f
 instance FromField DocumentType      where fromField f = toEnum <$> fromField f
+instance FromField ATGDelta          where fromField f = Codec.deserialise <$> fromField f
 instance FromField TxBlockIdx        where
     fromField f = leftToPanic . first mkError . matching intTxBlockIdx <$> fromField f
       where
@@ -37,6 +44,9 @@ instance FromField TxBlockIdx        where
 
 instance ToField   (Hash a)          where toField = toField . Codec.serialise
 instance ToField   (Signature a)     where toField = toField . Codec.serialise
+instance ToField (MerkleSignature a) where toField = toField . Codec.serialise
+instance Serialise a =>
+         ToField (EmptyMerkleTree a) where toField = toField . Codec.serialise
 
 instance ToField   Address           where toField = toField . Codec.serialise
 instance ToField   Course            where toField = toField . getCourseId
@@ -46,6 +56,7 @@ instance ToField   Grade             where toField = toField . getGrade
 instance ToField   SubmissionWitness where toField = toField . Codec.serialise
 instance ToField   DocumentType      where toField = toField . fromEnum
 instance ToField   TxBlockIdx        where toField = toField . review intTxBlockIdx
+instance ToField   ATGDelta          where toField = toField . Codec.serialise
 
 instance FromRow   Course            where fromRow = field
 instance FromRow   Grade             where fromRow = field
@@ -55,6 +66,12 @@ instance FromRow   Submission        where fromRow = Submission       <$> field 
 instance FromRow   SignedSubmission  where fromRow = SignedSubmission <$> fromRow <*> field
 instance FromRow   PrivateTx         where fromRow = PrivateTx        <$> fromRow <*> field <*> field
 
+instance FromRow   TxInBlock         where fromRow = TxInBlock        <$> fromRow <*> field
+instance FromRow   TxWithIdx         where fromRow = TxWithIdx        <$> fromRow <*> field
+
 instance ToRow Assignment where
     toRow task@ (Assignment course contentsHash ty text) =
         [toField (hash task), toField course, toField contentsHash, toField ty, toField text]
+
+instance FromRow BlockData where
+    fromRow = BlockData <$> field <*> field <*> field <*> field <*> field <*> field <*> field

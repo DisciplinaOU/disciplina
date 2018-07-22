@@ -18,7 +18,6 @@ import Dscp.Core (Address (..), SignedSubmission (..), Submission (..), Submissi
                   ssSubmission, ssWitness, swKey, swSig)
 import Dscp.Crypto (Hash, MerkleSignature, PublicKey, fromFoldable, getMerkleRoot, hash, verify)
 import Dscp.Educator.Block (PrivateBlock (..), PrivateBlockHeader (..), _pbBody, _pbbTxs)
-import Dscp.Educator.Serialise ()
 import Dscp.Educator.Txs (PrivateTx (..))
 import Text.InterpolatedString.Perl6 (qc)
 

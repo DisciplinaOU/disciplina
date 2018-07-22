@@ -1,41 +1,107 @@
 {-# LANGUAGE QuasiQuotes #-}
 
-module Dscp.DB.SQLite.Queries where
+module Dscp.DB.SQLite.Queries
+       ( -- * Domain-level database errors (missing entites, mostly)
+         DomainError(..)
+
+         -- * Prisms for constructors
+       , _CourseDoesNotExist
+       , _StudentDoesNotExist
+       , _AssignmentDoesNotExist
+       , _StudentWasNotEnrolledOnTheCourse
+       , _StudentWasNotSubscribedOnAssignment
+       , _SubmissionDoesNotExist
+       , _TransactionDoesNotExist
+       , _BlockWithIndexDoesNotExist
+       , _BlockProofIsCorrupted
+         -- * Synonym for MonadSQLiteDB
+       , DBM
+
+         -- * Readonly actions
+       , getCourseSubjects
+       , getStudentCourses
+       , getStudentAssignments
+       , getGradesForCourseAssignments
+       , getStudentTransactions
+       , getProvenStudentTransactionsSince
+       , getAssignment
+       , getSignedSubmission
+       , getTransaction
+
+         -- * Readonly predicates
+       , isEnrolledTo
+       , isAssignedToStudent
+       , existsCourse
+       , existsStudent
+
+         -- * Destructive actions
+       , enrollStudentToCourse
+       , submitAssignment
+       , createBlock
+       , createSignedSubmission
+       , setStudentAssignment
+       , createCourse
+       , createStudent
+       , createAssignment
+       , createTransaction
+       ) where
+
 
 import Control.Lens (makePrisms)
+
 import Data.Coerce (coerce)
+import qualified Data.Map as Map (empty, fromList, insertWith, toList)
+import Data.Time.Clock (UTCTime, getCurrentTime)
+
 import Database.SQLite.Simple (Only (..), Query)
 import Database.SQLite.Simple.ToField (ToField)
 import Database.SQLite.Simple.ToRow (ToRow (..))
 
 import Text.InterpolatedString.Perl6 (q)
 
-import Dscp.Core.Serialise ()
-import Dscp.Core.Types (Assignment (..), Course, SignedSubmission (..), Student, Subject,
+import Dscp.Core.Types (ATGDelta, Assignment (..), Course, SignedSubmission (..), Student, Subject,
                         Submission (..), aContentsHash, aCourseId, aDesc, aType, sAssignment,
                         sContentsHash, sStudentId, ssSubmission, ssWitness)
-import Dscp.DB.SQLite.Class (MonadSQLiteDB (..))
+import Dscp.Crypto (Hash, MerkleProof, fillEmptyMerkleTree, getEmptyMerkleTree, getMerkleRoot, hash)
+import qualified Dscp.Crypto.MerkleTree as MerkleTree (fromList)
+import Dscp.DB.SQLite.BlockData (BlockData (..), TxInBlock (..), TxWithIdx (..))
+import Dscp.DB.SQLite.Class (MonadSQLiteDB (..), transaction)
 import Dscp.DB.SQLite.Instances ()
 import Dscp.DB.SQLite.Types (TxBlockIdx (TxInMempool))
-import Dscp.Educator.Serialise ()
+import Dscp.Educator.Block (PrivateBlock (..), PrivateBlockHeader (..), genesisHeaderHash)
 import Dscp.Educator.Txs (PrivateTx (..), ptGrade, ptSignedSubmission, ptTime)
 import Dscp.Util (HasId (..), assert, assertJust, idOf)
 
 data DomainError
     = CourseDoesNotExist
-      { deCourseId :: Id Course }
+        { deCourseId :: Id Course }
+
     | StudentDoesNotExist
-      { deStudentId :: Id Student }
+        { deStudentId :: Id Student }
+
     | AssignmentDoesNotExist
-      { deAssignmentId :: Id Assignment }
+        { deAssignmentId :: Id Assignment }
+
     | StudentWasNotEnrolledOnTheCourse
-      { deStudentId :: Id Student
-      , deCourseId  :: Id Course }
+        { deStudentId :: Id Student
+        , deCourseId  :: Id Course }
+
     | StudentWasNotSubscribedOnAssignment
-      { deStudentId    :: Id Student
-      , deAssignmentId :: Id Assignment }
+        { deStudentId    :: Id Student
+        , deAssignmentId :: Id Assignment }
+
     | SubmissionDoesNotExist
-      { deSubmissionId :: Id Submission }
+        { deSubmissionId :: Id Submission }
+
+    | TransactionDoesNotExist
+        { deTransactionId :: Id PrivateTx }
+
+    | BlockWithIndexDoesNotExist
+        { deBlockIdx :: Word32 }
+
+    | BlockProofIsCorrupted
+        { deBlockId :: Id PrivateBlock }
+
     deriving (Show, Typeable, Eq)
 
 -- Using records ^ to get sensible autoderived json instances.
@@ -53,6 +119,7 @@ getStudentCourses student =
   where
     getStudentCoursesQuery :: Query
     getStudentCoursesQuery = [q|
+        -- getStudentCourses
         select  course_id
         from    StudentCourses
         where   student_addr = ?
@@ -69,6 +136,7 @@ enrollStudentToCourse student course = do
   where
     enrollStudentToCourseRequest :: Query
     enrollStudentToCourseRequest = [q|
+        -- enrollStudentToCourse
         insert into  StudentCourses
         values       (?, ?)
     |]
@@ -80,6 +148,7 @@ getStudentAssignments student course = do
   where
     getStudentAssignmentsQuery :: Query
     getStudentAssignmentsQuery = [q|
+        -- getStudentAssignments
         select     course_id, contents_hash, type, desc
         from       StudentAssignments
         left join  Assignments
@@ -155,6 +224,185 @@ getStudentTransactions student = do
         where      student_addr = ?
     |]
 
+-- | Returns list of transaction blocks along with block-proof of a student since given moment.
+getProvenStudentTransactionsSince :: DBM m => Id Student -> UTCTime -> m [(MerkleProof PrivateTx, [(Word32, PrivateTx)])]
+getProvenStudentTransactionsSince studentId sinceTime = do
+    transaction $ do
+        -- Contains `(tx, idx, blockId)` map.
+        txsBlockList <- getTxsBlockMap
+
+        -- Bake `blockId -> [(tx, idx)]` map.
+        let txsBlockMap = groupToAssocWith (_tibBlockId, _tibTx) txsBlockList
+                      -- TODO: remove if transaction order is not needed to be preserved
+                      <&> (<&> reverse)
+
+        results <- forM txsBlockMap $ \(blockId, transactions) -> do
+            blockData <- getBlockData blockId
+
+            let tree    = _bdTree blockData
+                indiced = [(idx, tx) | TxWithIdx tx idx <- transactions]
+                mapping = Map.fromList indiced
+                pruned  = fillEmptyMerkleTree mapping tree
+
+            return (pruned, indiced)
+
+        return [(proof, txs) | (Just proof, txs) <- results]
+
+  where
+    groupToAssocWith :: Ord k => Ord k => (a -> k, a -> v) -> [a] -> [(k, [v])]
+    groupToAssocWith (key, value) =
+        Map.toList . foldr' push Map.empty
+      where
+        push a = Map.insertWith (flip (++)) (key a) [value a]
+
+    -- Returns, effectively, `[(tx, idx, blockId)]`.
+    getTxsBlockMap :: DBM m => m [TxInBlock]
+    getTxsBlockMap = do
+        query getTxsBlockMapQuery (studentId, sinceTime)
+      where
+        getTxsBlockMapQuery = [q|
+            -- getTxsBlockMapQuery
+
+            select     Submissions.student_addr,
+                       Submissions.contents_hash,
+                       Assignments.course_id,
+                       Assignments.contents_hash,
+                       Assignments.type,
+                       Assignments.desc,
+                       Submissions.signature,
+                       Transactions.grade,
+                       Transactions.time,
+                       Transactions.idx,
+                       BlockTxs.blk_idx
+
+            from       BlockTxs
+            left join  Transactions
+                   on  tx_hash = Transactions.hash
+
+            left join  Submissions
+                   on  Transactions.submission_hash = Submissions.hash
+
+            left join  StudentAssignments
+                   on  StudentAssignments.assignment_hash = Submissions.assignment_hash
+
+            left join  Assignments
+                   on  StudentAssignments.assignment_hash = Assignments.hash
+
+            where      StudentAssignments.student_addr  =  ?
+                  and  time                            >=  ?
+                  and  Transactions.idx                <> -1
+        |]
+
+    -- Returns `PrivateBlock` in normalized format, with metadata.
+    getBlockData :: DBM m => Word32 -> m BlockData
+    getBlockData blockIdx = do
+        (listToMaybe <$> query getBlockDataQuery (Only blockIdx))
+            `assertJust` BlockWithIndexDoesNotExist blockIdx
+      where
+        getBlockDataQuery = [q|
+            -- getBlockData
+            select  idx,
+                    hash,
+                    time,
+                    prev_hash,
+                    atg_delta,
+                    mroot,
+                    mtree
+            from    Blocks
+            where   idx = ?
+        |]
+
+getAllNonChainedTransactions :: DBM m => m [PrivateTx]
+getAllNonChainedTransactions = do
+    query getAllNonChainedTransactionsQuery ()
+  where
+    getAllNonChainedTransactionsQuery = [q|
+        -- getAllNonChainedTransactions
+        select     Submissions.student_addr,
+                   Submissions.contents_hash,
+                   Assignments.course_id,
+                   Assignments.contents_hash,
+                   Assignments.type,
+                   Assignments.desc,
+                   Submissions.signature,
+                   grade,
+                   time
+
+        from       Transactions
+
+        left join  Submissions
+               on  submission_hash = Submissions.hash
+
+        left join  Assignments
+               on  assignment_hash = Assignments.hash
+
+        where  idx = -1
+    |]
+
+getLastBlockIdAndIdx :: DBM m => m (Hash PrivateBlockHeader, Word32)
+getLastBlockIdAndIdx = do
+    fromMaybe (genesisHeaderHash, 1) . listToMaybe <$> query [q|
+        -- getLastBlockIdAndIdx
+        select    hash,
+                  idx
+        from      Blocks
+        order by  idx desc
+        limit     1
+    |] ()
+
+createBlock :: DBM m => Maybe ATGDelta -> m ()
+createBlock delta = do
+    (prev, idx) <- getLastBlockIdAndIdx
+    txs         <- getAllNonChainedTransactions
+
+    let tree = MerkleTree.fromList txs
+        root = getMerkleRoot tree
+
+        txs' = zip [0..] (getId <$> txs)
+        bid  = idx + 1
+
+        trueDelta = mempty `fromMaybe` delta
+
+        hdr = PrivateBlockHeader prev root trueDelta
+
+    time <- liftIO getCurrentTime
+
+    transaction $ do
+        _ <- execute createBlockRequest
+            ( bid
+            , hash hdr
+            , time
+            , prev
+            , trueDelta
+            , root
+            , getEmptyMerkleTree tree
+            )
+
+        for_ txs' $ \(txIdx, txId) -> do
+            execute setTxIndexRequest    (txIdx :: Word32, txId)
+            execute assignToBlockRequest (bid, txId)
+
+        return ()
+  where
+    createBlockRequest = [q|
+        -- createBlock
+        insert into Blocks
+        values      (?, ?, ?, ?, ?, ?, ?)
+    |]
+
+    setTxIndexRequest = [q|
+        -- setTxIndex
+        update  Transactions
+        set     idx  = ?
+        where   hash = ?
+    |]
+
+    assignToBlockRequest = [q|
+        -- assignToBlock
+        insert into BlockTxs
+        values      (?, ?)
+    |]
+
 createSignedSubmission :: DBM m => SignedSubmission -> m (Id SignedSubmission)
 createSignedSubmission sigSub = do
     let
@@ -186,6 +434,7 @@ createSignedSubmission sigSub = do
   where
     generateSubmissionRequest :: Query
     generateSubmissionRequest = [q|
+        -- generateSubmission
         insert into  Submissions
         values       (?, ?, ?, ?, ?, null)
     |]
@@ -205,6 +454,7 @@ setStudentAssignment studentId assignmentId = do
   where
     setStudentAssignmentRequest :: Query
     setStudentAssignmentRequest = [q|
+        -- setStudentAssignment
         insert into  StudentAssignments
         values      (?, ?)
     |]
@@ -214,6 +464,7 @@ isEnrolledTo studentId courseId = do
     exists enrollmentQuery (studentId, courseId)
   where
     enrollmentQuery = [q|
+        -- isEnrolledTo
         select  count(*)
         from    StudentCourses
         where   student_addr = ?
@@ -226,6 +477,7 @@ isAssignedToStudent student assignment = do
   where
     getStudentAssignmentQuery :: Query
     getStudentAssignmentQuery = [q|
+        -- isAssignedToStudent
         select  count(*)
         from    StudentAssignments
         where   student_addr = ?
@@ -242,11 +494,13 @@ createCourse course desc subjects = do
         return course
   where
     createCourseRequest = [q|
+        -- createCourse
         insert into  Courses
         values       (?, ?)
     |]
 
     attachSubjectToCourseRequest = [q|
+        -- attachSubjectToCourse
         insert into  Subjects
         values       (?, ?, "")
     |]
@@ -267,6 +521,7 @@ existsCourse course = do
     exists existsCourseQuery (Only course)
   where
     existsCourseQuery = [q|
+        -- existsCourse
         select  count(*)
         from    Courses
         where   id = ?
