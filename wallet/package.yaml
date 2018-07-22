@@ -1,0 +1,42 @@
+<<: !include "../hpack/module.yaml"
+
+name:        disciplina-wallet
+description: This package contains Ariadne-based wallet for Disciplina
+
+library:
+  <<: *lib-common
+  default-extensions:
+    - ApplicativeDo
+    - DataKinds
+    - ExistentialQuantification
+  dependencies:
+    - Earley
+    - ansi-wl-pprint
+    - async
+    - bytestring
+    - containers
+    - disciplina
+    - formatting
+    - haskeline
+    - ii-extras
+    - knit
+    - lens
+    - loc
+    - megaparsec
+    - serialise
+    - serokell-util
+    - text
+    - vinyl
+executables:
+  disciplina-wallet:
+    <<: *exec-common
+    source-dirs: app
+    default-extensions:
+      - DataKinds
+    dependencies:
+      - ansi-wl-pprint
+      - disciplina
+      - disciplina-wallet
+      - ii-extras
+      - knit
+      - text
