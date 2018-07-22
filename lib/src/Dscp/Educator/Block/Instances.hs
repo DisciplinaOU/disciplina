@@ -19,4 +19,3 @@ instance HasId PrivateBlock where
     type Id PrivateBlock = Hash PrivateBlockHeader
 
     getId = hash . _pbHeader
-

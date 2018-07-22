@@ -233,6 +233,8 @@ getProvenStudentTransactionsSince studentId sinceTime = do
 
         -- Bake `blockId -> [(tx, idx)]` map.
         let txsBlockMap = groupToAssocWith (_tibBlockId, _tibTx) txsBlockList
+                      -- TODO: remove if transaction order is not needed to be preserved
+                      <&> (<&> reverse)
 
         results <- forM txsBlockMap $ \(blockId, transactions) -> do
             blockData <- getBlockData blockId
@@ -251,7 +253,7 @@ getProvenStudentTransactionsSince studentId sinceTime = do
     groupToAssocWith (key, value) =
         Map.toList . foldr' push Map.empty
       where
-        push a = Map.insertWith (++) (key a) [value a]
+        push a = Map.insertWith (flip (++)) (key a) [value a]
 
     -- Returns, effectively, `[(tx, idx, blockId)]`.
     getTxsBlockMap :: DBM m => m [TxInBlock]
@@ -297,7 +299,6 @@ getProvenStudentTransactionsSince studentId sinceTime = do
         (listToMaybe <$> query getBlockDataQuery (Only blockIdx))
             `assertJust` BlockWithIndexDoesNotExist blockIdx
       where
-        -- TODO: prune fields that aren't needed.
         getBlockDataQuery = [q|
             -- getBlockData
             select  idx,
@@ -354,19 +355,19 @@ createBlock delta = do
     (prev, idx) <- getLastBlockIdAndIdx
     txs         <- getAllNonChainedTransactions
 
+    let tree = MerkleTree.fromList txs
+        root = getMerkleRoot tree
+
+        txs' = zip [0..] (getId <$> txs)
+        bid  = idx + 1
+
+        trueDelta = mempty `fromMaybe` delta
+
+        hdr = PrivateBlockHeader prev root trueDelta
+
+    time <- liftIO getCurrentTime
+
     transaction $ do
-        let tree = MerkleTree.fromList txs
-            root = getMerkleRoot tree
-
-            txs' = zip [0..] (getId <$> txs)
-            bid  = idx + 1
-
-            trueDelta = mempty `fromMaybe` delta
-
-            hdr = PrivateBlockHeader prev root trueDelta
-
-        time <- liftIO getCurrentTime
-
         _ <- execute createBlockRequest
             ( bid
             , hash hdr

@@ -18,4 +18,3 @@ instance Serialise PrivateTxAux
 instance HasId PrivateTx where
     type Id PrivateTx = Hash PrivateTx
     getId = hash
-
