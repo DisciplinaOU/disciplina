@@ -3,6 +3,7 @@ resolver: lts-11.17
 packages:
 - 'lib'
 - 'tools'
+- 'wallet'
 
 nix:
   shell-file: shell.nix
@@ -39,6 +40,15 @@ extra-deps:
     - code/config
     - code/network
     - code/prelude
+
+- git: https://github.com/serokell/ariadne.git
+  commit: 0ff7cc63326c6697f3e1fb67818cc6370b0f566f
+  subdirs:
+    - knit
+    - util
+
+# for ariadne
+- loc-0.1.3.2
 
 # Forced by lootbox #
 - base-noprelude-4.10.1.0
