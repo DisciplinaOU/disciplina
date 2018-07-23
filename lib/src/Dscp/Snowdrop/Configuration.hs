@@ -81,8 +81,8 @@ deriving instance (Show pk, Show sig, Show a) => Show (WithSignature pk sig a)
 
 type AddrTxProof =
     WithSignature PublicKey
-                  (Signature (T.TxId, T.TxInAcc))
-                  (T.TxId, T.TxInAcc)
+                  (Signature (T.TxId, PublicKey))
+                  (T.TxId, PublicKey)
 
 data Proofs =
     AddressTxWitness AddrTxProof
@@ -137,8 +137,6 @@ deriveIdView withInjProj ''Ids
 
 deriveView withInjProj ''Values
 deriveIdView withInjProj ''Values
-
-deriveView withInjProj ''Proofs
 
 deriveView withInjProj ''TxIds
 deriveView withInj ''Exceptions

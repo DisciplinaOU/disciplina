@@ -332,7 +332,7 @@ txId = hash
 -- included to speed up and simplify transaction validation
 -- (@volhovm). Public key should correspond to the input address.
 data TxWitness = TxWitness
-    { txwSig :: Signature (TxId, TxInAcc)
+    { txwSig :: Signature (TxId, PublicKey)
     , txwPk  :: PublicKey
     } deriving (Eq, Show, Generic)
 

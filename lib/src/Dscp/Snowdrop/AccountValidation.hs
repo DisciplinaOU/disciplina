@@ -53,6 +53,7 @@ data AccountValidationException
     = AuthorDoesNotExist
     | SignatureIsMissing
     | SignatureIsCorrupted
+    | KeysMismatch
     | TransactionIsCorrupted
     | NoncesMismatch
     | NotASingletonSelfUpdate      -- ^ 'Author' account updated multiple times.
@@ -83,86 +84,82 @@ assertSigned WithSignature {..} message = do
 
     return wsBody
 
+infix 1 `check`
+check :: (Monoid a, HasException e e1) => Bool -> e1 -> ERoComp e id value ctx a
+check = flip validateIff
+
+type VatidatorCtx e pk addr id proof value ctx sig hash stTxId
+    =   ( HasExceptions e
+           [ AccountValidationException
+           , TxValidationException
+           , StatePException
+           ]
+        , VerifySign pk sig (hash, pk)
+        , HasGetter proof hash
+        , HasGetter proof pk
+        , HasGetter pk addr
+        , HasGetter proof (WithSignature pk sig (hash, pk))
+        , HasKeyValue id value (AccountId addr) Account
+        , IdStorage stTxId AccountTx
+        , IdSumPrefixed id
+        , Ord addr
+        , Ord id
+        , Eq hash
+        , Eq pk
+        )
+
 validateSimpleMoneyTransfer
-  :: forall e pk addr id proof value ctx sig hash stTxId
-    .  ( HasExceptions e
-          [ AccountValidationException
-          , TxValidationException
-          , StatePException
-          ]
-       , VerifySign pk sig (hash, Author (AccountId addr))
-       , HasPrism proof hash
-       , HasPrism proof pk
-       , HasPrism proof (WithSignature pk sig (hash, Author (AccountId addr)))
-       , HasKeyValue id value (AccountId addr) Account
-       , IdStorage stTxId AccountTx
-       , IdSumPrefixed id
-       , Ord addr
-       , Ord id
-       , Eq hash
-       , HasHash (ChangeSet id value) hash
-       )
-    => Validator e id proof value ctx
+    :: forall       e pk addr id proof value ctx sig hash stTxId
+    .  VatidatorCtx e pk addr id proof value ctx sig hash stTxId
+    => Validator    e         id proof value ctx
+
 validateSimpleMoneyTransfer = mkValidator ty
     [preValidateSimpleMoneyTransfer @e @pk @addr @id @proof @value @ctx @sig @hash @stTxId]
   where
     ty = StateTxType $ getId (Proxy @stTxId) AccountTxId
 
+authenticate
+    :: forall       e pk addr id proof value ctx sig hash stTxId
+    .  VatidatorCtx e pk addr id proof value ctx sig hash stTxId
+    => Eq             pk
+    => proof
+    -> ERoComp      e         id       value ctx (AccountId addr, Account)
+authenticate proof = do
+    let signedHash :: WithSignature pk sig (hash, pk)
+            = gett proof
+
+        realHashfromExpander :: hash
+            = gett proof
+
+    (hash, pk) <- signedHash                   `assertSigned` SignatureIsCorrupted
+    ()         <- pk == wsPublicKey signedHash `check`        KeysMismatch
+
+    let authorId = gett pk
+
+    before     <- AccountId authorId           `assertExists` AuthorDoesNotExist
+    ()         <- realHashfromExpander == hash `check`        TransactionIsCorrupted
+
+    return (AccountId authorId, before)
+
 preValidateSimpleMoneyTransfer
-  :: forall e pk addr id proof value ctx sig hash stTxId
-    .  ( Ord addr
-       , Ord id
-       , HasExceptions e
-          [ AccountValidationException
-          , TxValidationException
-          , StatePException
-          ]
-       , VerifySign pk sig (hash, Author (AccountId addr))
-       , HasPrism proof hash
-       , HasPrism proof pk
-       , HasPrism proof (WithSignature pk sig (hash, Author (AccountId addr)))
-       , HasKeyValue id value (AccountId addr) Account
-       , IdStorage stTxId AccountTx
-       , IdSumPrefixed id
-       , Eq hash
-       , HasHash (ChangeSet id value) hash
-       )
-    => PreValidator e id proof value ctx
+    :: forall       e pk addr id proof value ctx sig hash stTxId
+    .  VatidatorCtx e pk addr id proof value ctx sig hash stTxId
+    => PreValidator e         id proof value ctx
 preValidateSimpleMoneyTransfer =
     PreValidator $ \_trans@StateTx {..} -> do
-        --ty = StateTxType $ getId (Proxy @id) AccountTxId
-        --author :: Author (AccountId addr) <- requirePart txProof (ProofProjectionFailed ty)
-        signedHash
-          :: WithSignature pk sig (hash, Author (AccountId addr))
-          <- requirePart txProof SignatureIsMissing
+        (author, before) <- authenticate @e @pk @addr @id @proof @value @ctx @sig @hash @stTxId txProof
 
-        realHashfromExpander
-          :: hash
-          <- requirePart txProof SignatureIsMissing
-
-        (hash, author) <- assertSigned signedHash SignatureIsCorrupted
-
-        before <- assertExists (auAuthorId author) AuthorDoesNotExist
-
-        () <- mconcat
-            [ validateIff NoncesMismatch $
-                aNonce before == auNonce author
-
-            , validateIff TransactionIsCorrupted $
-                realHashfromExpander == hash
-            ]
-
-        -- Turn ChangeSet to kv-pairs.
+            -- Turn ChangeSet to kv-pairs.
         let updates        = Map.toList $ changeSet txBody
 
-        -- Project both key and value to AccointId and (ValueOp Account).
-        let accountChanges = updates <&> \pair@(k, _) -> (k, proj pair)
+            -- Project both key and value to AccointId and (ValueOp Account).
+            accountChanges = updates <&> \pair@ (k, _) -> (k, proj pair)
 
         -- Check that all pairs are projected and are Updates.
         -- Strip Update ctor from values.
         changes <- mapM checkThatAccountIsUpdatedOnly accountChanges
 
-        let (payer, recipients) = List.partition (is (auAuthorId author)) changes
+        let (payer, recipients) = List.partition (is author) changes
 
         (paid, deltas) <-
             (,) <$> validateSaneDeparture payer before
@@ -201,7 +198,7 @@ assertExists thing message = do
       Just it -> do
         return it
 
-
+-- TODO: Fix and unmess when fee will be actually required.
 accountComputeFee
   :: forall e addr id proof value ctx.
     ( HasExceptions e

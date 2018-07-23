@@ -67,7 +67,7 @@ toProofBalanceTx (TxWitnessed tx (TxWitness {..})) =
     txType = StateTxType $ getId (Proxy @TxIds) AccountTxId
     wsSignature = txwSig
     wsPublicKey = txwPk
-    wsBody = (txId tx, txInAcc tx)
+    wsBody = (txId tx, wsPublicKey)
 
 seqExpandersBalanceTx :: SeqExpanders Exceptions Ids Proofs Values ctx TxWitnessed
 seqExpandersBalanceTx =
@@ -101,10 +101,15 @@ seqExpandersBalanceTx =
 
         outs <- forM outOther $ \TxOut{..} -> do
             prevAcc <- getCurAcc txOutAddr
-            let outVal = coinToInteger txOutValue
-            let newAcc = Account { aBalance = outVal , aNonce = 0 }
+
+            let outVal    = coinToInteger txOutValue
+            let newAcc    = Account { aBalance = outVal,               aNonce = 0 }
             let updAcc a0 = Account { aBalance = aBalance a0 + outVal, aNonce = aNonce a0 }
-            let ch = maybe (New $ AccountOutVal newAcc) (Upd . AccountOutVal . updAcc) prevAcc
+            let ch        = maybe
+                    (New $ AccountOutVal   newAcc)
+                    (Upd . AccountOutVal . updAcc)
+                    prevAcc
+
             pure (AccountInIds (AccountId txOutAddr), ch)
 
         pure $ mkDiffCS $ M.fromList $ inp : outs
