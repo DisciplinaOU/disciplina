@@ -13,7 +13,7 @@ import qualified Snowdrop.Util as SD
 import Dscp.Core
 import Dscp.Crypto (PublicKey, Signature, hash, verify)
 import Dscp.Snowdrop.AccountValidation as A
-import Dscp.Snowdrop.Configuration (Exceptions, Ids, Proofs, SHeader, SPayload, SUndo, TxIds,
+import Dscp.Snowdrop.Configuration (Exceptions, Ids, Proofs (..), SHeader, SPayload, SUndo, TxIds,
                                     Values)
 
 ----------------------------------------------------------------------------
@@ -25,42 +25,41 @@ type IOCtx chgAccum = SD.IOCtx chgAccum Ids Values
 validator :: SD.Validator Exceptions Ids Proofs Values (IOCtx chgAccum)
 validator = mempty
 
--- TODO DSCP-159: below is my futile attempts to integrate account validator.
+instance
+    SD.VerifySign
+        PublicKey
+        (Signature (TxId, PublicKey))
+        (TxId, PublicKey)
+  where
+    verifySignature = verify
 
-instance SD.VerifySign PublicKey
-                       (Signature (TxId, TxInAcc))
-                       (TxId, A.Author (A.AccountId Address)) where
-    verifySignature pk (txHash,A.Author{..}) sig =
-        verify pk
-               (txHash,TxInAcc { tiaAddr = A.unAccountId auAuthorId
-                               , tiaNonce = auNonce })
-               sig
+instance SD.HasGetter PublicKey Address where
+    gett = Address . hash
 
+instance SD.HasGetter Proofs (SD.WithSignature PublicKey (Signature (TxId, PublicKey)) (TxId, PublicKey)) where
+    gett (AddressTxWitness it) = it
 
-instance SD.HasReview Proofs (SD.WithSignature PublicKey (Signature (TxId, TxInAcc)) (TxId, A.Author (A.AccountId Address))) where
-    inj = error "DSCP-159"
-instance SD.HasPrism Proofs (SD.WithSignature PublicKey (Signature (TxId, TxInAcc)) (TxId, A.Author (A.AccountId Address))) where
-    proj = error "DSCP-159"
+instance SD.HasGetter Proofs TxId where
+    gett (AddressTxWitness (SD.WithSignature { wsBody = (it, _) })) = it
 
-instance SD.HasReview Proofs TxId where
-    inj = error "DSCP-159"
-instance SD.HasPrism Proofs TxId where
-    proj = error "DSCP-159"
-
-instance SD.HasReview Proofs PublicKey where
-    inj = error "DSCP-159"
-instance SD.HasPrism Proofs PublicKey where
-    proj = error "DSCP-159"
-
-instance SD.HasHash (SD.ChangeSet Ids Values) TxId where
-    getHash = error "DSCP-159"
+instance SD.HasGetter Proofs PublicKey where
+    gett (AddressTxWitness (SD.WithSignature { wsBody = (_, it) })) = it
 
 _baseValidator ::
        forall chgAccum.
        SD.Validator Exceptions Ids Proofs Values (IOCtx chgAccum)
 _baseValidator =
-    A.validateSimpleMoneyTransfer @Exceptions @PublicKey @Address @Ids @Proofs @Values  @(IOCtx chgAccum) @(Signature (TxId, TxInAcc)) @TxId @TxIds
-
+    A.validateSimpleMoneyTransfer
+        @Exceptions
+        @PublicKey
+        @Address
+        @Ids
+        @Proofs
+        @Values
+        @(IOCtx chgAccum)
+        @(Signature (TxId, PublicKey))
+        @TxId
+        @TxIds
 
 ----------------------------------------------------------------------------
 -- Block configuration
@@ -77,20 +76,21 @@ simpleBlkConfiguration
     :: PublicKey
     -> SD.BlkConfiguration SHeader [SD.StateTx Ids Proofs Values] HeaderHash
 simpleBlkConfiguration pk = SD.BlkConfiguration
-    { bcBlockRef = hash
+    { bcBlockRef     = hash
     , bcPrevBlockRef = getPrevHash . hPrevHash
-    , bcBlkVerify = mconcat verifiers
+    , bcBlkVerify    = mconcat verifiers
     , bcIsBetterThan = \_ _ -> True
     , bcMaxForkDepth = 0
     }
   where
-    getPrevHash h | h == genesisHash = Nothing
-                  | otherwise = Just h
+    getPrevHash h
+        | h == genesisHash = Nothing
+        | otherwise        = Just h
 
     verifiers :: [SD.BlockIntegrityVerifier SHeader [SD.StateTx id proof value]]
     verifiers =
       [ -- I should get a hash of block body, but i only have SPayload!
         -- verify pk (BlockToSign hDifficulty hPrevHash (hSignature sheader)
         SD.BIV $ \(SD.Block _sheader _sbody) -> True
-      , SD.BIV $ \(SD.Block sheader _) -> pk == (hIssuer sheader)
+      , SD.BIV $ \(SD.Block  sheader _)      -> pk == (hIssuer sheader)
       ]
