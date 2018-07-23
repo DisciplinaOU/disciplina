@@ -88,7 +88,7 @@ infix 1 `check`
 check :: (Monoid a, HasException e e1) => Bool -> e1 -> ERoComp e id value ctx a
 check = flip validateIff
 
-type VatidatorCtx e pk addr id proof value ctx sig hash stTxId
+type ValidatorCtx e pk addr id proof value ctx sig hash stTxId
     =   ( HasExceptions e
            [ AccountValidationException
            , TxValidationException
@@ -110,7 +110,7 @@ type VatidatorCtx e pk addr id proof value ctx sig hash stTxId
 
 validateSimpleMoneyTransfer
     :: forall       e pk addr id proof value ctx sig hash stTxId
-    .  VatidatorCtx e pk addr id proof value ctx sig hash stTxId
+    .  ValidatorCtx e pk addr id proof value ctx sig hash stTxId
     => Validator    e         id proof value ctx
 
 validateSimpleMoneyTransfer = mkValidator ty
@@ -120,7 +120,7 @@ validateSimpleMoneyTransfer = mkValidator ty
 
 authenticate
     :: forall       e pk addr id proof value ctx sig hash stTxId
-    .  VatidatorCtx e pk addr id proof value ctx sig hash stTxId
+    .  ValidatorCtx e pk addr id proof value ctx sig hash stTxId
     => Eq             pk
     => proof
     -> ERoComp      e         id       value ctx (AccountId addr, Account)
@@ -143,7 +143,7 @@ authenticate proof = do
 
 preValidateSimpleMoneyTransfer
     :: forall       e pk addr id proof value ctx sig hash stTxId
-    .  VatidatorCtx e pk addr id proof value ctx sig hash stTxId
+    .  ValidatorCtx e pk addr id proof value ctx sig hash stTxId
     => PreValidator e         id proof value ctx
 preValidateSimpleMoneyTransfer =
     PreValidator $ \_trans@StateTx {..} -> do
