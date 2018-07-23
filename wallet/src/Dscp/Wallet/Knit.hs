@@ -5,7 +5,8 @@ import Prelude hiding (preview)
 import Codec.Serialise (deserialiseOrFail)
 import Control.Exception
 import Control.Lens
-import Dscp.Core (addrFromText, txId)
+import Data.Char (isSpace)
+import Dscp.Core (TxOut(..), addrFromText, txId)
 import Dscp.Crypto (mkPassPhrase)
 import IiExtras
 import Text.Earley
@@ -13,7 +14,6 @@ import Text.Earley
 import qualified Data.ByteString.Lazy as BSL
 import qualified Serokell.Util.Base64 as Base64
 import qualified Text.Megaparsec as P
-import qualified Text.Megaparsec.Char as P
 import qualified Text.Megaparsec.Char.Lexer as P
 
 import Dscp.Wallet.Face
@@ -26,6 +26,7 @@ data Wallet
 data instance ComponentValue _ Wallet
   = ValueAddress Address
   | ValueCoin Coin
+  | ValueTxOut TxOut
   | ValueSecretKey ByteString
   deriving (Eq, Ord, Show)
 
@@ -33,9 +34,16 @@ makePrisms 'ValueAddress
 
 instance Elem components Wallet => ComponentInflate components Wallet where
   componentInflate = \case
-    ValueAddress a -> ExprLit $ toLit (LitAddress a)
-    ValueCoin c -> ExprLit $ toLit (LitCoin c)
-    ValueSecretKey sk -> ExprLit $ toLit (LitSecretKey sk)
+      ValueAddress a -> ExprLit $ toLit (LitAddress a)
+      ValueCoin c -> ExprLit $ toLit (LitCoin c)
+      ValueTxOut txOut -> ExprProcCall $ ProcCall "tx-out" $ txOutToArgs txOut
+      ValueSecretKey sk -> ExprLit $ toLit (LitSecretKey sk)
+    where
+      txOutToArgs :: TxOut -> [Arg (Expr CommandId components)]
+      txOutToArgs TxOut{..} = map ArgPos $
+        [ componentInflate $ ValueAddress txOutAddr
+        , componentInflate $ ValueCoin txOutValue
+        ]
 
 data instance ComponentLit Wallet
   = LitAddress Address
@@ -53,23 +61,25 @@ makePrisms 'TokenAddress
 
 instance Elem components Wallet => ComponentTokenizer components Wallet where
   componentTokenizer =
-      [ toToken . TokenAddress <$> pAddress
+      [ -- Order is relevant here: Address should go after SecretKey.
+        -- Otherwise, all addresses will be parsed as secret keys
+        toToken . TokenSecretKey <$> pSecretKey
+      , toToken . TokenAddress <$> pAddress
       , toToken . TokenCoin <$> pCoin
-      , toToken . TokenSecretKey <$> pSecretKey
       ]
     where
+      pSecretKey :: Tokenizer ByteString
+      pSecretKey = do
+        str <- P.takeWhile1P (Just "base64") (not . isSpace)
+        either (fail . show) return $ Base64.decode str
+
       pAddress :: Tokenizer Address
       pAddress = do
         str <- pSomeAlphaNum
         either (fail . show) return $ addrFromText str
 
       pCoin :: Tokenizer Coin
-      pCoin = Coin <$> P.signed (return ()) P.decimal
-
-      pSecretKey :: Tokenizer ByteString
-      pSecretKey = do
-        str <- (<>) <$> P.takeP (Just "base64") 91 <*> P.string "="
-        either (fail . show) return $ Base64.decode str
+      pCoin = Coin <$> P.decimal
 
 instance ComponentDetokenizer Wallet where
   componentTokenRender = \case
@@ -97,6 +107,7 @@ instance ComponentPrinter Wallet where
 
 data instance ComponentCommandRepr components Wallet
   = CommandAction (WalletFace -> IO (Value components))
+  | CommandReturn (Value components)
 
 instance ComponentLitToValue components Wallet where
   componentLitToValue = \case
@@ -110,6 +121,7 @@ data instance ComponentExecContext _ _ Wallet =
 instance MonadIO m => ComponentCommandExec m components Wallet where
   componentCommandExec (WalletExecCtx walletFace) (CommandAction act) =
     liftIO $ act walletFace
+  componentCommandExec _ (CommandReturn val) = return val
 
 instance AllConstrained (Elem components) '[Wallet, Core] => ComponentCommandProcs components Wallet where
   componentCommandProcs =
@@ -130,18 +142,27 @@ instance AllConstrained (Elem components) '[Wallet, Core] => ComponentCommandPro
         , cpHelp = "Generate a key pair."
         }
     , CommandProc
+        { cpName = "tx-out"
+        , cpArgumentPrepare = identity
+        , cpArgumentConsumer = do
+            txOutAddr <- getArg tyAddress "addr"
+            txOutValue <- getArg tyCoin "value"
+            return TxOut{..}
+        , cpRepr = CommandReturn . toValue . ValueTxOut
+        , cpHelp = "Construct a transaction output"
+        }
+    , CommandProc
         { cpName = "send-tx"
         , cpArgumentPrepare = identity
         , cpArgumentConsumer = do
             passPhrase <- getArg tyString "passphrase"
             secretKey <- getArg tySecretKey "secretkey"
-            address <- getArg tyAddress "address"
-            value <- getArg tyCoin "value"
-            pure (passPhrase, secretKey, address, value)
-        , cpRepr = \(passPhrase, secretKey, address, value) -> CommandAction $ \WalletFace{..} -> do
+            outs <- getArgSome tyTxOut "out"
+            pure (passPhrase, secretKey, outs)
+        , cpRepr = \(passPhrase, secretKey, outs) -> CommandAction $ \WalletFace{..} -> do
             pp <- either throwIO return . mkPassPhrase . encodeUtf8 $ passPhrase
             sk <- either throwIO return . deserialiseOrFail $ BSL.fromStrict secretKey
-            toValue . ValueString . show . txId <$> walletSendTx pp sk address value
+            toValue . ValueString . show . txId <$> walletSendTx pp sk outs
         , cpHelp = "Send a transaction."
         }
     , CommandProc
@@ -165,6 +186,9 @@ tyAddress = TyProjection "Address" (preview _ValueAddress <=< fromValue)
 
 tyCoin :: Elem components Wallet => TyProjection components Coin
 tyCoin = TyProjection "Coin" (preview _ValueCoin <=< fromValue)
+
+tyTxOut :: Elem components Wallet => TyProjection components TxOut
+tyTxOut = TyProjection "TxOut" (preview _ValueTxOut <=< fromValue)
 
 tySecretKey :: Elem components Wallet => TyProjection components ByteString
 tySecretKey = TyProjection "SecretKey" (preview _ValueSecretKey <=< fromValue)

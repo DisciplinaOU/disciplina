@@ -16,12 +16,11 @@ genKeyPair :: PassPhrase -> IO (PublicKey, Encrypted SecretKey)
 genKeyPair passPhrase = error $ "Not implemented: genKeyPair"
     <> "\n   " <> show passPhrase
 
-sendTx :: PassPhrase -> Encrypted SecretKey -> Address -> Coin -> IO Tx
-sendTx passPhrase secretKey address value = error $ "Not implemented: sendTx"
+sendTx :: PassPhrase -> Encrypted SecretKey -> NonEmpty TxOut -> IO Tx
+sendTx passPhrase secretKey outs = error $ "Not implemented: sendTx"
     <> "\n   " <> show passPhrase
     <> "\n   " <> show secretKey
-    <> "\n   " <> show address
-    <> "\n   " <> show value
+    <> "\n" <> (unlines . toList $ ("   " <>) . show <$> outs)
 
 getBalance :: Address -> IO Coin
 getBalance address = error $ "Not implemented: getBalance"
