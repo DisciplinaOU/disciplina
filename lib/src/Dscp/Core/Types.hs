@@ -327,10 +327,10 @@ type TxId = Hash Tx
 txId :: (Serialise Tx) => Tx -> TxId
 txId = hash
 
--- | Transaction witness. We sign a pair of transaction hash and input
--- account. The second element of the pair is redundand, and only
--- included to speed up and simplify transaction validation
--- (@volhovm). Public key should correspond to the input address.
+-- | Transaction witness. We sign a pair of transaction hash and private
+-- key. The second element is there to authenticate proposed changes
+-- (@kirill.andreev). Public key hash should be equal to the input address.
+-- Also, public key should be the same which used to validate signature.
 data TxWitness = TxWitness
     { txwSig :: Signature (TxId, PublicKey)
     , txwPk  :: PublicKey
