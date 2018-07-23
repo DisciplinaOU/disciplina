@@ -28,6 +28,7 @@ import Dscp.Launcher.Rio (RIO)
 import Dscp.Network ()
 import Dscp.Resource.Keys (KeyResources)
 import Dscp.Snowdrop.Actions (SDActions)
+import Dscp.Witness.Config (HasWitnessConfig, withWitnessConfig)
 import Dscp.Witness.Launcher.Params (WitnessParams)
 import Dscp.Witness.Launcher.Resource (WitnessResources, wrDB, wrKey, wrLogging, wrNetwork)
 import Dscp.Witness.Mempool (MempoolVar)
@@ -43,6 +44,8 @@ type WitnessWorkMode ctx m =
     , NetworkingCli ZmqTcp m
     , NetworkingServ ZmqTcp m
 
+    , HasWitnessConfig
+
     , MonadReader ctx m
     , HasLens' ctx WitnessParams
     , HasLens' ctx LoggingIO
@@ -53,7 +56,6 @@ type WitnessWorkMode ctx m =
     , HasLens' ctx MempoolVar
     , HasLens' ctx SDActions
     , HasLens' ctx KeyResources
-
     )
 
 ---------------------------------------------------------------------
@@ -103,7 +105,6 @@ instance HasLens SDActions WitnessContext SDActions where
 ----------------------------------------------------------------------------
 
 _sanity :: WitnessRealMode ()
-_sanity = _sanityCallee
+_sanity = withWitnessConfig (error "") _sanityCallee
   where
-    _sanityCallee :: WitnessWorkMode ctx m => m ()
     _sanityCallee = pass

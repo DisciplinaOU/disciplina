@@ -8,6 +8,7 @@ import Fmt ((+|), (|+))
 import Loot.Log (logInfo)
 import Servant (Handler, Server, hoistServer, serve, throwError)
 
+import Dscp.Educator.Config (HasEducatorConfig)
 import Dscp.Educator.Launcher (EducatorContext, EducatorRealMode, EducatorWorkMode)
 import Dscp.Educator.Web.Student.API (StudentAPI, studentAPI)
 import Dscp.Educator.Web.Student.Error (toServantErr, unexpectedToServantErr)
@@ -31,7 +32,7 @@ convertHandler ctx handler =
         `catch` (throwError . toServantErr)
         `catchAny` (throwError . unexpectedToServantErr)
 
-serveStudentAPIReal :: NetworkAddress -> EducatorRealMode ()
+serveStudentAPIReal :: HasEducatorConfig => NetworkAddress -> EducatorRealMode ()
 serveStudentAPIReal addr = do
     logInfo $ "Serving Student API on "+|addr|+""
     eCtx <- ask

@@ -44,6 +44,7 @@ educator_params="
 
 # witness params (and educator's as well)
 witness_params="
+--config $files/config.yaml
 --bind 127.0.0.1:4010:4011
 --db-path $tmp_files/witness.db
 --log-dir $tmp_files/logs
