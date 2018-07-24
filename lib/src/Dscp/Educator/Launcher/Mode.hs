@@ -15,7 +15,6 @@ module Dscp.Educator.Launcher.Mode
     , EducatorContext (..)
     , EducatorRealMode
     , ecWitnessCtx
-    , ecDB
     ) where
 
 import Control.Lens (makeLenses)
@@ -28,6 +27,7 @@ import Dscp.DB.SQLite (MonadSQLiteDB, SQLiteDB)
 import Dscp.Educator.Config (HasEducatorConfig, withEducatorConfig)
 import Dscp.Educator.Launcher.Marker (EducatorNode)
 import Dscp.Educator.Launcher.Params (EducatorParams)
+import Dscp.Educator.Launcher.Resource (EducatorResources)
 import qualified Dscp.Launcher.Mode as Basic
 import Dscp.Launcher.Rio (RIO)
 import Dscp.Resource.Keys (KeyResources)
@@ -68,9 +68,9 @@ type CombinedWorkMode ctx m =
 data EducatorContext = EducatorContext
     {
       _ecParams     :: !EducatorParams
-    , _ecDB         :: !SQLiteDB
-    , _ecKeys       :: !(KeyResources EducatorNode)
-
+      -- ^ Parameters witness was started with.
+    , _ecResources  :: !EducatorResources
+      -- ^ Resources, allocated from params.
     , _ecWitnessCtx :: !W.WitnessContext
     }
 
@@ -85,9 +85,9 @@ type EducatorRealMode = RIO EducatorContext
 instance HasLens EducatorParams EducatorContext EducatorParams where
     lensOf = ecParams
 instance HasLens SQLiteDB EducatorContext SQLiteDB where
-    lensOf = ecDB
+    lensOf = ecResources . lensOf @SQLiteDB
 instance HasLens (KeyResources EducatorNode) EducatorContext (KeyResources EducatorNode) where
-    lensOf = ecKeys
+    lensOf = ecResources . lensOf @(KeyResources EducatorNode)
 
 instance HasLens W.WitnessParams EducatorContext W.WitnessParams where
     lensOf = ecWitnessCtx . lensOf @W.WitnessParams
