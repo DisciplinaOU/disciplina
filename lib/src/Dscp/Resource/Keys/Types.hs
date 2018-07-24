@@ -26,8 +26,8 @@ data KeyParams = KeyParams
       -- ^ When 'True', file with secret key is expected to be
       -- absent and will be generated from scratch.
       -- When 'False', file should be present and it will be used.
-    , kpPassphrase :: !PassPhrase
-      -- ^ Password from encrypted secret key stored on disk.
+    , kpPassphrase :: !(Maybe PassPhrase)
+      -- ^ Password of encrypted secret key stored on disk.
     } deriving (Show)
 
 -- | Context providing access to secret key.

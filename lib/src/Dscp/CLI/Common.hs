@@ -91,7 +91,7 @@ keyParamsParser who = do
     kpGenKeyParser = switch $
          long [qc|{who}-generate-new-key|] <>
          help [qc|Generate the key and write it to '{who}-keyfile-path' path.|]
-    kpPassphraseParser = option passphraseReadM $
+    kpPassphraseParser = optional . option passphraseReadM $
          long [qc|{who}-keyfile-password|] <>
          metavar "PASSWORD" <>
          help "Password of secret key."

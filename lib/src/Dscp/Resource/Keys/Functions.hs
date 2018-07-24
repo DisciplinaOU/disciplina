@@ -15,7 +15,8 @@ import System.FilePath ((</>))
 import qualified System.FilePath as FP
 
 import Dscp.Config (BaseConfig (..), HasBaseConfig, baseConfig)
-import Dscp.Crypto (PassPhrase, decrypt, encrypt, keyGen, runSecureRandom, toPublic)
+import Dscp.Crypto (PassPhrase, decrypt, emptyPassPhrase, encrypt, keyGen, runSecureRandom,
+                    toPublic)
 import Dscp.Resource.Class (AllocResource (..), buildComponentR)
 import Dscp.Resource.Keys.Error (KeyInitError (..), rewrapKeyIOErrors)
 import Dscp.Resource.Keys.Types (KeyJson (..), KeyParams (..), KeyResources (..), KeyfileContent)
@@ -118,9 +119,10 @@ linkStore
     => KeyParams -> m (KeyResources n)
 linkStore params@KeyParams{..} = do
     let path = storePath params (Proxy :: Proxy n)
+        pp = fromMaybe emptyPassPhrase kpPassphrase
     if kpGenNew
-        then createStore path kpPassphrase
-        else readStore path kpPassphrase
+        then createStore path pp
+        else readStore path pp
 
 ---------------------------------------------------------------------
 -- Other
