@@ -50,10 +50,15 @@ makePrisms ''ObjectAlreadyExistsError
 
 data APIError
     = SubmissionMalformed
+      -- ^ Submission is malformed.
     | BadSubmissionSignature WrongSubmissionSignature
+      -- ^ Submission signature doesn't match the student nor has valid format.
     | DeletingGradedSubmission
+      -- ^ Graded Submission is deleting
     | EntityAbsent DomainError
+      -- ^ Entity is missing
     | EntityAlreadyPresent ObjectAlreadyExistsError
+      -- ^ Entity is duplicated
     deriving (Show, Eq, Generic, Typeable)
 
 makePrisms ''APIError

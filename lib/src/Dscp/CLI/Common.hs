@@ -23,6 +23,9 @@ import qualified Loot.Log as Log
 import Loot.Network.ZMQ.Common (ZTNodeId (..), parseZTNodeId)
 import Options.Applicative (Parser, eitherReader, help, infoOption, long, metavar, option, optional,
                             strOption, switch, value)
+import qualified Text.Parsec.String as Parsec
+import Text.Parsec (parse, many1, sepBy, eof)
+import Text.Parsec.Char (digit, char)
 
 import Dscp.DB.Rocks.Real.Types (RocksDBParams (..))
 import Dscp.DB.SQLite.Types (SQLiteDBLocation (..), SQLiteParams (..))
@@ -111,11 +114,20 @@ netServParamsParser = NetServParams <$> peersParser <*> ourZTNodeIdParser
 
 parseNetAddr :: String -> Either String NetworkAddress
 parseNetAddr str =
-    let host = toText $ takeWhile (/= ':') str
-        portS = drop (length host + 1) str
-    in case readMaybe portS of
-        Just port -> Right $ NetworkAddress host port
-        Nothing   -> Left "Invalid network address"
+    first niceError $ parse parseNA "" str
+  where
+    niceError = const "Invalid Network Address"
+    parseNA :: Parsec.Parser NetworkAddress
+    parseNA = NetworkAddress <$> parseHost <* char ':'
+                             <*> parsePort <* eof
+    parseHost = do host <- parseByte `sepBy` (char '.')
+                   unless (length host == 4) $ fail "invalid"
+                   return $ toText $ intercalate "." $ (map show host)
+    parsePort = parseWord 16
+    parseByte = parseWord 8 :: Parsec.Parser Integer
+    parseWord n = do x <- fromMaybe (error "unexpected") . readMaybe <$> many1 digit
+                     when ((x :: Integer) > 2 ^ (n :: Integer) - 1) $ fail "invalid"
+                     return $ fromIntegral x
 
 networkAddressParser :: String -> String -> Parser NetworkAddress
 networkAddressParser pName helpTxt =

@@ -39,6 +39,7 @@ library:
     - monad-control
     - mtl
     - optparse-applicative
+    - parsec
     - prettyprinter
     - random
     - reflection
