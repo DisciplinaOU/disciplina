@@ -3,6 +3,8 @@ module Dscp.Wallet.Backend
        , createWalletFace
        ) where
 
+import Dscp.Crypto (keyGen)
+
 import Dscp.Wallet.Face
 
 createWalletFace :: IO WalletFace
@@ -12,13 +14,11 @@ createWalletFace = return WalletFace
     , walletGetBalance = getBalance
     }
 
-genKeyPair :: PassPhrase -> IO (PublicKey, Encrypted SecretKey)
-genKeyPair passPhrase = error $ "Not implemented: genKeyPair"
-    <> "\n   " <> show passPhrase
+genKeyPair :: IO (SecretKey, PublicKey)
+genKeyPair = keyGen
 
-sendTx :: PassPhrase -> Encrypted SecretKey -> NonEmpty TxOut -> IO Tx
-sendTx passPhrase secretKey outs = error $ "Not implemented: sendTx"
-    <> "\n   " <> show passPhrase
+sendTx :: SecretKey -> NonEmpty TxOut -> IO Tx
+sendTx secretKey outs = error $ "Not implemented: sendTx"
     <> "\n   " <> show secretKey
     <> "\n" <> (unlines . toList $ ("   " <>) . show <$> outs)
 
