@@ -94,7 +94,7 @@ keyParamsParser who = do
     kpPassphraseParser = option passphraseReadM $
          long [qc|{who}-keyfile-password|] <>
          metavar "PASSWORD" <>
-         help "Password from secret key."
+         help "Password of secret key."
     passphraseReadM = leftToFail . first pretty . mkPassPhrase =<< str
 
 

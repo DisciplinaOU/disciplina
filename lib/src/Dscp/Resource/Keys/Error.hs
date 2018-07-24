@@ -1,3 +1,5 @@
+{-# LANGUAGE StrictData #-}
+
 module Dscp.Resource.Keys.Error
     ( KeyInitError (..)
     , rewrapKeyIOErrors
@@ -12,10 +14,10 @@ import Dscp.Util (wrapRethrow)
 
 -- | Exception during secret key extraction from storage.
 data KeyInitError
-    = SecretWrongPassPhraseError !DecryptionError
-    | SecretParseError !Text
-    | SecretFileExistsError !FilePath
-    | SecretIOError !Text
+    = SecretWrongPassPhraseError DecryptionError
+    | SecretParseError Text
+    | SecretFileExistsError FilePath
+    | SecretIOError Text
 
 instance Show KeyInitError where
     show = toString . pretty

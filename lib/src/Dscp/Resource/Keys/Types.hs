@@ -30,7 +30,7 @@ data KeyParams = KeyParams
       -- ^ Password from encrypted secret key stored on disk.
     } deriving (Show)
 
--- | Context providing access to educator secret key.
+-- | Context providing access to secret key.
 --
 -- For now we assume secret key to be read-only.
 -- Also we assume applicatiion to be autonomous, so secret key is kept
@@ -61,12 +61,12 @@ type KeyfileContent = Versioned KeyJson
 
 instance ToJSON KeyJson where
     toJSON KeyJson{..} = object
-        [ "educator_secret" .= kjEncSecretKey
+        [ "secret" .= kjEncSecretKey
         ]
 
 instance FromJSON KeyJson where
-    parseJSON = withObject "educator secret storage" $ \o -> do
-        kjEncSecretKey <- o .: "educator_secret"
+    parseJSON = withObject "secret storage" $ \o -> do
+        kjEncSecretKey <- o .: "secret"
         return KeyJson{..}
 
 ---------------------------------------------------------------------
