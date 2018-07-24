@@ -6,7 +6,8 @@ import Codec.Serialise (deserialiseOrFail)
 import Control.Exception
 import Control.Lens
 import Data.Char (isSpace)
-import Dscp.Core (TxOut(..), addrFromText, txId)
+import Data.Scientific (toBoundedInteger)
+import Dscp.Core (TxOut(..), addrFromText, coinToInteger, txId)
 import Dscp.Crypto (mkPassPhrase)
 import IiExtras
 import Text.Earley
@@ -14,7 +15,6 @@ import Text.Earley
 import qualified Data.ByteString.Lazy as BSL
 import qualified Serokell.Util.Base64 as Base64
 import qualified Text.Megaparsec as P
-import qualified Text.Megaparsec.Char.Lexer as P
 
 import Dscp.Wallet.Face
 
@@ -32,10 +32,10 @@ data instance ComponentValue _ Wallet
 
 makePrisms 'ValueAddress
 
-instance Elem components Wallet => ComponentInflate components Wallet where
+instance (Elem components Core, Elem components Wallet) => ComponentInflate components Wallet where
   componentInflate = \case
       ValueAddress a -> ExprLit $ toLit (LitAddress a)
-      ValueCoin c -> ExprLit $ toLit (LitCoin c)
+      ValueCoin c -> ExprLit $ toLit (LitNumber . fromIntegral . coinToInteger $ c)
       ValueTxOut txOut -> ExprProcCall $ ProcCall "tx-out" $ txOutToArgs txOut
       ValueSecretKey sk -> ExprLit $ toLit (LitSecretKey sk)
     where
@@ -47,13 +47,11 @@ instance Elem components Wallet => ComponentInflate components Wallet where
 
 data instance ComponentLit Wallet
   = LitAddress Address
-  | LitCoin Coin
   | LitSecretKey ByteString
   deriving (Eq, Ord, Show)
 
 data instance ComponentToken Wallet
   = TokenAddress Address
-  | TokenCoin Coin
   | TokenSecretKey ByteString
   deriving (Eq, Ord, Show)
 
@@ -65,7 +63,6 @@ instance Elem components Wallet => ComponentTokenizer components Wallet where
         -- Otherwise, all addresses will be parsed as secret keys
         toToken . TokenSecretKey <$> pSecretKey
       , toToken . TokenAddress <$> pAddress
-      , toToken . TokenCoin <$> pCoin
       ]
     where
       pSecretKey :: Tokenizer ByteString
@@ -78,31 +75,24 @@ instance Elem components Wallet => ComponentTokenizer components Wallet where
         str <- pSomeAlphaNum
         either (fail . show) return $ addrFromText str
 
-      pCoin :: Tokenizer Coin
-      pCoin = Coin <$> P.decimal
-
 instance ComponentDetokenizer Wallet where
   componentTokenRender = \case
     TokenAddress a -> pretty a
-    TokenCoin c -> pretty c
     TokenSecretKey sk -> Base64.encode sk
 
 instance Elem components Wallet => ComponentLitGrammar components Wallet where
   componentLitGrammar =
     rule $ asum
       [ toLit . LitAddress <$> tok (_Token . uprismElem . _TokenAddress)
-      , toLit . LitCoin <$> tok (_Token . uprismElem . _TokenCoin)
       , toLit . LitSecretKey <$> tok (_Token . uprismElem . _TokenSecretKey)
       ]
 
 instance ComponentPrinter Wallet where
   componentPpLit = \case
     LitAddress x -> text (componentTokenRender (TokenAddress x))
-    LitCoin x -> text (componentTokenRender (TokenCoin x))
     LitSecretKey x -> text (componentTokenRender (TokenSecretKey x))
   componentPpToken = \case
     TokenAddress _ -> "address"
-    TokenCoin _ -> "coin"
     TokenSecretKey _ -> "encrypted secret key"
 
 data instance ComponentCommandRepr components Wallet
@@ -112,7 +102,6 @@ data instance ComponentCommandRepr components Wallet
 instance ComponentLitToValue components Wallet where
   componentLitToValue = \case
     LitAddress x -> ValueAddress x
-    LitCoin x -> ValueCoin x
     LitSecretKey x -> ValueSecretKey x
 
 data instance ComponentExecContext _ _ Wallet =
@@ -184,8 +173,11 @@ instance AllConstrained (Elem components) '[Wallet, Core] => ComponentCommandPro
 tyAddress :: Elem components Wallet => TyProjection components Address
 tyAddress = TyProjection "Address" (preview _ValueAddress <=< fromValue)
 
-tyCoin :: Elem components Wallet => TyProjection components Coin
-tyCoin = TyProjection "Coin" (preview _ValueCoin <=< fromValue)
+tyCoin :: (Elem components Core, Elem components Wallet) => TyProjection components Coin
+tyCoin = TyProjection "Coin" (\v -> fromValueCoin v <|> fromValueNumber v)
+  where
+    fromValueCoin = preview _ValueCoin <=< fromValue
+    fromValueNumber = return . Coin <=< toBoundedInteger <=< preview _ValueNumber <=< fromValue
 
 tyTxOut :: Elem components Wallet => TyProjection components TxOut
 tyTxOut = TyProjection "TxOut" (preview _ValueTxOut <=< fromValue)

@@ -23,6 +23,7 @@ library:
     - lens
     - loc
     - megaparsec
+    - scientific
     - serialise
     - serokell-util
     - text
