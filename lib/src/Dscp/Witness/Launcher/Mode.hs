@@ -4,8 +4,11 @@
 
 module Dscp.Witness.Launcher.Mode
     (
+      -- * Markers
+      WitnessNode
+
       -- * Constraints
-      WitnessWorkMode
+    , WitnessWorkMode
 
       -- * Implementations
     , WitnessContext (..)
@@ -29,6 +32,7 @@ import Dscp.Network ()
 import Dscp.Resource.Keys (KeyResources)
 import Dscp.Snowdrop.Actions (SDActions)
 import Dscp.Witness.Config (HasWitnessConfig, withWitnessConfig)
+import Dscp.Witness.Launcher.Marker (WitnessNode)
 import Dscp.Witness.Launcher.Params (WitnessParams)
 import Dscp.Witness.Launcher.Resource (WitnessResources, wrDB, wrKey, wrLogging, wrNetwork)
 import Dscp.Witness.Mempool (MempoolVar)
@@ -55,7 +59,8 @@ type WitnessWorkMode ctx m =
     , HasLens' ctx Z.ZTNetServEnv
     , HasLens' ctx MempoolVar
     , HasLens' ctx SDActions
-    , HasLens' ctx KeyResources
+    , HasLens' ctx (KeyResources WitnessNode)
+
     )
 
 ---------------------------------------------------------------------
@@ -93,7 +98,7 @@ instance HasLens Z.ZTNetCliEnv WitnessContext Z.ZTNetCliEnv where
     lensOf = wcResources . wrNetwork . lensOf @Z.ZTNetCliEnv
 instance HasLens Z.ZTNetServEnv WitnessContext Z.ZTNetServEnv where
     lensOf = wcResources . wrNetwork . lensOf @Z.ZTNetServEnv
-instance HasLens KeyResources WitnessContext KeyResources where
+instance HasLens (KeyResources WitnessNode) WitnessContext (KeyResources WitnessNode) where
     lensOf = wcResources . wrKey
 instance HasLens MempoolVar WitnessContext MempoolVar where
     lensOf = wcMempool
@@ -107,4 +112,5 @@ instance HasLens SDActions WitnessContext SDActions where
 _sanity :: WitnessRealMode ()
 _sanity = withWitnessConfig (error "") _sanityCallee
   where
+    _sanityCallee :: WitnessWorkMode ctx m => m ()
     _sanityCallee = pass

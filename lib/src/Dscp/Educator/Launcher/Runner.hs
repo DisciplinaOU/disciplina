@@ -13,11 +13,10 @@ import Dscp.Witness.Launcher.Runner (formWitnessContext)
 
 -- | Make up Educator context from dedicated pack of allocated resources.
 formEducatorContext :: EducatorParams -> EducatorResources -> IO EducatorContext
-formEducatorContext _ecParams EducatorResources{..} = do
-    let _ecDB = _erDB
-    let _ecSecret = _erSecret
-    _ecWitnessCtx <- formWitnessContext (epWitnessParams _ecParams) _erWitnessResources
-    pure EducatorContext {..}
+formEducatorContext _ecParams _ecResources = do
+    _ecWitnessCtx <- formWitnessContext (epWitnessParams _ecParams)
+                                        (_erWitnessResources _ecResources)
+    pure EducatorContext{..}
 
 runEducatorRealMode :: EducatorContext -> EducatorRealMode a -> IO a
 runEducatorRealMode = runRIO

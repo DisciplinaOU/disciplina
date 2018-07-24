@@ -36,7 +36,7 @@ instance HasLens LoggingIO InitContext LoggingIO where
     lensOf = icLogging
 
 -- | Resources safe allocation.
-class AllocResource param resource | param -> resource, resource -> param where
+class AllocResource param resource | resource -> param where
     -- | Construct a resource using given parameters. Automatic cleanup.
     -- Use 'buildComponentR' to construct function of this type.
     allocResource :: param -> ReaderT InitContext ComponentM resource

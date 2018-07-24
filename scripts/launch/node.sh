@@ -10,7 +10,7 @@ root="$base/../.."
 # permanent read-only files: configs, secrets...
 files="$root/run"
 # gitignored files: databases...
-tmp_files="$files/tmp/"
+tmp_files="$files/tmp"
 
 mkdir $tmp_files 2> /dev/null || true
 
@@ -36,8 +36,8 @@ done
 
 # educator-only params
 educator_params="
---keyfile-password 12345678
---keyfile-path $files/educator.key
+--educator-keyfile-path $files/educator.key
+--educator-keyfile-password 12345678
 --sql-path $tmp_files/educator.db
 --student-listen 127.0.0.1:8090
 "
@@ -48,8 +48,8 @@ witness_params="
 --bind 127.0.0.1:4010:4011
 --db-path $tmp_files/witness.db
 --log-dir $tmp_files/logs
---key $tmp_files/witness.key
---key-gen
+--witness-keyfile-path $files/witness.key
+--witness-keyfile-password xixixixi
 "
 
 if [[ "$node" == "educator" ]]; then

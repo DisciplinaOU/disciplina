@@ -1,3 +1,5 @@
+{-# LANGUAGE StrictData #-}
+
 module Dscp.Witness.Launcher.Params
        ( WitnessParams (..)
        ) where
@@ -9,12 +11,12 @@ import Dscp.Resource.Network (NetServParams)
 
 -- | Contains all initialization parameters of Witness node.
 data WitnessParams = WitnessParams
-    { wpLoggingParams :: !LoggingParams
+    { wpLoggingParams :: LoggingParams
     -- ^ Basic parameters for any node
-    , wpDBParams      :: !RocksDBParams
+    , wpDBParams      :: RocksDBParams
     -- ^ DB parameters
-    , wpNetworkParams :: !NetServParams
+    , wpNetworkParams :: NetServParams
     -- ^ Networking params.
-    , wpKeyParams     :: !KeyParams
+    , wpKeyParams     :: KeyParams
     -- ^ Key management params.
     } deriving Show

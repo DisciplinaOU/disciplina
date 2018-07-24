@@ -15,6 +15,7 @@ module Dscp.Crypto.Encrypt
        , PassPhraseError (..)
        , getPassPhrase
        , mkPassPhrase
+       , emptyPassPhrase
        , minPassPhraseLength
        , maxPassPhraseLength
 
@@ -104,6 +105,10 @@ mkPassPhrase bs
     | otherwise = Right $ PassPhrase (BA.convert bs)
   where
     lbs = length bs
+
+-- | You can still use no passphrase if that's required.
+emptyPassPhrase :: PassPhrase
+emptyPassPhrase = PassPhrase ""
 
 -------------------------------------------------------------
 -- Encryption/decryption constants/salts

@@ -24,7 +24,7 @@ import Dscp.Snowdrop.Configuration (Exceptions, Ids, blockPrefix, tipPrefix)
 import Dscp.Snowdrop.Expanders (expandBlock)
 import Dscp.Snowdrop.Storage.Avlp (RememberForProof (..))
 import Dscp.Snowdrop.Validators (blkStateConfig)
-import Dscp.Witness.Launcher (WitnessWorkMode)
+import Dscp.Witness.Launcher (WitnessNode, WitnessWorkMode)
 import Dscp.Witness.Mempool (MempoolVar, takeTxsMempool)
 
 -- | Empty mempool(s), create block body.
@@ -48,7 +48,7 @@ createBlock = do
     let tip = fromMaybe genesisHash tipMb
 
     payload <- createPayload =<< view (lensOf @MempoolVar)
-    sk <- ourSecretKey
+    sk <- ourSecretKey @WitnessNode
     let sgn = sign sk $ BlockToSign diff tip payload
     let header = Header sgn (toPublic sk) diff tip
     let block = Block header payload
@@ -66,7 +66,7 @@ applyBlock block = do
     let blockDBM = nsBlockDBActions sdActions
     let stateDBM = nsStateDBActions sdActions (RememberForProof True)
 
-    pk <- ourPublicKey
+    pk <- ourPublicKey @WitnessNode
 
     (blockCS, stateCS) <- reify blockPrefixes $ \(_ :: Proxy ps) ->
         let actions = SD.constructCompositeActions @ps (SD.dmaAccessActions blockDBM)

@@ -1,4 +1,5 @@
 {-# LANGUAGE ApplicativeDo #-}
+{-# LANGUAGE QuasiQuotes   #-}
 
 -- | Common CLI params
 
@@ -22,16 +23,19 @@ import Data.Version (showVersion)
 import qualified Loot.Log as Log
 import Loot.Network.ZMQ.Common (ZTNodeId (..), parseZTNodeId)
 import Options.Applicative (Parser, eitherReader, help, infoOption, long, metavar, option, optional,
-                            strOption, switch, value)
+                            str, strOption, switch, value)
+import Text.InterpolatedString.Perl6 (qc)
+import Text.Parsec (eof, many1, parse, sepBy)
+import Text.Parsec.Char (char, digit)
 import qualified Text.Parsec.String as Parsec
-import Text.Parsec (parse, many1, sepBy, eof)
-import Text.Parsec.Char (digit, char)
 
+import Dscp.Crypto (mkPassPhrase)
 import Dscp.DB.Rocks.Real.Types (RocksDBParams (..))
 import Dscp.DB.SQLite.Types (SQLiteDBLocation (..), SQLiteParams (..))
 import Dscp.Resource.Keys (KeyParams (..))
 import Dscp.Resource.Logging (LoggingParams (..))
 import Dscp.Resource.Network (NetCliParams (..), NetServParams (..))
+import Dscp.Util (leftToFail)
 import Dscp.Web (NetworkAddress (..))
 import Paths_disciplina (version)
 
@@ -73,16 +77,26 @@ versionOption = infoOption ("disciplina-" <> (showVersion version)) $
     long "version" <>
     help "Show version."
 
-keyParamsParser :: Parser KeyParams
-keyParamsParser = do
-    kpKeyPath <- kpKeyPathParser
-    kpGenKey <- kpGenKeyParser
+keyParamsParser :: Text -> Parser KeyParams
+keyParamsParser who = do
+    kpPath <- kpKeyPathParser
+    kpGenNew <- kpGenKeyParser
+    kpPassphrase <- kpPassphraseParser
     pure KeyParams{..}
   where
-    kpKeyPathParser =
-        strOption $ long "key" <> help "Path to the secret key" <> metavar "FILEPATH"
-    kpGenKeyParser =
-        switch $ long "key-gen" <> help "Generate the key and write it to 'key' path"
+    kpKeyPathParser = optional . strOption $
+         long [qc|{who}-keyfile-path|] <>
+         metavar "FILEPATH" <>
+         help [qc|Path to the secret key of {who}.|]
+    kpGenKeyParser = switch $
+         long [qc|{who}-generate-new-key|] <>
+         help [qc|Generate the key and write it to '{who}-keyfile-path' path.|]
+    kpPassphraseParser = optional . option passphraseReadM $
+         long [qc|{who}-keyfile-password|] <>
+         metavar "PASSWORD" <>
+         help "Password of secret key."
+    passphraseReadM = leftToFail . first pretty . mkPassPhrase =<< str
+
 
 ----------------------------------------------------------------------------
 -- ZMQ TCP
@@ -113,8 +127,8 @@ netServParamsParser = NetServParams <$> peersParser <*> ourZTNodeIdParser
 ---------------------------------------------------------------------------
 
 parseNetAddr :: String -> Either String NetworkAddress
-parseNetAddr str =
-    first niceError $ parse parseNA "" str
+parseNetAddr st =
+    first niceError $ parse parseNA "" st
   where
     niceError = const "Invalid Network Address"
     parseNA :: Parsec.Parser NetworkAddress
