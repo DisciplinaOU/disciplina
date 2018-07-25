@@ -7,7 +7,7 @@ import Control.Exception
 import Control.Lens
 import Data.Char (isSpace)
 import Data.Scientific (toBoundedInteger)
-import Dscp.Core (TxOut(..), addrFromText, coinToInteger, txId)
+import Dscp.Core (TxOut(..), addrFromText, coinToInteger, mkAddr, txId)
 import Dscp.Crypto (FromByteArray(..), decrypt, encrypt, mkPassPhrase)
 import Dscp.Util (toHex)
 import IiExtras
@@ -127,9 +127,10 @@ instance AllConstrained (Elem components) '[Wallet, Core] => ComponentCommandPro
             mPassPhrase <- forM passString $ either throwIO return . mkPassPhrase . encodeUtf8
             (secretKey, publicKey) <- walletGenKeyPair
             return . toValue . ValueList $
-              toValue . ValueCryptoKey <$>
-              [ maybe BA.convert (\pp -> BSL.toStrict . serialise . encrypt pp) mPassPhrase $ secretKey
-              , BA.convert $ publicKey
+              toValue <$>
+              [ ValueCryptoKey . maybe BA.convert (\pp -> BSL.toStrict . serialise . encrypt pp) mPassPhrase $ secretKey
+              , ValueCryptoKey . BA.convert $ publicKey
+              , ValueAddress . mkAddr $ publicKey
               ]
         , cpHelp = "Generate a key pair."
         }
