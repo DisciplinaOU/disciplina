@@ -1,0 +1,63 @@
+<<: !include "../hpack/module.yaml"
+
+name: disciplina-core
+description: Disciplina blockchain core functionality
+
+library:
+  <<: *lib-common
+
+  dependencies:
+    - aeson
+    - aeson-options
+    - autoexporter
+    - bytestring
+    - bytestring
+    - base58-bytestring
+    - containers
+    - cryptonite
+    - cryptonite-openssl
+    - data-default
+    - digest
+    - directory
+    - fmt
+    - hashable
+    - hspec
+    - loot-base
+    - loot-config
+    - loot-log
+    - lens
+    - memory
+    - optparse-applicative
+    - QuickCheck
+    - quickcheck-instances
+    - reflection
+    - safe-exceptions >= 0.1.4
+    - serialise
+    - serokell-util
+    - semver
+    - snowdrop
+    - text
+    - text-format
+    - unix
+    - unliftio
+    - yaml
+
+tests:
+  disciplina-core-test:
+    <<: *test-common
+
+    dependencies:
+      - aeson
+      - bytestring
+      - cryptonite
+      - containers
+      - disciplina-core
+      - hspec
+      - lens
+      - random
+      - safe-exceptions >= 0.1.4
+      - serialise
+      - tasty
+      - tasty-hspec
+      - tasty-discover
+      - QuickCheck

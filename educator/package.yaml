@@ -1,0 +1,107 @@
+<<: !include "../hpack/module.yaml"
+
+name: disciplina-educator
+description: Disciplina educator
+
+library:
+  <<: *lib-common
+
+  dependencies:
+    - aeson
+    - aeson-options
+    - autoexporter
+    - array
+    - AVL
+    - bytestring
+    - base58-bytestring
+    - containers
+    - componentm
+    - cryptonite
+    - cryptonite-openssl
+    - data-default
+    - digest
+    - directory
+    - direct-sqlite
+    - disciplina-core
+    - disciplina-witness
+    - exceptions
+    - formatting
+    - filepath
+    - fmt
+    - free
+    - hashable
+    - interpolatedstring-perl6
+    - lens
+    - loot-base
+    - loot-config
+    - loot-log
+    - loot-network
+    - log-warper
+    - memory
+    - monad-control
+    - mtl
+    - optparse-applicative
+    - parsec
+    - prettyprinter
+    - random
+    - reflection
+    - rocksdb-haskell
+    - safe-exceptions >= 0.1.4
+    - semver
+    - serialise
+    - serokell-util
+    - servant-server
+    - snowdrop
+    - sqlite-simple
+    - stm
+    - template-haskell
+    - text
+    - text-format
+    - time
+    - time-units
+    - unix
+    - unliftio
+    - warp
+    - yaml
+
+tests:
+  disciplina-test:
+    <<: *test-common
+
+    dependencies:
+      - aeson
+      - AVL
+      - bytestring
+      - containers
+      - cryptonite
+      - directory
+      - disciplina-core
+      - disciplina-witness
+      - disciplina-educator
+      - data-default
+      - hspec
+      - lens
+      - loot-log
+      - memory
+      - safe-exceptions >= 0.1.4
+      - serialise
+      - sqlite-simple
+      - tasty
+      - tasty-hspec
+      - tasty-discover
+      - time
+      - QuickCheck
+      - quickcheck-instances
+
+executables:
+  dscp-educator:
+    <<: *exec-common
+    source-dirs: exec
+    dependencies:
+      - disciplina-core
+      - disciplina-witness
+      - disciplina-educator
+      - formatting
+      - loot-log
+      - optparse-applicative
+      - unliftio

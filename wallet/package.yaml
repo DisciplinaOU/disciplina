@@ -15,7 +15,7 @@ library:
     - async
     - bytestring
     - containers
-    - disciplina
+    - disciplina-core
     - formatting
     - haskeline
     - ii-extras
@@ -28,6 +28,7 @@ library:
     - serokell-util
     - text
     - vinyl
+
 executables:
   disciplina-wallet:
     <<: *exec-common
@@ -36,7 +37,7 @@ executables:
       - DataKinds
     dependencies:
       - ansi-wl-pprint
-      - disciplina
+      - disciplina-core
       - disciplina-wallet
       - ii-extras
       - knit

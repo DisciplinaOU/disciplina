@@ -1,0 +1,102 @@
+<<: !include "../hpack/module.yaml"
+
+name: disciplina-witness
+description: Witness node package
+
+library:
+  <<: *lib-common
+
+  dependencies:
+    - aeson
+    - aeson-options
+    - autoexporter
+    - array
+    - AVL
+    - bytestring
+    - base58-bytestring
+    - containers
+    - componentm
+    - cryptonite
+    - data-default
+    - digest
+    - directory
+    - disciplina-core
+    - exceptions
+    - formatting
+    - filepath
+    - fmt
+    - free
+    - hashable
+    - interpolatedstring-perl6 
+    - lens
+    - loot-base
+    - loot-config
+    - loot-log
+    - loot-network
+    - log-warper
+    - memory
+    - monad-control
+    - mtl
+    - optparse-applicative
+    - parsec
+    - prettyprinter
+    - random
+    - reflection
+    - rocksdb-haskell
+    - safe-exceptions >= 0.1.4
+    - serialise
+    - serokell-util
+    - servant-server
+    - snowdrop
+    - stm
+    - template-haskell
+    - text
+    - text-format
+    - time
+    - time-units
+    - unix
+    - unliftio
+    - warp
+    - yaml
+
+tests:
+  disciplina-witness-test:
+    <<: *test-common
+
+    dependencies:
+      - aeson
+      - AVL
+      - bytestring
+      - containers
+      - cryptonite
+      - directory
+      - disciplina-core
+      - disciplina-witness
+      - data-default
+      - hspec
+      - lens
+      - loot-log
+      - memory
+      - safe-exceptions >= 0.1.4
+      - serialise
+      - tasty
+      - tasty-hspec
+      - tasty-discover
+      - time
+      - QuickCheck
+      - quickcheck-instances
+
+executables:
+  dscp-witness:
+    <<: *exec-common
+    source-dirs: exec
+    dependencies:
+      - bytestring
+      - disciplina-core
+      - disciplina-witness
+      - formatting
+      - loot-log
+      - time-units
+      - optparse-applicative
+      - random
+      - unliftio

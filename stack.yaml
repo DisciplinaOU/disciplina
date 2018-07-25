@@ -1,7 +1,9 @@
 resolver: lts-11.17
 
 packages:
-- 'lib'
+- 'core'
+- 'witness'
+- 'educator'
 - 'tools'
 - 'wallet'
 
