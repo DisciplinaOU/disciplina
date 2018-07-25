@@ -1,0 +1,67 @@
+<<: !include "../hpack/module.yaml"
+
+name: disciplina-witness
+description: Witness node package
+
+library:
+  <<: *lib-common
+
+  dependencies:
+    - aeson
+    - autoexporter
+    - AVL
+    - bytestring
+    - containers
+    - componentm
+    - data-default
+    - directory
+    - disciplina-core
+    - exceptions
+    - formatting
+    - filepath
+    - fmt
+    - free
+    - hashable
+    - interpolatedstring-perl6 
+    - lens
+    - loot-base
+    - loot-log
+    - loot-network
+    - log-warper
+    - memory
+    - mtl
+    - optparse-applicative
+    - parsec
+    - prettyprinter
+    - reflection
+    - rocksdb-haskell
+    - safe-exceptions >= 0.1.4
+    - serialise
+    - servant-server
+    - snowdrop
+    - stm
+    - text
+    - text-format
+    - time
+    - unliftio
+    - warp
+
+tests:
+  disciplina-witness-test:
+    <<: *test-common
+
+    dependencies:
+      - hspec
+      - memory
+      - tasty
+
+executables:
+  dscp-witness:
+    <<: *exec-common
+    source-dirs: exec
+    dependencies:
+      - disciplina-core
+      - disciplina-witness
+      - loot-log
+      - optparse-applicative
+      - unliftio
