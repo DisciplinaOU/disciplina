@@ -22,7 +22,6 @@ library:
     - fmt
     - hashable
     - hspec
-    - loot-base
     - loot-config
     - loot-log
     - lens
@@ -47,17 +46,10 @@ tests:
     <<: *test-common
 
     dependencies:
-      - aeson
       - bytestring
-      - cryptonite
       - containers
       - disciplina-core
       - hspec
-      - lens
-      - random
-      - safe-exceptions >= 0.1.4
-      - serialise
       - tasty
       - tasty-hspec
-      - tasty-discover
       - QuickCheck
