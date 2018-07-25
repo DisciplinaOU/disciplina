@@ -8,6 +8,7 @@ library:
 
   dependencies:
     - aeson
+    - aeson-options
     - autoexporter
     - AVL
     - bytestring
@@ -38,6 +39,7 @@ library:
     - safe-exceptions >= 0.1.4
     - serialise
     - servant-server
+    - servant-generic
     - snowdrop
     - stm
     - text

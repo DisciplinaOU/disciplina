@@ -67,7 +67,7 @@ toProofBalanceTx (TxWitnessed tx (TxWitness {..})) =
     txType = StateTxType $ getId (Proxy @TxIds) AccountTxId
     wsSignature = txwSig
     wsPublicKey = txwPk
-    wsBody = (txId tx, wsPublicKey)
+    wsBody = (toTxId tx, wsPublicKey)
 
 seqExpandersBalanceTx :: SeqExpanders Exceptions Ids Proofs Values ctx TxWitnessed
 seqExpandersBalanceTx =

@@ -53,11 +53,12 @@ module Dscp.Core.Types
        -- * Transaction
        , Coin (..)
        , coinToInteger
+       , coinFromInteger
        , TxInAcc (..)
        , TxOut (..)
        , Tx (..)
        , TxId
-       , txId
+       , toTxId
        , TxWitness (..)
        , TxWitnessed (..)
        , GTx (..)
@@ -94,11 +95,20 @@ newtype StakeholderId = StakeholderId
 
 -- | Coin amount.
 newtype Coin = Coin { unCoin :: Word64 }
-    deriving (Eq, Ord, Show, Generic, Hashable, Num)
+    deriving (Eq, Ord, Show, Generic, Hashable, Bounded)
 
 -- | Safely convert coin to integer.
 coinToInteger :: Coin -> Integer
 coinToInteger = toInteger . unCoin
+
+coinFromInteger :: Integer -> Either Text Coin
+coinFromInteger i
+    | i < 0
+        = Left "Negative coin amount"
+    | i > fromIntegral (unCoin maxBound)
+        = Left "Coin amount is too high"
+    | otherwise
+        = Right (Coin $ fromIntegral i)
 
 instance Buildable Coin where
     build (Coin c) = c ||+ " coin(s)"
@@ -324,8 +334,8 @@ instance Buildable Tx where
 type TxId = Hash Tx
 
 -- | Compute tx id.
-txId :: (Serialise Tx) => Tx -> TxId
-txId = hash
+toTxId :: (Serialise Tx) => Tx -> TxId
+toTxId = hash
 
 -- | Transaction witness. We sign a pair of transaction hash and private
 -- key. The second element is there to authenticate proposed changes

@@ -10,9 +10,8 @@ import UnliftIO.Async (async)
 import Dscp.CommonCLI (versionOption)
 import Dscp.Config (buildBaseConfig, configPathParser)
 import Dscp.Network (runListener, runWorker, withServer)
-import Dscp.Witness (WitnessConfig, WitnessParams, launchWitnessRealMode, witnessListeners,
-                     witnessParamsParser, witnessWorkers)
-
+import Dscp.Witness (WitnessConfig, WitnessParams (..), launchWitnessRealMode, serveWitnessAPIReal,
+                     witnessListeners, witnessParamsParser, witnessWorkers)
 
 main :: IO ()
 main = do
@@ -27,6 +26,10 @@ main = do
 
             logInfo "Forking listeners"
             forM_ witnessListeners $ void . async . runListener identity
+
+            logInfo "Forking wallet server"
+            void . async $
+                serveWitnessAPIReal (wpWalletServerParams witnessParams)
 
             logInfo "All done"
             logInfo "Hey, here log-warper works!"

@@ -14,7 +14,7 @@ import Dscp.Educator.Web.Student.API (StudentAPI, studentAPI)
 import Dscp.Educator.Web.Student.Error (toServantErr, unexpectedToServantErr)
 import Dscp.Educator.Web.Student.Handlers (servantHandlers)
 import Dscp.Launcher.Rio (runRIO)
-import Dscp.Web (NetworkAddress, serveWeb)
+import Dscp.Web (ServerParams (..), serveWeb)
 
 studentAPIServer
     :: forall ctx m. EducatorWorkMode ctx m
@@ -32,11 +32,11 @@ convertHandler ctx handler =
         `catch` (throwError . toServantErr)
         `catchAny` (throwError . unexpectedToServantErr)
 
-serveStudentAPIReal :: HasEducatorConfig => NetworkAddress -> EducatorRealMode ()
-serveStudentAPIReal addr = do
-    logInfo $ "Serving Student API on "+|addr|+""
+serveStudentAPIReal :: HasEducatorConfig => ServerParams -> EducatorRealMode ()
+serveStudentAPIReal ServerParams{..} = do
+    logInfo $ "Serving Student API on "+|spAddr|+""
     eCtx <- ask
-    serveWeb addr $
+    serveWeb spAddr $
         serve studentAPI $
         studentAPIServer $
         convertHandler eCtx

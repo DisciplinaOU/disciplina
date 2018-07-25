@@ -26,6 +26,9 @@ module Dscp.Crypto.Encrypt
        , DecryptionError (..)
        , encrypt
        , decrypt
+
+         -- * Other
+       , encKeyGen
        ) where
 
 import Codec.Serialise (Serialise (..), serialise)
@@ -38,7 +41,7 @@ import Crypto.Cipher.Types (AEAD, AEADMode (AEAD_GCM), AuthTag (..),
 import Crypto.Error (onCryptoFailure)
 import Crypto.Hash.Algorithms (SHA512 (..))
 import qualified Crypto.KDF.PBKDF2 as PBKDF2
-import Crypto.Random (getRandomBytes)
+import Crypto.Random (MonadRandom, getRandomBytes)
 import Data.ByteArray (ByteArray, ByteArrayAccess, ScrubbedBytes)
 import qualified Data.ByteArray as BA
 import qualified Data.ByteString.Lazy as BSL
@@ -48,6 +51,7 @@ import System.IO.Unsafe (unsafePerformIO)
 import Text.Show (show)
 
 import Dscp.Crypto.ByteArray (FromByteArray (..))
+import Dscp.Crypto.Impl (PublicKey, SecretKey, keyGen)
 import Dscp.Crypto.Random (runSecureRandom)
 import Dscp.Util (toBase64)
 
@@ -268,3 +272,10 @@ instance Show DecryptionError where
     show = toString . pretty
 
 instance Exception DecryptionError
+
+-------------------------------------------------------------
+-- Other
+-------------------------------------------------------------
+
+encKeyGen :: MonadRandom m => PassPhrase -> m (Encrypted SecretKey, PublicKey)
+encKeyGen pp = keyGen <&> \(sk, pk) -> (encrypt pp sk, pk)
