@@ -23,16 +23,3 @@ instance Serialise SubmissionWitness
 instance Serialise SignedSubmission
 instance Serialise DocumentType
 
-instance Serialise Coin
-instance Serialise TxInAcc
-instance Serialise TxOut
-instance Serialise Tx
-instance Serialise TxWitness
-instance Serialise TxWitnessed
-instance Serialise GTx
-instance Serialise GTxWitnessed
-instance Serialise BlockToSign
-instance Serialise Difficulty
-instance Serialise Header
-instance Serialise Block
-instance Serialise BlockBody

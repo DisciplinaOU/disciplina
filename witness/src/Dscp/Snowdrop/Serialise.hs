@@ -24,8 +24,8 @@ instance Serialise a => Serialise (SD.BlockRef a)
 instance Serialise SD.StateTxType
 instance (Serialise id, Ord id, Serialise v, Serialise proof) => Serialise (SD.StateTx id proof v)
 instance Serialise A.Account
-instance Serialise a => Serialise (A.Author a)
-instance Serialise a => Serialise (A.AccountId a)
+instance Serialise A.Author
+instance Serialise A.AccountId
 instance Serialise SD.TipKey
 
 instance Serialise Ids

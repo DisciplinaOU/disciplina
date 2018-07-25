@@ -6,7 +6,8 @@ import Codec.Serialise (deserialiseOrFail, serialise)
 import Control.Exception
 import Control.Lens
 import Data.Scientific (toBoundedInteger)
-import Dscp.Core (TxOut(..), addrFromText, coinToInteger, toTxId)
+import Dscp.Core (addrFromText)
+import Dscp.Core.Foundation.Transactions (TxOut (..), coinToInteger, toTxId)
 import Dscp.Crypto (mkPassPhrase)
 import Dscp.Util (toHex)
 import IiExtras

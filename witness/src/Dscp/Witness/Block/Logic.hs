@@ -15,7 +15,8 @@ import qualified Snowdrop.Model.Execution as SD
 import qualified Snowdrop.Model.State.Core as SD
 import qualified Snowdrop.Util as SD
 
-import Dscp.Core
+import Dscp.Core.Foundation.Genesis
+import Dscp.Core.Foundation.Transactions
 import Dscp.Crypto (sign, toPublic)
 import Dscp.Resource.Keys (ourPublicKey, ourSecretKey)
 import Dscp.Snowdrop.Actions (SDActions, nsBlockDBActions, nsStateDBActions)

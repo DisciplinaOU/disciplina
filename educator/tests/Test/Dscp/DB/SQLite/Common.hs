@@ -1,7 +1,7 @@
 module Test.Dscp.DB.SQLite.Common
   ( module Test.Dscp.DB.SQLite.Common
   , module Dscp.Core.Types
-  , module Dscp.Educator.Txs
+  , module Dscp.Core.Foundation.Educator.Txs
   , module Dscp.Util
   , module Dscp.Util.Test
   , module Test.Hspec
@@ -15,6 +15,7 @@ import Database.SQLite.Simple (Connection, execute, fold, query, setTrace, withC
 import qualified Loot.Log as Adapter
 import Test.Hspec
 
+import Dscp.Core.Foundation.Educator.Txs (PrivateTx (..), ptSignedSubmission, ptTime)
 import Dscp.Core.Types (Address (..), Assignment (..), AssignmentType (..), Course (..), Grade (..),
                         SignedSubmission (..), Submission (..), SubmissionSig,
                         SubmissionWitness (..), aCourseId, mkGrade, sAssignment, sStudentId,
@@ -23,7 +24,6 @@ import Dscp.Crypto (hash)
 import qualified Dscp.DB.SQLite.Class as Adapter
 import Dscp.DB.SQLite.Schema (ensureSchemaIsSetUp)
 import Dscp.Educator.Arbitrary ()
-import Dscp.Educator.Txs (PrivateTx (..), ptSignedSubmission, ptTime)
 import Dscp.Util (idOf)
 import Dscp.Util.Test
 

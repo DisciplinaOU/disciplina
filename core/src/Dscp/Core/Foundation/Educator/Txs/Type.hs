@@ -1,7 +1,7 @@
 
 -- | Definitions of private transactions
 
-module Dscp.Educator.Txs.Type
+module Dscp.Core.Foundation.Educator.Txs.Type
        ( PrivateTx (..)
        , PrivateTxWitness (..)
        , PrivateTxAux (..)

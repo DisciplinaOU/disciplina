@@ -28,10 +28,10 @@ import Servant (FromHttpApiData (..))
 
 import Dscp.Core.Address (addrFromText)
 import Dscp.Core.Aeson ()
+import Dscp.Core.Foundation.Educator.Txs (PrivateTx (..))
 import qualified Dscp.Core.Types as Core
 import Dscp.Crypto (hash)
 import Dscp.Crypto (Hash, Raw)
-import Dscp.Educator.Txs (PrivateTx (..))
 import Dscp.Educator.Web.Student.Error (APIError)
 import Dscp.Util (fromBase64)
 import Dscp.Util.Aeson (AsByteString, Base64Encoded)

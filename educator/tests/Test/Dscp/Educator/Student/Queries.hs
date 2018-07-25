@@ -4,13 +4,13 @@ import Data.List (nub, (!!))
 import Data.Time.Clock (UTCTime (..))
 
 import Dscp.Core.Arbitrary (genStudentSignedSubmissions)
+import Dscp.Core.Foundation.Educator.Txs (PrivateTx (..))
 import qualified Dscp.Core.Grade as Core
 import qualified Dscp.Core.Types as Core
 import Dscp.Crypto (Hash, Raw, hash)
 import Dscp.DB.SQLite (MonadSQLiteDB, WithinSQLTransaction, sqlTransaction, _AssignmentDoesNotExist,
                        _SubmissionDoesNotExist)
 import qualified Dscp.DB.SQLite as CoreDB
-import Dscp.Educator.Txs (PrivateTx (..))
 import Dscp.Educator.Web.Student (Assignment (..), Course (..), Grade (..), IsEnrolled (..),
                                   IsFinal (..), MonadStudentAPIQuery, Student, Submission (..),
                                   aDocumentType, assignmentTypeRaw, liftAssignment, liftSubmission,

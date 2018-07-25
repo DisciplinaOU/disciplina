@@ -4,7 +4,9 @@ module Dscp.Wallet.Backend
        ) where
 
 import Control.Exception (throwIO)
-import Dscp.Core (Tx (..), TxInAcc (..), TxWitness (..), TxWitnessed (..), mkAddr, toTxId)
+import Dscp.Core (mkAddr)
+import Dscp.Core.Foundation.Transactions (Tx (..), TxInAcc (..), TxWitness (..), TxWitnessed (..),
+                                          toTxId)
 import Dscp.Crypto (decrypt, emptyPassPhrase, encrypt, keyGen, sign, toPublic)
 
 import Dscp.Wallet.Client
@@ -67,13 +69,13 @@ sendTx wc eSecretKey mPassPhrase (toList -> outs) = do
     -- TODO: request nonce for a given address from witness node
     nonce <- asNextNonce <$> wGetAccountState wc address
 
-    let inAcc = TxInAcc{ tiaNonce = nonce, tiaAddr = address }
+    let inAcc   = TxInAcc { tiaNonce = nonce, tiaAddr   = address }
+        tx      = Tx      { txInAcc  = inAcc, txInValue = inValue, txOuts = outs }
         inValue = Coin $ sum $ unCoin . txOutValue <$> outs
-        tx = Tx{ txInAcc = inAcc, txInValue = inValue, txOuts = outs }
 
-        signature = sign secretKey (toTxId tx, publicKey)
-        witness = TxWitness{ txwSig = signature, txwPk = publicKey }
-        txWitnessed = TxWitnessed{ twTx = tx, twWitness = witness }
+        signature   = sign secretKey (toTxId tx, publicKey, ())
+        witness     = TxWitness   { txwSig = signature, txwPk = publicKey }
+        txWitnessed = TxWitnessed { twTx   = tx, twWitness = witness }
 
     void $ wSubmitTx wc txWitnessed
     return tx

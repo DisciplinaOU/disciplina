@@ -3,11 +3,11 @@ module Test.Dscp.DB.DSL.Interpret.SimpleTxDB where
 import Test.Hspec
 
 import Dscp.Core (Course (..), Subject, gA, gB, gC, gD)
+import Dscp.Core.Foundation.Educator (PrivateTx (..))
 import Dscp.Crypto (PublicKey, SecretKey, hash)
 import Dscp.DB.DSL (Obj, ObjHashEq (..), QueryObj (..), QueryTx (..), QueryTxs (..), TxGrade (..),
                     TxIdEq (..), TxsFilterExpr (..), WHERE (..))
 import Dscp.DB.DSL.Interpret.SimpleTxDB (runSimpleTxDBQuery)
-import Dscp.Educator (PrivateTx (..))
 import Dscp.Util (HasId (Id))
 import Dscp.Util.Test
 

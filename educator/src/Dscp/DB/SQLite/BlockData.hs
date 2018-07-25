@@ -6,10 +6,10 @@ import Codec.Serialise (Serialise)
 
 import Data.Time.Clock (UTCTime)
 
+import Dscp.Core.Foundation.Educator.Block (PrivateBlock)
+import Dscp.Core.Foundation.Educator.Txs (PrivateTx (..))
 import Dscp.Core.Types (ATGDelta)
 import Dscp.Crypto (EmptyMerkleTree, Hash, MerkleSignature)
-import Dscp.Educator.Block (PrivateBlock)
-import Dscp.Educator.Txs (PrivateTx (..))
 import Dscp.Util (HasId (..))
 
 data BlockData = BlockData
