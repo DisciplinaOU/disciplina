@@ -16,7 +16,7 @@ import Dscp.Core.Types (Address, Coin(..), Tx, TxOut(..))
 import Dscp.Crypto (Encrypted, PassPhrase, PublicKey, SecretKey)
 
 data WalletFace = WalletFace
-    { walletGenKeyPair :: PassPhrase -> IO (PublicKey, Encrypted SecretKey)
-    , walletSendTx :: PassPhrase -> Encrypted SecretKey -> NonEmpty TxOut -> IO Tx
+    { walletGenKeyPair :: IO (SecretKey, PublicKey)
+    , walletSendTx :: SecretKey -> NonEmpty TxOut -> IO Tx
     , walletGetBalance :: Address -> IO Coin
     }
