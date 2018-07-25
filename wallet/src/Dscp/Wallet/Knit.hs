@@ -9,6 +9,7 @@ import Data.Char (isSpace)
 import Data.Scientific (toBoundedInteger)
 import Dscp.Core (TxOut(..), addrFromText, coinToInteger, txId)
 import Dscp.Crypto (FromByteArray(..), decrypt, encrypt, mkPassPhrase)
+import Dscp.Util (toHex)
 import IiExtras
 import Text.Earley
 
@@ -163,7 +164,7 @@ instance AllConstrained (Elem components) '[Wallet, Core] => ComponentCommandPro
 
             mPassPhrase <- forM passString $ either throwIO return . mkPassPhrase . encodeUtf8
             secretKey <- maybe decodeSK decodeEncryptedSK mPassPhrase $ secretKeyString
-            toValue . ValueString . show . txId <$> walletSendTx secretKey outs
+            toValue . ValueString . toHex . txId <$> walletSendTx secretKey outs
         , cpHelp = "Send a transaction."
         }
     , CommandProc
