@@ -2,16 +2,17 @@ module Dscp.Wallet.Knit where
 
 import Prelude hiding (preview)
 
-import Codec.Serialise (Serialise, deserialiseOrFail, serialise)
+import Codec.Serialise (deserialiseOrFail, serialise)
 import Control.Exception
 import Control.Lens
 import Data.Char (isSpace)
 import Data.Scientific (toBoundedInteger)
 import Dscp.Core (TxOut(..), addrFromText, coinToInteger, txId)
-import Dscp.Crypto (decrypt, encrypt, mkPassPhrase)
+import Dscp.Crypto (FromByteArray(..), decrypt, encrypt, mkPassPhrase)
 import IiExtras
 import Text.Earley
 
+import qualified Data.ByteArray as BA
 import qualified Data.ByteString.Lazy as BSL
 import qualified Serokell.Util.Base64 as Base64
 import qualified Text.Megaparsec as P
@@ -125,8 +126,9 @@ instance AllConstrained (Elem components) '[Wallet, Core] => ComponentCommandPro
             mPassPhrase <- forM passString $ either throwIO return . mkPassPhrase . encodeUtf8
             (secretKey, publicKey) <- walletGenKeyPair
             return . toValue . ValueList $
-              [ toValue . ValueCryptoKey . BSL.toStrict . (maybe serialise (\pp -> serialise . encrypt pp) mPassPhrase) $ secretKey
-              , toValue . ValueCryptoKey . BSL.toStrict . serialise $ publicKey
+              toValue . ValueCryptoKey <$>
+              [ maybe BA.convert (\pp -> BSL.toStrict . serialise . encrypt pp) mPassPhrase $ secretKey
+              , BA.convert $ publicKey
               ]
         , cpHelp = "Generate a key pair."
         }
@@ -154,10 +156,9 @@ instance AllConstrained (Elem components) '[Wallet, Core] => ComponentCommandPro
             pure (passString, secretKeyString, outs)
         , cpRepr = \(passString, secretKeyString, outs) -> CommandAction $ \WalletFace{..} -> do
             let
-              decodeSK :: Serialise a => ByteString -> IO a
-              decodeSK = either throwIO return . deserialiseOrFail . BSL.fromStrict
+              decodeSK = either fail return . fromByteArray
               decodeEncryptedSK passPhrase =
-                decodeSK >=>
+                either throwIO return . deserialiseOrFail . BSL.fromStrict >=>
                 either throwIO return . decrypt passPhrase
 
             mPassPhrase <- forM passString $ either throwIO return . mkPassPhrase . encodeUtf8
