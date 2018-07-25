@@ -38,8 +38,10 @@ library:
     - rocksdb-haskell
     - safe-exceptions >= 0.1.4
     - serialise
+    - servant
     - servant-server
     - servant-generic
+    - serokell-util
     - snowdrop
     - stm
     - text

@@ -10,3 +10,7 @@ loggerTree:
   init:
     log:
       severity: Debug+
+
+  wallet:
+    server:
+      severity: Info+
