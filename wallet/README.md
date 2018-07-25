@@ -5,8 +5,9 @@ Ariadne-based wallet for Disciplina.
 Short usage example:
 ```
 knit> gen-key-pair
-L z1fEXUH5atk6W1VPWkwMMk7rfWIOsK26GMFXIW6hovg=   -- secret key
-  DpeMraH5KSkJpx79Rmt+w5ouhx8Yp0dxlBgOgg3bPBQ=   -- public key
+L z1fEXUH5atk6W1VPWkwMMk7rfWIOsK26GMFXIW6hovg=               -- secret key
+  DpeMraH5KSkJpx79Rmt+w5ouhx8Yp0dxlBgOgg3bPBQ=               -- public key
+  LL4qKtG4mmZF4nC8hMiTpmsG7noszDtWZhiVHuqQsEqtghWdiCFmkkMp   -- address
 
 knit> gen-key-pair "passphrase"
 L UFQtH7e81aWSevzLT9pww1JQNZ2o/kaXzrYxV2AaR/oZBFggIj3ohhCpNXFrvPyxLT9R8r76kihL2l3Eu7O0aLswsQI=  -- encrypted secret key
