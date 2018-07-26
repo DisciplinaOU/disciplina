@@ -6,8 +6,8 @@ import Codec.Serialise (deserialiseOrFail, serialise)
 import Control.Exception
 import Control.Lens
 import Data.Scientific (toBoundedInteger)
-import Dscp.Core (TxOut (..), addrFromText, coinToInteger, mkAddr, toTxId)
-import Dscp.Crypto (FromByteArray (..), decrypt, encrypt, mkPassPhrase)
+import Dscp.Core (TxOut(..), addrFromText, coinToInteger, mkAddr, toTxId)
+import Dscp.Crypto (decrypt, emptyPassPhrase, encrypt, mkPassPhrase)
 import Dscp.Util (toHex)
 import IiExtras
 import Text.Earley
@@ -111,7 +111,7 @@ instance AllConstrained (Elem components) '[Wallet, Core] => ComponentCommandPro
             (secretKey, publicKey) <- walletGenKeyPair
             return . toValue . ValueList $
               toValue <$>
-              [ ValueCryptoKey . maybe BA.convert (\pp -> BSL.toStrict . serialise . encrypt pp) mPassPhrase $ secretKey
+              [ ValueCryptoKey . BSL.toStrict . serialise . encrypt (fromMaybe emptyPassPhrase mPassPhrase) $ secretKey
               , ValueCryptoKey . BA.convert $ publicKey
               , ValueAddress . mkAddr $ publicKey
               ]
@@ -132,22 +132,20 @@ instance AllConstrained (Elem components) '[Wallet, Core] => ComponentCommandPro
     , CommandProc
         { cpName = "send-tx"
         , cpArgumentPrepare = map
-            $ typeDirectedKwAnn "secretkey" tyCryptoKey
-            . typeDirectedKwAnn "out" tyTxOut
+            $ typeDirectedKwAnn "out" tyTxOut
         , cpArgumentConsumer = do
-            passString <- getArgOpt tyString "pass"
             secretKeyString <- getArg tyCryptoKey "secretkey"
+            passString <- getArgOpt tyString "pass"
             outs <- getArgSome tyTxOut "out"
             pure (passString, secretKeyString, outs)
         , cpRepr = \(passString, secretKeyString, outs) -> CommandAction $ \WalletFace{..} -> do
             let
-              decodeSK = either fail return . fromByteArray
               decodeEncryptedSK passPhrase =
                 either throwIO return . deserialiseOrFail . BSL.fromStrict >=>
                 either throwIO return . decrypt passPhrase
 
             mPassPhrase <- forM passString $ either throwIO return . mkPassPhrase . encodeUtf8
-            secretKey <- maybe decodeSK decodeEncryptedSK mPassPhrase $ secretKeyString
+            secretKey <- decodeEncryptedSK (fromMaybe emptyPassPhrase mPassPhrase) $ secretKeyString
             toValue . ValueString . toHex . toTxId <$> walletSendTx secretKey outs
         , cpHelp = "Send a transaction."
         }
