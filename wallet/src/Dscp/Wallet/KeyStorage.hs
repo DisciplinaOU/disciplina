@@ -19,7 +19,8 @@ data Storage = Storage
     }
 
 data StorageAccount = StorageAccount
-    { secretKey :: Encrypted SecretKey
+    { name :: Maybe Text
+    , secretKey :: Encrypted SecretKey
     , publicKey :: PublicKey
     }
 
@@ -38,7 +39,8 @@ getAccounts = do
     return $ toAccount <$> accounts storage
   where
     toAccount StorageAccount{..} = Account
-        { accountSecretKey = secretKey
+        { accountName = name
+        , accountSecretKey = secretKey
         , accountPublicKey = publicKey
         , accountAddress = mkAddr publicKey
         }
@@ -47,7 +49,8 @@ addAccount :: Account -> IO ()
 addAccount account = modifyStorage (\(Storage accs) -> Storage $ accs ++ [fromAccount account])
   where
     fromAccount Account{..} = StorageAccount
-        { secretKey = accountSecretKey
+        { name = accountName
+        , secretKey = accountSecretKey
         , publicKey = accountPublicKey
         }
 
