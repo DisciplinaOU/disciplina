@@ -4,6 +4,14 @@ Ariadne-based wallet for Disciplina.
 
 Short usage example:
 ```
+knit> list-keys
+L (L "UKZbPfVbHQrsNTfBdtKKwRtQDzWOGmY3eh9sUWlsvNSAp1ggDgRRmJDWEzHh/43JfQ1LcmsklGS43ZLVFT
+     "3ePzBz82cJCSkCUWc/DmxxH8Ahj76+o4G3osAHDKmM0="
+     LL4qKkivDC1qzvT9ovcfr2uqx5Esi7e5ZbKCrvKYC1jEi6a3kuuAjrqE)
+  (L "UEqIlL9CD3wAdeoCfI6XyrtQ80AbwrmZbxD7+1CyikWLmVggbgRr/vFeJX0nSsH1GGjkLfORSfrfL5B1q9
+     "h6S36CJw+fevz8JiHyok9kW3Rwy+8+Ijj9go8xtHdGY="
+     LL4qKo9KtKiWEaaoDVnZhKW1BiQwyPjbDxd77aMgUDa43sqFjxb2Mub7)
+
 knit> gen-key-pair
 L "UDpQX35yW72QVKcL4ufC7YtQMDcPghbX+nKcccrRpHNLZFggwgj8Zo0cbRTepMzHudhyuatPGP5isWJNuNu7vS1ONBs="  -- encrypted secret key
   "D/nSS++ZrpsxqjV/Pj38iH75FJP73YBqyTyKUbqqfck="                                                  -- public key

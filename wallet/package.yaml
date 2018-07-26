@@ -11,12 +11,15 @@ library:
     - ExistentialQuantification
   dependencies:
     - Earley
+    - aeson
     - ansi-wl-pprint
     - async
     - bytestring
     - containers
+    - directory
     - disciplina-core
     - disciplina-witness
+    - filelock
     - formatting
     - haskeline
     - http-types
