@@ -8,7 +8,11 @@ library:
   default-extensions:
     - ApplicativeDo
     - DataKinds
+    - EmptyCase
     - ExistentialQuantification
+    - NegativeLiterals
+    - OverloadedLabels
+    - TypeOperators
   dependencies:
     - Earley
     - aeson
@@ -39,6 +43,17 @@ library:
     - text
     - text-format
     - vinyl
+
+    # for Ariadne/UI/Vty
+    - Hclip
+    - ansi-terminal
+    - brick
+    - named
+    - text-zipper
+    - transformers
+    - vty
+  ghc-options:
+    - -Wno-unused-top-binds
 
 executables:
   disciplina-wallet:
