@@ -1,23 +1,22 @@
--- | Minimalistic slotting. Currently we only need to get uniform
--- slots numbers so that several nodes can issue blocks one after
--- another.
+-- | Super-basic slotting.
 
-module Dscp.Witness.Slotting
-       ( getCurrentSlot
+module Dscp.Core.Slotting
+       ( SlotId (..)
+       , getCurrentSlot
        , waitUntilNextSlot
        ) where
 
 import Control.Concurrent (threadDelay)
 import Data.Time.Clock.POSIX (getPOSIXTime)
 
-newtype SlotId = SlotId Integer deriving (Eq, Ord, Show, Generic)
+import Dscp.Core.Foundation (SlotId (..))
 
 -- TODO pass it instead of fixing.
 -- In microseconds.
-slotLength :: Integer
+slotLength :: Word64
 slotLength = 20000000 -- 20 sec
 
-getTimeMcs :: MonadIO m => m Integer
+getTimeMcs :: MonadIO m => m Word64
 getTimeMcs = floor . (*1000000) . toRational <$> liftIO getPOSIXTime
 
 -- Yes. This is enough.

@@ -14,15 +14,16 @@ import qualified System.Directory as D
 import System.FilePath ((</>))
 import qualified System.FilePath as FP
 
-import Dscp.Config (BaseConfig (..), HasBaseConfig, baseConfig)
+import Dscp.Core
 import Dscp.Crypto (PassPhrase, decrypt, emptyPassPhrase, encrypt, keyGen, runSecureRandom,
                     toPublic)
-import Dscp.Resource.Class (AllocResource (..), buildComponentR)
 import Dscp.Resource.Keys.Error (KeyInitError (..), rewrapKeyIOErrors)
-import Dscp.Resource.Keys.Types (KeyJson (..), KeyParams (..), KeyResources (..), KeyfileContent)
+import Dscp.Resource.Keys.Types (BaseKeyParams (..), CommitteeParams (..), KeyJson (..),
+                                 KeyResources (..), KeyfileContent)
 import Dscp.System (ensureModeIs, mode600, setMode, whenPosix)
 import Dscp.Util (leftToThrow)
 import Dscp.Util.Aeson (Versioned (..))
+import Dscp.Witness.Config
 
 ---------------------------------------------------------------------
 -- Conversions
@@ -45,17 +46,47 @@ fromSecretJson pp KeyJson{..} = do
 
 -- | Where keyfile would lie.
 storePath
-    :: (HasBaseConfig, Buildable (Proxy node))
-    => KeyParams -> Proxy node -> FilePath
-storePath KeyParams{..} nodeNameP =
-    fromMaybe defPath kpPath
+    :: (HasWitnessConfig, Buildable (Proxy node))
+    => BaseKeyParams -> Proxy node -> FilePath
+storePath BaseKeyParams{..} nodeNameP =
+    fromMaybe defPath bkpPath
   where
-    defPath = bcAppDirectory baseConfig </> (nodeNameP |+ ".key")
+    defPath = giveLC @'["core", "generated", "home"] @WitnessConfig </> (nodeNameP |+ ".key")
 
 -- | Generate store randomly.
-genStore :: MonadIO m => m (KeyResources n)
-genStore = do
-    (_krSecretKey, _krPublicKey) <- runSecureRandom keyGen
+genStore ::
+       (HasWitnessConfig, MonadThrow m, MonadIO m)
+    => Maybe CommitteeParams
+    -> m (KeyResources n)
+genStore comParamsM = do
+    (_krSecretKey, _krPublicKey) <-
+        case comParamsM of
+          Nothing -> runSecureRandom keyGen
+          Just (CommitteeParamsOpen i) -> do
+              sec <- case gcGovernance (giveL @WitnessConfig @GenesisConfig) of
+                         GovCommittee (CommitteeOpen{..}) -> do
+                             when (i >= commN) $
+                                 throwM $ SecretConfMismatch $
+                                 "Index passed GOE than comm size: " <> show (i,commN)
+                             pure commSecret
+                         x -> throwM $ SecretConfMismatch $
+                                       "Params were passed for open committee, but " <>
+                                       "config specifies: " <> show x
+              let sk = committeeDerive sec i
+              pure (sk, toPublic sk)
+          Just (CommitteeParamsClosed {..}) -> do
+              let addrs = case gcGovernance (giveL @WitnessConfig @GenesisConfig) of
+                              GovCommittee (CommitteeClosed a) -> a
+                              x -> throwM $ SecretConfMismatch $
+                                            "Params were passed for closed committee, but " <>
+                                            "config specifies: " <> show x
+
+              let sk = committeeDerive cpSecret cpParticipantN
+              let pk = toPublic sk
+              when (mkAddr pk `notElem` addrs) $
+                  throwM $ SecretConfMismatch $ "Provided secret and index doesn't " <>
+                                                "belong to the list of addrs"
+              pure (sk,pk)
     return KeyResources{..}
 
 -- | Read store under given path.
@@ -81,7 +112,7 @@ writeStoreDumb path pp store =
 
 -- | Write given secret to store, setting appropriate access mode.
 writeStore
-    :: (MonadIO m, MonadCatch m)
+    :: (MonadIO m, MonadCatch m, HasWitnessConfig)
     => FilePath -> PassPhrase -> KeyResources n -> m ()
 writeStore path pp store = liftIO . rewrapKeyIOErrors $ do
     D.createDirectoryIfMissing True (FP.takeDirectory path)
@@ -92,22 +123,25 @@ writeStore path pp store = liftIO . rewrapKeyIOErrors $ do
 
 -- | Creates new store under given path.
 -- If file already exists, error is thrown.
-createStore
-    :: forall m n.
-       (MonadIO m, MonadCatch m, MonadLogging m, Buildable (Proxy n))
-    => FilePath -> PassPhrase -> m (KeyResources n)
-createStore path pp = do
-    exists <- liftIO . rewrapKeyIOErrors $ D.doesFileExist path
-    if exists
-        then throwM $ SecretFileExistsError path
-        else do
-            logInfo newKeyLog
-            store <- genStore
-            writeStore path pp store
-            return store
+createStore ::
+       forall m n.
+       ( MonadIO m
+       , MonadCatch m
+       , MonadLogging m
+       , Buildable (Proxy n)
+       , HasWitnessConfig
+       )
+    => FilePath
+    -> Maybe CommitteeParams
+    -> PassPhrase
+    -> m (KeyResources n)
+createStore path comParamsM pp = do
+     logInfo $ "Creating new "+|nodeNameP|+" secret key under "+||path||+""
+     store <- genStore comParamsM
+     writeStore path pp store
+     return store
   where
     nodeNameP = Proxy :: Proxy n
-    newKeyLog = "Creating new "+|nodeNameP|+" secret key under "+||path||+""
 
 -- | Syncs with store. For now store is read-only, thus it's just read.
 -- Store is also created (and assumed to be absent before this function call) if
@@ -115,22 +149,12 @@ createStore path pp = do
 linkStore
     :: forall m n.
        (MonadIO m, MonadCatch m, MonadLogging m,
-        HasBaseConfig, Buildable (Proxy n))
-    => KeyParams -> m (KeyResources n)
-linkStore params@KeyParams{..} = do
+        HasWitnessConfig, Buildable (Proxy n))
+    => BaseKeyParams -> Maybe CommitteeParams -> m (KeyResources n)
+linkStore params@BaseKeyParams{..} commParamsM = do
     let path = storePath params (Proxy :: Proxy n)
-        pp = fromMaybe emptyPassPhrase kpPassphrase
-    if kpGenNew
-        then createStore path pp
+        pp = fromMaybe emptyPassPhrase bkpPassphrase
+    keyExists <- liftIO . rewrapKeyIOErrors $ D.doesFileExist path
+    if bkpGenNew && not keyExists
+        then createStore path commParamsM pp
         else readStore path pp
-
----------------------------------------------------------------------
--- Other
----------------------------------------------------------------------
-
-instance (HasBaseConfig, Buildable (Proxy node)) =>
-         AllocResource KeyParams (KeyResources node) where
-    allocResource params =
-        buildComponentR (Proxy @node |+ " keys")
-            (linkStore params)
-            (\_ -> pass)

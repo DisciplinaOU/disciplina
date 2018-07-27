@@ -15,6 +15,7 @@ import Dscp.Crypto (PublicKey, Signature, hash, verify)
 import Dscp.Snowdrop.AccountValidation as A
 import Dscp.Snowdrop.Configuration (AddrTxProof, Exceptions, Ids, Proofs (..), PublicationTxProof,
                                     SHeader, SPayload, SUndo, Values)
+import Dscp.Witness.Config
 
 ----------------------------------------------------------------------------
 -- Validator
@@ -91,14 +92,16 @@ _baseValidator =
 ----------------------------------------------------------------------------
 
 blkStateConfig ::
-       PublicKey
+       HasWitnessConfig
+    => PublicKey
     -> SD.BlkStateConfiguration SHeader SPayload SUndo HeaderHash
                                 (SD.ERwComp Exceptions Ids Values (IOCtx chgAccum) chgAccum)
 blkStateConfig pk =
     SD.inmemoryBlkStateConfiguration (simpleBlkConfiguration pk) validator
 
-simpleBlkConfiguration
-    :: PublicKey
+simpleBlkConfiguration ::
+       HasWitnessConfig
+    => PublicKey
     -> SD.BlkConfiguration SHeader [SD.StateTx Ids Proofs Values] HeaderHash
 simpleBlkConfiguration pk = SD.BlkConfiguration
     { bcBlockRef     = hash

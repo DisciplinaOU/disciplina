@@ -6,9 +6,9 @@
 module Dscp.CommonCLI
        ( logParamsParser
        , versionOption
-       , keyParamsParser
-       , serverParamsParser
+       , baseKeyParamsParser
        , networkAddressParser
+       , serverParamsParser
        ) where
 
 import Data.Char (toLower)
@@ -22,7 +22,7 @@ import Text.Parsec.Char (char, digit)
 import qualified Text.Parsec.String as Parsec
 
 import Dscp.Crypto (mkPassPhrase)
-import Dscp.Resource.Keys (KeyParams (..))
+import Dscp.Resource.Keys (BaseKeyParams (..))
 import Dscp.Resource.Logging (LoggingParams (..))
 import Dscp.Util (leftToFail)
 import Dscp.Web (NetworkAddress (..), ServerParams (..))
@@ -52,12 +52,12 @@ versionOption = infoOption ("disciplina-" <> (showVersion version)) $
     long "version" <>
     help "Show version."
 
-keyParamsParser :: Text -> Parser KeyParams
-keyParamsParser who = do
-    kpPath <- kpKeyPathParser
-    kpGenNew <- kpGenKeyParser
-    kpPassphrase <- kpPassphraseParser
-    pure KeyParams{..}
+baseKeyParamsParser :: Text -> Parser BaseKeyParams
+baseKeyParamsParser who = do
+    bkpPath <- kpKeyPathParser
+    bkpGenNew <- kpGenKeyParser
+    bkpPassphrase <- kpPassphraseParser
+    pure BaseKeyParams{..}
   where
     kpKeyPathParser = optional . strOption $
          long [qc|{who}-keyfile-path|] <>
@@ -71,6 +71,10 @@ keyParamsParser who = do
          metavar "PASSWORD" <>
          help "Password of secret key."
     passphraseReadM = leftToFail . first pretty . mkPassPhrase =<< str
+
+----------------------------------------------------------------------------
+-- Utils
+----------------------------------------------------------------------------
 
 parseNetAddr :: String -> Either String NetworkAddress
 parseNetAddr st =

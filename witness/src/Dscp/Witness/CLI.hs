@@ -13,10 +13,13 @@ module Dscp.Witness.CLI
 
 import qualified Data.Set as Set
 import Loot.Network.ZMQ.Common (ZTNodeId (..), parseZTNodeId)
-import Options.Applicative (Parser, eitherReader, help, long, metavar, option, strOption, value)
+import Options.Applicative (Parser, auto, eitherReader, help, long, metavar, option, strOption,
+                            value)
 
-import Dscp.CommonCLI (keyParamsParser, logParamsParser, serverParamsParser)
+import Dscp.CommonCLI (baseKeyParamsParser, logParamsParser, serverParamsParser)
+import Dscp.Core.Governance (CommitteeSecret (..))
 import Dscp.DB.Rocks.Real.Types (RocksDBParams (..))
+import Dscp.Resource.Keys
 import Dscp.Resource.Network (NetCliParams (..), NetServParams (..))
 import Dscp.Witness.Launcher.Params (WitnessParams (..))
 
@@ -55,6 +58,32 @@ netCliParamsParser = NetCliParams <$> peersParser
 netServParamsParser :: Parser NetServParams
 netServParamsParser = NetServParams <$> peersParser <*> ourZTNodeIdParser
 
+---------------------------------------------------------------------------
+-- Utils
+---------------------------------------------------------------------------
+
+committeeParamsParser :: Parser CommitteeParams
+committeeParamsParser =
+    combine <$> nParser <*> optional commSecretParser
+  where
+    combine cpParticipantN Nothing         = CommitteeParamsOpen {..}
+    combine cpParticipantN (Just cpSecret) = CommitteeParamsClosed {..}
+
+    nParser =
+        option auto
+            (long "comm-n" <> metavar "INTEGER" <> help "Committee participant index")
+
+    commSecretParser =
+        fmap CommitteeSecret $
+        strOption
+            (long "comm-sec" <> metavar "BYTESTRING" <> help "Committee secret key")
+
+witnessKeyParamsParser :: Parser WitnessKeyParams
+witnessKeyParamsParser = do
+    wkpBase <- baseKeyParamsParser "witness"
+    wkpCommittee <- optional committeeParamsParser
+    pure $ WitnessKeyParams {..}
+
 ----------------------------------------------------------------------------
 -- Witness params parser
 ----------------------------------------------------------------------------
@@ -64,6 +93,6 @@ witnessParamsParser = do
     wpLoggingParams <- logParamsParser "witness"
     wpDBParams <- rocksParamsParser
     wpNetworkParams <- netServParamsParser
-    wpKeyParams <- keyParamsParser "witness"
+    wpKeyParams <- witnessKeyParamsParser
     wpWalletServerParams <- serverParamsParser "Witness"
     pure $ WitnessParams {..}

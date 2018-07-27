@@ -6,7 +6,7 @@ import Dscp.Launcher.Rio (runRIO)
 import Dscp.Resource.Class (AllocResource (..), InitParams (..))
 import Dscp.Resource.Functions (runResourceAllocation)
 import Dscp.Snowdrop.Actions (initSDActions)
-import Dscp.Witness.Config (HasWitnessConfig, WitnessConfig, withWitnessConfig)
+import Dscp.Witness.Config
 import Dscp.Witness.Launcher.Mode (WitnessContext (..), WitnessRealMode)
 import Dscp.Witness.Launcher.Params (WitnessParams (..))
 import Dscp.Witness.Launcher.Resource (WitnessResources (..))
@@ -25,7 +25,7 @@ runWitnessRealMode = runRIO
 -- | Given params, allocate resources, construct node context and run
 -- `WitnessWorkMode` monad. Any synchronous exceptions are handled inside.
 launchWitnessRealMode
-    :: WitnessConfig
+    :: WitnessConfigRec
     -> WitnessParams
     -> (HasWitnessConfig => WitnessRealMode ())
     -> IO ()

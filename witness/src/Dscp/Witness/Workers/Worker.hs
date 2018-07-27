@@ -12,11 +12,13 @@ import Loot.Log (logError, logInfo)
 import Loot.Network.Class (ClientEnv)
 import Loot.Network.ZMQ (ZmqTcp)
 
+import Dscp.Core
 import Dscp.Network.Messages (PingBlk (..), PingTx (..), PongBlk (..), PongTx (..))
 import Dscp.Network.Wrapped (Worker (..), cliRecvResp, cliSend, msgType)
+import Dscp.Resource.Keys (ourPublicKey)
 import Dscp.Witness.Block.Logic (applyBlock, createBlock)
-import Dscp.Witness.Launcher (WitnessWorkMode)
-import Dscp.Witness.Slotting (waitUntilNextSlot)
+import Dscp.Witness.Config
+import Dscp.Witness.Launcher (WitnessNode, WitnessWorkMode)
 
 
 witnessWorkers :: WitnessWorkMode ctx m => [Worker m]
@@ -33,8 +35,14 @@ blockIssuingWorker =
     handler e = logError $ fromString $ "Exception in blockIssuingWorker: " <> show e
     action :: ClientEnv ZmqTcp -> m ()
     action _btq = forever $ do
+        let GovCommittee committee = gcGovernance $ giveL @WitnessConfig @GenesisConfig
         slotId <- waitUntilNextSlot
+        ourAddr <- mkAddr <$> ourPublicKey @WitnessNode
         logInfo $ "New slot has just started: " +|| slotId ||+ ""
+        if committeeOwnsSlot committee ourAddr slotId
+        then issueBlock
+        else logInfo "We don't own current slot, skipping"
+    issueBlock = do
         block <- createBlock
         logInfo "Created a new block"
         proof <- applyBlock block

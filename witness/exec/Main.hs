@@ -8,15 +8,15 @@ import Options.Applicative (execParser, fullDesc, helper, info, progDesc)
 import UnliftIO.Async (async)
 
 import Dscp.CommonCLI (versionOption)
-import Dscp.Config (buildBaseConfig, configPathParser)
+import Dscp.Config (buildConfig, configPathParser)
 import Dscp.Network (runListener, runWorker, withServer)
-import Dscp.Witness (WitnessConfig, WitnessParams (..), launchWitnessRealMode, serveWitnessAPIReal,
-                     witnessListeners, witnessParamsParser, witnessWorkers)
+import Dscp.Witness
+
 
 main :: IO ()
 main = do
-    (witnessParams, witnessConfig) <- getWitnessParams
-    launchWitnessRealMode witnessConfig witnessParams $
+    (witnessParams, wConfig) <- getWitnessParams
+    launchWitnessRealMode wConfig witnessParams $
         withServer $
         modifyLogName (<> "node") $ do
             logInfo "Starting node."
@@ -36,11 +36,11 @@ main = do
             logWarning "Don't forget to implement everything else though!"
             forever $ liftIO $ threadDelay 10000000
 
-getWitnessParams :: IO (WitnessParams, WitnessConfig)
+getWitnessParams :: IO (WitnessParams, WitnessConfigRec)
 getWitnessParams = do
     let parser = (,) <$> witnessParamsParser <*> configPathParser
     (params, configPath) <- execParser $
         info (helper <*> versionOption <*> parser) $
         fullDesc <> progDesc "Disciplina witness node."
-    config <- buildBaseConfig configPath
+    config <- buildConfig configPath fillWitnessConfig
     return (params, config)

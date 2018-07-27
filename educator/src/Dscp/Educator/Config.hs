@@ -2,15 +2,29 @@
 
 module Dscp.Educator.Config
     ( EducatorConfig
+    , EducatorConfigRec
     , HasEducatorConfig
     , withEducatorConfig
+    , fillEducatorConfig
+
+    , module Dscp.Witness.Config
     ) where
 
-import Dscp.Config (BaseConfig, HasBaseConfig, withBaseConfig)
+import Data.Reflection (Given)
+import Loot.Config (ConfigKind (Final, Partial), ConfigRec)
 
-type EducatorConfig = BaseConfig
+import Dscp.Witness.Config
 
-type HasEducatorConfig = HasBaseConfig
 
-withEducatorConfig :: EducatorConfig -> (HasEducatorConfig => a) -> a
-withEducatorConfig = withBaseConfig
+type EducatorConfig = CoreConfig
+
+type EducatorConfigRecP = ConfigRec 'Partial EducatorConfig
+type EducatorConfigRec = ConfigRec 'Final EducatorConfig
+
+type HasEducatorConfig = Given EducatorConfigRec
+
+withEducatorConfig :: EducatorConfigRec -> (HasEducatorConfig => a) -> a
+withEducatorConfig = withCoreConfig
+
+fillEducatorConfig :: EducatorConfigRecP -> IO EducatorConfigRecP
+fillEducatorConfig = fillCoreConfig

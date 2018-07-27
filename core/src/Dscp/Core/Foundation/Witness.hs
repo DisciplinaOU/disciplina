@@ -6,6 +6,8 @@ module Dscp.Core.Foundation.Witness
     , StakeholderId (..)
     , coinToInteger
     , coinFromInteger
+    , unsafeMkCoin
+    , SlotId (..)
 
     -- * Transaction
     , TxInAcc (..)
@@ -29,8 +31,8 @@ module Dscp.Core.Foundation.Witness
     , GTxWitnessed (..)
 
     -- * Block
-    , HeaderHash
     , Difficulty (..)
+    , HeaderHash
     , BlockToSign (..)
     , Header (..)
     , Block (..)
@@ -60,10 +62,12 @@ newtype StakeholderId = StakeholderId
 newtype Coin = Coin { unCoin :: Word64 }
     deriving (Eq, Ord, Show, Generic, Hashable, Bounded)
 
+
 -- | Safely convert coin to integer.
 coinToInteger :: Coin -> Integer
 coinToInteger = toInteger . unCoin
 
+-- | Restore coin from integer.
 coinFromInteger :: Integer -> Either Text Coin
 coinFromInteger i
     | i < 0
@@ -72,6 +76,10 @@ coinFromInteger i
         = Left "Coin amount is too high"
     | otherwise
         = Right (Coin $ fromIntegral i)
+
+-- | Same as 'coinFromInteger', but errors if Left happens.
+unsafeMkCoin :: Integral i => i -> Coin
+unsafeMkCoin = Coin . fromIntegral -- also do checks
 
 instance Buildable Coin where
     build (Coin c) = c ||+ " coin(s)"
@@ -245,6 +253,11 @@ instance Buildable GTxWitnessed where
 -- Blocks/Transaction
 ----------------------------------------------------------------------------
 
+-- | Slot id.
+newtype SlotId = SlotId Word64
+    deriving (Eq, Ord, Show, Generic)
+
+-- | Chain difficulty.
 newtype Difficulty = Difficulty Word64
     deriving (Eq,Ord,Num,Show,Generic,Buildable)
 

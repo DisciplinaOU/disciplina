@@ -2,7 +2,7 @@
 
 module Dscp.Educator.Launcher.Runner where
 
-import Dscp.Educator.Config (EducatorConfig, HasEducatorConfig, withEducatorConfig)
+import Dscp.Educator.Config
 import Dscp.Educator.Launcher.Mode (EducatorContext (..), EducatorRealMode)
 import Dscp.Educator.Launcher.Params (EducatorParams (..))
 import Dscp.Educator.Launcher.Resource (EducatorResources (..))
@@ -25,7 +25,7 @@ runEducatorRealMode = runRIO
 -- | Given params, allocate resources, construct node context and run
 -- `EducatorWorkMode` monad. Any synchronous exceptions are handled inside.
 launchEducatorRealMode
-    :: EducatorConfig
+    :: EducatorConfigRec
     -> EducatorParams
     -> (HasEducatorConfig => EducatorRealMode ())
     -> IO ()
