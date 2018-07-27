@@ -27,6 +27,13 @@ paths:
       operationId: "getStudents"
       consumes:
       - "application/json"
+      parameters:
+        - in: "query"
+          name: "course"
+          description: "Return only students attending the given course"
+          required: "false"
+          type: "integer"
+          format: "int32"
       produces:
       - "application/json"
       responses:
@@ -161,6 +168,11 @@ paths:
       parameters:
       - $ref: "#/parameters/StudentAddr"
       - $ref: "#/parameters/CourseId"
+      - in: "query"
+        name: "is_final"
+        description: "Return only final/non-final assignments of the course"
+        required: "false"
+        type: "boolean"
       responses:
         200:
           description: "successful operation"
@@ -218,6 +230,11 @@ paths:
       parameters:
       - $ref: "#/parameters/StudentAddr"
       - $ref: "#/parameters/CourseId"
+      - in: "query"
+        name: "is_final"
+        description: "Return only grades for final/non-final assignments of the course"
+        required: "false"
+        type: "boolean"
       responses:
         200:
           description: "successful operation"
