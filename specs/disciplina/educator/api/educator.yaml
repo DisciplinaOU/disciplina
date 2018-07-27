@@ -54,6 +54,8 @@ paths:
         schema:
           $ref: "#/definitions/Student"
       responses:
+        201:
+          description: "successful operation"
         405:
           description: "Invalid input"
 
@@ -120,6 +122,8 @@ paths:
         schema:
           $ref: "#/definitions/CourseId"
       responses:
+        201:
+          description: "successful operation"
         400:
           description: "Student address value or request body is invalid"
         403:
@@ -253,6 +257,8 @@ paths:
         schema:
           $ref: "#/definitions/Hash"
       responses:
+        201:
+          description: "successful operation"
         400:
           description: "Student address value or request body is invalid"
         403:
@@ -448,7 +454,7 @@ paths:
         schema:
           $ref: "#/definitions/Grade"
       responses:
-        200:
+        201:
           description: "successful operation"
           schema:
             $ref: "#/definitions/Grade"
