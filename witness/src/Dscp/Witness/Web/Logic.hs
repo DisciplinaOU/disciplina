@@ -1,6 +1,5 @@
 module Dscp.Witness.Web.Logic
-       ( getAccountNextNonce
-       , getAccountState
+       ( getAccountState
        , submitUserTx
        ) where
 
@@ -55,14 +54,8 @@ getAccountState addr = do
     balances <- pickAccountBalance account
     return AccountState
         { asBalances = balances
+        , asNextNonce = aNonce account + 1
         }
-
-getAccountNextNonce
-    :: (MonadIO m, MonadReader ctx m, HasLens' ctx SDActions)
-    => Address -> m Integer
-getAccountNextNonce addr = do
-    account <- getAccount addr
-    return (aNonce account + 1)
 
 -- | Submit transaction.
 submitUserTx

@@ -19,7 +19,6 @@ witnessServantHandlers
     => ServerT WitnessAPI m
 witnessServantHandlers =
     toServant @(WitnessEndpoints (AsServerT m)) WitnessEndpoints
-    { wGetNextNonce = getAccountNextNonce
-    , wGetAccountState = getAccountState
+    { wGetAccountState = getAccountState
     , wSubmitTx = \tw -> submitUserTx tw $> NoContent
     }

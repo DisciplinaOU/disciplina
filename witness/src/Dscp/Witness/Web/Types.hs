@@ -26,6 +26,7 @@ data Balances = Balances
 -- | All what user may wish to know about an account.
 data AccountState = AccountState
     { asBalances  :: Balances
+    , asNextNonce :: Integer
       -- TODO: add transactions list
     }
 
@@ -38,11 +39,15 @@ instance Buildable Balances where
 
 instance Buildable AccountState where
     build AccountState{..} =
-        "{ balances = " +| asBalances |+ " }"
+        "{ balances = " +| asBalances |+
+        ", next nonce = " +| asNextNonce |+
+        " }"
 instance Buildable (ForResponseLog AccountState) where
     build (ForResponseLog AccountState{..}) =
         -- will differ once transaction list in included
-        "{ balances = " +| asBalances |+ " }"
+        "{ balances = " +| asBalances |+
+        ", next nonce = " +| asNextNonce |+
+        " }"
 
 ---------------------------------------------------------------------------
 -- JSON instances

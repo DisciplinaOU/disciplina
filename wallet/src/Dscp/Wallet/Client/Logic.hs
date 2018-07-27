@@ -42,7 +42,6 @@ createWalletClient netAddr = do
         es = fromServant $ client witnessAPI
     -- todo: use hoistClient or smth similar in lts-12 age
     return WitnessEndpoints
-        { wGetNextNonce = nat ... wGetNextNonce es
-        , wGetAccountState = nat ... wGetAccountState es
+        { wGetAccountState = nat ... wGetAccountState es
         , wSubmitTx = nat ... wSubmitTx es
         }

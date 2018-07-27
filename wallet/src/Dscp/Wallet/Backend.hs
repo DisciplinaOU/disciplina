@@ -29,7 +29,7 @@ sendTx wc secretKey (toList -> outs) = do
     publicKey = toPublic secretKey
     address = mkAddr publicKey
 
-  nonce <- wGetNextNonce wc address
+  nonce <- asNextNonce <$> wGetAccountState wc address
 
   let
     inAcc = TxInAcc{ tiaNonce = nonce, tiaAddr = address }
