@@ -56,7 +56,7 @@ paths:
       responses:
         201:
           description: "successful operation"
-        405:
+        400:
           description: "Invalid input"
           schema:
             $ref: "#/definitions/ApiResponse"
@@ -168,7 +168,11 @@ paths:
             type: "array"
             items:
               $ref: "#/definitions/Assignment"
-        404:
+        400:
+          description: "Student address or course id value is invalid"
+          schema:
+            $ref: "#/definitions/ApiResponse"
+        412:
           description: "Given student does not attend given course"
           schema:
             $ref: "#/definitions/ApiResponse"
@@ -194,6 +198,10 @@ paths:
             items:
               $ref: "#/definitions/Submission"
         400:
+          description: "Student address or course id value is invalid"
+          schema:
+            $ref: "#/definitions/ApiResponse"
+        412:
           description: "Given student does not attend given course"
           schema:
             $ref: "#/definitions/ApiResponse"
@@ -218,6 +226,10 @@ paths:
             items:
               $ref: "#/definitions/Grade"
         400:
+          description: "Student address or course id value is invalid"
+          schema:
+            $ref: "#/definitions/ApiResponse"
+        412:
           description: "Given student does not attend given course"
           schema:
             $ref: "#/definitions/ApiResponse"
@@ -240,6 +252,10 @@ paths:
           schema:
             $ref: "#/definitions/Proofs"
         400:
+          description: "Student address or course id value is invalid"
+          schema:
+            $ref: "#/definitions/ApiResponse"
+        412:
           description: "Given student does not attend given course"
           schema:
             $ref: "#/definitions/ApiResponse"
@@ -262,6 +278,10 @@ paths:
             type: "array"
             items:
               $ref: "#/definitions/Assignment"
+        400:
+          description: "Student address value is invalid"
+          schema:
+            $ref: "#/definitions/ApiResponse"
         404:
           description: "Student with a given address not found"
           schema:
@@ -343,6 +363,10 @@ paths:
             items:
               $ref: "#/definitions/Submission"
         400:
+          description: "Student address or assignment hash value is invalid"
+          schema:
+            $ref: "#/definitions/ApiResponse"
+        412:
           description: "Given student didn't have given assignment"
           schema:
             $ref: "#/definitions/ApiResponse"
@@ -368,7 +392,11 @@ paths:
             items:
               $ref: "#/definitions/Grade"
         400:
-          description: "Given student is not assigned to given assignment"
+          description: "Student address or assignment hash value is invalid"
+          schema:
+            $ref: "#/definitions/ApiResponse"
+        412:
+          description: "Given student didn't have given assignment"
           schema:
             $ref: "#/definitions/ApiResponse"
 
@@ -391,6 +419,10 @@ paths:
             type: "array"
             items:
               $ref: "#/definitions/Submission"
+        400:
+          description: "Student address value is invalid"
+          schema:
+            $ref: "#/definitions/ApiResponse"
         404:
           description: "Student with given address not found"
           schema:
@@ -414,6 +446,10 @@ paths:
             type: "array"
             items:
               $ref: "#/definitions/Grade"
+        400:
+          description: "Student address value is invalid"
+          schema:
+            $ref: "#/definitions/ApiResponse"
         404:
           description: "Student with given address not found"
           schema:
@@ -435,6 +471,10 @@ paths:
           description: "successful operation"
           schema:
             $ref: "#/definitions/Proofs"
+        400:
+          description: "Student address value is invalid"
+          schema:
+            $ref: "#/definitions/ApiResponse"
         404:
           description: "Student with given address not found"
           schema:
@@ -473,8 +513,12 @@ paths:
           description: "successful operation"
           schema:
             $ref: "#/definitions/Submission"
+        400:
+          description: "Submission hash value is invalid"
+          schema:
+            $ref: "#/definitions/ApiResponse"
         404:
-          description: "Submission with given hash not found (or a user has no rights to look it up)"
+          description: "Submission with given hash not found"
           schema:
             $ref: "#/definitions/ApiResponse"
     delete:
@@ -490,6 +534,10 @@ paths:
       responses:
         200:
           description: "successful operation"
+        400:
+          description: "Submission hash value is invalid"
+          schema:
+            $ref: "#/definitions/ApiResponse"
         404:
           description: "Submission with given hash not found"
           schema:
@@ -533,6 +581,10 @@ paths:
           description: "successful operation"
           schema:
             $ref: "#/definitions/Grade"
+        400:
+          description: "Request body is invalid"
+          schema:
+            $ref: "#/definitions/ApiResponse"
 
   /assignments:
     get:
@@ -571,6 +623,10 @@ paths:
       responses:
         201:
           description: "successful operation"
+        400:
+          description: "Request body is invalid"
+          schema:
+            $ref: "#/definitions/ApiResponse"
 
 
 definitions:
@@ -693,14 +749,40 @@ definitions:
     format: "int32"
   ApiResponse:
     type: "object"
+    required:
+      - error
     properties:
-      code:
-        type: "integer"
-        format: "int32"
-      type:
-        type: "string"
-      message:
-        type: "string"
+      error:
+        type: string
+        enum:
+          - InvalidFormat
+          
+          - StudentNotFound
+          - CourseNotFound
+          - AssignmentNotFound
+
+          - StudentAlreadyExists
+          - CourseAlreadyExists
+          - AssignmentAlreadyExists
+
+          - StudentDoesNotAttendCourse
+          - StudentIsActive
+          - StudentHasNoAssignment
+        description: >-
+          Error type:
+            * `InvalidFormat` - Failed to deserialise one of parameters.
+
+            * `StudentNotFound` - Specified student does not exist.
+            * `CourseNotFound` - Specified course does not exist.
+            * `AssignmentNotFound` - Specified assignment does not exist.
+
+            * `StudentAlreadyExists` - Student being added already exists.
+            * `CourseAlreadyExists` - Course with such id already exists.
+            * `AssignmentAlreadyExists` - Exactly the same assignment already exists.
+
+            * `StudentDoesNotAttendCourse` - Student does not attend the course.
+            * `StudentIsActive` - Can not delete a student because it is attending a course.
+            * `StudentHasNoAssignment` - Given student didn't have given assignment.
 parameters:
   StudentAddr:
     in: "path"
