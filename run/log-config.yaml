@@ -7,7 +7,7 @@ loggerTree:
   node:
     severity: Debug+
 
-    server:
+    web:
       severity: Info+
 
   init:
