@@ -1,36 +1,40 @@
 -- | Student API handlers
 
 module Dscp.Educator.Web.Student.Handlers
-       ( servantHandlers
+       ( studentApiHandlers
        ) where
 
 import Data.Time.Clock (UTCTime)
 import Servant
+import Servant.Generic (AsServerT, toServant)
 
 import qualified Dscp.Core.Types as Core
 import Dscp.Crypto (Hash, genSecretKey, toPublic, withIntSeed)
 import Dscp.DB.SQLite (sqlTransaction)
 import Dscp.Educator.Launcher (EducatorWorkMode)
-import Dscp.Educator.Web.Student.API (StudentAPI)
+import Dscp.Educator.Web.Student.API
 import Dscp.Educator.Web.Student.Logic (makeSubmissionVerified)
 import qualified Dscp.Educator.Web.Student.Queries as Queries
 
-import Dscp.Educator.Web.Student.Types (Assignment, BlkProof, Course, IsEnrolled (..), IsFinal (..),
-                                        Student, Submission)
+import Dscp.Educator.Web.Student.Types
 
-servantHandlers :: EducatorWorkMode ctx m => ServerT StudentAPI m
-servantHandlers
-    =    getCourses
-    :<|> getCourse
-    :<|> getAssignments
-    :<|> getAssignment
-    :<|> getSubmissions
-    :<|> getSubmission
-    :<|> makeSubmission
-    :<|> deleteSubmission
-    :<|> getProofs
+studentApiHandlers
+    :: forall m ctx. EducatorWorkMode ctx m
+    => ServerT StudentAPI m
+studentApiHandlers =
+    toServant @(StudentApiEndpoints (AsServerT m)) StudentApiEndpoints
+    { sGetCourses = getCourses
+    , sGetCourse = getCourse
+    , sGetAssignments = getAssignments
+    , sGetAssignment = getAssignment
+    , sGetSubmissions = getSubmissions
+    , sGetSubmission = getSubmission
+    , sMakeSubmission = makeSubmission
+    , sDeleteSubmission = deleteSubmission
+    , sGetProofs = getProofs
+    }
 
--- TODO [DSCP-141]: remove
+    -- TODO [DSCP-141]: remove
 student :: Student
 student = Core.mkAddr . toPublic $ withIntSeed 123 genSecretKey
 

@@ -29,6 +29,7 @@ library:
     - reflection
     - safe-exceptions >= 0.1.4
     - serialise
+    - servant-generic
     - servant-server
     - sqlite-simple
     - template-haskell
