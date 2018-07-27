@@ -307,6 +307,29 @@ paths:
         400:
           description: "Given student didn't have given assignment"
 
+  /students/{studentAddr}/assignments/{assignmentHash}/grades:
+    get:
+      tags:
+      - "students"
+      - "grades"
+      summary: "Get student's assignment grades"
+      description: "Gets a list of grades a student received for submissions on given assignment."
+      operationId: "getStudentAssignmentGrades"
+      produces:
+      - "application/json"
+      parameters:
+      - $ref: "#/parameters/StudentAddr"
+      - $ref: "#/parameters/AssignmentHash"
+      responses:
+        200:
+          description: "successful operation"
+          schema:
+            type: "array"
+            items:
+              $ref: "#/definitions/Grade"
+        400:
+          description: "Given student is not assigned to given assignment"
+
   /students/{studentAddr}/submissions:
     get:
       tags:
@@ -459,6 +482,44 @@ paths:
           schema:
             $ref: "#/definitions/Grade"
 
+  /assignments:
+    get:
+      tags:
+      - "assignments"
+      summary: "Get all assignments"
+      description: "Gets a list of all student assignments. Filter parameters are used to specify specific course or student."
+      operationId: "getAssignments"
+      parameters:
+        - $ref: '#/parameters/CourseId'  # todo student in query param
+        - $ref: '#/parameters/StudentAddr'
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: "successful operation"
+          schema:
+            type: "array"
+            items:
+              $ref: "#/definitions/Assignment"
+    post:
+      tags:
+      - "assignments"
+      summary: "Add assignment to a course"
+      description: "Add a given assignment to a course."
+      operationId: "addCourseAssignment"
+      parameters:
+        - in: "body"
+          name: "Assignment"
+          description: "An assignment"
+          required: true
+          schema:
+            $ref: "#/definitions/Assignment"
+      produces:
+      - "application/json"
+      responses:
+        201:
+          description: "successful operation"
+
 securityDefinitions:
   # TODO: do we need authentication for Educator API?
 
@@ -506,6 +567,8 @@ definitions:
         $ref: "#/definitions/CourseId"
       contents_hash:
         $ref: "#/definitions/Hash"
+      is_final:
+        type: boolean
       desc:
         type: "string"
   Submission:
