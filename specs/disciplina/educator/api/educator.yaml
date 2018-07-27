@@ -520,8 +520,6 @@ paths:
         201:
           description: "successful operation"
 
-securityDefinitions:
-  # TODO: do we need authentication for Educator API?
 
 definitions:
   Hash:
