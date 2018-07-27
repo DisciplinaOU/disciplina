@@ -48,7 +48,7 @@ witness_params="
 --bind 127.0.0.1:4010:4011
 --db-path $tmp_files/witness.db
 --log-dir $tmp_files/logs
---wallet-listen 127.0.0.1:4020
+--witness-listen 127.0.0.1:4020
 --witness-keyfile-path $files/witness.key
 --witness-keyfile-password xixixixi
 "
