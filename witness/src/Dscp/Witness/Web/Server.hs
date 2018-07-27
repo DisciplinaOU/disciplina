@@ -38,7 +38,7 @@ serveWitnessAPIReal :: HasWitnessConfig => ServerParams -> WitnessRealMode ()
 serveWitnessAPIReal ServerParams{..} = do
     logInfo $ "Serving wallet API on "+|spAddr|+""
     wCtx <- ask
-    lc <- buildServantLogConfig (<> "server")
+    lc <- buildServantLogConfig (<> "web")
     serveWeb spAddr $
         reify lc $ \logConfigP ->
         serve (servedApi logConfigP) $
