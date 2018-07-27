@@ -15,15 +15,19 @@ import Dscp.Witness.Web.Types
 
 createWalletFace :: NetworkAddress -> (WalletEvent -> IO ()) -> IO WalletFace
 createWalletFace serverAddress sendEvent = do
-    getAccounts >>= sendEvent . WalletStateUpdateEvent
+    sendStateUpdateEvent sendEvent
     wc <- createWalletClient serverAddress
     return WalletFace
-        { walletGenKeyPair = genKeyPair sendEvent
+        { walletRefreshState = sendStateUpdateEvent sendEvent
+        , walletGenKeyPair = genKeyPair sendEvent
         , walletRestoreKey = restoreKey sendEvent
         , walletListKeys = listKeys
         , walletSendTx = sendTx wc
         , walletGetBalance = getBalance wc
         }
+
+sendStateUpdateEvent :: (WalletEvent -> IO ()) -> IO ()
+sendStateUpdateEvent sendEvent = getAccounts >>= sendEvent . WalletStateUpdateEvent
 
 genKeyPair :: (WalletEvent -> IO ()) -> Maybe Text -> Maybe PassPhrase -> IO Account
 genKeyPair sendEvent mName mPassPhrase = do
@@ -35,7 +39,7 @@ genKeyPair sendEvent mName mPassPhrase = do
             , accountAddress = mkAddr pk
             }
     addAccount account
-    getAccounts >>= sendEvent . WalletStateUpdateEvent
+    sendStateUpdateEvent sendEvent
     return account
 
 restoreKey :: (WalletEvent -> IO ()) -> Maybe Text -> Encrypted SecretKey -> Maybe PassPhrase -> IO ()
@@ -49,7 +53,7 @@ restoreKey sendEvent mName eSecretKey mPassPhrase = do
             , accountAddress = mkAddr publicKey
             }
     addAccount account
-    getAccounts >>= sendEvent . WalletStateUpdateEvent
+    sendStateUpdateEvent sendEvent
 
 listKeys :: IO [Account]
 listKeys = getAccounts

@@ -21,6 +21,7 @@ module Ariadne.UI.Vty.Face
        , UiRenameArgs (..)
 
        , UiCommandResult (..)
+       , UiBalanceCommandResult (..)
        , UiSendCommandResult (..)
        , UiNewWalletCommandResult (..)
        , UiNewAccountCommandResult (..)
@@ -148,6 +149,7 @@ data UiNewVersionEvent = UiNewVersion
 -- | Commands issued by the UI widgets
 data UiCommand
   = UiSelect [Word]
+  | UiBalance
   | UiSend UiSendArgs
   | UiNewWallet UiNewWalletArgs
   | UiNewAccount UiNewAccountArgs
@@ -193,12 +195,17 @@ data UiRenameArgs = UiRenameArgs
 
 -- | Results of commands issued by the UI widgets
 data UiCommandResult
-  = UiSendCommandResult UiSendCommandResult
+  = UiBalanceCommandResult UiBalanceCommandResult
+  | UiSendCommandResult UiSendCommandResult
   | UiNewWalletCommandResult UiNewWalletCommandResult
   | UiNewAccountCommandResult UiNewAccountCommandResult
   | UiNewAddressCommandResult UiNewAddressCommandResult
   | UiRestoreWalletCommandResult UiRestoreWalletCommandResult
   | UiRenameCommandResult UiRenameCommandResult
+
+data UiBalanceCommandResult
+  = UiBalanceCommandSuccess Text
+  | UiBalanceCommandFailure Text
 
 data UiSendCommandResult
   = UiSendCommandSuccess Text

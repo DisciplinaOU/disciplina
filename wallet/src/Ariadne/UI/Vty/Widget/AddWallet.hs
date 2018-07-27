@@ -131,13 +131,12 @@ drawAddWalletWidget focus AddWalletWidgetState{..} = do
           NewResultNone -> B.emptyWidget
           NewResultWaiting _ -> B.txt "Creating..."
           NewResultError err -> B.txt $ "Couldn't create a wallet: " <> err
-          NewResultSuccess mnemonic -> B.txt $ "Wallet created, here's your mnemonic:\n\n" <> unwords mnemonic
+          NewResultSuccess mnemonic -> B.txt $ "Wallet created, here's your secret key:\n\n" <> unwords mnemonic
 
-      , B.txt "Restore wallet from a mnemonic"
+      , B.txt "Restore wallet from a secret key"
       , label       "Name:" B.<+> drawChild WidgetNameAddWalletRestoreName
-      , label   "Mnemonic:" B.<+> drawChild WidgetNameAddWalletRestoreMnemonic
+      , label "Secret key:" B.<+> drawChild WidgetNameAddWalletRestoreMnemonic
       , label "Passphrase:" B.<+> drawChild WidgetNameAddWalletRestorePass
-      , label            "" B.<+> drawChild WidgetNameAddWalletRestoreFull
       , label            "" B.<+> drawChild WidgetNameAddWalletRestoreButton
       , case addWalletRestoreResult of
           RestoreResultNone -> B.emptyWidget

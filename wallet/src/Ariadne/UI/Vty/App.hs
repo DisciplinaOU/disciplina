@@ -26,7 +26,6 @@ import Ariadne.UI.Vty.Widget.Help
 import Ariadne.UI.Vty.Widget.Logs
 import Ariadne.UI.Vty.Widget.Menu
 import Ariadne.UI.Vty.Widget.Repl
-import Ariadne.UI.Vty.Widget.Status
 import Ariadne.UI.Vty.Widget.Tree
 import Ariadne.UI.Vty.Widget.Wallet
 
@@ -77,13 +76,12 @@ initApp uiFace langFace historyFace =
       setWidgetHandleEvent handleAppWidgetEvent
 
       addWidgetChild WidgetNameMenu $ initMenuWidget menuItems (widgetParentLens appScreenL)
-      addWidgetChild WidgetNameStatus $ initStatusWidget
       addWidgetChild WidgetNameTree $ initTreeWidget langFace
       addWidgetChild WidgetNameAddWallet $ initAddWalletWidget langFace
       addWidgetChild WidgetNameWallet $ initWalletWidget langFace
       addWidgetChild WidgetNameAccount $ initAccountWidget langFace
       addWidgetChild WidgetNameRepl $ initReplWidget uiFace langFace historyFace
-        (widgetParentGetter $ (== AppScreenWallet) . appScreen)
+        (widgetParentGetter $ const False)
       addWidgetChild WidgetNameHelp $ initHelpWidget langFace
       addWidgetChild WidgetNameAbout initAboutWidget
       addWidgetChild WidgetNameLogs initLogsWidget
@@ -197,7 +195,6 @@ drawAppWidget focus AppWidgetState{..} = do
         widgets ++
         [ B.joinBorders B.hBorder
         , drawChild WidgetNameRepl
-        , drawChild WidgetNameStatus
         ]
     drawWalletScreen = drawScreen
         [ B.hBox
