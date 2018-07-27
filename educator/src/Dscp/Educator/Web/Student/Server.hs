@@ -2,6 +2,7 @@
 
 module Dscp.Educator.Web.Student.Server
        ( serveStudentAPIReal
+       , convertStudentApiHandler
        ) where
 
 import Fmt ((+|), (|+))
@@ -23,11 +24,11 @@ studentAPIServer
 studentAPIServer nat =
     hoistServer studentAPI nat studentApiHandlers
 
-convertHandler
+convertStudentApiHandler
     :: EducatorContext
     -> EducatorRealMode a
     -> Handler a
-convertHandler ctx handler =
+convertStudentApiHandler ctx handler =
     liftIO (runRIO ctx handler)
         `catch` (throwError . toServantErr)
         `catchAny` (throwError . unexpectedToServantErr)
@@ -39,4 +40,4 @@ serveStudentAPIReal ServerParams{..} = do
     serveWeb spAddr $
         serve studentAPI $
         studentAPIServer $
-        convertHandler eCtx
+        convertStudentApiHandler eCtx

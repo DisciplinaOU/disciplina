@@ -7,6 +7,7 @@ module Dscp.Educator.Web.Student.API
        ( StudentApiEndpoints (..)
        , StudentAPI
        , studentAPI
+       , StudentApiHandlers
        ) where
 
 import Data.Time.Clock (UTCTime)
@@ -17,7 +18,6 @@ import qualified Dscp.Core.Types as Core
 import Dscp.Crypto (Hash)
 import Dscp.Educator.Web.Student.Types (Assignment, BlkProof, Course, IsEnrolled, IsFinal,
                                         Submission)
-
 
 data StudentApiEndpoints route = StudentApiEndpoints
     { sGetCourses       :: route :- GetCourses
@@ -32,6 +32,8 @@ data StudentApiEndpoints route = StudentApiEndpoints
     } deriving (Generic)
 
 type StudentAPI = "v1" :> ToServant (StudentApiEndpoints AsApi)
+
+type StudentApiHandlers m = StudentApiEndpoints (AsServerT m)
 
 studentAPI :: Proxy StudentAPI
 studentAPI = Proxy

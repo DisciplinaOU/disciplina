@@ -2,11 +2,12 @@
 
 module Dscp.Educator.Web.Student.Handlers
        ( studentApiHandlers
+       , oneGeek
        ) where
 
 import Data.Time.Clock (UTCTime)
 import Servant
-import Servant.Generic (AsServerT, toServant)
+import Servant.Generic (toServant)
 
 import qualified Dscp.Core.Types as Core
 import Dscp.Crypto (Hash, genSecretKey, toPublic, withIntSeed)
@@ -22,7 +23,7 @@ studentApiHandlers
     :: forall m ctx. EducatorWorkMode ctx m
     => ServerT StudentAPI m
 studentApiHandlers =
-    toServant @(StudentApiEndpoints (AsServerT m)) StudentApiEndpoints
+    toServant @(StudentApiHandlers m) StudentApiEndpoints
     { sGetCourses = getCourses
     , sGetCourse = getCourse
     , sGetAssignments = getAssignments
@@ -34,64 +35,64 @@ studentApiHandlers =
     , sGetProofs = getProofs
     }
 
-    -- TODO [DSCP-141]: remove
-student :: Student
-student = Core.mkAddr . toPublic $ withIntSeed 123 genSecretKey
+-- TODO [DSCP-141]: remove
+oneGeek :: Student
+oneGeek = Core.mkAddr . toPublic $ withIntSeed 123 genSecretKey
 
 getCourses
     :: EducatorWorkMode ctx m
     => Maybe IsEnrolled -> m [Course]
 getCourses isEnrolled =
-    sqlTransaction $ Queries.getCourses student isEnrolled
+    sqlTransaction $ Queries.getCourses oneGeek isEnrolled
 
 getCourse
     :: EducatorWorkMode ctx m
     => Core.Course -> m Course
 getCourse courseId =
-    Queries.getCourse student courseId
+    Queries.getCourse oneGeek courseId
 
 getAssignments
     :: EducatorWorkMode ctx m
     => Maybe Core.Course -> Maybe Core.DocumentType -> Maybe IsFinal
     -> m [Assignment]
 getAssignments mcourseId mdocType mIsFinal =
-    sqlTransaction $ Queries.getAssignments student mcourseId mdocType mIsFinal
+    sqlTransaction $ Queries.getAssignments oneGeek mcourseId mdocType mIsFinal
 
 getAssignment
     :: EducatorWorkMode ctx m
     => Hash Core.Assignment -> m Assignment
 getAssignment assignH =
-    sqlTransaction $ Queries.getAssignment student assignH
+    sqlTransaction $ Queries.getAssignment oneGeek assignH
 
 getSubmissions
     :: EducatorWorkMode ctx m
     => Maybe Core.Course -> Maybe (Hash Core.Assignment) -> Maybe Core.DocumentType
     -> m [Submission]
 getSubmissions mcourseId massignH mdocType =
-    sqlTransaction $ Queries.getSubmissions student mcourseId massignH mdocType
+    sqlTransaction $ Queries.getSubmissions oneGeek mcourseId massignH mdocType
 
 getSubmission
     :: EducatorWorkMode ctx m
     => Hash Core.Submission
     -> m Submission
 getSubmission submissionH =
-    sqlTransaction $ Queries.getSubmission student submissionH
+    sqlTransaction $ Queries.getSubmission oneGeek submissionH
 
 makeSubmission
     :: EducatorWorkMode ctx m
     => Core.SignedSubmission -> m Submission
 makeSubmission signedSubmission =
-    makeSubmissionVerified student signedSubmission
+    makeSubmissionVerified oneGeek signedSubmission
 
 deleteSubmission
     :: EducatorWorkMode ctx m
     => Hash Core.Submission
     -> m ()
 deleteSubmission submissionH =
-    sqlTransaction $ Queries.deleteSubmission student submissionH
+    sqlTransaction $ Queries.deleteSubmission oneGeek submissionH
 
 getProofs
     :: EducatorWorkMode ctx m
     => Maybe UTCTime -> m [BlkProof]
 getProofs sinceF =
-    sqlTransaction $ Queries.getProofs student sinceF
+    sqlTransaction $ Queries.getProofs oneGeek sinceF

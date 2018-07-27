@@ -1,15 +1,14 @@
 -- | Arbitrary and other test-related instances.
 
 module Dscp.Core.Arbitrary
-    ( genStudentSignedSubmissions
+    ( genPleasantGrade
+    , genStudentSignedSubmissions
     ) where
 
 import Dscp.Util.Test
 
 import Dscp.Core.Serialise ()
-import Dscp.Core.Types (Address (..), Assignment (..), AssignmentType (..), Course (..),
-                        DocumentType (..), Grade, SignedSubmission (..), Student, Subject (..),
-                        Submission (..), SubmissionWitness (..), mkAddr, mkGrade, sStudentId)
+import Dscp.Core.Types
 import Dscp.Crypto (hash, sign, toPublic, unsafeSign)
 
 instance Arbitrary Address where
@@ -23,6 +22,19 @@ instance Arbitrary Subject where
 
 instance Arbitrary Grade where
     arbitrary = arbitrary `suchThatMap` mkGrade
+
+-- | Let's not make users upset ;)
+genPleasantGrade :: Gen Grade
+genPleasantGrade =
+    frequency
+    [ (1, arbitrary)
+    , (5, arbitrary `suchThat` (> threashold))
+    ]
+  where
+    threashold =
+        let UnsafeGrade maxG = maxBound
+        in fromMaybe (error "genPleasantGrade: bad grade") $
+           mkGrade (maxG `div` 2)
 
 instance Arbitrary Assignment where
     arbitrary = Assignment <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
@@ -60,7 +72,7 @@ genStudentSignedSubmissions genSubmission = do
     return (studentId, ss)
 
 instance Arbitrary AssignmentType where
-    arbitrary = elements [Regular, CourseFinal]
+    arbitrary = frequency [(5, pure Regular), (1, pure CourseFinal)]
 
 instance Arbitrary DocumentType where
-    arbitrary = elements [Offline, Online]
+    arbitrary = frequency [(1, pure Offline), (5, pure Online)]
