@@ -1,5 +1,6 @@
 module Dscp.Snowdrop.Configuration where
 
+import Control.Lens (makePrisms)
 import Fmt (build, (+|))
 
 import Snowdrop.Model.Block (Block, BlockApplicationException, BlockRef (..), BlockStateException,
@@ -129,8 +130,10 @@ instance Enum TxIds where
 instance IdStorage TxIds AccountTx
 
 ----------------------------------------------------------------------------
--- HasReview
+-- HasReview and lenses
 ----------------------------------------------------------------------------
+
+makePrisms ''Values
 
 deriveView withInjProj ''Ids
 deriveIdView withInjProj ''Ids

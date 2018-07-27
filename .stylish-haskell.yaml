@@ -237,6 +237,7 @@ language_extensions:
   - NamedFieldPuns
   - NoImplicitPrelude
   - OverloadedStrings
+  - PolyKinds
   - RecordWildCards
   - ScopedTypeVariables
   - StandaloneDeriving

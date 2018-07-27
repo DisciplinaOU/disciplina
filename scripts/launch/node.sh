@@ -48,14 +48,15 @@ witness_params="
 --bind 127.0.0.1:4010:4011
 --db-path $tmp_files/witness.db
 --log-dir $tmp_files/logs
+--wallet-listen 127.0.0.1:4020
 --witness-keyfile-path $files/witness.key
 --witness-keyfile-password xixixixi
 "
 
 if [[ "$node" == "educator" ]]; then
-    stack exec "disciplina-educator" -- $witness_params $educator_params
+    stack exec "dscp-educator" -- $witness_params $educator_params
 elif [[ "$node" == "witness" ]]; then
-    stack exec "disciplina-witness" -- $witness_params
+    stack exec "dscp-witness" -- $witness_params
 elif [[ "$node" == "" ]]; then
     echo "Please specify which node to run (e.g. \"educator\" or just \"e\")"
     exit 1

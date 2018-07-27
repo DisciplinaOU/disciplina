@@ -7,8 +7,8 @@ import Options.Applicative (execParser, fullDesc, helper, info, progDesc)
 
 import Dscp.CommonCLI (versionOption)
 import Dscp.Config (buildBaseConfig, configPathParser)
-import Dscp.Educator (EducatorConfig, EducatorParams (..), EducatorWebParams (..),
-                      educatorParamsParser, launchEducatorRealMode, serveStudentAPIReal)
+import Dscp.Educator (EducatorConfig, EducatorParams (..), educatorParamsParser,
+                      launchEducatorRealMode, serveStudentAPIReal)
 
 main :: IO ()
 main = do
@@ -18,8 +18,7 @@ main = do
         logInfo "This is the stub for Educator node executable"
         logWarning "Please don't forget to implement everything else!"
 
-        let apiAddr = ewpStudentApiAddr $ epWebParams educatorParams
-        serveStudentAPIReal apiAddr
+        serveStudentAPIReal (epWebParams educatorParams)
 
 getEducatorParams :: IO (EducatorParams, EducatorConfig)
 getEducatorParams = do

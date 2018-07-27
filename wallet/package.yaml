@@ -16,8 +16,11 @@ library:
     - bytestring
     - containers
     - disciplina-core
+    - disciplina-witness
     - formatting
     - haskeline
+    - http-types
+    - http-client
     - ii-extras
     - knit
     - lens
@@ -27,7 +30,11 @@ library:
     - scientific
     - serialise
     - serokell-util
+    - servant
+    - servant-generic
+    - servant-client
     - text
+    - text-format
     - vinyl
 
 executables:
@@ -39,7 +46,9 @@ executables:
     dependencies:
       - ansi-wl-pprint
       - disciplina-core
+      - disciplina-witness
       - disciplina-wallet
       - ii-extras
       - knit
+      - optparse-applicative
       - text

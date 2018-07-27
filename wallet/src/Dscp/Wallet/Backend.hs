@@ -3,43 +3,47 @@ module Dscp.Wallet.Backend
        , createWalletFace
        ) where
 
-import Dscp.Core (Tx(..), TxInAcc(..), TxWitness(..), TxWitnessed(..), mkAddr, txId)
+import Dscp.Core (Tx (..), TxInAcc (..), TxWitness (..), TxWitnessed (..), mkAddr, toTxId)
 import Dscp.Crypto (keyGen, sign, toPublic)
 
+import Dscp.Wallet.Client
 import Dscp.Wallet.Face
+import Dscp.Web
+import Dscp.Witness.Web.Types
 
-createWalletFace :: IO WalletFace
-createWalletFace = return WalletFace
-    { walletGenKeyPair = genKeyPair
-    , walletSendTx = sendTx
-    , walletGetBalance = getBalance
-    }
+createWalletFace :: NetworkAddress -> IO WalletFace
+createWalletFace serverAddress = do
+    wc <- createWalletClient serverAddress
+    return WalletFace
+        { walletGenKeyPair = genKeyPair
+        , walletSendTx = sendTx wc
+        , walletGetBalance = getBalance wc
+        }
 
 genKeyPair :: IO (SecretKey, PublicKey)
 genKeyPair = keyGen
 
-sendTx :: SecretKey -> NonEmpty TxOut -> IO Tx
-sendTx secretKey (toList -> outs) = do
+sendTx :: WalletClient -> SecretKey -> NonEmpty TxOut -> IO Tx
+sendTx wc secretKey (toList -> outs) = do
   let
     publicKey = toPublic secretKey
     address = mkAddr publicKey
 
-  -- TODO: request nonce for a given address from witness node
-  nonce <- return 1337
+  nonce <- asNextNonce <$> wGetAccountState wc address
 
   let
     inAcc = TxInAcc{ tiaNonce = nonce, tiaAddr = address }
     inValue = Coin $ sum $ unCoin . txOutValue <$> outs
     tx = Tx{ txInAcc = inAcc, txInValue = inValue, txOuts = outs }
 
-    signature = sign secretKey (txId tx, publicKey)
+    signature = sign secretKey (toTxId tx, publicKey)
     witness = TxWitness{ txwSig = signature, txwPk = publicKey }
-    _txWitnessed = TxWitnessed{ twTx = tx, twWitness = witness }
+    txWitnessed = TxWitnessed{ twTx = tx, twWitness = witness }
 
-  -- TODO: submit txWitnessed to witness node
+  void $ wSubmitTx wc txWitnessed
   return tx
 
-getBalance :: Address -> IO Coin
-getBalance _address = do
-  -- TODO: request address balance from witness node
-  return $ Coin 1337
+getBalance :: WalletClient -> Address -> IO Coin
+getBalance wc address = do
+  AccountState{..} <- wGetAccountState wc address
+  return (bConfirmed asBalances)

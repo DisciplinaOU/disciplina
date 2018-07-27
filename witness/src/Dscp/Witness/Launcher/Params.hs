@@ -8,15 +8,18 @@ import Dscp.DB.Rocks.Real.Types (RocksDBParams)
 import Dscp.Resource.Keys (KeyParams)
 import Dscp.Resource.Logging (LoggingParams)
 import Dscp.Resource.Network (NetServParams)
+import Dscp.Web (ServerParams)
 
 -- | Contains all initialization parameters of Witness node.
 data WitnessParams = WitnessParams
-    { wpLoggingParams :: LoggingParams
+    { wpLoggingParams      :: LoggingParams
     -- ^ Basic parameters for any node
-    , wpDBParams      :: RocksDBParams
+    , wpDBParams           :: RocksDBParams
     -- ^ DB parameters
-    , wpNetworkParams :: NetServParams
+    , wpNetworkParams      :: NetServParams
     -- ^ Networking params.
-    , wpKeyParams     :: KeyParams
+    , wpKeyParams          :: KeyParams
     -- ^ Key management params.
+    , wpWalletServerParams :: ServerParams
+    -- ^ Wallet server params.
     } deriving Show

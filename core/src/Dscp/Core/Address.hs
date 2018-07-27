@@ -6,6 +6,7 @@ module Dscp.Core.Address
        , addrToBase58
        , addrFromBase58
        , addrFromText
+       , addrToText
        ) where
 
 import Codec.Serialise (Serialise (..))
@@ -49,8 +50,11 @@ addrFromBase58 =
 addrFromText :: Text -> Either Text Address
 addrFromText = addrFromBase58 . encodeUtf8
 
+addrToText :: Address -> Text
+addrToText = decodeUtf8 . addrToBase58
+
 instance Buildable Address where
-    build = build @Text . decodeUtf8 . addrToBase58
+    build = build @Text . addrToText
 
 instance ToText Address where
     toText = pretty
