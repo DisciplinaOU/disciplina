@@ -1,14 +1,23 @@
 -- | Arbitrary and other test-related instances.
 
 module Dscp.Core.Arbitrary
-    ( genPleasantGrade
+    ( -- * Generators
+      genPleasantGrade
     , genStudentSignedSubmissions
+
+      -- * Examples
+    , studentEx
+    , studentSKEx
+    , courseEx
+    , assignmentEx
+    , signedSubmissionEx
     ) where
 
 import Dscp.Util.Test
 
 import Dscp.Core.Serialise ()
 import Dscp.Core.Types
+import Dscp.Crypto
 import Dscp.Crypto (hash, sign, toPublic, unsafeSign)
 
 instance Arbitrary Address where
@@ -57,11 +66,13 @@ instance Arbitrary SignedSubmission where
         pure $ SignedSubmission sub $ SubmissionWitness pk sig
 
 -- | Generate several submissions of same student.
+-- 'sStudentId' field of generated submission will be replaced.
 genStudentSignedSubmissions
-    :: Gen Submission
+    :: Gen SecretKey
+    -> Gen Submission
     -> Gen (Student, NonEmpty SignedSubmission)
-genStudentSignedSubmissions genSubmission = do
-    sk <- arbitrary
+genStudentSignedSubmissions genSK genSubmission = do
+    sk <- genSK
     subs <- listOf1 genSubmission `suchThatMap` nonEmpty
     let pk = toPublic sk
         studentId = mkAddr pk
@@ -76,3 +87,40 @@ instance Arbitrary AssignmentType where
 
 instance Arbitrary DocumentType where
     arbitrary = frequency [(1, pure Offline), (5, pure Online)]
+
+---------------------------------------------------------------------
+-- Examples
+---------------------------------------------------------------------
+
+-- Usefull to generate swagger examples, for instance.
+
+studentSKEx :: SecretKey
+studentSKEx = withIntSeed 123 genSecretKey
+
+studentEx :: Student
+studentEx = mkAddr $ toPublic studentSKEx
+
+courseEx :: Course
+courseEx = Course 7
+
+assignmentEx :: Assignment
+assignmentEx = detGen 123 $ do
+    _aContentsHash <- arbitrary
+    return Assignment
+        { _aCourseId = courseEx
+        , _aType = Regular
+        , _aDesc = "Find mathematical model of the world"
+        , ..
+        }
+
+signedSubmissionEx :: SignedSubmission
+signedSubmissionEx = detGen 123 $ do
+    _sContentsHash <- arbitrary
+    let submission = Submission
+            { _sStudentId = studentEx
+            , _sAssignment = assignmentEx
+            , ..
+            }
+    (_, sigsub :| _) <-
+        genStudentSignedSubmissions (pure studentSKEx) (pure submission)
+    return sigsub

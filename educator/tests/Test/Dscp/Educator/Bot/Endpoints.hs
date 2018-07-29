@@ -1,5 +1,6 @@
 module Test.Dscp.Educator.Bot.Endpoints where
 
+import Dscp.Core.Arbitrary
 import Dscp.Educator.Web
 import Dscp.Util.Test
 
@@ -19,14 +20,15 @@ spec_StudentApiWithBotQueries = describe "Basic properties" $ do
             assignments <- sGetAssignments Nothing Nothing Nothing
             return (not $ null assignments)
 
-    -- TODO [DSCP-141]: uncomment. If does not work, contact me (@martoon)
-    -- Currently I can't pass specific student into endpoint.
-    -- it "Submissions are graded automatically" $
-    --     sqliteProperty $ \
-    --       ( delayedGen (genStudentSignedSubmissions arbitrary)
-    --         -> (student, sigsub :| _)
-    --       ) -> do
-    --         StudentApiEndpoints{..} <- addBotHandlers studentApiHandlers
-    --         void $ sMakeSubmission student sigsub
-    --         [submission] <- sGetSubmissions Nothing Nothing Nothing
-    --         return (isJust $ sGrade submission)
+    it "Submissions are graded automatically" $
+        sqliteProperty $ \
+          ( delayedGen
+              (genStudentSignedSubmissions
+                  (pure oneGeekSK)
+                  (arbitrary <&> \s -> s{ _sAssignment = assignmentEx }))
+            -> (_, sigsub :| _)
+          ) -> do
+            StudentApiEndpoints{..} <- addBotHandlers studentApiHandlers
+            void $ sMakeSubmission sigsub
+            [submission] <- sGetSubmissions Nothing Nothing Nothing
+            return (isJust $ sGrade submission)

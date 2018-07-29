@@ -43,7 +43,7 @@ import Data.ByteArray (ByteArrayAccess)
 import Data.ByteArray.Encoding (Base (..), convertFromBase, convertToBase)
 import Fmt ((+|), (|+))
 import Loot.Log (MonadLogging, logWarning)
-import Snowdrop.Util hiding (getId)
+import Snowdrop.Util hiding (HasHash, getId)
 
 import Dscp.Crypto.ByteArray (FromByteArray (..))
 

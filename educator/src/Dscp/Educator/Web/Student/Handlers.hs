@@ -3,12 +3,14 @@
 module Dscp.Educator.Web.Student.Handlers
        ( studentApiHandlers
        , oneGeek
+       , oneGeekSK
        ) where
 
 import Data.Time.Clock (UTCTime)
 
+import Dscp.Core.Arbitrary (studentEx, studentSKEx)
 import qualified Dscp.Core.Types as Core
-import Dscp.Crypto (Hash, genSecretKey, toPublic, withIntSeed)
+import Dscp.Crypto
 import Dscp.DB.SQLite (sqlTransaction)
 import Dscp.Educator.Web.Student.API
 import Dscp.Educator.Web.Student.Logic (makeSubmissionVerified)
@@ -36,9 +38,12 @@ studentApiHandlers =
     , sGetProofs = getProofs
     }
 
--- TODO [DSCP-141]: remove
+-- TODO [DSCP-141]: remove these two
 oneGeek :: Student
-oneGeek = Core.mkAddr . toPublic $ withIntSeed 123 genSecretKey
+oneGeek = studentEx
+
+oneGeekSK :: SecretKey
+oneGeekSK = studentSKEx
 
 getCourses
     :: StudentApiWorkMode m

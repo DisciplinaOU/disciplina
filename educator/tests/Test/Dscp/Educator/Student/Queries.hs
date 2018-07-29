@@ -356,7 +356,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
         it "Last submission is actually the last" $
             sqliteProperty $
               \( delayedGen
-                 (genStudentSignedSubmissions (pure submission1))
+                 (genStudentSignedSubmissions arbitrary (pure submission1))
                  -> (student, sigSubmissions)
                ) -> do
                 prepareAndCreateSubmissions sigSubmissions
@@ -478,7 +478,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
 
         it "Returns grade when present" $
             sqliteProperty $ \
-              ( delayedGen (genStudentSignedSubmissions arbitrary)
+              ( delayedGen (genStudentSignedSubmissions arbitrary arbitrary)
                 -> (student, sigSubmissions)
               , delayedGen infiniteList
                 -> grades
@@ -504,7 +504,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
 
         it "Filtering works" $
             sqliteProperty $ \
-              ( delayedGen (genStudentSignedSubmissions arbitrary)
+              ( delayedGen (genStudentSignedSubmissions arbitrary arbitrary)
                 -> (student, sigSubmissions)
               , courseIdF
               , assignHF
@@ -537,7 +537,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
         it "Delete works" $
             sqliteProperty $
               \( delayedGen
-                 (genStudentSignedSubmissions arbitrary)
+                 (genStudentSignedSubmissions arbitrary arbitrary)
                  -> (student, sigSubmissions@(sigSubmissiontoDel :| _))
                ) -> do
                   prepareAndCreateSubmissions sigSubmissions

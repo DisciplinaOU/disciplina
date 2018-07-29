@@ -13,6 +13,7 @@ module Dscp.Educator.Web.Bot.Setting
      , botProvideInitSetting
      , botProvideAdvancedSetting
      , botGradeSubmission
+     , botProvideUnlockedAssignments
      ) where
 
 import Control.Exception.Safe (catchJust)
@@ -24,10 +25,12 @@ import Data.Time.Clock (getCurrentTime)
 import Fmt ((+|), (|+))
 import Loot.Log (ModifyLogName, MonadLogging, logInfo, modifyLogName)
 
-import Dscp.Core.Arbitrary (genPleasantGrade)
+import Dscp.Core.Arbitrary
 import Dscp.Core.Types
+import Dscp.Crypto.Impl
 import Dscp.DB.SQLite
 import Dscp.Educator.Txs
+import qualified Dscp.Educator.Web.Student.Types as Student
 import Dscp.Util
 import Dscp.Util.Test
 import Dscp.Witness.Instances ()
@@ -38,23 +41,23 @@ import Dscp.Witness.Instances ()
 
 data WithDependencies a = WithDependencies
     { wdItem  :: a
-    , _wdDeps :: Set a
-    }
+    , _wdDeps :: Set (Hash a)
+    } deriving (Show)
 
 -- | For each item in list, assign each element on his left as its dependency
 -- with 50% probability.
-genDependencies :: Ord a => [a] -> Gen [WithDependencies a]
+genDependencies :: (Ord a, HasHash a) => [a] -> Gen [WithDependencies a]
 genDependencies items = do
     forM (zip items (inits items)) $ \(item, allBefore) -> do
         deps <- sublistOf allBefore
-        return $ WithDependencies item (S.fromList deps)
+        return $ WithDependencies item (S.fromList $ map hash deps)
 
 genBotCourseAssignments :: Int -> Course -> Gen [Assignment]
 genBotCourseAssignments n _aCourseId =
     forM [1..n] $ \i -> do
         _aContentsHash <- arbitrary
         let _aType = if i == n then CourseFinal else Regular
-        let _aDesc = "Task #" <> pretty i
+        let _aDesc = if i == n then "Exam" else "Task #" <> pretty i
         return Assignment{..}
 
 ---------------------------------------------------------------------
@@ -87,7 +90,7 @@ mkBotSetting seed = BotSetting{..}
   botGen = detGen seed
 
   bsCourses =
-    [ (Course 11, "Basic math", [])
+    [ (courseEx , "Basic math", [])
     , (Course 21, "Classic physics", [])
 
     , (Course 12, "Advanced math", [])
@@ -104,10 +107,14 @@ mkBotSetting seed = BotSetting{..}
     botGen $
     forM (zip courseSizes bsCourses) $ \(courseSize, (course, _, _)) -> do
         assignments <- genBotCourseAssignments courseSize course
-        assignAndDeps <- genDependencies assignments
+        let assignmentsWithEx =
+                bool identity (assignmentEx :)
+                (course == _aCourseId assignmentEx)
+                assignments
+        assignAndDeps <- genDependencies assignmentsWithEx
         return (course, assignAndDeps)
     where
-      courseSizes = 3 : 5 : botGen (vectorOf 5 $ choose (1, 7))
+      courseSizes = 2 : 5 : botGen (vectorOf 5 $ choose (1, 7))
 
   bsAssignments = map wdItem $ fold bsCourseAssignments
 
@@ -148,15 +155,33 @@ maybePresent action = catchJust asAlreadyExistsError (void action) (\_ -> pass)
 
 -- | Assign student on assignments which became available for student
 -- since dependant assignments are completed.
-botProvideUnlockedAssignments
+botNoteCompletedAssignments
     :: (BotWorkMode m, HasBotSetting)
-    => Student -> Course -> Set Assignment -> m ()
-botProvideUnlockedAssignments student course completedAssigns =
+    => Student -> Course -> Set (Hash Assignment) -> m ()
+botNoteCompletedAssignments student course completedAssigns =
     whenJust (M.lookup course (bsCourseAssignments botSetting)) $
       \courseAssigns ->
         forM_ courseAssigns $ \(WithDependencies assign deps) ->
             when (deps `S.isSubsetOf` completedAssigns) $
+                maybePresent $
                 setStudentAssignment student (getId assign)
+
+-- | Helper to invoke 'botNoteCompletedAssignments', accepts
+-- student, made submission and overall list of student assignments.
+botProvideUnlockedAssignments
+    :: (BotWorkMode m, HasBotSetting)
+    => Student -> Student.Submission -> [Student.Assignment] -> m ()
+botProvideUnlockedAssignments student submission studentAssignments = do
+    let assignment =
+            fromMaybe (error "No related assignment among student ones") $
+            find (\a -> Student.sAssignmentHash submission == Student.aHash a)
+                 studentAssignments
+    let course = Student.aCourseId assignment
+    let passedAssigns =
+            S.fromList $
+            map Student.aHash $
+            filter (isJust . Student.aLastSubmission) studentAssignments
+    botNoteCompletedAssignments student course passedAssigns
 
 -- | Enroll student to given courses and give initial assignments.
 botProvideCourses
@@ -165,7 +190,7 @@ botProvideCourses
 botProvideCourses student courses = do
     forM_ courses $ \course -> do
         enrollStudentToCourse student course
-        botProvideUnlockedAssignments student course mempty
+        botNoteCompletedAssignments student course mempty
 
 -- | Remember student and add minimal set of courses.
 botProvideInitSetting :: (BotWorkMode m, HasBotSetting) => Student -> m ()

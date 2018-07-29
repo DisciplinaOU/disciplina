@@ -50,6 +50,9 @@ addBotHandlers StudentApiEndpoints{..} =
             res <- sMakeSubmission ssub
             botGradeSubmission ssub
 
+            allAssigns <- sGetAssignments Nothing Nothing Nothing
+            botProvideUnlockedAssignments oneGeek res allAssigns
+
             -- cheat: on 3 submissions for the same assignment unlock all courses
             let assign = ssub ^. Core.ssSubmission
                                . Core.sAssignment
