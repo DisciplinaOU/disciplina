@@ -67,7 +67,7 @@ import Dscp.Core.Foundation.Educator.Txs (PrivateTx (..), ptGrade, ptSignedSubmi
 import Dscp.Crypto (Hash, MerkleProof, fillEmptyMerkleTree, getEmptyMerkleTree, getMerkleRoot, hash)
 import qualified Dscp.Crypto.MerkleTree as MerkleTree (fromList)
 import Dscp.DB.SQLite.BlockData (BlockData (..), TxInBlock (..), TxWithIdx (..))
-import Dscp.DB.SQLite.Class (MonadSQLiteDB (..), transaction)
+import Dscp.DB.SQLite.Class (MonadSQLiteDB (..), WithinSQLTransaction, transaction)
 import Dscp.DB.SQLite.Instances ()
 import Dscp.DB.SQLite.Types (TxBlockIdx (TxInMempool))
 import Dscp.Util (HasId (..), assert, assertJust, idOf)
@@ -159,7 +159,9 @@ getStudentAssignments student course = do
     |]
 
 -- | How can a student submit a submission for assignment?
-submitAssignment :: DBM m => SignedSubmission -> m (Id SignedSubmission)
+submitAssignment
+    :: (DBM m, WithinSQLTransaction)
+    => SignedSubmission -> m (Id SignedSubmission)
 submitAssignment = createSignedSubmission
 
 -- How can a student see his grades for course assignments?
@@ -404,7 +406,9 @@ createBlock delta = do
         values      (?, ?)
     |]
 
-createSignedSubmission :: DBM m => SignedSubmission -> m (Id SignedSubmission)
+createSignedSubmission
+    :: (DBM m, WithinSQLTransaction)
+    => SignedSubmission -> m (Id SignedSubmission)
 createSignedSubmission sigSub = do
     let
         submission     = sigSub^.ssSubmission
@@ -417,19 +421,18 @@ createSignedSubmission sigSub = do
 
         assignmentHash = assignment^.idOf
 
-    transaction $ do
-        _ <- existsStudent student        `assert`     StudentDoesNotExist    student
-        _ <- getAssignment assignmentHash `assertJust` AssignmentDoesNotExist assignmentHash
-        _ <- isAssignedToStudent student assignmentHash
-            `assert` StudentWasNotSubscribedOnAssignment student assignmentHash
+    _ <- existsStudent student        `assert`     StudentDoesNotExist    student
+    _ <- getAssignment assignmentHash `assertJust` AssignmentDoesNotExist assignmentHash
+    _ <- isAssignedToStudent student assignmentHash
+        `assert` StudentWasNotSubscribedOnAssignment student assignmentHash
 
-        execute generateSubmissionRequest
-            ( submissionHash
-            , student
-            , assignmentHash
-            , submissionCont
-            , submissionSig
-            )
+    execute generateSubmissionRequest
+        ( submissionHash
+        , student
+        , assignmentHash
+        , submissionCont
+        , submissionSig
+        )
 
     return submissionHash
   where

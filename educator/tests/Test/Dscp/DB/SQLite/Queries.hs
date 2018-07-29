@@ -61,7 +61,7 @@ spec_Instances = do
             it "Submission is not created unless Assignment exist" $
                 sqliteProperty $ \submission -> do
                     throws @DomainError $ do
-                        _ <- DB.createSignedSubmission submission
+                        _ <- DB.sqlTransaction $ DB.createSignedSubmission submission
                         return ()
 
             it "Submission is not created unless Student exist" $
@@ -75,7 +75,7 @@ spec_Instances = do
                     _ <- DB.createAssignment       assignment
 
                     throws @DomainError $ do
-                        _ <- DB.createSignedSubmission sigSubmission
+                        _ <- DB.sqlTransaction $ DB.createSignedSubmission sigSubmission
                         return ()
 
             it "Submission is not created unless StudentAssignment exist" $
@@ -90,7 +90,8 @@ spec_Instances = do
                         _ <- DB.createCourse           course Nothing []
                         _ <- DB.createStudent          student
                         _ <- DB.createAssignment       assignment
-                        _ <- DB.createSignedSubmission sigSubmission
+                        _ <- sqlTransaction $
+                             DB.createSignedSubmission sigSubmission
 
                         return ()
 
@@ -109,7 +110,8 @@ spec_Instances = do
                     _         <- DB.enrollStudentToCourse  studentId courseId
                     aHash     <- DB.createAssignment       assignment
                     _         <- DB.setStudentAssignment   student aHash
-                    _         <- DB.createSignedSubmission sigSubmission
+                    _         <- sqlTransaction $
+                                 DB.createSignedSubmission sigSubmission
                     transHash <- DB.createTransaction      trans
 
                     trans'    <- DB.getTransaction transHash
@@ -201,7 +203,8 @@ spec_Instances = do
                 _         <- DB.enrollStudentToCourse  studentId courseId
                 aHash     <- DB.createAssignment       assignment
                 _         <- DB.setStudentAssignment   student aHash
-                subHash   <- DB.submitAssignment       sigSubmission
+                subHash   <- sqlTransaction $
+                             DB.submitAssignment       sigSubmission
 
                 sub'      <- DB.getSignedSubmission    subHash
 
@@ -236,8 +239,10 @@ spec_Instances = do
                     _          <- DB.setStudentAssignment   student aHash
                     _          <- DB.setStudentAssignment   student aHash2
 
-                    _          <- DB.createSignedSubmission sigSubmission
-                    _          <- DB.createSignedSubmission sigSubmission2
+                    _          <- sqlTransaction $
+                                  DB.createSignedSubmission sigSubmission
+                    _          <- sqlTransaction $
+                                  DB.createSignedSubmission sigSubmission2
 
                     _          <- DB.createTransaction      trans
                     _          <- DB.createTransaction      trans2
@@ -274,7 +279,8 @@ spec_Instances = do
                         _   <- DB.enrollStudentToCourse  studentId cId     `orIfItFails` ()
                         aId <- DB.createAssignment       assignment        `orIfItFails` getId assignment
                         _   <- DB.setStudentAssignment   studentId aId     `orIfItFails` ()
-                        _   <- DB.createSignedSubmission sigSubmission     `orIfItFails` getId sigSubmission
+                        _   <- sqlTransaction $
+                               DB.createSignedSubmission sigSubmission     `orIfItFails` getId sigSubmission
 
                         ptId <- DB.createTransaction trans
                         return ptId

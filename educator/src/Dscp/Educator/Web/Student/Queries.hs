@@ -312,7 +312,7 @@ deleteSubmission student submissionH = do
     |]
 
 makeSubmission
-    :: MonadStudentAPIQuery m
+    :: (MonadStudentAPIQuery m, WithinSQLTransaction)
     => Core.SignedSubmission -> m (Id Core.Submission)
 makeSubmission signedSubmission =
     Base.submitAssignment signedSubmission

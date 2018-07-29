@@ -83,6 +83,9 @@ instance Adapter.MonadLogging TestSQLiteM where
   log _ _ _ = pass
   logName = return $ error "Logger name requested in test"
 
+instance Adapter.ModifyLogName TestSQLiteM where
+  modifyLogNameSel _ = identity
+
 orIfItFails :: MonadCatch m => m a -> a -> m a
 orIfItFails action instead = do
   action `catch` \(_e :: SomeException) -> do return instead
