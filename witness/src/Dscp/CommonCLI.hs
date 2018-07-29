@@ -60,14 +60,14 @@ baseKeyParamsParser who = do
     pure BaseKeyParams{..}
   where
     kpKeyPathParser = optional . strOption $
-         long [qc|{who}-keyfile-path|] <>
+         long [qc|{who}-keyfile|] <>
          metavar "FILEPATH" <>
          help [qc|Path to the secret key of {who}.|]
     kpGenKeyParser = switch $
-         long [qc|{who}-generate-new-key|] <>
+         long [qc|{who}-gen-key|] <>
          help [qc|Generate the key and write it to '{who}-keyfile-path' path.|]
     kpPassphraseParser = optional . option passphraseReadM $
-         long [qc|{who}-keyfile-password|] <>
+         long [qc|{who}-keyfile-pass|] <>
          metavar "PASSWORD" <>
          help "Password of secret key."
     passphraseReadM = leftToFail . first pretty . mkPassPhrase =<< str

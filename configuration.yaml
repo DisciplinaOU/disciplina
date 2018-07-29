@@ -1,0 +1,12 @@
+core:
+  homeParam: 
+    path: "./tmp/"
+  genesis: 
+    genesisSeed: "GromakNaRechke"
+    governance: 
+      govCommittee: 
+        committeeOpen: 
+          secret: "opencomittee"
+          n: 3
+    distribution: 
+      equal: 1000
