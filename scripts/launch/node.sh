@@ -24,6 +24,8 @@ do
         node="witness"
     elif [[ "$var" == "educator" ]] || [ "$var" == "e" ]; then
         node="educator"
+    elif [[ "$var" == "bot" ]] || [ "$var" == "b" ]; then
+        educator_bot=true
     else
         echo "Unknown parameter \"$var\""
         exit 1
@@ -52,6 +54,11 @@ witness_params="
 --witness-keyfile-path $files/witness.key
 --witness-keyfile-password xixixixi
 "
+
+if [[ "$educator_bot" == true ]]; then
+    educator_params="$educator_params --educator-bot"
+fi
+
 
 if [[ "$node" == "educator" ]]; then
     stack exec "dscp-educator" -- $witness_params $educator_params
