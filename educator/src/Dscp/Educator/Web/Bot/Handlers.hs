@@ -10,9 +10,14 @@ import Dscp.Educator.Web.Student
 addBotHandlers
     :: forall m. BotWorkMode m
     => StudentApiHandlers m -> m (StudentApiHandlers m)
-addBotHandlers StudentApiEndpoints{..} = do
-    botPrepareInitialData
-    return $ StudentApiEndpoints
+addBotHandlers StudentApiEndpoints{..} =
+    -- TODO [DSCP-163] Take seed from config
+    withBotSetting (mkBotSetting 2342342) $ do
+        botPrepareInitialData
+        return botEndpoints
+  where
+    botEndpoints :: (BotWorkMode m, HasBotSetting) => StudentApiHandlers m
+    botEndpoints = StudentApiEndpoints
         { sGetCourses = \isEnrolledF -> do
             botProvideInitSetting oneGeek
             sGetCourses isEnrolledF
@@ -47,7 +52,8 @@ addBotHandlers StudentApiEndpoints{..} = do
             let assign = ssub ^. Core.ssSubmission
                                . Core.sAssignment
             courseSubs <- sGetSubmissions Nothing (Just $ hash assign) Nothing
-            when (length courseSubs >= 3) $
+            -- remembering about race conditions
+            when (length courseSubs `elem` [3..4]) $
                 botProvideAdvancedSetting oneGeek
             return res
 
