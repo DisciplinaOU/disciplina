@@ -26,6 +26,8 @@ do
         node="educator"
     elif [[ "$var" == "bot" ]] || [ "$var" == "b" ]; then
         educator_bot=true
+    elif [[ "$var" == "--no-clean" ]]; then
+        no_clean=true
     else
         echo "Unknown parameter \"$var\""
         exit 1
@@ -59,6 +61,10 @@ if [[ "$educator_bot" == true ]]; then
     educator_params="$educator_params --educator-bot"
 fi
 
+
+if [[ "$no_clean" != true ]]; then
+    rm -rf $tmp_files
+fi
 
 if [[ "$node" == "educator" ]]; then
     stack exec "dscp-educator" -- $witness_params $educator_params
