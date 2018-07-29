@@ -8,6 +8,7 @@ module Dscp.Educator.Web.Student.Server
 import Fmt ((+|), (|+))
 import Loot.Log (logInfo)
 import Servant (Handler, Server, hoistServer, serve, throwError)
+import Servant.Generic (toServant)
 
 import Dscp.Educator.Config (HasEducatorConfig)
 import Dscp.Educator.Launcher (EducatorContext, EducatorRealMode, EducatorWorkMode)
@@ -22,7 +23,7 @@ studentAPIServer
     => (forall x. m x -> Handler x)
     -> Server StudentAPI
 studentAPIServer nat =
-    hoistServer studentAPI nat studentApiHandlers
+    hoistServer studentAPI nat (toServant studentApiHandlers)
 
 convertStudentApiHandler
     :: EducatorContext

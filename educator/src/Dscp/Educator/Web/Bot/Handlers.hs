@@ -2,22 +2,17 @@ module Dscp.Educator.Web.Bot.Handlers
      ( addBotHandlers
      ) where
 
-import Servant
-import Servant.Generic (fromServant, toServant)
-
 import qualified Dscp.Core.Types as Core
 import Dscp.Crypto
-import Dscp.Educator.Launcher.Mode
 import Dscp.Educator.Web.Bot.Setting
 import Dscp.Educator.Web.Student
 
 addBotHandlers
-    :: forall m ctx. EducatorWorkMode ctx m
-    => ServerT StudentAPI m -> m (ServerT StudentAPI m)
-addBotHandlers handlers = do
+    :: forall m. BotWorkMode m
+    => StudentApiHandlers m -> m (StudentApiHandlers m)
+addBotHandlers StudentApiEndpoints{..} = do
     botPrepareInitialData
-    let StudentApiEndpoints{..} = fromServant handlers :: StudentApiHandlers m
-    return $ toServant @(StudentApiHandlers m) StudentApiEndpoints
+    return $ StudentApiEndpoints
         { sGetCourses = \isEnrolledF -> do
             botProvideInitSetting oneGeek
             sGetCourses isEnrolledF
@@ -47,6 +42,7 @@ addBotHandlers handlers = do
             res <- sMakeSubmission ssub
             botGradeSubmission ssub
 
+            -- TODO [DSCP-163] Logging
             -- cheat: on 3 submissions for the same assignment unlock all courses
             let assign = ssub ^. Core.ssSubmission
                                . Core.sAssignment

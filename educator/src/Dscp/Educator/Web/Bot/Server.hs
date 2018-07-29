@@ -7,6 +7,7 @@ module Dscp.Educator.Web.Bot.Server
 import Fmt ((+|), (|+))
 import Loot.Log (logInfo)
 import Servant (hoistServer, serve)
+import Servant.Generic (toServant)
 
 import Dscp.Educator.Config (HasEducatorConfig)
 import Dscp.Educator.Launcher (EducatorRealMode)
@@ -24,5 +25,5 @@ serveStudentAPIWithBotReal ServerParams{..} = do
     eCtx <- ask
     studentApiWithBotHandlers <- addBotHandlers studentApiHandlers
     let server = hoistServer studentAPI (convertStudentApiHandler eCtx)
-                 studentApiWithBotHandlers
+                 (toServant studentApiWithBotHandlers)
     serveWeb spAddr $ serve studentAPI server

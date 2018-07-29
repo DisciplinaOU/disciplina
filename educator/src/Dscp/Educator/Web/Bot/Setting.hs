@@ -1,7 +1,8 @@
 -- | Bot data and aspects of behaviour.
 
 module Dscp.Educator.Web.Bot.Setting
-     ( botPrepareInitialData
+     ( BotWorkMode
+     , botPrepareInitialData
      , botProvideInitSetting
      , botProvideAdvancedSetting
      , botGradeSubmission
@@ -17,10 +18,10 @@ import Data.Time.Clock (getCurrentTime)
 import Dscp.Core.Arbitrary (genPleasantGrade)
 import Dscp.Core.Types
 import Dscp.DB.SQLite
-import Dscp.Educator.Launcher.Mode
 import Dscp.Educator.Txs
 import Dscp.Util
 import Dscp.Util.Test
+import Dscp.Witness.Instances ()
 
 ---------------------------------------------------------------------
 -- Utils
@@ -100,7 +101,12 @@ botAssignments = map wdItem $ fold botCourseAssignments
 -- Operations
 ---------------------------------------------------------------------
 
-botPrepareInitialData :: EducatorWorkMode ctx m => m ()
+type BotWorkMode m =
+    ( MonadSQLiteDB m
+    , MonadCatch m
+    )
+
+botPrepareInitialData :: BotWorkMode m => m ()
 botPrepareInitialData =
     withBotSeed botDataSeed $ do
         mapM_ (\(c, t, s) -> createCourse c (Just t) s) botCourses
@@ -117,7 +123,7 @@ maybePresent action = catchJust asAlreadyExistsError (void action) (\_ -> pass)
 -- | Assign student on assignments which became available for student
 -- since dependant assignments are completed.
 botProvideUnlockedAssignments
-    :: EducatorWorkMode ctx m
+    :: BotWorkMode m
     => Student -> Course -> Set Assignment -> m ()
 botProvideUnlockedAssignments student course completedAssigns =
     withBotSeed botDataSeed $
@@ -127,25 +133,25 @@ botProvideUnlockedAssignments student course completedAssigns =
                     setStudentAssignment student (getId assign)
 
 -- | Enroll student to given courses and give initial assignments.
-botProvideCourses :: EducatorWorkMode ctx m => Student -> [Course] -> m ()
+botProvideCourses :: BotWorkMode m => Student -> [Course] -> m ()
 botProvideCourses student courses = do
     forM_ courses $ \course -> do
         enrollStudentToCourse student course
         botProvideUnlockedAssignments student course mempty
 
 -- | Remember student and add minimal set of courses.
-botProvideInitSetting :: EducatorWorkMode ctx m => Student -> m ()
+botProvideInitSetting :: BotWorkMode m => Student -> m ()
 botProvideInitSetting student = do
     maybePresent $ createStudent student
     botProvideCourses student botBasicCourses
 
 -- | Only for the chosen ones.
-botProvideAdvancedSetting :: EducatorWorkMode ctx m => Student -> m ()
+botProvideAdvancedSetting :: BotWorkMode m => Student -> m ()
 botProvideAdvancedSetting student = do
     botProvideCourses student botAdvancedCourses
 
 -- | Add a grade immediatelly after student submission.
-botGradeSubmission :: EducatorWorkMode ctx m => SignedSubmission -> m ()
+botGradeSubmission :: BotWorkMode m => SignedSubmission -> m ()
 botGradeSubmission ssub = do
     let sub = _ssSubmission ssub
         contentsH = _sContentsHash sub
