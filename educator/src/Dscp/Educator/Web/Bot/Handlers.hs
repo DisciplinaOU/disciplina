@@ -2,6 +2,8 @@ module Dscp.Educator.Web.Bot.Handlers
      ( addBotHandlers
      ) where
 
+import Loot.Log (logInfo)
+
 import qualified Dscp.Core.Types as Core
 import Dscp.Crypto
 import Dscp.Educator.Web.Bot.Setting
@@ -14,6 +16,7 @@ addBotHandlers StudentApiEndpoints{..} =
     -- TODO [DSCP-163] Take seed from config
     withBotSetting (mkBotSetting 2342342) $ do
         botPrepareInitialData
+        botLog $ logInfo "Educator bot initiated"
         return botEndpoints
   where
     botEndpoints :: (BotWorkMode m, HasBotSetting) => StudentApiHandlers m
@@ -47,7 +50,6 @@ addBotHandlers StudentApiEndpoints{..} =
             res <- sMakeSubmission ssub
             botGradeSubmission ssub
 
-            -- TODO [DSCP-163] Logging
             -- cheat: on 3 submissions for the same assignment unlock all courses
             let assign = ssub ^. Core.ssSubmission
                                . Core.sAssignment

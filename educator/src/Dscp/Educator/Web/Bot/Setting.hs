@@ -6,6 +6,8 @@ module Dscp.Educator.Web.Bot.Setting
      , HasBotSetting
      , withBotSetting
 
+     , botLog
+
      , BotWorkMode
      , botPrepareInitialData
      , botProvideInitSetting
@@ -19,6 +21,8 @@ import qualified Data.Map as M
 import Data.Reflection (Given (..), give)
 import qualified Data.Set as S
 import Data.Time.Clock (getCurrentTime)
+import Fmt ((+|), (|+))
+import Loot.Log (ModifyLogName, MonadLogging, logInfo, modifyLogName)
 
 import Dscp.Core.Arbitrary (genPleasantGrade)
 import Dscp.Core.Types
@@ -122,14 +126,19 @@ botSetting = given
 type BotWorkMode m =
     ( MonadSQLiteDB m
     , MonadCatch m
+    , MonadLogging m
+    , ModifyLogName m
     )
+
+botLog :: ModifyLogName m => m a -> m a
+botLog = modifyLogName (<> "bot")
 
 botPrepareInitialData :: (BotWorkMode m, HasBotSetting) => m ()
 botPrepareInitialData = do
     mapM_ (\(c, t, s) -> createCourse c (Just t) s) (bsCourses botSetting)
     mapM_ createAssignment (bsAssignments botSetting)
 
--- REMEMBER that all operations should be no-throw
+-- REMEMBER that all operations below should be no-throw
 
 -- | Ignore "Already present" errors.
 maybePresent :: MonadCatch m => m a -> m ()
@@ -161,13 +170,16 @@ botProvideCourses student courses = do
 -- | Remember student and add minimal set of courses.
 botProvideInitSetting :: (BotWorkMode m, HasBotSetting) => Student -> m ()
 botProvideInitSetting student = do
-    maybePresent $ createStudent student
-    botProvideCourses student (bsBasicCourses botSetting)
+    maybePresent $ do
+        void $ createStudent student
+        botProvideCourses student (bsBasicCourses botSetting)
+        botLog . logInfo $ "Registered student " +| student |+ ""
 
 -- | Only for the chosen ones.
 botProvideAdvancedSetting :: (BotWorkMode m, HasBotSetting) => Student -> m ()
 botProvideAdvancedSetting student = do
     botProvideCourses student (bsAdvancedCourses botSetting)
+    botLog . logInfo $ "Student " +| student |+ " has discovered all courses"
 
 -- | Add a grade immediatelly after student submission.
 botGradeSubmission :: BotWorkMode m => SignedSubmission -> m ()
