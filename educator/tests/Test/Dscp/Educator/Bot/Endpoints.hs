@@ -29,6 +29,6 @@ spec_StudentApiWithBotQueries = describe "Basic properties" $ do
             -> (_, sigsub :| _)
           ) -> do
             StudentApiEndpoints{..} <- addBotHandlers studentApiHandlers
-            void $ sMakeSubmission sigsub
+            void $ sMakeSubmission (signedSubmissionToRequest sigsub)
             [submission] <- sGetSubmissions Nothing Nothing Nothing
             return (isJust $ sGrade submission)

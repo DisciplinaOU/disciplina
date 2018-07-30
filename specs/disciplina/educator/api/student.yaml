@@ -362,15 +362,9 @@ definitions:
         format: binary
         description: Concatenated student public key and submission hash signed with student secret key.
     example:
-      submission:
-        studentId: "LL4qKmPY5aGuebXmwg68YX7VMojkFyjNwyN7qz7jgueodBxnGRTiSUb1"
-        contentsHash: "K9Dvapkf9ZVGPIPQoDFEypZBL2TyLvBGh3HgupOBfSw="
-        assignment:
-          courseId: 7
-          contentsHash: "K9Dvapkf9ZVGPIPQoDFEypZBL2TyLvBGh3HgupOBfSw="
-          type: "regular"
-          desc: "Find mathematical model of the world"
-      witness: "gwBYIGrcWfDHxgB0BhTMngCOjUmOZBpI0BK4zFMtn8i2cJt+WEBIMaxoe/qBbPq6B+3L4u7DU7VtDMWaVFoQ7gbSx0nU9Rmg99+bsAytE49EaNCjQ1gGzZ5U61KTQIK+VOzIiEMN"
+      assignmentHash: "pvHDZHWHxN+R78RDpOaYfwniqY5tMCiMGYE7+t7pspE="
+      contentsHash: "K9Dvapkf9ZVGPIPQoDFEypZBL2TyLvBGh3HgupOBfSw="
+      witness: "gwBYIGrcWfDHxgB0BhTMngCOjUmOZBpI0BK4zFMtn8i2cJt+WEDR5GE0Re705w52Clt31xE6ND0WWJTlp3kScWvpFt1IHVP28nGk9JKuIwafo3lCoYgoygCVFZlpeXERT4J1UOkL"
 
   Transaction:
     type: object

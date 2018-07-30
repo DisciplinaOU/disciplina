@@ -86,9 +86,9 @@ getSubmission submissionH =
 
 makeSubmission
     :: StudentApiWorkMode m
-    => Core.SignedSubmission -> m Submission
-makeSubmission signedSubmission =
-    makeSubmissionVerified oneGeek signedSubmission
+    => NewSubmission -> m Submission
+makeSubmission newSubmission =
+    makeSubmissionVerified oneGeek newSubmission
 
 deleteSubmission
     :: StudentApiWorkMode m

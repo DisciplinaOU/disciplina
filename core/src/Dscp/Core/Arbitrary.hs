@@ -114,14 +114,13 @@ courseEx :: Course
 courseEx = Course 7
 
 assignmentEx :: Assignment
-assignmentEx = detGen 123 $ do
-    _aContentsHash <- arbitrary
-    return Assignment
-        { _aCourseId = courseEx
-        , _aType = Regular
-        , _aDesc = "Find mathematical model of the world"
-        , ..
-        }
+assignmentEx =
+    Assignment
+    { _aCourseId = courseEx
+    , _aType = Regular
+    , _aContentsHash = offlineHash
+    , _aDesc = "Find mathematical model of the world"
+    }
 
 signedSubmissionEx :: SignedSubmission
 signedSubmissionEx = detGen 123 $ do

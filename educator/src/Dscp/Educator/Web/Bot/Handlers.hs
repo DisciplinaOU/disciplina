@@ -4,8 +4,6 @@ module Dscp.Educator.Web.Bot.Handlers
 
 import Loot.Log (logInfo)
 
-import qualified Dscp.Core as Core
-import Dscp.Crypto
 import Dscp.Educator.Web.Bot.Setting
 import Dscp.Educator.Web.Student
 
@@ -45,19 +43,18 @@ addBotHandlers StudentApiEndpoints{..} =
             botProvideInitSetting oneGeek
             sGetSubmission subH
 
-        , sMakeSubmission = \ssub -> do
+        , sMakeSubmission = \newSub -> do
             botProvideInitSetting oneGeek
-            res <- sMakeSubmission ssub
+            res <- sMakeSubmission newSub
 
-            delayed $ botGradeSubmission ssub
+            delayed $ requestToSignedSubmission newSub >>= botGradeSubmission
 
             allAssigns <- sGetAssignments Nothing Nothing Nothing
             botProvideUnlockedAssignments oneGeek res allAssigns
 
             -- cheat: on 3 submissions for the same assignment unlock all courses
-            let assign = ssub ^. Core.ssSubmission
-                               . Core.sAssignment
-            courseSubs <- sGetSubmissions Nothing (Just $ hash assign) Nothing
+            let assignH = nsAssignmentHash newSub
+            courseSubs <- sGetSubmissions Nothing (Just assignH) Nothing
             -- remembering about race conditions
             when (length courseSubs `elem` [3..4]) $
                 botProvideAdvancedSetting oneGeek

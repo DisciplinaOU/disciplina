@@ -10,12 +10,15 @@ module Dscp.Educator.Web.Student.Types
        , Submission (..)
        , Grade (..)
        , BlkProof (..)
+       , NewSubmission (..)
+       , nsOwner
        , ErrResponse (..)
 
        , _IsFinal
        , assignmentTypeRaw
        , liftAssignment
        , liftSubmission
+       , signedSubmissionToRequest
        , aDocumentType
        ) where
 
@@ -30,7 +33,7 @@ import qualified Dscp.Core as Core
 import Dscp.Crypto (hash)
 import Dscp.Crypto (Hash, Raw)
 import Dscp.Educator.Web.Student.Error (APIError)
-import Dscp.Util (fromBase64)
+import Dscp.Util (Id, fromBase64)
 import Dscp.Util.Aeson (AsByteString, Base64Encoded)
 
 type Student = Core.Student
@@ -83,6 +86,15 @@ data BlkProof = BlkProof
     , bpTxs             :: ![PrivateTx]
     } deriving (Show, Eq, Generic)
 
+data NewSubmission = NewSubmission
+    { nsAssignmentHash :: !(Hash Core.Assignment)
+    , nsContentsHash   :: !(Hash Raw)
+    , nsWitness        :: !Core.SubmissionWitness
+    } deriving (Show, Eq, Generic)
+
+nsOwner :: NewSubmission -> Id Core.Student
+nsOwner = Core.mkAddr . Core._swKey . nsWitness
+
 data ErrResponse = ErrResponse
     { erError :: !APIError
     } deriving (Show, Eq, Generic)
@@ -121,6 +133,15 @@ liftSubmission s sGrade =
     , ..
     }
 
+signedSubmissionToRequest :: Core.SignedSubmission -> NewSubmission
+signedSubmissionToRequest sigSub =
+    let submission = Core._ssSubmission sigSub
+    in NewSubmission
+        { nsAssignmentHash = hash (Core._sAssignment submission)
+        , nsContentsHash = Core._sContentsHash submission
+        , nsWitness = Core._ssWitness sigSub
+        }
+
 aDocumentType :: Assignment -> Core.DocumentType
 aDocumentType = Core.documentType . aContentsHash
 
@@ -138,6 +159,7 @@ deriveJSON defaultOptions ''Assignment
 deriveJSON defaultOptions ''Submission
 deriveJSON defaultOptions ''Grade
 deriveJSON defaultOptions ''BlkProof
+deriveJSON defaultOptions ''NewSubmission
 deriveJSON defaultOptions ''ErrResponse
 
 ---------------------------------------------------------------------------

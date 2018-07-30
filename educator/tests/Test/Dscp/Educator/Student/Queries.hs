@@ -9,12 +9,7 @@ import Dscp.Crypto (Hash, Raw, hash)
 import Dscp.DB.SQLite (MonadSQLiteDB, WithinSQLTransaction, sqlTransaction, _AssignmentDoesNotExist,
                        _SubmissionDoesNotExist)
 import qualified Dscp.DB.SQLite as CoreDB
-import Dscp.Educator.Web.Student (Assignment (..), Course (..), Grade (..), IsEnrolled (..),
-                                  IsFinal (..), MonadStudentAPIQuery, Student, Submission (..),
-                                  aDocumentType, assignmentTypeRaw, liftAssignment, liftSubmission,
-                                  _BadSubmissionSignature, _DeletingGradedSubmission,
-                                  _EntityAlreadyPresent, _FakeSubmissionSignature, _IsFinal,
-                                  _SubmissionAlreadyExists)
+import Dscp.Educator.Web.Student
 import qualified Dscp.Educator.Web.Student.Logic as Logic
 import qualified Dscp.Educator.Web.Student.Queries as DB
 import Dscp.Util (Id (..))
@@ -583,9 +578,10 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                 if Core._sStudentId (Core._ssSubmission sigSubmission) == badStudent
                 then return $ property rejected
                 else do
+                    let newSubmission = signedSubmissionToRequest sigSubmission
                     prepareForSubmissions [sigSubmission]
                     fmap property $ throwsPrism (_BadSubmissionSignature . _FakeSubmissionSignature) $
-                        Logic.makeSubmissionVerified badStudent sigSubmission
+                        Logic.makeSubmissionVerified badStudent newSubmission
 
   describe "Transactions" $ do
     describe "getProofs" $ do
