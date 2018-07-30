@@ -696,6 +696,7 @@ definitions:
   Hash:
     type: string
     format: byte
+    description: Blake2b hash, 256 bits
   Address:
     type: string
     format: byte

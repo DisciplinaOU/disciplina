@@ -229,6 +229,7 @@ definitions:
   Hash:
     type: string
     format: byte
+    description: "Blake2b hash, 256 bits"
     
   Address:
     type: string
@@ -359,6 +360,7 @@ definitions:
       witness:
         type: string
         format: binary
+        description: Concatenated student public key and submission hash signed with student secret key.
     example:
       submission:
         studentId: "LL4qKmPY5aGuebXmwg68YX7VMojkFyjNwyN7qz7jgueodBxnGRTiSUb1"
