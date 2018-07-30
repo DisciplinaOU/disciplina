@@ -48,7 +48,8 @@ addBotHandlers StudentApiEndpoints{..} =
         , sMakeSubmission = \ssub -> do
             botProvideInitSetting oneGeek
             res <- sMakeSubmission ssub
-            botGradeSubmission ssub
+
+            delayed $ botGradeSubmission ssub
 
             allAssigns <- sGetAssignments Nothing Nothing Nothing
             botProvideUnlockedAssignments oneGeek res allAssigns

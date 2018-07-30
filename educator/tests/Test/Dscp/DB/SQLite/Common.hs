@@ -14,6 +14,7 @@ import Database.SQLite.Simple (Connection, execute, fold, query, setTrace, withC
                                withTransaction)
 import qualified Loot.Log as Adapter
 import Test.Hspec
+import UnliftIO (MonadUnliftIO)
 
 import Dscp.Core.Foundation.Educator.Txs (PrivateTx (..), ptSignedSubmission, ptTime)
 import Dscp.Core.Types (Address (..), Assignment (..), AssignmentType (..), Course (..), Grade (..),
@@ -27,6 +28,8 @@ import Dscp.Educator.Arbitrary ()
 import Dscp.Util (idOf)
 import Dscp.Util.Test
 
+type Trololo m = (MonadThrow m, MonadCatch m)
+
 -- import System.Directory (removeFile)
 -- import System.IO.Error (IOError, isDoesNotExistError)
 newtype TestSQLiteM a = TestSQLiteM
@@ -39,6 +42,7 @@ newtype TestSQLiteM a = TestSQLiteM
              , MonadCatch
              , MonadFail
              , MonadReader Connection
+             , MonadUnliftIO
              )
 
 runTestSQLiteM :: TestSQLiteM a -> IO a

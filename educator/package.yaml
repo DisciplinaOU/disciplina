@@ -58,6 +58,7 @@ tests:
       - tasty-hspec
       - time
       - QuickCheck
+      - unliftio
 
 executables:
   dscp-educator:

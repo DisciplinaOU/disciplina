@@ -7,6 +7,7 @@ module Dscp.Educator.Web.Bot.Setting
      , withBotSetting
 
      , botLog
+     , delayed
 
      , BotWorkMode
      , botPrepareInitialData
@@ -22,8 +23,10 @@ import qualified Data.Map as M
 import Data.Reflection (Given (..), give)
 import qualified Data.Set as S
 import Data.Time.Clock (getCurrentTime)
-import Fmt ((+|), (|+))
-import Loot.Log (ModifyLogName, MonadLogging, logInfo, modifyLogName)
+import Fmt ((+|), (+||), (|+), (||+))
+import Loot.Log (ModifyLogName, MonadLogging, logError, logInfo, modifyLogName)
+import UnliftIO (MonadUnliftIO)
+import UnliftIO.Concurrent (forkIO, threadDelay)
 
 import Dscp.Core.Arbitrary
 import Dscp.Core.Types
@@ -133,12 +136,26 @@ botSetting = given
 type BotWorkMode m =
     ( MonadSQLiteDB m
     , MonadCatch m
+    , MonadUnliftIO m
     , MonadLogging m
     , ModifyLogName m
     )
 
 botLog :: ModifyLogName m => m a -> m a
 botLog = modifyLogName (<> "bot")
+
+delayed :: (BotWorkMode m) => m () -> m ()
+delayed action
+    | botOpsDelay == 0 = action
+    | otherwise =
+        void . forkIO $ do
+            threadDelay botOpsDelay
+            action `catchAny` logException
+  where
+    -- TODO [DSCP-163]: Take value from config
+    -- keeping it 0 now for the sake of tests
+    botOpsDelay = 0
+    logException e = botLog . logError $ "Delayed action failed: " +|| e ||+ ""
 
 botPrepareInitialData :: (BotWorkMode m, HasBotSetting) => m ()
 botPrepareInitialData = do
