@@ -665,7 +665,6 @@ paths:
       tags:
       - assignments
       summary: Add assignment to a course
-      description: Add a given assignment to a course.
       operationId: addCourseAssignment
       parameters:
         - in: body
@@ -778,8 +777,10 @@ definitions:
         format: int32
       timestamp:
         $ref: "#/definitions/Time"
+        readOnly: true
       hasProof:
         type: boolean
+        readOnly: true
 
   Transaction:
     type: object
