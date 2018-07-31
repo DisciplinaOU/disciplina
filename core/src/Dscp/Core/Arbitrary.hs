@@ -4,6 +4,8 @@ module Dscp.Core.Arbitrary
     ( -- * Generators
       genPleasantGrade
     , genStudentSignedSubmissions
+    , genCommonAssignmentType
+    , genCommonDocumentType
 
       -- * Examples
     , studentEx
@@ -37,16 +39,21 @@ genPleasantGrade :: Gen Grade
 genPleasantGrade =
     frequency
     [ (1, arbitrary)
-    , (5, arbitrary `suchThat` (> threashold))
+    , (5, arbitrary `suchThat` (> threshold))
     ]
   where
-    threashold =
+    threshold =
         let UnsafeGrade maxG = maxBound
         in fromMaybe (error "genPleasantGrade: bad grade") $
            mkGrade (maxG `div` 2)
 
 instance Arbitrary Assignment where
-    arbitrary = Assignment <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
+    arbitrary =
+        Assignment
+        <$> arbitrary
+        <*> arbitrary
+        <*> genCommonAssignmentType
+        <*> arbitrary
 
 instance Arbitrary Submission where
     arbitrary = Submission <$> arbitrary <*> arbitrary <*> arbitrary
@@ -83,10 +90,16 @@ genStudentSignedSubmissions genSK genSubmission = do
     return (studentId, ss)
 
 instance Arbitrary AssignmentType where
-    arbitrary = frequency [(5, pure Regular), (1, pure CourseFinal)]
+    arbitrary = elements [Regular, CourseFinal]
+
+genCommonAssignmentType :: Gen AssignmentType
+genCommonAssignmentType = frequency [(5, pure Regular), (1, pure CourseFinal)]
 
 instance Arbitrary DocumentType where
-    arbitrary = frequency [(1, pure Offline), (5, pure Online)]
+    arbitrary = elements [Offline, Online]
+
+genCommonDocumentType :: Gen DocumentType
+genCommonDocumentType = frequency [(5, pure Offline), (1, pure Online)]
 
 ---------------------------------------------------------------------
 -- Examples

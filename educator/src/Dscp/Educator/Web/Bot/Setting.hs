@@ -26,7 +26,8 @@ import Data.Time.Clock (getCurrentTime)
 import Fmt ((+|), (+||), (|+), (||+))
 import Loot.Log (ModifyLogName, MonadLogging, logError, logInfo, modifyLogName)
 import UnliftIO (MonadUnliftIO)
-import UnliftIO.Concurrent (forkIO, threadDelay)
+import UnliftIO.Async (async)
+import UnliftIO.Concurrent (threadDelay)
 
 import Dscp.Core.Arbitrary
 import Dscp.Core.Types
@@ -148,7 +149,7 @@ delayed :: (BotWorkMode m) => m () -> m ()
 delayed action
     | botOpsDelay == 0 = action
     | otherwise =
-        void . forkIO $ do
+        void . async $ do
             threadDelay botOpsDelay
             action `catchAny` logException
   where
