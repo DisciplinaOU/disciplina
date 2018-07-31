@@ -1,688 +1,688 @@
 swagger: "2.0"
 info:
-  description: "This is an HTTP API for interacting with Disciplina Educator node on Educator side. It is meant to be used for integrating external systems, CRMs and CMSs with Disciplina"
-  version: "1.0.0"
-  title: "Disciplina Educator API"
-  termsOfService: "https://disciplina.io/tnc.pdf"
+  description: This is an HTTP API for interacting with Disciplina Educator node on Educator side. It is meant to be used for integrating external systems, CRMs and CMSs with Disciplina
+  version: 1.0.0
+  title: Disciplina Educator API
+  termsOfService: https://disciplina.io/tnc.pdf
   contact:
-    email: "hi@serokell.io"
+    email: hi@serokell.io
   license:
-    name: "Apache 2.0"
-    url: "http://www.apache.org/licenses/LICENSE-2.0.html"
-host: "localhost:8090"
-basePath: "/v1"
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+host: localhost:8090
+basePath: /v1
 tags:
-- name: "students"
-  description: "Methods for working with students and their data."
+- name: students
+  description: Methods for working with students and their data.
 schemes:
-- "https"
-- "http"
+- https
+- http
 paths:
   /students:
     get:
       tags:
-      - "students"
-      summary: "Get a list of all registered students' addresses"
+      - students
+      summary: Get a list of all registered students' addresses
       description: ""
-      operationId: "getStudents"
+      operationId: getStudents
       consumes:
-      - "application/json"
+      - application/json
       parameters:
-        - in: "query"
-          name: "course"
-          description: "Return only students attending the given course"
-          required: "false"
-          type: "integer"
-          format: "int32"
+        - in: query
+          name: course
+          description: Return only students attending the given course
+          required: false
+          type: integer
+          format: int32
       produces:
-      - "application/json"
+      - application/json
       responses:
         200:
-          description: "A list of all registered students' addresses"
+          description: A list of all registered students' addresses
           schema:
-            type: "array"
+            type: array
             items:
               $ref: "#/definitions/Student"
     post:
       tags:
-      - "students"
-      summary: "Add a new student address to a database"
+      - students
+      summary: Add a new student address to a database
       description: ""
-      operationId: "addStudent"
+      operationId: addStudent
       consumes:
-      - "application/json"
+      - application/json
       produces:
-      - "application/json"
+      - application/json
       parameters:
-      - in: "body"
-        name: "body"
-        description: "Student object that needs to be added to the system"
+      - in: body
+        name: body
+        description: Student object that needs to be added to the system
         required: true
         schema:
           $ref: "#/definitions/Student"
       responses:
         201:
-          description: "successful operation"
+          description: successful operation
         400:
-          description: "Invalid input"
+          description: Invalid input
           schema:
             $ref: "#/definitions/ApiResponse"
 
   /students/{studentAddr}:
     delete:
       tags:
-      - "students"
-      summary: "Remove a student from a database"
-      description: "Removes a student only if he's not currently attending any course. We will not automatically perform a cascade deletion, because it will make this operation particularly dangerous. If a student attends any course, an error will be raised."
-      operationId: "deleteStudent"
+      - students
+      summary: Remove a student from a database
+      description: Removes a student only if he's not currently attending any course. We will not automatically perform a cascade deletion, because it will make this operation particularly dangerous. If a student attends any course, an error will be raised.
+      operationId: deleteStudent
       produces:
-      - "application/json"
+      - application/json
       parameters:
       - $ref: "#/parameters/StudentAddr"
       responses:
         200:
-          description: "successful operation"
+          description: successful operation
           schema:
             $ref: "#/definitions/Student"
         400:
-          description: "Invalid address value"
+          description: Invalid address value
           schema:
             $ref: "#/definitions/ApiResponse"
         403:
-          description: "Student cannot be deleted, as they are currently attending a course"
+          description: Student cannot be deleted, as they are currently attending a course
           schema:
             $ref: "#/definitions/ApiResponse"
         404:
-          description: "Student with given address not found"
+          description: Student with given address not found
           schema:
             $ref: "#/definitions/ApiResponse"
 
   /students/{studentAddr}/courses:
     get:
       tags:
-      - "students"
-      summary: "Get a list of student's courses"
-      description: "Gets a list of courses which student is currently attending."
-      operationId: "getStudentCourses"
+      - students
+      summary: Get a list of student's courses
+      description: Gets a list of courses which student is currently attending.
+      operationId: getStudentCourses
       produces:
-      - "application/json"
+      - application/json
       parameters:
       - $ref: "#/parameters/StudentAddr"
       responses:
         200:
-          description: "successfull operation"
+          description: successfull operation
           schema:
-            type: "array"
+            type: array
             items:
               $ref: "#/definitions/Course"
         400:
-          description: "Invalid address value"
+          description: Invalid address value
           schema:
             $ref: "#/definitions/ApiResponse"
         404:
-          description: "Student with given address not found"
+          description: Student with given address not found
           schema:
             $ref: "#/definitions/ApiResponse"
 
     post:
       tags:
-      - "students"
-      summary: "Enroll a student in a new course"
-      description: "Given existing student and course, enroll the student to the course."
-      operationId: "enrollStudentToCourse"
+      - students
+      summary: Enroll a student in a new course
+      description: Given existing student and course, enroll the student to the course.
+      operationId: enrollStudentToCourse
       produces:
-      - "application/json"
+      - application/json
       parameters:
       - $ref: "#/parameters/StudentAddr"
-      - in: "body"
-        name: "courseId"
-        description: "Course to enroll"
+      - in: body
+        name: courseId
+        description: Course to enroll
         required: true
         schema:
           $ref: "#/definitions/CourseId"
       responses:
         201:
-          description: "successful operation"
+          description: successful operation
         400:
-          description: "Student address value or request body is invalid"
+          description: Student address value or request body is invalid
           schema:
             $ref: "#/definitions/ApiResponse"
         403:
-          description: "Course with given ID does not exist"
+          description: Course with given ID does not exist
           schema:
             $ref: "#/definitions/ApiResponse"
         404:
-          description: "Student with given address not found"
+          description: Student with given address not found
           schema:
             $ref: "#/definitions/ApiResponse"
 
   /students/{studentAddr}/courses/{courseId}/assignments:
     get:
       tags:
-      - "students"
-      summary: "Get active student's assignments for a given course"
-      description: "Given student address and course ID, gets a list of all pending assignments student has as a part of a course."
-      operationId: "getStudentCourseAssignments"
+      - students
+      summary: Get active student's assignments for a given course
+      description: Given student address and course ID, gets a list of all pending assignments student has as a part of a course.
+      operationId: getStudentCourseAssignments
       produces:
-      - "application/json"
+      - application/json
       parameters:
       - $ref: "#/parameters/StudentAddr"
       - $ref: "#/parameters/CourseId"
-      - in: "query"
-        name: "is_final"
-        description: "Return only final/non-final assignments of the course"
-        required: "false"
-        type: "boolean"
+      - in: query
+        name: is_final
+        description: Return only final/non-final assignments of the course
+        required: false
+        type: boolean
       responses:
         200:
-          description: "successful operation"
+          description: successful operation
           schema:
-            type: "array"
+            type: array
             items:
               $ref: "#/definitions/Assignment"
         400:
-          description: "Student address or course id value is invalid"
+          description: Student address or course id value is invalid
           schema:
             $ref: "#/definitions/ApiResponse"
         412:
-          description: "Given student does not attend given course"
+          description: Given student does not attend given course
           schema:
             $ref: "#/definitions/ApiResponse"
 
   /students/{studentAddr}/courses/{courseId}/submissions:
     get:
       tags:
-      - "students"
-      - "submissions"
-      summary: "Get student's course submissions"
-      description: "Gets a list of student's submissions he made during studying given course."
-      operationId: "getStudentCourseSubmissions"
+      - students
+      - submissions
+      summary: Get student's course submissions
+      description: Gets a list of student's submissions he made during studying given course.
+      operationId: getStudentCourseSubmissions
       produces:
-      - "application/json"
+      - application/json
       parameters:
       - $ref: "#/parameters/StudentAddr"
       - $ref: "#/parameters/CourseId"
       responses:
         200:
-          description: "successful operation"
+          description: successful operation
           schema:
-            type: "array"
+            type: array
             items:
               $ref: "#/definitions/Submission"
         400:
-          description: "Student address or course id value is invalid"
+          description: Student address or course id value is invalid
           schema:
             $ref: "#/definitions/ApiResponse"
         412:
-          description: "Given student does not attend given course"
+          description: Given student does not attend given course
           schema:
             $ref: "#/definitions/ApiResponse"
 
   /students/{studentAddr}/courses/{courseId}/grades:
     get:
       tags:
-      - "students"
-      summary: "Get student's course grades"
-      description: "Gets a list of grades a student received during studying given course."
-      operationId: "getStudentCourseGrades"
+      - students
+      summary: Get student's course grades
+      description: Gets a list of grades a student received during studying given course.
+      operationId: getStudentCourseGrades
       produces:
-      - "application/json"
+      - application/json
       parameters:
       - $ref: "#/parameters/StudentAddr"
       - $ref: "#/parameters/CourseId"
-      - in: "query"
-        name: "is_final"
-        description: "Return only grades for final/non-final assignments of the course"
-        required: "false"
-        type: "boolean"
+      - in: query
+        name: is_final
+        description: Return only grades for final/non-final assignments of the course
+        required: false
+        type: boolean
       responses:
         200:
-          description: "successful operation"
+          description: successful operation
           schema:
-            type: "array"
+            type: array
             items:
               $ref: "#/definitions/Grade"
         400:
-          description: "Student address or course id value is invalid"
+          description: Student address or course id value is invalid
           schema:
             $ref: "#/definitions/ApiResponse"
         412:
-          description: "Given student does not attend given course"
+          description: Given student does not attend given course
           schema:
             $ref: "#/definitions/ApiResponse"
 
   /students/{studentAddr}/courses/{courseId}/proofs:
     get:
       tags:
-      - "students"
-      summary: "Get proofs of student's course progress"
-      description: "Gets student's course grades and submissions in form of private transactions, together with corresponding Merkle proofs."
-      operationId: "getStudentCourseProofs"
+      - students
+      summary: Get proofs of student's course progress
+      description: Gets student's course grades and submissions in form of private transactions, together with corresponding Merkle proofs.
+      operationId: getStudentCourseProofs
       produces:
-      - "application/json"
+      - application/json
       parameters:
       - $ref: "#/parameters/StudentAddr"
       - $ref: "#/parameters/CourseId"
       responses:
         200:
-          description: "successful operation"
+          description: successful operation
           schema:
             $ref: "#/definitions/Proofs"
         400:
-          description: "Student address or course id value is invalid"
+          description: Student address or course id value is invalid
           schema:
             $ref: "#/definitions/ApiResponse"
         412:
-          description: "Given student does not attend given course"
+          description: Given student does not attend given course
           schema:
             $ref: "#/definitions/ApiResponse"
 
   /students/{studentAddr}/assignments:
     get:
       tags:
-      - "students"
-      summary: "Get active student's assignments"
-      description: "Given student address, gets a list of all pending assignments student has."
-      operationId: "getStudentAssignments"
+      - students
+      summary: Get active student's assignments
+      description: Given student address, gets a list of all pending assignments student has.
+      operationId: getStudentAssignments
       produces:
-      - "application/json"
+      - application/json
       parameters:
       - $ref: "#/parameters/StudentAddr"
       responses:
         200:
-          description: "successful operation"
+          description: successful operation
           schema:
-            type: "array"
+            type: array
             items:
               $ref: "#/definitions/Assignment"
         400:
-          description: "Student address value is invalid"
+          description: Student address value is invalid
           schema:
             $ref: "#/definitions/ApiResponse"
         404:
-          description: "Student with a given address not found"
+          description: Student with a given address not found
           schema:
             $ref: "#/definitions/ApiResponse"
     post:
       tags:
-      - "students"
-      summary: "Assign an assignment to a student"
-      description: "Assigns a new assignment to a student in scope of given course."
-      operationId: "assignToStudent"
+      - students
+      summary: Assign an assignment to a student
+      description: Assigns a new assignment to a student in scope of given course.
+      operationId: assignToStudent
       produces:
-      - "application/json"
+      - application/json
       consumes:
-      - "application/json"
+      - application/json
       parameters:
       - $ref: "#/parameters/StudentAddr"
-      - in: "body"
-        name: "assignmentHash"
-        description: "Assignment to assign"
+      - in: body
+        name: assignmentHash
+        description: Assignment to assign
         required: true
         schema:
           $ref: "#/definitions/Hash"
       responses:
         201:
-          description: "successful operation"
+          description: successful operation
         400:
-          description: "Student address value or request body is invalid"
+          description: Student address value or request body is invalid
           schema:
             $ref: "#/definitions/ApiResponse"
         403:
-          description: "Assignment with given hash does not exist"
+          description: Assignment with given hash does not exist
           schema:
             $ref: "#/definitions/ApiResponse"
         404:
-          description: "Student with given address not found"
+          description: Student with given address not found
           schema:
             $ref: "#/definitions/ApiResponse"
 
   /students/{studentAddr}/assignments/{assignmentHash}:
     delete:
       tags:
-      - "students"
-      summary: "Unassign an assignment from a student"
-      description: "If given student has been assigned a given assignment, then unassigns it from them, otherwise raises error."
-      operationId: "unassignFromStudent"
+      - students
+      summary: Unassign an assignment from a student
+      description: If given student has been assigned a given assignment, then unassigns it from them, otherwise raises error.
+      operationId: unassignFromStudent
       produces:
-      - "application/json"
+      - application/json
       parameters:
       - $ref: "#/parameters/StudentAddr"
       - $ref: "#/parameters/AssignmentHash"
       responses:
         400:
-          description: "Student address or assignment hash are invalid"
+          description: Student address or assignment hash are invalid
           schema:
             $ref: "#/definitions/ApiResponse"
         404:
-          description: "Given student didn't have given assignment"
+          description: Given student didn't have given assignment
           schema:
             $ref: "#/definitions/ApiResponse"
 
   /students/{studentAddr}/assignments/{assignmentHash}/submissions:
     get:
       tags:
-      - "students"
-      - "submissions"
-      summary: "Student's submissions for an assignment"
-      description: "Gets a list of student's submissions for a given assignment"
-      operationId: "getStudentAssignmentSubmissions"
+      - students
+      - submissions
+      summary: Student's submissions for an assignment
+      description: Gets a list of student's submissions for a given assignment
+      operationId: getStudentAssignmentSubmissions
       produces:
-      - "application/json"
+      - application/json
       parameters:
       - $ref: "#/parameters/StudentAddr"
       - $ref: "#/parameters/AssignmentHash"
       responses:
         200:
-          description: "successful operation"
+          description: successful operation
           schema:
-            type: "array"
+            type: array
             items:
               $ref: "#/definitions/Submission"
         400:
-          description: "Student address or assignment hash value is invalid"
+          description: Student address or assignment hash value is invalid
           schema:
             $ref: "#/definitions/ApiResponse"
         412:
-          description: "Given student didn't have given assignment"
+          description: Given student didn't have given assignment
           schema:
             $ref: "#/definitions/ApiResponse"
 
   /students/{studentAddr}/assignments/{assignmentHash}/grades:
     get:
       tags:
-      - "students"
-      - "grades"
-      summary: "Get student's assignment grades"
-      description: "Gets a list of grades a student received for submissions on given assignment."
-      operationId: "getStudentAssignmentGrades"
+      - students
+      - grades
+      summary: Get student's assignment grades
+      description: Gets a list of grades a student received for submissions on given assignment.
+      operationId: getStudentAssignmentGrades
       produces:
-      - "application/json"
+      - application/json
       parameters:
       - $ref: "#/parameters/StudentAddr"
       - $ref: "#/parameters/AssignmentHash"
       responses:
         200:
-          description: "successful operation"
+          description: successful operation
           schema:
-            type: "array"
+            type: array
             items:
               $ref: "#/definitions/Grade"
         400:
-          description: "Student address or assignment hash value is invalid"
+          description: Student address or assignment hash value is invalid
           schema:
             $ref: "#/definitions/ApiResponse"
         412:
-          description: "Given student didn't have given assignment"
+          description: Given student didn't have given assignment
           schema:
             $ref: "#/definitions/ApiResponse"
 
   /students/{studentAddr}/submissions:
     get:
       tags:
-      - "students"
-      - "submissions"
-      summary: "Get all student's submissions"
-      description: "Gets a list of all student's submissions."
-      operationId: "getStudentSubmissions"
+      - students
+      - submissions
+      summary: Get all student's submissions
+      description: Gets a list of all student's submissions.
+      operationId: getStudentSubmissions
       produces:
-      - "application/json"
+      - application/json
       parameters:
       - $ref: "#/parameters/StudentAddr"
       responses:
         200:
-          description: "successful operation"
+          description: successful operation
           schema:
-            type: "array"
+            type: array
             items:
               $ref: "#/definitions/Submission"
         400:
-          description: "Student address value is invalid"
+          description: Student address value is invalid
           schema:
             $ref: "#/definitions/ApiResponse"
         404:
-          description: "Student with given address not found"
+          description: Student with given address not found
           schema:
             $ref: "#/definitions/ApiResponse"
 
   /students/{studentAddr}/grades:
     get:
       tags:
-      - "students"
-      summary: "Get all student's grades"
-      description: "Gets a list of all students grades (aka transactions in a private chain)"
-      operationId: "getStudentGrades"
+      - students
+      summary: Get all student's grades
+      description: Gets a list of all students grades (aka transactions in a private chain)
+      operationId: getStudentGrades
       produces:
-      - "application/json"
+      - application/json
       parameters:
       - $ref: "#/parameters/StudentAddr"
       responses:
         200:
-          description: "successful operation"
+          description: successful operation
           schema:
-            type: "array"
+            type: array
             items:
               $ref: "#/definitions/Grade"
         400:
-          description: "Student address value is invalid"
+          description: Student address value is invalid
           schema:
             $ref: "#/definitions/ApiResponse"
         404:
-          description: "Student with given address not found"
+          description: Student with given address not found
           schema:
             $ref: "#/definitions/ApiResponse"
 
   /students/{studentAddr}/proofs:
     get:
       tags:
-      - "students"
-      summary: "Get proofs of all student's activity"
-      description: "Gets all private transactions related to a student together with corresponding Merkle proofs."
-      operationId: "getStudentProofs"
+      - students
+      summary: Get proofs of all student's activity
+      description: Gets all private transactions related to a student together with corresponding Merkle proofs.
+      operationId: getStudentProofs
       produces:
-      - "application/json"
+      - application/json
       parameters:
       - $ref: "#/parameters/StudentAddr"
       responses:
         200:
-          description: "successful operation"
+          description: successful operation
           schema:
             $ref: "#/definitions/Proofs"
         400:
-          description: "Student address value is invalid"
+          description: Student address value is invalid
           schema:
             $ref: "#/definitions/ApiResponse"
         404:
-          description: "Student with given address not found"
+          description: Student with given address not found
           schema:
             $ref: "#/definitions/ApiResponse"
 
   /submissions:
     get:
       tags:
-      - "submissions"
-      summary: "Get all submissions"
-      description: "Gets a list of all submissions done by all students. This method is inaccessible by students."
-      operationId: "getSubmissions"
+      - submissions
+      summary: Get all submissions
+      description: Gets a list of all submissions done by all students. This method is inaccessible by students.
+      operationId: getSubmissions
       produces:
-      - "application/json"
+      - application/json
       responses:
         200:
-          description: "successful operation"
+          description: successful operation
           schema:
-            type: "array"
+            type: array
             items:
               $ref: "#/definitions/Submission"
 
   /submissions/{submissionHash}:
     get:
       tags:
-      - "submissions"
-      summary: "Get info about a submission"
-      description: "Gets a submission data by given submission hash."
-      operationId: "getSubmission"
+      - submissions
+      summary: Get info about a submission
+      description: Gets a submission data by given submission hash.
+      operationId: getSubmission
       produces:
-      - "application/json"
+      - application/json
       parameters:
       - $ref: "#/parameters/SubmissionHash"
       responses:
         200:
-          description: "successful operation"
+          description: successful operation
           schema:
             $ref: "#/definitions/Submission"
         400:
-          description: "Submission hash value is invalid"
+          description: Submission hash value is invalid
           schema:
             $ref: "#/definitions/ApiResponse"
         404:
-          description: "Submission with given hash not found"
+          description: Submission with given hash not found
           schema:
             $ref: "#/definitions/ApiResponse"
     delete:
       tags:
-      - "submissions"
-      summary: "Delete a submission"
-      description: "Deletes a submission from a database. Only ungraded submissions can be deleted."
-      operationId: "deleteSubmission"
+      - submissions
+      summary: Delete a submission
+      description: Deletes a submission from a database. Only ungraded submissions can be deleted.
+      operationId: deleteSubmission
       produces:
-      - "application/json"
+      - application/json
       parameters:
       - $ref: "#/parameters/SubmissionHash"
       responses:
         200:
-          description: "successful operation"
+          description: successful operation
         400:
-          description: "Submission hash value is invalid"
+          description: Submission hash value is invalid
           schema:
             $ref: "#/definitions/ApiResponse"
         404:
-          description: "Submission with given hash not found"
+          description: Submission with given hash not found
           schema:
             $ref: "#/definitions/ApiResponse"
 
   /grades:
     get:
       tags:
-      - "grades"
-      summary: "Get all grades"
-      description: "Gets a list of all grades performed by all students."
-      operationId: "getGrades"
+      - grades
+      summary: Get all grades
+      description: Gets a list of all grades performed by all students.
+      operationId: getGrades
       produces:
-      - "application/json"
+      - application/json
       responses:
         200:
-          description: "successful operation"
+          description: successful operation
           schema:
-            type: "array"
+            type: array
             items:
               $ref: "#/definitions/Grade"
     post:
       tags:
-      - "grades"
-      summary: "Post a new grade"
-      description: "Posts a new grade with a given body."
-      operationId: "postGrade"
+      - grades
+      summary: Post a new grade
+      description: Posts a new grade with a given body.
+      operationId: postGrade
       produces:
-      - "application/json"
+      - application/json
       consumes:
-      - "application/json"
+      - application/json
       parameters:
-      - in: "body"
-        name: "grade"
-        description: "A grade"
+      - in: body
+        name: grade
+        description: A grade
         required: true
         schema:
           $ref: "#/definitions/Grade"
       responses:
         201:
-          description: "successful operation"
+          description: successful operation
           schema:
             $ref: "#/definitions/Grade"
         400:
-          description: "Request body is invalid"
+          description: Request body is invalid
           schema:
             $ref: "#/definitions/ApiResponse"
 
   /assignments:
     get:
       tags:
-      - "assignments"
-      summary: "Get all assignments"
-      description: "Gets a list of all student assignments. Filter parameters are used to specify specific course or student."
-      operationId: "getAssignments"
+      - assignments
+      summary: Get all assignments
+      description: Gets a list of all student assignments. Filter parameters are used to specify specific course or student.
+      operationId: getAssignments
       parameters:
-        - $ref: '#/parameters/CourseId'  # todo student in query param
+        - $ref: '#/parameters/CourseId'
         - $ref: '#/parameters/StudentAddr'
       produces:
-      - "application/json"
+      - application/json
       responses:
         200:
-          description: "successful operation"
+          description: successful operation
           schema:
-            type: "array"
+            type: array
             items:
               $ref: "#/definitions/Assignment"
     post:
       tags:
-      - "assignments"
-      summary: "Add assignment to a course"
-      description: "Add a given assignment to a course."
-      operationId: "addCourseAssignment"
+      - assignments
+      summary: Add assignment to a course
+      description: Add a given assignment to a course.
+      operationId: addCourseAssignment
       parameters:
-        - in: "body"
-          name: "Assignment"
-          description: "An assignment"
+        - in: body
+          name: Assignment
+          description: An assignment
           required: true
           schema:
             $ref: "#/definitions/Assignment"
       produces:
-      - "application/json"
+      - application/json
       responses:
         201:
-          description: "successful operation"
+          description: successful operation
         400:
-          description: "Request body is invalid"
+          description: Request body is invalid
           schema:
             $ref: "#/definitions/ApiResponse"
 
 
 definitions:
   Hash:
-    type: "string"
-    format: "byte"
+    type: string
+    format: byte
   Address:
-    type: "string"
-    format: "byte"
+    type: string
+    format: byte
   Time:
-    type: "string"
-    format: "date-time"
+    type: string
+    format: date-time
   Student:
-    type: "object"
+    type: object
     required:
-    - "addr"
+    - addr
     properties:
       addr:
         $ref: "#/definitions/Address"
   CourseId:
-    type: "integer"
-    format: "int32"
+    type: integer
+    format: int32
   Course:
-    type: "object"
+    type: object
     required:
-    - "id"
+    - id
     properties:
       id:
         $ref: "#/definitions/CourseId"
       desc:
-        type: "string"
+        type: string
       subjects:
-        type: "array"
+        type: array
         items:
           $ref: "#/definitions/Subject"
   Assignment:
-    type: "object"
+    type: object
     required:
-    - "hash"
+    - hash
     properties:
       hash:
         $ref: "#/definitions/Hash"
@@ -693,15 +693,15 @@ definitions:
       is_final:
         type: boolean
       desc:
-        type: "string"
+        type: string
   Submission:
-    type: "object"
+    type: object
     required:
-    - "hash"
-    - "contents_hash"
-    - "assignment_hash"
-    - "student_addr"
-    - "witness"
+    - hash
+    - contents_hash
+    - assignment_hash
+    - student_addr
+    - witness
     properties:
       hash:
         $ref: "#/definitions/Hash"
@@ -712,60 +712,60 @@ definitions:
       student_addr:
         $ref: "#/definitions/Address"
       witness:
-        type: "string"
-        format: "binary"
+        type: string
+        format: binary
   Grade:
-    type: "object"
+    type: object
     properties:
       hash:
         $ref: "#/definitions/Hash"
       submission_hash:
         $ref: "#/definitions/Hash"
       grade:
-        type: "integer"
-        format: "int32"
+        type: integer
+        format: int32
       timestamp:
         $ref: "#/definitions/Time"
 
   Transaction:
-    type: "object"
+    type: object
     required:
-    - "signed_submission"
-    - "grade"
-    - "timestamp"
+    - signed_submission
+    - grade
+    - timestamp
     properties:
       signed_submission:
         $ref: "#/definitions/Submission"
       grade:
-        type: "integer"
-        format: "int32"
+        type: integer
+        format: int32
       timestamp:
         $ref: "#/definitions/Time"
 
   BlkProof:
-    type: "object"
+    type: object
     required:
-    - "mtree_serialized"
-    - "txs"
+    - mtree_serialized
+    - txs
     properties:
       mtree_serialized:
-        type: "string"
-        format: "binary"
+        type: string
+        format: binary
       txs:
-        type: "array"
+        type: array
         items:
           $ref: "#/definitions/Transaction"
 
   Proofs:
-    type: "array"
+    type: array
     items:
       $ref: "#/definitions/BlkProof"
 
   Subject:
-    type: "integer"
-    format: "int32"
+    type: integer
+    format: int32
   ApiResponse:
-    type: "object"
+    type: object
     required:
       - error
     properties:
@@ -802,33 +802,33 @@ definitions:
             * `StudentHasNoAssignment` - Given student didn't have given assignment.
 parameters:
   StudentAddr:
-    in: "path"
-    name: "studentAddr"
-    description: "Student's Disciplina address"
+    in: path
+    name: studentAddr
+    description: Student's Disciplina address
     required: true
-    type: "string"
-    format: "byte"
+    type: string
+    format: byte
   CourseId:
-    in: "path"
-    name: "courseId"
-    description: "Course ID"
+    in: path
+    name: courseId
+    description: Course ID
     required: true
-    type: "integer"
-    format: "int32"
+    type: integer
+    format: int32
   AssignmentHash:
-    in: "path"
-    name: "assignmentHash"
-    description: "Assignment hash"
+    in: path
+    name: assignmentHash
+    description: Assignment hash
     required: true
-    type: "string"
-    format: "byte"
+    type: string
+    format: byte
   SubmissionHash:
-    in: "path"
-    name: "submissionHash"
-    description: "Submission hash"
+    in: path
+    name: submissionHash
+    description: Submission hash
     required: true
-    type: "string"
-    format: "byte"
+    type: string
+    format: byte
 externalDocs:
-  description: "Find out more about Swagger"
-  url: "http://swagger.io"
+  description: Find out more about Swagger
+  url: http://swagger.io
