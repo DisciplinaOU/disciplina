@@ -324,6 +324,8 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                     , aLastSubmission = Nothing
                     }
 
+        it "Meme" $ sqliteProperty $ \() -> return $ property False
+
         it "Filtering works" $
             sqliteProperty $ \
               ( delayedGen listUnique -> preAssignments
