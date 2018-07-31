@@ -13,7 +13,6 @@ module Dscp.DB.SQLite.Queries
        , _SubmissionDoesNotExist
        , _TransactionDoesNotExist
        , _BlockWithIndexDoesNotExist
-       , _BlockProofIsCorrupted
          -- * Synonym for MonadSQLiteDB
        , DBM
 
@@ -58,11 +57,7 @@ import Database.SQLite.Simple.ToField (ToField)
 import Database.SQLite.Simple.ToRow (ToRow (..))
 import Text.InterpolatedString.Perl6 (q)
 
-import Dscp.Core (ATGDelta, Assignment (..), Course, PrivateBlock (..), PrivateBlockHeader (..),
-                  PrivateTx (..), SignedSubmission (..), Student, Subject, Submission (..),
-                  aContentsHash, aCourseId, aDesc, aType, genesisHeaderHash, ptGrade,
-                  ptSignedSubmission, ptTime, sAssignment, sContentsHash, sStudentId, ssSubmission,
-                  ssWitness)
+import Dscp.Core
 import Dscp.Crypto (Hash, MerkleProof, fillEmptyMerkleTree, getEmptyMerkleTree, getMerkleRoot, hash)
 import qualified Dscp.Crypto.MerkleTree as MerkleTree (fromList)
 import Dscp.DB.SQLite.BlockData (BlockData (..), TxInBlock (..), TxWithIdx (..))
@@ -97,9 +92,6 @@ data DomainError
 
     | BlockWithIndexDoesNotExist
         { deBlockIdx :: Word32 }
-
-    | BlockProofIsCorrupted
-        { deBlockId :: Id PrivateBlock }
 
     deriving (Show, Typeable, Eq)
 

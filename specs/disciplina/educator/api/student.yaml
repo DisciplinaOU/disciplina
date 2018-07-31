@@ -176,7 +176,7 @@ paths:
           schema:
             $ref: '#/definitions/Submission'
         '404':
-          description: Submission with given wasn not found (or a user has no rights to look it up)
+          description: Submission with given hash was not found (or a user has no rights to look it up)
     delete:
       tags:
         - submissions
@@ -229,7 +229,7 @@ definitions:
   Hash:
     type: string
     format: byte
-    description: "Blake2b hash, 256 bits"
+    description: "Base64url encoded blake2b (256 bits) hash"
     
   Address:
     type: string
@@ -405,7 +405,31 @@ definitions:
     properties:
       error:
         type: string
-        enum: [SubmissionMalformed, SubmissionSignatureInvalid, DeletingGradedSubmission]
+        enum:
+          - SubmissionSignatureInvalid
+          - FakeSubmissionSignature
+          - DeletingGradedSubmission
+          - CourseDoesNotExist
+          - StudentDoesNotExist
+          - AssignmentDoesNotExist
+          - StudentWasNotEnrolledOnTheCourse
+          - StudentWasNotSubscribedOnAssignment
+          - SubmissionDoesNotExist
+          - TransactionDoesNotExist
+          - SubmissionAlreadyExists
+        description: >-
+          * `SubmissionSignatureInvalid`: Signature does not match to claimed submission author.
+          * `FakeSubmissionSignature`: Claimed owner of submission does not match to authenticated user.
+          * `DeletingGradedSubmission`: Attempt to delete an already graded submission.
+          * `CourseDoesNotExist`: Given course does not exist.
+          * `StudentDoesNotExist`: Given student is not known to the educator.
+          * `AssignmentDoesNotExist`: Given assignment does not exist.
+          * `StudentWasNotEnrolledOnTheCourse`: Cannot perform this operation because student is not enrolled on the course.
+          * `StudentWasNotSubscribedOnAssignment`: Cannot perform this operation because student is not subscribed on this assignment.
+          * `SubmissionDoesNotExist`: Submission does not exist.
+          * `TransactionDoesNotExist`: Transaction does not exist.
+          * `SubmissionAlreadyExists`: Exactly the same submission has already been submitted.
+ 
 parameters:
   CourseId:
     in: query

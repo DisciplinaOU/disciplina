@@ -12,7 +12,6 @@ module Dscp.Educator.Web.Student.Types
        , BlkProof (..)
        , NewSubmission (..)
        , nsOwner
-       , ErrResponse (..)
 
        , _IsFinal
        , assignmentTypeRaw
@@ -32,7 +31,6 @@ import Dscp.Core (PrivateTx (..), addrFromText)
 import qualified Dscp.Core as Core
 import Dscp.Crypto (hash)
 import Dscp.Crypto (Hash, Raw)
-import Dscp.Educator.Web.Student.Error (APIError)
 import Dscp.Util (Id, fromBase64)
 import Dscp.Util.Aeson (AsByteString, Base64Encoded)
 
@@ -95,10 +93,6 @@ data NewSubmission = NewSubmission
 nsOwner :: NewSubmission -> Id Core.Student
 nsOwner = Core.mkAddr . Core._swKey . nsWitness
 
-data ErrResponse = ErrResponse
-    { erError :: !APIError
-    } deriving (Show, Eq, Generic)
-
 ---------------------------------------------------------------------------
 -- Simple functions
 ---------------------------------------------------------------------------
@@ -160,7 +154,6 @@ deriveJSON defaultOptions ''Submission
 deriveJSON defaultOptions ''Grade
 deriveJSON defaultOptions ''BlkProof
 deriveJSON defaultOptions ''NewSubmission
-deriveJSON defaultOptions ''ErrResponse
 
 ---------------------------------------------------------------------------
 -- FromHttpApiData instances
