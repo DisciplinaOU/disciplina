@@ -16,6 +16,7 @@ with import <nixpkgs> {
 let
   hsPkgs = haskell.packages.ghc822;
   environment.variables.TASTY_QUICKCHECK_SHOW_REPLAY=true
+  environment.variables.QUICKCHECK_TESTS=10000
 in
   haskell.lib.buildStackProject {
     name = "disciplina";
