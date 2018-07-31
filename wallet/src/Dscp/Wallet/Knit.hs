@@ -6,8 +6,8 @@ import Codec.Serialise (deserialiseOrFail, serialise)
 import Control.Exception
 import Control.Lens
 import Data.Scientific (toBoundedInteger)
-import Dscp.Core (TxOut(..), addrFromText, coinToInteger, mkAddr, toTxId)
-import Dscp.Crypto (decrypt, emptyPassPhrase, encrypt, mkPassPhrase)
+import Dscp.Core (TxOut(..), addrFromText, coinToInteger, toTxId)
+import Dscp.Crypto (mkPassPhrase)
 import Dscp.Util (toHex)
 import IiExtras
 import Text.Earley
@@ -108,14 +108,19 @@ instance AllConstrained (Elem components) '[Wallet, Core] => ComponentCommandPro
             pure (passString)
         , cpRepr = \(passString) -> CommandAction $ \WalletFace{..} -> do
             mPassPhrase <- forM passString $ either throwIO return . mkPassPhrase . encodeUtf8
-            (secretKey, publicKey) <- walletGenKeyPair
-            return . toValue . ValueList $
-              toValue <$>
-              [ ValueCryptoKey . BSL.toStrict . serialise . encrypt (fromMaybe emptyPassPhrase mPassPhrase) $ secretKey
-              , ValueCryptoKey . BA.convert $ publicKey
-              , ValueAddress . mkAddr $ publicKey
-              ]
-        , cpHelp = "Generate a key pair."
+            account <- walletGenKeyPair mPassPhrase
+            return . renderAccount $ account
+        , cpHelp = "Generate a key pair and save into storage."
+        }
+    , CommandProc
+        { cpName = "list-keys"
+        , cpArgumentPrepare = identity
+        , cpArgumentConsumer = pure ()
+        , cpRepr = \() -> CommandAction $ \WalletFace{..} -> do
+            accounts <- walletListKeys
+            let values = renderAccount <$> accounts
+            return . toValue . ValueList $ values
+        , cpHelp = "List all keys in storage."
         }
     , CommandProc
         { cpName = "tx-out"
@@ -139,14 +144,9 @@ instance AllConstrained (Elem components) '[Wallet, Core] => ComponentCommandPro
             outs <- getArgSome tyTxOut "out"
             pure (passString, secretKeyString, outs)
         , cpRepr = \(passString, secretKeyString, outs) -> CommandAction $ \WalletFace{..} -> do
-            let
-              decodeEncryptedSK passPhrase =
-                either throwIO return . deserialiseOrFail . BSL.fromStrict >=>
-                either throwIO return . decrypt passPhrase
-
             mPassPhrase <- forM passString $ either throwIO return . mkPassPhrase . encodeUtf8
-            secretKey <- decodeEncryptedSK (fromMaybe emptyPassPhrase mPassPhrase) $ secretKeyString
-            toValue . ValueString . toHex . toTxId <$> walletSendTx secretKey outs
+            eSecretKey <- either throwIO return . deserialiseOrFail . BSL.fromStrict $ secretKeyString
+            toValue . ValueString . toHex . toTxId <$> walletSendTx eSecretKey mPassPhrase outs
         , cpHelp = "Send a transaction."
         }
     , CommandProc
@@ -160,6 +160,16 @@ instance AllConstrained (Elem components) '[Wallet, Core] => ComponentCommandPro
         , cpHelp = "Get address balance."
         }
     ]
+
+renderAccount
+  :: AllConstrained (Elem components) '[Wallet, Core]
+  => Account
+  -> Value components
+renderAccount Account{..} = toValue . ValueList $
+  [ toValue . ValueCryptoKey . BSL.toStrict . serialise $ accountSecretKey
+  , toValue . ValueCryptoKey . BA.convert $ accountPublicKey
+  , toValue . ValueAddress $ accountAddress
+  ]
 
 ----------------------------------------------------------------------------
 -- Type projections
