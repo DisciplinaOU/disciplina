@@ -105,11 +105,27 @@ instance AllConstrained (Elem components) '[Wallet, Core] => ComponentCommandPro
         , cpArgumentPrepare = identity
         , cpArgumentConsumer = do
             passString <- getArgOpt tyString "pass"
-            pure (passString)
-        , cpRepr = \(passString) -> CommandAction $ \WalletFace{..} -> do
+            mName <- getArgOpt tyString "name"
+            pure (passString, mName)
+        , cpRepr = \(passString, mName) -> CommandAction $ \WalletFace{..} -> do
             mPassPhrase <- forM passString $ either throwIO return . mkPassPhrase . encodeUtf8
-            account <- walletGenKeyPair mPassPhrase
+            account <- walletGenKeyPair mName mPassPhrase
             return . renderAccount $ account
+        , cpHelp = "Generate a key pair and save into storage."
+        }
+    , CommandProc
+        { cpName = "restore-key"
+        , cpArgumentPrepare = identity
+        , cpArgumentConsumer = do
+            secretKeyString <- getArg tyCryptoKey "secretkey"
+            passString <- getArgOpt tyString "pass"
+            mName <- getArgOpt tyString "name"
+            pure (secretKeyString, passString, mName)
+        , cpRepr = \(secretKeyString, passString, mName) -> CommandAction $ \WalletFace{..} -> do
+            mPassPhrase <- forM passString $ either throwIO return . mkPassPhrase . encodeUtf8
+            eSecretKey <- either throwIO return . deserialiseOrFail . BSL.fromStrict $ secretKeyString
+            walletRestoreKey mName eSecretKey mPassPhrase
+            return . toValue $ ValueUnit
         , cpHelp = "Generate a key pair and save into storage."
         }
     , CommandProc
@@ -166,7 +182,8 @@ renderAccount
   => Account
   -> Value components
 renderAccount Account{..} = toValue . ValueList $
-  [ toValue . ValueCryptoKey . BSL.toStrict . serialise $ accountSecretKey
+  [ toValue . ValueString $ fromMaybe "" accountName
+  , toValue . ValueCryptoKey . BSL.toStrict . serialise $ accountSecretKey
   , toValue . ValueCryptoKey . BA.convert $ accountPublicKey
   , toValue . ValueAddress $ accountAddress
   ]

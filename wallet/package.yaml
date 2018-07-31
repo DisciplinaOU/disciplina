@@ -8,7 +8,11 @@ library:
   default-extensions:
     - ApplicativeDo
     - DataKinds
+    - EmptyCase
     - ExistentialQuantification
+    - NegativeLiterals
+    - OverloadedLabels
+    - TypeOperators
   dependencies:
     - Earley
     - aeson
@@ -40,6 +44,17 @@ library:
     - text-format
     - vinyl
 
+    # for Ariadne/UI/Vty
+    - Hclip
+    - ansi-terminal
+    - brick
+    - named
+    - text-zipper
+    - transformers
+    - vty
+  ghc-options:
+    - -Wno-unused-top-binds
+
 executables:
   disciplina-wallet:
     <<: *exec-common
@@ -49,9 +64,29 @@ executables:
     dependencies:
       - ansi-wl-pprint
       - disciplina-core
-      - disciplina-witness
       - disciplina-wallet
+      - disciplina-witness
       - ii-extras
       - knit
       - optparse-applicative
       - text
+
+  disciplina-wallet-vty:
+    <<: *exec-common
+    source-dirs: app-vty
+    default-extensions:
+      - DataKinds
+    dependencies:
+      - ansi-wl-pprint
+      - containers
+      - double-conversion
+      - disciplina-core
+      - disciplina-wallet
+      - disciplina-witness
+      - ii-extras
+      - knit
+      - lens
+      - optparse-applicative
+      - serokell-util
+      - text
+      - vector
