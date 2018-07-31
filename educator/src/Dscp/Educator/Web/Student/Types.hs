@@ -31,8 +31,8 @@ import Dscp.Core (PrivateTx (..), addrFromText)
 import qualified Dscp.Core as Core
 import Dscp.Crypto (hash)
 import Dscp.Crypto (Hash, Raw)
-import Dscp.Util (Id, fromBase64)
-import Dscp.Util.Aeson (AsByteString, Base64Encoded)
+import Dscp.Util (Id, fromHex)
+import Dscp.Util.Aeson (AsHex)
 
 type Student = Core.Student
 
@@ -80,7 +80,7 @@ data Grade = Grade
     } deriving (Show, Eq, Generic)
 
 data BlkProof = BlkProof
-    { bpMtreeSerialized :: !(AsByteString Base64Encoded ByteString)
+    { bpMtreeSerialized :: !(AsHex ByteString)
     , bpTxs             :: ![PrivateTx]
     } deriving (Show, Eq, Generic)
 
@@ -174,4 +174,4 @@ instance FromHttpApiData Core.Address where
     parseQueryParam = addrFromText
 
 instance FromHttpApiData (Hash a) where
-    parseQueryParam = first toText . fromBase64
+    parseQueryParam = first toText . fromHex

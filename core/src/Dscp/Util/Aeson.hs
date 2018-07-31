@@ -1,9 +1,7 @@
 -- | Aeson instances for common types and some useful abstractions.
 
 module Dscp.Util.Aeson
-    ( AsByteString (..)
-    , Base64Encoded
-
+    ( AsHex (..)
     , Versioned (..)
 
     , toJSONSerialise
@@ -18,28 +16,22 @@ import qualified Data.ByteArray as BA
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.SemVer as SemVer
 import Fmt ((+||), (||+))
-import qualified Serokell.Util.Base64 as Base64
 
 import qualified Dscp.Crypto.ByteArray as BA
-import Dscp.Util (Base, fromBase, leftToFail, leftToFailWith, toBase)
+import Dscp.Util (Base, fromBase, fromHex, leftToFail, toBase, toHex)
 import Dscp.Util.Test
 
 -- | Often one wants to convert bytestring to JSON, but such convertion
--- is encoding-dependent so we have no corresponding instance.
-newtype AsByteString encoding a = AsByteString { getAsByteString :: a }
+-- is encoding-dependent so we have no corresponding instance because it would
+-- be ambiguous.
+newtype AsHex a = AsHex { getAsHex :: a }
     deriving (Eq, Ord, Show, Monoid, ByteArrayAccess, ByteArray)
 
-data Base64Encoded
-
-instance BA.ByteArrayAccess a => ToJSON (AsByteString Base64Encoded a) where
-    toJSON = String . Base64.encode . BA.convert . getAsByteString
-instance BA.FromByteArray a => FromJSON (AsByteString Base64Encoded a) where
-    parseJSON = withText "base64 text" $ \t -> do
-        bs <- Base64.decode t
-            & leftToFailWith "Invalid base64 string"
-        res <- BA.fromByteArray bs
-            & leftToFailWith "Malformed object representation"
-        return $ AsByteString res
+instance BA.ByteArrayAccess a => ToJSON (AsHex a) where
+    toJSON = String . toHex . getAsHex
+instance BA.FromByteArray a => FromJSON (AsHex a) where
+    parseJSON = withText "hex text" $ \t -> do
+        fmap AsHex . leftToFail $ fromHex t
 
 -- | Attaches version of JSON serialisation format.
 newtype Versioned a = Versioned a
@@ -65,7 +57,7 @@ instance FromJSON a => FromJSON (Versioned a) where
         content <- o .: "content"
         return $ Versioned content
 
-deriving instance Arbitrary a => Arbitrary (AsByteString encoding a)
+deriving instance Arbitrary a => Arbitrary (AsHex a)
 
 instance Arbitrary a => Arbitrary (Versioned a) where
     arbitrary = Versioned <$> arbitrary
