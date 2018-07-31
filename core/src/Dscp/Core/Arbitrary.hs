@@ -61,14 +61,6 @@ instance Arbitrary SubmissionWitness where
         sig <- unsafeSign sk <$> arbitrary @ByteString
         pure $ SubmissionWitness (toPublic sk) sig
 
-instance Arbitrary SignedSubmission where
-    arbitrary = do
-        sk <- arbitrary
-        sub <- arbitrary
-        let pk = toPublic sk
-            sig = sign sk $ hash sub
-        pure $ SignedSubmission sub $ SubmissionWitness pk sig
-
 -- | Generate several submissions of same student.
 -- 'sStudentId' field of generated submission will be replaced.
 genStudentSignedSubmissions
@@ -85,6 +77,11 @@ genStudentSignedSubmissions genSK genSubmission = do
             sig = sign sk $ hash sub'
         pure $ SignedSubmission sub' $ SubmissionWitness pk sig
     return (studentId, ss)
+
+instance Arbitrary SignedSubmission where
+    arbitrary = do
+        (_, ss :| _) <- genStudentSignedSubmissions arbitrary
+        return ss
 
 instance Arbitrary AssignmentType where
     arbitrary = elements [Regular, CourseFinal]

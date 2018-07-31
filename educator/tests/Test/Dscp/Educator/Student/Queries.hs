@@ -573,6 +573,17 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                 throwsPrism (_EntityAlreadyPresent . _SubmissionAlreadyExists) $
                     sqlTx $ DB.makeSubmission sigSubmission
 
+        it "Making submission works" $
+            sqliteProperty $ \sigSubmission -> do
+                let student = Core._sStudentId (Core._ssSubmission sigSubmission)
+                let submissionReq = signedSubmissionToRequest sigSubmission
+                prepareForSubmissions [sigSubmission]
+                void $ Logic.makeSubmissionVerified student submissionReq
+
+                res <- getAllSubmissions student
+                let submission = Core._ssSubmission sigSubmission
+                return $ res === [liftSubmission submission Nothing]
+
         it "Pretending to be another student is bad" $
             sqliteProperty $ \(sigSubmission, badStudent) -> do
                 if Core._sStudentId (Core._ssSubmission sigSubmission) == badStudent
