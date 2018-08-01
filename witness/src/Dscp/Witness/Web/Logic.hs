@@ -9,6 +9,7 @@ import qualified Snowdrop.Model.Execution as SD
 import qualified Snowdrop.Model.State.Core as SD
 
 import Dscp.Core
+import Dscp.Core.Foundation.Transactions
 import Dscp.Snowdrop
 import Dscp.Util (assertJust)
 import Dscp.Witness.Mempool

@@ -14,23 +14,24 @@ module Dscp.Wallet.Face
        , TxOut (..)
        ) where
 
-import Dscp.Core.Types (Address, Coin (..), Tx, TxOut (..))
+import Dscp.Core.Foundation.Transactions (Coin (..), Tx, TxOut (..))
+import Dscp.Core.Types (Address)
 import Dscp.Crypto (Encrypted, PassPhrase, PublicKey, SecretKey)
 
 data WalletFace = WalletFace
     { walletRefreshState :: IO ()
-    , walletGenKeyPair :: Maybe Text -> Maybe PassPhrase -> IO Account
-    , walletRestoreKey :: Maybe Text -> Encrypted SecretKey -> Maybe PassPhrase -> IO ()
-    , walletListKeys :: IO [Account]
-    , walletSendTx :: Encrypted SecretKey -> Maybe PassPhrase -> NonEmpty TxOut -> IO Tx
-    , walletGetBalance :: Address -> IO Coin
+    , walletGenKeyPair   :: Maybe Text -> Maybe PassPhrase -> IO Account
+    , walletRestoreKey   :: Maybe Text -> Encrypted SecretKey -> Maybe PassPhrase -> IO ()
+    , walletListKeys     :: IO [Account]
+    , walletSendTx       :: Encrypted SecretKey -> Maybe PassPhrase -> NonEmpty TxOut -> IO Tx
+    , walletGetBalance   :: Address -> IO Coin
     }
 
 data Account = Account
-    { accountName :: Maybe Text
+    { accountName      :: Maybe Text
     , accountSecretKey :: Encrypted SecretKey
     , accountPublicKey :: PublicKey
-    , accountAddress :: Address
+    , accountAddress   :: Address
     }
     deriving (Eq, Show)
 

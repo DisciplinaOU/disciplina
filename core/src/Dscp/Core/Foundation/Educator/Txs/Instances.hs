@@ -1,11 +1,11 @@
-module Dscp.Educator.Txs.Instances () where
+module Dscp.Core.Foundation.Educator.Txs.Instances () where
 
 import Codec.Serialise (Serialise (..))
 
 import Dscp.Core.Serialise ()
 import Dscp.Crypto (Hash, hash)
 import Dscp.Crypto.Serialise ()
-import Dscp.Educator.Txs.Type (PrivateTx (..), PrivateTxAux (..), PrivateTxWitness (..))
+import Dscp.Core.Foundation.Educator.Txs.Type (PrivateTx (..), PrivateTxAux (..), PrivateTxWitness (..))
 import Dscp.Util (HasId (..))
 
 -- TODO: make well-defined Serialise instances instead of generic ones

@@ -61,14 +61,15 @@ import Text.InterpolatedString.Perl6 (q)
 import Dscp.Core (ATGDelta, Assignment (..), Course, SignedSubmission (..), Student, Subject,
                   Submission (..), aContentsHash, aCourseId, aDesc, aType, sAssignment,
                   sContentsHash, sStudentId, ssSubmission, ssWitness)
+import Dscp.Core.Foundation.Educator.Block (PrivateBlock (..), PrivateBlockHeader (..),
+                                            genesisHeaderHash)
+import Dscp.Core.Foundation.Educator.Txs (PrivateTx (..), ptGrade, ptSignedSubmission, ptTime)
 import Dscp.Crypto (Hash, MerkleProof, fillEmptyMerkleTree, getEmptyMerkleTree, getMerkleRoot, hash)
 import qualified Dscp.Crypto.MerkleTree as MerkleTree (fromList)
 import Dscp.DB.SQLite.BlockData (BlockData (..), TxInBlock (..), TxWithIdx (..))
 import Dscp.DB.SQLite.Class (MonadSQLiteDB (..), transaction)
 import Dscp.DB.SQLite.Instances ()
 import Dscp.DB.SQLite.Types (TxBlockIdx (TxInMempool))
-import Dscp.Educator.Block (PrivateBlock (..), PrivateBlockHeader (..), genesisHeaderHash)
-import Dscp.Educator.Txs (PrivateTx (..), ptGrade, ptSignedSubmission, ptTime)
 import Dscp.Util (HasId (..), assert, assertJust, idOf)
 
 data DomainError

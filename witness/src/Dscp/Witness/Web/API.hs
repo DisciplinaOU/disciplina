@@ -10,7 +10,8 @@ module Dscp.Witness.Web.API
 import Servant
 import Servant.Generic
 
-import Dscp.Core.Types
+import Dscp.Core
+import Dscp.Core.Foundation.Transactions
 import Dscp.Witness.Web.Types
 
 -- | API/implementation of witness endpoints.

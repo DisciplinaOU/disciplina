@@ -11,10 +11,13 @@ import qualified Snowdrop.Model.State.Core as SD
 import qualified Snowdrop.Util as SD
 
 import Dscp.Core
+import Dscp.Core.Foundation.Genesis (genesisHash)
+import Dscp.Core.Foundation.Transactions (Header (..), HeaderHash, Publication (..),
+                                          PublicationTxId, TxId)
 import Dscp.Crypto (PublicKey, Signature, hash, verify)
 import Dscp.Snowdrop.AccountValidation as A
-import Dscp.Snowdrop.Configuration (Exceptions, Ids, Proofs (..), SHeader, SPayload, SUndo, TxIds,
-                                    Values)
+import Dscp.Snowdrop.Configuration (AddrTxProof, Exceptions, Ids, Proofs (..), PublicationTxProof,
+                                    SHeader, SPayload, SUndo, Values)
 
 ----------------------------------------------------------------------------
 -- Validator
@@ -28,38 +31,63 @@ validator = mempty
 instance
     SD.VerifySign
         PublicKey
-        (Signature (TxId, PublicKey))
-        (TxId, PublicKey)
+        (Signature (TxId, PublicKey, ()))
+        (TxId, PublicKey, ())
+  where
+    verifySignature = verify
+
+instance
+    SD.VerifySign
+        PublicKey
+        (Signature (TxId, PublicKey, Publication))
+        (TxId, PublicKey, Publication)
   where
     verifySignature = verify
 
 instance SD.HasGetter PublicKey Address where
     gett = Address . hash
 
-instance SD.HasGetter Proofs (SD.WithSignature PublicKey (Signature (TxId, PublicKey)) (TxId, PublicKey)) where
-    gett (AddressTxWitness it) = it
+instance SD.HasPrism Proofs AddrTxProof where
+    proj (AddressTxWitness it) = Just it
+    proj  _                    = Nothing
 
-instance SD.HasGetter Proofs TxId where
-    gett (AddressTxWitness (SD.WithSignature { wsBody = (it, _) })) = it
+instance SD.HasReview Proofs AddrTxProof where
+    inj = AddressTxWitness
+
+instance SD.HasPrism Proofs PublicationTxProof where
+    proj (PublicationTxWitness it) = Just it
+    proj  _                        = Nothing
+
+instance SD.HasReview Proofs PublicationTxProof where
+    inj = PublicationTxWitness
+
+instance SD.HasPrism Proofs TxId where
+    proj (AddressTxWitness (SD.WithSignature { wsBody = (it, _, _) })) = Just it
+    proj  _                                                            = Nothing
+
+-- | We have to implement one part of the Prism ("contains"), bu we
+--   can't rebuild Proofs from TxId back.
+instance SD.HasReview Proofs TxId where
+    inj = error "impossible to implement"
+
+instance SD.HasPrism Proofs PublicationTxId where
+    proj (PublicationTxWitness (SD.WithSignature { wsBody = (it, _, _) })) = Just it
+    proj  _                                                                = Nothing
+
+-- | Same as TxId.
+instance SD.HasReview Proofs PublicationTxId where
+    inj = error "impossible to implement"
 
 instance SD.HasGetter Proofs PublicKey where
-    gett (AddressTxWitness (SD.WithSignature { wsBody = (_, it) })) = it
+    gett (AddressTxWitness     (SD.WithSignature { wsBody = (_, it, _) })) = it
+    gett (PublicationTxWitness (SD.WithSignature { wsBody = (_, it, _) })) = it
 
 _baseValidator ::
        forall chgAccum.
        SD.Validator Exceptions Ids Proofs Values (IOCtx chgAccum)
 _baseValidator =
     A.validateSimpleMoneyTransfer
-        @Exceptions
-        @PublicKey
-        @Address
-        @Ids
-        @Proofs
-        @Values
         @(IOCtx chgAccum)
-        @(Signature (TxId, PublicKey))
-        @TxId
-        @TxIds
 
 ----------------------------------------------------------------------------
 -- Block configuration

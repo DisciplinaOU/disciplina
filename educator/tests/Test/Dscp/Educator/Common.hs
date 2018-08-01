@@ -7,8 +7,8 @@ import Data.Time.Clock (UTCTime)
 import Data.Time.Format (defaultTimeLocale, parseTimeOrError)
 
 import Dscp.Core
+import Dscp.Core.Foundation.Educator (PrivateTx (..))
 import Dscp.Crypto (PublicKey, SecretKey, hash, sign)
-import Dscp.Educator (PrivateTx (..))
 import Dscp.Util (Id)
 
 

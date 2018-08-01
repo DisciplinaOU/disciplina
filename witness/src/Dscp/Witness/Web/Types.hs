@@ -11,7 +11,7 @@ import Servant (FromHttpApiData (..))
 
 import Dscp.Core.Address
 import Dscp.Core.Aeson ()
-import Dscp.Core.Types
+import Dscp.Core.Foundation.Transactions
 import Dscp.Util.Servant (ForResponseLog (..))
 
 -- | All balances related to account.

@@ -7,6 +7,7 @@ import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
 
 import Dscp.Core.Address (addrFromText)
+import Dscp.Core.Foundation.Transactions.Types
 import Dscp.Core.Serialise ()
 import Dscp.Core.Types
 import Dscp.Crypto.Aeson ()
@@ -79,3 +80,11 @@ deriveJSON defaultOptions ''Tx
 deriveJSON defaultOptions ''TxWitness
 deriveJSON defaultOptions ''TxWitnessed
 deriveJSON defaultOptions ''GTxWitnessed
+deriveJSON defaultOptions ''Publication
+deriveJSON defaultOptions ''PublicationTxWitness
+deriveJSON defaultOptions ''PublicationTxWitnessed
+deriveJSON defaultOptions ''PublicationTx
+deriveJSON defaultOptions ''PublicationsOf
+deriveJSON defaultOptions ''LastPublication
+deriveJSON defaultOptions ''PublicationHead
+deriveJSON defaultOptions ''PublicationNext

@@ -16,6 +16,7 @@ import Database.SQLite.Simple.ToField (ToField)
 import Loot.Log (MonadLogging)
 import Text.InterpolatedString.Perl6 (q)
 
+import Dscp.Core.Foundation.Educator.Txs (PrivateTx)
 import Dscp.Core.Serialise ()
 import qualified Dscp.Core.Types as Core
 import Dscp.Crypto (Hash, hash)
@@ -23,7 +24,6 @@ import Dscp.DB.SQLite (DomainError (..), MonadSQLiteDB (..), TxBlockIdx (TxInMem
                        WithinSQLTransaction)
 import qualified Dscp.DB.SQLite.Queries as Base
 import Dscp.DB.SQLite.Types (asAlreadyExistsError)
-import Dscp.Educator.Txs (PrivateTx)
 import Dscp.Util (Id, assertJust, listToMaybeWarn)
 import Dscp.Util.Aeson (AsByteString (..))
 

@@ -7,11 +7,13 @@ import System.IO.Unsafe (unsafePerformIO)
 import Test.Hspec
 
 import Dscp.Core (ATGDelta (..), Course (..), gB, ssSubmission, ssWitness, swKey, swSig)
+import Dscp.Core.Foundation.Educator (PrivateBlock (..), PrivateBlockBody (..),
+                                      PrivateBlockHeader (..), PrivateTx (..), genesisHeaderHash,
+                                      ptSignedSubmission)
 import Dscp.Crypto (AbstractPK (..), AbstractSK (..), PublicKey, SecretKey, fromFoldable,
                     getMerkleRoot, hash)
-import Dscp.Educator (BlockValidationFailure (..), PrivateBlock (..), PrivateBlockBody (..),
-                      PrivateBlockHeader (..), PrivateTx (..), SubmissionValidationFailure (..),
-                      genesisHeaderHash, ptSignedSubmission, validatePrivateBlk)
+import Dscp.Educator.BlockValidation (BlockValidationFailure (..), SubmissionValidationFailure (..),
+                                      validatePrivateBlk)
 import Dscp.Util (Id)
 import Dscp.Util.Test
 

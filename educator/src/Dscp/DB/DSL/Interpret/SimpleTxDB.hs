@@ -8,10 +8,10 @@ import Data.Map.Strict (Map)
 
 import Dscp.Core (Assignment (..), Course (..), SignedSubmission (..), Subject, Submission (..),
                   activityTypeGraphIndexed, hasPathFromTo)
+import Dscp.Core.Foundation.Educator (PrivateTx (..))
 import Dscp.Crypto (hash)
 import Dscp.DB.DSL.Class (MonadSearchTxObj (..), Obj, ObjHashEq (..), QueryObj (..), QueryTx (..),
                           QueryTxs (..), RunQuery (..), TxIdEq (..), TxsFilterExpr (..), WHERE (..))
-import Dscp.Educator (PrivateTx (..))
 import Dscp.Util (HasId (Id))
 
 import qualified Data.Map.Strict as Map hiding (Map)

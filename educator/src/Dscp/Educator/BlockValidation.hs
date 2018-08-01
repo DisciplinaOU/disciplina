@@ -16,9 +16,10 @@ import Data.Text.Buildable (build)
 
 import Dscp.Core (Address (..), SignedSubmission (..), Submission (..), SubmissionSig, sStudentId,
                   ssSubmission, ssWitness, swKey, swSig)
+import Dscp.Core.Foundation.Educator.Block (PrivateBlock (..), PrivateBlockHeader (..), _pbBody,
+                                            _pbbTxs)
+import Dscp.Core.Foundation.Educator.Txs (PrivateTx (..))
 import Dscp.Crypto (Hash, MerkleSignature, PublicKey, fromFoldable, getMerkleRoot, hash, verify)
-import Dscp.Educator.Block (PrivateBlock (..), PrivateBlockHeader (..), _pbBody, _pbbTxs)
-import Dscp.Educator.Txs (PrivateTx (..))
 import Text.InterpolatedString.Perl6 (qc)
 
 import qualified Data.Text.Buildable ()

@@ -7,9 +7,9 @@ import qualified Data.Set as Set (Set, empty, member, singleton)
 
 import Text.InterpolatedString.Perl6 (qc, qq)
 
+import Dscp.Core.Foundation.Educator.Txs (PrivateTx (..))
 import Dscp.DB.DSL.Class
 import Dscp.DB.SQLite
-import Dscp.Educator.Txs (PrivateTx (..))
 
 instance
 --    v-- GHC says it cand "find" Monad in superclasses (wat).
