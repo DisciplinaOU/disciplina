@@ -676,6 +676,11 @@ paths:
           required: true
           schema:
             $ref: "#/definitions/Assignment"
+        - in: query
+          name: autoAssign
+          description: Automatically subscribe all students attending related course to new assignment.
+          required: false
+          type: boolean
       produces:
       - application/json
       responses:
