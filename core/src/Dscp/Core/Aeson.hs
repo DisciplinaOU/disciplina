@@ -7,6 +7,7 @@ import Data.Aeson (FromJSON (..), FromJSONKey (..), ToJSON (..), Value (..), wit
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveFromJSON, deriveJSON)
 
+import Dscp.Core.Config
 import Dscp.Core.Foundation
 import Dscp.Core.Genesis
 import Dscp.Core.Governance
@@ -66,6 +67,9 @@ deriving instance FromJSON Course
 
 deriving instance ToJSON Subject
 deriving instance FromJSON Subject
+
+deriving instance ToJSON SlotDuration
+deriving instance FromJSON SlotDuration
 
 instance FromJSONKey Address
 

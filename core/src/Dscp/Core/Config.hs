@@ -8,7 +8,9 @@
 
 module Dscp.Core.Config
     (
-      CoreConfig
+      SlotDuration (..)
+
+    , CoreConfig
     , CoreConfigRec
     , HasCoreConfig
 
@@ -34,6 +36,14 @@ import Dscp.Core.Foundation
 import Dscp.Core.Genesis
 import Dscp.Crypto (hash)
 
+----------------------------------------------------------------------------
+-- Wrappers and parameters
+----------------------------------------------------------------------------
+
+-- | Slot duration in milliseconds.
+newtype SlotDuration = SlotDuration { unSlotDuration :: Word64 }
+    deriving (Eq, Ord, Num, Generic)
+
 ---------------------------------------------------------------------
 -- Reading config
 ---------------------------------------------------------------------
@@ -42,6 +52,7 @@ type CoreConfig =
    '[ "core" ::<
        '[ "homeParam" ::: AppDirectoryParam
         , "genesis" ::: GenesisConfig
+        , "slotDuration" ::: SlotDuration
 
         , "generated" ::<
             '[ "genesisInfo" ::: GenesisInfo
