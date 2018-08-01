@@ -245,6 +245,7 @@ definitions:
   CourseId:
     type: integer
     format: int32
+    description : Course ID
     
   Course:
     type: object
@@ -306,10 +307,13 @@ definitions:
   Grade:
     type: object
     required:
+      - signedSubmissionHash
       - grade
       - timestamp
       - hasProof
     properties:
+      submissionHash:
+        $ref: "#/definitions/Hash"
       grade:
         type: integer
         format: int32
