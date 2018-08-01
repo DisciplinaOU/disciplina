@@ -80,7 +80,7 @@ preValidatePublication =
                 PublicationIsBroken
 
             , -- Check that we move head pointer correctly.
-              if | isJust lastPub ->
+              if | isNothing lastPub ->
                     -- The pointer is set in the first time here?
                     check (box == Just (New (LastPublication pPrivateBlockHash))) $
                         PublicationIsBroken
