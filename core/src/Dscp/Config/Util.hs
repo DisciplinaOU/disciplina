@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE ApplicativeDo         #-}
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE PolyKinds             #-}
 {-# LANGUAGE TypeOperators         #-}
@@ -10,10 +11,10 @@ module Dscp.Config.Util
     (
       type (+++)
 
+    , ConfigParams (..)
+    , configParamsParser
     , ConfigBuildError (..)
     , buildConfig
-
-    , configPathParser
 
     , HasGiven
     , giveL
@@ -21,9 +22,11 @@ module Dscp.Config.Util
     , giveLC
     ) where
 
+import Data.Reflection (reifySymbol)
+import GHC.TypeLits (Symbol, symbolVal, KnownSymbol)
 import Data.Reflection (Given (..))
 import qualified Data.Text.Buildable
-import Data.Yaml (ParseException, decodeFileEither)
+import Data.Yaml (ParseException, decodeFileEither, FromJSON(..), withObject, (.:?))
 import Fmt (blockListF)
 import Loot.Base.HasLens (HasLens', lensOf)
 import Loot.Config (ConfigKind (Final, Partial), ConfigRec, HasLensC, finalise, lensOfC)
@@ -63,6 +66,25 @@ instance Buildable ConfigBuildError where
 
 instance Exception ConfigBuildError
 
+-- | Configuration parameters.
+data ConfigParams = ConfigParams
+    { cpPath :: FilePath
+      -- ^ Pass to the configuration file.
+    , cpConfigKey :: String
+      -- ^ Configuration key.
+    } deriving (Show)
+
+newtype ConfigWithKey (s :: Symbol) o = ConfigWithKey o
+
+instance (KnownSymbol s, FromJSON o) => FromJSON (ConfigWithKey s o) where
+    parseJSON =
+         withObject "Configuration object with keys-confignames" $ \o -> do
+             let s' = symbolVal (Proxy :: Proxy s)
+             configM <- o .:? fromString s'
+             let failNothing = fail $ "Configuration key not present: " <> s'
+             config <- maybe failNothing pure configM
+             ConfigWithKey <$> parseJSON config
+
 -- | Reads config file and fills missing values with ones in given default
 -- config.
 -- Function has complex constraint you don't need to bother with, it will be
@@ -70,24 +92,35 @@ instance Exception ConfigBuildError
 -- TODO: consider CLI params as well
 buildConfig ::
        (MonadIO m, MonadThrow m, _)
-    => FilePath
+    => ConfigParams
     -> (ConfigRec 'Partial o -> IO (ConfigRec 'Partial o))
     -> m (ConfigRec 'Final o)
-buildConfig configPath filler = liftIO $ do
-    fileConfig <- decodeFileEither configPath >>= leftToThrow ConfigReadError
-    fileConfigFilled <- filler fileConfig
-    config <-
-        leftToThrow ConfigIncomplete $
-        finalise fileConfigFilled
-    return config
+buildConfig ConfigParams{..} filler =
+    reifySymbol cpConfigKey $ \(_ :: Proxy s) -> liftIO $ do
+        ((ConfigWithKey fileConfig) :: ConfigWithKey s (ConfigRec 'Partial o)) <-
+            decodeFileEither cpPath >>= leftToThrow ConfigReadError
+        fileConfigFilled <- filler fileConfig
+        config <-
+            leftToThrow ConfigIncomplete $
+            finalise fileConfigFilled
+        pure config
 
--- | Get path to config file.
-configPathParser :: Opt.Parser FilePath
-configPathParser = Opt.strOption $
-    Opt.short 'c' <>
-    Opt.long "config" <>
-    Opt.metavar "FILEPATH" <>
-    Opt.help "Path to configuration file"
+-- | CLI parser for config parameters.
+configParamsParser :: Opt.Parser ConfigParams
+configParamsParser = do
+    cpPath <- confPathParser
+    cpConfigKey <- confKeyParser
+    pure ConfigParams {..}
+  where
+    confPathParser = Opt.strOption $
+        Opt.short 'c' <>
+        Opt.long "config" <>
+        Opt.metavar "FILEPATH" <>
+        Opt.help "Path to configuration file"
+    confKeyParser = Opt.strOption $
+        Opt.long "config-key" <>
+        Opt.metavar "STRING" <>
+        Opt.help "Configuration key"
 
 ----------------------------------------------------------------------------
 -- Accessing config with lens

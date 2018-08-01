@@ -6,7 +6,7 @@ import Loot.Log (logInfo, logWarning, modifyLogName)
 import Options.Applicative (execParser, fullDesc, helper, info, progDesc)
 
 import Dscp.CommonCLI (versionOption)
-import Dscp.Config (buildConfig, configPathParser)
+import Dscp.Config (buildConfig, configParamsParser)
 import Dscp.Educator
 
 main :: IO ()
@@ -21,7 +21,7 @@ main = do
 
 getEducatorParams :: IO (EducatorParams, EducatorConfigRec)
 getEducatorParams = do
-    let parser = (,) <$> educatorParamsParser <*> configPathParser
+    let parser = (,) <$> educatorParamsParser <*> configParamsParser
     (params, configPath) <- execParser $
         info (helper <*> versionOption <*> parser) $
         fullDesc <> progDesc "Disciplina educator node."

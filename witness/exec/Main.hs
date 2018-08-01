@@ -8,7 +8,7 @@ import Options.Applicative (execParser, fullDesc, helper, info, progDesc)
 import UnliftIO.Async (async)
 
 import Dscp.CommonCLI (versionOption)
-import Dscp.Config (buildConfig, configPathParser)
+import Dscp.Config (buildConfig, configParamsParser)
 import Dscp.Network (runListener, runWorker, withServer)
 import Dscp.Witness
 
@@ -38,7 +38,7 @@ main = do
 
 getWitnessParams :: IO (WitnessParams, WitnessConfigRec)
 getWitnessParams = do
-    let parser = (,) <$> witnessParamsParser <*> configPathParser
+    let parser = (,) <$> witnessParamsParser <*> configParamsParser
     (params, configPath) <- execParser $
         info (helper <*> versionOption <*> parser) $
         fullDesc <> progDesc "Disciplina witness node."
