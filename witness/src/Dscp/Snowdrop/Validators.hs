@@ -65,6 +65,8 @@ instance SD.HasPrism Proofs TxId where
     proj (AddressTxWitness (SD.WithSignature { wsBody = (it, _, _) })) = Just it
     proj  _                                                            = Nothing
 
+-- | We have to implement one part of the Prism ("contains"), bu we
+--   can't rebuild Proofs from TxId back.
 instance SD.HasReview Proofs TxId where
     inj = error "impossible to implement"
 
@@ -72,6 +74,7 @@ instance SD.HasPrism Proofs PublicationTxId where
     proj (PublicationTxWitness (SD.WithSignature { wsBody = (it, _, _) })) = Just it
     proj  _                                                                = Nothing
 
+-- | Same as TxId.
 instance SD.HasReview Proofs PublicationTxId where
     inj = error "impossible to implement"
 

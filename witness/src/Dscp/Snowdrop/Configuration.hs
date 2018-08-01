@@ -10,12 +10,15 @@ import Snowdrop.Model.State.Core (RedundantIdException, SValue, StateModificatio
                                   ValidatorExecException)
 import Snowdrop.Model.State.Restrict (RestrictionInOutException)
 import Snowdrop.Util (CSMappendException, ChangeSet, IdStorage, IdSumPrefixed (..), Prefix (..),
-                      WithSignature (..), deriveIdView, deriveView, withInj, withInjProj, VerifySign)
+                      VerifySign, WithSignature (..), deriveIdView, deriveView, withInj,
+                      withInjProj)
 
 import Dscp.Core.Foundation.Transactions (HeaderHash)
 import qualified Dscp.Core.Foundation.Transactions as T
 import Dscp.Crypto (PublicKey, Signature, hashF)
-import Dscp.Snowdrop.Types (Account, AccountId (..), AccountTxTypeId (..), AccountValidationException, PublicationTxTypeId (..), PublicationValidationError)
+import Dscp.Snowdrop.Types (Account, AccountId (..), AccountTxTypeId (..),
+                            AccountValidationException, PublicationTxTypeId (..),
+                            PublicationValidationError)
 
 ----------------------------------------------------------------------------
 -- Snowdrop block-related types
@@ -116,9 +119,8 @@ type PublicationTxProof =
     PersonalisedProof T.PublicationTxId T.Publication
 
 data Proofs
-    = AddressTxWitness     AddrTxProof
-    | PublicationTxWitness PublicationTxProof
-    -- ^ Money transaction witness
+    = AddressTxWitness     AddrTxProof         -- ^ Money transaction witness
+    | PublicationTxWitness PublicationTxProof  -- ^ Publication transaction witness
     deriving (Eq, Show, Generic)
 
 ----------------------------------------------------------------------------

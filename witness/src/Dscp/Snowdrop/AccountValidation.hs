@@ -56,26 +56,6 @@ infix 1 `check`
 check :: (Monoid a, HasException e e1) => Bool -> e1 -> ERoComp e id value ctx a
 check = flip validateIff
 
--- type ValidatorCtx e pk addr id proof value ctx sig hash stTxId payload
---     =   ( HasExceptions e
---            [ AccountValidationException
---            , TxValidationException
---            , StatePException
---            ]
---         , VerifySign pk sig (hash, pk, payload)
---         , HasPrism proof hash
---         , HasGetter proof pk
---         , HasGetter pk addr
---         , HasPrism proof (WithSignature pk sig (hash, pk, payload))
---         , HasKeyValue id value (AccountId addr) Account
---         , IdStorage stTxId AccountTxTypeId
---         , IdSumPrefixed id
---         , Ord addr
---         , Ord id
---         , Eq hash
---         , Eq pk
---         )
-
 validateSimpleMoneyTransfer
     :: forall ctx
     .  CanVerifyPayload TxId ()
