@@ -37,6 +37,7 @@ library:
     - snowdrop
     - text
     - text-format
+    - time
     - unix
     - unliftio
     - yaml

@@ -7,8 +7,10 @@ import Options.Applicative (execParser, fullDesc, helper, info, progDesc)
 
 import Dscp.CommonCLI (versionOption)
 import Dscp.Config (buildBaseConfig, configPathParser)
-import Dscp.Educator (EducatorConfig, EducatorParams (..), educatorParamsParser,
-                      launchEducatorRealMode, serveStudentAPIReal)
+import Dscp.Educator.CLI (educatorParamsParser)
+import Dscp.Educator.Config (EducatorConfig)
+import Dscp.Educator.Launcher (EducatorParams (..), launchEducatorRealMode)
+import Dscp.Educator.Web (serveStudentAPIReal)
 
 main :: IO ()
 main = do

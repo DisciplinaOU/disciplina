@@ -29,12 +29,14 @@ library:
     - reflection
     - safe-exceptions >= 0.1.4
     - serialise
+    - servant-generic
     - servant-server
     - sqlite-simple
     - template-haskell
     - text
     - text-format
     - time
+    - QuickCheck
     - unliftio
 
 tests:
@@ -56,6 +58,7 @@ tests:
       - tasty-hspec
       - time
       - QuickCheck
+      - unliftio
 
 executables:
   dscp-educator:

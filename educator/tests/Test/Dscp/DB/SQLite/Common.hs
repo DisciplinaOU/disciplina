@@ -1,7 +1,6 @@
 module Test.Dscp.DB.SQLite.Common
   ( module Test.Dscp.DB.SQLite.Common
-  , module Dscp.Core.Types
-  , module Dscp.Educator.Txs
+  , module Dscp.Core
   , module Dscp.Util
   , module Dscp.Util.Test
   , module Test.Hspec
@@ -14,18 +13,20 @@ import Database.SQLite.Simple (Connection, execute, fold, query, setTrace, withC
                                withTransaction)
 import qualified Loot.Log as Adapter
 import Test.Hspec
+import UnliftIO (MonadUnliftIO)
 
-import Dscp.Core.Types (Address (..), Assignment (..), AssignmentType (..), Course (..), Grade (..),
-                        SignedSubmission (..), Submission (..), SubmissionSig,
-                        SubmissionWitness (..), aCourseId, mkGrade, sAssignment, sStudentId,
-                        ssSubmission, ssWitness, swKey)
+import Dscp.Core (Address (..), Assignment (..), AssignmentType (..), Course (..), Grade (..),
+                  PrivateTx (..), SignedSubmission (..), Submission (..), SubmissionSig,
+                  SubmissionWitness (..), aCourseId, mkGrade, ptSignedSubmission, ptTime,
+                  sAssignment, sStudentId, ssSubmission, ssWitness, swKey)
 import Dscp.Crypto (hash)
 import qualified Dscp.DB.SQLite.Class as Adapter
 import Dscp.DB.SQLite.Schema (ensureSchemaIsSetUp)
 import Dscp.Educator.Arbitrary ()
-import Dscp.Educator.Txs (PrivateTx (..), ptSignedSubmission, ptTime)
 import Dscp.Util (idOf)
 import Dscp.Util.Test
+
+type Trololo m = (MonadThrow m, MonadCatch m)
 
 -- import System.Directory (removeFile)
 -- import System.IO.Error (IOError, isDoesNotExistError)
@@ -39,6 +40,7 @@ newtype TestSQLiteM a = TestSQLiteM
              , MonadCatch
              , MonadFail
              , MonadReader Connection
+             , MonadUnliftIO
              )
 
 runTestSQLiteM :: TestSQLiteM a -> IO a
@@ -82,6 +84,9 @@ instance Adapter.MonadSQLiteDB TestSQLiteM where
 instance Adapter.MonadLogging TestSQLiteM where
   log _ _ _ = pass
   logName = return $ error "Logger name requested in test"
+
+instance Adapter.ModifyLogName TestSQLiteM where
+  modifyLogNameSel _ = identity
 
 orIfItFails :: MonadCatch m => m a -> a -> m a
 orIfItFails action instead = do

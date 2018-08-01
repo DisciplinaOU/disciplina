@@ -361,14 +361,14 @@ definitions:
         format: binary
     example:
       submission:
-        studentId: "1Nh7uHdvY6fNwtQtM1G5EZAFPLC33B59rB"
-        contentsHash: "c52b4484433160146ec1f56fa18440399ac0c35487b8daecff1553f9f490fff6"
+        studentId: "LL4qKmPY5aGuebXmwg68YX7VMojkFyjNwyN7qz7jgueodBxnGRTiSUb1"
+        contentsHash: "K9Dvapkf9ZVGPIPQoDFEypZBL2TyLvBGh3HgupOBfSw="
         assignment:
-          courseId: 4
-          contentsHash: "c52b4484433160146ec1f56fa18440399ac0c35487b8daecff1553f9f490fff6"
+          courseId: 7
+          contentsHash: "K9Dvapkf9ZVGPIPQoDFEypZBL2TyLvBGh3HgupOBfSw="
           type: "regular"
-          desc: "mda"
-      witness: "c52b4484433160146ec1f56fa18440399ac0c35487b8daecff1553f9f490fff6c52b4484433160146ec1f56fa18440399ac0c35487b8daecff1553f9f490fff6"
+          desc: "Find mathematical model of the world"
+      witness: "gwBYIGrcWfDHxgB0BhTMngCOjUmOZBpI0BK4zFMtn8i2cJt+WEBIMaxoe/qBbPq6B+3L4u7DU7VtDMWaVFoQ7gbSx0nU9Rmg99+bsAytE49EaNCjQ1gGzZ5U61KTQIK+VOzIiEMN"
 
   Transaction:
     type: object

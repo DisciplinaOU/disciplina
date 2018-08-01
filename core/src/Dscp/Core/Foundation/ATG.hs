@@ -1,6 +1,6 @@
 -- | Module for methods related to Activity Type Graph
 
-module Dscp.Core.ATG
+module Dscp.Core.Foundation.ATG
        ( ATGIndexed
        , atgiGraph
        , atgiIndex
@@ -17,7 +17,7 @@ import qualified Data.Map.Strict as M
 import Data.Set (Set)
 import qualified Data.Set as S
 
-import Dscp.Core.Types (ATG (..), ATGEdge (..), ATGNode (..), Subject, atgeChild)
+import Dscp.Core.Foundation.Educator (ATG (..), ATGEdge (..), ATGNode (..), Subject, atgeChild)
 import Dscp.Util (Id, anyMapM)
 
 -- | ATG with an index from subject IDs to nodes.

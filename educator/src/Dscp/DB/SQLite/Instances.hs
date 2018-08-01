@@ -10,14 +10,12 @@ import Database.SQLite.Simple.FromRow (FromRow (..), field)
 import Database.SQLite.Simple.ToField (ToField (..))
 import Database.SQLite.Simple.ToRow (ToRow (..))
 
-import Dscp.Core.Serialise ()
-import Dscp.Core.Types (ATGDelta, Address (..), Assignment (..), AssignmentType, Course (..),
-                        DocumentType, Grade (..), SignedSubmission (..), Subject (..),
-                        Submission (..), SubmissionWitness (..))
+import Dscp.Core (ATGDelta, Address (..), Assignment (..), AssignmentType, Course (..),
+                  DocumentType, Grade (..), PrivateTx (..), SignedSubmission (..), Subject (..),
+                  Submission (..), SubmissionWitness (..))
 import Dscp.Crypto (EmptyMerkleTree, Hash, MerkleSignature, PublicKey, Signature, hash)
 import Dscp.DB.SQLite.BlockData (BlockData (..), TxInBlock (..), TxWithIdx (..))
 import Dscp.DB.SQLite.Types (TxBlockIdx, intTxBlockIdx)
-import Dscp.Educator.Txs (PrivateTx (..))
 import Dscp.Util (leftToPanic)
 
 

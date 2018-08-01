@@ -2,8 +2,7 @@
 
 module Dscp.Educator.Arbitrary where
 
-import Dscp.Core ()
-import Dscp.Educator.Txs (PrivateTx (..))
+import Dscp.Core (PrivateTx (..))
 import Dscp.Resource.Keys (KeyJson (..))
 import Dscp.Util.Test (Arbitrary (..))
 

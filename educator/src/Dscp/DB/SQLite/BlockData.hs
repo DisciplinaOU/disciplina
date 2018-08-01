@@ -1,15 +1,16 @@
 {-# LANGUAGE DeriveAnyClass #-}
 
-module Dscp.DB.SQLite.BlockData (BlockData (..), TxInBlock (..), TxWithIdx (..)) where
+module Dscp.DB.SQLite.BlockData
+    ( BlockData(..)
+    , TxInBlock(..)
+    , TxWithIdx(..)
+    ) where
 
 import Codec.Serialise (Serialise)
-
 import Data.Time.Clock (UTCTime)
 
-import Dscp.Core.Types (ATGDelta)
+import Dscp.Core
 import Dscp.Crypto (EmptyMerkleTree, Hash, MerkleSignature)
-import Dscp.Educator.Block (PrivateBlock)
-import Dscp.Educator.Txs (PrivateTx (..))
 import Dscp.Util (HasId (..))
 
 data BlockData = BlockData

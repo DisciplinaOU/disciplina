@@ -1,7 +1,6 @@
-
 -- | Utils for working with grades
 
-module Dscp.Core.Grade
+module Dscp.Core.Foundation.Grade
        ( gA
        , gB
        , gC
@@ -10,7 +9,7 @@ module Dscp.Core.Grade
        , gF
        ) where
 
-import Dscp.Core.Types (Grade (..))
+import Dscp.Core.Foundation.Educator (Grade (..))
 
 gA, gB, gC, gD, gE, gF :: Grade
 gA = UnsafeGrade 100

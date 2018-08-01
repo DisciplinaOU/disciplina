@@ -14,12 +14,13 @@ module Dscp.DB.DSL.Class
        , WHERE (..)
        ) where
 
-import Dscp.Educator.Txs (PrivateTx(..))
+import qualified Data.ByteString.Lazy as LBS
+
+import Dscp.Core (PrivateTx (..))
+import qualified Dscp.Core as Core (Grade, Subject)
 import Dscp.Crypto (Hash)
 import Dscp.Util (HasId (Id))
 
-import qualified Dscp.Core as Core (Grade, Subject)
-import qualified Data.ByteString.Lazy as LBS
 
 data WHERE   = WHERE
 

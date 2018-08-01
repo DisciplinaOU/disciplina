@@ -3,11 +3,9 @@
 
 module Dscp.Snowdrop.Storage.Pure where
 
-
 import Control.Concurrent.STM.TVar (modifyTVar)
 import Control.Lens (at, makeLenses)
 import qualified Data.Map as M
-
 
 import Snowdrop.Model.Block (BlockRef (..), TipKey (..), TipValue (..))
 import Snowdrop.Model.Execution (DbActionsException (..), DbModifyActions (..), SumChangeSet,
@@ -15,12 +13,10 @@ import Snowdrop.Model.Execution (DbActionsException (..), DbModifyActions (..), 
 import Snowdrop.Model.State.Core (HasKeyValue, SValue)
 import Snowdrop.Util
 
-
-import Dscp.Core.Types (Address, HeaderHash)
+import Dscp.Core.Foundation (HeaderHash)
 import Dscp.Snowdrop.AccountValidation (Account, AccountId)
 import Dscp.Snowdrop.Configuration (Ids (..), SBlund, Values (..), accountPrefix, blockPrefix,
                                     tipPrefix)
-
 
 data BlockStorage = BlockStorage
     { _bsBlunds :: Map HeaderHash SBlund
@@ -28,7 +24,7 @@ data BlockStorage = BlockStorage
     }
 makeLenses ''BlockStorage
 
-type AddrMap = Map (AccountId Address) Account
+type AddrMap = Map AccountId Account
 
 data StateStorage = StateStorage
     { _ssAddrMap        :: AddrMap
@@ -125,7 +121,7 @@ simpleStateDbActions initAddrMap =
     applyOne :: TVar StateStorage -> Ids -> ValueOp Values -> STM ()
     applyOne var (AccountInIds a) =
         performActionWithTVar var (ssAddrMap . at a) (applyException a) <=<
-        projValOp @(AccountId Address)
+        projValOp @AccountId
     applyOne _ i = applyException i '-'
 
     iterHelper :: (id' -> Ids)

@@ -25,13 +25,14 @@ import Control.Exception.Safe (catchJust)
 import Control.Lens (Prism')
 import Crypto.Random (ChaChaDRG, MonadPseudoRandom)
 import Data.Aeson (FromJSON, ToJSON, eitherDecode, encode)
+import qualified Data.Hashable as H
 import Data.Typeable (typeRep)
 import GHC.Show (Show (show))
 import Test.Hspec as T
 import Test.QuickCheck as T (Arbitrary (..), Fixed (..), Gen, Property, Testable (..), choose,
-                             elements, expectFailure, forAll, infiniteList, ioProperty, label,
-                             listOf, listOf1, oneof, property, suchThat, suchThatMap, vectorOf,
-                             (.&&.), (===), (==>))
+                             elements, expectFailure, forAll, frequency, infiniteList, ioProperty,
+                             label, listOf, listOf1, oneof, property, sublistOf, suchThat,
+                             suchThatMap, vectorOf, (.&&.), (===), (==>))
 import Test.QuickCheck (sized)
 import Test.QuickCheck.Gen (Gen (..))
 import Test.QuickCheck.Instances as T ()
@@ -73,6 +74,10 @@ instance Show GenCtx where
 -- | Run 'Gen' with seed.
 detGen :: Int -> Gen a -> a
 detGen seed gen = unGen gen (mkQCGen seed) 100
+
+-- | Generalized 'detGen'.
+detGenG :: Hashable seed => seed -> Gen a -> a
+detGenG seed = detGen (H.hash seed)
 
 noneof :: (Arbitrary a, Eq a, Show a) => [a] -> Gen a -> Gen a
 noneof set' gen = do

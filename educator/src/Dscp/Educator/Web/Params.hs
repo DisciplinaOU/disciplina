@@ -1,11 +1,10 @@
 module Dscp.Educator.Web.Params
-       ( EducatorWebParams (..)
-       ) where
+    ( EducatorWebParams (..)
+    ) where
 
-import Dscp.Web (NetworkAddress)
+import Dscp.Web
 
--- | Contains all the data relevant to web APIs served by
--- Educator node.
 data EducatorWebParams = EducatorWebParams
-    { ewpStudentApiAddr :: !NetworkAddress
-    } deriving (Eq, Show, Generic)
+    { ewpServerParams :: ServerParams
+    , ewpWithBot      :: Bool
+    }

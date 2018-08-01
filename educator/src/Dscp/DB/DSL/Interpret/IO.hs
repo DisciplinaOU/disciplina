@@ -6,10 +6,9 @@ module Dscp.DB.DSL.Interpret.IO
 import Data.List (intersect, union)
 
 import qualified Dscp.Core as Core (Grade (..), Subject (..))
-import Dscp.DB.DSL.Class (MonadSearchTxObj (..), Obj, ObjHashEq (..), QueryObj (..),
-                                QueryTx (..), QueryTxs (..), TxIdEq (..),
-                                TxsFilterExpr (..), WHERE (..))
-import Dscp.Educator.Txs (PrivateTx (..))
+import Dscp.Core.Foundation (PrivateTx (..))
+import Dscp.DB.DSL.Class (MonadSearchTxObj (..), Obj, ObjHashEq (..), QueryObj (..), QueryTx (..),
+                          QueryTxs (..), TxIdEq (..), TxsFilterExpr (..), WHERE (..))
 import Dscp.Util (HasId (Id))
 
 -- | TODO, we should have a proper monad here, not IO

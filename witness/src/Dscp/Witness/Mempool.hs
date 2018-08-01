@@ -10,7 +10,7 @@ module Dscp.Witness.Mempool
 
 import Control.Concurrent.STM.TVar (modifyTVar, swapTVar)
 import Control.Lens (makeLenses)
-import Dscp.Core (GTxWitnessed)
+import Dscp.Core.Foundation (GTxWitnessed)
 
 data Mempool = Mempool
     { _mpTxs :: [GTxWitnessed]

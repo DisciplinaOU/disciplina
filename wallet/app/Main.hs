@@ -23,7 +23,7 @@ main :: IO ()
 main = do
   serverAddress <- getWalletCLIParams
   taskManagerFace <- createTaskManagerFace
-  walletFace <- createWalletFace serverAddress
+  walletFace <- createWalletFace serverAddress (void . return)
   (uiFace, mkUiAction) <- createUI
 
   let

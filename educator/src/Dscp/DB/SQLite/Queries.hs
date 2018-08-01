@@ -58,17 +58,17 @@ import Database.SQLite.Simple.ToField (ToField)
 import Database.SQLite.Simple.ToRow (ToRow (..))
 import Text.InterpolatedString.Perl6 (q)
 
-import Dscp.Core (ATGDelta, Assignment (..), Course, SignedSubmission (..), Student, Subject,
-                  Submission (..), aContentsHash, aCourseId, aDesc, aType, sAssignment,
-                  sContentsHash, sStudentId, ssSubmission, ssWitness)
+import Dscp.Core (ATGDelta, Assignment (..), Course, PrivateBlock (..), PrivateBlockHeader (..),
+                  PrivateTx (..), SignedSubmission (..), Student, Subject, Submission (..),
+                  aContentsHash, aCourseId, aDesc, aType, genesisHeaderHash, ptGrade,
+                  ptSignedSubmission, ptTime, sAssignment, sContentsHash, sStudentId, ssSubmission,
+                  ssWitness)
 import Dscp.Crypto (Hash, MerkleProof, fillEmptyMerkleTree, getEmptyMerkleTree, getMerkleRoot, hash)
 import qualified Dscp.Crypto.MerkleTree as MerkleTree (fromList)
 import Dscp.DB.SQLite.BlockData (BlockData (..), TxInBlock (..), TxWithIdx (..))
-import Dscp.DB.SQLite.Class (MonadSQLiteDB (..), transaction)
+import Dscp.DB.SQLite.Class (MonadSQLiteDB (..), WithinSQLTransaction, transaction)
 import Dscp.DB.SQLite.Instances ()
 import Dscp.DB.SQLite.Types (TxBlockIdx (TxInMempool))
-import Dscp.Educator.Block (PrivateBlock (..), PrivateBlockHeader (..), genesisHeaderHash)
-import Dscp.Educator.Txs (PrivateTx (..), ptGrade, ptSignedSubmission, ptTime)
 import Dscp.Util (HasId (..), assert, assertJust, idOf)
 
 data DomainError
@@ -158,7 +158,9 @@ getStudentAssignments student course = do
     |]
 
 -- | How can a student submit a submission for assignment?
-submitAssignment :: DBM m => SignedSubmission -> m (Id SignedSubmission)
+submitAssignment
+    :: (DBM m, WithinSQLTransaction)
+    => SignedSubmission -> m (Id SignedSubmission)
 submitAssignment = createSignedSubmission
 
 -- How can a student see his grades for course assignments?
@@ -403,7 +405,9 @@ createBlock delta = do
         values      (?, ?)
     |]
 
-createSignedSubmission :: DBM m => SignedSubmission -> m (Id SignedSubmission)
+createSignedSubmission
+    :: (DBM m, WithinSQLTransaction)
+    => SignedSubmission -> m (Id SignedSubmission)
 createSignedSubmission sigSub = do
     let
         submission     = sigSub^.ssSubmission
@@ -416,19 +420,18 @@ createSignedSubmission sigSub = do
 
         assignmentHash = assignment^.idOf
 
-    transaction $ do
-        _ <- existsStudent student        `assert`     StudentDoesNotExist    student
-        _ <- getAssignment assignmentHash `assertJust` AssignmentDoesNotExist assignmentHash
-        _ <- isAssignedToStudent student assignmentHash
-            `assert` StudentWasNotSubscribedOnAssignment student assignmentHash
+    _ <- existsStudent student        `assert`     StudentDoesNotExist    student
+    _ <- getAssignment assignmentHash `assertJust` AssignmentDoesNotExist assignmentHash
+    _ <- isAssignedToStudent student assignmentHash
+        `assert` StudentWasNotSubscribedOnAssignment student assignmentHash
 
-        execute generateSubmissionRequest
-            ( submissionHash
-            , student
-            , assignmentHash
-            , submissionCont
-            , submissionSig
-            )
+    execute generateSubmissionRequest
+        ( submissionHash
+        , student
+        , assignmentHash
+        , submissionCont
+        , submissionSig
+        )
 
     return submissionHash
   where

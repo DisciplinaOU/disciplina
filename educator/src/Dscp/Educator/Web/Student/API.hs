@@ -4,30 +4,36 @@
 -- | Student HTTP API definition.
 
 module Dscp.Educator.Web.Student.API
-       ( StudentAPI
+       ( StudentApiEndpoints (..)
+       , StudentAPI
        , studentAPI
+       , StudentApiHandlers
        ) where
 
 import Data.Time.Clock (UTCTime)
 import Servant
+import Servant.Generic
 
-import qualified Dscp.Core.Types as Core
+import qualified Dscp.Core as Core
 import Dscp.Crypto (Hash)
 import Dscp.Educator.Web.Student.Types (Assignment, BlkProof, Course, IsEnrolled, IsFinal,
                                         Submission)
 
-type StudentAPI
-    = "v1"
-    :> ( GetCourses
-    :<|> GetCourse
-    :<|> GetAssignments
-    :<|> GetAssignment
-    :<|> GetSubmissions
-    :<|> GetSubmission
-    :<|> MakeSubmission
-    :<|> DeleteSubmission
-    :<|> GetProofs
-       )
+data StudentApiEndpoints route = StudentApiEndpoints
+    { sGetCourses       :: route :- GetCourses
+    , sGetCourse        :: route :- GetCourse
+    , sGetAssignments   :: route :- GetAssignments
+    , sGetAssignment    :: route :- GetAssignment
+    , sGetSubmissions   :: route :- GetSubmissions
+    , sGetSubmission    :: route :- GetSubmission
+    , sMakeSubmission   :: route :- MakeSubmission
+    , sDeleteSubmission :: route :- DeleteSubmission
+    , sGetProofs        :: route :- GetProofs
+    } deriving (Generic)
+
+type StudentAPI = "v1" :> ToServant (StudentApiEndpoints AsApi)
+
+type StudentApiHandlers m = StudentApiEndpoints (AsServerT m)
 
 studentAPI :: Proxy StudentAPI
 studentAPI = Proxy
