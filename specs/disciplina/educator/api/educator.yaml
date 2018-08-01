@@ -169,7 +169,7 @@ paths:
       - $ref: "#/parameters/StudentAddr"
       - $ref: "#/parameters/CourseId"
       - in: query
-        name: is_final
+        name: isFinal
         description: Return only final/non-final assignments of the course
         required: false
         type: boolean
@@ -231,7 +231,7 @@ paths:
       - $ref: "#/parameters/StudentAddr"
       - $ref: "#/parameters/CourseId"
       - in: query
-        name: is_final
+        name: isFinal
         description: Return only grades for final/non-final assignments of the course
         required: false
         type: boolean
@@ -683,14 +683,18 @@ definitions:
     type: object
     required:
     - hash
+    - courseId
+    - contentsHash
+    - isFinal
+    - desc
     properties:
       hash:
         $ref: "#/definitions/Hash"
-      course_id:
+      courseId:
         $ref: "#/definitions/CourseId"
-      contents_hash:
+      contentsHash:
         $ref: "#/definitions/Hash"
-      is_final:
+      isFinal:
         type: boolean
       desc:
         type: string
@@ -698,43 +702,48 @@ definitions:
     type: object
     required:
     - hash
-    - contents_hash
-    - assignment_hash
-    - student_addr
+    - contentsHash
+    - assignmentHash
+    - studentAddr
     - witness
     properties:
       hash:
         $ref: "#/definitions/Hash"
-      contents_hash:
+      contentsHash:
         $ref: "#/definitions/Hash"
       assignment:
         $ref: "#/definitions/Assignment"
-      student_addr:
+      studentAddr:
         $ref: "#/definitions/Address"
       witness:
         type: string
         format: binary
   Grade:
     type: object
+    required:
+    - submissionHash
+    - grade
+    - timestamp
+    - hasProof
     properties:
-      hash:
-        $ref: "#/definitions/Hash"
-      submission_hash:
+      submissionHash:
         $ref: "#/definitions/Hash"
       grade:
         type: integer
         format: int32
       timestamp:
         $ref: "#/definitions/Time"
+      hasProof:
+        type: boolean
 
   Transaction:
     type: object
     required:
-    - signed_submission
+    - submission
     - grade
     - timestamp
     properties:
-      signed_submission:
+      submission:
         $ref: "#/definitions/Submission"
       grade:
         type: integer
@@ -745,10 +754,10 @@ definitions:
   BlkProof:
     type: object
     required:
-    - mtree_serialized
+    - mtreeSerialized
     - txs
     properties:
-      mtree_serialized:
+      mtreeSerialized:
         type: string
         format: binary
       txs:
