@@ -6,7 +6,6 @@ module Dscp.Educator.Web.Student.Logic
 
 import qualified Dscp.Core.Types as Core
 import Dscp.DB.SQLite (sqlTransaction)
-import qualified Dscp.DB.SQLite.Queries as Queries
 import Dscp.Educator.Web.Student.Error (APIError (..))
 import qualified Dscp.Educator.Web.Student.Queries as Queries
 import Dscp.Util (leftToThrow)
@@ -22,5 +21,5 @@ makeSubmissionVerified student signedSubmission = do
     verifyStudentSubmission student signedSubmission
         & leftToThrow BadSubmissionSignature
     sqlTransaction $ do
-        submissionId <- Queries.submitAssignment signedSubmission
+        submissionId <- Queries.makeSubmission signedSubmission
         Queries.getSubmission student submissionId

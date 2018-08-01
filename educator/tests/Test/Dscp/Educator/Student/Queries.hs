@@ -99,7 +99,7 @@ prepareAndCreateSubmissions
     => l -> m ()
 prepareAndCreateSubmissions (toList -> sigSubmissions) = do
     prepareForSubmissions sigSubmissions
-    mapM_ CoreDB.submitAssignment (nub sigSubmissions)
+    sqlTx $ mapM_ CoreDB.submitAssignment (nub sigSubmissions)
 
 applyFilterOn :: Eq f => (a -> f) -> (Maybe f) -> [a] -> [a]
 applyFilterOn field (Just match) = filter (\a -> field a == match)
@@ -356,7 +356,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
         it "Last submission is actually the last" $
             sqliteProperty $
               \( delayedGen
-                 (genStudentSignedSubmissions (pure submission1))
+                 (genStudentSignedSubmissions arbitrary (pure submission1))
                  -> (student, sigSubmissions)
                ) -> do
                 prepareAndCreateSubmissions sigSubmissions
@@ -399,7 +399,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                 _ <- CoreDB.createAssignment assignment
                 _ <- CoreDB.enrollStudentToCourse owner course
                 _ <- CoreDB.setStudentAssignment owner (getId assignment)
-                _ <- CoreDB.submitAssignment sigSubmission
+                _ <- sqlTx $ CoreDB.submitAssignment sigSubmission
                 res <- sqlTx $
                     DB.getSubmission owner (getId submission)
                 return $ res === Submission
@@ -425,7 +425,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                     _ <- CoreDB.createAssignment assignment
                     _ <- CoreDB.enrollStudentToCourse owner course
                     _ <- CoreDB.setStudentAssignment owner (getId assignment)
-                    _ <- CoreDB.submitAssignment sigSubmission
+                    _ <- sqlTx $ CoreDB.submitAssignment sigSubmission
                     fmap property $ throwsPrism _SubmissionDoesNotExist $
                         sqlTx $ DB.getSubmission user (getId submission)
 
@@ -478,7 +478,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
 
         it "Returns grade when present" $
             sqliteProperty $ \
-              ( delayedGen (genStudentSignedSubmissions arbitrary)
+              ( delayedGen (genStudentSignedSubmissions arbitrary arbitrary)
                 -> (student, sigSubmissions)
               , delayedGen infiniteList
                 -> grades
@@ -504,7 +504,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
 
         it "Filtering works" $
             sqliteProperty $ \
-              ( delayedGen (genStudentSignedSubmissions arbitrary)
+              ( delayedGen (genStudentSignedSubmissions arbitrary arbitrary)
                 -> (student, sigSubmissions)
               , courseIdF
               , assignHF
@@ -537,7 +537,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
         it "Delete works" $
             sqliteProperty $
               \( delayedGen
-                 (genStudentSignedSubmissions arbitrary)
+                 (genStudentSignedSubmissions arbitrary arbitrary)
                  -> (student, sigSubmissions@(sigSubmissiontoDel :| _))
                ) -> do
                   prepareAndCreateSubmissions sigSubmissions
@@ -578,7 +578,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
             sqliteProperty $ \sigSubmission -> do
                 prepareAndCreateSubmissions [sigSubmission]
                 throwsPrism (_EntityAlreadyPresent . _SubmissionAlreadyExists) $
-                    DB.makeSubmission sigSubmission
+                    sqlTx $ DB.makeSubmission sigSubmission
 
         it "Pretending to be another student is bad" $
             sqliteProperty $ \(sigSubmission, badStudent) -> do

@@ -80,9 +80,9 @@ instance Bounded Grade where
     maxBound = UnsafeGrade 100
 
 mkGrade :: Word8 -> Maybe Grade
-mkGrade a
-    | a >= minBound && a <= maxBound = Just $ UnsafeGrade a
-    | otherwise                      = Nothing
+mkGrade a =
+    let g = UnsafeGrade a
+    in g <$ guard (g >= minBound && g <= maxBound)
 
 -- | Student is identified by their public address.
 type Student = Address
