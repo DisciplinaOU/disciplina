@@ -74,9 +74,10 @@ data Submission = Submission
     } deriving (Show, Eq, Generic)
 
 data Grade = Grade
-    { gGrade     :: !Core.Grade
-    , gTimestamp :: !UTCTime
-    , gHasProof  :: !Bool
+    { gSubmissionHash :: !(Hash Core.Submission)
+    , gGrade          :: !Core.Grade
+    , gTimestamp      :: !UTCTime
+    , gHasProof       :: !Bool
     } deriving (Show, Eq, Generic)
 
 data BlkProof = BlkProof

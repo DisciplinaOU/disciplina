@@ -433,7 +433,10 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                 submission' <-
                     sqlTx $ DB.getSubmission student (getId submission)
                 let Just grade' = sGrade submission'
-                return $ (gGrade grade', gHasProof grade') === (grade, False)
+                return $
+                    (gGrade grade', gHasProof grade', gSubmissionHash grade')
+                    ===
+                    (grade, False, hash submission)
 
     describe "getSubmissions" $ do
         it "Student has no last submissions initially" $

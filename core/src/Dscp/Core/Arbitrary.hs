@@ -80,7 +80,7 @@ genStudentSignedSubmissions genSK genSubmission = do
 
 instance Arbitrary SignedSubmission where
     arbitrary = do
-        (_, ss :| _) <- genStudentSignedSubmissions arbitrary
+        (_, ss :| _) <- genStudentSignedSubmissions arbitrary arbitrary
         return ss
 
 instance Arbitrary AssignmentType where

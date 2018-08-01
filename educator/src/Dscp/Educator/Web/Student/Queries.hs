@@ -140,13 +140,13 @@ getGrade submissionH = do
     mgrade <-
         query queryText (Only submissionH)
         >>= listToMaybeWarn "last submission"
-    forM mgrade $ \(gGrade, gTimestamp, blkIdx) -> do
+    forM mgrade $ \(gGrade, gTimestamp, gSubmissionHash, blkIdx) -> do
         let gHasProof = blkIdx /= TxInMempool
         return Grade{..}
   where
     queryText :: Query
     queryText = [q|
-        select    grade, time, idx
+        select    grade, time, submission_hash, idx
         from      Transactions
         where     submission_hash = ?
     |]
