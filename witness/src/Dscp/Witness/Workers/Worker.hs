@@ -7,54 +7,48 @@ module Dscp.Witness.Workers.Worker
     ) where
 
 import Control.Concurrent (threadDelay)
-import Fmt ((+||), (||+))
+import Fmt ((+|), (+||), (|+), (||+))
 import Loot.Log (logError, logInfo)
 import Loot.Network.Class (ClientEnv)
 import Loot.Network.ZMQ (ZmqTcp)
 
 import Dscp.Core
-import Dscp.Network.Messages (PingBlk (..), PingTx (..), PongBlk (..), PongTx (..))
-import Dscp.Network.Wrapped (Worker (..), cliRecvResp, cliSend, msgType)
-import Dscp.Resource.Keys (ourPublicKey)
-import Dscp.Witness.Block.Logic (applyBlock, createBlock)
-import Dscp.Witness.Config
-import Dscp.Witness.Launcher (WitnessNode, WitnessWorkMode)
+import Dscp.Crypto
+import Dscp.Network.Wrapped
+import Dscp.Witness.Block.Logic
+import Dscp.Witness.Launcher
+import Dscp.Witness.Messages
 
 
 witnessWorkers :: WitnessWorkMode ctx m => [Worker m]
-witnessWorkers = [blockIssuingWorker, witnessTxWorker, witnessBlkWorker]
+witnessWorkers = [blockReceivalWorker]
 
 ----------------------------------------------------------------------------
--- Block creation
+-- Updates
 ----------------------------------------------------------------------------
 
-blockIssuingWorker :: forall ctx m. WitnessWorkMode ctx m => Worker m
-blockIssuingWorker =
-    Worker "blockIssuingWorker" [] [] (\btq -> action btq `catchAny` handler)
+blockReceivalWorker :: forall ctx m. WitnessWorkMode ctx m => Worker m
+blockReceivalWorker =
+    Worker "blockIssuingListener" [] [subType @PubBlock] (\btq -> action btq `catchAny` handler)
   where
-    handler e = logError $ fromString $ "Exception in blockIssuingWorker: " <> show e
-    action :: ClientEnv ZmqTcp -> m ()
-    action _btq = forever $ do
-        let GovCommittee committee = gcGovernance $ giveL @WitnessConfig @GenesisConfig
-        slotId <- waitUntilNextSlot
-        ourAddr <- mkAddr <$> ourPublicKey @WitnessNode
-        logInfo $ "New slot has just started: " +|| slotId ||+ ""
-        if committeeOwnsSlot committee ourAddr slotId
-        then issueBlock
-        else logInfo "We don't own current slot, skipping"
-    issueBlock = do
-        block <- createBlock
-        logInfo "Created a new block"
-        proof <- applyBlock block
-        logInfo $ "Applied block, proof: " +|| proof ||+ ""
+    handler e = logError $ fromString $ "Exception in blockReceivalWorker " <> show e
+    action :: ClientEnv NetTag -> m ()
+    action btq = forever $ do
+        logInfo "Receiving.."
+        (_nId, PubBlock block) <- cliRecvUpdate btq (-1)
+        logInfo $ "Got a new block: " +| block |+ ""
+        tip <- getCurrentTip
+        unless (tip == hash (rbHeader block)) $ do
+            logInfo "Block is new, applying"
+            proof <- applyBlock block
+            logInfo $ "Applied received block, proof: " +|| proof ||+ ", propagating"
 
 ----------------------------------------------------------------------------
--- Pinging
+-- Ping/pong workers
 ----------------------------------------------------------------------------
 
-
-witnessTxWorker :: forall ctx m. WitnessWorkMode ctx m => Worker m
-witnessTxWorker =
+_witnessTxWorker :: forall ctx m. WitnessWorkMode ctx m => Worker m
+_witnessTxWorker =
     Worker "txWorker" [msgType @PongTx] [] (\btq -> action btq `catchAny` handler)
   where
     handler e = logError $ fromString $ "Exception in txWorker: " <> show e
@@ -67,8 +61,8 @@ witnessTxWorker =
         logInfo $ "Heard pongtx: " +|| txt ||+ " from " +|| nId ||+ ""
         liftIO $ threadDelay 1000000
 
-witnessBlkWorker :: forall ctx m. WitnessWorkMode ctx m => Worker m
-witnessBlkWorker =
+_witnessBlkWorker :: forall ctx m. WitnessWorkMode ctx m => Worker m
+_witnessBlkWorker =
     Worker "blkWorker" [msgType @PongBlk] [] (\btq -> action btq `catchAny` handler)
   where
     handler e = logError $ fromString $ "Exception in txWorker: " <> show e

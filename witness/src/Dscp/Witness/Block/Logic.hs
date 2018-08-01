@@ -3,6 +3,7 @@
 module Dscp.Witness.Block.Logic
     ( createBlock
     , applyBlock
+    , getCurrentTip
     ) where
 
 import Control.Lens (views)
@@ -19,7 +20,7 @@ import Dscp.Core
 import Dscp.Crypto (sign, toPublic)
 import Dscp.Resource.Keys (ourPublicKey, ourSecretKey)
 import Dscp.Snowdrop.Actions (SDActions, nsBlockDBActions, nsStateDBActions)
-import Dscp.Snowdrop.Configuration (Exceptions, Ids, blockPrefix, tipPrefix)
+import Dscp.Snowdrop.Configuration (Exceptions, Ids, Values, blockPrefix, tipPrefix)
 import Dscp.Snowdrop.Expanders (expandBlock)
 import Dscp.Snowdrop.Storage.Avlp (RememberForProof (..))
 import Dscp.Snowdrop.Validators (blkStateConfig)
@@ -31,12 +32,23 @@ import Dscp.Witness.Mempool (MempoolVar, takeTxsMempool)
 createPayload :: MonadIO m => MempoolVar -> m BlockBody
 createPayload v = BlockBody <$> takeTxsMempool v
 
+getTipSD :: SD.BaseM
+                Exceptions
+                (SD.DbAccess
+                   (SD.ChgAccum ctx) Ids Values)
+                ctx
+                (Maybe HeaderHash)
+getTipSD =
+    SD.unTipValue <$>
+        (SD.queryOne SD.TipKey >>=
+         maybe (SD.throwLocalError @(SD.BlockStateException Ids) SD.TipNotFound) pure)
+
 -- | Create a public block.
 createBlock :: WitnessWorkMode ctx m => m Block
 createBlock = do
     blockDBA <- views (lensOf @SDActions) (SD.dmaAccessActions . nsBlockDBActions)
     (tipMb, diff) <- liftIO $ SD.runERoCompIO @Exceptions blockDBA def $ do
-        (tipMb :: Maybe HeaderHash) <- getTip
+        (tipMb :: Maybe HeaderHash) <- getTipSD
         let resolveTip tip = do
                 blundM <- SD.queryOne (SD.BlockRef tip)
                 let headerM = SD.blkHeader . SD.buBlock <$> blundM
@@ -53,11 +65,14 @@ createBlock = do
     let header = Header sgn (toPublic sk) diff tip
     let block = Block header payload
     pure block
-  where
-    getTip =
-        SD.unTipValue <$>
-            (SD.queryOne SD.TipKey >>=
-             maybe (SD.throwLocalError @(SD.BlockStateException Ids) SD.TipNotFound) pure)
+
+-- | Retrieves current tip.
+getCurrentTip :: WitnessWorkMode ctx m => m HeaderHash
+getCurrentTip = do
+    blockDBA <- views (lensOf @SDActions) (SD.dmaAccessActions . nsBlockDBActions)
+    liftIO $ SD.runERoCompIO @Exceptions blockDBA def $
+        fromMaybe (error "tip must exist") <$> getTipSD
+
 
 -- | Apply verified block.
 applyBlock :: WitnessWorkMode ctx m => Block -> m AvlProof

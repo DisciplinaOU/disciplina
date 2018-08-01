@@ -3,7 +3,7 @@
 module Main where
 
 import Control.Concurrent (threadDelay)
-import Loot.Log (logInfo, logWarning, modifyLogName)
+import Loot.Log (logInfo, modifyLogName)
 import Options.Applicative (execParser, fullDesc, helper, info, progDesc)
 import UnliftIO.Async (async)
 
@@ -32,8 +32,6 @@ main = do
                 serveWitnessAPIReal (wpWalletServerParams witnessParams)
 
             logInfo "All done"
-            logInfo "Hey, here log-warper works!"
-            logWarning "Don't forget to implement everything else though!"
             forever $ liftIO $ threadDelay 10000000
 
 getWitnessParams :: IO (WitnessParams, WitnessConfigRec)

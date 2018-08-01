@@ -8,7 +8,10 @@
 -- used within the library instead of loot-network directly.
 
 module Dscp.Network.Wrapped
-    ( MsgK
+    (
+      NetTag
+
+    , MsgK
     , SubK
     , msgType
     , fromMsgType
@@ -32,6 +35,13 @@ module Dscp.Network.Wrapped
 
     , withClient
     , withServer
+
+    -- reexports
+    , ListenerEnv
+    , ClientEnv
+    , CallbackWrapper
+    , NodeId
+    , handlerDecoded
     ) where
 
 
@@ -49,7 +59,7 @@ import Loot.Network.Class (CliId, ClientEnv, ClientId, ListenerEnv, ListenerId, 
                            registerListener, runClient, runServer)
 import qualified Loot.Network.Class as L
 import Loot.Network.Message (CallbackWrapper, Message (..), getMsgTag, handlerDecoded,
-                             runCallbacksInt)
+                             handlerDecoded, runCallbacksInt)
 import Loot.Network.ZMQ.Common (ZmqTcp)
 import UnliftIO (MonadUnliftIO)
 import UnliftIO.Async (withAsync)

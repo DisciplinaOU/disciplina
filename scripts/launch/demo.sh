@@ -57,13 +57,25 @@ done
 
 panesCnt=$n
 
+function witness_addr {
+    echo "127.0.0.1:40"$1"0:40"$1"1"
+}
 
 function witness_args {
     index=$1
-    bind="127.0.0.1:40"$index"0:40"$index"1"
+    bind=$(witness_addr $index)
     bind_api="127.0.0.1:40"$index"3"
     witness_dir="$tmp_files/node$index"
     mkdir -p $witness_dir
+
+    i=0
+    peers=""
+    while [[ $i -lt $n ]]; do
+        if [[ $i -ne $index ]]; then
+            peers=$peers"--peer "$(witness_addr $i)" "
+        fi
+        i=$(($i+1))
+    done
 
     # witness params (and educator's as well)
     local witness_params="
@@ -76,6 +88,7 @@ function witness_args {
     --comm-n $index
     --witness-keyfile $witness_dir/witness.key
     --witness-gen-key
+    $peers
     "
     echo $witness_params
 }
