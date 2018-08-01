@@ -66,7 +66,7 @@ paths:
         400:
           description: Invalid input
           schema:
-            $ref: "#/definitions/ApiResponse"
+            $ref: "#/definitions/ErrResponse"
 
   /courses:
     get:
@@ -107,7 +107,7 @@ paths:
         400:
           description: Invalid input
           schema:
-            $ref: "#/definitions/ApiResponse"
+            $ref: "#/definitions/ErrResponse"
 
   /students/{studentAddr}:
     delete:
@@ -128,15 +128,15 @@ paths:
         400:
           description: Invalid address value
           schema:
-            $ref: "#/definitions/ApiResponse"
+            $ref: "#/definitions/ErrResponse"
         403:
           description: Student cannot be deleted, as they are currently attending a course
           schema:
-            $ref: "#/definitions/ApiResponse"
+            $ref: "#/definitions/ErrResponse"
         404:
           description: Student with given address not found
           schema:
-            $ref: "#/definitions/ApiResponse"
+            $ref: "#/definitions/ErrResponse"
 
   /students/{studentAddr}/courses:
     get:
@@ -159,11 +159,11 @@ paths:
         400:
           description: Invalid address value
           schema:
-            $ref: "#/definitions/ApiResponse"
+            $ref: "#/definitions/ErrResponse"
         404:
           description: Student with given address not found
           schema:
-            $ref: "#/definitions/ApiResponse"
+            $ref: "#/definitions/ErrResponse"
 
     post:
       tags:
@@ -187,15 +187,15 @@ paths:
         400:
           description: Student address value or request body is invalid
           schema:
-            $ref: "#/definitions/ApiResponse"
+            $ref: "#/definitions/ErrResponse"
         403:
           description: Course with given ID does not exist
           schema:
-            $ref: "#/definitions/ApiResponse"
+            $ref: "#/definitions/ErrResponse"
         404:
           description: Student with given address not found
           schema:
-            $ref: "#/definitions/ApiResponse"
+            $ref: "#/definitions/ErrResponse"
 
   /students/{studentAddr}/courses/{courseId}/assignments:
     get:
@@ -224,11 +224,11 @@ paths:
         400:
           description: Student address or course id value is invalid
           schema:
-            $ref: "#/definitions/ApiResponse"
+            $ref: "#/definitions/ErrResponse"
         412:
           description: Given student does not attend given course
           schema:
-            $ref: "#/definitions/ApiResponse"
+            $ref: "#/definitions/ErrResponse"
 
   /students/{studentAddr}/courses/{courseId}/submissions:
     get:
@@ -253,11 +253,11 @@ paths:
         400:
           description: Student address or course id value is invalid
           schema:
-            $ref: "#/definitions/ApiResponse"
+            $ref: "#/definitions/ErrResponse"
         412:
           description: Given student does not attend given course
           schema:
-            $ref: "#/definitions/ApiResponse"
+            $ref: "#/definitions/ErrResponse"
 
   /students/{studentAddr}/courses/{courseId}/grades:
     get:
@@ -286,11 +286,11 @@ paths:
         400:
           description: Student address or course id value is invalid
           schema:
-            $ref: "#/definitions/ApiResponse"
+            $ref: "#/definitions/ErrResponse"
         412:
           description: Given student does not attend given course
           schema:
-            $ref: "#/definitions/ApiResponse"
+            $ref: "#/definitions/ErrResponse"
 
   /students/{studentAddr}/courses/{courseId}/proofs:
     get:
@@ -312,11 +312,11 @@ paths:
         400:
           description: Student address or course id value is invalid
           schema:
-            $ref: "#/definitions/ApiResponse"
+            $ref: "#/definitions/ErrResponse"
         412:
           description: Given student does not attend given course
           schema:
-            $ref: "#/definitions/ApiResponse"
+            $ref: "#/definitions/ErrResponse"
 
   /students/{studentAddr}/assignments:
     get:
@@ -339,11 +339,11 @@ paths:
         400:
           description: Student address value is invalid
           schema:
-            $ref: "#/definitions/ApiResponse"
+            $ref: "#/definitions/ErrResponse"
         404:
           description: Student with a given address not found
           schema:
-            $ref: "#/definitions/ApiResponse"
+            $ref: "#/definitions/ErrResponse"
     post:
       tags:
       - students
@@ -368,15 +368,15 @@ paths:
         400:
           description: Student address value or request body is invalid
           schema:
-            $ref: "#/definitions/ApiResponse"
+            $ref: "#/definitions/ErrResponse"
         403:
           description: Assignment with given hash does not exist
           schema:
-            $ref: "#/definitions/ApiResponse"
+            $ref: "#/definitions/ErrResponse"
         404:
           description: Student with given address not found
           schema:
-            $ref: "#/definitions/ApiResponse"
+            $ref: "#/definitions/ErrResponse"
 
   /students/{studentAddr}/assignments/{assignmentHash}:
     delete:
@@ -394,11 +394,11 @@ paths:
         400:
           description: Student address or assignment hash are invalid
           schema:
-            $ref: "#/definitions/ApiResponse"
+            $ref: "#/definitions/ErrResponse"
         404:
           description: Given student didn't have given assignment
           schema:
-            $ref: "#/definitions/ApiResponse"
+            $ref: "#/definitions/ErrResponse"
 
   /students/{studentAddr}/assignments/{assignmentHash}/submissions:
     get:
@@ -423,11 +423,11 @@ paths:
         400:
           description: Student address or assignment hash value is invalid
           schema:
-            $ref: "#/definitions/ApiResponse"
+            $ref: "#/definitions/ErrResponse"
         412:
           description: Given student didn't have given assignment
           schema:
-            $ref: "#/definitions/ApiResponse"
+            $ref: "#/definitions/ErrResponse"
 
   /students/{studentAddr}/assignments/{assignmentHash}/grades:
     get:
@@ -452,11 +452,11 @@ paths:
         400:
           description: Student address or assignment hash value is invalid
           schema:
-            $ref: "#/definitions/ApiResponse"
+            $ref: "#/definitions/ErrResponse"
         412:
           description: Given student didn't have given assignment
           schema:
-            $ref: "#/definitions/ApiResponse"
+            $ref: "#/definitions/ErrResponse"
 
   /students/{studentAddr}/submissions:
     get:
@@ -480,11 +480,11 @@ paths:
         400:
           description: Student address value is invalid
           schema:
-            $ref: "#/definitions/ApiResponse"
+            $ref: "#/definitions/ErrResponse"
         404:
           description: Student with given address not found
           schema:
-            $ref: "#/definitions/ApiResponse"
+            $ref: "#/definitions/ErrResponse"
 
   /students/{studentAddr}/grades:
     get:
@@ -507,11 +507,11 @@ paths:
         400:
           description: Student address value is invalid
           schema:
-            $ref: "#/definitions/ApiResponse"
+            $ref: "#/definitions/ErrResponse"
         404:
           description: Student with given address not found
           schema:
-            $ref: "#/definitions/ApiResponse"
+            $ref: "#/definitions/ErrResponse"
 
   /students/{studentAddr}/proofs:
     get:
@@ -532,11 +532,11 @@ paths:
         400:
           description: Student address value is invalid
           schema:
-            $ref: "#/definitions/ApiResponse"
+            $ref: "#/definitions/ErrResponse"
         404:
           description: Student with given address not found
           schema:
-            $ref: "#/definitions/ApiResponse"
+            $ref: "#/definitions/ErrResponse"
 
   /submissions:
     get:
@@ -574,11 +574,11 @@ paths:
         400:
           description: Submission hash value is invalid
           schema:
-            $ref: "#/definitions/ApiResponse"
+            $ref: "#/definitions/ErrResponse"
         404:
           description: Submission with given hash not found
           schema:
-            $ref: "#/definitions/ApiResponse"
+            $ref: "#/definitions/ErrResponse"
     delete:
       tags:
       - submissions
@@ -595,11 +595,11 @@ paths:
         400:
           description: Submission hash value is invalid
           schema:
-            $ref: "#/definitions/ApiResponse"
+            $ref: "#/definitions/ErrResponse"
         404:
           description: Submission with given hash not found
           schema:
-            $ref: "#/definitions/ApiResponse"
+            $ref: "#/definitions/ErrResponse"
 
   /grades:
     get:
@@ -642,7 +642,7 @@ paths:
         400:
           description: Request body is invalid
           schema:
-            $ref: "#/definitions/ApiResponse"
+            $ref: "#/definitions/ErrResponse"
 
   /assignments:
     get:
@@ -684,7 +684,7 @@ paths:
         400:
           description: Request body is invalid
           schema:
-            $ref: "#/definitions/ApiResponse"
+            $ref: "#/definitions/ErrResponse"
 
 
 definitions:
@@ -814,7 +814,7 @@ definitions:
   Subject:
     type: integer
     format: int32
-  ApiResponse:
+  ErrResponse:
     type: object
     required:
       - error
