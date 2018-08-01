@@ -6,10 +6,7 @@ import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), withScientific, withT
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
 
-import Dscp.Core.Address (addrFromText)
-import Dscp.Core.Foundation.Transactions.Types
-import Dscp.Core.Serialise ()
-import Dscp.Core.Types
+import Dscp.Core.Foundation
 import Dscp.Crypto.Aeson ()
 import Dscp.Util (Base (Base64), leftToFail)
 import Dscp.Util.Aeson (parseJSONSerialise, toJSONSerialise)

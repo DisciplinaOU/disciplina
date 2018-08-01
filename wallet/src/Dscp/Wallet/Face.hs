@@ -14,8 +14,7 @@ module Dscp.Wallet.Face
        , TxOut (..)
        ) where
 
-import Dscp.Core.Foundation.Transactions (Coin (..), Tx, TxOut (..))
-import Dscp.Core.Types (Address)
+import Dscp.Core (Address, Coin (..), Tx, TxOut (..))
 import Dscp.Crypto (Encrypted, PassPhrase, PublicKey, SecretKey)
 
 data WalletFace = WalletFace

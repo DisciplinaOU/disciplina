@@ -5,18 +5,16 @@ import Prelude hiding (preview)
 import Codec.Serialise (deserialiseOrFail, serialise)
 import Control.Exception
 import Control.Lens
-import Data.Scientific (toBoundedInteger)
-import Dscp.Core (addrFromText)
-import Dscp.Core.Foundation.Transactions (TxOut (..), coinToInteger, toTxId)
-import Dscp.Crypto (mkPassPhrase)
-import Dscp.Util (toHex)
-import IiExtras
-import Text.Earley
-
 import qualified Data.ByteArray as BA
 import qualified Data.ByteString.Lazy as BSL
+import Data.Scientific (toBoundedInteger)
+import IiExtras
 import qualified Serokell.Util.Base64 as Base64
+import Text.Earley
 
+import Dscp.Core (TxOut (..), addrFromText, coinToInteger, toTxId)
+import Dscp.Crypto (mkPassPhrase)
+import Dscp.Util (toHex)
 import Dscp.Wallet.Face
 
 import Knit

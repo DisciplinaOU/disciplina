@@ -12,9 +12,7 @@ module Dscp.Snowdrop.PublicationValidation
 
 import Data.Map as Map (lookup)
 
-import Dscp.Core (Address)
-import Dscp.Core.Foundation.Transactions
-import Dscp.Core.Foundation.Transactions (Publication (..))
+import Dscp.Core
 import Dscp.Crypto (PublicKey)
 import Dscp.Snowdrop.AccountValidation
 import Dscp.Snowdrop.Configuration

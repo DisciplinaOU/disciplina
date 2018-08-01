@@ -10,10 +10,7 @@ import qualified Snowdrop.Model.Execution as SD
 import qualified Snowdrop.Model.State.Core as SD
 import qualified Snowdrop.Util as SD
 
-import Dscp.Core
-import Dscp.Core.Foundation.Genesis (genesisHash)
-import Dscp.Core.Foundation.Transactions (Header (..), HeaderHash, Publication (..),
-                                          PublicationTxId, TxId)
+import Dscp.Core hiding (PublicationTxWitness)
 import Dscp.Crypto (PublicKey, Signature, hash, verify)
 import Dscp.Snowdrop.AccountValidation as A
 import Dscp.Snowdrop.Configuration (AddrTxProof, Exceptions, Ids, Proofs (..), PublicationTxProof,

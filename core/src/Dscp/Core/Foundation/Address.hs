@@ -1,6 +1,6 @@
 -- | Address and related.
 
-module Dscp.Core.Address
+module Dscp.Core.Foundation.Address
        ( Address (..)
        , mkAddr
        , addrToBase58

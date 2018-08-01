@@ -15,13 +15,7 @@ import Snowdrop.Model.State.Core (ChgAccum, ChgAccumCtx, ERoComp, StateTxType (.
 import Snowdrop.Model.State.Restrict (RestrictCtx)
 import Snowdrop.Util
 
-import Dscp.Core.Foundation.Transactions (Block (..), BlockBody (..), GTxWitnessed (..),
-                                          LastPublication (..), Publication (..),
-                                          PublicationHead (..), PublicationNext (..),
-                                          PublicationTx (..), PublicationTxWitness (..),
-                                          PublicationTxWitnessed (..), PublicationsOf (..), Tx (..),
-                                          TxInAcc (..), TxOut (..), TxWitness (..),
-                                          TxWitnessed (..), coinToInteger, toPtxId, toTxId)
+import Dscp.Core.Foundation
 import Dscp.Snowdrop.AccountValidation (Account (..), AccountId (..), AccountTxTypeId (..))
 import Dscp.Snowdrop.Configuration hiding (PublicationTxWitness)
 import qualified Dscp.Snowdrop.Configuration as Conf (Proofs (..))

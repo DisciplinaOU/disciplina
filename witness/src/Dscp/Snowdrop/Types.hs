@@ -1,10 +1,11 @@
+-- | Snowdrop-related types.
 
 module Dscp.Snowdrop.Types where
 
 import Data.Text.Buildable (Buildable (..))
 import Formatting (bprint, build, int, (%))
 
-import Dscp.Core.Types (Address)
+import Dscp.Core.Foundation (Address)
 
 -- | Transaction type for publication.
 data PublicationTxTypeId

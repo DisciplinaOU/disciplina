@@ -16,9 +16,7 @@ import Database.SQLite.Simple.ToField (ToField)
 import Loot.Log (MonadLogging)
 import Text.InterpolatedString.Perl6 (q)
 
-import Dscp.Core.Foundation.Educator.Txs (PrivateTx)
-import Dscp.Core.Serialise ()
-import qualified Dscp.Core.Types as Core
+import qualified Dscp.Core as Core
 import Dscp.Crypto (Hash, hash)
 import Dscp.DB.SQLite (DomainError (..), MonadSQLiteDB (..), TxBlockIdx (TxInMempool),
                        WithinSQLTransaction)
@@ -327,7 +325,7 @@ getBlockTxs
     :: MonadStudentAPIQuery m
     => Student
     -> Word32
-    -> m [PrivateTx]
+    -> m [Core.PrivateTx]
 getBlockTxs student blockIdx = do
     query queryText (blockIdx, student)
   where

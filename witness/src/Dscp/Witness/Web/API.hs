@@ -11,7 +11,6 @@ import Servant
 import Servant.Generic
 
 import Dscp.Core
-import Dscp.Core.Foundation.Transactions
 import Dscp.Witness.Web.Types
 
 -- | API/implementation of witness endpoints.

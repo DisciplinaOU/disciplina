@@ -8,8 +8,8 @@ module Dscp.Educator.Web.Student.Handlers
 
 import Data.Time.Clock (UTCTime)
 
+import qualified Dscp.Core as Core
 import Dscp.Core.Arbitrary (studentEx, studentSKEx)
-import qualified Dscp.Core.Types as Core
 import Dscp.Crypto
 import Dscp.DB.SQLite (sqlTransaction)
 import Dscp.Educator.Web.Student.API

@@ -9,7 +9,7 @@ import Control.Monad.Error.Class (throwError)
 import Servant (err500, errBody)
 import qualified UnliftIO as UIO
 
-import Dscp.Core.Types (SignedSubmission (..), Submission (..))
+import Dscp.Core (SignedSubmission (..), Submission (..))
 import Dscp.Educator.BlockValidation (validateSubmission)
 import Dscp.Educator.Web.Student.Error (WrongSubmissionSignature (..))
 import Dscp.Educator.Web.Student.Types (Student)

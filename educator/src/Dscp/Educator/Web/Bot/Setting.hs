@@ -23,15 +23,13 @@ import qualified Data.Map as M
 import Data.Reflection (Given (..), give)
 import qualified Data.Set as S
 import Data.Time.Clock (getCurrentTime)
-import Dscp.Core.Foundation.Educator.Txs.Type
 import Fmt ((+|), (+||), (|+), (||+))
 import Loot.Log (ModifyLogName, MonadLogging, logError, logInfo, modifyLogName)
 import UnliftIO (MonadUnliftIO)
 import UnliftIO.Async (async)
 import UnliftIO.Concurrent (threadDelay)
 
-import Dscp.Core.Arbitrary
-import Dscp.Core.Types
+import Dscp.Core
 import Dscp.Crypto.Impl
 import Dscp.DB.SQLite
 import qualified Dscp.Educator.Web.Student.Types as Student

@@ -26,8 +26,8 @@ module Dscp.Snowdrop.AccountValidation
 import Control.Monad.Error.Class (MonadError)
 import Data.List as List (partition)
 import Data.Map as Map (toList)
-import Dscp.Core.Foundation.Transactions (TxId)
-import Dscp.Core.Types (Address)
+
+import Dscp.Core.Foundation (Address, TxId)
 import Dscp.Crypto (PublicKey)
 import Dscp.Snowdrop.Configuration (CanVerifyPayload, Exceptions, Ids, PersonalisedProof, Proofs,
                                     TxIds, Values)

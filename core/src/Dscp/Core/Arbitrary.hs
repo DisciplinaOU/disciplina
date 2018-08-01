@@ -15,12 +15,9 @@ module Dscp.Core.Arbitrary
     , signedSubmissionEx
     ) where
 
-import Dscp.Util.Test
-
-import Dscp.Core.Serialise ()
-import Dscp.Core.Types
+import Dscp.Core.Foundation
 import Dscp.Crypto
-import Dscp.Crypto (hash, sign, toPublic, unsafeSign)
+import Dscp.Util.Test
 
 instance Arbitrary Address where
     arbitrary = Address <$> arbitrary

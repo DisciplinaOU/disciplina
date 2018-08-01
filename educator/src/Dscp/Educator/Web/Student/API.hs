@@ -14,7 +14,7 @@ import Data.Time.Clock (UTCTime)
 import Servant
 import Servant.Generic
 
-import qualified Dscp.Core.Types as Core
+import qualified Dscp.Core as Core
 import Dscp.Crypto (Hash)
 import Dscp.Educator.Web.Student.Types (Assignment, BlkProof, Course, IsEnrolled, IsFinal,
                                         Submission)

@@ -12,7 +12,7 @@ import qualified Data.Tree.AVL as AVL
 import Snowdrop.Model.Execution (DbModifyActions (..), SumChangeSet)
 import Snowdrop.Util (gett)
 
-import Dscp.Core.Address (addrFromText)
+import Dscp.Core.Foundation (addrFromText)
 import Dscp.Snowdrop.AccountValidation (Account (..), AccountId (..))
 import Dscp.Snowdrop.Configuration (Ids (..), Values (..))
 import Dscp.Snowdrop.Serialise ()
