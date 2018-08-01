@@ -68,6 +68,47 @@ paths:
           schema:
             $ref: "#/definitions/ApiResponse"
 
+  /courses:
+    get:
+      tags:
+      - courses
+      summary: Get all courses
+      operationId: getCourses
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      responses:
+        200:
+          description: A list of all courses
+          schema:
+            type: array
+            items:
+              $ref: "#/definitions/Course"
+    post:
+      tags:
+      - courses
+      summary: Add a new course to a database
+      operationId: addCourse
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      parameters:
+      - in: body
+        name: body
+        description: Course object that needs to be added to the system
+        required: true
+        schema:
+          $ref: "#/definitions/Course"
+      responses:
+        201:
+          description: successful operation
+        400:
+          description: Invalid input
+          schema:
+            $ref: "#/definitions/ApiResponse"
+
   /students/{studentAddr}:
     delete:
       tags:
