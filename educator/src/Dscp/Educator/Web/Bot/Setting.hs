@@ -59,7 +59,7 @@ genDependencies items = do
 genBotCourseAssignments :: Int -> Course -> Gen [Assignment]
 genBotCourseAssignments n _aCourseId =
     forM [1..n] $ \i -> do
-        _aContentsHash <- arbitrary
+        let _aContentsHash = offlineHash
         let _aType = if i == n then CourseFinal else Regular
         let _aDesc = if i == n then "Exam" else "Task #" <> pretty i
         return Assignment{..}
@@ -74,16 +74,16 @@ genBotCourseAssignments n _aCourseId =
 data BotSetting = BotSetting
     {
       -- | All courses info
-      bsCourses :: [(Course, Text, [Id Subject])]
+      bsCourses           :: [(Course, Text, [Id Subject])]
       -- | We show a small set of courses at the beginning in order not to
       -- confuse user, and disclose all others later to prevent him getting
       -- bored.
-    , bsBasicCourses
-    , bsAdvancedCourses :: [Course]
+    , bsBasicCourses      :: [Course]
+    , bsAdvancedCourses   :: [Course]
       -- | All assignments info on per course basis.
     , bsCourseAssignments :: Map Course [WithDependencies Assignment]
       -- | Flattened assignments.
-    , bsAssignments :: [Assignment]
+    , bsAssignments       :: [Assignment]
     }
 
 -- | Generate a bot setting.
@@ -94,13 +94,16 @@ mkBotSetting seed = BotSetting{..}
   botGen = detGen seed
 
   bsCourses =
-    [ (courseEx , "Basic math", [])
+    [ (courseEx , "Basic maths", [])
     , (Course 21, "Classic physics", [])
 
     , (Course 12, "Advanced math", [])
     , (Course 22, "Quantum physics", [])
     , (Course 23, "Sci-fi physics", [])
-    , (Course 31, "You, yes YOU REVIEWER, coin some names for a couple more subjects", [])
+    , (Course 31, "English", [])
+    , (Course 41, "Data structures", [])
+    , (Course 42, "Discrete maths", [])
+    , (Course 43, "Electronic computer architecture", [])
     ]
 
   (bsBasicCourses, bsAdvancedCourses) =
