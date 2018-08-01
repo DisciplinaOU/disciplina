@@ -1,6 +1,6 @@
 -- | Datatypes for Student HTTP API
 
-module Dscp.Educator.Web.Student.Types
+module Dscp.Educator.Web.Types
        ( Student
        , IsFinal (..)
        , IsEnrolled (..)

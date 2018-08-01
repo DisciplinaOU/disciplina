@@ -26,10 +26,7 @@ import Dscp.Util (Id, assertJust, listToMaybeWarn)
 import Dscp.Util.Aeson (AsHex (..))
 
 import Dscp.Educator.Web.Student.Error (APIError (..), ObjectAlreadyExistsError (..))
-import Dscp.Educator.Web.Student.Types (Assignment (..), BlkProof (..), Course (..), Grade (..),
-                                        IsEnrolled (..), IsFinal (..), Student, Submission (..),
-                                        assignmentTypeRaw)
-
+import Dscp.Educator.Web.Types
 
 ---------------------------------------------------------------------
 -- Helpers

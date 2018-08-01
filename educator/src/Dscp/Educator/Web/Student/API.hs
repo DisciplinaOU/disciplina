@@ -16,7 +16,7 @@ import Servant.Generic
 
 import qualified Dscp.Core as Core
 import Dscp.Crypto (Hash)
-import Dscp.Educator.Web.Student.Types
+import Dscp.Educator.Web.Types
 
 data StudentApiEndpoints route = StudentApiEndpoints
     { sGetCourses       :: route :- GetCourses

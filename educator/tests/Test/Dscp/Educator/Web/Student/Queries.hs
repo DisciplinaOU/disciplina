@@ -1,4 +1,4 @@
-module Test.Dscp.Educator.Student.Queries where
+module Test.Dscp.Educator.Web.Student.Queries where
 
 import Data.List (nub, (!!))
 import Data.Time.Clock (UTCTime (..))
@@ -12,11 +12,12 @@ import qualified Dscp.DB.SQLite as CoreDB
 import Dscp.Educator.Web.Student
 import qualified Dscp.Educator.Web.Student.Logic as Logic
 import qualified Dscp.Educator.Web.Student.Queries as DB
+import Dscp.Educator.Web.Types
 import Dscp.Util (Id (..))
 import Dscp.Util.Test
 
 import Test.Dscp.DB.SQLite.Common (sqliteProperty)
-import Test.Dscp.Educator.Student.Instances ()
+import Test.Dscp.Educator.Web.Instances ()
 
 allStudents :: [Student]
 student1, student2 :: Student

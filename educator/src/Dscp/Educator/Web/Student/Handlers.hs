@@ -16,7 +16,7 @@ import Dscp.Educator.Web.Student.API
 import Dscp.Educator.Web.Student.Logic (makeSubmissionVerified)
 import qualified Dscp.Educator.Web.Student.Queries as Queries
 
-import Dscp.Educator.Web.Student.Types
+import Dscp.Educator.Web.Types
 
 type StudentApiWorkMode m =
     ( Queries.MonadStudentAPIQuery m

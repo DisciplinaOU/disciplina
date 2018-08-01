@@ -32,7 +32,7 @@ import UnliftIO.Concurrent (threadDelay)
 import Dscp.Core
 import Dscp.Crypto.Impl
 import Dscp.DB.SQLite
-import qualified Dscp.Educator.Web.Student.Types as Student
+import qualified Dscp.Educator.Web.Types as Student
 import Dscp.Util
 import Dscp.Util.Test
 import Dscp.Witness.Instances ()

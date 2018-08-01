@@ -10,8 +10,8 @@ import Dscp.DB.SQLite (sqlTransaction)
 import qualified Dscp.DB.SQLite.Queries as CoreQueries
 import Dscp.Educator.Web.Student.Error (APIError (..))
 import qualified Dscp.Educator.Web.Student.Queries as Queries
-import Dscp.Educator.Web.Student.Types (NewSubmission (..), Student, Submission (..), nsOwner)
 import Dscp.Educator.Web.Student.Util (verifyStudentSubmission)
+import Dscp.Educator.Web.Types (NewSubmission (..), Student, Submission (..), nsOwner)
 import Dscp.Util (assertJust, leftToThrow)
 
 requestToSignedSubmission

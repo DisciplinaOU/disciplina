@@ -12,7 +12,7 @@ import qualified UnliftIO as UIO
 import Dscp.Core (SignedSubmission (..), Submission (..))
 import Dscp.Educator.BlockValidation (validateSubmission)
 import Dscp.Educator.Web.Student.Error (WrongSubmissionSignature (..))
-import Dscp.Educator.Web.Student.Types (Student)
+import Dscp.Educator.Web.Types (Student)
 
 -- | Checks that
 -- 1. 'SignedSubmission' is valid;
