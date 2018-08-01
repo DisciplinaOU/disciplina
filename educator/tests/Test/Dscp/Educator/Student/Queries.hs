@@ -3,10 +3,8 @@ module Test.Dscp.Educator.Student.Queries where
 import Data.List (nub, (!!))
 import Data.Time.Clock (UTCTime (..))
 
+import qualified Dscp.Core as Core
 import Dscp.Core.Arbitrary (genStudentSignedSubmissions)
-import Dscp.Core.Foundation.Educator.Txs (PrivateTx (..))
-import qualified Dscp.Core.Grade as Core
-import qualified Dscp.Core.Types as Core
 import Dscp.Crypto (Hash, Raw, hash)
 import Dscp.DB.SQLite (MonadSQLiteDB, WithinSQLTransaction, sqlTransaction, _AssignmentDoesNotExist,
                        _SubmissionDoesNotExist)
@@ -435,7 +433,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                     student = Core._sStudentId $ submission
                 prepareAndCreateSubmissions [sigSubmission]
                 _ <- CoreDB.createTransaction $
-                     PrivateTx sigSubmission grade someTime
+                     Core.PrivateTx sigSubmission grade someTime
 
                 submission' <-
                     sqlTx $ DB.getSubmission student (getId submission)
@@ -489,7 +487,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
 
                 forM_ sigSubmissionsAndGrades $ \(sigSubmission, grade) ->
                     CoreDB.createTransaction $
-                    PrivateTx sigSubmission grade someTime
+                    Core.PrivateTx sigSubmission grade someTime
 
                 submissions' <- getAllSubmissions student
                 let submissionsAndGrades' =
@@ -558,7 +556,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                     student = Core._sStudentId $ submission
                 prepareAndCreateSubmissions [sigSubmission]
                 _ <- CoreDB.createTransaction $
-                     PrivateTx sigSubmission Core.gA someTime
+                     Core.PrivateTx sigSubmission Core.gA someTime
 
                 throwsPrism _DeletingGradedSubmission $ do
                      sqlTx $ DB.deleteSubmission student (hash submission)

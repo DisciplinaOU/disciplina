@@ -1,4 +1,3 @@
-
 -- | Datatypes for Student HTTP API
 
 module Dscp.Educator.Web.Student.Types
@@ -26,10 +25,8 @@ import Data.Aeson.TH (deriveJSON)
 import Data.Time.Clock (UTCTime)
 import Servant (FromHttpApiData (..))
 
-import Dscp.Core.Address (addrFromText)
-import Dscp.Core.Aeson ()
-import Dscp.Core.Foundation.Educator.Txs (PrivateTx (..))
-import qualified Dscp.Core.Types as Core
+import Dscp.Core (PrivateTx (..), addrFromText)
+import qualified Dscp.Core as Core
 import Dscp.Crypto (hash)
 import Dscp.Crypto (Hash, Raw)
 import Dscp.Educator.Web.Student.Error (APIError)

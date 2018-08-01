@@ -13,8 +13,8 @@ import Snowdrop.Util (CSMappendException, ChangeSet, IdStorage, IdSumPrefixed (.
                       VerifySign, WithSignature (..), deriveIdView, deriveView, withInj,
                       withInjProj)
 
-import Dscp.Core.Foundation.Transactions (HeaderHash)
-import qualified Dscp.Core.Foundation.Transactions as T
+import Dscp.Core.Foundation (HeaderHash)
+import qualified Dscp.Core.Foundation as T
 import Dscp.Crypto (PublicKey, Signature, hashF)
 import Dscp.Snowdrop.Types (Account, AccountId (..), AccountTxTypeId (..),
                             AccountValidationException, PublicationTxTypeId (..),

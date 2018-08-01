@@ -1,4 +1,3 @@
-
 {-# LANGUAGE QuasiQuotes #-}
 
 module Dscp.DB.DSL.Interpret.Sqlite3 () where
@@ -7,7 +6,7 @@ import qualified Data.Set as Set (Set, empty, member, singleton)
 
 import Text.InterpolatedString.Perl6 (qc, qq)
 
-import Dscp.Core.Foundation.Educator.Txs (PrivateTx (..))
+import Dscp.Core.Foundation (PrivateTx (..))
 import Dscp.DB.DSL.Class
 import Dscp.DB.SQLite
 

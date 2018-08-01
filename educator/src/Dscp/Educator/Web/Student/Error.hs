@@ -1,4 +1,3 @@
-
 -- | API errors
 
 module Dscp.Educator.Web.Student.Error
@@ -25,8 +24,7 @@ import Data.Aeson.TH (deriveJSON)
 import Data.Aeson.Types (typeMismatch)
 import Servant (ServantErr (..), err403, err404, err409, err500)
 
-import Dscp.Core.Aeson ()
-import qualified Dscp.Core.Types as Core
+import qualified Dscp.Core as Core
 import Dscp.Crypto (Hash)
 import Dscp.DB.SQLite.Queries (DomainError (..))
 import Dscp.Educator.BlockValidation (SubmissionValidationFailure)

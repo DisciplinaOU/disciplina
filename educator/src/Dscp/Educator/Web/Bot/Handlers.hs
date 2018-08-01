@@ -4,7 +4,7 @@ module Dscp.Educator.Web.Bot.Handlers
 
 import Loot.Log (logInfo)
 
-import qualified Dscp.Core.Types as Core
+import qualified Dscp.Core as Core
 import Dscp.Crypto
 import Dscp.Educator.Web.Bot.Setting
 import Dscp.Educator.Web.Student

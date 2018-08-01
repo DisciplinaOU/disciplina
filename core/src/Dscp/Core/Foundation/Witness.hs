@@ -1,47 +1,48 @@
-
-module Dscp.Core.Foundation.Transactions.Types
+-- | Common types for main witness node.
+module Dscp.Core.Foundation.Witness
     (
-       -- * Transaction
-         Coin (..)
-       , StakeholderId (..)
-       , coinToInteger
-       , coinFromInteger
-       , TxInAcc (..)
-       , TxOut (..)
-       , Tx (..)
-       , TxId
-       , toTxId
-       , TxWitness (..)
-       , TxWitnessed (..)
-       , Publication (..)
-       , PublicationTxWitness (..)
-       , PublicationTxWitnessed (..)
-       , PublicationTx (..)
-       , PublicationTxId
-       , PublicationsOf (..)
-       , LastPublication (..)
-       , PublicationHead (..)
-       , PublicationNext (..)
-       , toPtxId
-       , GTx (..)
-       , GTxWitnessed (..)
+    -- * Common
+      Coin (..)
+    , StakeholderId (..)
+    , coinToInteger
+    , coinFromInteger
 
-       -- * Block
-       , HeaderHash
-       , Difficulty (..)
-       , BlockToSign (..)
-       , Header (..)
-       , Block (..)
-       , BlockBody (..)
-    )
-    where
+    -- * Transaction
+    , TxInAcc (..)
+    , TxOut (..)
+    , Tx (..)
+    , TxId
+    , toTxId
+    , TxWitness (..)
+    , TxWitnessed (..)
+    , Publication (..)
+    , PublicationTxWitness (..)
+    , PublicationTxWitnessed (..)
+    , PublicationTx (..)
+    , PublicationTxId
+    , PublicationsOf (..)
+    , LastPublication (..)
+    , PublicationHead (..)
+    , PublicationNext (..)
+    , toPtxId
+    , GTx (..)
+    , GTxWitnessed (..)
+
+    -- * Block
+    , HeaderHash
+    , Difficulty (..)
+    , BlockToSign (..)
+    , Header (..)
+    , Block (..)
+    , BlockBody (..)
+    ) where
 
 import Codec.Serialise (Serialise)
 
 import Fmt (blockListF, build, indentF, listF, nameF, (+|), (+||), (|+), (||+))
 
-import Dscp.Core.Foundation.Educator.Block (PrivateHeaderHash)
-import Dscp.Core.Types
+import Dscp.Core.Foundation.Address
+import Dscp.Core.Foundation.Educator (PrivateHeaderHash)
 import Dscp.Crypto
 
 ----------------------------------------------------------------------------

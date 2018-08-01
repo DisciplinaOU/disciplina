@@ -1,12 +1,11 @@
 -- | Genesis block. Simplest way possible unless DSCP-156 is done.
 
-module Dscp.Core.Foundation.Genesis
+module Dscp.Core.Genesis
     ( genesisBlock
     , genesisHash
     ) where
 
-import Dscp.Core.Serialise ()
-import Dscp.Core.Foundation.Transactions
+import Dscp.Core.Foundation
 import Dscp.Crypto (hash, keyGen, sign, unsafeHash, withIntSeed)
 
 genesisBlock :: Block

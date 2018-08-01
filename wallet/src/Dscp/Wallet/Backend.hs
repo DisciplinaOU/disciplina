@@ -4,11 +4,9 @@ module Dscp.Wallet.Backend
        ) where
 
 import Control.Exception (throwIO)
-import Dscp.Core (mkAddr)
-import Dscp.Core.Foundation.Transactions (Tx (..), TxInAcc (..), TxWitness (..), TxWitnessed (..),
-                                          toTxId)
-import Dscp.Crypto (decrypt, emptyPassPhrase, encrypt, keyGen, sign, toPublic)
 
+import Dscp.Core (Tx (..), TxInAcc (..), TxWitness (..), TxWitnessed (..), mkAddr, toTxId)
+import Dscp.Crypto (decrypt, emptyPassPhrase, encrypt, keyGen, sign, toPublic)
 import Dscp.Wallet.Client
 import Dscp.Wallet.Face
 import Dscp.Wallet.KeyStorage
