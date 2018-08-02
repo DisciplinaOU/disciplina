@@ -25,13 +25,14 @@ import qualified Data.Set as S
 import Data.Time.Clock (getCurrentTime)
 import Fmt ((+|), (+||), (|+), (||+))
 import Loot.Log (ModifyLogName, MonadLogging, logError, logInfo, modifyLogName)
+import Time.Units (Microsecond, Time, threadDelay)
 import UnliftIO (MonadUnliftIO)
 import UnliftIO.Async (async)
-import UnliftIO.Concurrent (threadDelay)
 
 import Dscp.Core
 import Dscp.Crypto.Impl
 import Dscp.DB.SQLite
+import Dscp.Educator.Web.Bot.Params
 import Dscp.Educator.Web.Student.Types
 import Dscp.Util
 import Dscp.Util.Test
@@ -82,14 +83,17 @@ data BotSetting = BotSetting
     , bsCourseAssignments :: Map Course [WithDependencies Assignment]
       -- | Flattened assignments.
     , bsAssignments       :: [Assignment]
+      -- | Artificial delay in bot operations.
+    , bsOperationsDelay   :: Time Microsecond
     }
 
 -- | Generate a bot setting.
-mkBotSetting :: Int -> BotSetting
-mkBotSetting seed = BotSetting{..}
+mkBotSetting :: EducatorBotParams -> BotSetting
+mkBotSetting params =
+  BotSetting{ bsOperationsDelay = ebpOperationsDelay params, ..}
  where
   botGen :: Gen a -> a
-  botGen = detGen seed
+  botGen = detGenG (ebpSeed params)
 
   bsCourses =
     [ (courseEx , "Basic maths", [])
@@ -146,17 +150,15 @@ type BotWorkMode m =
 botLog :: ModifyLogName m => m a -> m a
 botLog = modifyLogName (<> "bot")
 
-delayed :: (BotWorkMode m) => m () -> m ()
+delayed :: (BotWorkMode m, HasBotSetting) => m () -> m ()
 delayed action
-    | botOpsDelay == 0 = action
+    | delay == 0 = action
     | otherwise =
         void . async $ do
-            threadDelay botOpsDelay
+            threadDelay delay
             action `catchAny` logException
   where
-    -- TODO [DSCP-163]: Take value from config
-    -- keeping it 0 now for the sake of tests
-    botOpsDelay = 0
+    delay = bsOperationsDelay botSetting
     logException e = botLog . logError $ "Delayed action failed: " +|| e ||+ ""
 
 botPrepareInitialData :: (BotWorkMode m, HasBotSetting) => m ()

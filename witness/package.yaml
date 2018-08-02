@@ -33,6 +33,7 @@ library:
     - memory
     - mtl
     - optparse-applicative
+    - o-clock
     - parsec
     - prettyprinter
     - reflection

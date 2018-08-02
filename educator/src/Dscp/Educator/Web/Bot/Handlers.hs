@@ -4,15 +4,15 @@ module Dscp.Educator.Web.Bot.Handlers
 
 import Loot.Log (logInfo)
 
+import Dscp.Educator.Web.Bot.Params
 import Dscp.Educator.Web.Bot.Setting
 import Dscp.Educator.Web.Student
 
 addBotHandlers
     :: forall m. BotWorkMode m
-    => StudentApiHandlers m -> m (StudentApiHandlers m)
-addBotHandlers StudentApiEndpoints{..} =
-    -- TODO [DSCP-163] Take seed from config
-    withBotSetting (mkBotSetting 2342342) $ do
+    => EducatorBotParams -> StudentApiHandlers m -> m (StudentApiHandlers m)
+addBotHandlers params StudentApiEndpoints{..} =
+    withBotSetting (mkBotSetting params) $ do
         botPrepareInitialData
         botLog $ logInfo "Educator bot initiated"
         return botEndpoints

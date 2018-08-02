@@ -6,11 +6,12 @@ module Dscp.Educator.CLI
     ( educatorParamsParser
     ) where
 
-import Options.Applicative (Parser, help, long, metavar, strOption, switch, value)
+import Options.Applicative (Parser, help, long, metavar, option, strOption, switch, value)
 
-import Dscp.CommonCLI (baseKeyParamsParser, serverParamsParser)
+import Dscp.CommonCLI (baseKeyParamsParser, serverParamsParser, timeReadM)
 import Dscp.DB.SQLite (SQLiteDBLocation (..), SQLiteParams (..))
 import Dscp.Educator.Launcher.Params (EducatorParams (..))
+import Dscp.Educator.Web.Bot.Params (EducatorBotParams (..), EducatorBotSwitch (..))
 import Dscp.Educator.Web.Params (EducatorWebParams (..))
 import Dscp.Resource.Keys (EducatorKeyParams (..))
 import Dscp.Witness.CLI (witnessParamsParser)
@@ -22,12 +23,30 @@ sqliteParamsParser = fmap (SQLiteParams . SQLiteReal) $ strOption $
     help "Path to database directory for educator's private data." <>
     value "educator-db"
 
+educatorBotParamsParser :: Parser EducatorBotSwitch
+educatorBotParamsParser = do
+    enabled <- switch $
+        long "educator-bot" <>
+        help "Enable bot which would automatically react on student actions."
+    ebpSeed <- strOption $
+        long "educator-bot-seed" <>
+        metavar "TEXT" <>
+        help "Seed for bot pregenerated data" <>
+        value "Memes generator"
+    ebpOperationsDelay <- option timeReadM $
+        long "educator-bot-delay" <>
+        metavar "TIME" <>
+        help "Delay before user action and bot reaction on it" <>
+        value 0
+    return $
+      if enabled
+        then EducatorBotOn EducatorBotParams{..}
+        else EducatorBotOff
+
 educatorWebParamsParser :: Parser EducatorWebParams
 educatorWebParamsParser = do
     ewpServerParams <- serverParamsParser "Student"
-    ewpWithBot <- switch $
-        long "educator-bot" <>
-        help "Enable bot which would automatically react on student actions."
+    ewpBotParams <- educatorBotParamsParser
     return EducatorWebParams{..}
 
 educatorKeyParamsParser :: Parser EducatorKeyParams
