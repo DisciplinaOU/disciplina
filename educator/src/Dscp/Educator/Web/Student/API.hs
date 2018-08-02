@@ -16,8 +16,7 @@ import Servant.Generic
 
 import qualified Dscp.Core as Core
 import Dscp.Crypto (Hash)
-import Dscp.Educator.Web.Student.Types (Assignment, BlkProof, Course, IsEnrolled, IsFinal,
-                                        Submission)
+import Dscp.Educator.Web.Student.Types
 
 data StudentApiEndpoints route = StudentApiEndpoints
     { sGetCourses       :: route :- GetCourses
@@ -103,7 +102,7 @@ type MakeSubmission
     :> Description "Posts a new submission with a given body. Request body should \
                    \contain valid student's signature of submission contents, \
                    \otherwise an error will be raised."
-    :> ReqBody '[JSON] Core.SignedSubmission
+    :> ReqBody '[JSON] NewSubmission
     :> Verb 'POST 201 '[JSON] Submission
 
 type DeleteSubmission

@@ -23,7 +23,7 @@ import Dscp.DB.SQLite (DomainError (..), MonadSQLiteDB (..), TxBlockIdx (TxInMem
 import qualified Dscp.DB.SQLite.Queries as Base
 import Dscp.DB.SQLite.Types (asAlreadyExistsError)
 import Dscp.Util (Id, assertJust, listToMaybeWarn)
-import Dscp.Util.Aeson (AsByteString (..))
+import Dscp.Util.Aeson (AsHex (..))
 
 import Dscp.Educator.Web.Student.Error (APIError (..), ObjectAlreadyExistsError (..))
 import Dscp.Educator.Web.Student.Types (Assignment (..), BlkProof (..), Course (..), Grade (..),
@@ -140,13 +140,13 @@ getGrade submissionH = do
     mgrade <-
         query queryText (Only submissionH)
         >>= listToMaybeWarn "last submission"
-    forM mgrade $ \(gGrade, gTimestamp, blkIdx) -> do
+    forM mgrade $ \(gGrade, gTimestamp, gSubmissionHash, blkIdx) -> do
         let gHasProof = blkIdx /= TxInMempool
         return Grade{..}
   where
     queryText :: Query
     queryText = [q|
-        select    grade, time, idx
+        select    grade, time, submission_hash, idx
         from      Transactions
         where     submission_hash = ?
     |]
@@ -365,7 +365,7 @@ getProofs student sinceF = do
     forM blocks $ \(idx, tree) -> do
         txs <- getBlockTxs student idx
         return BlkProof
-            { bpMtreeSerialized = AsByteString tree
+            { bpMtreeSerialized = AsHex tree
             , bpTxs = txs
             }
   where

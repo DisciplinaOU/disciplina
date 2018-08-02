@@ -23,7 +23,6 @@ paths:
       tags:
       - students
       summary: Get a list of all registered students' addresses
-      description: ""
       operationId: getStudents
       consumes:
       - application/json
@@ -47,7 +46,6 @@ paths:
       tags:
       - students
       summary: Add a new student address to a database
-      description: ""
       operationId: addStudent
       consumes:
       - application/json
@@ -696,6 +694,7 @@ definitions:
   Hash:
     type: string
     format: byte
+    description: Base64url encoded blake2b (256 bits) hash
   Address:
     type: string
     format: byte

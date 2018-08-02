@@ -12,7 +12,7 @@ import Dscp.Core.Foundation
 import Dscp.Core.Genesis
 import Dscp.Core.Governance
 import Dscp.Crypto.Aeson ()
-import Dscp.Util (Base (Base64), leftToFail)
+import Dscp.Util (Base (Base16), leftToFail)
 import Dscp.Util.Aeson (parseJSONSerialise, toJSONSerialise)
 
 ---------------------------------------------------------------------------
@@ -51,9 +51,9 @@ instance FromJSON Grade where
         mkGrade . round
 
 instance ToJSON SubmissionWitness where
-    toJSON = toJSONSerialise Base64
+    toJSON = toJSONSerialise Base16
 instance FromJSON SubmissionWitness where
-    parseJSON = parseJSONSerialise Base64
+    parseJSON = parseJSONSerialise Base16
 
 ---------------------------------------------------------------------------
 -- Standalone derivations for newtypes

@@ -2,7 +2,6 @@
 
 module Dscp.Educator.Web.Student.Error
        ( APIError (..)
-       , _SubmissionMalformed
        , _BadSubmissionSignature
        , _DeletingGradedSubmission
        , _EntityAbsent
@@ -13,15 +12,16 @@ module Dscp.Educator.Web.Student.Error
        , ObjectAlreadyExistsError (..)
        , _SubmissionAlreadyExists
 
+       , ErrResponse (..)
+
        , toServantErr
        , unexpectedToServantErr
        ) where
 
 import Control.Lens (makePrisms)
-import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), encode, object, withObject, (.:), (.=))
+import Data.Aeson (ToJSON (..), Value (..), encode)
 import Data.Aeson.Options (defaultOptions)
-import Data.Aeson.TH (deriveJSON)
-import Data.Aeson.Types (typeMismatch)
+import Data.Aeson.TH (deriveJSON, deriveToJSON)
 import Servant (ServantErr (..), err403, err404, err409, err500)
 
 import qualified Dscp.Core as Core
@@ -47,9 +47,7 @@ data ObjectAlreadyExistsError
 makePrisms ''ObjectAlreadyExistsError
 
 data APIError
-    = SubmissionMalformed
-      -- ^ Submission is malformed.
-    | BadSubmissionSignature WrongSubmissionSignature
+    = BadSubmissionSignature WrongSubmissionSignature
       -- ^ Submission signature doesn't match the student nor has valid format.
     | DeletingGradedSubmission
       -- ^ Graded Submission is deleting
@@ -63,39 +61,35 @@ makePrisms ''APIError
 
 instance Exception APIError
 
+data ErrResponse = ErrResponse
+    { erError :: !APIError
+    } deriving (Show, Eq, Generic)
+
 ---------------------------------------------------------------------------
 -- JSON instances
 ---------------------------------------------------------------------------
 
 deriveJSON defaultOptions ''ObjectAlreadyExistsError
 deriveJSON defaultOptions ''WrongSubmissionSignature
-
-instance FromJSON APIError where
-    parseJSON = \case
-        v@Object{}                          -> asum $ map ($ v)
-            [ withObject "EntityAbsent" $ \o ->
-                o .: "missing_entitry"
-            , withObject "EntityAbsent" $ \o ->
-                o .: "invalid_submission_signature"
-            ]
-        String "SubmissionMalformed"        -> pure SubmissionMalformed
-        String "DeletingGradedSubmission"   -> pure DeletingGradedSubmission
-        String other -> fail $ "invalid error constructor: " ++ toString other
-        other -> typeMismatch "API error" other
+deriveToJSON defaultOptions ''ErrResponse
 
 instance ToJSON APIError where
-    toJSON = \case
-        SubmissionMalformed -> String "SubmissionMalformed"
-        DeletingGradedSubmission -> String "DeletingGradedSubmission"
-        BadSubmissionSignature err -> object
-            [ "invalid_submission_signature" .= err
-            ]
-        EntityAbsent err -> object
-            [ "missing_entity" .= err
-            ]
-        EntityAlreadyPresent err -> object
-            [ "already_present" .= err
-            ]
+    toJSON = String . \case
+        BadSubmissionSignature err -> case err of
+            FakeSubmissionSignature{}    ->          "FakeSubmissionSignature"
+            SubmissionSignatureInvalid{} ->          "SubmissionSignatureInvalid"
+        DeletingGradedSubmission{} ->                "DeletingGradedSubmission"
+        EntityAbsent err -> case err of
+            CourseDoesNotExist{}                  -> "CourseDoesNotExist"
+            StudentDoesNotExist{}                 -> "StudentDoesNotExist"
+            AssignmentDoesNotExist{}              -> "AssignmentDoesNotExist"
+            StudentWasNotEnrolledOnTheCourse{}    -> "StudentWasNotEnrolledOnTheCourse"
+            StudentWasNotSubscribedOnAssignment{} -> "StudentWasNotSubscribedOnAssignment"
+            SubmissionDoesNotExist{}              -> "SubmissionDoesNotExist"
+            TransactionDoesNotExist{}             -> "TransactionDoesNotExist"
+            BlockWithIndexDoesNotExist{}          -> "BlockWithIndexDoesNotExist"
+        EntityAlreadyPresent err -> case err of
+            SubmissionAlreadyExists{} ->             "SubmissionAlreadyExists"
 
 ---------------------------------------------------------------------------
 -- Functions
@@ -104,15 +98,22 @@ instance ToJSON APIError where
 -- | Get HTTP error code of error.
 toServantErrNoReason :: APIError -> ServantErr
 toServantErrNoReason = \case
-    SubmissionMalformed{}      -> err403
     BadSubmissionSignature{}   -> err403
     DeletingGradedSubmission{} -> err403
-    EntityAbsent{}             -> err404
+    EntityAbsent err           -> case err of
+        CourseDoesNotExist{}                  -> err404
+        StudentDoesNotExist{}                 -> err404
+        AssignmentDoesNotExist{}              -> err404
+        StudentWasNotEnrolledOnTheCourse{}    -> err404
+        StudentWasNotSubscribedOnAssignment{} -> err404
+        SubmissionDoesNotExist{}              -> err404
+        TransactionDoesNotExist{}             -> err404
+        BlockWithIndexDoesNotExist{}          -> err500
     EntityAlreadyPresent{}     -> err409
 
 -- | Make up error which will be returned to client.
 toServantErr :: APIError -> ServantErr
-toServantErr err = (toServantErrNoReason err){ errBody = encode err }
+toServantErr err = (toServantErrNoReason err){ errBody = encode $ ErrResponse err }
 
 unexpectedToServantErr :: SomeException -> ServantErr
 unexpectedToServantErr err = err500{ errBody = show err }

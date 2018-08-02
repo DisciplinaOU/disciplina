@@ -176,7 +176,7 @@ paths:
           schema:
             $ref: '#/definitions/Submission'
         '404':
-          description: Submission with given wasn not found (or a user has no rights to look it up)
+          description: Submission with given hash was not found (or a user has no rights to look it up)
     delete:
       tags:
         - submissions
@@ -229,6 +229,7 @@ definitions:
   Hash:
     type: string
     format: byte
+    description: "Base64url encoded blake2b (256 bits) hash"
     
   Address:
     type: string
@@ -359,16 +360,11 @@ definitions:
       witness:
         type: string
         format: binary
+        description: Concatenated student public key and submission hash signed with student secret key.
     example:
-      submission:
-        studentId: "LL4qKmPY5aGuebXmwg68YX7VMojkFyjNwyN7qz7jgueodBxnGRTiSUb1"
-        contentsHash: "K9Dvapkf9ZVGPIPQoDFEypZBL2TyLvBGh3HgupOBfSw="
-        assignment:
-          courseId: 7
-          contentsHash: "K9Dvapkf9ZVGPIPQoDFEypZBL2TyLvBGh3HgupOBfSw="
-          type: "regular"
-          desc: "Find mathematical model of the world"
-      witness: "gwBYIGrcWfDHxgB0BhTMngCOjUmOZBpI0BK4zFMtn8i2cJt+WEBIMaxoe/qBbPq6B+3L4u7DU7VtDMWaVFoQ7gbSx0nU9Rmg99+bsAytE49EaNCjQ1gGzZ5U61KTQIK+VOzIiEMN"
+      assignmentHash: "a6f1c3647587c4df91efc443a4e6987f09e2a98e6d30288c19813bfadee9b291"
+      contentsHash: "2bd0ef6a991ff595463c83d0a03144ca96412f64f22ef0468771e0ba93817d2c"
+      witness: "830058206adc59f0c7c600740614cc9e008e8d498e641a48d012b8cc532d9fc8b6709b7e5840d1e4613445eef4e70e760a5b77d7113a343d165894e5a77912716be916dd481d53f6f271a4f492ae23069fa37942a18828ca00951599697971114f827550e90b"
 
   Transaction:
     type: object
@@ -409,7 +405,31 @@ definitions:
     properties:
       error:
         type: string
-        enum: [SubmissionMalformed, SubmissionSignatureInvalid, DeletingGradedSubmission]
+        enum:
+          - SubmissionSignatureInvalid
+          - FakeSubmissionSignature
+          - DeletingGradedSubmission
+          - CourseDoesNotExist
+          - StudentDoesNotExist
+          - AssignmentDoesNotExist
+          - StudentWasNotEnrolledOnTheCourse
+          - StudentWasNotSubscribedOnAssignment
+          - SubmissionDoesNotExist
+          - TransactionDoesNotExist
+          - SubmissionAlreadyExists
+        description: >-
+          * `SubmissionSignatureInvalid`: Signature does not match to claimed submission author.
+          * `FakeSubmissionSignature`: Claimed owner of submission does not match to authenticated user.
+          * `DeletingGradedSubmission`: Attempt to delete an already graded submission.
+          * `CourseDoesNotExist`: Given course does not exist.
+          * `StudentDoesNotExist`: Given student is not known to the educator.
+          * `AssignmentDoesNotExist`: Given assignment does not exist.
+          * `StudentWasNotEnrolledOnTheCourse`: Cannot perform this operation because student is not enrolled on the course.
+          * `StudentWasNotSubscribedOnAssignment`: Cannot perform this operation because student is not subscribed on this assignment.
+          * `SubmissionDoesNotExist`: Submission does not exist.
+          * `TransactionDoesNotExist`: Transaction does not exist.
+          * `SubmissionAlreadyExists`: Exactly the same submission has already been submitted.
+ 
 parameters:
   CourseId:
     in: query

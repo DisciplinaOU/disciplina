@@ -9,12 +9,7 @@ import Dscp.Crypto (Hash, Raw, hash)
 import Dscp.DB.SQLite (MonadSQLiteDB, WithinSQLTransaction, sqlTransaction, _AssignmentDoesNotExist,
                        _SubmissionDoesNotExist)
 import qualified Dscp.DB.SQLite as CoreDB
-import Dscp.Educator.Web.Student (Assignment (..), Course (..), Grade (..), IsEnrolled (..),
-                                  IsFinal (..), MonadStudentAPIQuery, Student, Submission (..),
-                                  aDocumentType, assignmentTypeRaw, liftAssignment, liftSubmission,
-                                  _BadSubmissionSignature, _DeletingGradedSubmission,
-                                  _EntityAlreadyPresent, _FakeSubmissionSignature, _IsFinal,
-                                  _SubmissionAlreadyExists)
+import Dscp.Educator.Web.Student
 import qualified Dscp.Educator.Web.Student.Logic as Logic
 import qualified Dscp.Educator.Web.Student.Queries as DB
 import Dscp.Util (Id (..))
@@ -438,7 +433,10 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                 submission' <-
                     sqlTx $ DB.getSubmission student (getId submission)
                 let Just grade' = sGrade submission'
-                return $ (gGrade grade', gHasProof grade') === (grade, False)
+                return $
+                    (gGrade grade', gHasProof grade', gSubmissionHash grade')
+                    ===
+                    (grade, False, hash submission)
 
     describe "getSubmissions" $ do
         it "Student has no last submissions initially" $
@@ -578,14 +576,26 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                 throwsPrism (_EntityAlreadyPresent . _SubmissionAlreadyExists) $
                     sqlTx $ DB.makeSubmission sigSubmission
 
+        it "Making submission works" $
+            sqliteProperty $ \sigSubmission -> do
+                let student = Core._sStudentId (Core._ssSubmission sigSubmission)
+                let submissionReq = signedSubmissionToRequest sigSubmission
+                prepareForSubmissions [sigSubmission]
+                void $ Logic.makeSubmissionVerified student submissionReq
+
+                res <- getAllSubmissions student
+                let submission = Core._ssSubmission sigSubmission
+                return $ res === [liftSubmission submission Nothing]
+
         it "Pretending to be another student is bad" $
             sqliteProperty $ \(sigSubmission, badStudent) -> do
                 if Core._sStudentId (Core._ssSubmission sigSubmission) == badStudent
                 then return $ property rejected
                 else do
+                    let newSubmission = signedSubmissionToRequest sigSubmission
                     prepareForSubmissions [sigSubmission]
                     fmap property $ throwsPrism (_BadSubmissionSignature . _FakeSubmissionSignature) $
-                        Logic.makeSubmissionVerified badStudent sigSubmission
+                        Logic.makeSubmissionVerified badStudent newSubmission
 
   describe "Transactions" $ do
     describe "getProofs" $ do

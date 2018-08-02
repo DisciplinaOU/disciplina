@@ -10,12 +10,14 @@ module Dscp.Educator.Web.Student.Types
        , Submission (..)
        , Grade (..)
        , BlkProof (..)
-       , ErrResponse (..)
+       , NewSubmission (..)
+       , nsOwner
 
        , _IsFinal
        , assignmentTypeRaw
        , liftAssignment
        , liftSubmission
+       , signedSubmissionToRequest
        , aDocumentType
        ) where
 
@@ -29,9 +31,8 @@ import Dscp.Core (PrivateTx (..), addrFromText)
 import qualified Dscp.Core as Core
 import Dscp.Crypto (hash)
 import Dscp.Crypto (Hash, Raw)
-import Dscp.Educator.Web.Student.Error (APIError)
-import Dscp.Util (fromBase64)
-import Dscp.Util.Aeson (AsByteString, Base64Encoded)
+import Dscp.Util (Id, fromHex)
+import Dscp.Util.Aeson (AsHex)
 
 type Student = Core.Student
 
@@ -73,19 +74,25 @@ data Submission = Submission
     } deriving (Show, Eq, Generic)
 
 data Grade = Grade
-    { gGrade     :: !Core.Grade
-    , gTimestamp :: !UTCTime
-    , gHasProof  :: !Bool
+    { gSubmissionHash :: !(Hash Core.Submission)
+    , gGrade          :: !Core.Grade
+    , gTimestamp      :: !UTCTime
+    , gHasProof       :: !Bool
     } deriving (Show, Eq, Generic)
 
 data BlkProof = BlkProof
-    { bpMtreeSerialized :: !(AsByteString Base64Encoded ByteString)
+    { bpMtreeSerialized :: !(AsHex ByteString)
     , bpTxs             :: ![PrivateTx]
     } deriving (Show, Eq, Generic)
 
-data ErrResponse = ErrResponse
-    { erError :: !APIError
+data NewSubmission = NewSubmission
+    { nsAssignmentHash :: !(Hash Core.Assignment)
+    , nsContentsHash   :: !(Hash Raw)
+    , nsWitness        :: !Core.SubmissionWitness
     } deriving (Show, Eq, Generic)
+
+nsOwner :: NewSubmission -> Id Core.Student
+nsOwner = Core.mkAddr . Core._swKey . nsWitness
 
 ---------------------------------------------------------------------------
 -- Simple functions
@@ -121,6 +128,15 @@ liftSubmission s sGrade =
     , ..
     }
 
+signedSubmissionToRequest :: Core.SignedSubmission -> NewSubmission
+signedSubmissionToRequest sigSub =
+    let submission = Core._ssSubmission sigSub
+    in NewSubmission
+        { nsAssignmentHash = hash (Core._sAssignment submission)
+        , nsContentsHash = Core._sContentsHash submission
+        , nsWitness = Core._ssWitness sigSub
+        }
+
 aDocumentType :: Assignment -> Core.DocumentType
 aDocumentType = Core.documentType . aContentsHash
 
@@ -138,7 +154,7 @@ deriveJSON defaultOptions ''Assignment
 deriveJSON defaultOptions ''Submission
 deriveJSON defaultOptions ''Grade
 deriveJSON defaultOptions ''BlkProof
-deriveJSON defaultOptions ''ErrResponse
+deriveJSON defaultOptions ''NewSubmission
 
 ---------------------------------------------------------------------------
 -- FromHttpApiData instances
@@ -159,4 +175,4 @@ instance FromHttpApiData Core.Address where
     parseQueryParam = addrFromText
 
 instance FromHttpApiData (Hash a) where
-    parseQueryParam = first toText . fromBase64
+    parseQueryParam = first toText . fromHex

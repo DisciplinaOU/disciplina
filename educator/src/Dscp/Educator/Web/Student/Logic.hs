@@ -1,22 +1,41 @@
 -- | Mid-layer between servant and sqlite endpoints.
 
 module Dscp.Educator.Web.Student.Logic
-    ( makeSubmissionVerified
+    ( requestToSignedSubmission
+    , makeSubmissionVerified
     ) where
 
 import qualified Dscp.Core as Core
 import Dscp.DB.SQLite (sqlTransaction)
+import qualified Dscp.DB.SQLite.Queries as CoreQueries
 import Dscp.Educator.Web.Student.Error (APIError (..))
 import qualified Dscp.Educator.Web.Student.Queries as Queries
-import Dscp.Educator.Web.Student.Types (Student, Submission)
+import Dscp.Educator.Web.Student.Types (NewSubmission (..), Student, Submission (..), nsOwner)
 import Dscp.Educator.Web.Student.Util (verifyStudentSubmission)
-import Dscp.Util (leftToThrow)
+import Dscp.Util (assertJust, leftToThrow)
+
+requestToSignedSubmission
+    :: Queries.MonadStudentAPIQuery m
+    => NewSubmission -> m Core.SignedSubmission
+requestToSignedSubmission ns = do
+    assignment <- CoreQueries.getAssignment (nsAssignmentHash ns)
+        `assertJust` CoreQueries.AssignmentDoesNotExist (nsAssignmentHash ns)
+    let submission = Core.Submission
+            { _sStudentId = nsOwner ns
+            , _sAssignment = assignment
+            , _sContentsHash = nsContentsHash ns
+            }
+    return Core.SignedSubmission
+        { _ssSubmission = submission
+        , _ssWitness = nsWitness ns
+        }
 
 -- | Verifies given user can create make submission and makes it.
 makeSubmissionVerified
     :: Queries.MonadStudentAPIQuery m
-    => Student -> Core.SignedSubmission -> m Submission
-makeSubmissionVerified student signedSubmission = do
+    => Student -> NewSubmission -> m Submission
+makeSubmissionVerified student newSubmission = do
+    signedSubmission <- requestToSignedSubmission newSubmission
     verifyStudentSubmission student signedSubmission
         & leftToThrow BadSubmissionSignature
     sqlTransaction $ do
