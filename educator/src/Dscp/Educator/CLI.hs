@@ -8,10 +8,11 @@ module Dscp.Educator.CLI
 
 import Options.Applicative (Parser, help, long, metavar, strOption, switch, value)
 
-import Dscp.CommonCLI (keyParamsParser, serverParamsParser)
+import Dscp.CommonCLI (baseKeyParamsParser, serverParamsParser)
 import Dscp.DB.SQLite (SQLiteDBLocation (..), SQLiteParams (..))
 import Dscp.Educator.Launcher.Params (EducatorParams (..))
 import Dscp.Educator.Web.Params (EducatorWebParams (..))
+import Dscp.Resource.Keys (EducatorKeyParams (..))
 import Dscp.Witness.CLI (witnessParamsParser)
 
 sqliteParamsParser :: Parser SQLiteParams
@@ -29,10 +30,14 @@ educatorWebParamsParser = do
         help "Enable bot which would automatically react on student actions."
     return EducatorWebParams{..}
 
+educatorKeyParamsParser :: Parser EducatorKeyParams
+educatorKeyParamsParser =
+    EducatorKeyParams <$> baseKeyParamsParser "educator"
+
 educatorParamsParser :: Parser EducatorParams
 educatorParamsParser = do
     epWitnessParams <- witnessParamsParser
     epDBParams <- sqliteParamsParser
-    epKeyParams <- keyParamsParser "educator"
+    epKeyParams <- educatorKeyParamsParser
     epWebParams <- educatorWebParamsParser
     return EducatorParams{..}

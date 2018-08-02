@@ -1,0 +1,14 @@
+demo: 
+  core:
+    homeParam: 
+      path: "./tmp/"
+    slotDuration: 10000 # 10 s
+    genesis: 
+      genesisSeed: "GromakNaRechke"
+      governance: 
+        govCommittee: 
+          committeeOpen: 
+            secret: "opencomittee"
+            n: 2
+      distribution: 
+        equal: 1000

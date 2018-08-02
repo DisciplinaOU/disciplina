@@ -8,7 +8,10 @@
 -- used within the library instead of loot-network directly.
 
 module Dscp.Network.Wrapped
-    ( MsgK
+    (
+      NetTag
+
+    , MsgK
     , SubK
     , msgType
     , fromMsgType
@@ -32,6 +35,13 @@ module Dscp.Network.Wrapped
 
     , withClient
     , withServer
+
+    -- reexports
+    , ListenerEnv
+    , ClientEnv
+    , CallbackWrapper
+    , NodeId
+    , handlerDecoded
     ) where
 
 
@@ -49,7 +59,7 @@ import Loot.Network.Class (CliId, ClientEnv, ClientId, ListenerEnv, ListenerId, 
                            registerListener, runClient, runServer)
 import qualified Loot.Network.Class as L
 import Loot.Network.Message (CallbackWrapper, Message (..), getMsgTag, handlerDecoded,
-                             runCallbacksInt)
+                             handlerDecoded, runCallbacksInt)
 import Loot.Network.ZMQ.Common (ZmqTcp)
 import UnliftIO (MonadUnliftIO)
 import UnliftIO.Async (withAsync)
@@ -230,12 +240,17 @@ cliRecv ::
     -> [CallbackWrapper (NodeId NetTag) m a]
     -> m a
 cliRecv btq timeout callbacks = withHandler $ withTimeout $ \tmAction -> do
+    putTextLn "cliRecv waiting"
     res <- atomically $ (Right <$> recvBtq btq) `orElse` (Left <$> tmAction)
+    putTextLn "cliRecv dispatching"
     let call nId msgTagM msgs = do
+            putTextLn "cliRecv getting msgtag"
             msgTag <- maybe (throwM CREMalformedTag) pure msgTagM
+            putTextLn "cliRecv getting msg"
             msg <- case msgs of
                 [x]   -> pure x
                 other -> throwM $ CREWrongFramesNumber (length other)
+            putTextLn "cliRecv running callbacks"
             runCallbacksInt callbacks msgTag msg nId >>= \case
                 Nothing -> throwM $ CRENoCallback msgTag
                 Just x -> pure x

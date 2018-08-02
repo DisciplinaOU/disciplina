@@ -2,15 +2,29 @@
 
 module Dscp.Witness.Config
     ( WitnessConfig
+    , WitnessConfigRec
     , HasWitnessConfig
     , withWitnessConfig
+    , fillWitnessConfig
+
+    , module Dscp.Core.Config
     ) where
 
-import Dscp.Config (BaseConfig, HasBaseConfig, withBaseConfig)
+import Data.Reflection (Given)
+import Loot.Config (ConfigKind (Final, Partial), ConfigRec)
 
-type WitnessConfig = BaseConfig
+import Dscp.Core.Config
 
-type HasWitnessConfig = HasBaseConfig
 
-withWitnessConfig :: WitnessConfig -> (HasWitnessConfig => a) -> a
-withWitnessConfig = withBaseConfig
+type WitnessConfig = CoreConfig
+
+type WitnessConfigRecP = ConfigRec 'Partial WitnessConfig
+type WitnessConfigRec = ConfigRec 'Final WitnessConfig
+
+type HasWitnessConfig = Given WitnessConfigRec
+
+withWitnessConfig :: WitnessConfigRec -> (HasWitnessConfig => a) -> a
+withWitnessConfig = withCoreConfig
+
+fillWitnessConfig :: WitnessConfigRecP -> IO WitnessConfigRecP
+fillWitnessConfig = fillCoreConfig

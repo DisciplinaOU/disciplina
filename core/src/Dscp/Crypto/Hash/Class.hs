@@ -9,9 +9,11 @@ module Dscp.Crypto.Hash.Class
        , AbstractHash (..)
        , abstractHash
        , hashF
+       , hashLongF
        ) where
 
 import Data.ByteArray (ByteArray, ByteArrayAccess)
+import qualified Data.Text as T
 import Fmt (Builder, build)
 
 import Dscp.Crypto.ByteArray (FromByteArray)
@@ -31,7 +33,10 @@ newtype AbstractHash hf a = AbstractHash (HashResult hf)
 
 -- | Hash builder.
 hashF :: ByteArrayAccess (HashResult hf) => AbstractHash hf a -> Builder
-hashF = build . toHex
+hashF = build . T.take 8 . toHex
+
+hashLongF :: ByteArrayAccess (HashResult hf) => AbstractHash hf a -> Builder
+hashLongF = build . toHex
 
 -- | 'GeneralizedNewtypeDeriving' cannot into type families,
 -- so we do this.

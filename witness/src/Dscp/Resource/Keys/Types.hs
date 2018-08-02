@@ -1,8 +1,13 @@
 module Dscp.Resource.Keys.Types
-    ( KeyParams (..)
+    ( BaseKeyParams (..)
+    , CommitteeParams (..)
+    , WitnessKeyParams (..)
+    , EducatorKeyParams (..)
+
     , KeyResources (..)
     , krSecretKey
     , krPublicKey
+
     , KeyJson (..)
     , KeyfileContent
 
@@ -14,20 +19,44 @@ import Control.Lens (makeLenses)
 import Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.:), (.=))
 import Loot.Base.HasLens (HasLens', lensOf)
 
+import Dscp.Core.Governance (CommitteeSecret (..))
 import Dscp.Crypto (Encrypted, PassPhrase, PublicKey, SecretKey)
 import Dscp.Util.Aeson (Versioned)
 
 -- | Contains all parameters required for manipulating with secret key.
-data KeyParams = KeyParams
-    { kpPath       :: !(Maybe FilePath)
+data BaseKeyParams = BaseKeyParams
+    { bkpPath       :: !(Maybe FilePath)
       -- ^ Path to file with secret key.
       -- If not specified, some default OS-dependent path is used.
-    , kpGenNew     :: !Bool
+    , bkpGenNew     :: !Bool
       -- ^ When 'True', file with secret key is expected to be
       -- absent and will be generated from scratch.
       -- When 'False', file should be present and it will be used.
-    , kpPassphrase :: !(Maybe PassPhrase)
+    , bkpPassphrase :: !(Maybe PassPhrase)
       -- ^ Password of encrypted secret key stored on disk.
+    } deriving (Show)
+
+-- | In case of committee governance, these keys help us to generate
+-- keys.
+data CommitteeParams
+    = CommitteeParamsOpen { cpParticipantN :: Integer }
+      -- ^ In open committee you become participant n/N.
+    | CommitteeParamsClosed { cpParticipantN :: Integer
+                            , cpSecret       :: CommitteeSecret }
+      -- ^ In closed committee you should provide a (common) secret
+      -- and your index.
+    deriving (Show)
+
+-- | Witness key parameters.
+data WitnessKeyParams = WitnessKeyParams
+    { wkpBase      :: !BaseKeyParams
+    , wkpCommittee :: !(Maybe CommitteeParams)
+      -- ^ Optional committee params which may alter key generation.
+    } deriving (Show)
+
+-- | Educator key parameters (move to educator/).
+newtype EducatorKeyParams = EducatorKeyParams
+    { unEducatorKeyParams :: BaseKeyParams
     } deriving (Show)
 
 -- | Context providing access to secret key.

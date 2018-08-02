@@ -16,7 +16,7 @@ import Dscp.Util (wrapRethrow)
 data KeyInitError
     = SecretWrongPassPhraseError DecryptionError
     | SecretParseError Text
-    | SecretFileExistsError FilePath
+    | SecretConfMismatch Text
     | SecretIOError Text
 
 instance Show KeyInitError where
@@ -28,8 +28,8 @@ instance Buildable KeyInitError where
             "Wrong password for educator key storage provided ("+|password|+")"
         SecretParseError _ ->
             "Invalid educator secret key storage format"
-        SecretFileExistsError path ->
-            "Cannot create new secret store, file already exists: "+|path|+""
+        SecretConfMismatch msg ->
+            "Configuration/CLI params mismatch: "+|msg|+""
         SecretIOError msg ->
             "Some I/O error occured: "+|msg|+""
 

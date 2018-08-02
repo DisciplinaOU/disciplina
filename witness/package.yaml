@@ -23,9 +23,10 @@ library:
     - fmt
     - free
     - hashable
-    - interpolatedstring-perl6 
+    - interpolatedstring-perl6
     - lens
     - loot-base
+    - loot-config
     - loot-log
     - loot-network
     - log-warper
@@ -64,6 +65,7 @@ executables:
     <<: *exec-common
     source-dirs: exec
     dependencies:
+      - data-default
       - disciplina-core
       - disciplina-witness
       - loot-log

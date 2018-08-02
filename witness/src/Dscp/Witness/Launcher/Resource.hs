@@ -15,12 +15,12 @@ import Control.Lens (makeLenses)
 import Loot.Base.HasLens (HasLens (..))
 import Loot.Network.ZMQ (ZTGlobalEnv, ZTNetCliEnv, ZTNetServEnv)
 
-import Dscp.Config (HasBaseConfig)
 import Dscp.DB.Rocks.Real (RocksDB)
 import Dscp.Resource.Class (AllocResource (..))
 import Dscp.Resource.Keys (KeyResources (..))
 import Dscp.Resource.Network (NetLogging (..), NetServResources, withNetLogging)
 import Dscp.Resource.Rocks ()
+import Dscp.Witness.Config (HasWitnessConfig)
 import Dscp.Witness.Launcher.Marker (WitnessNode)
 import Dscp.Witness.Launcher.Params (WitnessParams (..))
 
@@ -46,7 +46,7 @@ instance HasLens ZTNetCliEnv WitnessResources ZTNetCliEnv where
 instance HasLens ZTNetServEnv WitnessResources ZTNetServEnv where
     lensOf = wrNetwork . lensOf @ZTNetServEnv
 
-instance HasBaseConfig => AllocResource WitnessParams WitnessResources where
+instance HasWitnessConfig => AllocResource WitnessParams WitnessResources where
     allocResource WitnessParams{..} = do
         _wrLogging <- view (lensOf @LoggingIO)
         _wrDB <- allocResource wpDBParams

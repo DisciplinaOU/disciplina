@@ -2,45 +2,23 @@
 
 module Main where
 
-import Control.Concurrent (threadDelay)
-import Loot.Log (logInfo, logWarning, modifyLogName)
 import Options.Applicative (execParser, fullDesc, helper, info, progDesc)
-import UnliftIO.Async (async)
 
 import Dscp.CommonCLI (versionOption)
-import Dscp.Config (buildBaseConfig, configPathParser)
-import Dscp.Network (runListener, runWorker, withServer)
-import Dscp.Witness (WitnessConfig, WitnessParams (..), launchWitnessRealMode, serveWitnessAPIReal,
-                     witnessListeners, witnessParamsParser, witnessWorkers)
+import Dscp.Config
+import Dscp.Witness
+
 
 main :: IO ()
 main = do
-    (witnessParams, witnessConfig) <- getWitnessParams
-    launchWitnessRealMode witnessConfig witnessParams $
-        withServer $
-        modifyLogName (<> "node") $ do
-            logInfo "Starting node."
+    (witnessParams, wConfig) <- getWitnessParams
+    launchWitnessRealMode wConfig witnessParams witnessEntry
 
-            logInfo "Forking workers"
-            forM_ witnessWorkers $ void . async . runWorker identity
-
-            logInfo "Forking listeners"
-            forM_ witnessListeners $ void . async . runListener identity
-
-            logInfo "Forking wallet server"
-            void . async $
-                serveWitnessAPIReal (wpWalletServerParams witnessParams)
-
-            logInfo "All done"
-            logInfo "Hey, here log-warper works!"
-            logWarning "Don't forget to implement everything else though!"
-            forever $ liftIO $ threadDelay 10000000
-
-getWitnessParams :: IO (WitnessParams, WitnessConfig)
+getWitnessParams :: IO (WitnessParams, WitnessConfigRec)
 getWitnessParams = do
-    let parser = (,) <$> witnessParamsParser <*> configPathParser
+    let parser = (,) <$> witnessParamsParser <*> configParamsParser
     (params, configPath) <- execParser $
         info (helper <*> versionOption <*> parser) $
         fullDesc <> progDesc "Disciplina witness node."
-    config <- buildBaseConfig configPath
+    config <- buildConfig configPath fillWitnessConfig
     return (params, config)

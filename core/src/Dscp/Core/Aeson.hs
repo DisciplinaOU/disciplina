@@ -2,11 +2,15 @@
 
 module Dscp.Core.Aeson () where
 
-import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), withScientific, withText)
+import Data.Aeson (FromJSON (..), FromJSONKey (..), ToJSON (..), Value (..), withScientific,
+                   withText)
 import Data.Aeson.Options (defaultOptions)
-import Data.Aeson.TH (deriveJSON)
+import Data.Aeson.TH (deriveFromJSON, deriveJSON)
 
+import Dscp.Core.Config
 import Dscp.Core.Foundation
+import Dscp.Core.Genesis
+import Dscp.Core.Governance
 import Dscp.Crypto.Aeson ()
 import Dscp.Util (Base (Base64), leftToFail)
 import Dscp.Util.Aeson (parseJSONSerialise, toJSONSerialise)
@@ -55,14 +59,23 @@ instance FromJSON SubmissionWitness where
 -- Standalone derivations for newtypes
 ---------------------------------------------------------------------------
 
+deriving instance ToJSON Coin
+deriving instance FromJSON Coin
+
 deriving instance ToJSON Course
 deriving instance FromJSON Course
 
 deriving instance ToJSON Subject
 deriving instance FromJSON Subject
 
-deriving instance ToJSON Coin
-deriving instance FromJSON Coin
+deriving instance ToJSON SlotDuration
+deriving instance FromJSON SlotDuration
+
+instance FromJSONKey Address
+
+deriving instance FromJSON GenAddressMap
+instance FromJSON CommitteeSecret where
+    parseJSON = withText "CommitteeSecret" $ pure . CommitteeSecret . encodeUtf8
 
 ---------------------------------------------------------------------------
 -- TH derivations for data
@@ -85,3 +98,11 @@ deriveJSON defaultOptions ''PublicationsOf
 deriveJSON defaultOptions ''LastPublication
 deriveJSON defaultOptions ''PublicationHead
 deriveJSON defaultOptions ''PublicationNext
+
+deriveFromJSON defaultOptions ''Committee
+deriveFromJSON defaultOptions ''Governance
+deriveFromJSON defaultOptions ''GenesisDistribution
+deriveFromJSON defaultOptions ''GenesisConfig
+
+instance FromJSON GenesisInfo where
+    parseJSON = error "FromJSON GenesisInfo should never be called"

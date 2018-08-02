@@ -15,6 +15,7 @@ import Dscp.Crypto (PublicKey, Signature, hash, verify)
 import Dscp.Snowdrop.AccountValidation as A
 import Dscp.Snowdrop.Configuration (AddrTxProof, Exceptions, Ids, Proofs (..), PublicationTxProof,
                                     SHeader, SPayload, SUndo, Values)
+import Dscp.Witness.Config
 
 ----------------------------------------------------------------------------
 -- Validator
@@ -91,16 +92,16 @@ _baseValidator =
 ----------------------------------------------------------------------------
 
 blkStateConfig ::
-       PublicKey
-    -> SD.BlkStateConfiguration SHeader SPayload SUndo HeaderHash
+       HasWitnessConfig
+    => SD.BlkStateConfiguration SHeader SPayload SUndo HeaderHash
                                 (SD.ERwComp Exceptions Ids Values (IOCtx chgAccum) chgAccum)
-blkStateConfig pk =
-    SD.inmemoryBlkStateConfiguration (simpleBlkConfiguration pk) validator
+blkStateConfig =
+    SD.inmemoryBlkStateConfiguration simpleBlkConfiguration validator
 
-simpleBlkConfiguration
-    :: PublicKey
-    -> SD.BlkConfiguration SHeader [SD.StateTx Ids Proofs Values] HeaderHash
-simpleBlkConfiguration pk = SD.BlkConfiguration
+simpleBlkConfiguration ::
+       HasWitnessConfig
+    => SD.BlkConfiguration SHeader [SD.StateTx Ids Proofs Values] HeaderHash
+simpleBlkConfiguration = SD.BlkConfiguration
     { bcBlockRef     = hash
     , bcPrevBlockRef = getPrevHash . hPrevHash
     , bcBlkVerify    = mconcat verifiers
@@ -108,6 +109,8 @@ simpleBlkConfiguration pk = SD.BlkConfiguration
     , bcMaxForkDepth = 0
     }
   where
+    GovCommittee com = gcGovernance $ giveL @WitnessConfig
+
     getPrevHash h
         | h == genesisHash = Nothing
         | otherwise        = Just h
@@ -116,6 +119,8 @@ simpleBlkConfiguration pk = SD.BlkConfiguration
     verifiers =
       [ -- I should get a hash of block body, but i only have SPayload!
         -- verify pk (BlockToSign hDifficulty hPrevHash (hSignature sheader)
-        SD.BIV $ \(SD.Block _sheader _sbody) -> True
-      , SD.BIV $ \(SD.Block  sheader _)      -> pk == (hIssuer sheader)
+        -- TODO ^
+--        SD.BIV $ \(SD.Block _sheader _sbody) -> True
+        SD.BIV $ \(SD.Block sheader _) ->
+          committeeOwnsSlot com (mkAddr $ hIssuer sheader) (hSlotId sheader)
       ]

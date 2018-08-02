@@ -40,21 +40,22 @@ done
 
 # educator-only params
 educator_params="
---educator-keyfile-path $files/educator.key
---educator-keyfile-password 12345678
+--educator-keyfile $tmp_files/educator.key
+--educator-key-pass 12345678
 --sql-path $tmp_files/educator.db
 --student-listen 127.0.0.1:8090
 "
 
 # witness params (and educator's as well)
 witness_params="
---config $files/config.yaml
+--config ./configuration.yaml
+--config-key demo
 --bind 127.0.0.1:4010:4011
 --db-path $tmp_files/witness.db
 --log-dir $tmp_files/logs
 --witness-listen 127.0.0.1:4020
---witness-keyfile-path $files/witness.key
---witness-keyfile-password xixixixi
+--witness-keyfile $tmp_files/witness.key
+--witness-gen-key
 "
 
 if [[ "$educator_bot" == true ]]; then

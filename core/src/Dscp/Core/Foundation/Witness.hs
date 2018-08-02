@@ -6,6 +6,8 @@ module Dscp.Core.Foundation.Witness
     , StakeholderId (..)
     , coinToInteger
     , coinFromInteger
+    , unsafeMkCoin
+    , SlotId (..)
 
     -- * Transaction
     , TxInAcc (..)
@@ -29,12 +31,13 @@ module Dscp.Core.Foundation.Witness
     , GTxWitnessed (..)
 
     -- * Block
-    , HeaderHash
     , Difficulty (..)
+    , HeaderHash
     , BlockToSign (..)
     , Header (..)
     , Block (..)
     , BlockBody (..)
+    , HasHeaderHash (..)
     ) where
 
 import Codec.Serialise (Serialise)
@@ -60,10 +63,12 @@ newtype StakeholderId = StakeholderId
 newtype Coin = Coin { unCoin :: Word64 }
     deriving (Eq, Ord, Show, Generic, Hashable, Bounded)
 
+
 -- | Safely convert coin to integer.
 coinToInteger :: Coin -> Integer
 coinToInteger = toInteger . unCoin
 
+-- | Restore coin from integer.
 coinFromInteger :: Integer -> Either Text Coin
 coinFromInteger i
     | i < 0
@@ -72,6 +77,10 @@ coinFromInteger i
         = Left "Coin amount is too high"
     | otherwise
         = Right (Coin $ fromIntegral i)
+
+-- | Same as 'coinFromInteger', but errors if Left happens.
+unsafeMkCoin :: Integral i => i -> Coin
+unsafeMkCoin = Coin . fromIntegral -- also do checks
 
 instance Buildable Coin where
     build (Coin c) = c ||+ " coin(s)"
@@ -245,8 +254,13 @@ instance Buildable GTxWitnessed where
 -- Blocks/Transaction
 ----------------------------------------------------------------------------
 
+-- | Slot id.
+newtype SlotId = SlotId Word64
+    deriving (Eq, Ord, Num, Show, Generic, Buildable)
+
+-- | Chain difficulty.
 newtype Difficulty = Difficulty Word64
-    deriving (Eq,Ord,Num,Show,Generic,Buildable)
+    deriving (Eq, Ord, Num, Show, Generic, Buildable)
 
 -- | Blocks are indexed by their headers' hashes.
 type HeaderHash = Hash Header
@@ -257,23 +271,27 @@ data BlockToSign =
     deriving (Eq, Show, Generic)
 
 data Header = Header
-    { hSignature  :: Signature BlockToSign
-    , hIssuer     :: PublicKey
-    , hDifficulty :: Difficulty
-    , hPrevHash   :: HeaderHash
+    { hSignature  :: !(Signature BlockToSign)
+    , hIssuer     :: !PublicKey
+    , hDifficulty :: !Difficulty
+    , hSlotId     :: !SlotId
+    , hPrevHash   :: !HeaderHash
     } deriving (Eq, Show, Generic)
 
-instance Buildable Header where
-    build Header{..} =
-        "Header: " +|
+instance HasHash Header => Buildable Header where
+    build h@Header{..} =
+        "Header:\n" +|
         indentF 2 (blockListF [ nameF "sig" $ build hSignature
                               , nameF "issuer" $ build hIssuer
+                              , nameF "slotId" $ build hSlotId
                               , nameF "difficulty" $ build hDifficulty
-                              , nameF "prev" $ hashF hPrevHash ])
+                              , nameF "prev" $ hashF hPrevHash
+                              , nameF "headerHash" $ hashF (hash h)
+                              ])
 
 -- | Body of the block.
 data BlockBody = BlockBody
-    { rbbTxs :: [GTxWitnessed]
+    { rbbTxs :: ![GTxWitnessed]
     } deriving (Eq, Show, Generic)
 
 instance Buildable BlockBody where
@@ -281,9 +299,27 @@ instance Buildable BlockBody where
 
 -- | Block.
 data Block = Block
-    { rbHeader :: Header
-    , rbBody   :: BlockBody
+    { rbHeader :: !Header
+    , rbBody   :: !BlockBody
     } deriving (Eq, Show, Generic)
 
-instance Buildable Block where
-    build = build . (show :: Block -> Text)
+instance HasHash Header => Buildable Block where
+    build Block{..} =
+        "Block { \nheader: " +| rbHeader |+ ", body: " +| rbBody |+ " }"
+
+----------------------------------------------------------------------------
+-- Lens and classes
+----------------------------------------------------------------------------
+
+-- | Class for things that have headerHash.
+class HasHeaderHash d where
+    headerHash :: d -> HeaderHash
+
+instance HasHeaderHash HeaderHash where
+    headerHash = identity
+
+instance HasHash Header => HasHeaderHash Header where
+    headerHash = hash
+
+instance HasHash Header => HasHeaderHash Block where
+    headerHash = headerHash . rbHeader

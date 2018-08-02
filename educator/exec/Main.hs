@@ -6,11 +6,8 @@ import Loot.Log (logInfo, logWarning, modifyLogName)
 import Options.Applicative (execParser, fullDesc, helper, info, progDesc)
 
 import Dscp.CommonCLI (versionOption)
-import Dscp.Config (buildBaseConfig, configPathParser)
-import Dscp.Educator.CLI (educatorParamsParser)
-import Dscp.Educator.Config (EducatorConfig)
-import Dscp.Educator.Launcher (EducatorParams (..), launchEducatorRealMode)
-import Dscp.Educator.Web (serveStudentAPIReal)
+import Dscp.Config (buildConfig, configParamsParser)
+import Dscp.Educator
 
 main :: IO ()
 main = do
@@ -22,11 +19,11 @@ main = do
 
         serveStudentAPIReal (epWebParams educatorParams)
 
-getEducatorParams :: IO (EducatorParams, EducatorConfig)
+getEducatorParams :: IO (EducatorParams, EducatorConfigRec)
 getEducatorParams = do
-    let parser = (,) <$> educatorParamsParser <*> configPathParser
+    let parser = (,) <$> educatorParamsParser <*> configParamsParser
     (params, configPath) <- execParser $
         info (helper <*> versionOption <*> parser) $
         fullDesc <> progDesc "Disciplina educator node."
-    config <- buildBaseConfig configPath
+    config <- buildConfig configPath fillEducatorConfig
     return (params, config)
