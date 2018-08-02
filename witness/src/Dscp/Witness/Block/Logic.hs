@@ -18,14 +18,15 @@ import qualified Snowdrop.Util as SD
 
 import Dscp.Core
 import Dscp.Crypto (sign, toPublic)
-import Dscp.Resource.Keys (ourPublicKey, ourSecretKey)
+import Dscp.Resource.Keys (ourSecretKey)
 import Dscp.Snowdrop.Actions (SDActions, nsBlockDBActions, nsStateDBActions)
 import Dscp.Snowdrop.Configuration (Exceptions, Ids, Values, blockPrefix, tipPrefix)
 import Dscp.Snowdrop.Expanders (expandBlock)
 import Dscp.Snowdrop.Storage.Avlp (RememberForProof (..))
 import Dscp.Snowdrop.Validators (blkStateConfig)
 import Dscp.Witness.AVL (AvlProof)
-import Dscp.Witness.Launcher (WitnessNode, WitnessWorkMode)
+import Dscp.Witness.Launcher.Marker
+import Dscp.Witness.Launcher.Mode
 import Dscp.Witness.Mempool (MempoolVar, takeTxsMempool)
 
 -- | Empty mempool(s), create block body.
@@ -44,8 +45,8 @@ getTipSD =
          maybe (SD.throwLocalError @(SD.BlockStateException Ids) SD.TipNotFound) pure)
 
 -- | Create a public block.
-createBlock :: WitnessWorkMode ctx m => m Block
-createBlock = do
+createBlock :: WitnessWorkMode ctx m => SlotId -> m Block
+createBlock newSlot = do
     blockDBA <- views (lensOf @SDActions) (SD.dmaAccessActions . nsBlockDBActions)
     (tipMb, diff) <- liftIO $ SD.runERoCompIO @Exceptions blockDBA def $ do
         (tipMb :: Maybe HeaderHash) <- getTipSD
@@ -62,7 +63,7 @@ createBlock = do
     payload <- createPayload =<< view (lensOf @MempoolVar)
     sk <- ourSecretKey @WitnessNode
     let sgn = sign sk $ BlockToSign diff tip payload
-    let header = Header sgn (toPublic sk) diff tip
+    let header = Header sgn (toPublic sk) diff newSlot tip
     let block = Block header payload
     pure block
 
@@ -71,7 +72,7 @@ getCurrentTip :: WitnessWorkMode ctx m => m HeaderHash
 getCurrentTip = do
     blockDBA <- views (lensOf @SDActions) (SD.dmaAccessActions . nsBlockDBActions)
     liftIO $ SD.runERoCompIO @Exceptions blockDBA def $
-        fromMaybe (error "tip must exist") <$> getTipSD
+        fromMaybe genesisHash <$> getTipSD
 
 
 -- | Apply verified block.
@@ -81,14 +82,12 @@ applyBlock block = do
     let blockDBM = nsBlockDBActions sdActions
     let stateDBM = nsStateDBActions sdActions (RememberForProof True)
 
-    pk <- ourPublicKey @WitnessNode
-
     (blockCS, stateCS) <- reify blockPrefixes $ \(_ :: Proxy ps) ->
         let actions = SD.constructCompositeActions @ps (SD.dmaAccessActions blockDBM)
                                                        (SD.dmaAccessActions stateDBM)
             rwComp = do
               sblock <- SD.liftERoComp $ expandBlock block
-              SD.applyBlock (blkStateConfig pk) sblock
+              SD.applyBlock blkStateConfig sblock
          in liftIO $
             SD.runERwCompIO actions def rwComp >>=
                 \((), (SD.CompositeChgAccum blockCS_ stateCS_)) -> pure (blockCS_, stateCS_)

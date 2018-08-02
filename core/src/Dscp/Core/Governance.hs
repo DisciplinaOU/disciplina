@@ -18,7 +18,7 @@ import Dscp.Crypto
 -- | Governance type.
 data Governance
     = GovCommittee Committee -- ^ Fixed set of leaders.
-    | GovOpen -- ^ Open governance
+    | GovOpen                -- ^ Open governance
     deriving (Eq, Show, Generic)
 
 ----------------------------------------------------------------------------

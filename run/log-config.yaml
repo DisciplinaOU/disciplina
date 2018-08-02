@@ -4,8 +4,11 @@ loggerTree:
 
   severity: Info+
 
-  node:
+  witness:
     severity: Debug+
+
+    network:
+      severity: Info+
 
     web:
       severity: Info+

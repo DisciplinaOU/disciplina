@@ -1,6 +1,9 @@
 -- | Helpers for starting an Witness node
 
-module Dscp.Witness.Launcher.Runner where
+module Dscp.Witness.Launcher.Runner
+    ( formWitnessContext
+    , launchWitnessRealMode
+    ) where
 
 import Dscp.Launcher.Rio (runRIO)
 import Dscp.Resource.Class (AllocResource (..), InitParams (..))
@@ -19,9 +22,6 @@ formWitnessContext _wcParams _wcResources = do
     _wcSDActions <- initSDActions
     pure $ WitnessContext {..}
 
-runWitnessRealMode :: WitnessContext -> WitnessRealMode () -> IO ()
-runWitnessRealMode = runRIO
-
 -- | Given params, allocate resources, construct node context and run
 -- `WitnessWorkMode` monad. Any synchronous exceptions are handled inside.
 launchWitnessRealMode
@@ -35,7 +35,7 @@ launchWitnessRealMode config params@WitnessParams{..} action =
     runResourceAllocation appDesc initParams (allocResource params) $
         \resources -> do
             ctx <- formWitnessContext params resources
-            runWitnessRealMode ctx action
+            runRIO ctx action
   where
     appDesc = "Witness (real mode)"
     initParams = InitParams{ ipLoggingParams = wpLoggingParams }

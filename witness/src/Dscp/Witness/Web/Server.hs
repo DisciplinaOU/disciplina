@@ -13,7 +13,7 @@ import Dscp.Launcher.Rio (runRIO)
 import Dscp.Util.Servant (LoggingApi, ServantLogConfig (..))
 import Dscp.Web (ServerParams (..), buildServantLogConfig, serveWeb)
 import Dscp.Witness.Config (HasWitnessConfig)
-import Dscp.Witness.Launcher (WitnessContext, WitnessRealMode, WitnessWorkMode)
+import Dscp.Witness.Launcher.Mode (WitnessContext, WitnessRealMode, WitnessWorkMode)
 import Dscp.Witness.Web.API (WitnessAPI, witnessAPI)
 import Dscp.Witness.Web.Error
 import Dscp.Witness.Web.Handlers (witnessServantHandlers)

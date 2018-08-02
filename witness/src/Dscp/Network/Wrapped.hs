@@ -240,12 +240,17 @@ cliRecv ::
     -> [CallbackWrapper (NodeId NetTag) m a]
     -> m a
 cliRecv btq timeout callbacks = withHandler $ withTimeout $ \tmAction -> do
+    putTextLn "cliRecv waiting"
     res <- atomically $ (Right <$> recvBtq btq) `orElse` (Left <$> tmAction)
+    putTextLn "cliRecv dispatching"
     let call nId msgTagM msgs = do
+            putTextLn "cliRecv getting msgtag"
             msgTag <- maybe (throwM CREMalformedTag) pure msgTagM
+            putTextLn "cliRecv getting msg"
             msg <- case msgs of
                 [x]   -> pure x
                 other -> throwM $ CREWrongFramesNumber (length other)
+            putTextLn "cliRecv running callbacks"
             runCallbacksInt callbacks msgTag msg nId >>= \case
                 Nothing -> throwM $ CRENoCallback msgTag
                 Just x -> pure x

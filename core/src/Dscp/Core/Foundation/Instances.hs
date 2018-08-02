@@ -75,6 +75,7 @@ instance Serialise PublicationTxWitnessed
 instance Serialise GTx
 instance Serialise GTxWitnessed
 instance Serialise BlockToSign
+instance Serialise SlotId
 instance Serialise Difficulty
 instance Serialise Header
 instance Serialise Block

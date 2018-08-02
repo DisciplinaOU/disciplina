@@ -58,13 +58,13 @@ done
 panesCnt=$n
 
 function witness_addr {
-    echo "127.0.0.1:40"$1"0:40"$1"1"
+    echo "127.0.0.1:80"$1"0:80"$1"1"
 }
 
 function witness_args {
     index=$1
     bind=$(witness_addr $index)
-    bind_api="127.0.0.1:40"$index"3"
+    bind_api="127.0.0.1:80"$index"3"
     witness_dir="$tmp_files/node$index"
     mkdir -p $witness_dir
 
@@ -85,6 +85,7 @@ function witness_args {
     --witness-listen $bind_api
     --db-path $witness_dir/witness.db
     --log-dir $witness_dir/logs
+    --log-config $files/log-config.yaml
     --comm-n $index
     --witness-keyfile $witness_dir/witness.key
     --witness-gen-key

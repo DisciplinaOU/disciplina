@@ -94,6 +94,7 @@ formGenesisInfo GenesisConfig{..} =
         toSign = BlockToSign 0 prevHash payload
         header = Header { hSignature = sign sk toSign
                         , hIssuer = pk
+                        , hSlotId = 0
                         , hDifficulty = 0
                         , hPrevHash = prevHash
                         }

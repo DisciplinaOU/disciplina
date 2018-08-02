@@ -6,7 +6,7 @@ module Dscp.Witness.Listeners.Listener
     ( witnessListeners
     ) where
 
-import Fmt ((+||), (||+))
+import Fmt ((+|), (|+))
 import Loot.Log (logError, logInfo)
 
 import Dscp.Core
@@ -14,7 +14,8 @@ import Dscp.Network.Wrapped
 import Dscp.Resource.Keys (ourPublicKey)
 import Dscp.Witness.Block.Logic (applyBlock, createBlock)
 import Dscp.Witness.Config
-import Dscp.Witness.Launcher
+import Dscp.Witness.Launcher.Marker
+import Dscp.Witness.Launcher.Mode
 import Dscp.Witness.Messages
 
 
@@ -37,16 +38,16 @@ blockIssuingListener =
         let GovCommittee committee = gcGovernance $ giveL @WitnessConfig @GenesisConfig
         slotId <- waitUntilNextSlot
         ourAddr <- mkAddr <$> ourPublicKey @WitnessNode
-        logInfo $ "New slot has just started: " +|| slotId ||+ ""
+        logInfo $ "New slot has just started: " +| slotId |+ ""
         if committeeOwnsSlot committee ourAddr slotId
-        then issueBlock
+        then issueBlock slotId
         else logInfo "We don't own current slot, skipping"
       where
-        issueBlock = do
-            block <- createBlock
-            logInfo "Created a new block"
+        issueBlock slotId = do
+            block <- createBlock slotId
+            logInfo $ "Created a new block: \n" +| block |+ ""
             proof <- applyBlock block
-            logInfo $ "Applied block, proof: " +|| proof ||+ ", propagating"
+            logInfo $ "Applied block, proof: " +| proof |+ ", propagating"
             atomically $ servPub btq (PubBlock block)
 
 ----------------------------------------------------------------------------

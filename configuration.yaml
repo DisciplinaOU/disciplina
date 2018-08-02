@@ -9,6 +9,6 @@ demo:
         govCommittee: 
           committeeOpen: 
             secret: "opencomittee"
-            n: 3
+            n: 2
       distribution: 
         equal: 1000

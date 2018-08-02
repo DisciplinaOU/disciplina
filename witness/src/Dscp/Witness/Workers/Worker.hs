@@ -16,7 +16,7 @@ import Dscp.Core
 import Dscp.Crypto
 import Dscp.Network.Wrapped
 import Dscp.Witness.Block.Logic
-import Dscp.Witness.Launcher
+import Dscp.Witness.Launcher.Mode
 import Dscp.Witness.Messages
 
 
@@ -34,14 +34,14 @@ blockReceivalWorker =
     handler e = logError $ fromString $ "Exception in blockReceivalWorker " <> show e
     action :: ClientEnv NetTag -> m ()
     action btq = forever $ do
-        logInfo "Receiving.."
         (_nId, PubBlock block) <- cliRecvUpdate btq (-1)
-        logInfo $ "Got a new block: " +| block |+ ""
+        logInfo $ "Received a new block: " +| hashF (headerHash block) |+ ""
         tip <- getCurrentTip
         unless (tip == hash (rbHeader block)) $ do
             logInfo "Block is new, applying"
             proof <- applyBlock block
-            logInfo $ "Applied received block, proof: " +|| proof ||+ ", propagating"
+            logInfo $ "Applied received block: " +| block |+
+                      "with proof" +|| proof ||+ ", propagating"
 
 ----------------------------------------------------------------------------
 -- Ping/pong workers
