@@ -1,7 +1,9 @@
 module Test.Dscp.Educator.Bot.Endpoints where
 
 import Dscp.Core.Arbitrary
-import Dscp.Educator.Web
+import Dscp.Educator.Web.Bot
+import Dscp.Educator.Web.Student
+import Dscp.Educator.Web.Types
 import Dscp.Util.Test
 
 import Test.Dscp.DB.SQLite.Common

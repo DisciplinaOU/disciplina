@@ -8,6 +8,7 @@ import Options.Applicative (execParser, fullDesc, helper, info, progDesc)
 import Dscp.CommonCLI (versionOption)
 import Dscp.Config (buildConfig, configParamsParser)
 import Dscp.Educator
+import Dscp.Educator.Web.Server
 
 main :: IO ()
 main = do

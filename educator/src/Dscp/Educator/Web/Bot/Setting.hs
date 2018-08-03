@@ -32,7 +32,7 @@ import UnliftIO.Concurrent (threadDelay)
 import Dscp.Core
 import Dscp.Crypto.Impl
 import Dscp.DB.SQLite
-import Dscp.Educator.Web.Types
+import Dscp.Educator.Web.Student.Types
 import Dscp.Util
 import Dscp.Util.Test
 import Dscp.Witness.Instances ()
@@ -189,7 +189,7 @@ botNoteCompletedAssignments student course completedAssigns =
 -- student, made submission and overall list of student assignments.
 botProvideUnlockedAssignments
     :: (BotWorkMode m, HasBotSetting)
-    => Student -> SubmissionInfo -> [AssignmentInfo] -> m ()
+    => Student -> SubmissionStudentInfo -> [AssignmentStudentInfo] -> m ()
 botProvideUnlockedAssignments student submission studentAssignments = do
     let assignment =
             fromMaybe (error "No related assignment among student ones") $

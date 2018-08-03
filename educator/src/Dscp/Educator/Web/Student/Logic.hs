@@ -10,8 +10,8 @@ import Dscp.DB.SQLite (sqlTransaction)
 import Dscp.DB.SQLite.Queries
 import Dscp.Educator.Web.Student.Error (APIError (..))
 import Dscp.Educator.Web.Student.Queries
+import Dscp.Educator.Web.Student.Types
 import Dscp.Educator.Web.Student.Util (verifyStudentSubmission)
-import Dscp.Educator.Web.Types
 import Dscp.Util (assertJust, leftToThrow)
 
 requestToSignedSubmission
@@ -33,7 +33,7 @@ requestToSignedSubmission ns = do
 -- | Verifies given user can create make submission and makes it.
 studentMakeSubmissionVerified
     :: MonadStudentAPIQuery m
-    => Student -> NewSubmission -> m SubmissionInfo
+    => Student -> NewSubmission -> m SubmissionStudentInfo
 studentMakeSubmissionVerified student newSubmission = do
     signedSubmission <- requestToSignedSubmission newSubmission
     verifyStudentSubmission student signedSubmission

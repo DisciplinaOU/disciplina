@@ -14,6 +14,7 @@ import Servant.Generic
 
 import Dscp.Core
 import Dscp.Crypto
+import Dscp.Educator.Web.Educator.Types
 import Dscp.Educator.Web.Types
 
 data EducatorApiEndpoints route = EducatorApiEndpoints
@@ -53,7 +54,7 @@ data EducatorApiEndpoints route = EducatorApiEndpoints
     , eGetCourses :: route
         :> "courses"
         :> Summary "Get all courses"
-        :> Get '[JSON] [CourseInfo]
+        :> Get '[JSON] [CourseEducatorInfo]
 
     , eEnrollStudentToCourse :: route
         :- "students" :> Capture "studentAddr" Student
@@ -61,7 +62,7 @@ data EducatorApiEndpoints route = EducatorApiEndpoints
         :> Summary "Enroll a student in a new course"
         :> Description "Given existing student and course, enroll the \
                         \student to the course."
-        :> ReqBody '[JSON] CourseInfo
+        :> ReqBody '[JSON] CourseEducatorInfo
         :> Post '[JSON] ()
 
     , eGetStudentCourses :: route
@@ -70,7 +71,7 @@ data EducatorApiEndpoints route = EducatorApiEndpoints
         :> Summary "Get a list of student's courses"
         :> Description "Gets a list of courses which student is currently \
                         \attending."
-        :> Get '[JSON] [CourseInfo]
+        :> Get '[JSON] [CourseEducatorInfo]
 
       -- * Assignments
 
@@ -124,7 +125,7 @@ data EducatorApiEndpoints route = EducatorApiEndpoints
         :- "submissions" :> Capture "submissionHash" (Hash Submission)
         :> Summary "Get info about a submission"
         :> Description "Gets a submission data by given submission hash."
-        :> Get '[JSON] [SubmissionInfo]
+        :> Get '[JSON] [SubmissionEducatorInfo]
 
     , eDeleteSubmission :: route
         :- "submissions" :> Capture "submissionHash" (Hash Submission)
@@ -138,14 +139,14 @@ data EducatorApiEndpoints route = EducatorApiEndpoints
         :> Summary "Get all submissions"
         :> Description "Gets a list of all submissions done by all students. \
                       \This method is inaccessible by students."
-        :> Get '[JSON] [SubmissionInfo]
+        :> Get '[JSON] [SubmissionEducatorInfo]
 
     , eGetStudentSubmissions :: route
         :- "students" :> Capture "studentAddr" Student
         :> "submissions"
         :> Summary "Get all student's submissions"
         :> Description "Gets a list of all student's submissions."
-        :> Get '[JSON] [SubmissionInfo]
+        :> Get '[JSON] [SubmissionEducatorInfo]
 
     , eGetStudentAssignmentSubmissions :: route
         :- "students"    :> Capture "studentAddr" Student
@@ -154,7 +155,7 @@ data EducatorApiEndpoints route = EducatorApiEndpoints
         :> Summary "Student's submissions for an assignment"
         :> Description "Gets a list of student's submissions for a given \
                     \assignment"
-        :> Get '[JSON] [SubmissionInfo]
+        :> Get '[JSON] [SubmissionEducatorInfo]
 
     , eGetStudentCourseSubmissions :: route
         :- "students" :> Capture "studentAddr" Student
@@ -163,7 +164,7 @@ data EducatorApiEndpoints route = EducatorApiEndpoints
         :> Summary "Get student's course submissions"
         :> Description "Gets a list of student's submissions he made during \
                         \studying given course."
-        :> Get '[JSON] [SubmissionInfo]
+        :> Get '[JSON] [SubmissionEducatorInfo]
 
       -- * Grades
 

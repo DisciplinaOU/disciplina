@@ -6,7 +6,6 @@ import Loot.Log (logInfo)
 
 import Dscp.Educator.Web.Bot.Setting
 import Dscp.Educator.Web.Student
-import Dscp.Educator.Web.Types
 
 addBotHandlers
     :: forall m. BotWorkMode m

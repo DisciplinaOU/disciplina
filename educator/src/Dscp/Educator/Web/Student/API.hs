@@ -16,6 +16,7 @@ import Servant.Generic
 
 import qualified Dscp.Core as Core
 import Dscp.Crypto (Hash)
+import Dscp.Educator.Web.Student.Types
 import Dscp.Educator.Web.Types
 
 data StudentApiEndpoints route = StudentApiEndpoints
@@ -46,13 +47,13 @@ type GetCourses
     :> Summary "Get Educator's courses"
     :> Description "Gets a list of Educator's courses, both enrolled and available."
     :> QueryParam "enrolled" IsEnrolled
-    :> Verb 'GET 200 '[JSON] [CourseInfo]
+    :> Verb 'GET 200 '[JSON] [CourseStudentInfo]
 
 type GetCourse
     = "courses" :> Capture "courseId" Core.Course
     :> Summary "Get info about the course"
     :> Description "Gets all info about the given course."
-    :> Verb 'GET 200 '[JSON] CourseInfo
+    :> Verb 'GET 200 '[JSON] CourseStudentInfo
 
 ---------------------------------------------------------------------------
 -- Assignments
@@ -66,14 +67,14 @@ type GetAssignments
     :> QueryParam "course" Core.Course
     :> QueryParam "type" Core.DocumentType
     :> QueryParam "final" IsFinal
-    :> Verb 'GET 200 '[JSON] [AssignmentInfo]
+    :> Verb 'GET 200 '[JSON] [AssignmentStudentInfo]
 
 type GetAssignment
     = "assignments" :> Capture "assignmentHash" (Hash Core.Assignment)
     :> Summary "Get info about an assignment"
     :> Description "Gets an assignment info by given submission hash. Returns \
                    \404 if a student tries to get an assignment which is not assigned to them."
-    :> Verb 'GET 200 '[JSON] AssignmentInfo
+    :> Verb 'GET 200 '[JSON] AssignmentStudentInfo
 
 ---------------------------------------------------------------------------
 -- Submissions
@@ -87,14 +88,14 @@ type GetSubmissions
     :> QueryParam "course" Core.Course
     :> QueryParam "assignment" (Hash Core.Assignment)
     :> QueryParam "type" Core.DocumentType
-    :> Verb 'GET 200 '[JSON] [SubmissionInfo]
+    :> Verb 'GET 200 '[JSON] [SubmissionStudentInfo]
 
 type GetSubmission
     = "submissions" :> Capture "submissionHash" (Hash Core.Submission)
     :> Summary "Get info about a submission"
     :> Description "Gets a submission data by given submission hash. Returns a 404 \
                    \if a student tries to get a submission which is not their own."
-    :> Verb 'GET 200 '[JSON] SubmissionInfo
+    :> Verb 'GET 200 '[JSON] SubmissionStudentInfo
 
 type MakeSubmission
     = "submissions"
@@ -103,7 +104,7 @@ type MakeSubmission
                    \contain valid student's signature of submission contents, \
                    \otherwise an error will be raised."
     :> ReqBody '[JSON] NewSubmission
-    :> Verb 'POST 201 '[JSON] SubmissionInfo
+    :> Verb 'POST 201 '[JSON] SubmissionStudentInfo
 
 type DeleteSubmission
     = "submissions" :> Capture "submissionHash" (Hash Core.Submission)

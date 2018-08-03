@@ -59,7 +59,7 @@ createCourseSimple i =
 
 getAllSubmissions
     :: (MonadStudentAPIQuery m)
-    => Student -> m [SubmissionInfo]
+    => Student -> m [SubmissionStudentInfo]
 getAllSubmissions student =
     sqlTx $ studentGetSubmissions student Nothing Nothing Nothing
 
@@ -141,7 +141,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
               ) -> do
                 _ <- CoreDB.createCourse courseId desc subjects
                 course <- studentGetCourse student1 courseId
-                return $ course === CourseInfo
+                return $ course === CourseStudentInfo
                     { ciId = courseId
                     , ciDesc = fromMaybe "" desc
                     , ciSubjects = subjects
@@ -186,7 +186,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
               ) -> do
                 _ <- CoreDB.createCourse courseId desc subjects
                 courses <- sqlTx $ studentGetCourses student1 Nothing
-                return $ courses === one CourseInfo
+                return $ courses === one CourseStudentInfo
                     { ciId = courseId
                     , ciDesc = fromMaybe "" desc
                     , ciSubjects = subjects
@@ -255,7 +255,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                 _ <- CoreDB.setStudentAssignment student1 assignmentH
 
                 assignment' <- sqlTx $ studentGetAssignment student1 assignmentH
-                return $ assignment' === AssignmentInfo
+                return $ assignment' === AssignmentStudentInfo
                     { aiHash = assignmentH
                     , aiCourseId = _aCourseId assignment
                     , aiContentsHash = _aContentsHash assignment
@@ -306,7 +306,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                 _ <- CoreDB.setStudentAssignment student1 assignmentH
 
                 res <- getAssignmentsSimple student1
-                return $ res === one AssignmentInfo
+                return $ res === one AssignmentStudentInfo
                     { aiHash = getId assignment
                     , aiCourseId = _aCourseId assignment
                     , aiContentsHash = _aContentsHash assignment
@@ -338,9 +338,9 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
 
                 let assignments' =
                         applyFilterOn aiCourseId courseIdF $
-                        applyFilterOn aiDocumentType docTypeF $
+                        applyFilterOn saDocumentType docTypeF $
                         applyFilterOn (IsFinal . aiIsFinal) isFinalF $
-                        map (\a -> liftAssignment a Nothing)
+                        map (\a -> studentLiftAssignment a Nothing)
                         preAssignments
 
                 return $ sortOn aiHash assignments === sortOn aiHash assignments'
@@ -363,7 +363,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                 return $
                     lastSubmission'
                     ===
-                    Just (liftSubmission lastSubmission Nothing)
+                    Just (studentLiftSubmission lastSubmission Nothing)
 
   describe "Submissions" $ do
     describe "getSubmission" $ do
@@ -394,7 +394,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                 _ <- sqlTx $ CoreDB.submitAssignment sigSubmission
                 res <- sqlTx $
                     studentGetSubmission owner (getId submission)
-                return $ res === SubmissionInfo
+                return $ res === SubmissionStudentInfo
                     { siHash = hash submission
                     , siContentsHash = _sContentsHash submission
                     , siAssignmentHash = hash assignment
@@ -463,7 +463,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                     prepareAndCreateSubmissions sigSubmissions
 
                     res <- getAllSubmissions owner1
-                    return $ res === one SubmissionInfo
+                    return $ res === one SubmissionStudentInfo
                         { siHash = hash someSubmission
                         , siContentsHash = _sContentsHash someSubmission
                         , siAssignmentHash =
@@ -513,7 +513,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
 
                   let subCourseId = _aCourseId . _sAssignment
                   let submissions' =
-                        map (\s -> liftSubmission s Nothing) $
+                        map (\s -> studentLiftSubmission s Nothing) $
                         applyFilterOn subCourseId courseIdF $
                         applyFilterOn (hash . _sAssignment) assignHF $
                         applyFilterOn _sDocumentType docTypeF $
@@ -584,7 +584,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
 
                 res <- getAllSubmissions student
                 let submission = _ssSubmission sigSubmission
-                return $ res === [liftSubmission submission Nothing]
+                return $ res === [studentLiftSubmission submission Nothing]
 
         it "Pretending to be another student is bad" $
             sqliteProperty $ \(sigSubmission, badStudent) -> do
