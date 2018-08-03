@@ -7,6 +7,7 @@ module Dscp.Educator.Web.Educator.API
     ( EducatorApiEndpoints (..)
     , EducatorAPI
     , educatorAPI
+    , EducatorApiHandlers
     ) where
 
 import Servant
@@ -52,7 +53,7 @@ data EducatorApiEndpoints route = EducatorApiEndpoints
         :> PostCreated '[JSON] ()
 
     , eGetCourses :: route
-        :> "courses"
+        :- "courses"
         :> Summary "Get all courses"
         :> Get '[JSON] [CourseEducatorInfo]
 
@@ -219,9 +220,11 @@ data EducatorApiEndpoints route = EducatorApiEndpoints
                         \Merkle proofs."
         :> Get '[JSON] [BlkProofInfo]
 
-   }
+   } deriving (Generic)
 
-type EducatorAPI m = "v1" :> EducatorApiEndpoints (AsServerT m)
+type EducatorAPI = "v1" :> ToServant (EducatorApiEndpoints AsApi)
 
-educatorAPI :: Proxy (EducatorAPI m)
+type EducatorApiHandlers m = EducatorApiEndpoints (AsServerT m)
+
+educatorAPI :: Proxy EducatorAPI
 educatorAPI = Proxy

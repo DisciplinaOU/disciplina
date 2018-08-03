@@ -34,6 +34,7 @@ library:
     - safe-exceptions >= 0.1.4
     - serialise
     - serokell-util
+    - servant
     - semver
     - snowdrop
     - text

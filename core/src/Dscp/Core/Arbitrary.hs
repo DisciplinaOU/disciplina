@@ -13,7 +13,15 @@ module Dscp.Core.Arbitrary
     , courseEx
     , assignmentEx
     , signedSubmissionEx
+    , submissionEx
+    , gradeEx
+    , privateTxEx
+    , submissionWitnessEx
+    , utcTimeEx
     ) where
+
+import Data.Time.Clock (UTCTime, getCurrentTime)
+import GHC.IO.Unsafe (unsafePerformIO)
 
 import Dscp.Core.Foundation
 import Dscp.Crypto
@@ -95,6 +103,9 @@ instance Arbitrary DocumentType where
 genCommonDocumentType :: Gen DocumentType
 genCommonDocumentType = frequency [(5, pure Offline), (1, pure Online)]
 
+instance Arbitrary PrivateTx where
+    arbitrary = PrivateTx <$> arbitrary <*> arbitrary <*> arbitrary
+
 ---------------------------------------------------------------------
 -- Examples
 ---------------------------------------------------------------------
@@ -130,3 +141,28 @@ signedSubmissionEx = detGen 123 $ do
     (_, sigsub :| _) <-
         genStudentSignedSubmissions (pure studentSKEx) (pure submission)
     return sigsub
+
+submissionEx :: Submission
+submissionEx = _ssSubmission signedSubmissionEx
+
+gradeEx :: Grade
+gradeEx = detGen 123 arbitrary
+
+privateTxEx :: PrivateTx
+privateTxEx =
+    PrivateTx
+    { _ptSignedSubmission = signedSubmissionEx
+    , _ptGrade = gradeEx
+    , _ptTime = utcTimeEx
+    }
+
+submissionWitnessEx :: SubmissionWitness
+submissionWitnessEx = _ssWitness signedSubmissionEx
+
+----------------------------------------------------------------------------
+-- Orphans
+----------------------------------------------------------------------------
+
+utcTimeEx :: UTCTime
+utcTimeEx = unsafePerformIO getCurrentTime
+{-# NOINLINE utcTimeEx #-}

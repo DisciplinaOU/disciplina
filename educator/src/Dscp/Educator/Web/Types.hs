@@ -23,7 +23,6 @@ import Servant (FromHttpApiData (..))
 
 import Dscp.Core
 import Dscp.Crypto
-import Dscp.Util (fromHex)
 import Dscp.Util.Aeson (AsHex)
 
 -- | Whether assignment is final in course.
@@ -77,18 +76,4 @@ deriveJSON defaultOptions ''BlkProofInfo
 -- FromHttpApiData instances
 ---------------------------------------------------------------------------
 
-deriving instance FromHttpApiData Course
-deriving instance FromHttpApiData Subject
-deriving instance FromHttpApiData Grade
 deriving instance FromHttpApiData IsFinal
-
-instance FromHttpApiData DocumentType where
-    parseQueryParam "offline" = Right Offline
-    parseQueryParam "online"  = Right Online
-    parseQueryParam other     = Left $ "invalid document type: " <> other
-
-instance FromHttpApiData Address where
-    parseQueryParam = addrFromText
-
-instance FromHttpApiData (Hash a) where
-    parseQueryParam = first toText . fromHex

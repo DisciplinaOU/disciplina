@@ -85,5 +85,9 @@ educatorLiftAssignment a =
 -- JSON instances
 ---------------------------------------------------------------------------
 
+deriveJSON defaultOptions ''NewCourse
+deriveJSON defaultOptions ''NewGrade
+deriveJSON defaultOptions ''NewAssignment
+deriveJSON defaultOptions ''CourseEducatorInfo
 deriveJSON defaultOptions ''AssignmentEducatorInfo
 deriveJSON defaultOptions ''SubmissionEducatorInfo

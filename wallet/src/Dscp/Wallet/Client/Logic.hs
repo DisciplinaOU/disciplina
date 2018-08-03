@@ -11,7 +11,6 @@ import Servant.Generic ((:-), fromServant)
 
 import Dscp.Util
 import Dscp.Wallet.Client.Error
-import Dscp.Wallet.Client.Instances ()
 import Dscp.Web
 import Dscp.Witness.Web
 

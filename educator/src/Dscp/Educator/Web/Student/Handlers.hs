@@ -4,15 +4,21 @@ module Dscp.Educator.Web.Student.Handlers
        ( studentApiHandlers
        , oneGeek
        , oneGeekSK
+       , convertStudentApiHandler
        ) where
+
+import Servant (Handler, throwError)
 
 import Dscp.Core (Student)
 import Dscp.Core.Arbitrary (studentEx, studentSKEx)
 import Dscp.Crypto
 import Dscp.DB.SQLite (sqlTransaction)
+import Dscp.Educator.Launcher
 import Dscp.Educator.Web.Student.API
+import Dscp.Educator.Web.Student.Error
 import Dscp.Educator.Web.Student.Logic
 import Dscp.Educator.Web.Student.Queries
+import Dscp.Launcher.Rio
 
 type StudentApiWorkMode m =
     ( MonadStudentAPIQuery m
@@ -57,3 +63,12 @@ studentApiHandlers =
     , sGetProofs = \sinceF ->
         sqlTransaction $ studentGetProofs oneGeek sinceF
     }
+
+convertStudentApiHandler
+    :: EducatorContext
+    -> EducatorRealMode a
+    -> Handler a
+convertStudentApiHandler ctx handler =
+    liftIO (runRIO ctx handler)
+        `catch` (throwError . toServantErr)
+        `catchAny` (throwError . unexpectedToServantErr)
