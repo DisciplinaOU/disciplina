@@ -1,3 +1,5 @@
+{-# LANGUAGE StrictData #-}
+
 -- | Types specific to student API.
 
 module Dscp.Educator.Web.Student.Types
@@ -35,35 +37,35 @@ newtype IsEnrolled = IsEnrolled { unIsEnrolled :: Bool }
     deriving (Eq, Show)
 
 data NewSubmission = NewSubmission
-    { nsAssignmentHash :: !(Hash Assignment)
-    , nsContentsHash   :: !(Hash Raw)
-    , nsWitness        :: !SubmissionWitness
+    { nsAssignmentHash :: (Hash Assignment)
+    , nsContentsHash   :: (Hash Raw)
+    , nsWitness        :: SubmissionWitness
     } deriving (Show, Eq, Generic)
 
 nsOwner :: NewSubmission -> Id Student
 nsOwner = mkAddr . _swKey . nsWitness
 
 data CourseStudentInfo = CourseStudentInfo
-    { ciId         :: !Course
-    , ciDesc       :: !Text
-    , ciSubjects   :: ![Subject]
-    , ciIsEnrolled :: !Bool
+    { ciId         :: Course
+    , ciDesc       :: Text
+    , ciSubjects   :: [Subject]
+    , ciIsEnrolled :: Bool
     } deriving (Show, Eq, Generic)
 
 data AssignmentStudentInfo = AssignmentStudentInfo
-    { aiHash           :: !(Hash Assignment)
-    , aiCourseId       :: !Course
-    , aiContentsHash   :: !(Hash Raw)
-    , aiIsFinal        :: !Bool
-    , aiDesc           :: !Text
-    , aiLastSubmission :: !(Maybe SubmissionStudentInfo)
+    { aiHash           :: (Hash Assignment)
+    , aiCourseId       :: Course
+    , aiContentsHash   :: (Hash Raw)
+    , aiIsFinal        :: Bool
+    , aiDesc           :: Text
+    , aiLastSubmission :: (Maybe SubmissionStudentInfo)
     } deriving (Show, Eq, Generic)
 
 data SubmissionStudentInfo = SubmissionStudentInfo
-    { siHash           :: !(Hash Submission)
-    , siContentsHash   :: !(Hash Raw)
-    , siAssignmentHash :: !(Hash Assignment)
-    , siGrade          :: !(Maybe GradeInfo)
+    { siHash           :: (Hash Submission)
+    , siContentsHash   :: (Hash Raw)
+    , siAssignmentHash :: (Hash Assignment)
+    , siGrade          :: (Maybe GradeInfo)
     } deriving (Show, Eq, Generic)
 
 saDocumentType :: AssignmentStudentInfo -> DocumentType

@@ -166,7 +166,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                 _ <- createCourseSimple 1
 
                 courses <- sqlTx $ studentGetCourses student1 Nothing
-                return (all (not . ciIsEnrolled) courses)
+                return . not $ any ciIsEnrolled courses
 
         it "Student gets enrolled when he asks to" $
             sqliteProperty $ \() -> do

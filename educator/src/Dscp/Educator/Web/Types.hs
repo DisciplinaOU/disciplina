@@ -1,3 +1,5 @@
+{-# LANGUAGE StrictData #-}
+
 -- | Common datatypes for educator and student HTTP APIs
 
 module Dscp.Educator.Web.Types
@@ -15,7 +17,7 @@ module Dscp.Educator.Web.Types
        , assignmentTypeRaw
        ) where
 
-import Control.Lens (Iso', iso, makePrisms)
+import Control.Lens (Iso', from, iso, makePrisms)
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
 import Data.Time.Clock (UTCTime)
@@ -36,15 +38,15 @@ newtype HasProof = HasProof { unHasProof :: Bool }
     deriving (Eq, Show)
 
 data GradeInfo = GradeInfo
-    { giSubmissionHash :: !(Hash Submission)
-    , giGrade          :: !Grade
-    , giTimestamp      :: !UTCTime
-    , giHasProof       :: !Bool
+    { giSubmissionHash :: (Hash Submission)
+    , giGrade          :: Grade
+    , giTimestamp      :: UTCTime
+    , giHasProof       :: Bool
     } deriving (Show, Eq, Generic)
 
 data BlkProofInfo = BlkProofInfo
-    { bpiMtreeSerialized :: !(AsHex ByteString)
-    , bpiTxs             :: ![PrivateTx]
+    { bpiMtreeSerialized :: (AsHex ByteString)
+    , bpiTxs             :: [PrivateTx]
     } deriving (Show, Eq, Generic)
 
 ---------------------------------------------------------------------------
@@ -52,14 +54,14 @@ data BlkProofInfo = BlkProofInfo
 ---------------------------------------------------------------------------
 
 assignmentTypeRaw :: Iso' AssignmentType IsFinal
-assignmentTypeRaw = iso forth back
+assignmentTypeRaw = iso forth back . from _IsFinal
   where
     back = \case
-        IsFinal False -> Regular
-        IsFinal True  -> CourseFinal
+        False -> Regular
+        True  -> CourseFinal
     forth = \case
-        Regular     -> IsFinal False
-        CourseFinal -> IsFinal True
+        Regular     -> False
+        CourseFinal -> True
 
 ---------------------------------------------------------------------------
 -- JSON instances

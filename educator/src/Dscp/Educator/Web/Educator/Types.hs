@@ -1,3 +1,5 @@
+{-# LANGUAGE StrictData #-}
+
 -- | Types specific to educator API.
 
 module Dscp.Educator.Web.Educator.Types
@@ -25,43 +27,43 @@ import Dscp.Crypto
 import Dscp.Educator.Web.Types
 
 data NewCourse = NewCourse
-    { ncId       :: !Course
-    , ncDesc     :: !Text
-    , ncSubjects :: ![Subject]
+    { ncId       :: Course
+    , ncDesc     :: Text
+    , ncSubjects :: [Subject]
     } deriving (Show, Eq, Generic)
 
 data NewGrade = NewGrade
-    { ngSubmissionHash :: !(Hash Submission)
-    , ngGrade          :: !Grade
+    { ngSubmissionHash :: (Hash Submission)
+    , ngGrade          :: Grade
     }
 
 data NewAssignment = NewAssignment
-    { naCourseId     :: !Course
-    , naContentsHash :: !(Hash Raw)
-    , naIsFinal      :: !Bool
-    , naDesc         :: !Text
+    { naCourseId     :: Course
+    , naContentsHash :: (Hash Raw)
+    , naIsFinal      :: Bool
+    , naDesc         :: Text
     } deriving (Show, Eq, Generic)
 
 data CourseEducatorInfo = CourseEducatorInfo
-    { ciId       :: !Course
-    , ciDesc     :: !Text
-    , ciSubjects :: ![Subject]
+    { ciId       :: Course
+    , ciDesc     :: Text
+    , ciSubjects :: [Subject]
     } deriving (Show, Eq, Generic)
 
 data AssignmentEducatorInfo = AssignmentEducatorInfo
-    { aiHash         :: !(Hash Assignment)
-    , aiCourseId     :: !Course
-    , aiContentsHash :: !(Hash Raw)
-    , aiIsFinal      :: !Bool
-    , aiDesc         :: !Text
+    { aiHash         :: (Hash Assignment)
+    , aiCourseId     :: Course
+    , aiContentsHash :: (Hash Raw)
+    , aiIsFinal      :: Bool
+    , aiDesc         :: Text
     } deriving (Show, Eq, Generic)
 
 data SubmissionEducatorInfo = SubmissionEducatorInfo
-    { siHash           :: !(Hash Submission)
-    , siContentsHash   :: !(Hash Raw)
-    , siAssignmentHash :: !(Hash Assignment)
-    , siGrade          :: !(Maybe GradeInfo)
-    , siWitness        :: !SubmissionWitness
+    { siHash           :: (Hash Submission)
+    , siContentsHash   :: (Hash Raw)
+    , siAssignmentHash :: (Hash Assignment)
+    , siGrade          :: (Maybe GradeInfo)
+    , siWitness        :: SubmissionWitness
     } deriving (Show, Eq, Generic)
 
 eaDocumentType :: AssignmentEducatorInfo -> DocumentType
