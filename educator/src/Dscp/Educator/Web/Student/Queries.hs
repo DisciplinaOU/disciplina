@@ -16,7 +16,7 @@ import Database.SQLite.Simple.ToField (ToField)
 import Loot.Log (MonadLogging)
 import Text.InterpolatedString.Perl6 (q)
 
-import qualified Dscp.Core as Core
+import Dscp.Core
 import Dscp.Crypto (Hash, hash)
 import Dscp.DB.SQLite (DomainError (..), MonadSQLiteDB (..), TxBlockIdx (TxInMempool),
                        WithinSQLTransaction)
@@ -77,10 +77,10 @@ type MonadStudentAPIQuery m =
     , MonadCatch m
     )
 
-getCourse
+studentGetCourse
     :: MonadStudentAPIQuery m
-    => Id Student -> Core.Course -> m Course
-getCourse studentId courseId =
+    => Id Student -> Course -> m CourseInfo
+studentGetCourse studentId courseId =
     transaction $ do
         mcourse <-
             query queryText (Only courseId)
@@ -88,10 +88,10 @@ getCourse studentId courseId =
         Only mdesc <-
             pure mcourse `assertJust` CourseDoesNotExist courseId
 
-        cIsEnrolled <- Base.isEnrolledTo studentId courseId
-        cSubjects <- Base.getCourseSubjects courseId
-        let cDesc = fromMaybe "" mdesc
-        return Course{ cId = courseId, .. }
+        ciIsEnrolled <- Base.isEnrolledTo studentId courseId
+        ciSubjects <- Base.getCourseSubjects courseId
+        let ciDesc = fromMaybe "" mdesc
+        return CourseInfo{ ciId = courseId, .. }
   where
     queryText :: Query
     queryText = [q|
@@ -100,10 +100,10 @@ getCourse studentId courseId =
         where     id = ?
     |]
 
-getCourses
+studentGetCourses
     :: (MonadStudentAPIQuery m, WithinSQLTransaction)
-    => Id Student -> Maybe IsEnrolled -> m [Course]
-getCourses studentId (coerce -> isEnrolledF) = do
+    => Id Student -> Maybe IsEnrolled -> m [CourseInfo]
+studentGetCourses studentId (coerce -> isEnrolledF) = do
     let (enrolledClause, enrolledParam) = case isEnrolledF of
             Just isEnrolled -> (mkEnrolledClause isEnrolled, oneParam studentId)
             Nothing         -> ("", mempty)
@@ -112,10 +112,10 @@ getCourses studentId (coerce -> isEnrolledF) = do
                       enrolledParam
 
     forM courses $ \(courceId, mdesc) -> do
-        cIsEnrolled <- Base.isEnrolledTo studentId courceId
-        cSubjects <- Base.getCourseSubjects courceId
-        let cDesc = fromMaybe "" mdesc
-        return Course{ cId = courceId, .. }
+        ciIsEnrolled <- Base.isEnrolledTo studentId courceId
+        ciSubjects <- Base.getCourseSubjects courceId
+        let ciDesc = fromMaybe "" mdesc
+        return CourseInfo{ ciId = courceId, .. }
   where
     queryText :: Query
     queryText = [q|
@@ -132,14 +132,14 @@ getCourses studentId (coerce -> isEnrolledF) = do
         )
     |]
 
-getGrade :: MonadStudentAPIQuery m => Hash Core.Submission -> m (Maybe Grade)
-getGrade submissionH = do
+studentGetGrade :: MonadStudentAPIQuery m => Hash Submission -> m (Maybe GradeInfo)
+studentGetGrade submissionH = do
     mgrade <-
         query queryText (Only submissionH)
         >>= listToMaybeWarn "last submission"
-    forM mgrade $ \(gGrade, gTimestamp, gSubmissionHash, blkIdx) -> do
-        let gHasProof = blkIdx /= TxInMempool
-        return Grade{..}
+    forM mgrade $ \(giGrade, giTimestamp, giSubmissionHash, blkIdx) -> do
+        let giHasProof = blkIdx /= TxInMempool
+        return GradeInfo{..}
   where
     queryText :: Query
     queryText = [q|
@@ -148,16 +148,16 @@ getGrade submissionH = do
         where     submission_hash = ?
     |]
 
-getLastAssignmentSubmission
+studentGetLastAssignmentSubmission
     :: (MonadStudentAPIQuery m, WithinSQLTransaction)
-    => Student -> Hash Core.Assignment -> m (Maybe Submission)
-getLastAssignmentSubmission student assignH = do
+    => Student -> Hash Assignment -> m (Maybe SubmissionInfo)
+studentGetLastAssignmentSubmission student assignH = do
     msubmission <-
         query queryText (assignH, student)
         >>= listToMaybeWarn "last submission"
-    forM msubmission $ \(submissionH, sContentsHash, sAssignmentHash) -> do
-        sGrade <- getGrade submissionH
-        return Submission{ sHash = submissionH, .. }
+    forM msubmission $ \(submissionH, siContentsHash, siAssignmentHash) -> do
+        siGrade <- studentGetGrade submissionH
+        return SubmissionInfo{ siHash = submissionH, .. }
   where
     queryText :: Query
     queryText = [q|
@@ -169,18 +169,18 @@ getLastAssignmentSubmission student assignH = do
         limit     1
     |]
 
-getAssignment
+studentGetAssignment
     :: (MonadStudentAPIQuery m, WithinSQLTransaction)
-    => Student -> Hash Core.Assignment -> m Assignment
-getAssignment student assignH = do
+    => Student -> Hash Assignment -> m AssignmentInfo
+studentGetAssignment student assignH = do
     massign <-
         query queryText (assignH, student)
         >>= listToMaybeWarn "assignments"
-    (aCourseId, aContentsHash, assignType, aDesc) <-
+    (aiCourseId, aiContentsHash, assignType, aiDesc) <-
         pure massign `assertJust` AssignmentDoesNotExist assignH
-    let IsFinal aIsFinal = assignType ^. assignmentTypeRaw
-    aLastSubmission <- getLastAssignmentSubmission student assignH
-    return Assignment{ aHash = assignH, .. }
+    let IsFinal aiIsFinal = assignType ^. assignmentTypeRaw
+    aiLastSubmission <- studentGetLastAssignmentSubmission student assignH
+    return AssignmentInfo{ aiHash = assignH, .. }
   where
     queryText :: Query
     queryText = [q|
@@ -192,23 +192,23 @@ getAssignment student assignH = do
               and student_addr = ?
     |]
 
-mkDocTypeFilter :: Maybe Core.DocumentType -> (FilterClause, SomeParams)
+mkDocTypeFilter :: Maybe DocumentType -> (FilterClause, SomeParams)
 mkDocTypeFilter = \case
     Nothing ->
         ("", mempty)
-    Just Core.Offline ->
-        ("and Assignments.hash = ?", oneParam Core.offlineHash)
-    Just Core.Online  ->
-        ("and Assignments.hash <> ?", oneParam Core.offlineHash)
+    Just Offline ->
+        ("and Assignments.hash = ?", oneParam offlineHash)
+    Just Online  ->
+        ("and Assignments.hash <> ?", oneParam offlineHash)
 
-getAssignments
+studentGetAssignments
     :: (MonadStudentAPIQuery m, WithinSQLTransaction)
     => Student
-    -> Maybe Core.Course
-    -> Maybe Core.DocumentType
+    -> Maybe Course
+    -> Maybe DocumentType
     -> Maybe IsFinal
-    -> m [Assignment]
-getAssignments student courseIdF docTypeF isFinalF = do
+    -> m [AssignmentInfo]
+studentGetAssignments student courseIdF docTypeF isFinalF = do
     let courseFilter = mkFilterOn "course_id" courseIdF
         assignTypeF = isFinalF ^. mapping (from assignmentTypeRaw)
         assignTypeFilter = mkFilterOn "type" assignTypeF
@@ -219,10 +219,10 @@ getAssignments student courseIdF docTypeF isFinalF = do
     assignments <- query (queryText clausesF)
                          (mconcat $ oneParam student : paramsF)
     forM assignments $
-      \(assignH, aCourseId, aContentsHash, assignType, aDesc) -> do
-        let IsFinal aIsFinal = assignType ^. assignmentTypeRaw
-        aLastSubmission <- getLastAssignmentSubmission student assignH
-        return Assignment{ aHash = assignH, .. }
+      \(assignH, aiCourseId, aiContentsHash, assignType, aiDesc) -> do
+        let IsFinal aiIsFinal = assignType ^. assignmentTypeRaw
+        aiLastSubmission <- studentGetLastAssignmentSubmission student assignH
+        return AssignmentInfo{ aiHash = assignH, .. }
   where
     queryText clausesF = [q|
         select    hash, course_id, contents_hash, type, desc
@@ -233,17 +233,17 @@ getAssignments student courseIdF docTypeF isFinalF = do
     |]
       `filterClauses` clausesF
 
-getSubmission
+studentGetSubmission
     :: (MonadStudentAPIQuery m, WithinSQLTransaction)
-    => Student -> Hash Core.Submission -> m Submission
-getSubmission student submissionH = do
+    => Student -> Hash Submission -> m SubmissionInfo
+studentGetSubmission student submissionH = do
     msubmission <-
         query queryText (submissionH, student)
         >>= listToMaybeWarn "courses"
-    (sContentsHash, sAssignmentHash) <-
+    (siContentsHash, siAssignmentHash) <-
         pure msubmission `assertJust` SubmissionDoesNotExist submissionH
-    sGrade <- getGrade submissionH
-    return Submission{ sHash = submissionH, .. }
+    siGrade <- studentGetGrade submissionH
+    return SubmissionInfo{ siHash = submissionH, .. }
   where
     queryText :: Query
     queryText = [q|
@@ -253,14 +253,14 @@ getSubmission student submissionH = do
               and student_addr = ?
     |]
 
-getSubmissions
+studentGetSubmissions
     :: (MonadStudentAPIQuery m, WithinSQLTransaction)
     => Student
-    -> Maybe Core.Course
-    -> Maybe (Hash Core.Assignment)
-    -> Maybe Core.DocumentType
-    -> m [Submission]
-getSubmissions student courseIdF assignHF docTypeF = do
+    -> Maybe Course
+    -> Maybe (Hash Assignment)
+    -> Maybe DocumentType
+    -> m [SubmissionInfo]
+studentGetSubmissions student courseIdF assignHF docTypeF = do
     let courseFilter = mkFilterOn "course_id" courseIdF
         assignFilter = mkFilterOn "Assignments.hash" assignHF
         docTypeFilter = mkDocTypeFilter docTypeF
@@ -269,9 +269,9 @@ getSubmissions student courseIdF assignHF docTypeF = do
     submissions <- query (queryText clausesF)
                          (mconcat $ oneParam student : paramsF)
     forM submissions $
-      \(submissionH, sContentsHash, sAssignmentHash) -> do
-        sGrade <- getGrade submissionH
-        return Submission{ sHash = submissionH, .. }
+      \(submissionH, siContentsHash, siAssignmentHash) -> do
+        siGrade <- studentGetGrade submissionH
+        return SubmissionInfo{ siHash = submissionH, .. }
   where
     queryText clausesF = [q|
         select    Submissions.hash, Submissions.contents_hash, assignment_hash
@@ -282,19 +282,19 @@ getSubmissions student courseIdF assignHF docTypeF = do
     |]
       `filterClauses` clausesF
 
-ensureSubmissionExists
+studentEnsureSubmissionExists
     :: (MonadStudentAPIQuery m, WithinSQLTransaction)
-    => Student -> Hash Core.Submission -> m ()
-ensureSubmissionExists = void ... getSubmission
+    => Student -> Hash Submission -> m ()
+studentEnsureSubmissionExists = void ... studentGetSubmission
 
-deleteSubmission
+studentDeleteSubmission
     :: (MonadStudentAPIQuery m, WithinSQLTransaction)
     => Student
-    -> Hash Core.Submission
+    -> Hash Submission
     -> m ()
-deleteSubmission student submissionH = do
-    submission <- getSubmission student submissionH
-    whenJust (sGrade submission) $ \_ ->
+studentDeleteSubmission student submissionH = do
+    submission <- studentGetSubmission student submissionH
+    whenJust (siGrade submission) $ \_ ->
         throwM DeletingGradedSubmission
 
     execute queryText (submissionH, student)
@@ -306,24 +306,24 @@ deleteSubmission student submissionH = do
             and student_addr = ?
     |]
 
-makeSubmission
+studentMakeSubmission
     :: (MonadStudentAPIQuery m, WithinSQLTransaction)
-    => Core.SignedSubmission -> m (Id Core.Submission)
-makeSubmission signedSubmission =
+    => SignedSubmission -> m (Id Submission)
+studentMakeSubmission signedSubmission =
     Base.submitAssignment signedSubmission
         & handleAlreadyPresent
   where
     handleAlreadyPresent action =
         catchJust asAlreadyExistsError action $ \_ -> do
-            let subH = hash (Core._ssSubmission signedSubmission)
+            let subH = hash (_ssSubmission signedSubmission)
             throwM $ EntityAlreadyPresent (SubmissionAlreadyExists subH)
 
-getBlockTxs
+studentGetBlockTxs
     :: MonadStudentAPIQuery m
     => Student
     -> Word32
-    -> m [Core.PrivateTx]
-getBlockTxs student blockIdx = do
+    -> m [PrivateTx]
+studentGetBlockTxs student blockIdx = do
     query queryText (blockIdx, student)
   where
     queryText :: Query
@@ -352,18 +352,18 @@ getBlockTxs student blockIdx = do
               and  student_addr = ?
     |]
 
-getProofs
+studentGetProofs
     :: (MonadStudentAPIQuery m, WithinSQLTransaction)
     => Student
     -> Maybe UTCTime
-    -> m [BlkProof]
-getProofs student sinceF = do
+    -> m [BlkProofInfo]
+studentGetProofs student sinceF = do
     blocks <- query queryText (Only sinceF)
     forM blocks $ \(idx, tree) -> do
-        txs <- getBlockTxs student idx
-        return BlkProof
-            { bpMtreeSerialized = AsHex tree
-            , bpTxs = txs
+        txs <- studentGetBlockTxs student idx
+        return BlkProofInfo
+            { bpiMtreeSerialized = AsHex tree
+            , bpiTxs = txs
             }
   where
     queryText :: Query

@@ -32,7 +32,7 @@ import UnliftIO.Concurrent (threadDelay)
 import Dscp.Core
 import Dscp.Crypto.Impl
 import Dscp.DB.SQLite
-import qualified Dscp.Educator.Web.Types as Student
+import Dscp.Educator.Web.Types
 import Dscp.Util
 import Dscp.Util.Test
 import Dscp.Witness.Instances ()
@@ -189,17 +189,17 @@ botNoteCompletedAssignments student course completedAssigns =
 -- student, made submission and overall list of student assignments.
 botProvideUnlockedAssignments
     :: (BotWorkMode m, HasBotSetting)
-    => Student -> Student.Submission -> [Student.Assignment] -> m ()
+    => Student -> SubmissionInfo -> [AssignmentInfo] -> m ()
 botProvideUnlockedAssignments student submission studentAssignments = do
     let assignment =
             fromMaybe (error "No related assignment among student ones") $
-            find (\a -> Student.sAssignmentHash submission == Student.aHash a)
+            find (\a -> siAssignmentHash submission == aiHash a)
                  studentAssignments
-    let course = Student.aCourseId assignment
+    let course = aiCourseId assignment
     let passedAssigns =
             S.fromList $
-            map Student.aHash $
-            filter (isJust . Student.aLastSubmission) studentAssignments
+            map aiHash $
+            filter (isJust . aiLastSubmission) studentAssignments
     botNoteCompletedAssignments student course passedAssigns
 
 -- | Enroll student to given courses and give initial assignments.

@@ -3,15 +3,13 @@ module Test.Dscp.Educator.Web.Student.Queries where
 import Data.List (nub, (!!))
 import Data.Time.Clock (UTCTime (..))
 
-import qualified Dscp.Core as Core
+import Dscp.Core
 import Dscp.Core.Arbitrary (genStudentSignedSubmissions)
 import Dscp.Crypto (Hash, Raw, hash)
 import Dscp.DB.SQLite (MonadSQLiteDB, WithinSQLTransaction, sqlTransaction, _AssignmentDoesNotExist,
                        _SubmissionDoesNotExist)
 import qualified Dscp.DB.SQLite as CoreDB
 import Dscp.Educator.Web.Student
-import qualified Dscp.Educator.Web.Student.Logic as Logic
-import qualified Dscp.Educator.Web.Student.Queries as DB
 import Dscp.Educator.Web.Types
 import Dscp.Util (Id (..))
 import Dscp.Util.Test
@@ -23,36 +21,36 @@ allStudents :: [Student]
 student1, student2 :: Student
 allStudents@(student1 : student2 : _) = detGen 3432 $ vectorUnique 100
 
-allCourses :: [Id Core.Course]
-courseId1, courseId2 :: Id Core.Course
+allCourses :: [Id Course]
+courseId1, courseId2 :: Id Course
 allCourses@(courseId1 : courseId2 : _) = detGen 2234 $ vectorUnique 100
 
-allAssignments :: [Core.Assignment]
-assignment1, assignment2 :: Core.Assignment
+allAssignments :: [Assignment]
+assignment1, assignment2 :: Assignment
 allAssignments@(assignment1 : assignment2 : _) = detGen 23423 $ do
     contentsHashes <- vectorUnique 100
     return $
         zip3 [1::Int ..]
-             (cycle [Core.Regular, Core.CourseFinal])
+             (cycle [Regular, CourseFinal])
              contentsHashes
         <&> \(i, assignType, chash) ->
-            Core.Assignment
+            Assignment
                 { _aCourseId = courseId1
                 , _aContentsHash = chash
                 , _aType = assignType
                 , _aDesc = "assignment " <> show i
                 }
 
-submission1 :: Core.Submission
+submission1 :: Submission
 submission1 : _ = detGen 23423 $ do
     contentsHashes <- vectorUnique 100
     return $
         zip3 allStudents
              contentsHashes
              allAssignments
-        <&> \(_sStudentId, _sContentsHash, _sAssignment) -> Core.Submission{..}
+        <&> \(_sStudentId, _sContentsHash, _sAssignment) -> Submission{..}
 
-createCourseSimple :: CoreDB.DBM m => Int -> m Core.Course
+createCourseSimple :: CoreDB.DBM m => Int -> m Course
 createCourseSimple i =
     CoreDB.createCourse
         (allCourses !! (i - 1))
@@ -61,20 +59,20 @@ createCourseSimple i =
 
 getAllSubmissions
     :: (MonadStudentAPIQuery m)
-    => Student -> m [Submission]
+    => Student -> m [SubmissionInfo]
 getAllSubmissions student =
-    sqlTx $ DB.getSubmissions student Nothing Nothing Nothing
+    sqlTx $ studentGetSubmissions student Nothing Nothing Nothing
 
 -- | For advanced queries. Puts SignedSubmissions in db, tolerates repeating
 -- entities.
 prepareForSubmissions
-    :: (MonadSQLiteDB m, Container l, Element l ~ Core.SignedSubmission)
+    :: (MonadSQLiteDB m, Container l, Element l ~ SignedSubmission)
     => l -> m ()
 prepareForSubmissions (toList -> sigSubmissions) = do
-    let submissions = map Core._ssSubmission sigSubmissions
-        assignments = map Core._sAssignment submissions
-        courses = map Core._aCourseId assignments
-        owners = map Core._sStudentId submissions
+    let submissions = map _ssSubmission sigSubmissions
+        assignments = map _sAssignment submissions
+        courses = map _aCourseId assignments
+        owners = map _sStudentId submissions
     mapM_ CoreDB.createStudent (ordNub owners)
     forM_ (ordNub courses) $ \course -> do
           void $ CoreDB.createCourse course Nothing []
@@ -89,7 +87,7 @@ prepareForSubmissions (toList -> sigSubmissions) = do
 -- | For advanced queries. Puts SignedSubmissions in db, tolerates repeating
 -- entities.
 prepareAndCreateSubmissions
-    :: (MonadSQLiteDB m, Container l, Element l ~ Core.SignedSubmission)
+    :: (MonadSQLiteDB m, Container l, Element l ~ SignedSubmission)
     => l -> m ()
 prepareAndCreateSubmissions (toList -> sigSubmissions) = do
     prepareForSubmissions sigSubmissions
@@ -123,8 +121,8 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                 _ <- CoreDB.createStudent student1
                 _ <- createCourseSimple 1
 
-                course <- DB.getCourse student1 courseId1
-                return (not $ cIsEnrolled course)
+                course <- studentGetCourse student1 courseId1
+                return (not $ ciIsEnrolled course)
 
         it "Student gets enrolled when she asks to" $
             sqliteProperty $ \() -> do
@@ -132,8 +130,8 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                 _ <- createCourseSimple 1
                 CoreDB.enrollStudentToCourse student1 courseId1
 
-                course <- DB.getCourse student1 courseId1
-                return (cIsEnrolled course)
+                course <- studentGetCourse student1 courseId1
+                return (ciIsEnrolled course)
 
         it "'Course' datatype is filled correctly" $
             sqliteProperty $ \
@@ -142,12 +140,12 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
               , delayedGen listUnique -> subjects
               ) -> do
                 _ <- CoreDB.createCourse courseId desc subjects
-                course <- DB.getCourse student1 courseId
-                return $ course === Course
-                    { cId = courseId
-                    , cDesc = fromMaybe "" desc
-                    , cSubjects = subjects
-                    , cIsEnrolled = False
+                course <- studentGetCourse student1 courseId
+                return $ course === CourseInfo
+                    { ciId = courseId
+                    , ciDesc = fromMaybe "" desc
+                    , ciSubjects = subjects
+                    , ciIsEnrolled = False
                     }
 
         it "Student has vision proper for him" $
@@ -158,8 +156,8 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                 _ <- createCourseSimple 2
                 CoreDB.enrollStudentToCourse student1 courseId1
 
-                course <- DB.getCourse student2 courseId1
-                return (not $ cIsEnrolled course)
+                course <- studentGetCourse student2 courseId1
+                return (not $ ciIsEnrolled course)
 
     describe "getCourses" $ do
         it "Student is not enrolled initially" $
@@ -167,8 +165,8 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                 _ <- CoreDB.createStudent student1
                 _ <- createCourseSimple 1
 
-                courses <- sqlTx $ DB.getCourses student1 Nothing
-                return (all (not . cIsEnrolled) courses)
+                courses <- sqlTx $ studentGetCourses student1 Nothing
+                return (all (not . ciIsEnrolled) courses)
 
         it "Student gets enrolled when he asks to" $
             sqliteProperty $ \() -> do
@@ -176,9 +174,9 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                 _ <- createCourseSimple 1
                 CoreDB.enrollStudentToCourse student1 courseId1
 
-                courses <- sqlTx $ DB.getCourses student1 Nothing
-                let Just course1 = find (\c -> cId c == courseId1) courses
-                return (cIsEnrolled course1)
+                courses <- sqlTx $ studentGetCourses student1 Nothing
+                let Just course1 = find (\c -> ciId c == courseId1) courses
+                return (ciIsEnrolled course1)
 
         it "'Course' datatype is filled correctly" $
             sqliteProperty $ \
@@ -187,12 +185,12 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
               , delayedGen listUnique -> subjects
               ) -> do
                 _ <- CoreDB.createCourse courseId desc subjects
-                courses <- sqlTx $ DB.getCourses student1 Nothing
-                return $ courses === one Course
-                    { cId = courseId
-                    , cDesc = fromMaybe "" desc
-                    , cSubjects = subjects
-                    , cIsEnrolled = False
+                courses <- sqlTx $ studentGetCourses student1 Nothing
+                return $ courses === one CourseInfo
+                    { ciId = courseId
+                    , ciDesc = fromMaybe "" desc
+                    , ciSubjects = subjects
+                    , ciIsEnrolled = False
                     }
 
         it "Student has vision proper for him" $
@@ -206,9 +204,9 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                 mapM_ (CoreDB.enrollStudentToCourse student2)
                       [courseId1, courseId2]
 
-                courses <- sqlTx $ DB.getCourses student1 Nothing
-                               <&> sortOn cDesc
-                return (map cIsEnrolled courses === [True, False])
+                courses <- sqlTx $ studentGetCourses student1 Nothing
+                               <&> sortOn ciDesc
+                return (map ciIsEnrolled courses === [True, False])
 
         it "Filtering on IsEnrolled works" $
             sqliteProperty $ \() -> do
@@ -220,12 +218,12 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                 [notEnrolled, enrolled] <-
                     forM [False, True] $ \isEnrolled ->
                         sqlTx $
-                        DB.getCourses student1 (Just $ IsEnrolled isEnrolled)
+                        studentGetCourses student1 (Just $ IsEnrolled isEnrolled)
 
                 return $
-                    map cDesc enrolled === ["course 2"]
+                    map ciDesc enrolled === ["course 2"]
                   .&&.
-                    map cDesc notEnrolled === ["course 1"]
+                    map ciDesc notEnrolled === ["course 1"]
 
   describe "Assignments" $ do
     describe "getAssignment" $ do
@@ -233,66 +231,66 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
             sqliteProperty $ \() ->
                 throwsPrism _AssignmentDoesNotExist $ do
                     _ <- CoreDB.createStudent student1
-                    sqlTx $ DB.getAssignment student1 (getId assignment1)
+                    sqlTx $ studentGetAssignment student1 (getId assignment1)
 
         it "Fails when student is not assigned to submission" $
             -- Student is required to just take his recent submission,
             -- but we have to fail on all unautharized actions.
             sqliteProperty $ \assignment -> do
-                let course = Core._aCourseId assignment
+                let course = _aCourseId assignment
                 _ <- CoreDB.createStudent student1
                 _ <- CoreDB.createCourse course Nothing []
                 _ <- CoreDB.createAssignment assignment
                 throwsPrism _AssignmentDoesNotExist $
-                    sqlTx $ DB.getAssignment student1 (getId assignment1)
+                    sqlTx $ studentGetAssignment student1 (getId assignment1)
 
         it "Returns existing assignment properly" $
             sqliteProperty $ \assignment -> do
                 let assignmentH = getId assignment
-                let course = Core._aCourseId assignment
+                let course = _aCourseId assignment
                 _ <- CoreDB.createStudent student1
                 _ <- CoreDB.createCourse course Nothing []
                 _ <- CoreDB.createAssignment assignment
                 _ <- CoreDB.enrollStudentToCourse student1 course
                 _ <- CoreDB.setStudentAssignment student1 assignmentH
 
-                assignment' <- sqlTx $ DB.getAssignment student1 assignmentH
-                return $ assignment' === Assignment
-                    { aHash = assignmentH
-                    , aCourseId = Core._aCourseId assignment
-                    , aContentsHash = Core._aContentsHash assignment
-                    , aIsFinal = Core._aType assignment ^. assignmentTypeRaw . _IsFinal
-                    , aDesc = Core._aDesc assignment
-                    , aLastSubmission = Nothing
+                assignment' <- sqlTx $ studentGetAssignment student1 assignmentH
+                return $ assignment' === AssignmentInfo
+                    { aiHash = assignmentH
+                    , aiCourseId = _aCourseId assignment
+                    , aiContentsHash = _aContentsHash assignment
+                    , aiIsFinal = _aType assignment ^. assignmentTypeRaw . _IsFinal
+                    , aiDesc = _aDesc assignment
+                    , aiLastSubmission = Nothing
                     }
 
         it "Student sees only his assignment" $
             sqliteProperty $ \
               ( delayedGen (vectorUnique 2) -> [assignment, needlessAssignment]
               ) -> do
-                let course = Core._aCourseId assignment
+                let course = _aCourseId assignment
                 _ <- CoreDB.createStudent student1
                 _ <- CoreDB.createCourse course Nothing []
                 _ <- CoreDB.createAssignment assignment
                 _ <- CoreDB.enrollStudentToCourse student1 course
                 _ <- CoreDB.setStudentAssignment student1 (getId assignment)
                 throwsPrism _AssignmentDoesNotExist $
-                    sqlTx $ DB.getAssignment student1 (getId needlessAssignment)
+                    sqlTx $ studentGetAssignment student1 (getId needlessAssignment)
 
     describe "getAssignments" $ do
         let getAssignmentsSimple student =
-                sqlTx $ DB.getAssignments student Nothing Nothing Nothing
+                sqlTx $ studentGetAssignments student Nothing Nothing Nothing
 
         it "Student has no last submission initially" $
             sqliteProperty $ \() -> do
-                let course = Core._aCourseId assignment1
+                let course = _aCourseId assignment1
                 _ <- CoreDB.createStudent student1
                 _ <- CoreDB.createCourse course Nothing []
                 _ <- CoreDB.createAssignment assignment1
                 _ <- CoreDB.enrollStudentToCourse student1 course
                 _ <- CoreDB.setStudentAssignment student1 (getId assignment1)
                 assignments <- getAssignmentsSimple student1
-                return $ all (isNothing . aLastSubmission) assignments
+                return $ all (isNothing . aiLastSubmission) assignments
 
         it "Returns existing assignment properly and only related to student" $
             sqliteProperty $
@@ -300,7 +298,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                  -> assignments@[assignment, needlessAssignment]) -> do
                 let assignmentH = getId assignment
                 _ <- CoreDB.createStudent student1
-                forM_ (ordNub $ map Core._aCourseId assignments) $ \course -> do
+                forM_ (ordNub $ map _aCourseId assignments) $ \course -> do
                     void $ CoreDB.createCourse course Nothing []
                     void $ CoreDB.enrollStudentToCourse student1 course
                 _ <- CoreDB.createAssignment assignment
@@ -308,14 +306,14 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                 _ <- CoreDB.setStudentAssignment student1 assignmentH
 
                 res <- getAssignmentsSimple student1
-                return $ res === one Assignment
-                    { aHash = getId assignment
-                    , aCourseId = Core._aCourseId assignment
-                    , aContentsHash = Core._aContentsHash assignment
-                    , aIsFinal =
-                        Core._aType assignment ^. assignmentTypeRaw . _IsFinal
-                    , aDesc = Core._aDesc assignment
-                    , aLastSubmission = Nothing
+                return $ res === one AssignmentInfo
+                    { aiHash = getId assignment
+                    , aiCourseId = _aCourseId assignment
+                    , aiContentsHash = _aContentsHash assignment
+                    , aiIsFinal =
+                        _aType assignment ^. assignmentTypeRaw . _IsFinal
+                    , aiDesc = _aDesc assignment
+                    , aiLastSubmission = Nothing
                     }
 
         it "Filtering works" $
@@ -325,7 +323,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
               , docTypeF
               , isFinalF
               ) -> do
-                let courseIds = ordNub $ map Core._aCourseId preAssignments
+                let courseIds = ordNub $ map _aCourseId preAssignments
                 _ <- CoreDB.createStudent student1
                 forM_ courseIds $ \courseId -> do
                     void $ CoreDB.createCourse courseId Nothing []
@@ -336,16 +334,16 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                     void $ CoreDB.setStudentAssignment student1 assignH
 
                 assignments <- sqlTx $
-                    DB.getAssignments student1 courseIdF docTypeF isFinalF
+                    studentGetAssignments student1 courseIdF docTypeF isFinalF
 
                 let assignments' =
-                        applyFilterOn aCourseId courseIdF $
-                        applyFilterOn aDocumentType docTypeF $
-                        applyFilterOn (IsFinal . aIsFinal) isFinalF $
+                        applyFilterOn aiCourseId courseIdF $
+                        applyFilterOn aiDocumentType docTypeF $
+                        applyFilterOn (IsFinal . aiIsFinal) isFinalF $
                         map (\a -> liftAssignment a Nothing)
                         preAssignments
 
-                return $ sortOn aHash assignments === sortOn aHash assignments'
+                return $ sortOn aiHash assignments === sortOn aiHash assignments'
 
         it "Last submission is actually the last" $
             sqliteProperty $
@@ -357,11 +355,11 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
 
                 let lastSigSubmission = last sigSubmissions
                     -- submission was changed
-                let lastSubmission = Core._ssSubmission lastSigSubmission
-                let assignment = Core._sAssignment lastSubmission
+                let lastSubmission = _ssSubmission lastSigSubmission
+                let assignment = _sAssignment lastSubmission
                 assignment' <-
-                    sqlTx $ DB.getAssignment student (hash assignment)
-                let lastSubmission' = aLastSubmission assignment'
+                    sqlTx $ studentGetAssignment student (hash assignment)
+                let lastSubmission' = aiLastSubmission assignment'
                 return $
                     lastSubmission'
                     ===
@@ -369,25 +367,25 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
 
   describe "Submissions" $ do
     describe "getSubmission" $ do
-        let mkSomeSubmission :: Hash Raw -> Core.Submission
+        let mkSomeSubmission :: Hash Raw -> Submission
             mkSomeSubmission _sContentsHash =
-                Core.Submission { _sStudentId = student1
+                Submission { _sStudentId = student1
                                 , _sAssignment = assignment1
                                 , .. }
 
         it "Fails on request of non-existent submission" $
             sqliteProperty $ \(mkSomeSubmission -> submission) ->
                 throwsPrism _SubmissionDoesNotExist $ do
-                    let student = Core._sStudentId submission
+                    let student = _sStudentId submission
                     _ <- CoreDB.createStudent student
-                    sqlTx $ DB.getSubmission student (getId submission)
+                    sqlTx $ studentGetSubmission student (getId submission)
 
         it "Returns existing submission properly" $
             sqliteProperty $ \sigSubmission -> do
-                let submission = Core._ssSubmission sigSubmission
-                    assignment = Core._sAssignment submission
-                    course = Core._aCourseId assignment
-                    owner = Core._sStudentId submission
+                let submission = _ssSubmission sigSubmission
+                    assignment = _sAssignment submission
+                    course = _aCourseId assignment
+                    owner = _sStudentId submission
                 _ <- CoreDB.createStudent owner
                 _ <- CoreDB.createCourse course Nothing []
                 _ <- CoreDB.createAssignment assignment
@@ -395,21 +393,21 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                 _ <- CoreDB.setStudentAssignment owner (getId assignment)
                 _ <- sqlTx $ CoreDB.submitAssignment sigSubmission
                 res <- sqlTx $
-                    DB.getSubmission owner (getId submission)
-                return $ res === Submission
-                    { sHash = hash submission
-                    , sContentsHash = Core._sContentsHash submission
-                    , sAssignmentHash = hash assignment
-                    , sGrade = Nothing
+                    studentGetSubmission owner (getId submission)
+                return $ res === SubmissionInfo
+                    { siHash = hash submission
+                    , siContentsHash = _sContentsHash submission
+                    , siAssignmentHash = hash assignment
+                    , siGrade = Nothing
                     }
 
         it "Fails when student is not submission owner" $
             sqliteProperty $ \sigSubmission -> do
-                let submission = Core._ssSubmission sigSubmission
+                let submission = _ssSubmission sigSubmission
                     user = student1
-                    owner = Core._sStudentId submission
-                    assignment = Core._sAssignment submission
-                    course = Core._aCourseId assignment
+                    owner = _sStudentId submission
+                    assignment = _sAssignment submission
+                    course = _aCourseId assignment
                 if user == owner
                 then return $ property rejected
                 else do
@@ -421,28 +419,28 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                     _ <- CoreDB.setStudentAssignment owner (getId assignment)
                     _ <- sqlTx $ CoreDB.submitAssignment sigSubmission
                     fmap property $ throwsPrism _SubmissionDoesNotExist $
-                        sqlTx $ DB.getSubmission user (getId submission)
+                        sqlTx $ studentGetSubmission user (getId submission)
 
         it "Returns grade when present" $
             sqliteProperty $ \(sigSubmission, grade) -> do
-                let submission = Core._ssSubmission sigSubmission
-                    student = Core._sStudentId $ submission
+                let submission = _ssSubmission sigSubmission
+                    student = _sStudentId $ submission
                 prepareAndCreateSubmissions [sigSubmission]
                 _ <- CoreDB.createTransaction $
-                     Core.PrivateTx sigSubmission grade someTime
+                     PrivateTx sigSubmission grade someTime
 
                 submission' <-
-                    sqlTx $ DB.getSubmission student (getId submission)
-                let Just grade' = sGrade submission'
+                    sqlTx $ studentGetSubmission student (getId submission)
+                let Just grade' = siGrade submission'
                 return $
-                    (gGrade grade', gHasProof grade', gSubmissionHash grade')
+                    (giGrade grade', giHasProof grade', giSubmissionHash grade')
                     ===
                     (grade, False, hash submission)
 
     describe "getSubmissions" $ do
         it "Student has no last submissions initially" $
             sqliteProperty $ \() -> do
-                let course = Core._aCourseId assignment1
+                let course = _aCourseId assignment1
                 _ <- CoreDB.createStudent student1
                 _ <- CoreDB.createCourse course Nothing []
                 _ <- CoreDB.createAssignment assignment1
@@ -457,20 +455,20 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
             sqliteProperty $
               \(delayedGen (vectorUnique 2) -> sigSubmissions) -> do
                 let submissions@[someSubmission, _] =
-                        map Core._ssSubmission sigSubmissions
-                    [owner1, owner2] = map Core._sStudentId submissions
+                        map _ssSubmission sigSubmissions
+                    [owner1, owner2] = map _sStudentId submissions
                 if owner1 == owner2
                 then return $ property rejected
                 else do
                     prepareAndCreateSubmissions sigSubmissions
 
                     res <- getAllSubmissions owner1
-                    return $ res === one Submission
-                        { sHash = hash someSubmission
-                        , sContentsHash = Core._sContentsHash someSubmission
-                        , sAssignmentHash =
-                            hash (Core._sAssignment someSubmission)
-                        , sGrade = Nothing
+                    return $ res === one SubmissionInfo
+                        { siHash = hash someSubmission
+                        , siContentsHash = _sContentsHash someSubmission
+                        , siAssignmentHash =
+                            hash (_sAssignment someSubmission)
+                        , siGrade = Nothing
                         }
 
         it "Returns grade when present" $
@@ -486,14 +484,14 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
 
                 forM_ sigSubmissionsAndGrades $ \(sigSubmission, grade) ->
                     CoreDB.createTransaction $
-                    Core.PrivateTx sigSubmission grade someTime
+                    PrivateTx sigSubmission grade someTime
 
                 submissions' <- getAllSubmissions student
                 let submissionsAndGrades' =
-                        map (sHash &&& fmap gGrade . sGrade) submissions'
+                        map (siHash &&& fmap giGrade . siGrade) submissions'
                 let submissionsAndGrades = sigSubmissionsAndGrades
                         <&> \(sigSub, grade) ->
-                            (hash $ Core._ssSubmission sigSub, Just grade)
+                            (hash $ _ssSubmission sigSub, Just grade)
                 return $
                     sortOn fst submissionsAndGrades
                     ===
@@ -511,25 +509,25 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
 
                   submissions <-
                       sqlTx $
-                      DB.getSubmissions student courseIdF assignHF docTypeF
+                      studentGetSubmissions student courseIdF assignHF docTypeF
 
-                  let subCourseId = Core._aCourseId . Core._sAssignment
+                  let subCourseId = _aCourseId . _sAssignment
                   let submissions' =
                         map (\s -> liftSubmission s Nothing) $
                         applyFilterOn subCourseId courseIdF $
-                        applyFilterOn (hash . Core._sAssignment) assignHF $
-                        applyFilterOn Core._sDocumentType docTypeF $
-                        map Core._ssSubmission $
+                        applyFilterOn (hash . _sAssignment) assignHF $
+                        applyFilterOn _sDocumentType docTypeF $
+                        map _ssSubmission $
                         toList sigSubmissions
 
-                  return $ sortOn sHash submissions == sortOn sHash submissions'
+                  return $ sortOn siHash submissions == sortOn siHash submissions'
 
     describe "deleteSubmission" $ do
         it "Deletion of non-existing submission throws" $
             sqliteProperty $ \submission -> do
                 _ <- CoreDB.createStudent student1
                 throwsPrism _SubmissionDoesNotExist $
-                    sqlTx $ DB.deleteSubmission student1 (hash submission)
+                    sqlTx $ studentDeleteSubmission student1 (hash submission)
 
         it "Delete works" $
             sqliteProperty $
@@ -540,67 +538,67 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                   prepareAndCreateSubmissions sigSubmissions
                   subBefore <- getAllSubmissions student
 
-                  let submissionToDel = Core._ssSubmission sigSubmissiontoDel
+                  let submissionToDel = _ssSubmission sigSubmissiontoDel
                   let submissionToDelH = hash submissionToDel
-                  sqlTx $ DB.deleteSubmission student submissionToDelH
+                  sqlTx $ studentDeleteSubmission student submissionToDelH
                   subAfter <- getAllSubmissions student
                   let expected =
-                          filter (\s -> sHash s /= submissionToDelH) subBefore
+                          filter (\s -> siHash s /= submissionToDelH) subBefore
 
-                  return $ sortOn sHash subAfter === sortOn sHash expected
+                  return $ sortOn siHash subAfter === sortOn siHash expected
 
         it "Can not delete graded submission" $
             sqliteProperty $ \sigSubmission -> do
-                let submission = Core._ssSubmission sigSubmission
-                    student = Core._sStudentId $ submission
+                let submission = _ssSubmission sigSubmission
+                    student = _sStudentId $ submission
                 prepareAndCreateSubmissions [sigSubmission]
                 _ <- CoreDB.createTransaction $
-                     Core.PrivateTx sigSubmission Core.gA someTime
+                     PrivateTx sigSubmission gA someTime
 
                 throwsPrism _DeletingGradedSubmission $ do
-                     sqlTx $ DB.deleteSubmission student (hash submission)
+                     sqlTx $ studentDeleteSubmission student (hash submission)
 
         it "Can not delete other student's submission" $
             sqliteProperty $ \sigSubmission -> do
-                let submission = Core._ssSubmission sigSubmission
-                    student = Core._sStudentId $ submission
+                let submission = _ssSubmission sigSubmission
+                    student = _sStudentId $ submission
                     Just otherStudent = find (/= student) allStudents
                 prepareAndCreateSubmissions [sigSubmission]
 
                 throwsPrism _SubmissionDoesNotExist $
-                    sqlTx $ DB.deleteSubmission otherStudent (hash submission)
+                    sqlTx $ studentDeleteSubmission otherStudent (hash submission)
 
     describe "makeSubmission" $ do
         it "Making same submission twice throws" $
             sqliteProperty $ \sigSubmission -> do
                 prepareAndCreateSubmissions [sigSubmission]
                 throwsPrism (_EntityAlreadyPresent . _SubmissionAlreadyExists) $
-                    sqlTx $ DB.makeSubmission sigSubmission
+                    sqlTx $ studentMakeSubmission sigSubmission
 
         it "Making submission works" $
             sqliteProperty $ \sigSubmission -> do
-                let student = Core._sStudentId (Core._ssSubmission sigSubmission)
+                let student = _sStudentId (_ssSubmission sigSubmission)
                 let submissionReq = signedSubmissionToRequest sigSubmission
                 prepareForSubmissions [sigSubmission]
-                void $ Logic.makeSubmissionVerified student submissionReq
+                void $ studentMakeSubmissionVerified student submissionReq
 
                 res <- getAllSubmissions student
-                let submission = Core._ssSubmission sigSubmission
+                let submission = _ssSubmission sigSubmission
                 return $ res === [liftSubmission submission Nothing]
 
         it "Pretending to be another student is bad" $
             sqliteProperty $ \(sigSubmission, badStudent) -> do
-                if Core._sStudentId (Core._ssSubmission sigSubmission) == badStudent
+                if _sStudentId (_ssSubmission sigSubmission) == badStudent
                 then return $ property rejected
                 else do
                     let newSubmission = signedSubmissionToRequest sigSubmission
                     prepareForSubmissions [sigSubmission]
                     fmap property $ throwsPrism (_BadSubmissionSignature . _FakeSubmissionSignature) $
-                        Logic.makeSubmissionVerified badStudent newSubmission
+                        studentMakeSubmissionVerified badStudent newSubmission
 
   describe "Transactions" $ do
     describe "getProofs" $ do
-         let getAllProofs student = sqlTx $ DB.getProofs student Nothing
+         let getAllProofs student = sqlTx $ studentGetProofs student Nothing
 
          it "Returns nothing initially" $
              sqliteProperty $ \() -> do
