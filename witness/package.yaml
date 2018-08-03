@@ -54,6 +54,7 @@ library:
     - time
     - transformers
     - unliftio
+    - unordered-containers
     - warp
 
 tests:
