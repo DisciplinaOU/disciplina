@@ -16,23 +16,16 @@ library:
   dependencies:
     - Earley
     - aeson
-    - ansi-wl-pprint
-    - async
     - bytestring
-    - containers
     - directory
     - disciplina-core
     - disciplina-witness
     - filelock
-    - formatting
-    - haskeline
     - http-types
     - http-client
     - ii-extras
     - knit
     - lens
-    - loc
-    - megaparsec
     - memory
     - scientific
     - serialise
@@ -40,18 +33,7 @@ library:
     - servant
     - servant-generic
     - servant-client
-    - text
     - text-format
-    - vinyl
-
-    # for Ariadne/UI/Vty
-    - Hclip
-    - ansi-terminal
-    - brick
-    - named
-    - text-zipper
-    - transformers
-    - vty
   ghc-options:
     - -Wno-unused-top-binds
 
@@ -63,6 +45,8 @@ executables:
       - DataKinds
     dependencies:
       - ansi-wl-pprint
+      - ariadne-cli-lib
+      - ariadne-core
       - disciplina-core
       - disciplina-wallet
       - disciplina-witness
@@ -78,6 +62,8 @@ executables:
       - DataKinds
     dependencies:
       - ansi-wl-pprint
+      - ariadne-core
+      - ariadne-vty-lib
       - containers
       - double-conversion
       - disciplina-core
