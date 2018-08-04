@@ -665,7 +665,6 @@ paths:
       tags:
       - assignments
       summary: Add assignment to a course
-      description: Add a given assignment to a course.
       operationId: addCourseAssignment
       parameters:
         - in: body
@@ -673,7 +672,7 @@ paths:
           description: An assignment
           required: true
           schema:
-            $ref: "#/definitions/Assignment"
+            $ref: "#/definitions/AssignmentReq"
         - in: query
           name: autoAssign
           description: Automatically subscribe all students attending related course to new assignment.
@@ -743,6 +742,22 @@ definitions:
         type: boolean
       desc:
         type: string
+  AssignmentReq:
+    type: object
+    required:
+    - courseId
+    - contentsHash
+    - isFinal
+    - desc
+    properties:
+      courseId:
+        $ref: "#/definitions/CourseId"
+      contentsHash:
+        $ref: "#/definitions/Hash"
+      isFinal:
+        type: boolean
+      desc:
+        type: string
   Submission:
     type: object
     required:
@@ -768,8 +783,6 @@ definitions:
     required:
     - submissionHash
     - grade
-    - timestamp
-    - hasProof
     properties:
       submissionHash:
         $ref: "#/definitions/Hash"
@@ -778,8 +791,10 @@ definitions:
         format: int32
       timestamp:
         $ref: "#/definitions/Time"
+        readOnly: true
       hasProof:
         type: boolean
+        readOnly: true
 
   Transaction:
     type: object

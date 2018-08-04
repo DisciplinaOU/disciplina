@@ -1,4 +1,4 @@
--- | API errors
+-- | Student API errors
 
 module Dscp.Educator.Web.Student.Error
        ( APIError (..)
@@ -46,6 +46,7 @@ data ObjectAlreadyExistsError
 
 makePrisms ''ObjectAlreadyExistsError
 
+-- | Any error backend may return.
 data APIError
     = BadSubmissionSignature WrongSubmissionSignature
       -- ^ Submission signature doesn't match the student nor has valid format.
@@ -61,6 +62,7 @@ makePrisms ''APIError
 
 instance Exception APIError
 
+-- | Contains info about error in client-convenient form.
 data ErrResponse = ErrResponse
     { erError :: !APIError
     } deriving (Show, Eq, Generic)

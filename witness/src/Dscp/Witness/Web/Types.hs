@@ -7,7 +7,6 @@ import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
 import qualified Data.Text.Buildable
 import Fmt ((+|), (|+))
-import Servant (FromHttpApiData (..))
 
 import Dscp.Core
 import Dscp.Util.Servant (ForResponseLog (..))
@@ -53,10 +52,3 @@ instance Buildable (ForResponseLog AccountState) where
 
 deriveJSON defaultOptions ''Balances
 deriveJSON defaultOptions ''AccountState
-
----------------------------------------------------------------------------
--- FromHttpApiData instances
----------------------------------------------------------------------------
-
-instance FromHttpApiData Address where
-    parseUrlPiece = addrFromText

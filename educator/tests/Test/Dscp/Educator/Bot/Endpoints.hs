@@ -1,7 +1,8 @@
 module Test.Dscp.Educator.Bot.Endpoints where
 
 import Dscp.Core.Arbitrary
-import Dscp.Educator.Web
+import Dscp.Educator.Web.Bot
+import Dscp.Educator.Web.Student
 import Dscp.Util.Test
 
 import Test.Dscp.DB.SQLite.Common
@@ -31,4 +32,4 @@ spec_StudentApiWithBotQueries = describe "Basic properties" $ do
             StudentApiEndpoints{..} <- addBotHandlers studentApiHandlers
             void $ sMakeSubmission (signedSubmissionToRequest sigsub)
             [submission] <- sGetSubmissions Nothing Nothing Nothing
-            return (isJust $ sGrade submission)
+            return (isJust $ siGrade submission)
