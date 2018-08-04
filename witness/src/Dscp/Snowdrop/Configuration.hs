@@ -19,7 +19,7 @@ import Dscp.Crypto (PublicKey, Signature, hashF)
 import Dscp.Snowdrop.Types (Account, AccountId (..), AccountTxTypeId (..),
                             AccountValidationException, PublicationTxTypeId (..),
                             PublicationValidationError)
-import Dscp.Witness.Block.Exceptions (BlockLogicException)
+import Dscp.Witness.Logic.Exceptions (LogicException)
 
 ----------------------------------------------------------------------------
 -- Snowdrop block-related types
@@ -153,7 +153,7 @@ data Exceptions
     | TxValidationError          TxValidationException
     | StatePError                StatePException
     | ExpanderError              ExpanderException
-    | BlockLogicError              BlockLogicException
+    | LogicError                 LogicException
     deriving (Show)
 
 instance Exception Exceptions

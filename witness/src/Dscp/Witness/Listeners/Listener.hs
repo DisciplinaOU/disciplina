@@ -12,10 +12,10 @@ import Loot.Log (logError, logInfo)
 import Dscp.Core
 import Dscp.Network.Wrapped
 import Dscp.Resource.Keys (ourPublicKey)
-import Dscp.Witness.Block.Logic (applyBlock, createBlock)
 import Dscp.Witness.Config
 import Dscp.Witness.Launcher.Marker
 import Dscp.Witness.Launcher.Mode
+import Dscp.Witness.Logic (applyBlock, createBlock)
 import Dscp.Witness.Messages
 
 

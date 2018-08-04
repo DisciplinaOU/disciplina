@@ -16,8 +16,8 @@ import Dscp.Core
 import Dscp.Crypto
 import Dscp.Network.Wrapped
 import Dscp.Snowdrop.Mode
-import Dscp.Witness.Block.Logic
 import Dscp.Witness.Launcher.Mode
+import Dscp.Witness.Logic
 import Dscp.Witness.Messages
 
 
