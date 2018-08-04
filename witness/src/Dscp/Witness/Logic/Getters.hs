@@ -1,6 +1,17 @@
 -- | Block-related getters.
 
-module Dscp.Witness.Logic.Getters where
+module Dscp.Witness.Logic.Getters
+    ( getTipHash
+    , getTipBlock
+    , getTipHeader
+
+    , getBlockMaybe
+    , getBlock
+    , getHeaderMaybe
+    , getHeader
+
+    , resolvePrevious
+    ) where
 
 import qualified Snowdrop.Model.Block as SD
 import qualified Snowdrop.Model.State.Core as SD
@@ -37,17 +48,35 @@ getTipBlock = do
 getTipHeader :: HasWitnessConfig => SdM_ c Header
 getTipHeader = rbHeader <$> getTipBlock
 
+-- | Safely get block.
+getBlockMaybe :: HasHeaderHash x => x -> SdM (Maybe Block)
+getBlockMaybe o =
+    fmap (sBlockReconstruct . SD.buBlock) <$>
+    SD.queryOne (SD.BlockRef $ headerHash o)
+
 -- | Resolves block, throws exception if it's absent.
 getBlock :: HasHeaderHash x => x -> SdM Block
 getBlock o = do
-    block <-
-        maybe (SD.throwLocalError $ LEBlockAbsent $
-               "Can't get block with hash " <> pretty h) pure =<<
-        SD.queryOne (SD.BlockRef h)
-    pure $ sBlockReconstruct $ SD.buBlock block
-  where
-    h = headerHash o
+    bM <- getBlockMaybe o
+    maybe (SD.throwLocalError $ LEBlockAbsent $
+              "Can't get block with hash " <> pretty (headerHash o))
+          pure
+          bM
+
+-- | Safely resolve header.
+getHeaderMaybe :: HasHeaderHash x => x -> SdM (Maybe Header)
+getHeaderMaybe = fmap (fmap rbHeader) . getBlockMaybe
 
 -- | Resolves header, throws exception if it's absent.
 getHeader :: HasHeaderHash x => x -> SdM Header
 getHeader = fmap rbHeader . getBlock
+
+-- | Given the element, get the previous one. If the element itself
+-- doesn't exist, this method will throw.
+resolvePrevious ::
+       (HasWitnessConfig, HasHeaderHash x) => x -> SdM (Maybe HeaderHash)
+resolvePrevious o = do
+    header <- getHeader o
+    if headerHash header == genesisHash
+    then pure Nothing
+    else pure $ Just $ hPrevHash header
