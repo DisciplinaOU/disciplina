@@ -44,9 +44,12 @@ extra-deps:
     - code/prelude
 
 - git: https://github.com/serokell/ariadne.git
-  commit: 0ff7cc63326c6697f3e1fb67818cc6370b0f566f
+  commit: 86ac1f8155ecc014c70d624a7c0d2b6633ef916e
   subdirs:
+    - ariadne/core
     - knit
+    - ui/cli-lib
+    - ui/vty-lib
     - util
 
 # for ariadne

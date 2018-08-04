@@ -7,6 +7,7 @@ import Text.PrettyPrint.ANSI.Leijen (Doc)
 import Ariadne.Knit.Backend
 import Ariadne.TaskManager.Backend
 import Ariadne.UI.Vty
+import Ariadne.UI.Vty.Face
 import Dscp.CommonCLI
 import Dscp.Wallet.Backend
 import Dscp.Web
@@ -26,7 +27,14 @@ main = do
 
   uiWalletState <- createWalletState
 
-  (uiFace, mkUiAction) <- createAriadneUI historyToUI
+  let
+    features = UiFeatures
+      { featureStatus = False
+      , featureAccounts = False
+      , featureFullRestore = False
+      , featureSecretKeyName = "Secret key"
+      }
+  (uiFace, mkUiAction) <- createAriadneUI features historyToUI
   taskManagerFace <- createTaskManagerFace
   walletFace <- createWalletFace serverAddress (putWalletEventToUI uiWalletState uiFace)
 

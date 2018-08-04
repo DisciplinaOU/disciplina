@@ -24,7 +24,7 @@ main = do
   serverAddress <- getWalletCLIParams
   taskManagerFace <- createTaskManagerFace
   walletFace <- createWalletFace serverAddress (void . return)
-  (uiFace, mkUiAction) <- createUI
+  (uiFace, mkUiAction) <- createAriadneUI
 
   let
     knitExecContext :: (Doc -> IO ()) -> Knit.ExecContext IO Components

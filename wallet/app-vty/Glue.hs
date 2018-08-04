@@ -270,7 +270,7 @@ walletEventToUI WalletState{ selection } = \case
       Just $ UiSelectionWallet $ UiWalletInfo
         { uwiLabel = Just $ fromMaybe (pretty accountAddress) accountName
         , uwiWalletIdx = i
-        , uwiBalance = "0"
+        , uwiBalance = Nothing
         , uwiAccounts = []
         }
 
