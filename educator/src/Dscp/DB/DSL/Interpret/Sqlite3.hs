@@ -11,8 +11,8 @@ import Dscp.DB.DSL.Class
 import Dscp.DB.SQLite
 
 instance
---    v-- GHC says it cand "find" Monad in superclasses (wat).
     ( Monad m
+    , MonadThrow m
     , MonadSQLiteDB m
     )
     => MonadSearchTxObj m

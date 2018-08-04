@@ -102,7 +102,7 @@ makePrisms ''DomainError
 deriveJSON defaultOptions ''DomainError
 instance Exception DomainError
 
-type DBM m = MonadSQLiteDB m
+type DBM m = (MonadSQLiteDB m, MonadThrow m)
 
 -- | How can a student get a list of courses?
 getStudentCourses :: DBM m => Id Student -> m [Id Course]

@@ -31,5 +31,6 @@ instance Serialise SD.TipKey
 instance Serialise Ids
 instance Serialise Proofs
 instance Serialise SBlock
+instance Serialise SPayload
 instance Serialise SBlund
 instance Serialise Values

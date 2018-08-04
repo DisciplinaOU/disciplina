@@ -13,6 +13,11 @@ module Dscp.Util
        , assert
        , assertJust
 
+         -- * Maybe conversions
+       , nothingToThrow
+       , nothingToFail
+       , nothingToPanic
+
          -- * Either conversions
        , leftToThrow
        , leftToFail
@@ -93,19 +98,24 @@ wrapRethrowIO wrap action = wrapRethrow wrap (liftIO action)
 -- Do-or-throw error handlers
 -----------------------------------------------------------
 
-assert :: (MonadIO m, Exception e) => m Bool -> e -> m ()
-assert action message = do
-    yes <- action
+assert :: (MonadThrow m, Exception e) => m Bool -> e -> m ()
+assert action message = unlessM action $ throwM message
 
-    unless yes $ do
-        UIO.throwIO message
+assertJust :: (MonadThrow m, Exception e) => m (Maybe a) -> e -> m a
+assertJust action message = whenNothingM action $ throwM message
 
-assertJust :: (MonadIO m, Exception e) => m (Maybe a) -> e -> m a
-assertJust action message = do
-    mb <- action
+-----------------------------------------------------------
+-- Maybe conversions
+-----------------------------------------------------------
 
-    whenNothing mb $ do
-        UIO.throwIO message
+nothingToThrow :: (MonadThrow m, Exception e) => e -> Maybe a -> m a
+nothingToThrow e = maybe (throwM e) pure
+
+nothingToFail :: (MonadFail m, ToString t) => t -> Maybe a -> m a
+nothingToFail e = maybe (fail $ toString e) pure
+
+nothingToPanic :: Text -> Maybe a -> a
+nothingToPanic e = fromMaybe (error e)
 
 -----------------------------------------------------------
 -- Either conversions

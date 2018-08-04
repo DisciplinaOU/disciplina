@@ -11,7 +11,8 @@ import qualified Data.Set as Set
 
 import qualified Snowdrop.Model.Block as SD
 import Snowdrop.Model.Expander (Expander (..), SeqExpanders (..), expandUnionRawTxs, mkDiffCS)
-import Snowdrop.Model.State.Core (ChgAccum, ChgAccumCtx, ERoComp, StateTxType (..), queryOne)
+import Snowdrop.Model.State.Core (ChgAccum, ChgAccumCtx, ERoComp, StateTx, StateTxType (..),
+                                  queryOne)
 import Snowdrop.Model.State.Restrict (RestrictCtx)
 import Snowdrop.Util
 
@@ -33,7 +34,9 @@ expandBlock ::
        )
     => Block
     -> ERoComp Exceptions Ids Values ctx SBlock
-expandBlock Block{..} = SD.Block rbHeader <$> expandGTxs (rbbTxs rbBody)
+expandBlock Block{..} = do
+    stateTxs <- expandGTxs (rbbTxs rbBody)
+    pure $ SD.Block rbHeader (SPayload stateTxs rbBody)
 
 -- | Expand list of global txs.
 expandGTxs ::
@@ -42,7 +45,7 @@ expandGTxs ::
        , HasLens ctx (ChgAccumCtx ctx)
        )
     => [GTxWitnessed]
-    -> ERoComp Exceptions Ids Values ctx SPayload
+    -> ERoComp Exceptions Ids Values ctx [StateTx Ids Proofs Values]
 expandGTxs txs = expandUnionRawTxs getByGTx txs
 
 getByGTx ::

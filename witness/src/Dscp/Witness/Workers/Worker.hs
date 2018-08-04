@@ -15,6 +15,7 @@ import Loot.Network.ZMQ (ZmqTcp)
 import Dscp.Core
 import Dscp.Crypto
 import Dscp.Network.Wrapped
+import Dscp.Snowdrop.Mode
 import Dscp.Witness.Block.Logic
 import Dscp.Witness.Launcher.Mode
 import Dscp.Witness.Messages
@@ -36,7 +37,7 @@ blockReceivalWorker =
     action btq = forever $ do
         (_nId, PubBlock block) <- cliRecvUpdate btq (-1)
         logInfo $ "Received a new block: " +| hashF (headerHash block) |+ ""
-        tip <- getCurrentTip
+        tip <- runSdM getTipHash
         unless (tip == hash (rbHeader block)) $ do
             logInfo "Block is new, applying"
             proof <- applyBlock block

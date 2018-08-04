@@ -66,7 +66,7 @@ getAllSubmissions student =
 -- | For advanced queries. Puts SignedSubmissions in db, tolerates repeating
 -- entities.
 prepareForSubmissions
-    :: (MonadSQLiteDB m, Container l, Element l ~ SignedSubmission)
+    :: (MonadSQLiteDB m, MonadThrow m, Container l, Element l ~ SignedSubmission)
     => l -> m ()
 prepareForSubmissions (toList -> sigSubmissions) = do
     let submissions = map _ssSubmission sigSubmissions
@@ -87,7 +87,7 @@ prepareForSubmissions (toList -> sigSubmissions) = do
 -- | For advanced queries. Puts SignedSubmissions in db, tolerates repeating
 -- entities.
 prepareAndCreateSubmissions
-    :: (MonadSQLiteDB m, Container l, Element l ~ SignedSubmission)
+    :: (MonadSQLiteDB m, MonadThrow m, Container l, Element l ~ SignedSubmission)
     => l -> m ()
 prepareAndCreateSubmissions (toList -> sigSubmissions) = do
     prepareForSubmissions sigSubmissions
