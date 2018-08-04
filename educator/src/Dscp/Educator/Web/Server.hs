@@ -13,7 +13,7 @@ import Servant.Generic (toServant)
 
 import Dscp.Educator.Config (HasEducatorConfig)
 import Dscp.Educator.Launcher (EducatorRealMode, EducatorWorkMode)
-import Dscp.Educator.Web.Bot (addBotHandlers)
+import Dscp.Educator.Web.Bot (EducatorBotSwitch (..), addBotHandlers)
 import Dscp.Educator.Web.Educator (EducatorAPI, convertEducatorApiHandler, educatorAPI,
                                    educatorApiHandlers)
 import Dscp.Educator.Web.Params (EducatorWebParams (..))
@@ -37,13 +37,15 @@ mkEducatorApiServer nat =
 mkStudentApiServer
     :: forall ctx m. EducatorWorkMode ctx m
     => (forall x. m x -> Handler x)
-    -> Bool
+    -> EducatorBotSwitch
     -> m (Server StudentAPI)
-mkStudentApiServer nat withBot = do
-    studentAndBotHandlers <-
-        bool identity (>>= addBotHandlers) withBot
-        (pure studentApiHandlers)
-    return $ hoistServer studentAPI nat (toServant studentAndBotHandlers)
+mkStudentApiServer nat botSwitch = do
+    totalHandlers <- addBot studentApiHandlers
+    return $ hoistServer studentAPI nat (toServant totalHandlers)
+  where
+    addBot cur = case botSwitch of
+        EducatorBotOff       -> pure cur
+        EducatorBotOn params -> addBotHandlers params cur
 
 serveStudentAPIReal :: HasEducatorConfig => EducatorWebParams -> EducatorRealMode ()
 serveStudentAPIReal EducatorWebParams{..} = do
@@ -51,7 +53,7 @@ serveStudentAPIReal EducatorWebParams{..} = do
     logInfo $ "Serving Student API on "+|spAddr|+""
     eCtx <- ask
     let educatorApiServer = mkEducatorApiServer (convertEducatorApiHandler eCtx)
-    studentApiServer <- mkStudentApiServer (convertStudentApiHandler eCtx) ewpWithBot
+    studentApiServer <- mkStudentApiServer (convertStudentApiHandler eCtx) ewpBotParams
     serveWeb spAddr $ serve (Proxy @EducatorWebAPI) $
          educatorApiServer
          :<|>

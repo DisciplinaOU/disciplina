@@ -25,13 +25,14 @@ import qualified Data.Set as S
 import Data.Time.Clock (getCurrentTime)
 import Fmt ((+|), (+||), (|+), (||+))
 import Loot.Log (ModifyLogName, MonadLogging, logError, logInfo, modifyLogName)
+import Time.Units (Microsecond, Time, threadDelay)
 import UnliftIO (MonadUnliftIO)
 import UnliftIO.Async (async)
-import UnliftIO.Concurrent (threadDelay)
 
 import Dscp.Core
 import Dscp.Crypto.Impl
 import Dscp.DB.SQLite
+import Dscp.Educator.Web.Bot.Params
 import Dscp.Educator.Web.Student.Types
 import Dscp.Util
 import Dscp.Util.Test
@@ -82,26 +83,52 @@ data BotSetting = BotSetting
     , bsCourseAssignments :: Map Course [WithDependencies Assignment]
       -- | Flattened assignments.
     , bsAssignments       :: [Assignment]
+      -- | Artificial delay in bot operations.
+    , bsOperationsDelay   :: Time Microsecond
     }
 
 -- | Generate a bot setting.
-mkBotSetting :: Int -> BotSetting
-mkBotSetting seed = BotSetting{..}
+mkBotSetting :: EducatorBotParams -> BotSetting
+mkBotSetting params =
+  BotSetting{ bsOperationsDelay = ebpOperationsDelay params, ..}
  where
   botGen :: Gen a -> a
-  botGen = detGen seed
+  botGen = detGenG (ebpSeed params)
 
   bsCourses =
-    [ (courseEx , "Basic maths", [])
-    , (Course 21, "Classic physics", [])
+    -- using 'courseEx' here helps to keep examples in swagger doc working
+    [ (Course 0  , "Patakology", [])
+    , (Course 1  , "Learning!", [])
+    , (courseEx  , "Boredom", [])
 
-    , (Course 12, "Advanced math", [])
-    , (Course 22, "Quantum physics", [])
-    , (Course 23, "Sci-fi physics", [])
-    , (Course 31, "English", [])
-    , (Course 41, "Data structures", [])
-    , (Course 42, "Discrete maths", [])
-    , (Course 43, "Electronic computer architecture", [])
+    , (Course 101, "Introduction To Basics", [])
+    , (Course 102, "Principles of Intermediate", [])
+    , (Course 103, "Studyology", [])
+    , (Course 104, "Class 101", [])
+    , (Course 105, "Theoretical Phys Ed", [])
+    , (Course 106, "Math 1-2-3", [])
+    , (Course 107, "Simplified Chinese", [])
+    , (Course 108, "Reading ?", [])
+    , (Course 109, "Nominal Ascertainment", [])
+    , (Course 110, "Canned Response Awareness", [])
+    , (Course 111, "Advanced Arts & Craft", [])
+
+    , (Course 201, "History of something", [])
+    , (Course 202, "Tap dance", [])
+    , (Course 203, "Modern dance", [])
+    , (Course 204, "Statistics", [])
+    , (Course 205, "Accounting", [])
+    , (Course 206, "Italian wine tasting", [])
+    , (Course 207, "Spanish 101", [])
+    , (Course 208, "Spanish 102", [])
+    , (Course 209, "Anthropology", [])
+    , (Course 210, "Biology", [])
+    , (Course 211, "History", [])
+    , (Course 212, "History of ice cream", [])
+    , (Course 213, "Law", [])
+    , (Course 214, "Criminology", [])
+    , (Course 215, "Grifting 101", [])
+    , (Course 216, "Sci-fi physics", [])
     ]
 
   (bsBasicCourses, bsAdvancedCourses) =
@@ -146,17 +173,15 @@ type BotWorkMode m =
 botLog :: ModifyLogName m => m a -> m a
 botLog = modifyLogName (<> "bot")
 
-delayed :: (BotWorkMode m) => m () -> m ()
+delayed :: (BotWorkMode m, HasBotSetting) => m () -> m ()
 delayed action
-    | botOpsDelay == 0 = action
+    | delay == 0 = action
     | otherwise =
         void . async $ do
-            threadDelay botOpsDelay
+            threadDelay delay
             action `catchAny` logException
   where
-    -- TODO [DSCP-163]: Take value from config
-    -- keeping it 0 now for the sake of tests
-    botOpsDelay = 0
+    delay = bsOperationsDelay botSetting
     logException e = botLog . logError $ "Delayed action failed: " +|| e ||+ ""
 
 botPrepareInitialData :: (BotWorkMode m, HasBotSetting) => m ()

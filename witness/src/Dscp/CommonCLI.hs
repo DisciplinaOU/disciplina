@@ -7,6 +7,7 @@ module Dscp.CommonCLI
        ( logParamsParser
        , versionOption
        , baseKeyParamsParser
+       , timeReadM
        , networkAddressParser
        , serverParamsParser
        ) where
@@ -14,12 +15,14 @@ module Dscp.CommonCLI
 import Data.Char (toLower)
 import Data.Version (showVersion)
 import qualified Loot.Log as Log
-import Options.Applicative (Parser, eitherReader, help, infoOption, long, metavar, option, str,
-                            strOption, switch)
+import Options.Applicative (Parser, ReadM, auto, eitherReader, help, infoOption, long, metavar,
+                            option, str, strOption, switch)
 import Text.InterpolatedString.Perl6 (qc)
 import Text.Parsec (eof, many1, parse, sepBy)
 import Text.Parsec.Char (char, digit)
 import qualified Text.Parsec.String as Parsec
+import Time.Rational (KnownRat)
+import Time.Units (Microsecond, Millisecond, Minute, Second, Time, toUnit)
 
 import Dscp.Crypto (mkPassPhrase)
 import Dscp.Resource.Keys (BaseKeyParams (..))
@@ -71,6 +74,14 @@ baseKeyParamsParser who = do
          metavar "PASSWORD" <>
          help "Password of secret key."
     passphraseReadM = leftToFail . first pretty . mkPassPhrase =<< str
+
+timeReadM :: KnownRat unit => ReadM (Time unit)
+timeReadM = asum
+    [ toUnit @_ @Second <$> auto
+    , toUnit @_ @Millisecond <$> auto
+    , toUnit @_ @Microsecond <$> auto
+    , toUnit @_ @Minute <$> auto
+    ]
 
 ----------------------------------------------------------------------------
 -- Utils

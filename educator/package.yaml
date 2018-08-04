@@ -27,6 +27,7 @@ library:
     - loot-network
     - mtl
     - optparse-applicative
+    - o-clock
     - reflection
     - safe-exceptions >= 0.1.4
     - serialise

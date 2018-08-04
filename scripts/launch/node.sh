@@ -41,7 +41,7 @@ done
 # educator-only params
 educator_params="
 --educator-keyfile $tmp_files/educator.key
---educator-key-pass 12345678
+--educator-gen-key
 --sql-path $tmp_files/educator.db
 --student-listen 127.0.0.1:8090
 "
@@ -59,7 +59,11 @@ witness_params="
 "
 
 if [[ "$educator_bot" == true ]]; then
-    educator_params="$educator_params --educator-bot"
+    educator_params="
+$educator_params
+--educator-bot
+--educator-bot-delay 3s
+"
 fi
 
 
