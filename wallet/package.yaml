@@ -21,8 +21,6 @@ library:
     - disciplina-core
     - disciplina-witness
     - filelock
-    - http-types
-    - http-client
     - ii-extras
     - knit
     - lens

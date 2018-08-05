@@ -23,6 +23,8 @@ library:
     - fmt
     - free
     - hashable
+    - http-types
+    - http-client
     - interpolatedstring-perl6
     - lens
     - loot-base
@@ -41,6 +43,7 @@ library:
     - safe-exceptions >= 0.1.4
     - serialise
     - servant
+    - servant-client
     - servant-server
     - servant-generic
     - serokell-util

@@ -7,16 +7,16 @@ import Control.Exception (throwIO)
 
 import Dscp.Core (Tx (..), TxInAcc (..), TxWitness (..), TxWitnessed (..), mkAddr, toTxId)
 import Dscp.Crypto (decrypt, emptyPassPhrase, encrypt, keyGen, sign, toPublic)
-import Dscp.Wallet.Client
 import Dscp.Wallet.Face
 import Dscp.Wallet.KeyStorage
 import Dscp.Web
+import Dscp.Witness.Web.Client
 import Dscp.Witness.Web.Types
 
 createWalletFace :: NetworkAddress -> (WalletEvent -> IO ()) -> IO WalletFace
 createWalletFace serverAddress sendEvent = do
     sendStateUpdateEvent sendEvent
-    wc <- createWalletClient serverAddress
+    wc <- createWitnessClient serverAddress
     return WalletFace
         { walletRefreshState = sendStateUpdateEvent sendEvent
         , walletGenKeyPair = genKeyPair sendEvent
@@ -58,7 +58,7 @@ restoreKey sendEvent mName eSecretKey mPassPhrase = do
 listKeys :: IO [Account]
 listKeys = getAccounts
 
-sendTx :: WalletClient -> Encrypted SecretKey -> Maybe PassPhrase -> NonEmpty TxOut -> IO Tx
+sendTx :: WitnessClient -> Encrypted SecretKey -> Maybe PassPhrase -> NonEmpty TxOut -> IO Tx
 sendTx wc eSecretKey mPassPhrase (toList -> outs) = do
     secretKey <- either throwIO return . decrypt (fromMaybe emptyPassPhrase mPassPhrase) $ eSecretKey
     let publicKey = toPublic secretKey
@@ -78,7 +78,7 @@ sendTx wc eSecretKey mPassPhrase (toList -> outs) = do
     void $ wSubmitTx wc txWitnessed
     return tx
 
-getBalance :: WalletClient -> Address -> IO Coin
+getBalance :: WitnessClient -> Address -> IO Coin
 getBalance wc address = do
     AccountState{..} <- wGetAccountState wc address
     return (bConfirmed asBalances)

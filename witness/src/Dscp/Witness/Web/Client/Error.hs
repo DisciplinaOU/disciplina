@@ -1,4 +1,4 @@
-module Dscp.Wallet.Client.Error
+module Dscp.Witness.Web.Client.Error
     ( WitnessClientError (..)
     , servantToWitnessError
     ) where
