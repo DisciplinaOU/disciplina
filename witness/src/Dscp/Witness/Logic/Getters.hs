@@ -49,13 +49,15 @@ getTipHeader :: HasWitnessConfig => SdM Header
 getTipHeader = bHeader <$> getTipBlock
 
 -- | Safely get block.
-getBlockMaybe :: HasHeaderHash x => x -> SdM (Maybe Block)
-getBlockMaybe o =
-    fmap (sBlockReconstruct . SD.buBlock) <$>
-    SD.queryOne (SD.BlockRef $ headerHash o)
+getBlockMaybe :: (HasWitnessConfig, HasHeaderHash x) => x -> SdM (Maybe Block)
+getBlockMaybe (headerHash -> h)
+    | h == genesisHash = pure $ Just genesisBlock
+    | otherwise =
+          fmap (sBlockReconstruct . SD.buBlock) <$>
+          SD.queryOne (SD.BlockRef h)
 
 -- | Resolves block, throws exception if it's absent.
-getBlock :: HasHeaderHash x => x -> SdM Block
+getBlock :: (HasWitnessConfig, HasHeaderHash x) => x -> SdM Block
 getBlock o = do
     bM <- getBlockMaybe o
     maybe (SD.throwLocalError $ LEBlockAbsent $
@@ -64,11 +66,11 @@ getBlock o = do
           bM
 
 -- | Safely resolve header.
-getHeaderMaybe :: HasHeaderHash x => x -> SdM (Maybe Header)
+getHeaderMaybe :: (HasWitnessConfig, HasHeaderHash x) => x -> SdM (Maybe Header)
 getHeaderMaybe = fmap (fmap bHeader) . getBlockMaybe
 
 -- | Resolves header, throws exception if it's absent.
-getHeader :: HasHeaderHash x => x -> SdM Header
+getHeader :: (HasWitnessConfig, HasHeaderHash x) => x -> SdM Header
 getHeader = fmap bHeader . getBlock
 
 -- | Given the element, get the previous one. If the element itself
