@@ -27,8 +27,8 @@ import Dscp.Util
 ----------------------------------------------------------------------------
 
 data GetBlocksMsg = GetBlocksMsg
-    { gbFrom :: HeaderHash
-    , gbTo   :: HeaderHash
+    { gbOlder :: HeaderHash
+    , gbNewer :: HeaderHash
     } deriving (Show, Generic)
 instance Serialise GetBlocksMsg
 instance Message MsgK GetBlocksMsg where type MsgTag MsgK GetBlocksMsg = 0

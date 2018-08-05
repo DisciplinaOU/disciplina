@@ -98,9 +98,11 @@ getBlocksFromTo ::
     -> SdM (Either Text (OldestFirst NonEmpty Block))
 getBlocksFromTo (headerHash -> olderH) (headerHash -> newerH) = runExceptT $ do
     olderBlock <-
-        ExceptT $ maybeToRight "Can't get older block" <$> getBlockMaybe olderH
+        ExceptT $ maybeToRight ("Can't get older block: " <> show olderH) <$>
+        getBlockMaybe olderH
     newerBlock <-
-        ExceptT $ maybeToRight "Can't get newer block" <$> getBlockMaybe newerH
+        ExceptT $ maybeToRight ("Can't get newer block: " <> show newerH) <$>
+        getBlockMaybe newerH
 
     let dOlder = hDifficulty $ bHeader olderBlock
     let dNewer = hDifficulty $ bHeader newerBlock

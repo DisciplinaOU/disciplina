@@ -49,11 +49,9 @@ import Data.ByteArray (ByteArrayAccess)
 import Data.ByteArray.Encoding (Base (..), convertFromBase, convertToBase)
 import Fmt ((+|), (|+))
 import Loot.Log (MonadLogging, logWarning)
-import Snowdrop.Util hiding (HasHash, getId)
+import Snowdrop.Util (NewestFirst (..), OldestFirst (..))
 
 import Dscp.Crypto.ByteArray (FromByteArray (..))
-
-import qualified UnliftIO as UIO
 
 deriving instance Container (b a) => Container (OldestFirst b a)
 deriving instance Container (b a) => Container (NewestFirst b a)

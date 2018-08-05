@@ -62,7 +62,7 @@ getBlocksListener =
   where
     respond btq cliId (GetBlocksMsg{..}) = do
         logDebug "getBlocksMsg: received request"
-        res <- runSdM $ getBlocksFromTo gbFrom gbTo
+        res <- runSdM $ getBlocksFromTo gbOlder gbNewer
         let response = either NoBlocksMsg BlocksMsg res
         atomically $ servSend btq cliId response
         logDebug "getBlocksMsg: response sent"
