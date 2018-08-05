@@ -28,6 +28,7 @@ hoistWitnessClient nat es =
     WitnessEndpoints
     { wGetAccountState = nat ... wGetAccountState es
     , wSubmitTx = nat ... wSubmitTx es
+    , wSubmitTxAsync = nat ... wSubmitTxAsync es
     }
 
 createWitnessClient :: NetworkAddress -> IO WitnessClient

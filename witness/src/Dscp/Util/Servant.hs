@@ -405,5 +405,8 @@ instance ( HasServer (Verb mt st ct a) ctx
 instance Buildable (ForResponseLog NoContent) where
     build _ = "<no response>"
 
+instance Buildable (ForResponseLog ()) where
+    build _ = "<no response>"
+
 instance Buildable (ForResponseLog Integer) where
     build = buildForResponse

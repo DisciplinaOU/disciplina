@@ -21,10 +21,19 @@ data WitnessEndpoints route = WitnessEndpoints
         :- "account" :> Capture "accountId" Address
         :> "state"
         :> Verb 'GET 200 '[JSON] AccountState
+
     , wSubmitTx :: route
         :- "tx"
         :> ReqBody '[JSON] TxWitnessed
-        :> Verb 'POST 201 '[JSON] NoContent
+        :> Verb 'POST 201 '[JSON] ()
+
+      -- Like 'wSubmitTx', but does not any checks on transaction application.
+      -- Useful, since submitting transaction over network may take long.
+    , wSubmitTxAsync :: route
+        :- "tx"
+        :> "async"
+        :> ReqBody '[JSON] TxWitnessed
+        :> Verb 'POST 202 '[JSON] ()
     } deriving (Generic)
 
 type WitnessAPI =

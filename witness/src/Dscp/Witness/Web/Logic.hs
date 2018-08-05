@@ -1,14 +1,17 @@
 module Dscp.Witness.Web.Logic
        ( getAccountState
        , submitUserTx
+       , submitUserTxAsync
        ) where
 
 import Control.Lens (views)
 import Loot.Base.HasLens (HasLens', lensOf)
 import qualified Snowdrop.Model.Execution as SD
 import qualified Snowdrop.Model.State.Core as SD
+import UnliftIO.Async (async)
 
 import Dscp.Core
+import Dscp.Launcher.Mode
 import Dscp.Snowdrop
 import Dscp.Util (assertJust)
 import Dscp.Witness.Mempool
@@ -57,10 +60,18 @@ getAccountState addr = do
         , asNextNonce = aNonce account + 1
         }
 
--- | Submit transaction.
+-- | Applies transaction everywhere.
 submitUserTx
-    :: (MonadIO m, MonadThrow m, MonadReader ctx m, HasLens' ctx MempoolVar)
+    :: (BasicWorkMode m, MonadReader ctx m, HasLens' ctx MempoolVar)
     => TxWitnessed -> m ()
 submitUserTx tw = do
     mempool <- view (lensOf @MempoolVar)
     addTxToMempool mempool (GMoneyTxWitnessed tw)
+    -- TODO: also send into network
+
+-- | Applies transaction, but does not wait for a whole cycle of transaction
+-- application.
+submitUserTxAsync
+    :: (BasicWorkMode m, MonadReader ctx m, HasLens' ctx MempoolVar)
+    => TxWitnessed -> m ()
+submitUserTxAsync tw = void . async $ submitUserTx tw
