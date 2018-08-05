@@ -25,6 +25,10 @@ warpSettings NetworkAddress {..} = Warp.defaultSettings
     & Warp.setHost (fromString $ toString naHost)
     & Warp.setPort (fromIntegral naPort)
 
+----------------------------------------------------------------------------
+-- Server stuff
+----------------------------------------------------------------------------
+
 serveWeb
     :: MonadIO m
     => NetworkAddress -> Application -> m ()
@@ -43,8 +47,12 @@ buildServantLogConfig modifyName = do
         { clcLog = \level text -> logger level name text
         }
 
+----------------------------------------------------------------------------
+-- Client stuff
+----------------------------------------------------------------------------
+
 -- | Construct common client networking environment.
-buildClientEnv :: Scheme -> NetworkAddress -> IO ClientEnv
+buildClientEnv :: MonadIO m => Scheme -> NetworkAddress -> m ClientEnv
 buildClientEnv scheme netAddr = do
     let baseUrl = BaseUrl
             { baseUrlScheme = scheme
@@ -52,5 +60,5 @@ buildClientEnv scheme netAddr = do
             , baseUrlPort = fromIntegral $ naPort netAddr
             , baseUrlPath = ""
             }
-    manager <- newManager defaultManagerSettings
+    manager <- liftIO $ newManager defaultManagerSettings
     return $ mkClientEnv manager baseUrl

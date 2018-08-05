@@ -26,6 +26,8 @@ do
         node="educator"
     elif [[ "$var" == "bot" ]] || [ "$var" == "b" ]; then
         educator_bot=true
+    elif [[ "$var" == "faucet" ]] || [ "$var" == "f" ]; then
+        node="faucet"
     elif [[ "$var" == "--no-clean" ]]; then
         no_clean=true
     else
@@ -37,6 +39,8 @@ done
 ##################
 # Launch
 ##################
+
+witness_web_addr="127.0.0.1:8091"
 
 # educator-only params
 educator_params="
@@ -53,9 +57,21 @@ witness_params="
 --bind 127.0.0.1:4010:4011
 --db-path $tmp_files/witness.db
 --log-dir $tmp_files/logs
---witness-listen 127.0.0.1:4020
+--witness-listen $witness_web_addr
 --witness-keyfile $tmp_files/witness.key
 --witness-gen-key
+"
+
+# parameters for faucet
+faucet_params="
+--faucet-listen 127.0.0.1:8095
+--witness-backend $witness_web_addr
+--translated-amount 20
+--config ./configuration.yaml
+--config-key demo
+--faucet-keyfile $tmp_files/faucet.key
+--faucet-gen-key
+--log-dir $tmp_files/logs
 "
 
 if [[ "$educator_bot" == true ]]; then
@@ -67,6 +83,7 @@ $educator_params
 fi
 
 
+
 if [[ "$no_clean" != true ]]; then
     rm -rf $tmp_files
 fi
@@ -75,6 +92,8 @@ if [[ "$node" == "educator" ]]; then
     stack exec "dscp-educator" -- $witness_params $educator_params
 elif [[ "$node" == "witness" ]]; then
     stack exec "dscp-witness" -- $witness_params
+elif [[ "$node" == "faucet" ]]; then
+    stack exec "dscp-faucet" -- $faucet_params
 elif [[ "$node" == "" ]]; then
     echo "Please specify which node to run (e.g. \"educator\" or just \"e\")"
     exit 1

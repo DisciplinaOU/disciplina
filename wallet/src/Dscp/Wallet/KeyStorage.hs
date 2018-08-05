@@ -6,12 +6,13 @@ module Dscp.Wallet.KeyStorage
 import Data.Aeson (eitherDecode, encode)
 import Data.Aeson.TH (defaultOptions, deriveJSON)
 import Dscp.Core (mkAddr)
-import Dscp.Util.Aeson (Versioned(..))
+import Dscp.Util.Aeson (Versioned (..))
 import System.Directory (doesFileExist)
 import System.FileLock (SharedExclusive (..), withFileLock)
 
 import qualified Data.ByteString.Lazy as LBS
 
+import Dscp.Util.Aeson (Base64Encoded, CustomEncoding (..))
 import Dscp.Wallet.Face
 
 data Storage = Storage
@@ -19,8 +20,8 @@ data Storage = Storage
     }
 
 data StorageAccount = StorageAccount
-    { name :: Maybe Text
-    , secretKey :: Encrypted SecretKey
+    { name      :: Maybe Text
+    , secretKey :: CustomEncoding Base64Encoded (Encrypted SecretKey)
     , publicKey :: PublicKey
     }
 
@@ -40,7 +41,7 @@ getAccounts = do
   where
     toAccount StorageAccount{..} = Account
         { accountName = name
-        , accountSecretKey = secretKey
+        , accountSecretKey = unCustomEncoding secretKey
         , accountPublicKey = publicKey
         , accountAddress = mkAddr publicKey
         }
@@ -50,7 +51,7 @@ addAccount account = modifyStorage (\(Storage accs) -> Storage $ accs ++ [fromAc
   where
     fromAccount Account{..} = StorageAccount
         { name = accountName
-        , secretKey = accountSecretKey
+        , secretKey = CustomEncoding accountSecretKey
         , publicKey = accountPublicKey
         }
 

@@ -2,11 +2,13 @@ module Dscp.Witness.Web.Client.Logic
        ( WitnessClient
        , WitnessEndpoints (..)
        , createWitnessClient
+       , hoistWitnessClient
        ) where
 
 import Servant.Client (Client, ClientM, Scheme (..), client, runClientM)
 import Servant.Generic ((:-), fromServant)
 
+import Dscp.Resource.Class
 import Dscp.Util
 import Dscp.Web
 import Dscp.Witness.Web.API
@@ -31,7 +33,7 @@ hoistWitnessClient nat es =
     , wSubmitTxAsync = nat ... wSubmitTxAsync es
     }
 
-createWitnessClient :: NetworkAddress -> IO WitnessClient
+createWitnessClient :: MonadIO m => NetworkAddress -> m WitnessClient
 createWitnessClient netAddr = do
     cliEnv <- buildClientEnv Http netAddr
     let nat :: ClientM a -> IO a
@@ -40,3 +42,13 @@ createWitnessClient netAddr = do
     let es :: WitnessEndpoints (AsClientT ClientM)
         es = fromServant $ client witnessAPI
     return $ hoistWitnessClient nat es
+
+----------------------------------------------------------------------------
+-- Instances
+----------------------------------------------------------------------------
+
+instance AllocResource NetworkAddress WitnessClient where
+    allocResource params =
+        buildComponentR "witness client"
+            (createWitnessClient params)
+            (\_ -> pass)  -- items clean on itself on GC, kaef

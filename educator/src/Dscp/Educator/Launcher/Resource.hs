@@ -14,9 +14,9 @@ import Dscp.DB.Rocks.Real.Types (RocksDB)
 import Dscp.DB.SQLite (SQLiteDB)
 import Dscp.Educator.Config (HasEducatorConfig)
 import Dscp.Educator.Launcher.Marker (EducatorNode)
-import Dscp.Educator.Launcher.Params (EducatorParams (..))
-import Dscp.Resource.Class (AllocResource (..))
-import Dscp.Resource.Keys (KeyResources (..))
+import Dscp.Educator.Launcher.Params (EducatorKeyParams (..), EducatorParams (..))
+import Dscp.Resource.Class (AllocResource (..), buildComponentR)
+import Dscp.Resource.Keys (KeyResources (..), linkStore)
 import Dscp.Resource.SQLite ()
 import qualified Dscp.Witness.Launcher.Resource as Witness
 
@@ -45,6 +45,13 @@ instance HasLens ZTNetCliEnv EducatorResources ZTNetCliEnv where
     lensOf = erWitnessResources . lensOf @ZTNetCliEnv
 instance HasLens ZTNetServEnv EducatorResources ZTNetServEnv where
     lensOf = erWitnessResources . lensOf @ZTNetServEnv
+
+instance HasEducatorConfig =>
+         AllocResource EducatorKeyParams (KeyResources EducatorNode) where
+    allocResource (EducatorKeyParams baseParams) =
+        buildComponentR "educator keys"
+            (linkStore baseParams Nothing)
+            (\_ -> pass)
 
 instance HasEducatorConfig => AllocResource EducatorParams EducatorResources where
     allocResource EducatorParams{..} = do

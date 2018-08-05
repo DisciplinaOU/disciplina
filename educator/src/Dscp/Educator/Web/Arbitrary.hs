@@ -23,6 +23,6 @@ gradeInfoEx =
 blkProofInfoEx :: BlkProofInfo
 blkProofInfoEx =
     BlkProofInfo
-    { bpiMtreeSerialized = AsHex $ detGen 123 arbitrary
+    { bpiMtreeSerialized = AsByteString $ detGen 123 arbitrary
     , bpiTxs = one privateTxEx
     }

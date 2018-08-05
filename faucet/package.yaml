@@ -1,0 +1,38 @@
+<<: !include "../hpack/module.yaml"
+
+name: disciplina-faucet
+description: This package contains disciplina faucet backend
+
+library:
+  <<: *lib-common
+  dependencies:
+    - aeson
+    - aeson-options
+    - disciplina-core
+    - disciplina-witness
+    - fmt
+    - lens
+    - loot-base
+    - loot-config
+    - loot-log
+    - optparse-applicative
+    - reflection
+    - serokell-util
+    - servant
+    - servant-client
+    - servant-generic
+    - servant-server
+    - text-format
+    - unliftio
+
+executables:
+  dscp-faucet:
+    <<: *exec-common
+    source-dirs: exec
+    dependencies:
+      - disciplina-core
+      - disciplina-faucet
+      - disciplina-wallet
+      - disciplina-witness
+      - optparse-applicative
+      - text

@@ -10,10 +10,9 @@ import Options.Applicative (Parser, help, long, metavar, option, strOption, swit
 
 import Dscp.CommonCLI (baseKeyParamsParser, serverParamsParser, timeReadM)
 import Dscp.DB.SQLite (SQLiteDBLocation (..), SQLiteParams (..))
-import Dscp.Educator.Launcher.Params (EducatorParams (..))
+import Dscp.Educator.Launcher.Params (EducatorKeyParams (..), EducatorParams (..))
 import Dscp.Educator.Web.Bot.Params (EducatorBotParams (..), EducatorBotSwitch (..))
 import Dscp.Educator.Web.Params (EducatorWebParams (..))
-import Dscp.Resource.Keys (EducatorKeyParams (..))
 import Dscp.Witness.CLI (witnessParamsParser)
 
 sqliteParamsParser :: Parser SQLiteParams

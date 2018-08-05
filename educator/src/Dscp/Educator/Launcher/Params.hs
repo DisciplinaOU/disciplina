@@ -1,14 +1,19 @@
 {-# LANGUAGE StrictData #-}
 
 module Dscp.Educator.Launcher.Params
-       ( EducatorParams(..)
+       ( EducatorKeyParams (..)
+       , EducatorParams(..)
        ) where
 
 import Dscp.DB.SQLite (SQLiteParams)
 import Dscp.Educator.Web.Params (EducatorWebParams)
-import Dscp.Resource.Keys.Types (EducatorKeyParams)
+import Dscp.Resource.Keys (BaseKeyParams)
 import Dscp.Witness.Launcher.Params (WitnessParams)
 
+-- | Educator key parameters.
+newtype EducatorKeyParams = EducatorKeyParams
+    { unEducatorKeyParams :: BaseKeyParams
+    } deriving (Show)
 
 -- | Contains all initialization parameters of Educator node.
 data EducatorParams = EducatorParams

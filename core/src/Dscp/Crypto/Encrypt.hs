@@ -48,7 +48,7 @@ import qualified Data.ByteString.Lazy as BSL
 import Data.Text.Buildable (build)
 import Fmt ((+|), (|+))
 import System.IO.Unsafe (unsafePerformIO)
-import Text.Show (show)
+import qualified Text.Show
 
 import Dscp.Crypto.ByteArray (FromByteArray (..))
 import Dscp.Crypto.Impl (PublicKey, SecretKey, keyGen)
@@ -109,6 +109,9 @@ mkPassPhrase bs
     | otherwise = Right $ PassPhrase (BA.convert bs)
   where
     lbs = length bs
+
+instance FromByteArray PassPhrase where
+    fromByteArray = first show . mkPassPhrase . BA.convert
 
 -- | You can still use no passphrase if that's required.
 emptyPassPhrase :: PassPhrase

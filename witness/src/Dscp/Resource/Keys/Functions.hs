@@ -22,7 +22,7 @@ import Dscp.Resource.Keys.Types (BaseKeyParams (..), CommitteeParams (..), KeyJs
                                  KeyResources (..), KeyfileContent)
 import Dscp.System (ensureModeIs, mode600, setMode, whenPosix)
 import Dscp.Util (leftToThrow)
-import Dscp.Util.Aeson (Versioned (..))
+import Dscp.Util.Aeson (CustomEncoding (..), Versioned (..))
 import Dscp.Witness.Config
 
 ---------------------------------------------------------------------
@@ -31,12 +31,12 @@ import Dscp.Witness.Config
 
 toSecretJson :: PassPhrase -> KeyResources n -> KeyJson
 toSecretJson pp KeyResources{..} =
-    let kjEncSecretKey = encrypt pp _krSecretKey
+    let kjEncSecretKey = CustomEncoding $ encrypt pp _krSecretKey
     in KeyJson{..}
 
 fromSecretJson :: MonadThrow m => PassPhrase -> KeyJson -> m (KeyResources n)
 fromSecretJson pp KeyJson{..} = do
-    sk <- decrypt pp kjEncSecretKey
+    sk <- decrypt pp (unCustomEncoding kjEncSecretKey)
         & leftToThrow SecretWrongPassPhraseError
     return $ KeyResources sk (toPublic sk)
 

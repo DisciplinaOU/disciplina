@@ -1,7 +1,14 @@
+{-# LANGUAGE DeriveFunctor #-}
+
 -- | Aeson instances for common types and some useful abstractions.
 
 module Dscp.Util.Aeson
-    ( AsHex (..)
+    ( AsByteString (..)
+    , CustomEncoding (..)
+    , Base64Encoded
+    , HexEncoded
+    , IsEncoding
+
     , Versioned (..)
 
     , toJSONSerialise
@@ -14,24 +21,46 @@ import Data.Aeson.Types (Parser)
 import Data.ByteArray (ByteArray, ByteArrayAccess)
 import qualified Data.ByteArray as BA
 import qualified Data.ByteString.Lazy as LBS
+import Data.Reflection (Reifies (..))
 import qualified Data.SemVer as SemVer
 import Fmt ((+||), (||+))
 
 import qualified Dscp.Crypto.ByteArray as BA
-import Dscp.Util (Base, fromBase, fromHex, leftToFail, toBase, toHex)
+import Dscp.Util (Base (..), fromBase, leftToFail, toBase)
 import Dscp.Util.Test
 
 -- | Often one wants to convert bytestring to JSON, but such convertion
 -- is encoding-dependent so we have no corresponding instance because it would
 -- be ambiguous.
-newtype AsHex a = AsHex { getAsHex :: a }
-    deriving (Eq, Ord, Show, Monoid, ByteArrayAccess, ByteArray)
+newtype AsByteString encoding a = AsByteString { getAsByteString :: a }
+    deriving (Eq, Ord, Show, Monoid, ByteArrayAccess, ByteArray, Functor)
 
-instance BA.ByteArrayAccess a => ToJSON (AsHex a) where
-    toJSON = String . toHex . getAsHex
-instance BA.FromByteArray a => FromJSON (AsHex a) where
-    parseJSON = withText "hex text" $ \t -> do
-        fmap AsHex . leftToFail $ fromHex t
+-- | This one for the case when need custom JSON instances.
+newtype CustomEncoding encoding a =
+    CustomEncoding { unCustomEncoding :: a }
+    deriving (Eq, Ord, Show, Monoid, ByteArrayAccess, ByteArray, Functor)
+
+data Base64Encoded
+data HexEncoded
+
+instance Reifies Base64Encoded Base where
+    reflect _ = Base64
+instance Reifies HexEncoded Base where
+    reflect _ = Base16
+
+type IsEncoding enc = Reifies enc Base
+
+instance (BA.ByteArrayAccess a, IsEncoding enc) =>
+         ToJSON (AsByteString enc a) where
+    toJSON =
+        let base = reflect (Proxy @enc)
+        in String . toBase base . getAsByteString
+
+instance (BA.FromByteArray a, IsEncoding enc) =>
+         FromJSON (AsByteString enc a) where
+    parseJSON = withText "encoded text" $ \t ->
+        let base = reflect (Proxy @enc)
+        in fmap AsByteString . leftToFail $ fromBase base t
 
 -- | Attaches version of JSON serialisation format.
 newtype Versioned a = Versioned a
@@ -57,7 +86,8 @@ instance FromJSON a => FromJSON (Versioned a) where
         content <- o .: "content"
         return $ Versioned content
 
-deriving instance Arbitrary a => Arbitrary (AsHex a)
+deriving instance Arbitrary a => Arbitrary (AsByteString enc a)
+deriving instance Arbitrary a => Arbitrary (CustomEncoding enc a)
 
 instance Arbitrary a => Arbitrary (Versioned a) where
     arbitrary = Versioned <$> arbitrary
