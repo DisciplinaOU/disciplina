@@ -5,7 +5,12 @@ module Dscp.Witness.Logic.Traversals
     , loadHashesDownWhile
     , loadHeadersDownWhile
     , loadBlocksDownWhile
+
+    , getBlocksFromTo
     ) where
+
+import Control.Monad.Trans.Except (throwE)
+import qualified Data.List.NonEmpty as NE
 
 import Dscp.Core
 import Dscp.Snowdrop
@@ -13,13 +18,17 @@ import Dscp.Util
 import Dscp.Witness.Config
 import Dscp.Witness.Logic.Getters
 
+----------------------------------------------------------------------------
+-- One-direction traversals
+----------------------------------------------------------------------------
+
 foldlGeneric
     :: forall a b m r .
     ( Monad m, HasHeaderHash a )
     => (HeaderHash -> m (Maybe HeaderHash)) -- ^ Get next element
     -> (HeaderHash -> m (Maybe b))          -- ^ For each header we get b(lund)
     -> a                                    -- ^ We start iterating from it
-    -> (b -> Int -> Bool)                   -- ^ Condition on b and depth
+    -> (b -> Int -> Bool)                   -- ^ While condition on b and depth
     -> (r -> b -> m r)                      -- ^ Conversion function
     -> r                                    -- ^ Starting value
     -> m r
@@ -43,8 +52,8 @@ loadDownWhile
     => (HeaderHash -> SdM (Maybe b))
     -> a
     -> (b -> Int -> Bool)
-    -> SdM (OldestFirst [] b)
-loadDownWhile morph start condition = OldestFirst <$>
+    -> SdM (OldestFirst NonEmpty b)
+loadDownWhile morph start condition = OldestFirst . NE.fromList <$>
     foldlGeneric
         resolvePrevious
         morph
@@ -58,7 +67,7 @@ loadHashesDownWhile
     :: forall a. (HasHeaderHash a, HasWitnessConfig)
     => a
     -> (HeaderHash -> Int -> Bool)
-    -> SdM (OldestFirst [] HeaderHash)
+    -> SdM (OldestFirst NonEmpty HeaderHash)
 loadHashesDownWhile = loadDownWhile (pure . Just)
 
 -- | Return hashes loaded up. Basically a forward links traversal.
@@ -66,7 +75,7 @@ loadHeadersDownWhile
     :: forall a. (HasHeaderHash a, HasWitnessConfig)
     => a
     -> (Header -> Int -> Bool)
-    -> SdM (OldestFirst [] Header)
+    -> SdM (OldestFirst NonEmpty Header)
 loadHeadersDownWhile = loadDownWhile getHeaderMaybe
 
 -- | Return hashes loaded up. Basically a forward links traversal.
@@ -74,5 +83,49 @@ loadBlocksDownWhile
     :: forall a. (HasHeaderHash a, HasWitnessConfig)
     => a
     -> (Block -> Int -> Bool)
-    -> SdM (OldestFirst [] Block)
+    -> SdM (OldestFirst NonEmpty Block)
 loadBlocksDownWhile = loadDownWhile getBlockMaybe
+
+----------------------------------------------------------------------------
+-- From/to
+----------------------------------------------------------------------------
+
+-- | Retrieves blocks from older to newer.
+getBlocksFromTo ::
+       (HasWitnessConfig, HasHeaderHash a)
+    => a -- ^ Older element
+    -> a -- ^ Newer element
+    -> SdM (Either Text (OldestFirst NonEmpty Block))
+getBlocksFromTo (headerHash -> olderH) (headerHash -> newerH) = runExceptT $ do
+    olderBlock <-
+        ExceptT $ maybeToRight "Can't get older block" <$> getBlockMaybe olderH
+    newerBlock <-
+        ExceptT $ maybeToRight "Can't get newer block" <$> getBlockMaybe newerH
+
+    let dOlder = hDifficulty $ bHeader olderBlock
+    let dNewer = hDifficulty $ bHeader newerBlock
+    when (dNewer < dOlder) $
+        throwE "Headers passed in wrong order: newer is < than older"
+
+    if olderBlock == newerBlock
+    then pure $ OldestFirst $ olderBlock :| []
+    else do
+        -- Exactly this number of blocks we want to retrieve
+        let depthDiff = fromIntegral $ unDifficulty $ dNewer - dOlder + 1
+        let loadCond _block depth = depth < depthDiff
+        blocks <- lift $ loadBlocksDownWhile newerH loadCond
+
+        let retrievedOldest = NE.head (unOldestFirst blocks)
+
+        -- sanity checks, remove them later
+        when (NE.length (unOldestFirst blocks) < depthDiff &&
+              retrievedOldest /= genesisBlock) $
+            error "getBlocksFromTo: retrieved less than expected"
+
+        when (NE.length (unOldestFirst blocks) > depthDiff) $
+            error "getBlocksFromTo: retrieved too many"
+
+        unless (retrievedOldest `elem` [olderBlock,genesisBlock]) $
+            error "getBlocksFromTo: unexpected oldest block"
+
+        pure blocks

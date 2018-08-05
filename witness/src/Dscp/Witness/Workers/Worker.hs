@@ -38,7 +38,7 @@ blockReceivalWorker =
         (_nId, PubBlock block) <- cliRecvUpdate btq (-1)
         logInfo $ "Received a new block: " +| hashF (headerHash block) |+ ""
         tip <- runSdM getTipHash
-        unless (tip == hash (rbHeader block)) $ do
+        unless (tip == hash (bHeader block)) $ do
             logInfo "Block is new, applying"
             proof <- applyBlock block
             logInfo $ "Applied received block: " +| block |+

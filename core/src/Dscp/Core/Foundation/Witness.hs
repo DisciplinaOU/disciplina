@@ -259,7 +259,7 @@ newtype SlotId = SlotId Word64
     deriving (Eq, Ord, Num, Show, Generic, Buildable)
 
 -- | Chain difficulty.
-newtype Difficulty = Difficulty Word64
+newtype Difficulty = Difficulty { unDifficulty :: Word64 }
     deriving (Eq, Ord, Num, Show, Generic, Buildable)
 
 -- | Blocks are indexed by their headers' hashes.
@@ -291,7 +291,7 @@ instance HasHash Header => Buildable Header where
 
 -- | Body of the block.
 data BlockBody = BlockBody
-    { rbbTxs :: ![GTxWitnessed]
+    { bbTxs :: ![GTxWitnessed]
     } deriving (Eq, Show, Generic)
 
 instance Buildable BlockBody where
@@ -299,13 +299,13 @@ instance Buildable BlockBody where
 
 -- | Block.
 data Block = Block
-    { rbHeader :: !Header
-    , rbBody   :: !BlockBody
+    { bHeader :: !Header
+    , bBody   :: !BlockBody
     } deriving (Eq, Show, Generic)
 
 instance HasHash Header => Buildable Block where
     build Block{..} =
-        "Block { \nheader: " +| rbHeader |+ ", body: " +| rbBody |+ " }"
+        "Block { \nheader: " +| bHeader |+ ", body: " +| bBody |+ " }"
 
 ----------------------------------------------------------------------------
 -- Lens and classes
@@ -322,4 +322,4 @@ instance HasHash Header => HasHeaderHash Header where
     headerHash = hash
 
 instance HasHash Header => HasHeaderHash Block where
-    headerHash = headerHash . rbHeader
+    headerHash = headerHash . bHeader

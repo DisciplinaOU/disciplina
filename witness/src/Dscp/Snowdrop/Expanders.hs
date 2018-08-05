@@ -35,8 +35,8 @@ expandBlock ::
     => Block
     -> ERoComp Exceptions Ids Values ctx SBlock
 expandBlock Block{..} = do
-    stateTxs <- expandGTxs (rbbTxs rbBody)
-    pure $ SD.Block rbHeader (SPayload stateTxs rbBody)
+    stateTxs <- expandGTxs (bbTxs bBody)
+    pure $ SD.Block bHeader (SPayload stateTxs bBody)
 
 -- | Expand list of global txs.
 expandGTxs ::

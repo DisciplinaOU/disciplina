@@ -46,7 +46,7 @@ getTipBlock = do
 
 -- | Retrieves current tip header.
 getTipHeader :: HasWitnessConfig => SdM_ c Header
-getTipHeader = rbHeader <$> getTipBlock
+getTipHeader = bHeader <$> getTipBlock
 
 -- | Safely get block.
 getBlockMaybe :: HasHeaderHash x => x -> SdM (Maybe Block)
@@ -65,11 +65,11 @@ getBlock o = do
 
 -- | Safely resolve header.
 getHeaderMaybe :: HasHeaderHash x => x -> SdM (Maybe Header)
-getHeaderMaybe = fmap (fmap rbHeader) . getBlockMaybe
+getHeaderMaybe = fmap (fmap bHeader) . getBlockMaybe
 
 -- | Resolves header, throws exception if it's absent.
 getHeader :: HasHeaderHash x => x -> SdM Header
-getHeader = fmap rbHeader . getBlock
+getHeader = fmap bHeader . getBlock
 
 -- | Given the element, get the previous one. If the element itself
 -- doesn't exist, this method will throw.

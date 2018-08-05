@@ -101,7 +101,7 @@ genesisBlock :: HasCoreConfig => Block
 genesisBlock = giGenesisBlock $ giveL @CoreConfig @GenesisInfo
 
 genesisHeader :: HasCoreConfig => Header
-genesisHeader = rbHeader genesisBlock
+genesisHeader = bHeader genesisBlock
 
 genesisHash :: HasCoreConfig => HeaderHash
 genesisHash = hash genesisHeader
