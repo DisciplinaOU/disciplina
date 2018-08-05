@@ -2,16 +2,12 @@
 
 module Dscp.Educator.Web.Student.Handlers
        ( studentApiHandlers
-       , oneGeek
-       , oneGeekSK
        , convertStudentApiHandler
        ) where
 
 import Servant (Handler, throwError)
 
 import Dscp.Core (Student)
-import Dscp.Core.Arbitrary (studentEx, studentSKEx)
-import Dscp.Crypto
 import Dscp.DB.SQLite (sqlTransaction)
 import Dscp.Educator.Launcher
 import Dscp.Educator.Web.Student.API
@@ -24,44 +20,37 @@ type StudentApiWorkMode m =
     ( MonadStudentAPIQuery m
     )
 
--- TODO [DSCP-141]: remove these two
-oneGeek :: Student
-oneGeek = studentEx
-
-oneGeekSK :: SecretKey
-oneGeekSK = studentSKEx
-
 studentApiHandlers
     :: forall m. StudentApiWorkMode m
-    => StudentApiHandlers m
-studentApiHandlers =
+    => Student -> StudentApiHandlers m
+studentApiHandlers student =
     StudentApiEndpoints
     { sGetCourses = \isEnrolledF ->
-        sqlTransaction $ studentGetCourses oneGeek isEnrolledF
+        sqlTransaction $ studentGetCourses student isEnrolledF
 
     , sGetCourse = \course ->
-        studentGetCourse oneGeek course
+        studentGetCourse student course
 
     , sGetAssignments = \courseIdF docTypeF isFinalF ->
-        sqlTransaction $ studentGetAssignments oneGeek courseIdF docTypeF isFinalF
+        sqlTransaction $ studentGetAssignments student courseIdF docTypeF isFinalF
 
     , sGetAssignment = \assignH ->
-        sqlTransaction $ studentGetAssignment oneGeek assignH
+        sqlTransaction $ studentGetAssignment student assignH
 
     , sGetSubmissions = \courseIdF assignHF docTypeF ->
-        sqlTransaction $ studentGetSubmissions oneGeek courseIdF assignHF docTypeF
+        sqlTransaction $ studentGetSubmissions student courseIdF assignHF docTypeF
 
     , sGetSubmission = \subH ->
-        sqlTransaction $ studentGetSubmission oneGeek subH
+        sqlTransaction $ studentGetSubmission student subH
 
     , sMakeSubmission = \newSub ->
-        studentMakeSubmissionVerified oneGeek newSub
+        studentMakeSubmissionVerified student newSub
 
     , sDeleteSubmission = \subH ->
-        sqlTransaction $ studentDeleteSubmission oneGeek subH
+        sqlTransaction $ studentDeleteSubmission student subH
 
     , sGetProofs = \sinceF ->
-        sqlTransaction $ studentGetProofs oneGeek sinceF
+        sqlTransaction $ studentGetProofs student sinceF
     }
 
 convertStudentApiHandler

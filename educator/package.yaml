@@ -20,6 +20,7 @@ library:
     - filepath
     - fmt
     - interpolatedstring-perl6
+    - jose
     - lens
     - loot-base
     - loot-config
@@ -31,6 +32,7 @@ library:
     - reflection
     - safe-exceptions >= 0.1.4
     - serialise
+    - servant-auth-server
     - servant-generic
     - servant-server
     - sqlite-simple
@@ -40,6 +42,7 @@ library:
     - time
     - QuickCheck
     - unliftio
+    - wai
     - wai-cors
 
 tests:
