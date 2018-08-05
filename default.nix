@@ -17,6 +17,8 @@ let
     done
   '';
 
+  srcPath = import (writeText "path.nix" src);
+
   ghc = haskell.compiler.ghc822;
 
   packages = [
@@ -38,7 +40,7 @@ let
       rocksdb-haskell = dependCabal previous.rocksdb-haskell [ rocksdb ];
     } // (mapAttrs (const overrideModule) (getAttrs packages previous));
 
-  closure = stackClosure ghc src overrides;
+  closure = stackClosure ghc srcPath overrides;
 
 in
   getAttrs packages closure
