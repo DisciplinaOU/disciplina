@@ -1,9 +1,7 @@
 with import <nixpkgs> { overlays = [ (import <serokell-overlay/pkgs>) ]; };
+with lib;
 with haskell.lib;
-
-buildStackApplication {
-  package = "disciplina-educator";
-
+let
   # Running hpack manually before the build is required
   # because of the problem in stack2nix -- it builds every
   # subpackage in a separate environment, thus moving
@@ -21,6 +19,13 @@ buildStackApplication {
 
   ghc = haskell.compiler.ghc822;
 
+  packages = [
+    "disciplina-core" "disciplina-witness" "disciplina-educator"
+    "disciplina-wallet" "disciplina-tools"
+  ];
+
+  getAttrs = attrs: set: genAttrs attrs (name: set.${name});
+
   overrides = 
     final: previous: 
     let overridingSet = (super: with final; {
@@ -31,12 +36,10 @@ buildStackApplication {
         overrideModule = prev: overrideCabal prev (overridingSet final);
     in {
       rocksdb-haskell = dependCabal previous.rocksdb-haskell [ rocksdb ];
+    } // (mapAttrs (const overrideModule) (getAttrs packages previous));
 
-      # Is it possible to minimise this boilerplate?
-      disciplina-core = overrideModule previous.disciplina-core;
-      disciplina-witness = overrideModule previous.disciplina-witness;
-      disciplina-educator = overrideModule previous.disciplina-educator;
-      disciplina-wallet = overrideModule previous.disciplina-wallet;
-      disciplina-tools = overrideModule previous.disciplina-tools;
-    };
-}
+  closure = stackClosure ghc src overrides;
+
+in
+  getAttrs packages closure
+
