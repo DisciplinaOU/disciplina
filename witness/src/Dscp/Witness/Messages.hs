@@ -6,46 +6,16 @@
 
 module Dscp.Witness.Messages
     (
-      PingBlk (..)
-    , PongBlk (..)
-    , PingTx (..)
-    , PongTx (..)
-
-    , PubBlock (..)
+      PubBlock (..)
     ) where
 
 import Codec.Serialise (Serialise)
 import Loot.Network.Message (Message (..))
 
 import Dscp.Core
-import Dscp.Network.Wrapped (MsgK, SubK)
+import Dscp.Network.Wrapped
 
-----------------------------------------------------------------------------
--- Testing ping/pong messages
-----------------------------------------------------------------------------
-
--- | Type for messages from the workers to the witnessListeners.
-data PingBlk = PingBlk deriving (Generic,Show)
-instance Serialise PingBlk
-instance Message MsgK PingBlk where type MsgTag MsgK PingBlk = 0
-
-data PingTx = PingTx deriving (Generic,Show)
-instance Serialise PingTx
-instance Message MsgK PingTx where type MsgTag MsgK PingTx = 1
-
--- | Type for messages from the witnessListeners to the workers.
-data PongBlk = PongBlk ByteString deriving (Generic,Show)
-instance Serialise PongBlk
-instance Message MsgK PongBlk where type MsgTag MsgK PongBlk = 2
-
-data PongTx = PongTx ByteString deriving (Generic,Show)
-instance Serialise PongTx
-instance Message MsgK PongTx where type MsgTag MsgK PongTx = 3
-
-----------------------------------------------------------------------------
--- Real messages
-----------------------------------------------------------------------------
 
 data PubBlock = PubBlock Block deriving (Generic,Show)
 instance Serialise PubBlock
-instance Message SubK PubBlock where type MsgTag SubK PubBlock = 4
+instance Message SubK PubBlock where type MsgTag SubK PubBlock = 1
