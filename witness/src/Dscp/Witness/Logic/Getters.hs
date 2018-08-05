@@ -27,7 +27,7 @@ import Dscp.Witness.Logic.Exceptions
 ----------------------------------------------------------------------------
 
 -- | Retrieves current tip.
-getTipHash :: HasWitnessConfig => SdM_ c HeaderHash
+getTipHash :: HasWitnessConfig => SdM HeaderHash
 getTipHash = do
     x <- SD.unTipValue <$>
         (SD.queryOne SD.TipKey >>=
@@ -35,7 +35,7 @@ getTipHash = do
     pure $ fromMaybe genesisHash x
 
 -- | Retrieves current tip block.
-getTipBlock :: HasWitnessConfig => SdM_ c Block
+getTipBlock :: HasWitnessConfig => SdM Block
 getTipBlock = do
     tipHash <- getTipHash
     if tipHash == genesisHash
@@ -45,7 +45,7 @@ getTipBlock = do
           SD.queryOne (SD.BlockRef tipHash))
 
 -- | Retrieves current tip header.
-getTipHeader :: HasWitnessConfig => SdM_ c Header
+getTipHeader :: HasWitnessConfig => SdM Header
 getTipHeader = bHeader <$> getTipBlock
 
 -- | Safely get block.

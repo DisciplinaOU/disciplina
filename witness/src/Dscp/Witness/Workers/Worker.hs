@@ -39,4 +39,4 @@ blockReceivalWorker =
             logInfo "Block is new, applying"
             proof <- applyBlock block
             logInfo $ "Applied received block: " +| block |+
-                      "with proof" +|| proof ||+ ", propagating"
+                      " with proof " +|| proof ||+ ", propagating"

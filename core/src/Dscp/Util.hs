@@ -43,6 +43,7 @@ module Dscp.Util
        , module Snowdrop.Util
        ) where
 
+import Codec.Serialise (Serialise)
 import Control.Lens (Getter, to)
 import Data.ByteArray (ByteArrayAccess)
 import Data.ByteArray.Encoding (Base (..), convertFromBase, convertToBase)
@@ -56,6 +57,12 @@ import qualified UnliftIO as UIO
 
 deriving instance Container (b a) => Container (OldestFirst b a)
 deriving instance Container (b a) => Container (NewestFirst b a)
+
+deriving instance Show (b a) => Show (OldestFirst b a)
+deriving instance Show (b a) => Show (NewestFirst b a)
+
+deriving instance Serialise (b a) => Serialise (OldestFirst b a)
+deriving instance Serialise (b a) => Serialise (NewestFirst b a)
 
 anyMapM :: Monad m => (a -> m Bool) -> [a] -> m Bool
 anyMapM _ [] = return False

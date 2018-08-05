@@ -6,7 +6,13 @@
 
 module Dscp.Witness.Messages
     (
-      PubBlock (..)
+
+      GetBlocksMsg (..)
+    , BlocksMsg (..)
+    , GetTipMsg (..)
+    , TipMsg (..)
+
+    , PubBlock (..)
     ) where
 
 import Codec.Serialise (Serialise)
@@ -14,8 +20,35 @@ import Loot.Network.Message (Message (..))
 
 import Dscp.Core
 import Dscp.Network.Wrapped
+import Dscp.Util
 
+----------------------------------------------------------------------------
+-- Messages
+----------------------------------------------------------------------------
 
-data PubBlock = PubBlock Block deriving (Generic,Show)
+data GetBlocksMsg = GetBlocksMsg
+    { gbFrom :: HeaderHash
+    , gbTo   :: HeaderHash
+    } deriving (Show, Generic)
+instance Serialise GetBlocksMsg
+instance Message MsgK GetBlocksMsg where type MsgTag MsgK GetBlocksMsg = 0
+
+data BlocksMsg = NoBlocksMsg Text | BlocksMsg (OldestFirst NonEmpty Block) deriving (Show, Generic)
+instance Serialise BlocksMsg
+instance Message MsgK BlocksMsg where type MsgTag MsgK BlocksMsg = 1
+
+data GetTipMsg = GetTipMsg deriving (Show, Generic)
+instance Serialise GetTipMsg
+instance Message MsgK GetTipMsg where type MsgTag MsgK GetTipMsg = 2
+
+data TipMsg = TipMsg Block deriving (Show, Generic)
+instance Serialise TipMsg
+instance Message MsgK TipMsg where type MsgTag MsgK TipMsg = 3
+
+----------------------------------------------------------------------------
+-- Publications
+----------------------------------------------------------------------------
+
+data PubBlock = PubBlock Block deriving (Show,Generic)
 instance Serialise PubBlock
-instance Message SubK PubBlock where type MsgTag SubK PubBlock = 1
+instance Message SubK PubBlock where type MsgTag SubK PubBlock = 100

@@ -7,22 +7,23 @@ module Dscp.Witness.Listeners.Listener
     ) where
 
 import Fmt ((+|), (|+))
-import Loot.Log (logError, logInfo)
+import Loot.Log (logDebug, logError, logInfo)
 
 import Dscp.Core
 import Dscp.Network.Wrapped
 import Dscp.Resource.Keys (ourPublicKey)
+import Dscp.Snowdrop
 import Dscp.Witness.Config
 import Dscp.Witness.Launcher.Marker
 import Dscp.Witness.Launcher.Mode
-import Dscp.Witness.Logic (applyBlock, createBlock)
+import Dscp.Witness.Logic
 import Dscp.Witness.Messages
 
 
 witnessListeners
     :: forall ctx m. WitnessWorkMode ctx m
     => [Listener m]
-witnessListeners = [blockIssuingListener]
+witnessListeners = [blockIssuingListener, getBlocksListener, getTipListener]
 
 ----------------------------------------------------------------------------
 -- Block creation
@@ -49,3 +50,30 @@ blockIssuingListener =
             proof <- applyBlock block
             logInfo $ "Applied block, proof: " +| proof |+ ", propagating"
             atomically $ servPub btq (PubBlock block)
+
+----------------------------------------------------------------------------
+-- Headers and blocks
+----------------------------------------------------------------------------
+
+getBlocksListener :: WitnessWorkMode ctx m => Listener m
+getBlocksListener =
+    simpleListener "getHeadersListener" [msgType @GetBlocksMsg] $ \btq ->
+        [lcallback (respond btq)]
+  where
+    respond btq cliId (GetBlocksMsg{..}) = do
+        logDebug "getBlocksMsg: received request"
+        res <- runSdM $ getBlocksFromTo gbFrom gbTo
+        let response = either NoBlocksMsg BlocksMsg res
+        atomically $ servSend btq cliId response
+        logDebug "getBlocksMsg: response sent"
+
+getTipListener :: WitnessWorkMode ctx m => Listener m
+getTipListener =
+    simpleListener "getTipListener" [msgType @GetTipMsg] $ \btq ->
+        [lcallback (respond btq)]
+  where
+    respond btq cliId GetTipMsg = do
+        logDebug "getTipMsg: received request"
+        tip <- runSdM getTipBlock
+        atomically $ servSend btq cliId (TipMsg tip)
+        logDebug "getTipMsg: response sent"
