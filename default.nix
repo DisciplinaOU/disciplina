@@ -1,7 +1,14 @@
 with import <nixpkgs> { overlays = [ (import <serokell-overlay/pkgs>) ]; };
-with lib;
 with haskell.lib;
 let
+  getAttrs = attrs: set: lib.genAttrs attrs (name: set.${name});
+in
+buildStackApplication rec {
+  packages = [
+    "disciplina-core" "disciplina-witness" "disciplina-educator"
+    "disciplina-wallet" "disciplina-tools"
+  ];
+
   # Running hpack manually before the build is required
   # because of the problem in stack2nix -- it builds every
   # subpackage in a separate environment, thus moving
@@ -17,16 +24,7 @@ let
     done
   '';
 
-  srcPath = import (writeText "path.nix" src);
-
   ghc = haskell.compiler.ghc822;
-
-  packages = [
-    "disciplina-core" "disciplina-witness" "disciplina-educator"
-    "disciplina-wallet" "disciplina-tools"
-  ];
-
-  getAttrs = attrs: set: genAttrs attrs (name: set.${name});
 
   overrides = 
     final: previous: 
@@ -39,9 +37,4 @@ let
     in {
       rocksdb-haskell = dependCabal previous.rocksdb-haskell [ rocksdb ];
     } // (mapAttrs (const overrideModule) (getAttrs packages previous));
-
-  closure = stackClosure ghc srcPath overrides;
-
-in
-  getAttrs packages closure
-
+}
