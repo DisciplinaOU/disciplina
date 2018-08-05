@@ -22,7 +22,7 @@ import Control.Lens (makePrisms)
 import Data.Aeson (ToJSON (..), Value (..), encode)
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON, deriveToJSON)
-import Servant (ServantErr (..), err403, err404, err409, err500)
+import Servant (ServantErr (..), err400, err403, err404, err409, err500)
 
 import qualified Dscp.Core as Core
 import Dscp.Crypto (Hash)
@@ -106,8 +106,8 @@ toServantErrNoReason = \case
         CourseDoesNotExist{}                  -> err404
         StudentDoesNotExist{}                 -> err404
         AssignmentDoesNotExist{}              -> err404
-        StudentWasNotEnrolledOnTheCourse{}    -> err404
-        StudentWasNotSubscribedOnAssignment{} -> err404
+        StudentWasNotEnrolledOnTheCourse{}    -> err400
+        StudentWasNotSubscribedOnAssignment{} -> err400
         SubmissionDoesNotExist{}              -> err404
         TransactionDoesNotExist{}             -> err404
         BlockWithIndexDoesNotExist{}          -> err500
