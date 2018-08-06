@@ -3,8 +3,8 @@ module Dscp.Snowdrop.Configuration where
 import Control.Lens (makePrisms)
 import Fmt (build, (+|))
 
-import Snowdrop.Model.Block (Block, BlockApplicationException, BlockRef (..), BlockStateException,
-                             Blund, TipKey, TipValue)
+import Snowdrop.Model.Block (Block (..), BlockApplicationException, BlockRef (..),
+                             BlockStateException, Blund, TipKey, TipValue)
 import Snowdrop.Model.State.Core (RedundantIdException, SValue, StateModificationException,
                                   StatePException, StateTx (..), TxValidationException,
                                   ValidatorExecException)
@@ -18,17 +18,25 @@ import qualified Dscp.Core.Foundation as T
 import Dscp.Crypto (PublicKey, Signature, hashF)
 import Dscp.Snowdrop.Types (Account, AccountId (..), AccountTxTypeId (..),
                             AccountValidationException, PublicationTxTypeId (..),
-                            PublicationValidationError)
+                            PublicationValidationException)
+import Dscp.Witness.Logic.Exceptions (LogicException)
 
 ----------------------------------------------------------------------------
 -- Snowdrop block-related types
 ----------------------------------------------------------------------------
 
 type SHeader  = T.Header
-type SPayload = [StateTx Ids Proofs Values]
+-- We store payload twice b/c snowdrop can't into blocks. This allows
+-- us to reconstruct block back from SDBlock. DSCP-175
+data SPayload = SPayload { sPayStateTxs :: [StateTx Ids Proofs Values]
+                         , sPayOrigBody :: T.BlockBody
+                         } deriving (Eq, Show, Generic)
 type SBlock   = Block SHeader SPayload
 type SUndo    = ChangeSet Ids Values
 type SBlund   = Blund SHeader SPayload SUndo
+
+sBlockReconstruct :: SBlock -> T.Block
+sBlockReconstruct (Block h (SPayload _ b)) = T.Block h b
 
 ----------------------------------------------------------------------------
 -- Identities/prefixes
@@ -138,13 +146,14 @@ data Exceptions
     | BlockApplicationError     (BlockApplicationException  HeaderHash)
     | StateModificationError    (StateModificationException Ids)
     | AccountValidationError     AccountValidationException
-    | PublicationValidationError PublicationValidationError
+    | PublicationValidationError PublicationValidationException
     | RedundantIdError           RedundantIdException
     | ValidatorExecError         ValidatorExecException
     | CSMappendError            (CSMappendException         Ids)
     | TxValidationError          TxValidationException
     | StatePError                StatePException
     | ExpanderError              ExpanderException
+    | LogicError                 LogicException
     deriving (Show)
 
 instance Exception Exceptions

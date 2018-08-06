@@ -13,6 +13,11 @@ module Dscp.Util
        , assert
        , assertJust
 
+         -- * Maybe conversions
+       , nothingToThrow
+       , nothingToFail
+       , nothingToPanic
+
          -- * Either conversions
        , leftToThrow
        , leftToFail
@@ -38,19 +43,24 @@ module Dscp.Util
        , module Snowdrop.Util
        ) where
 
+import Codec.Serialise (Serialise)
 import Control.Lens (Getter, to)
 import Data.ByteArray (ByteArrayAccess)
 import Data.ByteArray.Encoding (Base (..), convertFromBase, convertToBase)
 import Fmt ((+|), (|+))
 import Loot.Log (MonadLogging, logWarning)
-import Snowdrop.Util hiding (HasHash, getId)
+import Snowdrop.Util (NewestFirst (..), OldestFirst (..))
 
 import Dscp.Crypto.ByteArray (FromByteArray (..))
 
-import qualified UnliftIO as UIO
-
 deriving instance Container (b a) => Container (OldestFirst b a)
 deriving instance Container (b a) => Container (NewestFirst b a)
+
+deriving instance Show (b a) => Show (OldestFirst b a)
+deriving instance Show (b a) => Show (NewestFirst b a)
+
+deriving instance Serialise (b a) => Serialise (OldestFirst b a)
+deriving instance Serialise (b a) => Serialise (NewestFirst b a)
 
 anyMapM :: Monad m => (a -> m Bool) -> [a] -> m Bool
 anyMapM _ [] = return False
@@ -93,19 +103,24 @@ wrapRethrowIO wrap action = wrapRethrow wrap (liftIO action)
 -- Do-or-throw error handlers
 -----------------------------------------------------------
 
-assert :: (MonadIO m, Exception e) => m Bool -> e -> m ()
-assert action message = do
-    yes <- action
+assert :: (MonadThrow m, Exception e) => m Bool -> e -> m ()
+assert action message = unlessM action $ throwM message
 
-    unless yes $ do
-        UIO.throwIO message
+assertJust :: (MonadThrow m, Exception e) => m (Maybe a) -> e -> m a
+assertJust action message = whenNothingM action $ throwM message
 
-assertJust :: (MonadIO m, Exception e) => m (Maybe a) -> e -> m a
-assertJust action message = do
-    mb <- action
+-----------------------------------------------------------
+-- Maybe conversions
+-----------------------------------------------------------
 
-    whenNothing mb $ do
-        UIO.throwIO message
+nothingToThrow :: (MonadThrow m, Exception e) => e -> Maybe a -> m a
+nothingToThrow e = maybe (throwM e) pure
+
+nothingToFail :: (MonadFail m, ToString t) => t -> Maybe a -> m a
+nothingToFail e = maybe (fail $ toString e) pure
+
+nothingToPanic :: Text -> Maybe a -> a
+nothingToPanic e = fromMaybe (error e)
 
 -----------------------------------------------------------
 -- Either conversions

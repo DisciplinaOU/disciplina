@@ -14,9 +14,8 @@ import Snowdrop.Model.State.Core (HasKeyValue, SValue)
 import Snowdrop.Util
 
 import Dscp.Core.Foundation (HeaderHash)
-import Dscp.Snowdrop.AccountValidation (Account, AccountId)
-import Dscp.Snowdrop.Configuration (Ids (..), SBlund, Values (..), accountPrefix, blockPrefix,
-                                    tipPrefix)
+import Dscp.Snowdrop.Configuration
+import Dscp.Snowdrop.Types
 
 data BlockStorage = BlockStorage
     { _bsBlunds :: Map HeaderHash SBlund

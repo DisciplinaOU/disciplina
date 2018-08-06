@@ -6,10 +6,11 @@
 
 module Dscp.Witness.Messages
     (
-      PingBlk (..)
-    , PongBlk (..)
-    , PingTx (..)
-    , PongTx (..)
+
+      GetBlocksMsg (..)
+    , BlocksMsg (..)
+    , GetTipMsg (..)
+    , TipMsg (..)
 
     , PubBlock (..)
     ) where
@@ -18,34 +19,36 @@ import Codec.Serialise (Serialise)
 import Loot.Network.Message (Message (..))
 
 import Dscp.Core
-import Dscp.Network.Wrapped (MsgK, SubK)
+import Dscp.Network.Wrapped
+import Dscp.Util
 
 ----------------------------------------------------------------------------
--- Testing ping/pong messages
+-- Messages
 ----------------------------------------------------------------------------
 
--- | Type for messages from the workers to the witnessListeners.
-data PingBlk = PingBlk deriving (Generic,Show)
-instance Serialise PingBlk
-instance Message MsgK PingBlk where type MsgTag MsgK PingBlk = 0
+data GetBlocksMsg = GetBlocksMsg
+    { gbOlder :: HeaderHash
+    , gbNewer :: HeaderHash
+    } deriving (Show, Generic)
+instance Serialise GetBlocksMsg
+instance Message MsgK GetBlocksMsg where type MsgTag MsgK GetBlocksMsg = 0
 
-data PingTx = PingTx deriving (Generic,Show)
-instance Serialise PingTx
-instance Message MsgK PingTx where type MsgTag MsgK PingTx = 1
+data BlocksMsg = NoBlocksMsg Text | BlocksMsg (OldestFirst NonEmpty Block) deriving (Show, Generic)
+instance Serialise BlocksMsg
+instance Message MsgK BlocksMsg where type MsgTag MsgK BlocksMsg = 1
 
--- | Type for messages from the witnessListeners to the workers.
-data PongBlk = PongBlk ByteString deriving (Generic,Show)
-instance Serialise PongBlk
-instance Message MsgK PongBlk where type MsgTag MsgK PongBlk = 2
+data GetTipMsg = GetTipMsg deriving (Show, Generic)
+instance Serialise GetTipMsg
+instance Message MsgK GetTipMsg where type MsgTag MsgK GetTipMsg = 2
 
-data PongTx = PongTx ByteString deriving (Generic,Show)
-instance Serialise PongTx
-instance Message MsgK PongTx where type MsgTag MsgK PongTx = 3
+data TipMsg = TipMsg Block deriving (Show, Generic)
+instance Serialise TipMsg
+instance Message MsgK TipMsg where type MsgTag MsgK TipMsg = 3
 
 ----------------------------------------------------------------------------
--- Real messages
+-- Publications
 ----------------------------------------------------------------------------
 
-data PubBlock = PubBlock Block deriving (Generic,Show)
+data PubBlock = PubBlock Block deriving (Show,Generic)
 instance Serialise PubBlock
-instance Message SubK PubBlock where type MsgTag SubK PubBlock = 4
+instance Message SubK PubBlock where type MsgTag SubK PubBlock = 100

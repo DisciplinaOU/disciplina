@@ -35,7 +35,7 @@ extra-deps:
   commit: 2dd6b4ffdc4edb86b477273ee3c8416a1520f4e1
 
 - git: https://github.com/serokell/lootbox.git
-  commit: 018f3b79840e284b67657f55bf9f3d074c42b309
+  commit: 366dddb9d0623bf8307742d6d75d513909823895
   subdirs:
     - code/base
     - code/config

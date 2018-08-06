@@ -49,6 +49,7 @@ library:
     - text
     - text-format
     - time
+    - transformers
     - unliftio
     - warp
 

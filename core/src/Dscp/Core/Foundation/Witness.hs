@@ -86,7 +86,6 @@ instance Buildable Coin where
     build (Coin c) = c ||+ " coin(s)"
 
 
-
 ----------------------------------------------------------------------------
 -- Transactions
 ----------------------------------------------------------------------------
@@ -95,6 +94,10 @@ instance Buildable Coin where
 -- transactions, delegation transactions (in the future). Money
 -- transactions are the most popular, so we'll call them just
 -- "transactions".
+
+----------------------------------------------------------------------------
+-- Money transactions
+----------------------------------------------------------------------------
 
 -- | Tx input account. Can be used for other tx types too.
 data TxInAcc = TxInAcc
@@ -127,25 +130,9 @@ instance Buildable Tx where
 
 type TxId = Hash Tx
 
-data PublicationTx = PublicationTx
-    { ptAuthor    :: Address
-    , ptPrevBlock :: Maybe PrivateHeaderHash
-    , ptBlock     :: PrivateHeaderHash
-    } deriving (Eq, Ord, Generic, Show)
-
-instance Buildable PublicationTx where
-    build PublicationTx { ptAuthor, ptPrevBlock, ptBlock } =
-        "Tx { from: " +| ptAuthor |+ "; prev block: " +| ptPrevBlock |+ "; block:" +| ptBlock |+ " }"
-
-type PublicationTxId = Hash PublicationTx
-
 -- | Compute tx id.
 toTxId :: (Serialise Tx) => Tx -> TxId
 toTxId = hash
-
--- | Compute tx id.
-toPtxId :: (Serialise PublicationTx) => PublicationTx -> PublicationTxId
-toPtxId = hash
 
 -- | Transaction witness. We sign a pair of transaction hash and private
 -- key. The second element is there to authenticate proposed changes
@@ -159,6 +146,37 @@ data TxWitness = TxWitness
 instance Buildable TxWitness where
     build TxWitness {..} =
         "TxWitness { " +| txwSig |+ ", pk: " +| txwPk |+ " }"
+
+-- | Transaction coupled with witness.
+data TxWitnessed = TxWitnessed
+    { twTx      :: Tx
+    , twWitness :: TxWitness
+    } deriving (Eq, Show, Generic)
+
+instance Buildable TxWitnessed where
+    build TxWitnessed {..} =
+        "TxWitnessed { " +| twTx |+ ", " +| twWitness |+  " }"
+
+----------------------------------------------------------------------------
+-- Publication transactions
+----------------------------------------------------------------------------
+
+-- | Transaction for private block publications.
+data PublicationTx = PublicationTx
+    { ptAuthor    :: Address
+    , ptPrevBlock :: Maybe PrivateHeaderHash
+    , ptBlock     :: PrivateHeaderHash
+    } deriving (Eq, Ord, Generic, Show)
+
+instance Buildable PublicationTx where
+    build PublicationTx { ptAuthor, ptPrevBlock, ptBlock } =
+        "Tx { from: " +| ptAuthor |+ "; prev block: " +| ptPrevBlock |+ "; block:" +| ptBlock |+ " }"
+
+type PublicationTxId = Hash PublicationTx
+
+-- | Compute tx id.
+toPtxId :: (Serialise PublicationTx) => PublicationTx -> PublicationTxId
+toPtxId = hash
 
 -- | Incoming publication message; transaction payload.
 data Publication = Publication
@@ -175,16 +193,6 @@ data PublicationTxWitness = PublicationTxWitness
 instance Buildable PublicationTxWitness where
     build PublicationTxWitness {..} =
         "PublicationTxWitness { " +| pwSig |+ ", pk: " +| pwPk |+ " }"
-
--- | Transaction coupled with witness.
-data TxWitnessed = TxWitnessed
-    { twTx      :: Tx
-    , twWitness :: TxWitness
-    } deriving (Eq, Show, Generic)
-
-instance Buildable TxWitnessed where
-    build TxWitnessed {..} =
-        "TxWitnessed { " +| twTx |+ ", " +| twWitness |+  " }"
 
 -- | Transaction coupled with witness.
 data PublicationTxWitnessed = PublicationTxWitnessed
@@ -230,6 +238,10 @@ data PublicationNext
     = PublicationNext (Maybe PrivateHeaderHash)
     deriving (Eq, Ord, Show, Generic)
 
+----------------------------------------------------------------------------
+-- Transactions (united)
+----------------------------------------------------------------------------
+
 -- | Generalised version of transaction, other types to appear
 -- here.
 data GTx
@@ -251,7 +263,7 @@ instance Buildable GTxWitnessed where
     build (GPublicationTxWitnessed pw) = "GPublicationTxWitnessed: " +| pw |+ ""
 
 ----------------------------------------------------------------------------
--- Blocks/Transaction
+-- Blocks and headers
 ----------------------------------------------------------------------------
 
 -- | Slot id.
@@ -259,7 +271,7 @@ newtype SlotId = SlotId Word64
     deriving (Eq, Ord, Num, Show, Generic, Buildable)
 
 -- | Chain difficulty.
-newtype Difficulty = Difficulty Word64
+newtype Difficulty = Difficulty { unDifficulty :: Word64 }
     deriving (Eq, Ord, Num, Show, Generic, Buildable)
 
 -- | Blocks are indexed by their headers' hashes.
@@ -267,7 +279,7 @@ type HeaderHash = Hash Header
 
 -- Part of the block we sign
 data BlockToSign =
-    BlockToSign Difficulty HeaderHash BlockBody
+    BlockToSign Difficulty SlotId HeaderHash  BlockBody
     deriving (Eq, Show, Generic)
 
 data Header = Header
@@ -291,7 +303,7 @@ instance HasHash Header => Buildable Header where
 
 -- | Body of the block.
 data BlockBody = BlockBody
-    { rbbTxs :: ![GTxWitnessed]
+    { bbTxs :: ![GTxWitnessed]
     } deriving (Eq, Show, Generic)
 
 instance Buildable BlockBody where
@@ -299,13 +311,13 @@ instance Buildable BlockBody where
 
 -- | Block.
 data Block = Block
-    { rbHeader :: !Header
-    , rbBody   :: !BlockBody
+    { bHeader :: !Header
+    , bBody   :: !BlockBody
     } deriving (Eq, Show, Generic)
 
 instance HasHash Header => Buildable Block where
     build Block{..} =
-        "Block { \nheader: " +| rbHeader |+ ", body: " +| rbBody |+ " }"
+        "Block { \nheader: " +| bHeader |+ ", body: " +| bBody |+ " }"
 
 ----------------------------------------------------------------------------
 -- Lens and classes
@@ -322,4 +334,4 @@ instance HasHash Header => HasHeaderHash Header where
     headerHash = hash
 
 instance HasHash Header => HasHeaderHash Block where
-    headerHash = headerHash . rbHeader
+    headerHash = headerHash . bHeader

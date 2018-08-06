@@ -32,6 +32,7 @@ module Dscp.Network.Wrapped
     , cliRecv
     , cliRecvResp
     , cliRecvUpdate
+    , ccallback
 
     , withClient
     , withServer
@@ -51,7 +52,7 @@ import Control.Concurrent.STM (orElse, retry)
 import Control.Concurrent.STM.TMVar (newEmptyTMVarIO, putTMVar, readTMVar)
 import qualified Data.ByteString.Char8 as BS8
 import qualified Data.ByteString.Lazy as BSL
-import Fmt ((+|), (||+))
+import Fmt ((+||), (||+))
 import Loot.Log (MonadLogging, logDebug, logError, logWarning)
 import Loot.Network.BiTQueue (recvBtq, sendBtq)
 import Loot.Network.Class (CliId, ClientEnv, ClientId, ListenerEnv, ListenerId, MsgType (..),
@@ -123,9 +124,9 @@ runListener ::
     -> Listener m
     -> n ()
 runListener nat Listener{..} = do
-    logDebug $ "Launching listner " +| lId ||+ ""
+    logDebug $ "Launching listner " +|| lId ||+ ""
     (lEnv :: ListenerEnv NetTag) <- registerListener @NetTag lId lMsgTypes
-    nat (lAction lEnv) `finally` (logDebug $ "Listener " +| lId ||+ " has exited")
+    nat (lAction lEnv) `finally` (logDebug $ "Listener " +|| lId ||+ " has exited")
 
 servSend :: forall d. Message MsgK d => ListenerEnv NetTag -> CliId NetTag -> d -> STM ()
 servSend btq cliId msg =
@@ -146,7 +147,7 @@ simpleListener lId lMsgTypes getCallbacks =
   where
     -- todo use 'fmt' or something similar
     lAction btq = do
-        logDebug $ "Listener " +| lId ||+ " has started."
+        logDebug $ "Listener " +|| lId ||+ " has started."
         forever $ action btq `catchAny` handler
     action btq = do
         let callbacks = getCallbacks btq
@@ -154,12 +155,12 @@ simpleListener lId lMsgTypes getCallbacks =
         case (fromMsgType msgT,content) of
             (Just n,[d]) -> runCallbacksInt callbacks n d cliId >>= \case
                 Nothing ->
-                    logWarning $ "Listener " +| lId ||+ "couldn't match on type (runCallbacksInt)"
+                    logWarning $ "Listener " +|| lId ||+ "couldn't match on type (runCallbacksInt)"
                 _       -> pass
             _            -> pass
     handler e = do
         logError $
-            "Listener " +| lId ||+ " has failed with an error: " +|
+            "Listener " +|| lId ||+ " has failed with an error: " +||
             e ||+ ". Recovering (in 2sec)."
         liftIO $ threadDelay $ 2000000
 
@@ -192,9 +193,9 @@ runWorker ::
     -> Worker m
     -> n ()
 runWorker nat Worker{..} = do
-    logDebug $ "Launching worker " +| wId ||+ ""
+    logDebug $ "Launching worker " +|| wId ||+ ""
     (cEnv :: ClientEnv NetTag) <- registerClient @NetTag wId wMsgTypes wSubs
-    nat (wAction cEnv) `finally` (logDebug $ "Worker " +| wId ||+ " has exited")
+    nat (wAction cEnv) `finally` (logDebug $ "Worker " +|| wId ||+ " has exited")
 
 cliSend ::
        forall d m. (Message MsgK d, NetworkingCli NetTag m, MonadIO m)
@@ -234,7 +235,11 @@ type SendConstraint k d m
 -- Callback takes care of decoding itself because we might want to
 -- propagate data first (before decoding the message).
 cliRecv ::
-       forall k d m a. SendConstraint k d m
+       forall m a.
+       ( NetworkingCli NetTag m
+       , MonadUnliftIO m
+       , MonadCatch m
+       , MonadLogging m)
     => ClientEnv NetTag
     -> Int
     -> [CallbackWrapper (NodeId NetTag) m a]
@@ -256,7 +261,7 @@ cliRecv btq timeout callbacks = withHandler $ withTimeout $ \tmAction -> do
   where
     withHandler x =
         catch x $ \(e :: CliRecvExcInternal) -> do
-            logWarning $ "Could not receive: " +| e ||+ ", retrying"
+            logWarning $ "Could not receive: " +|| e ||+ ", retrying"
             case e of
                 CRENoCallback n -> throwM $ CREUnexpected $ "No callback for " <> show n
                 -- we ignore messages related to malformed input from
@@ -279,7 +284,7 @@ cliRecvOne ::
     -> Int
     -> m (NodeId NetTag, d)
 cliRecvOne btq timeout =
-    cliRecv @k @d
+    cliRecv
         btq
         timeout
         [ handlerDecoded $ \(nId :: NodeId NetTag) ->
@@ -302,6 +307,14 @@ cliRecvUpdate ::
     -> Int
     -> m (NodeId NetTag, d)
 cliRecvUpdate = cliRecvOne @SubK @d
+
+-- Callback printing a warning if it can't decode the result.
+ccallback ::
+       forall d k m. (Message k d, MonadLogging m, Monad m)
+    => (NodeId NetTag -> d -> m ())
+    -> CallbackWrapper (NodeId NetTag) m ()
+ccallback foo =
+    handlerDecoded $ \cId -> either (\e -> logWarning $ "ccallback: " +|| e ||+ "") (foo cId)
 
 ----------------------------------------------------------------------------
 -- Launching

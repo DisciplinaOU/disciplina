@@ -7,22 +7,23 @@ module Dscp.Witness.Listeners.Listener
     ) where
 
 import Fmt ((+|), (|+))
-import Loot.Log (logError, logInfo)
+import Loot.Log (logDebug, logError, logInfo)
 
 import Dscp.Core
 import Dscp.Network.Wrapped
 import Dscp.Resource.Keys (ourPublicKey)
-import Dscp.Witness.Block.Logic (applyBlock, createBlock)
+import Dscp.Snowdrop
 import Dscp.Witness.Config
 import Dscp.Witness.Launcher.Marker
 import Dscp.Witness.Launcher.Mode
+import Dscp.Witness.Logic
 import Dscp.Witness.Messages
 
 
 witnessListeners
     :: forall ctx m. WitnessWorkMode ctx m
     => [Listener m]
-witnessListeners = [blockIssuingListener]
+witnessListeners = [blockIssuingListener, getBlocksListener, getTipListener]
 
 ----------------------------------------------------------------------------
 -- Block creation
@@ -51,21 +52,28 @@ blockIssuingListener =
             atomically $ servPub btq (PubBlock block)
 
 ----------------------------------------------------------------------------
--- Ping/pong listeners
+-- Headers and blocks
 ----------------------------------------------------------------------------
 
-_blkListener, _txListener :: WitnessWorkMode ctx m => Listener m
-_blkListener =
-    simpleListener "blkListener" [msgType @PingBlk] $ \btq ->
-    let blkCallback cId PingBlk = do
-            logInfo "got PingBlk"
-            atomically $ servSend btq cId (PongBlk "that was a great block")
-            logInfo "got PingBlk, replied"
-    in [ lcallback blkCallback ]
-_txListener =
-    simpleListener "txListener" [msgType @PingTx] $ \btq ->
-    let txCallback cId PingTx = do
-            logInfo "got PingTx"
-            atomically $ servSend btq cId (PongTx "wonderful tx, thank you!")
-            logInfo "got PingTx, replied"
-    in [ lcallback txCallback ]
+getBlocksListener :: WitnessWorkMode ctx m => Listener m
+getBlocksListener =
+    simpleListener "getHeadersListener" [msgType @GetBlocksMsg] $ \btq ->
+        [lcallback (respond btq)]
+  where
+    respond btq cliId (GetBlocksMsg{..}) = do
+        logDebug "getBlocksMsg: received request"
+        res <- runSdM $ getBlocksFromTo gbOlder gbNewer
+        let response = either NoBlocksMsg BlocksMsg res
+        atomically $ servSend btq cliId response
+        logDebug "getBlocksMsg: response sent"
+
+getTipListener :: WitnessWorkMode ctx m => Listener m
+getTipListener =
+    simpleListener "getTipListener" [msgType @GetTipMsg] $ \btq ->
+        [lcallback (respond btq)]
+  where
+    respond btq cliId GetTipMsg = do
+        logDebug "getTipMsg: received request"
+        tip <- runSdM getTipBlock
+        atomically $ servSend btq cliId (TipMsg tip)
+        logDebug "getTipMsg: response sent"

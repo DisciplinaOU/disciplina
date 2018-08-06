@@ -13,13 +13,13 @@ import Snowdrop.Model.Execution (DbModifyActions (..), SumChangeSet)
 import Snowdrop.Util (gett)
 
 import Dscp.Core.Foundation (addrFromText)
-import Dscp.Snowdrop.AccountValidation (Account (..), AccountId (..))
 import Dscp.Snowdrop.Configuration (Ids (..), Values (..))
 import Dscp.Snowdrop.Serialise ()
 import Dscp.Snowdrop.Storage.Avlp (AVLChgAccum, ClientError (..), RememberForProof, RootHash,
                                    avlClientDbActions, avlServerDbActions, deserialiseM,
                                    initAVLPureStorage)
 import Dscp.Snowdrop.Storage.Pure (blockDbActions)
+import Dscp.Snowdrop.Types
 import Dscp.Util (leftToPanic)
 import Dscp.Witness.AVL (AvlHash, AvlProof)
 

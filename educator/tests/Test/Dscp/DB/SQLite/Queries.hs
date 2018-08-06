@@ -269,33 +269,39 @@ spec_Instances = do
                     let (_ : rest@ (next : _)) = sortWith _ptTime transactions
                         pointSince             = next^.ptTime
 
-                    for_ transactions $ \trans -> do
-                        let sigSubmission = trans        ^.ptSignedSubmission
-                            submission    = sigSubmission^.ssSubmission
-                            assignment    = submission   ^.sAssignment
-                            course        = assignment   ^.aCourseId
+                    -- Check that transactions aren't simultaneous.
+                    if trans1^.ptTime == trans2^.ptTime || trans1^.ptTime == trans3^.ptTime
+                    then do
+                        return True
 
-                        cId <- DB.createCourse           course Nothing [] `orIfItFails` getId course
-                        _   <- DB.enrollStudentToCourse  studentId cId     `orIfItFails` ()
-                        aId <- DB.createAssignment       assignment        `orIfItFails` getId assignment
-                        _   <- DB.setStudentAssignment   studentId aId     `orIfItFails` ()
-                        _   <- sqlTransaction $
-                               DB.createSignedSubmission sigSubmission     `orIfItFails` getId sigSubmission
+                    else do
+                        for_ transactions $ \trans -> do
+                            let sigSubmission = trans        ^.ptSignedSubmission
+                                submission    = sigSubmission^.ssSubmission
+                                assignment    = submission   ^.sAssignment
+                                course        = assignment   ^.aCourseId
 
-                        ptId <- DB.createTransaction trans
-                        return ptId
+                            cId <- DB.createCourse           course Nothing [] `orIfItFails` getId course
+                            _   <- DB.enrollStudentToCourse  studentId cId     `orIfItFails` ()
+                            aId <- DB.createAssignment       assignment        `orIfItFails` getId assignment
+                            _   <- DB.setStudentAssignment   studentId aId     `orIfItFails` ()
+                            _   <- sqlTransaction $
+                                   DB.createSignedSubmission sigSubmission     `orIfItFails` getId sigSubmission
 
-                    DB.createBlock Nothing
+                            ptId <- DB.createTransaction trans
+                            return ptId
 
-                    transPacksSince <- DB.getProvenStudentTransactionsSince studentId pointSince
+                        DB.createBlock Nothing
 
-                    let transSince = join . map (map snd . snd) $ transPacksSince
+                        transPacksSince <- DB.getProvenStudentTransactionsSince studentId pointSince
 
-                    let equal = (==) `on` sortWith getId
+                        let transSince = join . map (map snd . snd) $ transPacksSince
 
-                    (transSince `equal` rest) `assertThat`
-                        "Incorrect set of transactions is returned"
+                        let equal = (==) `on` sortWith getId
 
-                    return $ flip all transPacksSince $ \(proof, txSet) ->
-                        flip all txSet $ \(idx, tx) ->
-                            MerkleTree.validateElementExistAt idx tx proof
+                        (transSince `equal` rest) `assertThat`
+                            "Incorrect set of transactions is returned"
+
+                        return $ flip all transPacksSince $ \(proof, txSet) ->
+                            flip all txSet $ \(idx, tx) ->
+                                MerkleTree.validateElementExistAt idx tx proof

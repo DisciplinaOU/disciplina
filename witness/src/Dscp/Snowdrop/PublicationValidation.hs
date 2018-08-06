@@ -4,41 +4,39 @@
 
 module Dscp.Snowdrop.PublicationValidation
        ( validatePublication
-       , Publication (..)
-       , PublicationValidationError (..)
-       , PublicationTx (..)
-       , PublicationTxTypeId (..)
        ) where
 
 import Data.Map as Map (lookup)
+import Snowdrop.Model.State.Core (PreValidator (..), StateTx (..), StateTxType (..), Validator,
+                                  mkValidator, queryOne)
+import Snowdrop.Util
 
 import Dscp.Core
 import Dscp.Crypto (PublicKey)
 import Dscp.Snowdrop.AccountValidation
 import Dscp.Snowdrop.Configuration
-import Dscp.Snowdrop.Types (PublicationTxTypeId (..), PublicationValidationError (..))
-import Snowdrop.Model.State.Core (PreValidator (..), StateTx (..), StateTxType (..), Validator,
-                                  mkValidator, queryOne)
+import Dscp.Snowdrop.Types
 
-import Snowdrop.Util
 
-validatePublication
-    :: forall ctx
-    .  HasPrism Proofs (PersonalisedProof PublicationTxId Publication)
-    => HasGetter PublicKey Address
-    => HasPrism Proofs PublicationTxId
-    => CanVerifyPayload PublicationTxId Publication
+validatePublication ::
+       forall ctx.
+       ( HasPrism Proofs (PersonalisedProof PublicationTxId Publication)
+       , HasGetter PublicKey Address
+       , HasPrism Proofs PublicationTxId
+       , CanVerifyPayload PublicationTxId Publication
+       )
     => Validator Exceptions Ids Proofs Values ctx
 validatePublication = mkValidator ty [preValidatePublication]
   where
     ty = StateTxType $ getId (Proxy @TxIds) PublicationTxTypeId
 
-preValidatePublication
-    :: forall ctx
-    .  HasPrism Proofs (PersonalisedProof PublicationTxId Publication)
-    => HasGetter PublicKey Address
-    => HasPrism Proofs PublicationTxId
-    => CanVerifyPayload PublicationTxId Publication
+preValidatePublication ::
+       forall ctx.
+       ( HasPrism Proofs (PersonalisedProof PublicationTxId Publication)
+       , HasGetter PublicKey Address
+       , HasPrism Proofs PublicationTxId
+       , CanVerifyPayload PublicationTxId Publication
+       )
     => PreValidator Exceptions Ids Proofs Values ctx
 preValidatePublication =
     PreValidator $ \_trans@ StateTx {..} -> do

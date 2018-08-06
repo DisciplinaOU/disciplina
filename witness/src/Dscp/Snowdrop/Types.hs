@@ -1,6 +1,14 @@
 -- | Snowdrop-related types.
 
-module Dscp.Snowdrop.Types where
+module Dscp.Snowdrop.Types
+    ( PublicationTxTypeId(..)
+    , PublicationValidationException(..)
+    , AccountTxTypeId(..)
+    , AccountValidationException(..)
+    , AccountId(..)
+    , Account(..)
+    , Author(..)
+    ) where
 
 import Data.Text.Buildable (Buildable (..))
 import Formatting (bprint, build, int, (%))
@@ -12,7 +20,7 @@ data PublicationTxTypeId
     = PublicationTxTypeId
     deriving (Eq, Ord, Show, Generic)
 
-data PublicationValidationError
+data PublicationValidationException
     = PublicationSignatureIsIncorrect
     | PublicationPrevBlockIsIncorrect
     | StorageIsCorrupted

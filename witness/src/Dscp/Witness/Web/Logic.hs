@@ -27,7 +27,7 @@ noAccount = EntityAbsent "No account corresponding to secret key found"
 ----------------------------------------------------------------------------
 
 getAccount
-    :: (MonadIO m, MonadReader ctx m, HasLens' ctx SDActions)
+    :: (MonadIO m, MonadThrow m, MonadReader ctx m, HasLens' ctx SDActions)
     => Address -> m Account
 getAccount address = do
     blockActs <-
@@ -47,7 +47,7 @@ pickAccountBalance blockAcc = do
         }
 
 getAccountState
-    :: (MonadIO m, MonadReader ctx m, HasLens' ctx SDActions)
+    :: (MonadIO m, MonadThrow m, MonadReader ctx m, HasLens' ctx SDActions)
     => Address -> m AccountState
 getAccountState addr = do
     account <- getAccount addr
