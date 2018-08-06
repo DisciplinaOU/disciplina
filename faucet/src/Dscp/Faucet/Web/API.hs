@@ -13,19 +13,20 @@ module Dscp.Faucet.Web.API
 import Servant
 import Servant.Generic
 
+import Dscp.Faucet.Web.Error
 import Dscp.Faucet.Web.Types
 
 data FaucetApiEndpoints route = FaucetApiEndpoints
     { -- uses POST because accepts private data
       fGenKeyPair :: route
         :- "keygen"
-        :> ReqBody '[JSON] GenKeysRequest
-        :> Post '[JSON] GenKeysResponse
+        :> ReqBody '[DSON] GenKeysRequest
+        :> Post '[DSON] GenKeysResponse
 
     , fTransferMoneyTo :: route
         :- "transfer"
-        :> ReqBody '[JSON] TransferMoneyRequest
-        :> Post '[JSON] ()
+        :> ReqBody '[DSON] TransferMoneyRequest
+        :> Post '[DSON] ()
     } deriving (Generic)
 
 type FaucetAPI = "v1" :> ToServant (FaucetApiEndpoints AsApi)

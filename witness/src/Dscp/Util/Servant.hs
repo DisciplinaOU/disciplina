@@ -16,6 +16,8 @@ module Dscp.Util.Servant
     , ForResponseLog (..)
     , buildListForResponse
     , buildForResponse
+
+    , SimpleJSON
     ) where
 
 import Prelude hiding (log)
@@ -23,6 +25,7 @@ import Prelude hiding (log)
 import Control.Exception.Safe (handleAny)
 import Control.Lens (makePrisms)
 import Control.Monad.Error.Class (catchError, throwError)
+import Data.Aeson (FromJSON, ToJSON, eitherDecode, encode)
 import Data.Default (Default (..))
 import Data.Reflection (Reifies (..))
 import qualified Data.Text as T
@@ -35,8 +38,9 @@ import GHC.TypeLits (KnownSymbol, symbolVal)
 import Loot.Log (Level (Info))
 import Serokell.Util ()
 import Serokell.Util.ANSI (Color (..), colorizeDull)
-import Servant.API ((:<|>) (..), (:>), Capture, Description, NoContent, QueryParam,
+import Servant.API ((:<|>) (..), (:>), Capture, Description, JSON, NoContent, QueryParam,
                     ReflectMethod (..), ReqBody, Summary, Verb)
+import Servant.API.ContentTypes (Accept (..), MimeRender (..), MimeUnrender (..))
 import Servant.Server (Handler (..), HasServer (..), ServantErr (..), Server)
 import qualified Servant.Server.Internal as SI
 
@@ -410,3 +414,20 @@ instance Buildable (ForResponseLog ()) where
 
 instance Buildable (ForResponseLog Integer) where
     build = buildForResponse
+
+-------------------------------------------------------------------------
+-- Deserialisation errors
+-------------------------------------------------------------------------
+
+-- | Custom json marker which sends no human-unreadable decoding errors
+-- but a given fixed one.
+data SimpleJSON err
+
+instance Accept (SimpleJSON err) where
+    contentTypes _ = contentTypes (Proxy @JSON)
+instance ToJSON a => MimeRender (SimpleJSON err) a where
+    mimeRender _ = encode
+instance (FromJSON a, Reifies err String) => MimeUnrender (SimpleJSON err) a where
+    mimeUnrender _ =
+        let errMsg = reflect (Proxy @err)
+        in first (\_ -> errMsg) . eitherDecode
