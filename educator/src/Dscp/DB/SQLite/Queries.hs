@@ -408,19 +408,17 @@ createSignedSubmission sigSub = do
         student        = submission^.sStudentId
         submissionHash = submission^.idOf
         submissionCont = submission^.sContentsHash
-        assignment     = submission^.sAssignment
-
-        assignmentHash = assignment^.idOf
+        assignmentId   = submission^.sAssignmentId
 
     _ <- existsStudent student        `assert`     StudentDoesNotExist    student
-    _ <- getAssignment assignmentHash `assertJust` AssignmentDoesNotExist assignmentHash
-    _ <- isAssignedToStudent student assignmentHash
-        `assert` StudentWasNotSubscribedOnAssignment student assignmentHash
+    _ <- getAssignment assignmentId `assertJust` AssignmentDoesNotExist assignmentId
+    _ <- isAssignedToStudent student assignmentId
+        `assert` StudentWasNotSubscribedOnAssignment student assignmentId
 
     execute generateSubmissionRequest
         ( submissionHash
         , student
-        , assignmentHash
+        , assignmentId
         , submissionCont
         , submissionSig
         )
@@ -549,23 +547,23 @@ createAssignment assignment = do
     _ <- existsCourse courseId `assert` CourseDoesNotExist courseId
 
     execute createAssignmentRequest
-        ( assignmentHash
+        ( assignmentId
         , assignment^.aCourseId
         , assignment^.aContentsHash
         , assignment^.aType
         , assignment^.aDesc
         )
-    return assignmentHash
+    return assignmentId
   where
     createAssignmentRequest = [q|
         insert into  Assignments
         values       (?,?,?,?,?)
     |]
-    assignmentHash = assignment^.idOf
+    assignmentId = assignment^.idOf
 
 getAssignment :: DBM m => Id Assignment -> m (Maybe Assignment)
-getAssignment assignmentHash = do
-    listToMaybe <$> query getAssignmentQuery (Only assignmentHash)
+getAssignment assignmentId = do
+    listToMaybe <$> query getAssignmentQuery (Only assignmentId)
   where
     getAssignmentQuery = [q|
         select  course_id, contents_hash, type, desc

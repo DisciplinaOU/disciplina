@@ -2,14 +2,14 @@
 
 module Test.Dscp.DB.SQLite.Queries where
 
-import Prelude hiding (toList)
+import Prelude
 
 import Control.Lens (mapped)
 
-import Data.List (nubBy)
-
+import Dscp.Core.Arbitrary
 import qualified Dscp.Crypto.MerkleTree as MerkleTree
 import Dscp.DB.SQLite as DB
+import Dscp.Educator.Arbitrary
 import Dscp.Util (Id (..), allUniqueOrd)
 
 import Test.Dscp.DB.SQLite.Common
@@ -67,11 +67,12 @@ spec_Instances = do
                         return ()
 
             it "Submission is not created unless Student exist" $
-                sqliteProperty $ \sigSubmission -> do
+                sqliteProperty $ \
+                    ( delayedGen (genStudentSignedSubmissions arbitrary arbitrary)
+                      -> (_, assignment, sigSubmission :| _)
+                    ) -> do
 
-                    let submission = sigSubmission^.ssSubmission
-                        assignment = submission   ^.sAssignment
-                        course     = assignment   ^.aCourseId
+                    let course     = assignment   ^.aCourseId
 
                     _ <- DB.createCourse           course Nothing []
                     _ <- DB.createAssignment       assignment
@@ -81,11 +82,13 @@ spec_Instances = do
                         return ()
 
             it "Submission is not created unless StudentAssignment exist" $
-                sqliteProperty $ \sigSubmission -> do
+                sqliteProperty $ \
+                    ( delayedGen (genStudentSignedSubmissions arbitrary arbitrary)
+                      -> (_, assignment, sigSubmission :| _)
+                    ) -> do
 
                     throws @DomainError $ do
                         let submission = sigSubmission^.ssSubmission
-                            assignment = submission^.sAssignment
                             course     = assignment^.aCourseId
                             student    = submission^.sStudentId
 
@@ -99,11 +102,13 @@ spec_Instances = do
 
         describe "Transactions" $ do
             it "Transaction is created if all deps exist" $
-                sqliteProperty $ \trans -> do
+                sqliteProperty $ \
+                    ( delayedGen (genPrivateTx arbitrary)
+                      -> (_, assignment, trans :| _)
+                    ) -> do
 
                     let sigSubmission = trans        ^.ptSignedSubmission
                         submission    = sigSubmission^.ssSubmission
-                        assignment    = submission   ^.sAssignment
                         course        = assignment   ^.aCourseId
                         student       = submission   ^.sStudentId
 
@@ -193,10 +198,12 @@ spec_Instances = do
                             (assignments1 <> assignments2) `equal` toHer
 
         it "submitAssignment" $
-            sqliteProperty $ \sigSubmission -> do
+            sqliteProperty $ \
+                ( delayedGen (genStudentSignedSubmissions arbitrary arbitrary)
+                  -> (_, assignment, sigSubmission :| _)
+                ) -> do
 
                 let submission = sigSubmission^.ssSubmission
-                    assignment = submission   ^.sAssignment
                     course     = assignment   ^.aCourseId
                     student    = submission   ^.sStudentId
 
@@ -213,17 +220,21 @@ spec_Instances = do
                 return (sub' == Just sigSubmission)
 
         it "getGradesForCourseAssignments" $
-            sqliteProperty $ \(trans, course2) -> do
+            sqliteProperty $ \
+                ( delayedGen (genPrivateTx arbitrary)
+                  -> (_, assignment, trans :| _)
+                , course2
+                ) -> do
 
                 let sigSubmission = trans        ^.ptSignedSubmission
                     submission    = sigSubmission^.ssSubmission
-                    assignment    = submission   ^.sAssignment
                     course        = assignment   ^.aCourseId
                     student       = submission   ^.sStudentId
 
-                    sigSubmission2 = sigSubmission & ssSubmission.sAssignment .~ assignment2
-                    assignment2    = assignment    & aCourseId                .~ getId course2
-                    trans2         = trans         & ptSignedSubmission       .~ sigSubmission2
+                    sigSubmission2 = sigSubmission & ssSubmission
+                                                   . sAssignmentId      .~ getId assignment2
+                    assignment2    = assignment    & aCourseId          .~ getId course2
+                    trans2         = trans         & ptSignedSubmission .~ sigSubmission2
 
                 if  (assignment^.idOf /= assignment2^.idOf)
                 then do
@@ -259,51 +270,41 @@ spec_Instances = do
     describe "Retrieval of proven transactions" $ do
         it "getProvenStudentTransactionsSince" $
             sqliteProperty $ \
-                ( trans1
-                , trans2
-                , trans3
-                , student
+                ( delayedGen (genPrivateTx arbitrary)
+                  -> (student, assignment, (toList -> transactions'))
                 ) -> do
                     studentId <- DB.createStudent student
 
-                    let transactions'          = [trans1, trans2, trans3]
                     let transactions           = transactions' & mapped.ptSignedSubmission.ssSubmission.sStudentId .~ studentId
                     let (_ : rest@ (next : _)) = sortWith _ptTime transactions
                         pointSince             = next^.ptTime
 
                     -- Check that transactions aren't simultaneous.
-                    if length (nubBy ((==) `on` _ptTime) transactions) < 3
-                    then do
-                        return True
+                    for_ transactions $ \trans -> do
+                        let sigSubmission = trans        ^.ptSignedSubmission
+                            course        = assignment   ^.aCourseId
 
-                    else do
-                        for_ transactions $ \trans -> do
-                            let sigSubmission = trans        ^.ptSignedSubmission
-                                submission    = sigSubmission^.ssSubmission
-                                assignment    = submission   ^.sAssignment
-                                course        = assignment   ^.aCourseId
+                        cId <- DB.createCourse           course Nothing [] `orIfItFails` getId course
+                        _   <- DB.enrollStudentToCourse  studentId cId     `orIfItFails` ()
+                        aId <- DB.createAssignment       assignment        `orIfItFails` getId assignment
+                        _   <- DB.setStudentAssignment   studentId aId     `orIfItFails` ()
+                        _   <- sqlTransaction $
+                                DB.createSignedSubmission sigSubmission     `orIfItFails` getId sigSubmission
 
-                            cId <- DB.createCourse           course Nothing [] `orIfItFails` getId course
-                            _   <- DB.enrollStudentToCourse  studentId cId     `orIfItFails` ()
-                            aId <- DB.createAssignment       assignment        `orIfItFails` getId assignment
-                            _   <- DB.setStudentAssignment   studentId aId     `orIfItFails` ()
-                            _   <- sqlTransaction $
-                                   DB.createSignedSubmission sigSubmission     `orIfItFails` getId sigSubmission
+                        ptId <- DB.createTransaction trans
+                        return ptId
 
-                            ptId <- DB.createTransaction trans
-                            return ptId
+                    DB.createBlock Nothing
 
-                        DB.createBlock Nothing
+                    transPacksSince <- DB.getProvenStudentTransactionsSince studentId pointSince
 
-                        transPacksSince <- DB.getProvenStudentTransactionsSince studentId pointSince
+                    let transSince = join . map (map snd . snd) $ transPacksSince
 
-                        let transSince = join . map (map snd . snd) $ transPacksSince
+                    let equal = (==) `on` sortWith getId
 
-                        let equal = (==) `on` sortWith getId
+                    (transSince `equal` rest) `assertThat`
+                        "Incorrect set of transactions is returned"
 
-                        (transSince `equal` rest) `assertThat`
-                            "Incorrect set of transactions is returned"
-
-                        return $ flip all transPacksSince $ \(proof, txSet) ->
-                            flip all txSet $ \(idx, tx) ->
-                                MerkleTree.validateElementExistAt idx tx proof
+                    return $ flip all transPacksSince $ \(proof, txSet) ->
+                        flip all txSet $ \(idx, tx) ->
+                            MerkleTree.validateElementExistAt idx tx proof

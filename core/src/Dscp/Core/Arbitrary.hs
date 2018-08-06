@@ -25,6 +25,7 @@ import GHC.IO.Unsafe (unsafePerformIO)
 
 import Dscp.Core.Foundation
 import Dscp.Crypto
+import Dscp.Util
 import Dscp.Util.Test
 
 instance Arbitrary Address where
@@ -74,21 +75,23 @@ instance Arbitrary SubmissionWitness where
 genStudentSignedSubmissions
     :: Gen SecretKey
     -> Gen Submission
-    -> Gen (Student, NonEmpty SignedSubmission)
+    -> Gen (Student, Assignment, NonEmpty SignedSubmission)
 genStudentSignedSubmissions genSK genSubmission = do
     sk <- genSK
     subs <- listOf1 genSubmission `suchThatMap` nonEmpty
+    assignment <- arbitrary
     let pk = toPublic sk
         studentId = mkAddr pk
     ss <- forM subs $ \sub -> do
         let sub' = sub & sStudentId .~ studentId
+                       & sAssignmentId .~ hash assignment
             sig = sign sk $ hash sub'
         pure $ SignedSubmission sub' $ SubmissionWitness pk sig
-    return (studentId, ss)
+    return (studentId, assignment, ss)
 
 instance Arbitrary SignedSubmission where
     arbitrary = do
-        (_, ss :| _) <- genStudentSignedSubmissions arbitrary arbitrary
+        (_, _, ss :| _) <- genStudentSignedSubmissions arbitrary arbitrary
         return ss
 
 instance Arbitrary AssignmentType where
@@ -135,10 +138,10 @@ signedSubmissionEx = detGen 123 $ do
     _sContentsHash <- arbitrary
     let submission = Submission
             { _sStudentId = studentEx
-            , _sAssignment = assignmentEx
+            , _sAssignmentId = getId assignmentEx
             , ..
             }
-    (_, sigsub :| _) <-
+    (_, _, sigsub :| _) <-
         genStudentSignedSubmissions (pure studentSKEx) (pure submission)
     return sigsub
 

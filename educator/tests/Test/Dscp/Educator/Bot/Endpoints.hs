@@ -3,6 +3,7 @@ module Test.Dscp.Educator.Bot.Endpoints where
 import Dscp.Core.Arbitrary
 import Dscp.Educator.Web.Bot
 import Dscp.Educator.Web.Student
+import Dscp.Util
 import Dscp.Util.Test
 
 import Test.Dscp.DB.SQLite.Common
@@ -38,8 +39,8 @@ spec_StudentApiWithBotQueries = describe "Basic properties" $ do
           , delayedGen
               (genStudentSignedSubmissions
                   (pure oneGeekSK)
-                  (arbitrary <&> \s -> s{ _sAssignment = assignmentEx }))
-            -> (_, sigsub :| _)
+                  (arbitrary <&> \s -> s{ _sAssignmentId = getId assignmentEx }))
+            -> (_, _, sigsub :| _)
           ) -> do
             StudentApiEndpoints{..} <- testMakeBotHandlers seed
             void $ sMakeSubmission (signedSubmissionToRequest sigsub)

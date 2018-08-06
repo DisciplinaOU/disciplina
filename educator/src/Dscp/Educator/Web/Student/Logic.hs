@@ -12,7 +12,7 @@ import Dscp.Educator.Web.Student.Error (APIError (..))
 import Dscp.Educator.Web.Student.Queries
 import Dscp.Educator.Web.Student.Types
 import Dscp.Educator.Web.Student.Util (verifyStudentSubmission)
-import Dscp.Util (assertJust, leftToThrow)
+import Dscp.Util (assertJust, getId, leftToThrow)
 
 requestToSignedSubmission
     :: MonadStudentAPIQuery m
@@ -22,7 +22,7 @@ requestToSignedSubmission ns = do
         `assertJust` AssignmentDoesNotExist (nsAssignmentHash ns)
     let submission = Submission
             { _sStudentId = nsOwner ns
-            , _sAssignment = assignment
+            , _sAssignmentId = getId assignment
             , _sContentsHash = nsContentsHash ns
             }
     return SignedSubmission
