@@ -156,10 +156,10 @@ simpleBlkConfiguration = SD.BlkConfiguration
 
     verifiers :: [SD.BlockIntegrityVerifier SHeader SPayload]
     verifiers =
-      [ -- I should get a hash of block body, but i only have SPayload!
-        -- verify pk (BlockToSign hDifficulty hPrevHash (hSignature sheader)
-        -- TODO ^
---        SD.BIV $ \(SD.Block _sheader _sbody) -> True
-        SD.BIV $ \(SD.Block sheader _) ->
+      [ SD.BIV $ \(SD.Block Header{..} sbody) ->
+          verify hIssuer
+                 (BlockToSign hDifficulty hSlotId hPrevHash (sPayOrigBody sbody))
+                 hSignature
+      , SD.BIV $ \(SD.Block sheader _) ->
           committeeOwnsSlot com (mkAddr $ hIssuer sheader) (hSlotId sheader)
       ]

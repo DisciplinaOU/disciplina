@@ -35,7 +35,7 @@ createBlock newSlot = do
 
     payload <- createPayload =<< view (lensOf @MempoolVar)
     sk <- ourSecretKey @WitnessNode
-    let sgn = sign sk $ BlockToSign diff tipHash payload
+    let sgn = sign sk $ BlockToSign diff newSlot tipHash payload
     let header = Header sgn (toPublic sk) diff newSlot tipHash
     let block = Block header payload
     pure block

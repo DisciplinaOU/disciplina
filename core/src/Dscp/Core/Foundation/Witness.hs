@@ -279,7 +279,7 @@ type HeaderHash = Hash Header
 
 -- Part of the block we sign
 data BlockToSign =
-    BlockToSign Difficulty HeaderHash BlockBody
+    BlockToSign Difficulty SlotId HeaderHash  BlockBody
     deriving (Eq, Show, Generic)
 
 data Header = Header
