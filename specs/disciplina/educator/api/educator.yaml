@@ -10,7 +10,7 @@ info:
     name: Apache 2.0
     url: http://www.apache.org/licenses/LICENSE-2.0.html
 host: localhost:8090
-basePath: /v1
+basePath: /api/educator/v1
 tags:
 - name: students
   description: Methods for working with students and their data.
