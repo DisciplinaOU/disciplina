@@ -36,5 +36,5 @@ buildStackApplication rec {
         overrideModule = prev: overrideCabal prev (overridingSet final);
     in {
       rocksdb-haskell = dependCabal previous.rocksdb-haskell [ rocksdb ];
-    } // (mapAttrs (const overrideModule) (getAttrs packages previous));
+    } // (lib.mapAttrs (lib.const overrideModule) (getAttrs packages previous));
 }
