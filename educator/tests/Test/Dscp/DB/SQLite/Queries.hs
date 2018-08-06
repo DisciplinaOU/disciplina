@@ -6,8 +6,6 @@ import Prelude hiding (toList)
 
 import Control.Lens (mapped)
 
-import Data.List (nubBy)
-
 import qualified Dscp.Crypto.MerkleTree as MerkleTree
 import Dscp.DB.SQLite as DB
 import Dscp.Util (Id (..), allUniqueOrd)
