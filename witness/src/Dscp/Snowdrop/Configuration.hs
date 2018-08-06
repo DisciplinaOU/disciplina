@@ -18,7 +18,7 @@ import qualified Dscp.Core.Foundation as T
 import Dscp.Crypto (PublicKey, Signature, hashF)
 import Dscp.Snowdrop.Types (Account, AccountId (..), AccountTxTypeId (..),
                             AccountValidationException, PublicationTxTypeId (..),
-                            PublicationValidationError)
+                            PublicationValidationException)
 import Dscp.Witness.Logic.Exceptions (LogicException)
 
 ----------------------------------------------------------------------------
@@ -146,7 +146,7 @@ data Exceptions
     | BlockApplicationError     (BlockApplicationException  HeaderHash)
     | StateModificationError    (StateModificationException Ids)
     | AccountValidationError     AccountValidationException
-    | PublicationValidationError PublicationValidationError
+    | PublicationValidationError PublicationValidationException
     | RedundantIdError           RedundantIdException
     | ValidatorExecError         ValidatorExecException
     | CSMappendError            (CSMappendException         Ids)

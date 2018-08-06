@@ -13,9 +13,10 @@ import qualified Snowdrop.Util as SD
 
 import Dscp.Core hiding (PublicationTxWitness)
 import Dscp.Crypto (PublicKey, Signature, hash, verify)
-import Dscp.Snowdrop.AccountValidation as A
+import Dscp.Snowdrop.AccountValidation
 import Dscp.Snowdrop.Configuration
 import Dscp.Snowdrop.Mode
+import Dscp.Snowdrop.PublicationValidation
 import Dscp.Witness.Config
 
 ----------------------------------------------------------------------------
@@ -36,8 +37,8 @@ instance
 instance
     SD.VerifySign
         PublicKey
-        (Signature (TxId, PublicKey, Publication))
-        (TxId, PublicKey, Publication)
+        (Signature (PublicationTxId, PublicKey, Publication))
+        (PublicationTxId, PublicKey, Publication)
   where
     verifySignature = verify
 
@@ -83,8 +84,8 @@ _baseValidator ::
        forall chgAccum.
        SD.Validator Exceptions Ids Proofs Values (IOCtx chgAccum)
 _baseValidator =
-    A.validateSimpleMoneyTransfer
-        @(IOCtx chgAccum)
+    validateSimpleMoneyTransfer @(IOCtx chgAccum) <>
+    validatePublication @(IOCtx chgAccum)
 
 ----------------------------------------------------------------------------
 -- Block configuration

@@ -5,12 +5,8 @@
 -- snowdrop at some point :yao:
 
 module Dscp.Snowdrop.AccountValidation
-       ( AccountTxTypeId (..)
-       , validateSimpleMoneyTransfer
-       , AccountId(..)
-       , Account(..)
-       , Author(..)
-       , AccountValidationException(..)
+       ( validateSimpleMoneyTransfer
+
        -- , accountComputeFee
        , validateSaneArrival
        , validateSaneDeparture
@@ -31,8 +27,7 @@ import Dscp.Core.Foundation (Address, TxId)
 import Dscp.Crypto (PublicKey)
 import Dscp.Snowdrop.Configuration (CanVerifyPayload, Exceptions, Ids, PersonalisedProof, Proofs,
                                     TxIds, Values)
-import Dscp.Snowdrop.Types (Account (..), AccountId (..), AccountTxTypeId (..),
-                            AccountValidationException (..), Author (..))
+import Dscp.Snowdrop.Types
 import Snowdrop.Model.State.Core (ERoComp, HasKeyValue, PreValidator (..), StatePException,
                                   StateTx (..), StateTxType (..), TxValidationException (..),
                                   Validator, mkValidator, queryOne, validateIff)

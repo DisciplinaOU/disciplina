@@ -17,10 +17,9 @@ import Snowdrop.Model.State.Restrict (RestrictCtx)
 import Snowdrop.Util
 
 import Dscp.Core.Foundation
-import Dscp.Snowdrop.AccountValidation (Account (..), AccountId (..), AccountTxTypeId (..))
 import Dscp.Snowdrop.Configuration hiding (PublicationTxWitness)
 import qualified Dscp.Snowdrop.Configuration as Conf (Proofs (..))
-import Dscp.Snowdrop.PublicationValidation (PublicationTxTypeId (..))
+import Dscp.Snowdrop.Types
 
 ----------------------------------------------------------------------------
 -- Top-level expanders
