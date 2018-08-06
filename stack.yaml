@@ -13,6 +13,7 @@ nix:
 extra-deps:
 - aeson-options-0.0.0
 - base58-bytestring-0.1.0
+- cryptonite-openssl-0.7
 - pretty-tree-0.1.0.0
 - time-units-1.0.0
 - componentm-0.0.0.2
