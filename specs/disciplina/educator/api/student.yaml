@@ -10,7 +10,7 @@ info:
     name: Apache 2.0
     url: "http://www.apache.org/licenses/LICENSE-2.0.html"
 host: "localhost:8090"
-basePath: /v1
+basePath: /api/student/v1
 tags:
   - name: courses
     description: "Methods for working with student's courses."
@@ -229,7 +229,7 @@ definitions:
   Hash:
     type: string
     format: byte
-    description: "Base64url encoded blake2b (256 bits) hash"
+    description: "Hex encoded blake2b (256 bits) hash"
     
   Address:
     type: string
