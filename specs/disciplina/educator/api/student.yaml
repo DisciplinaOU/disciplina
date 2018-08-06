@@ -362,9 +362,9 @@ definitions:
         format: binary
         description: Concatenated student public key and submission hash signed with student secret key.
     example:
-      assignmentHash: "a6f1c3647587c4df91efc443a4e6987f09e2a98e6d30288c19813bfadee9b291"
-      contentsHash: "2bd0ef6a991ff595463c83d0a03144ca96412f64f22ef0468771e0ba93817d2c"
-      witness: "830058206adc59f0c7c600740614cc9e008e8d498e641a48d012b8cc532d9fc8b6709b7e5840d1e4613445eef4e70e760a5b77d7113a343d165894e5a77912716be916dd481d53f6f271a4f492ae23069fa37942a18828ca00951599697971114f827550e90b"
+      assignmentHash: "3ac844212387a8ed8a1702a3ba7309bd2841f7d2959749fecd08781d986480d3"
+      contentsHash: "7b6d0c6de38639cc6063e9c36f9dcdb71fff60fe551ccc757246a3bf2fa00f37"
+      witness: "830058206adc59f0c7c600740614cc9e008e8d498e641a48d012b8cc532d9fc8b6709b7e5840601d28410a8ccd18065738d8ddaee331922963757565e9716d973c9a306d919f8e15cd4d3d6cac59a2049c926eb66aafd277965886dcb0cfa67afc90d8a1c902"
 
   Transaction:
     type: object

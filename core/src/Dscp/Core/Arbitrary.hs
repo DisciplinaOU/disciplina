@@ -135,11 +135,10 @@ assignmentEx =
 
 signedSubmissionEx :: SignedSubmission
 signedSubmissionEx = detGen 123 $ do
-    _sContentsHash <- arbitrary
     let submission = Submission
             { _sStudentId = studentEx
+            , _sContentsHash = offlineHash
             , _sAssignmentId = getId assignmentEx
-            , ..
             }
     (_, _, sigsub :| _) <-
         genStudentSignedSubmissions (pure studentSKEx) (pure submission)
