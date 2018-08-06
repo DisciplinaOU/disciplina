@@ -1,0 +1,111 @@
+swagger: "2.0"
+info:
+  description: "This is an HTTP API for interacting with Disciplina Faucet. It is used by Faucet frontend to generate keys and submitting money to user accounts."
+  version: 0.1.0
+  title: Disciplina Faucet API
+  termsOfService: "https://disciplina.io/tnc.pdf"
+  contact:
+    email: hi@serokell.io
+  license:
+    name: Apache 2.0
+    url: "http://www.apache.org/licenses/LICENSE-2.0.html"
+host: "localhost:8095"
+basePath: /api/faucet/v1
+schemes:
+  - https
+  - http
+paths:
+  /keygen:
+    post:
+      summary: Generate a key pair.
+      operationId: genKeyPair
+      consumes:
+      - application/json
+      produces: 
+      - application/json
+      parameters:
+      - in: body
+        name: body
+        required: false
+        description: Hex-encoded password.
+        schema:
+          $ref: "#/definitions/GenKeyReq"
+      responses:
+        200:
+          description: successful operation
+          schema:
+            type: object
+            required:
+            - encSecretKey
+            - publicKey
+            properties:
+              encSecretKey:
+                type: string
+                description: "Hex encoded secret key encrypted with the given password"
+              publicKey:
+                type: string
+                description: "Hex encoded public key"
+        400:
+          description: Password is too short or too long
+          schema:
+            $ref: "#/definitions/ErrResponse"
+
+  /transfer:
+    post:
+      summary: Transfer money to given address
+      operationId: transferMoneyTo
+      consumes:
+      - application/json
+      produces:
+      - application/json
+      parameters:
+      - in: body
+        name: body
+        required: true
+        schema:
+          $ref: "#/definitions/TransferReq"
+      responses:
+        200:
+          description: successful operation
+        403:
+          description: Given address already received money previously
+          schema:
+            $ref: "#/definitions/ErrResponse"
+        503:
+          description: Source account exhausted
+          schema:
+            $ref: "#/definitions/ErrResponse"
+
+definitions:
+  ErrResponse:
+    type: object
+    required:
+      - error
+    properties:
+      error:
+        type: string
+        enum:
+          - InvalidFormat
+          - AddressAlreadyGifted
+          - SourceAccountExhausted
+        description: >-
+          * `InvalidFormat` - Failed to deserialise one of parameters.
+          * `AddressAlreadyGifted`: Given address has already requested faucet for money and cannot do that again.
+          * `SourceAccountExhausted`: Specified source account has not enough money for further transfers, the event is over!
+
+  TransferReq:
+    type: object
+    required:
+    - destination
+    properties:
+      destination:
+        type: string
+        description: Hex-encoded destination address
+        example: LL4qKmtpBGs95j1fDYWsyPJSzvkATGNvu1PXyxMbEkZrsVSshB1dGCDp
+  GenKeyReq:
+    type: object
+    properties:
+      password:
+        type: string
+        description: Hex-encoded password for secret key
+        example: 70617373776f7264
