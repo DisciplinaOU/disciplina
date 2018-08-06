@@ -1,8 +1,13 @@
 with import <nixpkgs> { overlays = [ (import <serokell-overlay/pkgs>) ]; };
 with haskell.lib;
-
-buildStackApplication {
-  package = "disciplina-educator";
+let
+  getAttrs = attrs: set: lib.genAttrs attrs (name: set.${name});
+in
+buildStackApplication rec {
+  packages = [
+    "disciplina-core" "disciplina-witness" "disciplina-educator"
+    "disciplina-wallet" "disciplina-tools"
+  ];
 
   # Running hpack manually before the build is required
   # because of the problem in stack2nix -- it builds every
@@ -31,12 +36,5 @@ buildStackApplication {
         overrideModule = prev: overrideCabal prev (overridingSet final);
     in {
       rocksdb-haskell = dependCabal previous.rocksdb-haskell [ rocksdb ];
-
-      # Is it possible to minimise this boilerplate?
-      disciplina-core = overrideModule previous.disciplina-core;
-      disciplina-witness = overrideModule previous.disciplina-witness;
-      disciplina-educator = overrideModule previous.disciplina-educator;
-      disciplina-wallet = overrideModule previous.disciplina-wallet;
-      disciplina-tools = overrideModule previous.disciplina-tools;
-    };
+    } // (lib.mapAttrs (lib.const overrideModule) (getAttrs packages previous));
 }
