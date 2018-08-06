@@ -6,6 +6,7 @@ module Dscp.Witness.Workers.Worker
     ( witnessWorkers
     ) where
 
+import Control.Concurrent (threadDelay)
 import qualified Data.List.NonEmpty as NE
 import Fmt (listF, listF', (+|), (+||), (|+), (||+))
 import Loot.Log (logDebug, logError, logInfo, logWarning)
@@ -38,6 +39,10 @@ blockUpdateWorker =
     -- We ask for a tip on startup to synchronise.
     bootstrap :: ClientEnv NetTag -> m ()
     bootstrap btq = do
+        -- Small delay is needed b/c otherwise simultaneous launch of
+        -- several nodes can lead to situation when request is sent to
+        -- uninitalised listener of other node.
+        liftIO $ threadDelay 200000
         logDebug "Bootstrapped, asking for a tip"
         cliSend btq Nothing GetTipMsg
 
