@@ -13,8 +13,8 @@ module Dscp.Witness.Messages
     , TipMsg (..)
 
     , PubBlock (..)
-    , DistributeBlock (..)
-    , RetranslateTx (..)
+    , SendTx (..)
+    , PubTx (..)
     ) where
 
 import Codec.Serialise (Serialise)
@@ -53,12 +53,12 @@ instance Message MsgK TipMsg where type MsgTag MsgK TipMsg = 3
 
 data PubBlock = PubBlock Block deriving (Show,Generic)
 instance Serialise PubBlock
-instance Message SubK PubBlock where type MsgTag SubK PubBlock = 4
+instance Message SubK PubBlock where type MsgTag SubK PubBlock = 100
 
-data DistributeBlock = DistributeBlock Block deriving (Generic,Show)
-instance Serialise DistributeBlock
-instance Message MsgK DistributeBlock where type MsgTag MsgK DistributeBlock = 5
+data SendTx = SendTx { getSendTx :: GTxWitnessed } deriving (Generic,Show)
+instance Serialise SendTx
+instance Message MsgK SendTx where type MsgTag MsgK SendTx = 101
 
-data RetranslateTx = RetranslateTx GTxWitnessed deriving (Generic,Show)
-instance Serialise RetranslateTx
-instance Message SubK RetranslateTx where type MsgTag SubK RetranslateTx = 6
+data PubTx = PubTx { getPubTx :: GTxWitnessed } deriving (Generic,Show)
+instance Serialise PubTx
+instance Message SubK PubTx where type MsgTag SubK PubTx = 102
