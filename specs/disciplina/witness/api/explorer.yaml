@@ -17,14 +17,20 @@ schemes:
 paths:
   /blocks:
     get:
-      summary: Get list of blocks (paginated).
+      summary: >-
+        Get list of blocks.
+        Only the batch of N most recent blocks are returned at once.
+        The hash of the last block in the batch can be passed as `before` parameter to get the next batch.
       operationId: getBlocks
       produces:
       - application/json
       parameters:
       - in: query
         name: before
-        description: Get only blocks before (not including) the specified one. If not specified, get the most recent blocks.
+        description: >-
+          The hash of the oldest block in the previous batch.
+          Get the batch of blocks before (not including) the specified one.
+          If not specified, get the most recent blocks.
         required: false
         type: string
         format: byte
@@ -35,6 +41,10 @@ paths:
             type: array
             items:
               $ref: "#/definitions/BlockInfo"
+        400:
+          description: Invalid input
+          schema:
+            $ref: "#/definitions/ErrResponse"
         404:
           description: Block not found
   /blocks/{headerHash}:
@@ -55,6 +65,10 @@ paths:
           description: Successful operation
           schema:
             $ref: "#/definitions/BlockInfo"
+        400:
+          description: Invalid input
+          schema:
+            $ref: "#/definitions/ErrResponse"
         404:
           description: Block not found
   /addresses/{address}:
@@ -75,11 +89,18 @@ paths:
           description: Successful operation
           schema:
             $ref: "#/definitions/AddressInfo"
+        400:
+          description: Invalid input
+          schema:
+            $ref: "#/definitions/ErrResponse"
         404:
           description: Address not found
   /transactions/{transactionHash}:
     get:
-      summary: Get information about a transaction.
+      summary: >-
+        Get information about a transaction.
+        `txType` field of the result object will denote the type of transaction: "money" or "publication".
+        The corresponding key in the object will contain the rest of information about the transaction.
       operationId: getTransaction
       produces: 
       - application/json
@@ -95,6 +116,10 @@ paths:
           description: Successful operation
           schema:
             $ref: "#/definitions/TransactionInfo"
+        400:
+          description: Invalid input
+          schema:
+            $ref: "#/definitions/ErrResponse"
         404:
           description: Transaction not found
 
@@ -172,6 +197,18 @@ definitions:
             $ref: "#/definitions/Hash"
           prevBlock:
             $ref: "#/definitions/Hash"
+  ErrResponse:
+    type: object
+    required:
+      - error
+    properties:
+      error:
+        type: string
+        enum:
+          - InvalidFormat
+        description: >-
+          Error type:
+            * `InvalidFormat` - Failed to deserialise one of parameters.
 
 externalDocs:
   description: Find out more about Swagger
