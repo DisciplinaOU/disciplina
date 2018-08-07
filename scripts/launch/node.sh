@@ -7,13 +7,6 @@ base=$(dirname "$0")
 # project root
 root="$base/../.."
 
-# permanent read-only files: configs, secrets...
-files="$root/run"
-# gitignored files: databases...
-tmp_files="$files/tmp"
-
-mkdir $tmp_files 2> /dev/null || true
-
 ##################
 # Parsing params
 ##################
@@ -36,9 +29,22 @@ do
     fi
 done
 
+if [[ "$node" == "" ]]; then
+    echo "Please specify which node to run (e.g. \"educator\" or just \"e\")"
+    exit 1
+else
+
 ##################
 # Launch
 ##################
+
+# permanent read-only files: configs, secrets...
+files="$root/run"
+# gitignored files: databases...
+tmp_files="$files/tmp/$node"
+
+mkdir $tmp_files 2> /dev/null || true
+
 
 witness_web_addr="127.0.0.1:8091"
 
@@ -94,10 +100,7 @@ elif [[ "$node" == "witness" ]]; then
     stack exec "dscp-witness" -- $witness_params
 elif [[ "$node" == "faucet" ]]; then
     stack exec "dscp-faucet" -- $faucet_params
-elif [[ "$node" == "" ]]; then
-    echo "Please specify which node to run (e.g. \"educator\" or just \"e\")"
-    exit 1
-else
+fi
     echo "Unknown node type \"$node\""
     exit 1
 fi
