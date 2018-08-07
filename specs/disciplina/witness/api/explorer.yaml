@@ -62,7 +62,9 @@ paths:
         200:
           description: Successful operation
           schema:
-            $ref: "#/definitions/BlockInfo"
+            allOf:
+            - $ref: "#/definitions/BlockInfo"
+            - $ref: "#/definitions/TransactionList"
         400:
           description: Invalid input
           schema:
@@ -88,7 +90,9 @@ paths:
         200:
           description: Successful operation
           schema:
-            $ref: "#/definitions/AddressInfo"
+            allOf:
+            - $ref: "#/definitions/AddressInfo"
+            - $ref: "#/definitions/TransactionList"
         400:
           description: Invalid input
           schema:
@@ -160,10 +164,6 @@ definitions:
         format: int64
       prevHash:
         $ref: "#/definitions/Hash"
-      transactions:
-        type: array
-        items:
-          $ref: "#/definitions/TransactionInfo"
   AddressInfo:
     type: object
     properties:
@@ -201,6 +201,13 @@ definitions:
             $ref: "#/definitions/Hash"
           prevBlock:
             $ref: "#/definitions/Hash"
+  TransactionList:
+    type: object
+    properties:
+      transactions:
+        type: array
+        items:
+          $ref: "#/definitions/TransactionInfo"
   ErrResponse:
     type: object
     required:
