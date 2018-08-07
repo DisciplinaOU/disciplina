@@ -19,7 +19,7 @@ paths:
     get:
       summary: Get list of blocks.
       description: >-
-        Only the batch of N most recent blocks are returned at once.
+        Only the batch of `count` most recent blocks are returned at once.
         The hash of the last block in the batch can be passed as `before` parameter to get the next batch.
       operationId: getBlocks
       produces:
@@ -34,6 +34,14 @@ paths:
         required: false
         type: string
         format: byte
+      - in: query
+        name: count
+        description: The amount of blocks returned.
+        required: false
+        default: 100
+        maximum: 100
+        type: integer
+        format: int32
       responses:
         200:
           description: Successful operation
