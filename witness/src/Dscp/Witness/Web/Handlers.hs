@@ -19,7 +19,8 @@ witnessServantHandlers
     => ServerT WitnessAPI m
 witnessServantHandlers =
     toServant @(WitnessEndpoints (AsServerT m)) WitnessEndpoints
-    { wGetAccountState = getAccountState
+    { wPing = pass
+    , wGetAccountState = getAccountState
     , wSubmitTx = submitUserTx
     , wSubmitTxAsync = submitUserTxAsync
     }

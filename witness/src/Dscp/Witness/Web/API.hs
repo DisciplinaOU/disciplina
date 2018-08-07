@@ -17,7 +17,12 @@ import Dscp.Witness.Web.Types
 data WitnessEndpoints route = WitnessEndpoints
     { -- shortened prefix for purpose, one will most probably use type aliases
       -- refering this type
-      wGetAccountState :: route
+
+      wPing :: route
+        :- "ping"
+        :> Verb 'GET 200 '[JSON] ()
+
+    , wGetAccountState :: route
         :- "account" :> Capture "accountId" Address
         :> "state"
         :> Verb 'GET 200 '[JSON] AccountState

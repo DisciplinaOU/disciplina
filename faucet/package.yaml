@@ -34,5 +34,7 @@ executables:
       - disciplina-faucet
       - disciplina-wallet
       - disciplina-witness
+      - loot-base
+      - loot-log
       - optparse-applicative
       - text

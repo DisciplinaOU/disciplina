@@ -28,7 +28,8 @@ hoistWitnessClient
     -> WitnessEndpoints (AsClientT n)
 hoistWitnessClient nat es =
     WitnessEndpoints
-    { wGetAccountState = nat ... wGetAccountState es
+    { wPing = nat ... wPing es
+    , wGetAccountState = nat ... wGetAccountState es
     , wSubmitTx = nat ... wSubmitTx es
     , wSubmitTxAsync = nat ... wSubmitTxAsync es
     }
