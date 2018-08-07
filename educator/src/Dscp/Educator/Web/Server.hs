@@ -8,7 +8,7 @@ module Dscp.Educator.Web.Server
 
 import Fmt ((+|), (|+))
 import Loot.Log (logInfo)
-import Servant ((:<|>) (..), (:>), Handler, Server, hoistServer, serve)
+import Servant ((:<|>) (..), Handler, Server, hoistServer, serve)
 import Servant.Generic (toServant)
 
 import Dscp.Educator.Config (HasEducatorConfig)
@@ -21,11 +21,10 @@ import Dscp.Educator.Web.Student (StudentAPI, convertStudentApiHandler, studentA
                                   studentApiHandlers)
 import Dscp.Web (ServerParams (..), serveWeb)
 
-type EducatorWebAPI = "api" :> (
-    "educator" :> EducatorAPI
+type EducatorWebAPI =
+    EducatorAPI
     :<|>
-    "student" :> StudentAPI
-  )
+    StudentAPI
 
 mkEducatorApiServer
     :: forall ctx m. EducatorWorkMode ctx m

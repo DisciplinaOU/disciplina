@@ -27,7 +27,8 @@ data WitnessEndpoints route = WitnessEndpoints
         :> Verb 'POST 201 '[JSON] NoContent
     } deriving (Generic)
 
-type WitnessAPI = "v1" :> ToServant (WitnessEndpoints AsApi)
+type WitnessAPI =
+    "api" :> "witness" :> "v1" :> ToServant (WitnessEndpoints AsApi)
 
 witnessAPI :: Proxy WitnessAPI
 witnessAPI = Proxy
