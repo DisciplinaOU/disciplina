@@ -15,7 +15,7 @@ import Dscp.Core
 -- | Keeps set of addresses which has already got money from faucet.
 type GiftedAddresses = TVar (Set Address)
 
--- | Provides sequencial transaction submission.
+-- | Provides sequential transaction submission.
 type TxSendLock = MVar ()
 
 -- | All faucet variables.

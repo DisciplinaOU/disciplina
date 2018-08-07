@@ -7,7 +7,7 @@ module Dscp.Faucet.Web.Types
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveFromJSON, deriveToJSON)
 import qualified Data.Text.Buildable
-import Fmt ((|+))
+import Fmt ((+|), (|+))
 
 import Dscp.Core
 import Dscp.Crypto
@@ -22,6 +22,7 @@ newtype GenKeysRequest = GenKeysRequest
 data GenKeysResponse = GenKeysResponse
     { gkrEncSecretKey :: CustomEncoding Base64Encoded (Encrypted SecretKey)
     , gkrPublicKey    :: PublicKey
+    , gkrAddress      :: Address
     }
 
 -- | Wrapper to generate proper JSON instance for request body.
@@ -40,7 +41,8 @@ instance Buildable GenKeysRequest where
         Just _  -> "some password O_o"
 
 instance Buildable (ForResponseLog GenKeysResponse) where
-    build _ = "<some keys>"
+    build (ForResponseLog GenKeysResponse{..}) =
+        "Keys for '" +| gkrAddress |+ "'"
 
 instance Buildable TransferMoneyRequest where
     build TransferMoneyRequest{..} = tmrDestination |+ ""

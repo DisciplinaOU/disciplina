@@ -65,4 +65,6 @@ data FaucetDecodeErrTag
 instance Reifies FaucetDecodeErrTag String where
     reflect _ = decodeUtf8 $ encode InvalidFormat
 
+-- | Marker like 'JSON' for servant, but returns just "InvalidFormat" on
+-- decoding error.
 type DSON = SimpleJSON FaucetDecodeErrTag

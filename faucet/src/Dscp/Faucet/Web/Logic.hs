@@ -45,7 +45,7 @@ faucetTransferMoneyTo dest = do
     lock <- view (lensOf @TxSendLock)
     TranslatedAmount transfer <- view (lensOf @TranslatedAmount)
 
-    -- sad truth: we have to submit transactions sequencially in order to use
+    -- sad truth: we have to submit transactions sequentially in order to use
     -- sound nonces
     withMVar lock $ \() -> do
         sourceState <- wGetAccountState wc source

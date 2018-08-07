@@ -7,6 +7,7 @@ module Dscp.Faucet.Web.Handlers
 
 import Servant (Handler, throwError)
 
+import Dscp.Core
 import Dscp.Crypto
 import Dscp.Faucet.Launcher
 import Dscp.Faucet.Web.API
@@ -27,6 +28,7 @@ faucetApiHandlers =
           return GenKeysResponse
               { gkrEncSecretKey = CustomEncoding esk
               , gkrPublicKey = pk
+              , gkrAddress = mkAddr pk
               }
 
     , fTransferMoneyTo = \(TransferMoneyRequest dest) ->
