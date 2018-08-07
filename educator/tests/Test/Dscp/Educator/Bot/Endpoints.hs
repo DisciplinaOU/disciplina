@@ -3,7 +3,6 @@ module Test.Dscp.Educator.Bot.Endpoints where
 import Dscp.Core.Arbitrary
 import Dscp.Educator.Web.Bot
 import Dscp.Educator.Web.Student
-import Dscp.Util
 import Dscp.Util.Test
 
 import Test.Dscp.DB.SQLite.Common
@@ -37,11 +36,12 @@ spec_StudentApiWithBotQueries = describe "Basic properties" $ do
         sqliteProperty $ \
           ( seed
           , delayedGen
-              (genStudentSignedSubmissions
-                  (pure oneGeekSK)
-                  (arbitrary <&> \s -> s{ _sAssignmentId = getId assignmentEx }))
-            -> (_, _, sigsub :| _)
+            (genCoreTestEnv simpleCoreTestParams
+                            { ctpSecretKey = oneTestItem (pure oneGeekSK)
+                            , ctpAssignment = oneTestItem (pure assignmentEx) })
+             -> env
           ) -> do
+            let sigsub = tiOne $ cteSignedSubmissions env
             StudentApiEndpoints{..} <- testMakeBotHandlers seed
             void $ sMakeSubmission (signedSubmissionToRequest sigsub)
             [submission] <- sGetSubmissions Nothing Nothing Nothing

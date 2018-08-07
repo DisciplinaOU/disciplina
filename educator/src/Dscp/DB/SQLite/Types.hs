@@ -39,7 +39,7 @@ newtype SQLiteDB = SQLiteDB { sdConn :: Connection }
 data TxBlockIdx
     = TxBlockIdx Word32
     | TxInMempool
-    deriving (Eq)
+    deriving (Eq, Show)
 
 -- | Convert between 'TxBlockIdx' and true index which can be used in database.
 intTxBlockIdx :: Prism' Int TxBlockIdx

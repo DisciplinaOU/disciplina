@@ -9,7 +9,6 @@ import Control.Lens (mapped)
 import Dscp.Core.Arbitrary
 import qualified Dscp.Crypto.MerkleTree as MerkleTree
 import Dscp.DB.SQLite as DB
-import Dscp.Educator.Arbitrary
 import Dscp.Util (Id (..), allUniqueOrd)
 
 import Test.Dscp.DB.SQLite.Common
@@ -68,9 +67,10 @@ spec_Instances = do
 
             it "Submission is not created unless Student exist" $
                 sqliteProperty $ \
-                    ( delayedGen (genStudentSignedSubmissions arbitrary arbitrary)
-                      -> (_, assignment, sigSubmission :| _)
+                    ( delayedGen (genCoreTestEnv simpleCoreTestParams) -> env
                     ) -> do
+                    let assignment    = tiOne $ cteAssignments env
+                        sigSubmission = tiOne $ cteSignedSubmissions env
 
                     let course     = assignment   ^.aCourseId
 
@@ -83,9 +83,10 @@ spec_Instances = do
 
             it "Submission is not created unless StudentAssignment exist" $
                 sqliteProperty $ \
-                    ( delayedGen (genStudentSignedSubmissions arbitrary arbitrary)
-                      -> (_, assignment, sigSubmission :| _)
+                    ( delayedGen (genCoreTestEnv simpleCoreTestParams) -> env
                     ) -> do
+                    let assignment    = tiOne $ cteAssignments env
+                        sigSubmission = tiOne $ cteSignedSubmissions env
 
                     throws @DomainError $ do
                         let submission = sigSubmission^.ssSubmission
@@ -103,9 +104,10 @@ spec_Instances = do
         describe "Transactions" $ do
             it "Transaction is created if all deps exist" $
                 sqliteProperty $ \
-                    ( delayedGen (genPrivateTx arbitrary)
-                      -> (_, assignment, trans :| _)
+                    ( delayedGen (genCoreTestEnv simpleCoreTestParams) -> env
                     ) -> do
+                    let assignment    = tiOne $ cteAssignments env
+                        trans         = tiOne $ ctePrivateTxs env
 
                     let sigSubmission = trans        ^.ptSignedSubmission
                         submission    = sigSubmission^.ssSubmission
@@ -199,9 +201,10 @@ spec_Instances = do
 
         it "submitAssignment" $
             sqliteProperty $ \
-                ( delayedGen (genStudentSignedSubmissions arbitrary arbitrary)
-                  -> (_, assignment, sigSubmission :| _)
+                ( delayedGen (genCoreTestEnv simpleCoreTestParams) -> env
                 ) -> do
+                let assignment    = tiOne $ cteAssignments env
+                    sigSubmission = tiOne $ cteSignedSubmissions env
 
                 let submission = sigSubmission^.ssSubmission
                     course     = assignment   ^.aCourseId
@@ -221,10 +224,11 @@ spec_Instances = do
 
         it "getGradesForCourseAssignments" $
             sqliteProperty $ \
-                ( delayedGen (genPrivateTx arbitrary)
-                  -> (_, assignment, trans :| _)
+                ( delayedGen (genCoreTestEnv simpleCoreTestParams) -> env
                 , course2
                 ) -> do
+                let assignment    = tiOne $ cteAssignments env
+                    trans         = tiOne $ ctePrivateTxs env
 
                 let sigSubmission = trans        ^.ptSignedSubmission
                     submission    = sigSubmission^.ssSubmission
@@ -270,12 +274,14 @@ spec_Instances = do
     describe "Retrieval of proven transactions" $ do
         it "getProvenStudentTransactionsSince" $
             sqliteProperty $ \
-                ( delayedGen (genPrivateTx arbitrary)
-                  -> (student, assignment, (toList -> transactions'))
+                ( delayedGen (genCoreTestEnv simpleCoreTestParams) -> env
                 ) -> do
+                    let student      = tiOne $ cteStudents env
+                        assignment   = tiOne $ cteAssignments env
+                        transactions = tiInfUnique $ ctePrivateTxs env
+
                     studentId <- DB.createStudent student
 
-                    let transactions           = transactions' & mapped.ptSignedSubmission.ssSubmission.sStudentId .~ studentId
                     let (_ : rest@ (next : _)) = sortWith _ptTime transactions
                         pointSince             = next^.ptTime
 
@@ -289,7 +295,7 @@ spec_Instances = do
                         aId <- DB.createAssignment       assignment        `orIfItFails` getId assignment
                         _   <- DB.setStudentAssignment   studentId aId     `orIfItFails` ()
                         _   <- sqlTransaction $
-                                DB.createSignedSubmission sigSubmission     `orIfItFails` getId sigSubmission
+                               DB.createSignedSubmission sigSubmission     `orIfItFails` getId sigSubmission
 
                         ptId <- DB.createTransaction trans
                         return ptId

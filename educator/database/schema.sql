@@ -126,7 +126,7 @@ create trigger if not exists Submissions_fill_time
     after insert on Submissions for each row
 begin
     update Submissions
-    set creation_time = CURRENT_TIMESTAMP
+    set creation_time = strftime("%Y-%m-%d %H:%M:%f", "now")
     where hash = new.hash;
 end;
 

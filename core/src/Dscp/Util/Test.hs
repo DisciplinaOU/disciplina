@@ -101,6 +101,11 @@ listUnique = sized $ \n -> do
     k <- choose (0, n)
     vectorUniqueOf k arbitrary
 
+takeSome :: [a] -> Gen (NonEmpty a)
+takeSome l = sized $ \n -> do
+    k <- choose (1, n)
+    return (take k l) `suchThatMap` nonEmpty
+
 -- | Create public key from seed
 mkPubKey :: Char -> PublicKey
 mkPubKey seed = fst (mkKeyPair seed)

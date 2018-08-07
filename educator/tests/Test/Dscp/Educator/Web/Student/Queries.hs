@@ -1,11 +1,14 @@
 module Test.Dscp.Educator.Web.Student.Queries where
 
+import Control.Concurrent (threadDelay)
+import Control.Lens (to)
+import qualified Data.Foldable as F
 import Data.List (nub, (!!))
 import Data.Time.Clock (UTCTime (..))
 
+import Database.SQLite.Simple (setTrace)
 import Dscp.Core
-import Dscp.Core.Arbitrary (genStudentSignedSubmissions)
-import Dscp.Crypto (Hash, Raw, hash)
+import Dscp.Crypto (Hash, Raw, hash, unsafeHash)
 import Dscp.DB.SQLite (MonadSQLiteDB, WithinSQLTransaction, sqlTransaction, _AssignmentDoesNotExist,
                        _SubmissionDoesNotExist)
 import qualified Dscp.DB.SQLite as CoreDB
@@ -68,28 +71,29 @@ getAllSubmissions student =
 -- entities.
 prepareForSubmissions
     :: (MonadSQLiteDB m, MonadThrow m)
-    => NonEmpty SignedSubmission -> Assignment -> m ()
-prepareForSubmissions (toList -> sigSubmissions) assignment = do
-    let submissions = map _ssSubmission sigSubmissions
-        course = _aCourseId assignment
-        owners = map _sStudentId submissions
+    => CoreTestEnv -> m ()
+prepareForSubmissions CoreTestEnv{..} = do
+    let assignments = F.toList cteAssignments
+        courses = map _aCourseId assignments
+        owners = F.toList cteStudents
     mapM_ CoreDB.createStudent (ordNub owners)
-    void $ CoreDB.createCourse course Nothing []
-    forM_ (ordNub owners) $ \owner ->
-        CoreDB.enrollStudentToCourse owner course
-    void $ CoreDB.createAssignment assignment
-    forM_ (ordNub owners) $ \owner ->
-        CoreDB.setStudentAssignment owner
-                                    (getId assignment)
+    forM_ (ordNub courses) $ \course -> do
+          void $ CoreDB.createCourse course Nothing []
+          forM_ (ordNub owners) $ \owner ->
+              CoreDB.enrollStudentToCourse owner course
+    forM_ (ordNub assignments) $ \assignment -> do
+          void $ CoreDB.createAssignment assignment
+          forM_ (ordNub owners) $ \owner ->
+              CoreDB.setStudentAssignment owner
+                                          (getId assignment)
 
--- | For advanced queries. Puts SignedSubmissions in db, tolerates repeating
--- entities.
-prepareAndCreateSubmissions
+prepareAndCreateSubmission
     :: (MonadSQLiteDB m, MonadThrow m)
-    => NonEmpty SignedSubmission -> Assignment -> m ()
-prepareAndCreateSubmissions sigSubmissions assignment = do
-    prepareForSubmissions sigSubmissions assignment
-    sqlTx $ mapM_ CoreDB.submitAssignment (nub $ toList sigSubmissions)
+    => CoreTestEnv -> m ()
+prepareAndCreateSubmission env = do
+    prepareForSubmissions env
+    let sigSub = tiOne $ cteSignedSubmissions env
+    void $ sqlTx $ CoreDB.submitAssignment sigSub
 
 applyFilterOn :: Eq f => (a -> f) -> (Maybe f) -> [a] -> [a]
 applyFilterOn field (Just match) = filter (\a -> field a == match)
@@ -346,13 +350,20 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
         it "Last submission is actually the last" $
             sqliteProperty $
               \( delayedGen
-                 (genStudentSignedSubmissions arbitrary (pure submission1))
-                 -> (student, assignment, sigSubmissions)
+                 (genCoreTestEnv simpleCoreTestParams) -> env
                ) -> do
-                prepareAndCreateSubmissions sigSubmissions assignment
+                let student = tiOne $ cteStudents env
+                    sigSubs = tiListNE $ cteSignedSubmissions env
 
-                let lastSigSubmission = last sigSubmissions
-                    -- submission was changed
+                prepareForSubmissions env
+                conn <- ask
+                liftIO $ setTrace conn (Just putStrLn)
+                forM_ (nub $ toList sigSubs) $ \sigSub -> do
+                    void $ sqlTx $ CoreDB.createSignedSubmission sigSub
+                    liftIO $ threadDelay 10000  -- sqlite keeps time in mcs precision
+                liftIO $ setTrace conn (Nothing)
+
+                let lastSigSubmission = last sigSubs
                 let lastSubmission = _ssSubmission lastSigSubmission
                 let assignmentId = _sAssignmentId lastSubmission
                 assignment' <-
@@ -381,18 +392,19 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
         it "Returns existing submission properly" $
             sqliteProperty $
               \( delayedGen
-                 (genStudentSignedSubmissions arbitrary arbitrary)
-                 -> (_, assignment, sigSubmission :| _)
+                 (genCoreTestEnv simpleCoreTestParams) -> env
                ) -> do
-                let submission = _ssSubmission sigSubmission
+                let owner = tiOne $ cteStudents env
+                    sigSub = tiOne $ cteSignedSubmissions env
+                    assignment = tiOne $ cteAssignments env
+                    submission = _ssSubmission sigSub
                     course = _aCourseId assignment
-                    owner = _sStudentId submission
                 _ <- CoreDB.createStudent owner
                 _ <- CoreDB.createCourse course Nothing []
                 _ <- CoreDB.createAssignment assignment
                 _ <- CoreDB.enrollStudentToCourse owner course
                 _ <- CoreDB.setStudentAssignment owner (getId assignment)
-                _ <- sqlTx $ CoreDB.submitAssignment sigSubmission
+                _ <- sqlTx $ CoreDB.submitAssignment sigSub
                 res <- sqlTx $
                     studentGetSubmission owner (getId submission)
                 return $ res === SubmissionStudentInfo
@@ -405,12 +417,13 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
         it "Fails when student is not submission owner" $
             sqliteProperty $
               \( delayedGen
-                 (genStudentSignedSubmissions arbitrary arbitrary)
-                 -> (_, assignment, sigSubmission :| _)
+                 (genCoreTestEnv simpleCoreTestParams) -> env
+               , user
                ) -> do
-                let submission = _ssSubmission sigSubmission
-                    user = student1
-                    owner = _sStudentId submission
+                let owner = tiOne $ cteStudents env
+                    sigSub = tiOne $ cteSignedSubmissions env
+                    assignment = tiOne $ cteAssignments env
+                    submission = _ssSubmission sigSub
                     course = _aCourseId assignment
                 if user == owner
                 then return $ property rejected
@@ -421,22 +434,21 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                     _ <- CoreDB.createAssignment assignment
                     _ <- CoreDB.enrollStudentToCourse owner course
                     _ <- CoreDB.setStudentAssignment owner (getId assignment)
-                    _ <- sqlTx $ CoreDB.submitAssignment sigSubmission
+                    _ <- sqlTx $ CoreDB.submitAssignment sigSub
                     fmap property $ throwsPrism _SubmissionDoesNotExist $
                         sqlTx $ studentGetSubmission user (getId submission)
 
         it "Returns grade when present" $
             sqliteProperty $
-              \( delayedGen
-                 (genStudentSignedSubmissions arbitrary arbitrary)
-                 -> (_, assignment, sigSubmission :| _)
+              \( delayedGen (genCoreTestEnv simpleCoreTestParams) -> env
                , grade
                ) -> do
-                let submission = _ssSubmission sigSubmission
+                let sigSub = tiOne $ cteSignedSubmissions env
+                let submission = _ssSubmission sigSub
                     student = _sStudentId $ submission
-                prepareAndCreateSubmissions (one sigSubmission) assignment
+                prepareAndCreateSubmission env
                 _ <- CoreDB.createTransaction $
-                     PrivateTx sigSubmission grade someTime
+                     PrivateTx sigSub grade someTime
 
                 submission' <-
                     sqlTx $ studentGetSubmission student (getId submission)
@@ -462,74 +474,80 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
 
         it "Returns existing submission properly and only related to student" $
             sqliteProperty $
-              \(delayedGen (vectorUnique 2) -> sigSubmissions) -> do
+              \( delayedGen (genCoreTestEnv wildCoreTestParams) -> env
+               ) -> do
+                let sigSubs = take 2 . tiInfUnique $ cteSignedSubmissions env
                 let submissions@[someSubmission, _] =
-                        map _ssSubmission sigSubmissions
+                        map _ssSubmission sigSubs
                     [owner1, owner2] = map _sStudentId submissions
                 if owner1 == owner2
                 then return $ property rejected
                 else do
-                    prepareAndCreateSubmissions sigSubmissions
+                    prepareAndCreateSubmission env
 
                     res <- getAllSubmissions owner1
                     return $ res === one SubmissionStudentInfo
                         { siHash = hash someSubmission
                         , siContentsHash = _sContentsHash someSubmission
-                        , siAssignmentHash =
-                            hash (_sAssignment someSubmission)
+                        , siAssignmentHash = _sAssignmentId someSubmission
                         , siGrade = Nothing
                         }
 
         it "Returns grade when present" $
             sqliteProperty $ \
-              ( delayedGen (genStudentSignedSubmissions arbitrary arbitrary)
-                -> (student, assignment, sigSubmissions)
-              , delayedGen infiniteList
-                -> grades
+              ( delayedGen (genCoreTestEnv simpleCoreTestParams) -> env
               ) -> do
-                prepareAndCreateSubmissions sigSubmissions assignment
-                let sigSubmissionsAndGrades =
-                        zip (nub (toList sigSubmissions)) grades
+                let student = tiOne $ cteStudents env
+                    txs     = tiList $ ctePrivateTxs env
+                    sigSubs = tiList $ cteSignedSubmissions env
+                    sigSubsUnique = nub sigSubs
 
-                forM_ sigSubmissionsAndGrades $ \(sigSubmission, grade) ->
-                    CoreDB.createTransaction $
-                    PrivateTx sigSubmission grade someTime
+                if length sigSubs /= length sigSubsUnique
+                then return $ property rejected
+                else do
+                    prepareForSubmissions env
+                    sqlTx $ mapM_ CoreDB.createSignedSubmission sigSubsUnique
+                    mapM_ CoreDB.createTransaction txs
 
-                submissions' <- getAllSubmissions student
-                let submissionsAndGrades' =
-                        map (siHash &&& fmap giGrade . siGrade) submissions'
-                let submissionsAndGrades = sigSubmissionsAndGrades
-                        <&> \(sigSub, grade) ->
-                            (hash $ _ssSubmission sigSub, Just grade)
-                return $
-                    sortOn fst submissionsAndGrades
-                    ===
-                    sortOn fst submissionsAndGrades'
+                    submissions' <- getAllSubmissions student
+                    let submissionsAndGrades' =
+                            map (siHash &&& fmap giGrade . siGrade) submissions'
+                    let submissionsAndGrades = txs <&> \tx ->
+                                ( tx ^. ptSignedSubmission . ssSubmission . to hash
+                                , Just (_ptGrade tx))
+                    return $
+                        sortOn fst submissionsAndGrades
+                        ===
+                        sortOn fst submissionsAndGrades'
 
         it "Filtering works" $
             sqliteProperty $ \
-              ( delayedGen (genStudentSignedSubmissions arbitrary arbitrary)
-                -> (student, assignment, sigSubmissions)
+              ( delayedGen
+                (genCoreTestEnv simpleCoreTestParams
+                                { ctpAssignment = AllRandomItems }) -> env
               , courseIdF
               , assignHF
               , docTypeF
               ) -> do
-                  prepareAndCreateSubmissions sigSubmissions assignment
+                  let student = tiOne $ cteStudents env
+                      sigSubs = nub . tiList $ cteSignedSubmissions env
+                      courses = map _aCourseId . tiList $ cteAssignments env
+
+                  prepareForSubmissions env
+                  sqlTx $ mapM_ CoreDB.createSignedSubmission sigSubs
 
                   submissions <-
                       sqlTx $
                       studentGetSubmissions student courseIdF assignHF docTypeF
 
-                  let subCourseId = _aCourseId . _sAssignment
                   let submissions' =
-                        map (\s -> studentLiftSubmission s Nothing) $
-                        applyFilterOn subCourseId courseIdF $
-                        applyFilterOn (hash . _sAssignment) assignHF $
-                        applyFilterOn _sDocumentType docTypeF $
-                        map _ssSubmission $
-                        toList sigSubmissions
+                        map (\(s, _) -> studentLiftSubmission s Nothing) $
+                        applyFilterOn snd courseIdF $
+                        applyFilterOn (_sAssignmentId . fst) assignHF $
+                        applyFilterOn (_sDocumentType . fst) docTypeF $
+                        map _ssSubmission sigSubs `zip` cycle courses
 
-                  return $ sortOn siHash submissions == sortOn siHash submissions'
+                  return $ sortOn siHash submissions === sortOn siHash submissions'
 
     describe "deleteSubmission" $ do
         it "Deletion of non-existing submission throws" $
@@ -540,14 +558,15 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
 
         it "Delete works" $
             sqliteProperty $
-              \( delayedGen
-                 (genStudentSignedSubmissions arbitrary arbitrary)
-                 -> (student, assignment, sigSubmissions@(sigSubmissiontoDel :| _))
+              \( delayedGen (genCoreTestEnv simpleCoreTestParams) -> env
                ) -> do
-                  prepareAndCreateSubmissions sigSubmissions assignment
+                  let student = tiOne $ cteStudents env
+                      subToDel = tiOne $ cteSignedSubmissions env
+
+                  prepareAndCreateSubmission env
                   subBefore <- getAllSubmissions student
 
-                  let submissionToDel = _ssSubmission sigSubmissiontoDel
+                  let submissionToDel = _ssSubmission subToDel
                   let submissionToDelH = hash submissionToDel
                   sqlTx $ studentDeleteSubmission student submissionToDelH
                   subAfter <- getAllSubmissions student
@@ -557,73 +576,93 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                   return $ sortOn siHash subAfter === sortOn siHash expected
 
         it "Can not delete graded submission" $
-            sqliteProperty $ \
-              ( delayedGen (genStudentSignedSubmissions arbitrary arbitrary)
-                -> (student, assignment, sigSubmission :| _)
-              ) -> do
-                let submission = _ssSubmission sigSubmission
-                    student = _sStudentId $ submission
-                prepareAndCreateSubmissions (one sigSubmission) assignment
+            sqliteProperty $
+              \( delayedGen (genCoreTestEnv simpleCoreTestParams) -> env
+               ) -> do
+                let student = tiOne $ cteStudents env
+                    sigSub = tiOne $ cteSignedSubmissions env
+                    sub = _ssSubmission sigSub
+                prepareAndCreateSubmission env
                 _ <- CoreDB.createTransaction $
-                     PrivateTx sigSubmission gA someTime
+                     PrivateTx sigSub gA someTime
 
                 throwsPrism _DeletingGradedSubmission $ do
-                     sqlTx $ studentDeleteSubmission student (hash submission)
+                     sqlTx $ studentDeleteSubmission student (hash sub)
 
         it "Can not delete other student's submission" $
             sqliteProperty $
-              \( delayedGen
-                 (genStudentSignedSubmissions arbitrary arbitrary)
-                 -> (student, assignment, sigSubmission :| _)
+              \( delayedGen (genCoreTestEnv simpleCoreTestParams) -> env
+               , otherStudent
                ) -> do
-                let submission = _ssSubmission sigSubmission
-                    student = _sStudentId $ submission
-                    Just otherStudent = find (/= student) allStudents
-                prepareAndCreateSubmissions (one sigSubmission) assignment
+                let student = tiOne $ cteStudents env
+                    sigSub = tiOne $ cteSignedSubmissions env
+                    sub = _ssSubmission sigSub
 
-                throwsPrism _SubmissionDoesNotExist $
-                    sqlTx $ studentDeleteSubmission otherStudent (hash submission)
+                if student == otherStudent
+                then return $ property rejected
+                else do
+                    prepareAndCreateSubmission env
+
+                    fmap property . throwsPrism _SubmissionDoesNotExist $
+                        sqlTx $ studentDeleteSubmission otherStudent (hash sub)
 
     describe "makeSubmission" $ do
         it "Making same submission twice throws" $
             sqliteProperty $
-              \( delayedGen
-                 (genStudentSignedSubmissions arbitrary arbitrary)
-                 -> (student, assignment, sigSubmission :| _)
+              \( delayedGen (genCoreTestEnv simpleCoreTestParams) -> env
                ) -> do
-                prepareAndCreateSubmissions (one sigSubmission) assignment
+                let sigSub = tiOne $ cteSignedSubmissions env
+
+                prepareForSubmissions env
+                void $ sqlTx $ CoreDB.submitAssignment sigSub
                 throwsPrism (_EntityAlreadyPresent . _SubmissionAlreadyExists) $
-                    sqlTx $ studentMakeSubmission sigSubmission
+                    sqlTx $ void $ studentMakeSubmission sigSub
 
         it "Making submission works" $
             sqliteProperty $
-              \( delayedGen
-                 (genStudentSignedSubmissions arbitrary arbitrary)
-                 -> (student, assignment, sigSubmission :| _)
+              \( delayedGen (genCoreTestEnv simpleCoreTestParams) -> env
                ) -> do
-                let student = _sStudentId (_ssSubmission sigSubmission)
-                let submissionReq = signedSubmissionToRequest sigSubmission
-                prepareForSubmissions (one sigSubmission) assignment
+                let student = tiOne $ cteStudents env
+                    sigSub = tiOne $ cteSignedSubmissions env
+                    submissionReq = signedSubmissionToRequest sigSub
+                prepareForSubmissions env
                 void $ studentMakeSubmissionVerified student submissionReq
 
                 res <- getAllSubmissions student
-                let submission = _ssSubmission sigSubmission
+                let submission = _ssSubmission sigSub
                 return $ res === [studentLiftSubmission submission Nothing]
 
         it "Pretending to be another student is bad" $
             sqliteProperty $
               \( delayedGen
-                 (genStudentSignedSubmissions arbitrary arbitrary)
-                 -> (student, assignment, sigSubmission :| _)
+                 (genCoreTestEnv simpleCoreTestParams
+                                 { ctpSecretKey = AllRandomItems }) -> env
                , badStudent
                ) -> do
-                if _sStudentId (_ssSubmission sigSubmission) == badStudent
+                let student = tiOne $ cteStudents env
+                    sigSub = tiOne $ cteSignedSubmissions env
+                    newSubmission = signedSubmissionToRequest sigSub
+
+                if student == badStudent
                 then return $ property rejected
                 else do
-                    let newSubmission = signedSubmissionToRequest sigSubmission
-                    prepareForSubmissions (one sigSubmission) assignment
+                    prepareForSubmissions env
                     fmap property $ throwsPrism (_BadSubmissionSignature . _FakeSubmissionSignature) $
                         studentMakeSubmissionVerified badStudent newSubmission
+
+        it "Fake signature does not work" $
+            sqliteProperty $
+              \( delayedGen (genCoreTestEnv simpleCoreTestParams) -> env
+               ) -> do
+                let student = tiOne $ cteStudents env
+                    sigSub = tiOne $ cteSignedSubmissions env
+                    badSub = sigSub & ssSubmission . sContentsHash
+                                        .~ unsafeHash @Text "pva was here"
+                    newSubmission = signedSubmissionToRequest badSub
+
+                prepareForSubmissions env
+                fmap property $ throwsPrism (_BadSubmissionSignature . _SubmissionSignatureInvalid) $
+                    studentMakeSubmissionVerified student newSubmission
 
   describe "Transactions" $ do
     describe "getProofs" $ do

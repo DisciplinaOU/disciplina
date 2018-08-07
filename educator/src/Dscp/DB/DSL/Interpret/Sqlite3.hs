@@ -53,10 +53,7 @@ getPrivateTxsByFilter filterExpr = do
             select    Submissions.student_addr,
                       Submissions.contents_hash,
 
-                      Assignments.course_id,
-                      Assignments.contents_hash,
-                      Assignments.type
-                      Assignments.desc,
+                      Assignments.hash,
 
                       Submissions.signature,
 

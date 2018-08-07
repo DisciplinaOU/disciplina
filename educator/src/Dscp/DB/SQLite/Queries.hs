@@ -166,11 +166,7 @@ getGradesForCourseAssignments student course = do
 
         select     Submissions.student_addr,
                    Submissions.contents_hash,
-                   Assignments.course_id,
-
-                   Assignments.contents_hash,
-                   Assignments.type,
-                   Assignments.desc,
+                   Assignments.hash,
 
                    Submissions.signature,
                    grade,
@@ -199,10 +195,7 @@ getStudentTransactions student = do
 
         select     Submissions.student_addr,
                    Submissions.contents_hash,
-                   Assignments.course_id,
-                   Assignments.contents_hash,
-                   Assignments.type,
-                   Assignments.desc,
+                   Assignments.hash,
                    Submissions.signature,
                    grade,
                    time
@@ -259,10 +252,7 @@ getProvenStudentTransactionsSince studentId sinceTime = do
 
             select     Submissions.student_addr,
                        Submissions.contents_hash,
-                       Assignments.course_id,
-                       Assignments.contents_hash,
-                       Assignments.type,
-                       Assignments.desc,
+                       Assignments.hash,
                        Submissions.signature,
                        Transactions.grade,
                        Transactions.time,
@@ -314,10 +304,7 @@ getAllNonChainedTransactions = do
         -- getAllNonChainedTransactions
         select     Submissions.student_addr,
                    Submissions.contents_hash,
-                   Assignments.course_id,
-                   Assignments.contents_hash,
-                   Assignments.type,
-                   Assignments.desc,
+                   Assignments.hash,
                    Submissions.signature,
                    grade,
                    time
@@ -579,10 +566,7 @@ getSignedSubmission submissionHash = do
         -- from 'getSignedSubmission'
         select     student_addr,
                    Submissions.contents_hash,
-                   Assignments.course_id,
-                   Assignments.contents_hash,
-                   Assignments.type,
-                   Assignments.desc,
+                   Assignments.hash,
                    Submissions.signature
 
         from       Submissions
@@ -627,10 +611,7 @@ getTransaction ptid = do
 
         select     Submissions.student_addr,
                    Submissions.contents_hash,
-                   Assignments.course_id,
-                   Assignments.contents_hash,
-                   Assignments.type,
-                   Assignments.desc,
+                   Assignments.hash,
                    Submissions.signature,
                    grade,
                    time
