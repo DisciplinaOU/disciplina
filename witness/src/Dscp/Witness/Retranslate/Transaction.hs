@@ -9,20 +9,14 @@ import qualified Control.Concurrent.STM as STM
 
 import qualified Data.HashMap.Strict as HashMap
 
-import Fmt ((+|), (+||), (|+), (||+))
-
 import Loot.Base.HasLens (HasLens (..))
-import Loot.Log (logError, logInfo)
-import Loot.Network.Class (ClientEnv, getPeers)
-import Loot.Network.ZMQ (ZmqTcp)
+import Loot.Log (logError)
 
 import Dscp.Crypto (hash)
 import Dscp.Network.Wrapped (Listener (..), Worker (..), cliRecvUpdate, msgType, servPub, subType)
 import Dscp.Witness.Launcher.Mode (WitnessWorkMode)
 import Dscp.Witness.Mempool (MempoolVar, addTxToMempool, isInMempool)
 import Dscp.Witness.Messages (PubTx (..), SendTx (..))
-
-import qualified Loot.Network.BiTQueue as BTQ
 
 -- | Holds input queue for 'SendTx's and all moving parts of the retranslator.
 --
@@ -73,7 +67,7 @@ makeRetranslator = do
         , trMessageConsumer = Worker
             "txRetranslationInitialiser"
             [msgType @SendTx]
-            [subType @PubTx] $ \btq -> do
+            [subType @PubTx] $ \_btq -> do
                 dieGracefully $ do
                     forever $ do
                         SendTx tx <- sync $ STM.readTQueue input
