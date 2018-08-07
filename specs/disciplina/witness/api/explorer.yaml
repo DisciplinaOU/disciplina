@@ -17,8 +17,8 @@ schemes:
 paths:
   /blocks:
     get:
-      summary: >-
-        Get list of blocks.
+      summary: Get list of blocks.
+      description: >-
         Only the batch of N most recent blocks are returned at once.
         The hash of the last block in the batch can be passed as `before` parameter to get the next batch.
       operationId: getBlocks
@@ -45,8 +45,6 @@ paths:
           description: Invalid input
           schema:
             $ref: "#/definitions/ErrResponse"
-        404:
-          description: Block not found
   /blocks/{headerHash}:
     get:
       summary: Get information about a block.
@@ -71,6 +69,8 @@ paths:
             $ref: "#/definitions/ErrResponse"
         404:
           description: Block not found
+          schema:
+            $ref: "#/definitions/ErrResponse"
   /addresses/{address}:
     get:
       summary: Get information about an address.
@@ -95,10 +95,12 @@ paths:
             $ref: "#/definitions/ErrResponse"
         404:
           description: Address not found
+          schema:
+            $ref: "#/definitions/ErrResponse"
   /transactions/{transactionHash}:
     get:
-      summary: >-
-        Get information about a transaction.
+      summary: Get information about a transaction.
+      description: >-
         `txType` field of the result object will denote the type of transaction: "money" or "publication".
         The corresponding key in the object will contain the rest of information about the transaction.
       operationId: getTransaction
@@ -122,6 +124,8 @@ paths:
             $ref: "#/definitions/ErrResponse"
         404:
           description: Transaction not found
+          schema:
+            $ref: "#/definitions/ErrResponse"
 
 definitions:
   Hash:
@@ -206,9 +210,17 @@ definitions:
         type: string
         enum:
           - InvalidFormat
+
+          - BlockNotFound
+          - AddressNotFound
+          - TransactionNotFound
         description: >-
           Error type:
             * `InvalidFormat` - Failed to deserialise one of parameters.
+
+            * `BlockNotFound` - Specified block does not exist.
+            * `AddressNotFound` - Specified address does not exist.
+            * `TransactionNotFound` - Specified transaction does not exist.
 
 externalDocs:
   description: Find out more about Swagger
