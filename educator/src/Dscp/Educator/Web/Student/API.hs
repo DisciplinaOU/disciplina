@@ -31,7 +31,8 @@ data StudentApiEndpoints route = StudentApiEndpoints
     , sGetProofs        :: route :- GetProofs
     } deriving (Generic)
 
-type StudentAPI = "v1" :> ToServant (StudentApiEndpoints AsApi)
+type StudentAPI =
+    "api" :> "student" :> "v1" :> ToServant (StudentApiEndpoints AsApi)
 
 type StudentApiHandlers m = StudentApiEndpoints (AsServerT m)
 

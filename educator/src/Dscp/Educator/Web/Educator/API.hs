@@ -18,6 +18,14 @@ import Dscp.Crypto
 import Dscp.Educator.Web.Educator.Types
 import Dscp.Educator.Web.Types
 
+type EducatorAPI =
+    "api" :> "educator" :> "v1" :> ToServant (EducatorApiEndpoints AsApi)
+
+type EducatorApiHandlers m = EducatorApiEndpoints (AsServerT m)
+
+educatorAPI :: Proxy EducatorAPI
+educatorAPI = Proxy
+
 data EducatorApiEndpoints route = EducatorApiEndpoints
     {
       -- * Students
@@ -221,10 +229,3 @@ data EducatorApiEndpoints route = EducatorApiEndpoints
         :> Get '[JSON] [BlkProofInfo]
 
    } deriving (Generic)
-
-type EducatorAPI = "v1" :> ToServant (EducatorApiEndpoints AsApi)
-
-type EducatorApiHandlers m = EducatorApiEndpoints (AsServerT m)
-
-educatorAPI :: Proxy EducatorAPI
-educatorAPI = Proxy
