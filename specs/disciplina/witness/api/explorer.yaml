@@ -1,0 +1,178 @@
+swagger: "2.0"
+info:
+  description: "This is an HTTP API for interacting with Disciplina Witness node. It is used by Block Explorer frontend to request info about blocks, addresses and transactions."
+  version: 0.1.0
+  title: Disciplina Block Explorer API
+  termsOfService: "https://disciplina.io/tnc.pdf"
+  contact:
+    email: hi@serokell.io
+  license:
+    name: Apache 2.0
+    url: "http://www.apache.org/licenses/LICENSE-2.0.html"
+host: "localhost:8091"
+basePath: /api/witness/v1
+schemes:
+  - https
+  - http
+paths:
+  /blocks:
+    get:
+      summary: Get list of blocks (paginated).
+      operationId: getBlocks
+      produces:
+      - application/json
+      parameters:
+      - in: query
+        name: before
+        description: Get only blocks before (not including) the specified one. If not specified, get the most recent blocks.
+        required: false
+        type: string
+        format: byte
+      responses:
+        200:
+          description: Successful operation
+          schema:
+            type: array
+            items:
+              $ref: "#/definitions/BlockInfo"
+        404:
+          description: Block not found
+  /blocks/{headerHash}:
+    get:
+      summary: Get information about a block.
+      operationId: getBlock
+      produces: 
+      - application/json
+      parameters:
+      - in: path
+        name: headerHash
+        description: Block identifier (hash of the block header).
+        required: true
+        type: string
+        format: byte
+      responses:
+        200:
+          description: Successful operation
+          schema:
+            $ref: "#/definitions/BlockInfo"
+        404:
+          description: Block not found
+  /addresses/{address}:
+    get:
+      summary: Get information about an address.
+      operationId: getAddress
+      produces: 
+      - application/json
+      parameters:
+      - in: path
+        name: address
+        description: Address being requested.
+        required: true
+        type: string
+        format: byte
+      responses:
+        200:
+          description: Successful operation
+          schema:
+            $ref: "#/definitions/AddressInfo"
+        404:
+          description: Address not found
+  /transactions/{transactionHash}:
+    get:
+      summary: Get information about a transaction.
+      operationId: getTransaction
+      produces: 
+      - application/json
+      parameters:
+      - in: path
+        name: transactionHash
+        description: Hash of the transaction being requested.
+        required: true
+        type: string
+        format: byte
+      responses:
+        200:
+          description: Successful operation
+          schema:
+            $ref: "#/definitions/TransactionInfo"
+        404:
+          description: Transaction not found
+
+definitions:
+  Hash:
+    type: string
+    format: byte
+  Address:
+    type: string
+    format: byte
+  Coin:
+    type: integer
+    format: int64
+  TransactionPart:
+    type: object
+    properties:
+      address:
+        $ref: "#/definitions/Address"
+      value:
+        $ref: "#/definitions/Coin"
+  BlockInfo:
+    type: object
+    properties:
+      headerHash:
+        $ref: "#/definitions/Hash"
+      issuer:
+        type: string
+        format: byte
+      difficulty:
+        type: integer
+        format: int64
+      slotId:
+        type: integer
+        format: int64
+      prevHash:
+        $ref: "#/definitions/Hash"
+      transactions:
+        type: array
+        items:
+          $ref: "#/definitions/TransactionInfo"
+  AddressInfo:
+    type: object
+    properties:
+      balance:
+        type: integer
+        format: int32
+      transactions:
+        type: array
+        items:
+          $ref: "#/definitions/TransactionInfo"
+  TransactionInfo:
+    type: object
+    discriminator: txType
+    properties:
+      txType:
+        type: string
+        enum:
+        - money
+        - publication
+      money:
+        type: object
+        properties:
+          in:
+            $ref: "#/definitions/TransactionPart"
+          outs:
+            type: array
+            items:
+              $ref: "#/definitions/TransactionPart"
+      publication:
+        type: object
+        properties:
+          author:
+            $ref: "#/definitions/Address"
+          block:
+            $ref: "#/definitions/Hash"
+          prevBlock:
+            $ref: "#/definitions/Hash"
+
+externalDocs:
+  description: Find out more about Swagger
+  url: 'http://swagger.io'
