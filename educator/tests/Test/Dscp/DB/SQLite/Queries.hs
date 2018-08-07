@@ -6,6 +6,8 @@ import Prelude hiding (toList)
 
 import Control.Lens (mapped)
 
+import Data.List (nubBy)
+
 import qualified Dscp.Crypto.MerkleTree as MerkleTree
 import Dscp.DB.SQLite as DB
 import Dscp.Util (Id (..), allUniqueOrd)
@@ -270,7 +272,7 @@ spec_Instances = do
                         pointSince             = next^.ptTime
 
                     -- Check that transactions aren't simultaneous.
-                    if trans1^.ptTime == trans2^.ptTime || trans1^.ptTime == trans3^.ptTime
+                    if length (nubBy ((==) `on` _ptTime) transactions) < 3
                     then do
                         return True
 
