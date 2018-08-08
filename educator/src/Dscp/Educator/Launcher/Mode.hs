@@ -107,6 +107,10 @@ instance HasLens MempoolVar EducatorContext MempoolVar where
     lensOf = ecWitnessCtx . lensOf @MempoolVar
 instance HasLens SDActions EducatorContext SDActions where
     lensOf = ecWitnessCtx . lensOf @SDActions
+instance HasLens W.TxRelayInput EducatorContext W.TxRelayInput where
+    lensOf = ecWitnessCtx . lensOf @W.TxRelayInput
+instance HasLens W.TxRelayPipe EducatorContext W.TxRelayPipe where
+    lensOf = ecWitnessCtx . lensOf @W.TxRelayPipe
 
 ----------------------------------------------------------------------------
 -- Sanity check

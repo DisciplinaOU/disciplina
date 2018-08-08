@@ -16,14 +16,21 @@ module Dscp.Witness.Launcher.Mode
 
       -- * RealMode
     , WitnessRealMode
+
+      -- * Todo: move to place they belong
+    , TxRelayInput (..)
+    , TxRelayPipe (..)
     ) where
 
+import Control.Concurrent.STM (TQueue)
 import Control.Lens (makeLenses)
+
 import Loot.Base.HasLens (HasLens (..), HasLens')
 import Loot.Log.Rio (LoggingIO)
 import Loot.Network.Class (NetworkingCli, NetworkingServ)
 import Loot.Network.ZMQ as Z
 
+import Dscp.Core.Foundation.Witness (GTxWitnessed)
 import Dscp.DB.Rocks.Class (MonadDB)
 import Dscp.DB.Rocks.Real.Types (RocksDB)
 import qualified Dscp.Launcher.Mode as Basic
@@ -51,6 +58,7 @@ type WitnessWorkMode ctx m =
     , HasWitnessConfig
 
     , MonadReader ctx m
+
     , HasLens' ctx WitnessParams
     , HasLens' ctx LoggingIO
     , HasLens' ctx RocksDB
@@ -60,21 +68,25 @@ type WitnessWorkMode ctx m =
     , HasLens' ctx MempoolVar
     , HasLens' ctx SDActions
     , HasLens' ctx (KeyResources WitnessNode)
-
+    , HasLens' ctx TxRelayInput
+    , HasLens' ctx TxRelayPipe
     )
 
 ---------------------------------------------------------------------
 -- WorkMode implementation
 ---------------------------------------------------------------------
 
+newtype TxRelayInput = TxRelayInput { getTxRelayInput :: TQueue GTxWitnessed }
+newtype TxRelayPipe  = TxRelayPipe  { getTxRelayPipe  :: TQueue GTxWitnessed }
+
 -- | Context is resources plus some runtime variables.
 data WitnessContext = WitnessContext
-    { _wcParams    :: !WitnessParams
-      -- ^ Parameters witness was started with.
-    , _wcResources :: !WitnessResources
-      -- ^ Resources, allocated from params.
-    , _wcMempool   :: !MempoolVar
-    , _wcSDActions :: !SDActions
+    { _wcParams       :: !WitnessParams     -- ^ Parameters witness was started with.
+    , _wcResources    :: !WitnessResources  -- ^ Resources, allocated from params.
+    , _wcMempool      :: !MempoolVar
+    , _wcSDActions    :: !SDActions
+    , _wcTxRelayInput :: !TxRelayInput
+    , _wcTxRelayPipe  :: !TxRelayPipe
     }
 
 
@@ -104,6 +116,10 @@ instance HasLens MempoolVar WitnessContext MempoolVar where
     lensOf = wcMempool
 instance HasLens SDActions WitnessContext SDActions where
     lensOf = wcSDActions
+instance HasLens TxRelayInput WitnessContext TxRelayInput where
+    lensOf = wcTxRelayInput
+instance HasLens TxRelayPipe WitnessContext TxRelayPipe where
+    lensOf = wcTxRelayPipe
 
 ----------------------------------------------------------------------------
 -- Sanity check
