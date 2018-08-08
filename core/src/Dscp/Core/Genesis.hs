@@ -11,6 +11,7 @@ module Dscp.Core.Genesis
     ) where
 
 import qualified Data.List.NonEmpty as NE
+import qualified Data.Map as M
 import qualified Data.Map.Strict as Map
 
 import Dscp.Core.Foundation
@@ -21,7 +22,15 @@ import Dscp.Crypto (keyGen, sign, unsafeHash, withIntSeed)
 -- | Wrapper over address mapping.
 newtype GenAddressMap = GenAddressMap
     { unGenAddressMap :: Map Address Coin
-    } deriving (Eq, Ord, Monoid, Show, Generic)
+    } deriving (Eq, Ord, Show, Generic)
+
+instance Semigroup GenAddressMap where
+    GenAddressMap a <> GenAddressMap b =
+        GenAddressMap (M.unionWith sumCoins a b)
+
+instance Monoid GenAddressMap where
+    mempty = GenAddressMap mempty
+    mappend = (<>)
 
 -- | Runtime representation of the genesis info. It is built from
 -- other config parameters and genesis config in particular. It is
@@ -68,7 +77,7 @@ distrElemToMap _ _ = error "distrToMap: param combination is invalid"
 
 distrToMap :: Maybe (NonEmpty Address) -> GenesisDistribution -> GenAddressMap
 distrToMap maddrs (GenesisDistribution distrs) =
-    fold $ fmap (distrElemToMap maddrs) distrs
+    foldl1 mappend $ fmap (distrElemToMap maddrs) distrs
 
 formGenesisInfo :: GenesisConfig -> GenesisInfo
 formGenesisInfo GenesisConfig{..} =
