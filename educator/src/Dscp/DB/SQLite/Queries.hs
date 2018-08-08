@@ -402,12 +402,15 @@ createSignedSubmission sigSub = do
     _ <- isAssignedToStudent student assignmentId
         `assert` StudentWasNotSubscribedOnAssignment student assignmentId
 
+    currentTime <- liftIO getCurrentTime
+
     execute generateSubmissionRequest
         ( submissionHash
         , student
         , assignmentId
         , submissionCont
         , submissionSig
+        , currentTime
         )
 
     return submissionHash
@@ -416,7 +419,7 @@ createSignedSubmission sigSub = do
     generateSubmissionRequest = [q|
         -- generateSubmission
         insert into  Submissions
-        values       (?, ?, ?, ?, ?, null)
+        values       (?, ?, ?, ?, ?, julianday(?))
     |]
 
 setStudentAssignment :: DBM m => Id Student -> Id Assignment -> m ()

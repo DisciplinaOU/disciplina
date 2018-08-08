@@ -5,8 +5,8 @@ import Control.Lens (to)
 import qualified Data.Foldable as F
 import Data.List (nub, (!!))
 import Data.Time.Clock (UTCTime (..))
+import qualified GHC.Exts as Exts
 
-import Database.SQLite.Simple (setTrace)
 import Dscp.Core
 import Dscp.Crypto (Hash, Raw, hash, unsafeHash)
 import Dscp.DB.SQLite (MonadSQLiteDB, WithinSQLTransaction, sqlTransaction, _AssignmentDoesNotExist,
@@ -353,17 +353,14 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                  (genCoreTestEnv simpleCoreTestParams) -> env
                ) -> do
                 let student = tiOne $ cteStudents env
-                    sigSubs = tiListNE $ cteSignedSubmissions env
+                    sigSubs = take 3 $ tiList $ cteSignedSubmissions env
 
                 prepareForSubmissions env
-                conn <- ask
-                liftIO $ setTrace conn (Just putStrLn)
                 forM_ (nub $ toList sigSubs) $ \sigSub -> do
                     void $ sqlTx $ CoreDB.createSignedSubmission sigSub
-                    liftIO $ threadDelay 10000  -- sqlite keeps time in mcs precision
-                liftIO $ setTrace conn (Nothing)
+                    liftIO $ threadDelay 10000  -- sqlite keeps time in ms precision
 
-                let lastSigSubmission = last sigSubs
+                let lastSigSubmission = last $ Exts.fromList sigSubs
                 let lastSubmission = _ssSubmission lastSigSubmission
                 let assignmentId = _sAssignmentId lastSubmission
                 assignment' <-

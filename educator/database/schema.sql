@@ -110,7 +110,7 @@ create table if not exists Submissions (
     assignment_hash  BLOB     not null,
     contents_hash    BLOB     not null,
     signature        BLOB     not null,
-    creation_time    TIME     null,      -- autofilled with trigger
+    creation_time    NUMERIC  not null,
 
     primary key (hash),
 
@@ -121,14 +121,6 @@ create table if not exists Submissions (
 
 create index if not exists Submissions_student_addr    on Submissions (student_addr);
 create index if not exists Submissions_assignment_hash on Submissions (assignment_hash);
-
-create trigger if not exists Submissions_fill_time
-    after insert on Submissions for each row
-begin
-    update Submissions
-    set creation_time = strftime("%Y-%m-%d %H:%M:%f", "now")
-    where hash = new.hash;
-end;
 
 -- Creating 'Transactions' table.
 --
