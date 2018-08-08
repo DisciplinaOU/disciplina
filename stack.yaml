@@ -6,6 +6,7 @@ packages:
 - 'educator'
 - 'tools'
 - 'wallet'
+- 'faucet'
 
 nix:
   shell-file: shell.nix

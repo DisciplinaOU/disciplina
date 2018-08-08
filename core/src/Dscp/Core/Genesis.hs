@@ -2,6 +2,7 @@
 
 module Dscp.Core.Genesis
     ( GenesisInfo (..)
+    , GenesisDistributionElem (..)
     , GenesisDistribution (..)
     , GenesisConfig (..)
     , GenAddressMap (..)
@@ -10,6 +11,7 @@ module Dscp.Core.Genesis
     ) where
 
 import qualified Data.List.NonEmpty as NE
+import qualified Data.Map as M
 import qualified Data.Map.Strict as Map
 
 import Dscp.Core.Foundation
@@ -20,7 +22,15 @@ import Dscp.Crypto (keyGen, sign, unsafeHash, withIntSeed)
 -- | Wrapper over address mapping.
 newtype GenAddressMap = GenAddressMap
     { unGenAddressMap :: Map Address Coin
-    } deriving (Eq, Ord, Monoid, Show, Generic)
+    } deriving (Eq, Ord, Show, Generic)
+
+instance Semigroup GenAddressMap where
+    GenAddressMap a <> GenAddressMap b =
+        GenAddressMap (M.unionWith sumCoins a b)
+
+instance Monoid GenAddressMap where
+    mempty = GenAddressMap mempty
+    mappend = (<>)
 
 -- | Runtime representation of the genesis info. It is built from
 -- other config parameters and genesis config in particular. It is
@@ -30,11 +40,15 @@ data GenesisInfo = GenesisInfo
     , giGenesisBlock :: Block
     } deriving (Eq, Show, Generic)
 
--- | Coin distribution. TODO come up with a way to combine these.
-data GenesisDistribution
+-- | Coin distribution.
+data GenesisDistributionElem
     = GDEqual Coin             -- ^ Equally distributed c coins among n persons.
     | GDSpecific GenAddressMap -- ^ Specific address map.
     deriving (Eq, Show, Generic)
+
+newtype GenesisDistribution = GenesisDistribution
+    { genesisDistributionElems :: NonEmpty GenesisDistributionElem
+    } deriving (Eq, Show, Generic)
 
 -- | Genesis configuration.
 data GenesisConfig = GenesisConfig
@@ -46,9 +60,9 @@ data GenesisConfig = GenesisConfig
       -- ^ Initial coins distribution.
     } deriving (Eq, Show, Generic)
 
-distrToMap :: Maybe (NonEmpty Address) -> GenesisDistribution -> GenAddressMap
-distrToMap Nothing (GDSpecific addrMap) = addrMap
-distrToMap (Just addrs) (GDEqual cTotal) =
+distrElemToMap :: Maybe (NonEmpty Address) -> GenesisDistributionElem -> GenAddressMap
+distrElemToMap _ (GDSpecific addrMap) = addrMap
+distrElemToMap (Just addrs) (GDEqual cTotal) =
     let mapping = case addrs of
             a :| [] -> [(a, cTotal)]
             a :| as -> let n = length addrs
@@ -59,7 +73,11 @@ distrToMap (Just addrs) (GDEqual cTotal) =
     in if sum (map (unCoin . snd) mapping) /= unCoin cTotal
        then error "distrToMap: equal summing failed"
        else GenAddressMap $ Map.fromList mapping
-distrToMap _ _ = error "distrToMap: param combination is invalid"
+distrElemToMap _ _ = error "distrToMap: param combination is invalid"
+
+distrToMap :: Maybe (NonEmpty Address) -> GenesisDistribution -> GenAddressMap
+distrToMap maddrs (GenesisDistribution distrs) =
+    foldl1 mappend $ fmap (distrElemToMap maddrs) distrs
 
 formGenesisInfo :: GenesisConfig -> GenesisInfo
 formGenesisInfo GenesisConfig{..} =

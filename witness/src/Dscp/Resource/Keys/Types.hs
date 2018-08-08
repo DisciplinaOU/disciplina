@@ -1,8 +1,6 @@
 module Dscp.Resource.Keys.Types
     ( BaseKeyParams (..)
     , CommitteeParams (..)
-    , WitnessKeyParams (..)
-    , EducatorKeyParams (..)
 
     , KeyResources (..)
     , krSecretKey
@@ -21,7 +19,7 @@ import Loot.Base.HasLens (HasLens', lensOf)
 
 import Dscp.Core.Governance (CommitteeSecret (..))
 import Dscp.Crypto (Encrypted, PassPhrase, PublicKey, SecretKey)
-import Dscp.Util.Aeson (Versioned)
+import Dscp.Util.Aeson (Base64Encoded, CustomEncoding (..), Versioned)
 
 -- | Contains all parameters required for manipulating with secret key.
 data BaseKeyParams = BaseKeyParams
@@ -47,18 +45,6 @@ data CommitteeParams
       -- and your index.
     deriving (Show)
 
--- | Witness key parameters.
-data WitnessKeyParams = WitnessKeyParams
-    { wkpBase      :: !BaseKeyParams
-    , wkpCommittee :: !(Maybe CommitteeParams)
-      -- ^ Optional committee params which may alter key generation.
-    } deriving (Show)
-
--- | Educator key parameters (move to educator/).
-newtype EducatorKeyParams = EducatorKeyParams
-    { unEducatorKeyParams :: BaseKeyParams
-    } deriving (Show)
-
 -- | Context providing access to secret key.
 --
 -- For now we assume secret key to be read-only.
@@ -82,7 +68,7 @@ makeLenses ''KeyResources
 
 -- | Intermediate form of 'KeyResources' for JSON serialization.
 data KeyJson = KeyJson
-    { kjEncSecretKey :: Encrypted SecretKey
+    { kjEncSecretKey :: CustomEncoding Base64Encoded (Encrypted SecretKey)
     } deriving (Eq, Show)
 
 -- | What exactly lies in the store.

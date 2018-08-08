@@ -7,6 +7,7 @@ module Dscp.Core.Foundation.Witness
     , coinToInteger
     , coinFromInteger
     , unsafeMkCoin
+    , sumCoins
     , SlotId (..)
 
     -- * Transaction
@@ -41,6 +42,7 @@ module Dscp.Core.Foundation.Witness
     ) where
 
 import Codec.Serialise (Serialise)
+import Data.Coerce (coerce)
 
 import Fmt (blockListF, build, indentF, listF, nameF, (+|), (+||), (|+), (||+))
 
@@ -85,6 +87,8 @@ unsafeMkCoin = Coin . fromIntegral -- also do checks
 instance Buildable Coin where
     build (Coin c) = c ||+ " coin(s)"
 
+sumCoins :: Coin -> Coin -> Coin
+sumCoins = coerce $ (+) @Word64
 
 ----------------------------------------------------------------------------
 -- Transactions

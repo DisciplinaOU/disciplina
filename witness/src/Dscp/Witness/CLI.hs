@@ -7,6 +7,7 @@ module Dscp.Witness.CLI
     ( rocksParamsParser
     , netCliParamsParser
     , netServParamsParser
+    , committeeParamsParser
 
     , witnessParamsParser
     ) where
@@ -21,7 +22,7 @@ import Dscp.Core.Governance (CommitteeSecret (..))
 import Dscp.DB.Rocks.Real.Types (RocksDBParams (..))
 import Dscp.Resource.Keys
 import Dscp.Resource.Network (NetCliParams (..), NetServParams (..))
-import Dscp.Witness.Launcher.Params (WitnessParams (..))
+import Dscp.Witness.Launcher.Params
 
 ----------------------------------------------------------------------------
 -- DB

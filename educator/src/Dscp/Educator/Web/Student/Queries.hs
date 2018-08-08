@@ -23,7 +23,7 @@ import Dscp.DB.SQLite (DomainError (..), MonadSQLiteDB (..), TxBlockIdx (TxInMem
 import qualified Dscp.DB.SQLite.Queries as Base
 import Dscp.DB.SQLite.Types (asAlreadyExistsError)
 import Dscp.Util (Id, assertJust, listToMaybeWarn)
-import Dscp.Util.Aeson (AsHex (..))
+import Dscp.Util.Aeson (AsByteString (..))
 
 import Dscp.Educator.Web.Student.Error (APIError (..), ObjectAlreadyExistsError (..))
 import Dscp.Educator.Web.Student.Types
@@ -363,7 +363,7 @@ studentGetProofs student sinceF = do
     forM blocks $ \(idx, tree) -> do
         txs <- studentGetBlockTxs student idx
         return BlkProofInfo
-            { bpiMtreeSerialized = AsHex tree
+            { bpiMtreeSerialized = AsByteString tree
             , bpiTxs = txs
             }
   where

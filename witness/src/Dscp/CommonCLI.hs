@@ -8,6 +8,7 @@ module Dscp.CommonCLI
        , versionOption
        , baseKeyParamsParser
        , timeReadM
+       , coinReadM
        , networkAddressParser
        , serverParamsParser
        ) where
@@ -24,6 +25,7 @@ import qualified Text.Parsec.String as Parsec
 import Time.Rational (KnownRat)
 import Time.Units (Microsecond, Millisecond, Minute, Second, Time, toUnit)
 
+import Dscp.Core.Foundation.Witness
 import Dscp.Crypto (mkPassPhrase)
 import Dscp.Resource.Keys (BaseKeyParams (..))
 import Dscp.Resource.Logging (LoggingParams (..))
@@ -75,6 +77,7 @@ baseKeyParamsParser who = do
          help "Password of secret key."
     passphraseReadM = leftToFail . first pretty . mkPassPhrase =<< str
 
+-- | Parses time with specified unit of measurement, e.g. @10s@.
 timeReadM :: KnownRat unit => ReadM (Time unit)
 timeReadM = asum
     [ toUnit @_ @Second <$> auto
@@ -82,6 +85,10 @@ timeReadM = asum
     , toUnit @_ @Microsecond <$> auto
     , toUnit @_ @Minute <$> auto
     ]
+
+-- | Parses plain number to coin.
+coinReadM :: ReadM Coin
+coinReadM = leftToFail . coinFromInteger =<< auto @Integer
 
 ----------------------------------------------------------------------------
 -- Utils

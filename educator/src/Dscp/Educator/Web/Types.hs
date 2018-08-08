@@ -25,7 +25,7 @@ import Servant (FromHttpApiData (..))
 
 import Dscp.Core
 import Dscp.Crypto
-import Dscp.Util.Aeson (AsHex)
+import Dscp.Util.Aeson (AsByteString, HexEncoded)
 
 -- | Whether assignment is final in course.
 newtype IsFinal = IsFinal { unIsFinal :: Bool }
@@ -45,7 +45,7 @@ data GradeInfo = GradeInfo
     } deriving (Show, Eq, Generic)
 
 data BlkProofInfo = BlkProofInfo
-    { bpiMtreeSerialized :: (AsHex ByteString)
+    { bpiMtreeSerialized :: (AsByteString HexEncoded ByteString)
     , bpiTxs             :: [PrivateTx]
     } deriving (Show, Eq, Generic)
 

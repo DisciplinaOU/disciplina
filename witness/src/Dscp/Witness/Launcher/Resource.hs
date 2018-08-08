@@ -16,13 +16,13 @@ import Loot.Base.HasLens (HasLens (..))
 import Loot.Network.ZMQ (ZTGlobalEnv, ZTNetCliEnv, ZTNetServEnv)
 
 import Dscp.DB.Rocks.Real (RocksDB)
-import Dscp.Resource.Class (AllocResource (..))
-import Dscp.Resource.Keys (KeyResources (..))
+import Dscp.Resource.Class (AllocResource (..), buildComponentR)
+import Dscp.Resource.Keys (KeyResources (..), linkStore)
 import Dscp.Resource.Network (NetLogging (..), NetServResources, withNetLogging)
 import Dscp.Resource.Rocks ()
 import Dscp.Witness.Config (HasWitnessConfig)
 import Dscp.Witness.Launcher.Marker (WitnessNode)
-import Dscp.Witness.Launcher.Params (WitnessParams (..))
+import Dscp.Witness.Launcher.Params (WitnessKeyParams (..), WitnessParams (..))
 
 -- | Datatype which contains resources required by witness node to start
 -- working.
@@ -45,6 +45,13 @@ instance HasLens ZTNetCliEnv WitnessResources ZTNetCliEnv where
     lensOf = wrNetwork . lensOf @ZTNetCliEnv
 instance HasLens ZTNetServEnv WitnessResources ZTNetServEnv where
     lensOf = wrNetwork . lensOf @ZTNetServEnv
+
+instance HasWitnessConfig =>
+         AllocResource WitnessKeyParams (KeyResources WitnessNode) where
+    allocResource WitnessKeyParams{..} =
+        buildComponentR "witness keys"
+            (linkStore wkpBase wkpCommittee)
+            (\_ -> pass)
 
 instance HasWitnessConfig => AllocResource WitnessParams WitnessResources where
     allocResource WitnessParams{..} = do
