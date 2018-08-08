@@ -6,6 +6,8 @@ module Dscp.Witness.Listeners.Listener
     ( witnessListeners
     ) where
 
+import qualified Control.Concurrent.STM as STM
+
 import Fmt ((+|), (|+))
 import Loot.Log (logDebug, logError, logInfo)
 
@@ -18,12 +20,16 @@ import Dscp.Witness.Launcher.Marker
 import Dscp.Witness.Launcher.Mode
 import Dscp.Witness.Logic
 import Dscp.Witness.Messages
+import Dscp.Witness.Util
 
 
-witnessListeners
-    :: forall ctx m. WitnessWorkMode ctx m
-    => [Listener m]
-witnessListeners = [blockIssuingListener, getBlocksListener, getTipListener]
+witnessListeners :: TxRelayPipe -> WitnessWorkMode ctx m => [Listener m]
+witnessListeners (TxRelayPipe pipe) =
+    [ blockIssuingListener
+    , getBlocksListener
+    , getTipListener
+    , txPublisher pipe
+    ]
 
 ----------------------------------------------------------------------------
 -- Block creation
@@ -77,3 +83,15 @@ getTipListener =
         tip <- runSdM getTipBlock
         atomically $ servSend btq cliId (TipMsg tip)
         logDebug "getTipMsg: response sent"
+
+----------------------------------------------------------------------------
+-- Retranslator, publishing part
+----------------------------------------------------------------------------
+
+txPublisher :: WitnessWorkMode ctx m => STM.TQueue GTxWitnessed -> Listener m
+txPublisher pipe = Listener
+    "txRetranslationPublisher"
+    [] $ \btq -> do
+        dieGracefully $ forever $ atomically $ do
+            tx <- STM.readTQueue pipe
+            servPub btq (PubTx tx)

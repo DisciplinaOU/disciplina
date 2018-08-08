@@ -4,11 +4,15 @@
 
 module Dscp.Witness.Workers.Worker
     ( witnessWorkers
+    , newFailedTxs
     ) where
 
 import Control.Concurrent (threadDelay)
+import qualified Control.Concurrent.STM as STM
+import qualified Data.HashMap.Strict as HashMap
 import qualified Data.List.NonEmpty as NE
 import Fmt (listF, listF', (+|), (+||), (|+), (||+))
+import Loot.Base.HasLens (lensOf)
 import Loot.Log (logDebug, logError, logInfo, logWarning)
 
 import Dscp.Core
@@ -18,11 +22,24 @@ import Dscp.Snowdrop.Mode
 import Dscp.Util
 import Dscp.Witness.Launcher.Mode
 import Dscp.Witness.Logic
+import Dscp.Witness.Mempool
 import Dscp.Witness.Messages
+import Dscp.Witness.Util (dieGracefully)
 
+newtype FailedTxs = FailedTxs (TVar (HashMap (Hash GTxWitnessed) GTxWitnessed))
 
-witnessWorkers :: WitnessWorkMode ctx m => [Worker m]
-witnessWorkers = [blockUpdateWorker]
+newFailedTxs :: MonadIO m => m FailedTxs
+newFailedTxs = FailedTxs <$> newTVarIO mempty
+
+witnessWorkers
+    :: WitnessWorkMode ctx m
+    => TxRelayInput
+    -> TxRelayPipe
+    -> FailedTxs
+    -> [Worker m]
+witnessWorkers input pipe failedTxs =
+    let (inputReader, subReader) = makeRelay input pipe failedTxs
+    in  [blockUpdateWorker, inputReader, subReader]
 
 ----------------------------------------------------------------------------
 -- Updates
@@ -96,3 +113,45 @@ blockUpdateWorker =
                 forM_ blocks' applyBlock
                 logInfo $ "Applied received blocks: " +| listF blocks |+ ""
         else logWarning "blockUpdateWorker: received sequence of blocks can't be applied"
+
+----------------------------------------------------------------------------
+-- Retranslator, input part
+----------------------------------------------------------------------------
+
+makeRelay
+    :: forall ctx m
+    .  WitnessWorkMode ctx m
+    => TxRelayInput
+    -> TxRelayPipe
+    -> FailedTxs
+    -> (Worker m, Worker m)
+makeRelay (TxRelayInput input) (TxRelayPipe pipe) (FailedTxs failedTxs) =
+    (inputWorker, republisher)
+  where
+    inputWorker = Worker
+        "txRetranslationInitialiser"
+        [msgType @SendTx]
+        [subType @PubTx] $ \_btq ->
+            dieGracefully $ forever $ do
+                tx <- atomically $ STM.readTQueue input
+                checkThenRepublish tx
+
+    republisher = Worker
+        "txRetranslationRepeater"
+        [msgType @SendTx]
+        [subType @PubTx] $ \btq -> do
+            dieGracefully $ forever $ do
+                (_, PubTx tx) <- cliRecvUpdate btq (-1)
+                checkThenRepublish tx
+
+    -- Check that the transaction is neither failed nor in a mempool and republish it.
+    checkThenRepublish tx = do
+        hashmap <- atomically $ readTVar failedTxs
+
+        unless (hash tx `HashMap.member` hashmap) $ do
+            pool    <- view (lensOf @MempoolVar @ctx)
+            isThere <- isInMempool pool tx
+
+            unless isThere $ do
+                addTxToMempool pool tx
+                atomically $ STM.writeTQueue pipe tx

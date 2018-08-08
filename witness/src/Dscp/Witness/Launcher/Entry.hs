@@ -22,14 +22,18 @@ witnessEntry :: HasWitnessConfig => WitnessRealMode ()
 witnessEntry =
     withServer $
     modifyLogName (<> "node") $ do
+
+        failedTxs <- newFailedTxs
+        input     <- newTxRelayInput
+        pipe      <- newTxRelayPipe
         -- todo git revision
         logInfo $ "Genesis header: " +| genesisHeader |+ ""
 
         logInfo "Forking workers"
-        forM_ witnessWorkers $ void . async . runWorker identity
+        forM_ (witnessWorkers input pipe failedTxs) $ void . async . runWorker identity
 
         logInfo "Forking listeners"
-        forM_ witnessListeners $ void . async . runListener identity
+        forM_ (witnessListeners pipe) $ void . async . runListener identity
 
         witnessParams <- view (lensOf @WitnessParams)
         logInfo "Forking wallet server"

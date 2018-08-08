@@ -9,7 +9,9 @@ module Dscp.Crypto.Hash.Cryptonite
 
 import Crypto.Hash (Digest, HashAlgorithm)
 import qualified Crypto.Hash as Crypto
-import Data.ByteArray (ByteArrayAccess, Bytes)
+
+import Data.ByteArray (ByteArrayAccess, Bytes, convert)
+import Data.Hashable (Hashable (hash))
 
 import Dscp.Crypto.Hash.Class (AbstractHash (..), HasAbstractHash (..), HashFunc (..))
 import Dscp.Crypto.Signing.Class (AbstractPK, AbstractSK, AbstractSig)
@@ -42,3 +44,7 @@ BA_INSTANCE_HASH((AbstractSig ss a))
 instance HashAlgorithm algo =>
          HasAbstractHash (CryptoniteFunc algo) LByteString where
     unsafeAbstractHash = AbstractHash . Crypto.hashlazy
+
+instance Hashable (Digest alg) where
+    hash              = hash              . (convert :: Digest alg -> ByteString)
+    hashWithSalt salt = hashWithSalt salt . (convert :: Digest alg -> ByteString)

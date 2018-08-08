@@ -18,11 +18,11 @@ module Dscp.Witness.Launcher.Mode
     , WitnessRealMode
 
       -- * Todo: move to place they belong
-    , TxRelayInput (..)
-    , TxRelayPipe (..)
+    , TxRelayInput (..), newTxRelayInput
+    , TxRelayPipe (..),  newTxRelayPipe
     ) where
 
-import Control.Concurrent.STM (TQueue)
+import qualified Control.Concurrent.STM as STM
 import Control.Lens (makeLenses)
 
 import Loot.Base.HasLens (HasLens (..), HasLens')
@@ -76,8 +76,14 @@ type WitnessWorkMode ctx m =
 -- WorkMode implementation
 ---------------------------------------------------------------------
 
-newtype TxRelayInput = TxRelayInput { getTxRelayInput :: TQueue GTxWitnessed }
-newtype TxRelayPipe  = TxRelayPipe  { getTxRelayPipe  :: TQueue GTxWitnessed }
+newtype TxRelayInput = TxRelayInput { getTxRelayInput :: STM.TQueue GTxWitnessed }
+newtype TxRelayPipe  = TxRelayPipe  { getTxRelayPipe  :: STM.TQueue GTxWitnessed }
+
+newTxRelayInput :: MonadIO m => m TxRelayInput
+newTxRelayInput = TxRelayInput <$> atomically STM.newTQueue
+
+newTxRelayPipe :: MonadIO m => m TxRelayPipe
+newTxRelayPipe = TxRelayPipe <$> atomically STM.newTQueue
 
 -- | Context is resources plus some runtime variables.
 data WitnessContext = WitnessContext
