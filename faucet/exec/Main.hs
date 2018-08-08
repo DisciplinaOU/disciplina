@@ -31,9 +31,10 @@ main = do
         liftIO (wPing wc)
           `onException` logError "Failled to connect to witness node"
 
-        addrState <- liftIO (wGetAccountState wc addr)
-        let balance = bConfirmed (asBalances addrState)
-        logInfo $ "Source address current balance: " +| balance |+ ""
+        -- TODO [DSCP-187]: uncomment when genesis is filled
+        -- addrState <- liftIO (wGetAccountState wc addr)
+        -- let balance = bConfirmed (asBalances addrState)
+        -- logInfo $ "Source address current balance: " +| balance |+ ""
 
 getFaucetParams :: IO (FaucetParams, FaucetConfigRec)
 getFaucetParams = do
