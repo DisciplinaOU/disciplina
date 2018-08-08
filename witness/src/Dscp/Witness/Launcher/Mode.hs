@@ -20,6 +20,7 @@ module Dscp.Witness.Launcher.Mode
       -- * Todo: move to place they belong
     , TxRelayInput (..), newTxRelayInput
     , TxRelayPipe (..),  newTxRelayPipe
+    , relayTx
     ) where
 
 import qualified Control.Concurrent.STM as STM
@@ -78,6 +79,11 @@ type WitnessWorkMode ctx m =
 
 newtype TxRelayInput = TxRelayInput { getTxRelayInput :: STM.TQueue GTxWitnessed }
 newtype TxRelayPipe  = TxRelayPipe  { getTxRelayPipe  :: STM.TQueue GTxWitnessed }
+
+relayTx :: WitnessWorkMode ctx m => GTxWitnessed -> m ()
+relayTx tx = do
+    TxRelayInput input <- view (lensOf @TxRelayInput)
+    atomically $ STM.writeTQueue input tx
 
 newTxRelayInput :: MonadIO m => m TxRelayInput
 newTxRelayInput = TxRelayInput <$> atomically STM.newTQueue

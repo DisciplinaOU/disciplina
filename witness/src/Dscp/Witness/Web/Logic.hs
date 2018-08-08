@@ -5,7 +5,7 @@ module Dscp.Witness.Web.Logic
        ) where
 
 import Control.Lens (views)
-import Loot.Base.HasLens (HasLens', lensOf)
+import Loot.Base.HasLens (lensOf)
 import qualified Snowdrop.Model.Execution as SD
 import qualified Snowdrop.Model.State.Core as SD
 import UnliftIO.Async (async)
@@ -14,6 +14,7 @@ import Dscp.Core
 import Dscp.Launcher.Mode
 import Dscp.Snowdrop
 import Dscp.Util (assertJust)
+import Dscp.Witness.Launcher.Mode (WitnessWorkMode, relayTx)
 import Dscp.Witness.Mempool
 import Dscp.Witness.Web.Error
 import Dscp.Witness.Web.Types
@@ -29,9 +30,7 @@ noAccount = EntityAbsent "No such address registered"
 -- Logic
 ----------------------------------------------------------------------------
 
-getAccount
-    :: (MonadIO m, MonadThrow m, MonadReader ctx m, HasLens' ctx SDActions)
-    => Address -> m Account
+getAccount :: WitnessWorkMode ctx m => Address -> m Account
 getAccount address = do
     blockActs <-
         views (lensOf @SDActions)
@@ -41,17 +40,13 @@ getAccount address = do
         SD.queryOne (AccountId address)
     pure maccount `assertJust` noAccount
 
-pickAccountBalance
-    :: (MonadIO m, MonadReader ctx m, HasLens' ctx SDActions)
-    => Account -> m Balances
+pickAccountBalance :: WitnessWorkMode ctx m => Account -> m Balances
 pickAccountBalance blockAcc = do
     return Balances
         { bConfirmed = Coin . fromIntegral $ aBalance blockAcc
         }
 
-getAccountState
-    :: (MonadIO m, MonadThrow m, MonadReader ctx m, HasLens' ctx SDActions)
-    => Address -> m AccountState
+getAccountState :: WitnessWorkMode ctx m => Address -> m AccountState
 getAccountState addr = do
     account <- getAccount addr
     balances <- pickAccountBalance account
@@ -61,13 +56,11 @@ getAccountState addr = do
         }
 
 -- | Applies transaction everywhere.
-submitUserTx
-    :: (BasicWorkMode m, MonadReader ctx m, HasLens' ctx MempoolVar)
-    => TxWitnessed -> m ()
+submitUserTx :: WitnessWorkMode ctx m => TxWitnessed -> m ()
 submitUserTx tw = do
     mempool <- view (lensOf @MempoolVar)
     addTxToMempool mempool (GMoneyTxWitnessed tw)
-    -- TODO: also send into network
+    relayTx (GMoneyTxWitnessed tw)
 
 -- | Applies transaction, but does not wait for a whole cycle of transaction
 -- application.
