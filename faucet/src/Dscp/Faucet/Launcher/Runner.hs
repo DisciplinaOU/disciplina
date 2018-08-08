@@ -12,7 +12,7 @@ import Dscp.Faucet.Launcher.Resource
 import Dscp.Faucet.Variables
 import Dscp.Launcher.Rio (runRIO)
 import Dscp.Resource.Class (AllocResource (..), InitParams (..))
-import Dscp.Resource.Functions (runResourceAllocation)
+import Dscp.Resource.Functions
 
 -- | Make up Faucet context from dedicated pack of allocated resources.
 formFaucetContext :: FaucetParams -> FaucetResources -> IO FaucetContext
@@ -28,7 +28,7 @@ launchFaucetRealMode
     -> (HasFaucetConfig => FaucetRealMode ())
     -> IO ()
 launchFaucetRealMode config params@FaucetParams{..} action =
-    void $
+    exitSilentlyOnFailure $
     withFaucetConfig config $
     runResourceAllocation appDesc initParams (allocResource params) $
         \resources -> do

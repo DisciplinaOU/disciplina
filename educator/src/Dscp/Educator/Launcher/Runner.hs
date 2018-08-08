@@ -11,7 +11,7 @@ import Dscp.Educator.Launcher.Params (EducatorParams (..))
 import Dscp.Educator.Launcher.Resource (EducatorResources (..))
 import Dscp.Launcher.Rio (runRIO)
 import Dscp.Resource.Class (AllocResource (..), InitParams (..))
-import Dscp.Resource.Functions (runResourceAllocation)
+import Dscp.Resource.Functions
 import Dscp.Witness.Launcher (formWitnessContext, wpLoggingParams)
 
 -- | Make up Educator context from dedicated pack of allocated resources.
@@ -29,7 +29,7 @@ launchEducatorRealMode
     -> (HasEducatorConfig => EducatorRealMode ())
     -> IO ()
 launchEducatorRealMode config params@EducatorParams{..} action =
-    void $
+    exitSilentlyOnFailure $
     withEducatorConfig config $
     runResourceAllocation appDesc initParams (allocResource params) $
         \resources -> do
