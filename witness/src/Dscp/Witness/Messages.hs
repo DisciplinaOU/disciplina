@@ -57,7 +57,7 @@ instance Message SubK PubBlock where type MsgTag SubK PubBlock = 100
 
 data SendTx = SendTx { getSendTx :: GTxWitnessed } deriving (Generic,Show)
 instance Serialise SendTx
-instance Message MsgK SendTx where type MsgTag MsgK SendTx = 101
+instance Message MsgK SendTx where type MsgTag MsgK SendTx = 4
 
 data PubTx = PubTx { getPubTx :: GTxWitnessed } deriving (Generic,Show)
 instance Serialise PubTx

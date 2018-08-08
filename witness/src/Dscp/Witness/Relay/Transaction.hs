@@ -1,8 +1,8 @@
 {-# LANGUAGE OverloadedLists #-}
 
-module Dscp.Witness.Retranslate.Transaction
-    ( TxRetranslator (..)
-    , makeRetranslator
+module Dscp.Witness.Relay.Transaction
+    ( TxRelay (..)
+    , makeRelay
     ) where
 
 import qualified Control.Concurrent.STM as STM
@@ -25,8 +25,8 @@ import Dscp.Witness.Messages (PubTx (..), SendTx (..))
 --
 --   They could be replaced by some `trStop :: m ()` method.
 --
-data TxRetranslator m
-    = TxRetranslator
+data TxRelay m
+    = TxRelay
         { trInput           :: STM.TQueue SendTx  -- ^ 'TQueue' messages arrive from
         , trMessageConsumer :: Worker m           -- ^ Watches for messages
         , trSubConsumer     :: Worker m           -- ^ Watches other retranslations
@@ -52,48 +52,45 @@ data TxRetranslator m
 --                                      V
 --   input --> trMessageConsumer --> pipe --> trRepublisher
 --
-makeRetranslator :: forall ctx m. WitnessWorkMode ctx m => STM (TxRetranslator m)
-makeRetranslator = do
+makeRelay :: forall ctx m. WitnessWorkMode ctx m => STM (TxRelay m)
+makeRelay = do
     failedTxs <- STM.newTVar HashMap.empty
     input     <- STM.newTQueue
     pipe      <- STM.newTQueue
 
     return (retranslator failedTxs input pipe)
   where
-    retranslator failedTxs input pipe =  TxRetranslator
+    retranslator failedTxs input pipe =  TxRelay
         {
           trInput = input
 
         , trMessageConsumer = Worker
             "txRetranslationInitialiser"
             [msgType @SendTx]
-            [subType @PubTx] $ \_btq -> do
-                dieGracefully $ do
-                    forever $ do
-                        SendTx tx <- sync $ STM.readTQueue input
-                        checkThenRepublish tx
+            [subType @PubTx] $ \_btq ->
+                dieGracefully $ forever $ do
+                    SendTx tx <- atomically $ STM.readTQueue input
+                    checkThenRepublish tx
 
         , trSubConsumer = Worker
             "txRetranslationRepeater"
             [msgType @SendTx]
             [subType @PubTx] $ \btq -> do
-                dieGracefully $ do
-                    forever $ do
-                        (_, PubTx tx) <- cliRecvUpdate btq (-1)
-                        checkThenRepublish tx
+                dieGracefully $ forever $ do
+                    (_, PubTx tx) <- cliRecvUpdate btq (-1)
+                    checkThenRepublish tx
 
         , trRepublisher = Listener
             "txRetranslationPublisher"
             [] $ \btq -> do
-                dieGracefully $ do
-                    forever $ sync $ do
-                        tx <- STM.readTQueue pipe
-                        servPub btq (PubTx tx)
+                dieGracefully $ forever $ atomically $ do
+                    tx <- STM.readTQueue pipe
+                    servPub btq (PubTx tx)
         }
       where
         -- Check that the transaction is neither failed nor in a mempool and republish it.
         checkThenRepublish tx = do
-            hashmap <- sync $ readTVar failedTxs
+            hashmap <- atomically $ readTVar failedTxs
 
             unless (hash tx `elem` hashmap) $ do
                 pool    <- view (lensOf @MempoolVar @ctx)
@@ -101,16 +98,10 @@ makeRetranslator = do
 
                 unless isThere $ do
                     addTxToMempool pool tx
-                    sync $ STM.writeTQueue pipe tx
+                    atomically $ STM.writeTQueue pipe tx
 
         -- Catch error and log it.
         -- TODO: move to some *.Utils.
         dieGracefully action =
             action `catchAny` \e -> do
-                logError $ fromString $ "Exception in transactionRetranslatorInput: " <> show e
-
--- | Run STM action inside (MonadIO m).
---   TODO: move to some *.Utils.
-sync :: MonadIO m => STM.STM a -> m a
-sync = liftIO . STM.atomically
-
+                logError $ fromString $ "Exception in transactionRelayInput: " <> show e
