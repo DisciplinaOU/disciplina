@@ -1,6 +1,6 @@
 with import (fetchTarball "https://github.com/serokell/nixpkgs/archive/master.tar.gz") {
   config.allowUnfree = true;
-  overlays = [ (import "${fetchGit "git@github.com:/serokell/serokell-overlay"}/pkgs") ];
+  overlays = [ (import "${fetchGit "ssh://git@github.com:/serokell/serokell-overlay"}/pkgs") ];
 };
 
 with haskell.lib;
