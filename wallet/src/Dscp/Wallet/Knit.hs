@@ -13,7 +13,7 @@ import qualified Serokell.Util.Base64 as Base64
 import Text.Earley
 
 import Dscp.Core (TxOut (..), addrFromText, coinToInteger, toTxId)
-import Dscp.Crypto (mkPassPhrase)
+import Dscp.Crypto (decrypt, emptyPassPhrase, encrypt, fromByteArray, mkPassPhrase)
 import Dscp.Util (toHex)
 import Dscp.Wallet.Face
 
@@ -121,8 +121,7 @@ instance AllConstrained (Elem components) '[Wallet, Core] => ComponentCommandPro
             mName <- getArgOpt tyString "name"
             pure (secretKeyString, passString, mName)
         , cpRepr = \(secretKeyString, passString, mName) -> CommandAction $ \WalletFace{..} -> do
-            mPassPhrase <- forM passString $ either throwIO return . mkPassPhrase . encodeUtf8
-            eSecretKey <- either throwIO return . deserialiseOrFail . BSL.fromStrict $ secretKeyString
+            (eSecretKey, mPassPhrase) <- parseAccount secretKeyString passString
             walletRestoreKey mName eSecretKey mPassPhrase
             return . toValue $ ValueUnit
         , cpHelp = "Generate a key pair and save into storage."
@@ -159,8 +158,7 @@ instance AllConstrained (Elem components) '[Wallet, Core] => ComponentCommandPro
             outs <- getArgSome tyTxOut "out"
             pure (passString, secretKeyString, outs)
         , cpRepr = \(passString, secretKeyString, outs) -> CommandAction $ \WalletFace{..} -> do
-            mPassPhrase <- forM passString $ either throwIO return . mkPassPhrase . encodeUtf8
-            eSecretKey <- either throwIO return . deserialiseOrFail . BSL.fromStrict $ secretKeyString
+            (eSecretKey, mPassPhrase) <- parseAccount secretKeyString passString
             toValue . ValueString . toHex . toTxId <$> walletSendTx eSecretKey mPassPhrase outs
         , cpHelp = "Send a transaction."
         }
@@ -182,10 +180,21 @@ renderAccount
   -> Value components
 renderAccount Account{..} = toValue . ValueList $
   [ toValue . ValueString $ fromMaybe "" accountName
-  , toValue . ValueCryptoKey . BSL.toStrict . serialise $ accountSecretKey
+  , fromRight (toValue . ValueCryptoKey . BSL.toStrict . serialise $ accountSecretKey) $
+      toValue . ValueCryptoKey . BA.convert <$> decrypt emptyPassPhrase accountSecretKey
   , toValue . ValueCryptoKey . BA.convert $ accountPublicKey
   , toValue . ValueAddress $ accountAddress
   ]
+
+parseAccount :: ByteString -> Maybe Text -> IO (Encrypted SecretKey, Maybe PassPhrase)
+parseAccount secretKeyString passString =
+  case fromByteArray @SecretKey secretKeyString of
+    Right secretKey | Nothing <- passString ->
+      return (encrypt emptyPassPhrase secretKey, Nothing)
+    _ -> do
+      mPassPhrase <- forM passString $ either throwIO return . mkPassPhrase . encodeUtf8
+      eSecretKey <- either throwIO return . deserialiseOrFail . BSL.fromStrict $ secretKeyString
+      return (eSecretKey, mPassPhrase)
 
 ----------------------------------------------------------------------------
 -- Type projections
