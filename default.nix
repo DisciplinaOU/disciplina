@@ -1,8 +1,14 @@
-with import <nixpkgs> { overlays = [ (import <serokell-overlay/pkgs>) ]; };
+with import (fetchTarball "https://github.com/serokell/nixpkgs/archive/master.tar.gz") {
+  config.allowUnfree = true;
+  overlays = [ (import "${fetchGit "ssh://git@github.com:/serokell/serokell-overlay"}/pkgs") ];
+};
+
 with haskell.lib;
+
 let
   getAttrs = attrs: set: lib.genAttrs attrs (name: set.${name});
 in
+
 buildStackApplication rec {
   packages = [
     "disciplina-core" "disciplina-witness" "disciplina-educator"
