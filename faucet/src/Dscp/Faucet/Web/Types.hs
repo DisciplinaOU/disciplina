@@ -2,6 +2,7 @@ module Dscp.Faucet.Web.Types
     ( GenKeysRequest (..)
     , GenKeysResponse (..)
     , TransferMoneyRequest (..)
+    , TransferMoneyResponse (..)
     ) where
 
 import Data.Aeson.Options (defaultOptions)
@@ -31,6 +32,11 @@ newtype TransferMoneyRequest = TransferMoneyRequest
     { tmrDestination :: Address
     }
 
+data TransferMoneyResponse = TransferMoneyResponse
+    { tmrTxId   :: AsByteString HexEncoded TxId
+    , tmrAmount :: Coin
+    }
+
 ----------------------------------------------------------------------------
 -- Buildable instances
 ----------------------------------------------------------------------------
@@ -48,6 +54,10 @@ instance Buildable (ForResponseLog GenKeysResponse) where
 instance Buildable TransferMoneyRequest where
     build TransferMoneyRequest{..} = tmrDestination |+ ""
 
+instance Buildable (ForResponseLog TransferMoneyResponse) where
+    build (ForResponseLog TransferMoneyResponse{..}) =
+        getAsByteString tmrTxId |+ " <- " +| tmrAmount |+ ""
+
 ----------------------------------------------------------------------------
 -- JSON instances
 ----------------------------------------------------------------------------
@@ -55,3 +65,4 @@ instance Buildable TransferMoneyRequest where
 deriveFromJSON defaultOptions ''GenKeysRequest
 deriveFromJSON defaultOptions ''TransferMoneyRequest
 deriveToJSON defaultOptions ''GenKeysResponse
+deriveToJSON defaultOptions ''TransferMoneyResponse

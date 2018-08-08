@@ -26,7 +26,7 @@ data FaucetApiEndpoints route = FaucetApiEndpoints
     , fTransferMoneyTo :: route
         :- "transfer"
         :> ReqBody '[DSON] TransferMoneyRequest
-        :> Post '[DSON] ()
+        :> Post '[DSON] TransferMoneyResponse
     } deriving (Generic)
 
 type FaucetAPI = "v1" :> ToServant (FaucetApiEndpoints AsApi)

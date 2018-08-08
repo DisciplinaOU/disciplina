@@ -16,7 +16,9 @@ import Dscp.Faucet.Launcher.Mode
 import Dscp.Faucet.Launcher.Params
 import Dscp.Faucet.Variables
 import Dscp.Faucet.Web.Error
+import Dscp.Faucet.Web.Types
 import Dscp.Resource.Keys
+import Dscp.Util.Aeson
 import Dscp.Witness.Web.Client
 import Dscp.Witness.Web.Types
 
@@ -32,7 +34,7 @@ ensureFirstGift addr = do
     when (isJust prevVal) $
         throwM AddressAlreadyGifted
 
-faucetTransferMoneyTo :: FaucetWorkMode ctx m => Address -> m ()
+faucetTransferMoneyTo :: FaucetWorkMode ctx m => Address -> m TransferMoneyResponse
 faucetTransferMoneyTo dest = do
     ensureFirstGift dest
 
@@ -59,9 +61,15 @@ faucetTransferMoneyTo dest = do
             inAcc = TxInAcc{ tiaNonce = nonce, tiaAddr = source }
             outs  = one (TxOut dest transfer)
             tx    = Tx{ txInAcc = inAcc, txInValue = transfer, txOuts = outs }
+            txId  = toTxId tx
 
-            sgn = sign sk (toTxId tx, pk, ())
+            sgn = sign sk (txId, pk, ())
             witness = TxWitness{ txwSig = sgn, txwPk = pk }
             txWitnessed = TxWitnessed{ twTx = tx, twWitness = witness }
 
         wSubmitTxAsync wc txWitnessed
+
+        return TransferMoneyResponse
+            { tmrTxId = AsByteString txId
+            , tmrAmount = transfer
+            }

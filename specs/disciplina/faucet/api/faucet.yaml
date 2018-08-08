@@ -45,7 +45,7 @@ paths:
                 type: string
                 format: byte
                 description: "Secret key encrypted with the given password (empty pass is also a pass)"
-              SecretKey:
+              secretKey:
                 type: string
                 format: byte
                 description: "Plain secret key"
@@ -78,6 +78,19 @@ paths:
       responses:
         200:
           description: successful operation
+          schema:
+            type: object
+            required:
+            - txId
+            - amount
+            properties:
+              txId:
+                type: string
+                format: byte
+                description: "Transaction id"
+              amount:
+                type: integer
+                description: "Amount of money transfered"
         403:
           description: Given address already received money previously
           schema:
