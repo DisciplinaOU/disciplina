@@ -24,6 +24,7 @@ import Data.Reflection (Given (..), give)
 import qualified Data.Set as S
 import Data.Time.Clock (getCurrentTime)
 import Fmt ((+|), (+||), (|+), (||+))
+import qualified GHC.Exts as Exts
 import Loot.Log (ModifyLogName, MonadLogging, logError, logInfo, modifyLogName)
 import Time.Units (Microsecond, Time, threadDelay)
 import UnliftIO (MonadUnliftIO)
@@ -186,8 +187,11 @@ delayed action
 
 botPrepareInitialData :: (BotWorkMode m, HasBotSetting) => m ()
 botPrepareInitialData = do
-    mapM_ (\(c, t, s) -> createCourse c (Just t) s) (bsCourses botSetting)
-    mapM_ createAssignment (bsAssignments botSetting)
+    exists <- existsCourse (head . Exts.fromList $ bsBasicCourses botSetting)
+    unless exists $ do
+        forM_ (bsCourses botSetting) $
+            \(c, t, s) -> createCourse c (Just t) s
+        mapM_ createAssignment (bsAssignments botSetting)
 
 -- REMEMBER that all operations below should be no-throw
 
