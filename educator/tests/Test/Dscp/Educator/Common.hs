@@ -9,7 +9,7 @@ import Data.Time.Format (defaultTimeLocale, parseTimeOrError)
 import Dscp.Core
 import Dscp.Core.Foundation.Educator (PrivateTx (..))
 import Dscp.Crypto (PublicKey, SecretKey, hash, sign)
-import Dscp.Util (Id, getId)
+import Dscp.Util (Id)
 
 -- | Create a private transaction
 mkPrivateTx :: Id Course -- ^ course id
@@ -36,7 +36,7 @@ mkPrivateTx courseId grade addrKey (witnessPKey, witnessSKey) =
      mkSubmission = Submission
        { _sStudentId = mkAddr addrKey
        , _sContentsHash = offlineHash
-       , _sAssignmentId = getId mkAssignment
+       , _sAssignmentHash = hash mkAssignment
        }
 
      mkSubmissionWitness :: SubmissionWitness

@@ -51,7 +51,7 @@ submission1 : _ = detGen 23423 $ do
         zip3 allStudents
              contentsHashes
              allAssignments
-        <&> \(_sStudentId, _sContentsHash, (getId -> _sAssignmentId))
+        <&> \(_sStudentId, _sContentsHash, (hash -> _sAssignmentHash))
             -> Submission{..}
 
 createCourseSimple :: CoreDB.DBM m => Int -> m Course
@@ -85,7 +85,7 @@ prepareForSubmissions CoreTestEnv{..} = do
           void $ CoreDB.createAssignment assignment
           forM_ (ordNub owners) $ \owner ->
               CoreDB.setStudentAssignment owner
-                                          (getId assignment)
+                                          (hash assignment)
 
 prepareAndCreateSubmission
     :: (MonadSQLiteDB m, MonadThrow m)
@@ -233,7 +233,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
             sqliteProperty $ \() ->
                 throwsPrism _AssignmentDoesNotExist $ do
                     _ <- CoreDB.createStudent student1
-                    sqlTx $ studentGetAssignment student1 (getId assignment1)
+                    sqlTx $ studentGetAssignment student1 (hash assignment1)
 
         it "Fails when student is not assigned to submission" $
             -- Student is required to just take his recent submission,
@@ -244,11 +244,11 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                 _ <- CoreDB.createCourse course Nothing []
                 _ <- CoreDB.createAssignment assignment
                 throwsPrism _AssignmentDoesNotExist $
-                    sqlTx $ studentGetAssignment student1 (getId assignment1)
+                    sqlTx $ studentGetAssignment student1 (hash assignment1)
 
         it "Returns existing assignment properly" $
             sqliteProperty $ \assignment -> do
-                let assignmentH = getId assignment
+                let assignmentH = hash assignment
                 let course = _aCourseId assignment
                 _ <- CoreDB.createStudent student1
                 _ <- CoreDB.createCourse course Nothing []
@@ -275,7 +275,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                 _ <- CoreDB.createCourse course Nothing []
                 _ <- CoreDB.createAssignment assignment
                 _ <- CoreDB.enrollStudentToCourse student1 course
-                _ <- CoreDB.setStudentAssignment student1 (getId assignment)
+                _ <- CoreDB.setStudentAssignment student1 (hash assignment)
                 throwsPrism _AssignmentDoesNotExist $
                     sqlTx $ studentGetAssignment student1 (getId needlessAssignment)
 
@@ -290,7 +290,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                 _ <- CoreDB.createCourse course Nothing []
                 _ <- CoreDB.createAssignment assignment1
                 _ <- CoreDB.enrollStudentToCourse student1 course
-                _ <- CoreDB.setStudentAssignment student1 (getId assignment1)
+                _ <- CoreDB.setStudentAssignment student1 (hash assignment1)
                 assignments <- getAssignmentsSimple student1
                 return $ all (isNothing . aiLastSubmission) assignments
 
@@ -298,7 +298,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
             sqliteProperty $
               \(delayedGen (vectorUnique 2)
                  -> assignments@[assignment, needlessAssignment]) -> do
-                let assignmentH = getId assignment
+                let assignmentH = hash assignment
                 _ <- CoreDB.createStudent student1
                 forM_ (ordNub $ map _aCourseId assignments) $ \course -> do
                     void $ CoreDB.createCourse course Nothing []
@@ -309,7 +309,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
 
                 res <- getAssignmentsSimple student1
                 return $ res === one AssignmentStudentInfo
-                    { aiHash = getId assignment
+                    { aiHash = hash assignment
                     , aiCourseId = _aCourseId assignment
                     , aiContentsHash = _aContentsHash assignment
                     , aiIsFinal =
@@ -332,7 +332,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                     void $ CoreDB.enrollStudentToCourse student1 courseId
                 forM_ preAssignments $ \assignment -> do
                     void $ CoreDB.createAssignment assignment
-                    let assignH = getId assignment
+                    let assignH = hash assignment
                     void $ CoreDB.setStudentAssignment student1 assignH
 
                 assignments <- sqlTx $
@@ -362,7 +362,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
 
                 let lastSigSubmission = last $ Exts.fromList sigSubs
                 let lastSubmission = _ssSubmission lastSigSubmission
-                let assignmentId = _sAssignmentId lastSubmission
+                let assignmentId = _sAssignmentHash lastSubmission
                 assignment' <-
                     sqlTx $ studentGetAssignment student assignmentId
                 let lastSubmission' = aiLastSubmission assignment'
@@ -376,7 +376,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
         let mkSomeSubmission :: Hash Raw -> Submission
             mkSomeSubmission _sContentsHash =
                 Submission { _sStudentId = student1
-                           , _sAssignmentId = getId assignment1
+                           , _sAssignmentHash = hash assignment1
                            , .. }
 
         it "Fails on request of non-existent submission" $
@@ -400,7 +400,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                 _ <- CoreDB.createCourse course Nothing []
                 _ <- CoreDB.createAssignment assignment
                 _ <- CoreDB.enrollStudentToCourse owner course
-                _ <- CoreDB.setStudentAssignment owner (getId assignment)
+                _ <- CoreDB.setStudentAssignment owner (hash assignment)
                 _ <- sqlTx $ CoreDB.submitAssignment sigSub
                 res <- sqlTx $
                     studentGetSubmission owner (getId submission)
@@ -430,7 +430,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                     _ <- CoreDB.createCourse course Nothing []
                     _ <- CoreDB.createAssignment assignment
                     _ <- CoreDB.enrollStudentToCourse owner course
-                    _ <- CoreDB.setStudentAssignment owner (getId assignment)
+                    _ <- CoreDB.setStudentAssignment owner (hash assignment)
                     _ <- sqlTx $ CoreDB.submitAssignment sigSub
                     fmap property $ throwsPrism _SubmissionDoesNotExist $
                         sqlTx $ studentGetSubmission user (getId submission)
@@ -463,7 +463,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                 _ <- CoreDB.createCourse course Nothing []
                 _ <- CoreDB.createAssignment assignment1
                 _ <- CoreDB.enrollStudentToCourse student1 course
-                _ <- CoreDB.setStudentAssignment student1 (getId assignment1)
+                _ <- CoreDB.setStudentAssignment student1 (hash assignment1)
                 -- even after these steps there should be no submissions
 
                 submissions <- getAllSubmissions student1
@@ -486,7 +486,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                     return $ res === one SubmissionStudentInfo
                         { siHash = hash someSubmission
                         , siContentsHash = _sContentsHash someSubmission
-                        , siAssignmentHash = _sAssignmentId someSubmission
+                        , siAssignmentHash = _sAssignmentHash someSubmission
                         , siGrade = Nothing
                         }
 
@@ -540,7 +540,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                   let submissions' =
                         map (\(s, _) -> studentLiftSubmission s Nothing) $
                         applyFilterOn snd courseIdF $
-                        applyFilterOn (_sAssignmentId . fst) assignHF $
+                        applyFilterOn (_sAssignmentHash . fst) assignHF $
                         applyFilterOn (_sDocumentType . fst) docTypeF $
                         map _ssSubmission sigSubs `zip` cycle courses
 

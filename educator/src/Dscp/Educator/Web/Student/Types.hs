@@ -92,7 +92,7 @@ studentLiftSubmission s siGrade =
     SubmissionStudentInfo
     { siHash = hash s
     , siContentsHash = _sContentsHash s
-    , siAssignmentHash = _sAssignmentId s
+    , siAssignmentHash = _sAssignmentHash s
     , ..
     }
 
@@ -100,7 +100,7 @@ signedSubmissionToRequest :: SignedSubmission -> NewSubmission
 signedSubmissionToRequest sigSub =
     let submission = _ssSubmission sigSub
     in NewSubmission
-        { nsAssignmentHash = _sAssignmentId submission
+        { nsAssignmentHash = _sAssignmentHash submission
         , nsContentsHash = _sContentsHash submission
         , nsWitness = _ssWitness sigSub
         }

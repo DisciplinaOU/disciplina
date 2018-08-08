@@ -395,7 +395,7 @@ createSignedSubmission sigSub = do
         student        = submission^.sStudentId
         submissionHash = submission^.idOf
         submissionCont = submission^.sContentsHash
-        assignmentId   = submission^.sAssignmentId
+        assignmentId   = submission^.sAssignmentHash
 
     _ <- existsStudent student        `assert`     StudentDoesNotExist    student
     _ <- getAssignment assignmentId `assertJust` AssignmentDoesNotExist assignmentId

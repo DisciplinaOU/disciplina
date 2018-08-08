@@ -6,13 +6,14 @@ module Dscp.Educator.Web.Student.Logic
     ) where
 
 import Dscp.Core
+import Dscp.Crypto
 import Dscp.DB.SQLite (sqlTransaction)
 import Dscp.DB.SQLite.Queries
 import Dscp.Educator.Web.Student.Error (APIError (..))
 import Dscp.Educator.Web.Student.Queries
 import Dscp.Educator.Web.Student.Types
 import Dscp.Educator.Web.Student.Util (verifyStudentSubmission)
-import Dscp.Util (assertJust, getId, leftToThrow)
+import Dscp.Util (assertJust, leftToThrow)
 
 requestToSignedSubmission
     :: MonadStudentAPIQuery m
@@ -22,7 +23,7 @@ requestToSignedSubmission ns = do
         `assertJust` AssignmentDoesNotExist (nsAssignmentHash ns)
     let submission = Submission
             { _sStudentId = nsOwner ns
-            , _sAssignmentId = getId assignment
+            , _sAssignmentHash = hash assignment
             , _sContentsHash = nsContentsHash ns
             }
     return SignedSubmission

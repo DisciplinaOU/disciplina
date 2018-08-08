@@ -236,7 +236,7 @@ spec_Instances = do
                     student       = submission   ^.sStudentId
 
                     sigSubmission2 = sigSubmission & ssSubmission
-                                                   . sAssignmentId      .~ getId assignment2
+                                                   . sAssignmentHash    .~ getId assignment2
                     assignment2    = assignment    & aCourseId          .~ getId course2
                     trans2         = trans         & ptSignedSubmission .~ sigSubmission2
 
