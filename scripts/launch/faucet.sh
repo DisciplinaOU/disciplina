@@ -6,6 +6,6 @@ faucet_params="
 --faucet-listen 127.0.0.1:8095
 --witness-backend 127.0.0.1:4020
 --translated-amount 20
---faucet-keyfile ./faucet.key
+--faucet-keyfile ./run/faucet.key
 --log-dir logs
 "

@@ -75,7 +75,7 @@ faucet_params="
 --translated-amount 20
 --config ./configuration.yaml
 --config-key demo
---faucet-keyfile $tmp_files/faucet.key
+--faucet-keyfile $files/faucet.key
 --faucet-gen-key
 --log-dir $tmp_files/logs
 "

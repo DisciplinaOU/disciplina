@@ -2,26 +2,38 @@
 
 module Main where
 
+import Fmt ((+|), (|+))
 import Loot.Base.HasLens (lensOf)
-import Loot.Log (logError)
+import Loot.Log (logError, logInfo)
 import Options.Applicative (execParser, fullDesc, helper, info, progDesc)
 
 import Dscp.CommonCLI (versionOption)
 import Dscp.Config (buildConfig, configParamsParser)
+import Dscp.Core
 import Dscp.Faucet
+import Dscp.Resource.Keys
 import Dscp.Witness.Web
 
 main :: IO ()
 main = do
     (faucetParams, faucetConfig) <- getFaucetParams
     launchFaucetRealMode faucetConfig faucetParams $ do
-        pingBackend
+        printSourceInfo
         serveFaucetAPIReal (_fpWebParams faucetParams)
   where
-    pingBackend = do
+    printSourceInfo = do
         wc <- view (lensOf @WitnessClient)
+        pk <- view $ lensOf @(KeyResources FaucetApp) . krPublicKey
+        let addr = mkAddr pk
+
+        logInfo $ "Faucet source address: " +| addr |+ ""
+
         liftIO (wPing wc)
-            `onException` logError "Failled to connect witness node"
+          `onException` logError "Failled to connect to witness node"
+
+        addrState <- liftIO (wGetAccountState wc addr)
+        let balance = bConfirmed (asBalances addrState)
+        logInfo $ "Source address current balance: " +| balance |+ ""
 
 getFaucetParams :: IO (FaucetParams, FaucetConfigRec)
 getFaucetParams = do

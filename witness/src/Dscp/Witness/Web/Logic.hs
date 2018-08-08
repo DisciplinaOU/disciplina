@@ -23,7 +23,7 @@ import Dscp.Witness.Web.Types
 ----------------------------------------------------------------------------
 
 noAccount :: WitnessWebError
-noAccount = EntityAbsent "No account corresponding to secret key found"
+noAccount = EntityAbsent "No such address registered"
 
 ----------------------------------------------------------------------------
 -- Logic
