@@ -21,6 +21,7 @@ newtype GenKeysRequest = GenKeysRequest
 
 data GenKeysResponse = GenKeysResponse
     { gkrEncSecretKey :: CustomEncoding Base64Encoded (Encrypted SecretKey)
+    , gkrSecretKey    :: AsByteString Base64Encoded SecretKey
     , gkrPublicKey    :: PublicKey
     , gkrAddress      :: Address
     }

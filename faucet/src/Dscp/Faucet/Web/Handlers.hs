@@ -24,9 +24,11 @@ faucetApiHandlers =
     FaucetApiEndpoints
     { fGenKeyPair = \(GenKeysRequest mpp) -> do
           let pp = maybe emptyPassPhrase getAsByteString mpp
-          (esk, pk) <- runSecureRandom (encKeyGen pp)
+          (sk, pk) <- runSecureRandom keyGen
+          let esk = encrypt pp sk
           return GenKeysResponse
               { gkrEncSecretKey = CustomEncoding esk
+              , gkrSecretKey = AsByteString sk
               , gkrPublicKey = pk
               , gkrAddress = mkAddr pk
               }

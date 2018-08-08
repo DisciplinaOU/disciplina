@@ -37,14 +37,25 @@ paths:
             type: object
             required:
             - encSecretKey
+            - secretKey
             - publicKey
+            - address
             properties:
               encSecretKey:
                 type: string
-                description: "Hex encoded secret key encrypted with the given password"
+                format: byte
+                description: "Secret key encrypted with the given password (empty pass is also a pass)"
+              SecretKey:
+                type: string
+                format: byte
+                description: "Plain secret key"
               publicKey:
                 type: string
-                description: "Hex encoded public key"
+                format: byte
+                description: "Public key corresponding to secret key"
+              address:
+                type: string
+                description: "Address corresponding to public key"
         400:
           description: Password is too short or too long
           schema:
