@@ -7,7 +7,7 @@ module Dscp.Witness.Launcher.Runner
 
 import Dscp.Launcher.Rio (runRIO)
 import Dscp.Resource.Class (AllocResource (..), InitParams (..))
-import Dscp.Resource.Functions (runResourceAllocation)
+import Dscp.Resource.Functions
 import Dscp.Snowdrop.Actions (initSDActions)
 import Dscp.Witness.Config
 import Dscp.Witness.Launcher.Mode (WitnessContext (..), WitnessRealMode)
@@ -30,7 +30,7 @@ launchWitnessRealMode
     -> (HasWitnessConfig => WitnessRealMode ())
     -> IO ()
 launchWitnessRealMode config params@WitnessParams{..} action =
-    void $
+    exitSilentlyOnFailure $
     withWitnessConfig config $
     runResourceAllocation appDesc initParams (allocResource params) $
         \resources -> do

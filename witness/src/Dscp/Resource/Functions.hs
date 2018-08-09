@@ -4,6 +4,7 @@ module Dscp.Resource.Functions
        ( handleComponentErrors
        , runComponentR
        , runResourceAllocation
+       , exitSilentlyOnFailure
        ) where
 
 import Control.Monad.Component (ComponentError (..), ComponentM, runComponentM)
@@ -66,3 +67,6 @@ runResourceAllocation desc params component main = do
     return eres
   where
     initDesc = "Preliminary resource allocation"
+
+exitSilentlyOnFailure :: IO (Either e a) -> IO a
+exitSilentlyOnFailure action = action >>= either (\_ -> exitFailure) return
