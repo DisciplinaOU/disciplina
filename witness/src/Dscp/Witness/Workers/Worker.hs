@@ -4,7 +4,6 @@
 
 module Dscp.Witness.Workers.Worker
     ( witnessWorkers
-    , newFailedTxs
     ) where
 
 import Control.Concurrent (threadDelay)
@@ -26,11 +25,6 @@ import Dscp.Witness.Logic
 import Dscp.Witness.Mempool
 import Dscp.Witness.Messages
 import Dscp.Witness.Relay
-
-newtype FailedTxs = FailedTxs (TVar (HashMap (Hash GTxWitnessed) GTxWitnessed))
-
-newFailedTxs :: MonadIO m => m FailedTxs
-newFailedTxs = FailedTxs <$> newTVarIO mempty
 
 witnessWorkers
     :: WitnessWorkMode ctx m
