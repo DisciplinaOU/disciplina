@@ -30,7 +30,10 @@ module Dscp.Core.Foundation.Witness
     , PublicationNext (..)
     , toPtxId
     , GTx (..)
+    , GTxId (..)
+    , toGTxId
     , GTxWitnessed (..)
+    , unGTxWitnessed
 
     -- * Block
     , Difficulty (..)
@@ -263,6 +266,16 @@ instance Buildable GTx where
     build (GMoneyTx       tw) = "GMoneyTx: "       +| tw |+ ""
     build (GPublicationTx pw) = "GPublciationTx: " +| pw |+ ""
 
+-- | Unified tx id, which is actually a hash of underlying Tx or PublicationTx.
+-- NB! It's different from Hash GTx.
+newtype GTxId = GTxId (Hash GTx)
+    deriving (Eq, Show, Generic, Buildable)
+
+-- | Compute tx id.
+toGTxId :: (Serialise Tx, Serialise PublicationTx) => GTx -> GTxId
+toGTxId (GMoneyTx tx) = GTxId . unsafeCastHash . toTxId $ tx
+toGTxId (GPublicationTx tx) = GTxId . unsafeCastHash . toPtxId $ tx
+
 data GTxWitnessed
     = GMoneyTxWitnessed TxWitnessed
     | GPublicationTxWitnessed PublicationTxWitnessed
@@ -271,6 +284,10 @@ data GTxWitnessed
 instance Buildable GTxWitnessed where
     build (GMoneyTxWitnessed       tw) = "GMoneyTxWitnessed: " +| tw |+ ""
     build (GPublicationTxWitnessed pw) = "GPublicationTxWitnessed: " +| pw |+ ""
+
+unGTxWitnessed :: GTxWitnessed -> GTx
+unGTxWitnessed (GMoneyTxWitnessed tw) = GMoneyTx (twTx tw)
+unGTxWitnessed (GPublicationTxWitnessed tw) = GPublicationTx (ptwTx tw)
 
 ----------------------------------------------------------------------------
 -- Blocks and headers

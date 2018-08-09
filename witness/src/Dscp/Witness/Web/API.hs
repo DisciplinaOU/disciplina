@@ -39,6 +39,20 @@ data WitnessEndpoints route = WitnessEndpoints
         :> "async"
         :> ReqBody '[JSON] TxWitnessed
         :> Verb 'POST 202 '[JSON] ()
+
+    , wGetBlocks :: route
+        :- "blocks"
+        :> QueryParam "count" Int
+        :> QueryParam "from" HeaderHash
+        :> Verb 'GET 200 '[JSON] [BlockInfo]
+
+    , wGetBlock :: route
+        :- "blocks" :> Capture "headerHash" HeaderHash
+        :> Verb 'GET 200 '[JSON] BlockInfo
+
+    , wGetTransaction :: route
+        :- "transactions" :> Capture "transactionHash" GTxId
+        :> Verb 'GET 200 '[JSON] TxInfo
     } deriving (Generic)
 
 type WitnessAPI =
