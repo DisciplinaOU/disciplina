@@ -9,8 +9,7 @@ import qualified GHC.Exts as Exts
 
 import Dscp.Core
 import Dscp.Crypto (Hash, Raw, hash, unsafeHash)
-import Dscp.DB.SQLite (MonadSQLiteDB, WithinSQLTransaction, sqlTransaction, _AssignmentDoesNotExist,
-                       _SubmissionDoesNotExist)
+import Dscp.DB.SQLite
 import qualified Dscp.DB.SQLite as CoreDB
 import Dscp.Educator.Web.Student
 import Dscp.Educator.Web.Types
@@ -70,7 +69,7 @@ getAllSubmissions student =
 -- | For advanced queries. Puts SignedSubmissions in db, tolerates repeating
 -- entities.
 prepareForSubmissions
-    :: (MonadSQLiteDB m, MonadThrow m)
+    :: (MonadSQLiteDB m, MonadCatch m)
     => CoreTestEnv -> m ()
 prepareForSubmissions CoreTestEnv{..} = do
     let assignments = F.toList cteAssignments
@@ -88,7 +87,7 @@ prepareForSubmissions CoreTestEnv{..} = do
                                           (hash assignment)
 
 prepareAndCreateSubmission
-    :: (MonadSQLiteDB m, MonadThrow m)
+    :: (MonadSQLiteDB m, MonadCatch m)
     => CoreTestEnv -> m ()
 prepareAndCreateSubmission env = do
     prepareForSubmissions env
@@ -231,7 +230,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
     describe "getAssignment" $ do
         it "Fails on request of non-existent assignment" $
             sqliteProperty $ \() ->
-                throwsPrism _AssignmentDoesNotExist $ do
+                throwsPrism (_AbsentError . _AssignmentDomain) $ do
                     _ <- CoreDB.createStudent student1
                     sqlTx $ studentGetAssignment student1 (hash assignment1)
 
@@ -243,7 +242,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                 _ <- CoreDB.createStudent student1
                 _ <- CoreDB.createCourse course Nothing []
                 _ <- CoreDB.createAssignment assignment
-                throwsPrism _AssignmentDoesNotExist $
+                throwsPrism (_AbsentError . _AssignmentDomain) $
                     sqlTx $ studentGetAssignment student1 (hash assignment1)
 
         it "Returns existing assignment properly" $
@@ -276,7 +275,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                 _ <- CoreDB.createAssignment assignment
                 _ <- CoreDB.enrollStudentToCourse student1 course
                 _ <- CoreDB.setStudentAssignment student1 (hash assignment)
-                throwsPrism _AssignmentDoesNotExist $
+                throwsPrism (_AbsentError . _AssignmentDomain) $
                     sqlTx $ studentGetAssignment student1 (getId needlessAssignment)
 
     describe "getAssignments" $ do
@@ -382,7 +381,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
 
         it "Fails on request of non-existent submission" $
             sqliteProperty $ \(mkSomeSubmission -> submission) ->
-                throwsPrism _SubmissionDoesNotExist $ do
+                throwsPrism (_AbsentError . _SubmissionDomain) $ do
                     let student = _sStudentId submission
                     _ <- CoreDB.createStudent student
                     sqlTx $ studentGetSubmission student (getId submission)
@@ -433,7 +432,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                     _ <- CoreDB.enrollStudentToCourse owner course
                     _ <- CoreDB.setStudentAssignment owner (hash assignment)
                     _ <- sqlTx $ CoreDB.submitAssignment sigSub
-                    fmap property $ throwsPrism _SubmissionDoesNotExist $
+                    fmap property $ throwsPrism (_AbsentError . _SubmissionDomain) $
                         sqlTx $ studentGetSubmission user (getId submission)
 
         it "Returns grade when present" $
@@ -551,7 +550,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
         it "Deletion of non-existing submission throws" $
             sqliteProperty $ \submission -> do
                 _ <- CoreDB.createStudent student1
-                throwsPrism _SubmissionDoesNotExist $
+                throwsPrism (_AbsentError . _SubmissionDomain) $
                     sqlTx $ studentDeleteSubmission student1 (hash submission)
 
         it "Delete works" $
@@ -601,7 +600,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                 else do
                     prepareAndCreateSubmission env
 
-                    fmap property . throwsPrism _SubmissionDoesNotExist $
+                    fmap property . throwsPrism (_AbsentError . _SubmissionDomain) $
                         sqlTx $ studentDeleteSubmission otherStudent (hash sub)
 
     describe "makeSubmission" $ do
@@ -613,8 +612,8 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
 
                 prepareForSubmissions env
                 void $ sqlTx $ CoreDB.submitAssignment sigSub
-                throwsPrism (_EntityAlreadyPresent . _SubmissionAlreadyExists) $
-                    sqlTx $ void $ studentMakeSubmission sigSub
+                throwsPrism (_AlreadyPresentError . _SubmissionDomain) $
+                    sqlTx $ void $ submitAssignment sigSub
 
         it "Making submission works" $
             sqliteProperty $

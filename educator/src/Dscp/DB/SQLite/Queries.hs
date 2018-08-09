@@ -2,19 +2,25 @@
 
 module Dscp.DB.SQLite.Queries
        ( -- * Domain-level database errors (missing entites, mostly)
-         DomainError(..)
+         DomainError (..)
+       , DomainErrorItem (..)
 
          -- * Prisms for constructors
-       , _CourseDoesNotExist
-       , _StudentDoesNotExist
-       , _AssignmentDoesNotExist
-       , _StudentWasNotEnrolledOnTheCourse
-       , _StudentWasNotSubscribedOnAssignment
-       , _SubmissionDoesNotExist
-       , _TransactionDoesNotExist
-       , _BlockWithIndexDoesNotExist
+       , _AbsentError
+       , _AlreadyPresentError
+       , _CourseDomain
+       , _StudentDomain
+       , _AssignmentDomain
+       , _StudentCourseEnrollmentDomain
+       , _StudentAssignmentSubscriptionDomain
+       , _SubmissionDomain
+       , _TransactionDomain
+       , _BlockWithIndexDomain
          -- * Synonym for MonadSQLiteDB
        , DBM
+
+         -- * Utils
+       , ifAlreadyExistsThrow
 
          -- * Readonly actions
        , getCourseSubjects
@@ -46,9 +52,8 @@ module Dscp.DB.SQLite.Queries
        ) where
 
 
+import Control.Exception.Safe (catchJust)
 import Control.Lens (makePrisms)
-import Data.Aeson.Options (defaultOptions)
-import Data.Aeson.TH (deriveJSON)
 import Data.Coerce (coerce)
 import qualified Data.Map as Map (empty, fromList, insertWith, toList)
 import Data.Time.Clock (UTCTime, getCurrentTime)
@@ -62,47 +67,64 @@ import Dscp.Crypto (Hash, MerkleProof, fillEmptyMerkleTree, getEmptyMerkleTree, 
 import qualified Dscp.Crypto.MerkleTree as MerkleTree (fromList)
 import Dscp.DB.SQLite.BlockData (BlockData (..), TxInBlock (..), TxWithIdx (..))
 import Dscp.DB.SQLite.Class (MonadSQLiteDB (..), WithinSQLTransaction, transaction)
+import Dscp.DB.SQLite.Error (asAlreadyExistsError)
 import Dscp.DB.SQLite.Instances ()
 import Dscp.DB.SQLite.Types (TxBlockIdx (TxInMempool))
-import Dscp.Util (HasId (..), assert, assertJust, idOf)
+import Dscp.Util (HasId (..), idOf)
 
 data DomainError
-    = CourseDoesNotExist
+    = AbsentError DomainErrorItem
+    | AlreadyPresentError DomainErrorItem
+    deriving (Show, Eq)
+
+data DomainErrorItem
+    = CourseDomain
         { deCourseId :: Id Course }
 
-    | StudentDoesNotExist
+    | StudentDomain
         { deStudentId :: Id Student }
 
-    | AssignmentDoesNotExist
+    | AssignmentDomain
         { deAssignmentId :: Id Assignment }
 
-    | StudentWasNotEnrolledOnTheCourse
+    | StudentCourseEnrollmentDomain
         { deStudentId :: Id Student
         , deCourseId  :: Id Course }
 
-    | StudentWasNotSubscribedOnAssignment
+    | StudentAssignmentSubscriptionDomain
         { deStudentId    :: Id Student
         , deAssignmentId :: Id Assignment }
 
-    | SubmissionDoesNotExist
+    | SubmissionDomain
         { deSubmissionId :: Id Submission }
 
-    | TransactionDoesNotExist
+    | TransactionDomain
         { deTransactionId :: Id PrivateTx }
 
-    | BlockWithIndexDoesNotExist
+    | BlockWithIndexDomain
         { deBlockIdx :: Word32 }
 
     deriving (Show, Typeable, Eq)
 
--- Using records ^ to get sensible autoderived json instances.
-
 makePrisms ''DomainError
+makePrisms ''DomainErrorItem
 
-deriveJSON defaultOptions ''DomainError
 instance Exception DomainError
 
-type DBM m = (MonadSQLiteDB m, MonadThrow m)
+-- | Catch "unique" constraint violation and rethrow specific error.
+ifAlreadyExistsThrow :: MonadCatch m => m a -> DomainErrorItem -> m a
+ifAlreadyExistsThrow action err =
+    catchJust asAlreadyExistsError action
+        (\_ -> throwM $ AlreadyPresentError err)
+
+assertExists :: MonadCatch m => m Bool -> DomainErrorItem -> m ()
+assertExists action = assertJustPresent (bool Nothing (Just ()) <$> action)
+
+assertJustPresent :: MonadCatch m => m (Maybe a) -> DomainErrorItem -> m a
+assertJustPresent action err =
+    action >>= maybe (throwM $ AbsentError err) pure
+
+type DBM m = (MonadSQLiteDB m, MonadCatch m)
 
 -- | How can a student get a list of courses?
 getStudentCourses :: DBM m => Id Student -> m [Id Course]
@@ -121,10 +143,11 @@ getStudentCourses student =
 enrollStudentToCourse :: DBM m => Id Student -> Id Course -> m ()
 enrollStudentToCourse student course = do
     transaction $ do
-        _ <- existsCourse  course  `assert` CourseDoesNotExist  course
-        _ <- existsStudent student `assert` StudentDoesNotExist student
+        existsCourse  course  `assertExists` CourseDomain  course
+        existsStudent student `assertExists` StudentDomain student
 
         execute enrollStudentToCourseRequest (student, course)
+            `ifAlreadyExistsThrow` StudentCourseEnrollmentDomain student course
   where
     enrollStudentToCourseRequest :: Query
     enrollStudentToCourseRequest = [q|
@@ -281,7 +304,7 @@ getProvenStudentTransactionsSince studentId sinceTime = do
     getBlockData :: DBM m => Word32 -> m BlockData
     getBlockData blockIdx = do
         (listToMaybe <$> query getBlockDataQuery (Only blockIdx))
-            `assertJust` BlockWithIndexDoesNotExist blockIdx
+            `assertJustPresent` BlockWithIndexDomain blockIdx
       where
         getBlockDataQuery = [q|
             -- getBlockData
@@ -358,6 +381,7 @@ createBlock delta = do
             , root
             , getEmptyMerkleTree tree
             )
+            `ifAlreadyExistsThrow` BlockWithIndexDomain bid
 
         for_ txs' $ \(txIdx, txId) -> do
             execute setTxIndexRequest    (txIdx :: Word32, txId)
@@ -397,10 +421,10 @@ createSignedSubmission sigSub = do
         submissionCont = submission^.sContentsHash
         assignmentId   = submission^.sAssignmentHash
 
-    _ <- existsStudent student        `assert`     StudentDoesNotExist    student
-    _ <- getAssignment assignmentId `assertJust` AssignmentDoesNotExist assignmentId
+    _ <- existsStudent student      `assertExists`     StudentDomain   student
+    _ <- getAssignment assignmentId `assertJustPresent` AssignmentDomain assignmentId
     _ <- isAssignedToStudent student assignmentId
-        `assert` StudentWasNotSubscribedOnAssignment student assignmentId
+        `assertExists` StudentAssignmentSubscriptionDomain student assignmentId
 
     currentTime <- liftIO getCurrentTime
 
@@ -412,6 +436,7 @@ createSignedSubmission sigSub = do
         , submissionSig
         , currentTime
         )
+        `ifAlreadyExistsThrow` SubmissionDomain submissionHash
 
     return submissionHash
   where
@@ -425,15 +450,16 @@ createSignedSubmission sigSub = do
 setStudentAssignment :: DBM m => Id Student -> Id Assignment -> m ()
 setStudentAssignment studentId assignmentId = do
     transaction $ do
-      _          <- existsStudent studentId    `assert`     StudentDoesNotExist    studentId
-      assignment <- getAssignment assignmentId `assertJust` AssignmentDoesNotExist assignmentId
+      _          <- existsStudent studentId    `assertExists`     StudentDomain    studentId
+      assignment <- getAssignment assignmentId `assertJustPresent` AssignmentDomain assignmentId
 
       let courseId = assignment^.aCourseId
 
-      _ <- existsCourse            courseId `assert` CourseDoesNotExist                         courseId
-      _ <- isEnrolledTo  studentId courseId `assert` StudentWasNotEnrolledOnTheCourse studentId courseId
+      _ <- existsCourse            courseId `assertExists` CourseDomain                         courseId
+      _ <- isEnrolledTo  studentId courseId `assertExists` StudentCourseEnrollmentDomain studentId courseId
 
       execute setStudentAssignmentRequest (studentId, assignmentId)
+          `ifAlreadyExistsThrow` StudentAssignmentSubscriptionDomain studentId assignmentId
   where
     setStudentAssignmentRequest :: Query
     setStudentAssignmentRequest = [q|
@@ -472,6 +498,7 @@ createCourse :: DBM m => Course -> Maybe Text -> [Id Subject] -> m (Id Course)
 createCourse course desc subjects = do
     transaction $ do
         execute createCourseRequest (course, desc)
+            `ifAlreadyExistsThrow` CourseDomain course
         for_ subjects $ \subject -> do
             execute attachSubjectToCourseRequest (subject, course)
         return course
@@ -523,6 +550,7 @@ existsStudent student = do
 createStudent :: DBM m => Student -> m (Id Student)
 createStudent student = do
     execute createStudentRequest (Only student)
+        `ifAlreadyExistsThrow` StudentDomain student
     return student
   where
     createStudentRequest = [q|
@@ -534,7 +562,7 @@ createAssignment :: DBM m => Assignment -> m (Id Assignment)
 createAssignment assignment = do
     let courseId = assignment^.aCourseId
 
-    _ <- existsCourse courseId `assert` CourseDoesNotExist courseId
+    _ <- existsCourse courseId `assertExists` CourseDomain courseId
 
     execute createAssignmentRequest
         ( assignmentId
@@ -543,6 +571,7 @@ createAssignment assignment = do
         , assignment^.aType
         , assignment^.aDesc
         )
+        `ifAlreadyExistsThrow` AssignmentDomain assignmentId
     return assignmentId
   where
     createAssignmentRequest = [q|
@@ -586,8 +615,8 @@ createTransaction trans = do
         let ptid    = trans^.idOf
             subHash = trans^.ptSignedSubmission.idOf
 
-        _ <- getSignedSubmission subHash `assertJust`
-            SubmissionDoesNotExist subHash
+        _ <- getSignedSubmission subHash `assertJustPresent`
+            SubmissionDomain subHash
 
         execute createTransactionRequest
             ( ptid
@@ -596,6 +625,7 @@ createTransaction trans = do
             , trans^.ptTime
             , TxInMempool
             )
+            `ifAlreadyExistsThrow` TransactionDomain ptid
 
         return ptid
   where

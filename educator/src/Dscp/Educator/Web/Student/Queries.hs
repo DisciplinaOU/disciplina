@@ -7,7 +7,6 @@ module Dscp.Educator.Web.Student.Queries
     ( module Dscp.Educator.Web.Student.Queries
     ) where
 
-import Control.Exception.Safe (catchJust)
 import Control.Lens (from, mapping)
 import Data.Coerce (coerce)
 import Data.Time.Clock (UTCTime)
@@ -17,15 +16,14 @@ import Loot.Log (MonadLogging)
 import Text.InterpolatedString.Perl6 (q)
 
 import Dscp.Core
-import Dscp.Crypto (Hash, hash)
-import Dscp.DB.SQLite (DomainError (..), MonadSQLiteDB (..), TxBlockIdx (TxInMempool),
-                       WithinSQLTransaction)
+import Dscp.Crypto (Hash)
+import Dscp.DB.SQLite (DomainError (..), DomainErrorItem (..), MonadSQLiteDB (..),
+                       TxBlockIdx (TxInMempool), WithinSQLTransaction)
 import qualified Dscp.DB.SQLite.Queries as Base
-import Dscp.DB.SQLite.Types (asAlreadyExistsError)
 import Dscp.Util (Id, assertJust, listToMaybeWarn)
 import Dscp.Util.Aeson (AsByteString (..))
 
-import Dscp.Educator.Web.Student.Error (APIError (..), ObjectAlreadyExistsError (..))
+import Dscp.Educator.Web.Student.Error (APIError (..))
 import Dscp.Educator.Web.Student.Types
 import Dscp.Educator.Web.Types
 
@@ -87,7 +85,7 @@ studentGetCourse studentId courseId =
             query queryText (Only courseId)
             >>= listToMaybeWarn "courses"
         Only mdesc <-
-            pure mcourse `assertJust` CourseDoesNotExist courseId
+            pure mcourse `assertJust` AbsentError (CourseDomain courseId)
 
         ciIsEnrolled <- Base.isEnrolledTo studentId courseId
         ciSubjects <- Base.getCourseSubjects courseId
@@ -178,7 +176,7 @@ studentGetAssignment student assignH = do
         query queryText (assignH, student)
         >>= listToMaybeWarn "assignments"
     (aiCourseId, aiContentsHash, assignType, aiDesc) <-
-        pure massign `assertJust` AssignmentDoesNotExist assignH
+        pure massign `assertJust` AbsentError (AssignmentDomain assignH)
     let IsFinal aiIsFinal = assignType ^. assignmentTypeRaw
     aiLastSubmission <- studentGetLastAssignmentSubmission student assignH
     return AssignmentStudentInfo{ aiHash = assignH, .. }
@@ -242,7 +240,7 @@ studentGetSubmission student submissionH = do
         query queryText (submissionH, student)
         >>= listToMaybeWarn "courses"
     (siContentsHash, siAssignmentHash) <-
-        pure msubmission `assertJust` SubmissionDoesNotExist submissionH
+        pure msubmission `assertJust` AbsentError (SubmissionDomain submissionH)
     siGrade <- studentGetGrade submissionH
     return SubmissionStudentInfo{ siHash = submissionH, .. }
   where
@@ -306,18 +304,6 @@ studentDeleteSubmission student submissionH = do
        where    hash = ?
             and student_addr = ?
     |]
-
-studentMakeSubmission
-    :: (MonadStudentAPIQuery m, WithinSQLTransaction)
-    => SignedSubmission -> m (Id Submission)
-studentMakeSubmission signedSubmission =
-    Base.submitAssignment signedSubmission
-        & handleAlreadyPresent
-  where
-    handleAlreadyPresent action =
-        catchJust asAlreadyExistsError action $ \_ -> do
-            let subH = hash (_ssSubmission signedSubmission)
-            throwM $ EntityAlreadyPresent (SubmissionAlreadyExists subH)
 
 studentGetBlockTxs
     :: MonadStudentAPIQuery m
