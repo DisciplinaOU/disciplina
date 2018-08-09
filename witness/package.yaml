@@ -13,6 +13,7 @@ library:
     - AVL
     - bytestring
     - containers
+    - concurrent-extra
     - componentm
     - data-default
     - directory
@@ -54,6 +55,7 @@ library:
     - time
     - transformers
     - unliftio
+    - unordered-containers
     - warp
 
 tests:

@@ -14,13 +14,24 @@ import Dscp.Witness.Launcher.Mode (WitnessContext (..), WitnessRealMode)
 import Dscp.Witness.Launcher.Params (WitnessParams (..))
 import Dscp.Witness.Launcher.Resource (WitnessResources (..))
 import Dscp.Witness.Mempool (newMempoolVar)
+import qualified Dscp.Witness.Relay as Relay
+import qualified Dscp.Witness.SDLock as Lock
 
 -- | Make up Witness context from dedicated pack of allocated resources.
 formWitnessContext :: WitnessParams -> WitnessResources -> IO WitnessContext
 formWitnessContext _wcParams _wcResources = do
-    _wcMempool <- newMempoolVar
-    _wcSDActions <- initSDActions
-    pure $ WitnessContext {..}
+    _wcMempool    <- newMempoolVar
+    _wcSDActions  <- initSDActions
+    _wcRelayState <- Relay.newRelayState
+    _wcSDLock     <- Lock.newSDLock
+    pure $ WitnessContext
+        { _wcParams
+        , _wcResources
+        , _wcMempool
+        , _wcSDActions
+        , _wcRelayState
+        , _wcSDLock
+        }
 
 -- | Given params, allocate resources, construct node context and run
 -- `WitnessWorkMode` monad. Any synchronous exceptions are handled inside.

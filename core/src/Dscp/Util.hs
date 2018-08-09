@@ -39,6 +39,9 @@ module Dscp.Util
        , HasId (..)
        , idOf
 
+         -- * Catch errors and report to logs
+       , dieGracefully
+
          -- * Re-exports
        , module Snowdrop.Util
        ) where
@@ -48,7 +51,7 @@ import Control.Lens (Getter, to)
 import Data.ByteArray (ByteArrayAccess)
 import Data.ByteArray.Encoding (Base (..), convertFromBase, convertToBase)
 import Fmt ((+|), (|+))
-import Loot.Log (MonadLogging, logWarning)
+import Loot.Log (MonadLogging, logError, logWarning)
 import Snowdrop.Util (NewestFirst (..), OldestFirst (..))
 
 import Dscp.Crypto.ByteArray (FromByteArray (..))
@@ -190,3 +193,12 @@ class HasId s where
 
 idOf :: HasId s => Getter s (Id s)
 idOf = to getId
+
+-----------------------------------------------------------
+-- Wrapper, that prints an error happened
+-----------------------------------------------------------
+
+dieGracefully :: (MonadLogging m, MonadCatch m) => m () -> m ()
+dieGracefully action =
+    action `catchAny` \e -> do
+        logError $ fromString $ "Exception in transactionRelayInput: " <> show e

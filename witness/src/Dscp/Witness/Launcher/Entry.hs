@@ -22,14 +22,15 @@ witnessEntry :: HasWitnessConfig => WitnessRealMode ()
 witnessEntry =
     withServer $
     modifyLogName (<> "node") $ do
+
         -- todo git revision
         logInfo $ "Genesis header: " +| genesisHeader |+ ""
 
         logInfo "Forking workers"
-        forM_ witnessWorkers $ void . async . runWorker identity
+        witnessWorkers >>= mapM_ (void . async . runWorker identity)
 
         logInfo "Forking listeners"
-        forM_ witnessListeners $ void . async . runListener identity
+        witnessListeners >>= mapM_ (void . async . runListener identity)
 
         witnessParams <- view (lensOf @WitnessParams)
         logInfo "Forking wallet server"

@@ -34,6 +34,7 @@ import Dscp.Resource.Keys (KeyResources)
 import Dscp.Snowdrop.Actions (SDActions)
 import qualified Dscp.Witness as W
 import Dscp.Witness.Mempool (MempoolVar)
+import Dscp.Witness.Relay
 
 ---------------------------------------------------------------------
 -- WorkMode class
@@ -107,6 +108,10 @@ instance HasLens MempoolVar EducatorContext MempoolVar where
     lensOf = ecWitnessCtx . lensOf @MempoolVar
 instance HasLens SDActions EducatorContext SDActions where
     lensOf = ecWitnessCtx . lensOf @SDActions
+instance HasLens RelayState EducatorContext RelayState where
+    lensOf = ecWitnessCtx . lensOf @RelayState
+instance HasLens W.SDLock EducatorContext W.SDLock where
+    lensOf = ecWitnessCtx . lensOf @W.SDLock
 
 ----------------------------------------------------------------------------
 -- Sanity check

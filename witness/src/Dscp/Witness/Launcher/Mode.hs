@@ -19,6 +19,7 @@ module Dscp.Witness.Launcher.Mode
     ) where
 
 import Control.Lens (makeLenses)
+
 import Loot.Base.HasLens (HasLens (..), HasLens')
 import Loot.Log.Rio (LoggingIO)
 import Loot.Network.Class (NetworkingCli, NetworkingServ)
@@ -36,6 +37,8 @@ import Dscp.Witness.Launcher.Marker (WitnessNode)
 import Dscp.Witness.Launcher.Params (WitnessParams)
 import Dscp.Witness.Launcher.Resource (WitnessResources, wrDB, wrKey, wrLogging, wrNetwork)
 import Dscp.Witness.Mempool (MempoolVar)
+import Dscp.Witness.Relay (RelayState)
+import Dscp.Witness.SDLock (SDLock)
 
 ---------------------------------------------------------------------
 -- WorkMode class
@@ -51,6 +54,7 @@ type WitnessWorkMode ctx m =
     , HasWitnessConfig
 
     , MonadReader ctx m
+
     , HasLens' ctx WitnessParams
     , HasLens' ctx LoggingIO
     , HasLens' ctx RocksDB
@@ -60,7 +64,8 @@ type WitnessWorkMode ctx m =
     , HasLens' ctx MempoolVar
     , HasLens' ctx SDActions
     , HasLens' ctx (KeyResources WitnessNode)
-
+    , HasLens' ctx RelayState
+    , HasLens' ctx SDLock
     )
 
 ---------------------------------------------------------------------
@@ -69,12 +74,12 @@ type WitnessWorkMode ctx m =
 
 -- | Context is resources plus some runtime variables.
 data WitnessContext = WitnessContext
-    { _wcParams    :: !WitnessParams
-      -- ^ Parameters witness was started with.
-    , _wcResources :: !WitnessResources
-      -- ^ Resources, allocated from params.
-    , _wcMempool   :: !MempoolVar
-    , _wcSDActions :: !SDActions
+    { _wcParams     :: !WitnessParams     -- ^ Parameters witness was started with.
+    , _wcResources  :: !WitnessResources  -- ^ Resources, allocated from params.
+    , _wcMempool    :: !MempoolVar
+    , _wcSDActions  :: !SDActions
+    , _wcRelayState :: !RelayState
+    , _wcSDLock     :: !SDLock
     }
 
 
@@ -104,6 +109,10 @@ instance HasLens MempoolVar WitnessContext MempoolVar where
     lensOf = wcMempool
 instance HasLens SDActions WitnessContext SDActions where
     lensOf = wcSDActions
+instance HasLens RelayState WitnessContext RelayState where
+    lensOf = wcRelayState
+instance HasLens SDLock WitnessContext SDLock where
+    lensOf = wcSDLock
 
 ----------------------------------------------------------------------------
 -- Sanity check

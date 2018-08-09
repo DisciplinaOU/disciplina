@@ -7,8 +7,11 @@ module Dscp.Witness.Workers.Worker
     ) where
 
 import Control.Concurrent (threadDelay)
+import qualified Control.Concurrent.STM as STM
+import qualified Data.HashMap.Strict as HashMap
 import qualified Data.List.NonEmpty as NE
 import Fmt (listF, listF', (+|), (+||), (|+), (||+))
+import Loot.Base.HasLens (lensOf)
 import Loot.Log (logDebug, logError, logInfo, logWarning)
 
 import Dscp.Core
@@ -16,13 +19,20 @@ import Dscp.Crypto
 import Dscp.Network.Wrapped
 import Dscp.Snowdrop.Mode
 import Dscp.Util
+import Dscp.Util (dieGracefully)
 import Dscp.Witness.Launcher.Mode
 import Dscp.Witness.Logic
+import Dscp.Witness.Mempool
 import Dscp.Witness.Messages
+import Dscp.Witness.Relay
 
-
-witnessWorkers :: WitnessWorkMode ctx m => [Worker m]
-witnessWorkers = [blockUpdateWorker]
+witnessWorkers
+    :: WitnessWorkMode ctx m
+    => m [Worker m]
+witnessWorkers = do
+    relayState <- view (lensOf @RelayState)
+    let (inputReader, subReader) = makeRelay relayState
+    return [blockUpdateWorker, inputReader, subReader]
 
 ----------------------------------------------------------------------------
 -- Updates
@@ -71,7 +81,7 @@ blockUpdateWorker =
 
     processNewBlock nId btq block = do
         let header = bHeader block
-        tip <- runSdM getTipHeader
+        tip <- runSdMRead getTipHeader
         let tipHash = headerHash tip
         if | hPrevHash header == tipHash -> applyNewBlock block
            | hDifficulty header > hDifficulty tip -> do
@@ -88,7 +98,7 @@ blockUpdateWorker =
                   " with proof " +|| proof ||+ ", propagating"
 
     applyManyBlocks blocks = do
-        tip <- runSdM getTipBlock
+        tip <- runSdMRead getTipBlock
         if (NE.head (unOldestFirst blocks) == tip)
         then do let blocks' = NE.tail $ unOldestFirst blocks
                 logDebug $ "Will attempt to apply blocks: " +|
@@ -96,3 +106,43 @@ blockUpdateWorker =
                 forM_ blocks' applyBlock
                 logInfo $ "Applied received blocks: " +| listF blocks |+ ""
         else logWarning "blockUpdateWorker: received sequence of blocks can't be applied"
+
+----------------------------------------------------------------------------
+-- Retranslator, input part
+----------------------------------------------------------------------------
+
+makeRelay
+    :: forall ctx m
+    .  WitnessWorkMode ctx m
+    => RelayState
+    -> (Worker m, Worker m)
+makeRelay (RelayState input pipe failedTxs) =
+    (inputWorker, republisher)
+  where
+    inputWorker = Worker
+        "txRetranslationInitialiser"
+        [msgType @SendTx]
+        [subType @PubTx] $ \_btq ->
+            dieGracefully $ forever $ do
+                tx <- atomically $ STM.readTQueue input
+                checkThenRepublish tx
+
+    republisher = Worker
+        "txRetranslationRepeater"
+        [msgType @SendTx]
+        [subType @PubTx] $ \btq -> do
+            dieGracefully $ forever $ do
+                (_, PubTx tx) <- cliRecvUpdate btq (-1)
+                checkThenRepublish tx
+
+    -- Check that the transaction is neither failed nor in a mempool and republish it.
+    checkThenRepublish tx = do
+        hashmap <- atomically $ readTVar failedTxs
+
+        unless (hash tx `HashMap.member` hashmap) $ do
+            pool    <- view (lensOf @MempoolVar @ctx)
+            isThere <- isInMempool pool tx
+
+            unless isThere $ do
+                addTxToMempool pool tx
+                atomically $ STM.writeTQueue pipe tx
