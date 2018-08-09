@@ -31,12 +31,12 @@ type SdM a = SdM_ (SD.SumChangeSet Ids Values) a
 runSdMRead :: WitnessWorkMode ctx m => SdM a -> m a
 runSdMRead action = do
     blockDBA <- SD.dmaAccessActions . nsBlockDBActions <$> view (lensOf @SDActions)
-    Lock.reading $ do
+    Lock.readingSDLock $ do
         liftIO $ SD.runERoCompIO @Exceptions blockDBA def $ action
 
 -- | SdM runner.
 runSdMWrite :: WitnessWorkMode ctx m => SdM a -> m a
 runSdMWrite action = do
     blockDBA <- SD.dmaAccessActions . nsBlockDBActions <$> view (lensOf @SDActions)
-    Lock.writing $ do
+    Lock.writingSDLock $ do
         liftIO $ SD.runERoCompIO @Exceptions blockDBA def $ action

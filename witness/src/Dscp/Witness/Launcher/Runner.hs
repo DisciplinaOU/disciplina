@@ -22,9 +22,9 @@ formWitnessContext :: WitnessParams -> WitnessResources -> IO WitnessContext
 formWitnessContext _wcParams _wcResources = do
     _wcMempool      <- newMempoolVar
     _wcSDActions    <- initSDActions
-    _wcTxRelayInput <- Relay.newInput
-    _wcTxRelayPipe  <- Relay.newPipe
-    _wcSDLock       <- Lock.new
+    _wcTxRelayInput <- Relay.newRelayInput
+    _wcTxRelayPipe  <- Relay.newRelayPipe
+    _wcSDLock       <- Lock.newSDLock
     pure $ WitnessContext
         { _wcParams
         , _wcResources

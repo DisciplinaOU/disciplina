@@ -35,7 +35,7 @@ getAccount address = do
     blockActs <-
         views (lensOf @SDActions)
               (SD.dmaAccessActions . flip nsStateDBActions (RememberForProof False))
-    maccount <- Lock.reading $ do
+    maccount <- Lock.readingSDLock $ do
         liftIO . SD.runERoCompIO @Exceptions blockActs Nothing $
             SD.queryOne (AccountId address)
     pure maccount `assertJust` noAccount
@@ -57,7 +57,7 @@ getAccountState addr = do
 
 -- | Applies transaction everywhere.
 submitUserTx :: WitnessWorkMode ctx m => TxWitnessed -> m ()
-submitUserTx = Relay.tx . GMoneyTxWitnessed
+submitUserTx = Relay.relayTx . GMoneyTxWitnessed
 
 -- | Applies transaction, but does not wait for a whole cycle of transaction
 -- application.

@@ -44,7 +44,7 @@ createBlock newSlot = do
 -- | Apply verified block.
 applyBlock :: WitnessWorkMode ctx m => Block -> m AvlProof
 applyBlock block = do
-    Lock.writing $ do
+    Lock.writingSDLock $ do
         (sdActions :: SDActions) <- view (lensOf @SDActions)
         let blockDBM = nsBlockDBActions sdActions
         let stateDBM = nsStateDBActions sdActions (RememberForProof True)

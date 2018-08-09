@@ -20,11 +20,11 @@ import Dscp.Crypto
 import Dscp.Network.Wrapped
 import Dscp.Snowdrop.Mode
 import Dscp.Util
+import Dscp.Util (dieGracefully)
 import Dscp.Witness.Launcher.Mode
 import Dscp.Witness.Logic
 import Dscp.Witness.Mempool
 import Dscp.Witness.Messages
-import Dscp.Witness.Util (dieGracefully)
 
 newtype FailedTxs = FailedTxs (TVar (HashMap (Hash GTxWitnessed) GTxWitnessed))
 

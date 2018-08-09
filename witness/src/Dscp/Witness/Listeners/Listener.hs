@@ -15,12 +15,12 @@ import Dscp.Core
 import Dscp.Network.Wrapped
 import Dscp.Resource.Keys (ourPublicKey)
 import Dscp.Snowdrop
+import Dscp.Util (dieGracefully)
 import Dscp.Witness.Config
 import Dscp.Witness.Launcher.Marker
 import Dscp.Witness.Launcher.Mode
 import Dscp.Witness.Logic
 import Dscp.Witness.Messages
-import Dscp.Witness.Util
 
 
 witnessListeners :: TxRelayPipe -> WitnessWorkMode ctx m => [Listener m]

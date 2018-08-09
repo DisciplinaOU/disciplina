@@ -25,8 +25,8 @@ witnessEntry =
     modifyLogName (<> "node") $ do
 
         failedTxs <- newFailedTxs
-        input     <- Relay.newInput
-        pipe      <- Relay.newPipe
+        input     <- Relay.newRelayInput
+        pipe      <- Relay.newRelayPipe
         -- todo git revision
         logInfo $ "Genesis header: " +| genesisHeader |+ ""
 
