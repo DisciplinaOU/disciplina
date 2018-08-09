@@ -14,6 +14,8 @@ module Dscp.Educator.Web.Student.Error
 
        , ErrResponse (..)
 
+       , DSON
+
        , toServantErr
        , unexpectedToServantErr
        ) where
@@ -22,6 +24,7 @@ import Control.Lens (makePrisms)
 import Data.Aeson (ToJSON (..), Value (..), encode)
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON, deriveToJSON)
+import Data.Reflection (Reifies (..))
 import Data.Typeable (cast)
 import Servant (ServantErr (..), err400, err403, err404, err409, err500)
 
@@ -29,6 +32,7 @@ import qualified Dscp.Core as Core
 import Dscp.Crypto (Hash)
 import Dscp.DB.SQLite.Queries (DomainError (..))
 import Dscp.Educator.BlockValidation (SubmissionValidationFailure)
+import Dscp.Util.Servant
 
 data WrongSubmissionSignature
     = FakeSubmissionSignature
@@ -59,6 +63,8 @@ data APIError
       -- ^ Entity is missing
     | EntityAlreadyPresent ObjectAlreadyExistsError
       -- ^ Entity is duplicated
+    | InvalidFormat
+      -- ^ Decoding failed
     deriving (Show, Eq, Generic, Typeable)
 
 makePrisms ''APIError
@@ -102,6 +108,7 @@ instance ToJSON APIError where
             BlockWithIndexDoesNotExist{}          -> "BlockWithIndexDoesNotExist"
         EntityAlreadyPresent err -> case err of
             SubmissionAlreadyExists{} ->             "SubmissionAlreadyExists"
+        InvalidFormat                             -> "InvalidFormat"
 
 ---------------------------------------------------------------------------
 -- Functions
@@ -122,6 +129,7 @@ toServantErrNoReason = \case
         TransactionDoesNotExist{}             -> err404
         BlockWithIndexDoesNotExist{}          -> err500
     EntityAlreadyPresent{}     -> err409
+    InvalidFormat{}            -> err400
 
 -- | Make up error which will be returned to client.
 toServantErr :: APIError -> ServantErr
@@ -129,3 +137,15 @@ toServantErr err = (toServantErrNoReason err){ errBody = encode $ ErrResponse er
 
 unexpectedToServantErr :: SomeException -> ServantErr
 unexpectedToServantErr err = err500{ errBody = show err }
+
+---------------------------------------------------------------------------
+-- Other
+---------------------------------------------------------------------------
+
+data FaucetDecodeErrTag
+instance Reifies FaucetDecodeErrTag String where
+    reflect _ = decodeUtf8 $ encode InvalidFormat
+
+-- | Marker like 'JSON' for servant, but returns just "InvalidFormat" on
+-- decoding error.
+type DSON = SimpleJSON FaucetDecodeErrTag
