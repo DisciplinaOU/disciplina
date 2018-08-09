@@ -2,6 +2,9 @@ module Dscp.Witness.Web.Logic
        ( getAccountState
        , submitUserTx
        , submitUserTxAsync
+       , getBlocks
+       , getBlockInfo
+       , getTransactionInfo
        ) where
 
 import Control.Lens (views)
@@ -16,6 +19,8 @@ import Dscp.Util (assertJust)
 import Dscp.Witness.Launcher.Mode (WitnessWorkMode)
 import qualified Dscp.Witness.Relay as Relay
 import qualified Dscp.Witness.SDLock as Lock
+import Dscp.Witness.Config
+import Dscp.Witness.Logic
 import Dscp.Witness.Web.Error
 import Dscp.Witness.Web.Types
 
@@ -63,3 +68,29 @@ submitUserTx = Relay.relayTx . GMoneyTxWitnessed
 -- application.
 submitUserTxAsync :: WitnessWorkMode ctx m => TxWitnessed -> m ()
 submitUserTxAsync tw = void . async $ submitUserTx tw
+
+toBlockInfo :: HasWitnessConfig => Bool -> Block -> BlockInfo
+toBlockInfo includeTxs block = BlockInfo
+    { biHeaderHash = headerHash block
+    , biHeader = bHeader block
+    , biIsGenesis = block == genesisBlock
+    , biTransactions =
+        if includeTxs
+        then Just . map (TxInfo . unGTxWitnessed) . bbTxs . bBody $ block
+        else Nothing
+    }
+
+getBlocks :: WitnessWorkMode ctx m => Maybe Int -> Maybe HeaderHash -> m [BlockInfo]
+getBlocks mCount mFrom = do
+    let count = max 100 $ fromMaybe 100 mCount
+    from <- maybe (runSdMRead getTipHash) return mFrom
+    eBlocks <- runSdMRead $ getBlocksBefore count from
+    either (throwM . InternalError) (return . map (toBlockInfo False) . toList) eBlocks
+
+getBlockInfo :: WitnessWorkMode ctx m => HeaderHash -> m BlockInfo
+getBlockInfo = runSdMRead . getBlock >=> return . toBlockInfo True
+
+getTransactionInfo :: WitnessWorkMode ctx m => GTxId -> m TxInfo
+getTransactionInfo gTxId = do
+    mTx <- runSdMRead $ getTransaction gTxId
+    maybe (throwM $ EntityAbsent "No transaction found") (return . TxInfo . unGTxWitnessed) mTx

@@ -9,6 +9,7 @@ module Dscp.Crypto.Impl
        , HasHash
        , hash
        , unsafeHash
+       , unsafeCastHash
 
          -- * Signing
        , SigScheme
@@ -55,6 +56,12 @@ hash = abstractHash
 
 unsafeHash :: forall a b. HasHash a => a -> Hash b
 unsafeHash = unsafeAbstractHash
+
+-- | Use hash of one entity verbatim as a hash of another entity.
+-- Useful, when we serialise them differently, but require them to have the same hash.
+-- Example: using hash of underlying concrete tx as id of generic tx.
+unsafeCastHash :: Hash a -> Hash b
+unsafeCastHash (AbstractHash hashResult) = AbstractHash hashResult
 
 ------------------------------------------------------
 -- Signing

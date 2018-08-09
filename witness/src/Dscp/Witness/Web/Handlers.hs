@@ -23,4 +23,7 @@ witnessServantHandlers =
     , wGetAccountState = getAccountState
     , wSubmitTx = submitUserTx
     , wSubmitTxAsync = submitUserTxAsync
+    , wGetBlocks = getBlocks
+    , wGetBlock = getBlockInfo
+    , wGetTransaction = getTransactionInfo
     }

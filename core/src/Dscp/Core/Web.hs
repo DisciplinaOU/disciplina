@@ -21,3 +21,6 @@ instance FromHttpApiData DocumentType where
     parseQueryParam "offline" = Right Offline
     parseQueryParam "online"  = Right Online
     parseQueryParam other     = Left $ "invalid document type: " <> other
+
+deriving instance ToHttpApiData GTxId
+deriving instance FromHttpApiData GTxId

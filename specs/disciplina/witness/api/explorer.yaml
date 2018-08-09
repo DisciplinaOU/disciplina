@@ -19,17 +19,16 @@ paths:
     get:
       summary: Get list of blocks.
       description: >-
-        Only the batch of `count` most recent blocks are returned at once.
-        The hash of the last block in the batch can be passed as `before` parameter to get the next batch.
+        Return a batch of `count` most recent blocks.
+        `prevHash` of the oldest block in the batch can be passed as `from` parameter to get the next batch.
       operationId: getBlocks
       produces:
       - application/json
       parameters:
       - in: query
-        name: before
+        name: from
         description: >-
-          The hash of the oldest block in the previous batch.
-          Get the batch of blocks before (not including) the specified one.
+          Get a batch of blocks starting with the specified one.
           If not specified, get the most recent blocks.
         required: false
         type: string
@@ -161,6 +160,14 @@ definitions:
     properties:
       headerHash:
         $ref: "#/definitions/Hash"
+      header:
+        $ref: "#/definitions/BlockHeader"
+  BlockHeader:
+    type: object
+    properties:
+      signature:
+        type: string
+        format: byte
       issuer:
         type: string
         format: byte

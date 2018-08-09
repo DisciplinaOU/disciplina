@@ -76,6 +76,9 @@ instance FromJSON Governance where
 deriving instance ToJSON Coin
 deriving instance FromJSON Coin
 
+deriving instance ToJSON GTxId
+deriving instance FromJSON GTxId
+
 deriving instance ToJSON Course
 deriving instance FromJSON Course
 
@@ -84,6 +87,12 @@ deriving instance FromJSON Subject
 
 deriving instance ToJSON SlotDuration
 deriving instance FromJSON SlotDuration
+
+deriving instance ToJSON SlotId
+deriving instance FromJSON SlotId
+
+deriving instance ToJSON Difficulty
+deriving instance FromJSON Difficulty
 
 instance FromJSONKey Address
 instance ToJSONKey Address
@@ -103,11 +112,13 @@ deriving instance FromJSON GenesisDistribution
 deriveJSON defaultOptions ''Assignment
 deriveJSON defaultOptions ''Submission
 deriveJSON defaultOptions ''SignedSubmission
+deriveJSON defaultOptions ''Header
 deriveJSON defaultOptions ''TxInAcc
 deriveJSON defaultOptions ''TxOut
 deriveJSON defaultOptions ''Tx
 deriveJSON defaultOptions ''TxWitness
 deriveJSON defaultOptions ''TxWitnessed
+deriveJSON defaultOptions ''GTx
 deriveJSON defaultOptions ''GTxWitnessed
 deriveJSON defaultOptions ''Publication
 deriveJSON defaultOptions ''PublicationTxWitness
