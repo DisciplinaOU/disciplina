@@ -1,6 +1,7 @@
 
 module Dscp.Witness.SDLock
-    ( readingSDLock
+    ( SDLock
+    , readingSDLock
     , writingSDLock
     , newSDLock
     ) where
@@ -10,7 +11,7 @@ import qualified UnliftIO
 
 import Loot.Base.HasLens (HasLens (..), HasLens')
 
-import Dscp.Witness.Launcher.Mode (SDLock (..))
+newtype SDLock = SDLock Lock.RWLock
 
 newSDLock :: MonadIO m => m SDLock
 newSDLock = liftIO $ SDLock <$> Lock.new

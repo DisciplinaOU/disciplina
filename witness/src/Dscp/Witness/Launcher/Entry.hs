@@ -15,7 +15,6 @@ import Dscp.Witness.Config
 import Dscp.Witness.Launcher.Mode
 import Dscp.Witness.Launcher.Params
 import Dscp.Witness.Listeners
-import qualified Dscp.Witness.Relay as Relay
 import Dscp.Witness.Web
 import Dscp.Witness.Workers
 
@@ -24,17 +23,14 @@ witnessEntry =
     withServer $
     modifyLogName (<> "node") $ do
 
-        failedTxs <- newFailedTxs
-        input     <- Relay.newRelayInput
-        pipe      <- Relay.newRelayPipe
         -- todo git revision
         logInfo $ "Genesis header: " +| genesisHeader |+ ""
 
         logInfo "Forking workers"
-        forM_ (witnessWorkers input pipe failedTxs) $ void . async . runWorker identity
+        witnessWorkers >>= mapM_ (void . async . runWorker identity)
 
         logInfo "Forking listeners"
-        forM_ (witnessListeners pipe) $ void . async . runListener identity
+        witnessListeners >>= mapM_ (void . async . runListener identity)
 
         witnessParams <- view (lensOf @WitnessParams)
         logInfo "Forking wallet server"

@@ -9,6 +9,8 @@ module Dscp.Witness.Listeners.Listener
 import qualified Control.Concurrent.STM as STM
 
 import Fmt ((+|), (|+))
+
+import Loot.Base.HasLens (HasLens (..))
 import Loot.Log (logDebug, logError, logInfo)
 
 import Dscp.Core
@@ -21,15 +23,18 @@ import Dscp.Witness.Launcher.Marker
 import Dscp.Witness.Launcher.Mode
 import Dscp.Witness.Logic
 import Dscp.Witness.Messages
+import Dscp.Witness.Relay
 
 
-witnessListeners :: TxRelayPipe -> WitnessWorkMode ctx m => [Listener m]
-witnessListeners (TxRelayPipe pipe) =
-    [ blockIssuingListener
-    , getBlocksListener
-    , getTipListener
-    , txPublisher pipe
-    ]
+witnessListeners :: WitnessWorkMode ctx m => m [Listener m]
+witnessListeners = do
+    relayState <- view (lensOf @RelayState)
+    return
+        [ blockIssuingListener
+        , getBlocksListener
+        , getTipListener
+        , txPublisher relayState
+        ]
 
 ----------------------------------------------------------------------------
 -- Block creation
@@ -88,8 +93,8 @@ getTipListener =
 -- Retranslator, publishing part
 ----------------------------------------------------------------------------
 
-txPublisher :: WitnessWorkMode ctx m => STM.TQueue GTxWitnessed -> Listener m
-txPublisher pipe = Listener
+txPublisher :: WitnessWorkMode ctx m => RelayState -> Listener m
+txPublisher (RelayState _ pipe _) = Listener
     "txRetranslationPublisher"
     [] $ \btq -> do
         dieGracefully $ forever $ atomically $ do

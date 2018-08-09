@@ -1,24 +1,40 @@
 
 module Dscp.Witness.Relay
     ( relayTx
-    , newRelayInput
-    , newRelayPipe
+    , newRelayState
+    , RelayState (RelayState)
+    , rsInput
+    , rsPipe
+    , rsFailed
     ) where
 
 import qualified Control.Concurrent.STM as STM
+import Control.Lens (makeLenses)
 
-import Loot.Base.HasLens (HasLens (..))
+import Loot.Base.HasLens (HasLens (..), HasLens')
 
-import qualified Dscp.Core as Core
-import Dscp.Witness.Launcher.Mode (TxRelayInput (..), TxRelayPipe (..), WitnessWorkMode)
+import Dscp.Core
+import Dscp.Crypto
 
-relayTx :: WitnessWorkMode ctx m => Core.GTxWitnessed -> m ()
-relayTx gtx = do
-    TxRelayInput input <- view (lensOf @TxRelayInput)
-    atomically $ STM.writeTQueue input gtx
+data RelayState = RelayState
+    { _rsInput  :: STM.TQueue GTxWitnessed
+    , _rsPipe   :: STM.TQueue GTxWitnessed
+    , _rsFailed :: TVar (HashMap (Hash GTxWitnessed) GTxWitnessed)
+    }
 
-newRelayInput :: MonadIO m => m TxRelayInput
-newRelayInput = TxRelayInput <$> atomically STM.newTQueue
+makeLenses ''RelayState
 
-newRelayPipe :: MonadIO m => m TxRelayPipe
-newRelayPipe = TxRelayPipe <$> atomically STM.newTQueue
+newRelayState :: MonadIO m => m RelayState
+newRelayState = atomically $
+    pure RelayState
+        <*> STM.newTQueue
+        <*> STM.newTQueue
+        <*> STM.newTVar mempty
+
+relayTx
+    :: (MonadReader ctx m, HasLens' ctx RelayState, MonadIO m)
+    => GTxWitnessed
+    -> m ()
+relayTx tx = do
+    input <- view (lensOf @RelayState . rsInput)
+    atomically $ STM.writeTQueue input tx

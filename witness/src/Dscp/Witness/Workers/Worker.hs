@@ -25,6 +25,7 @@ import Dscp.Witness.Launcher.Mode
 import Dscp.Witness.Logic
 import Dscp.Witness.Mempool
 import Dscp.Witness.Messages
+import Dscp.Witness.Relay
 
 newtype FailedTxs = FailedTxs (TVar (HashMap (Hash GTxWitnessed) GTxWitnessed))
 
@@ -33,13 +34,11 @@ newFailedTxs = FailedTxs <$> newTVarIO mempty
 
 witnessWorkers
     :: WitnessWorkMode ctx m
-    => TxRelayInput
-    -> TxRelayPipe
-    -> FailedTxs
-    -> [Worker m]
-witnessWorkers input pipe failedTxs =
-    let (inputReader, subReader) = makeRelay input pipe failedTxs
-    in  [blockUpdateWorker, inputReader, subReader]
+    => m [Worker m]
+witnessWorkers = do
+    relayState <- view (lensOf @RelayState)
+    let (inputReader, subReader) = makeRelay relayState
+    return [blockUpdateWorker, inputReader, subReader]
 
 ----------------------------------------------------------------------------
 -- Updates
@@ -121,11 +120,9 @@ blockUpdateWorker =
 makeRelay
     :: forall ctx m
     .  WitnessWorkMode ctx m
-    => TxRelayInput
-    -> TxRelayPipe
-    -> FailedTxs
+    => RelayState
     -> (Worker m, Worker m)
-makeRelay (TxRelayInput input) (TxRelayPipe pipe) (FailedTxs failedTxs) =
+makeRelay (RelayState input pipe failedTxs) =
     (inputWorker, republisher)
   where
     inputWorker = Worker

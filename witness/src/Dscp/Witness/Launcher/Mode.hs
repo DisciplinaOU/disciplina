@@ -16,16 +16,8 @@ module Dscp.Witness.Launcher.Mode
 
       -- * RealMode
     , WitnessRealMode
-
-      -- * Todo: move to place they belong
-    , TxRelayInput (..)
-    , TxRelayPipe (..)
-
-    , SDLock (..)
     ) where
 
-import qualified Control.Concurrent.STM as STM
-import qualified Control.Concurrent.ReadWriteLock as Lock
 import Control.Lens (makeLenses)
 
 import Loot.Base.HasLens (HasLens (..), HasLens')
@@ -33,7 +25,6 @@ import Loot.Log.Rio (LoggingIO)
 import Loot.Network.Class (NetworkingCli, NetworkingServ)
 import Loot.Network.ZMQ as Z
 
-import Dscp.Core.Foundation.Witness (GTxWitnessed)
 import Dscp.DB.Rocks.Class (MonadDB)
 import Dscp.DB.Rocks.Real.Types (RocksDB)
 import qualified Dscp.Launcher.Mode as Basic
@@ -46,6 +37,8 @@ import Dscp.Witness.Launcher.Marker (WitnessNode)
 import Dscp.Witness.Launcher.Params (WitnessParams)
 import Dscp.Witness.Launcher.Resource (WitnessResources, wrDB, wrKey, wrLogging, wrNetwork)
 import Dscp.Witness.Mempool (MempoolVar)
+import Dscp.Witness.Relay (RelayState)
+import Dscp.Witness.SDLock (SDLock)
 
 ---------------------------------------------------------------------
 -- WorkMode class
@@ -71,8 +64,7 @@ type WitnessWorkMode ctx m =
     , HasLens' ctx MempoolVar
     , HasLens' ctx SDActions
     , HasLens' ctx (KeyResources WitnessNode)
-    , HasLens' ctx TxRelayInput
-    , HasLens' ctx TxRelayPipe
+    , HasLens' ctx RelayState
     , HasLens' ctx SDLock
     )
 
@@ -80,19 +72,14 @@ type WitnessWorkMode ctx m =
 -- WorkMode implementation
 ---------------------------------------------------------------------
 
-newtype TxRelayInput = TxRelayInput { getTxRelayInput :: STM.TQueue GTxWitnessed }
-newtype TxRelayPipe  = TxRelayPipe  { getTxRelayPipe  :: STM.TQueue GTxWitnessed }
-newtype SDLock       = SDLock       { getSDLock       :: Lock.RWLock }
-
 -- | Context is resources plus some runtime variables.
 data WitnessContext = WitnessContext
-    { _wcParams       :: !WitnessParams     -- ^ Parameters witness was started with.
-    , _wcResources    :: !WitnessResources  -- ^ Resources, allocated from params.
-    , _wcMempool      :: !MempoolVar
-    , _wcSDActions    :: !SDActions
-    , _wcTxRelayInput :: !TxRelayInput
-    , _wcTxRelayPipe  :: !TxRelayPipe
-    , _wcSDLock       :: !SDLock
+    { _wcParams     :: !WitnessParams     -- ^ Parameters witness was started with.
+    , _wcResources  :: !WitnessResources  -- ^ Resources, allocated from params.
+    , _wcMempool    :: !MempoolVar
+    , _wcSDActions  :: !SDActions
+    , _wcRelayState :: !RelayState
+    , _wcSDLock     :: !SDLock
     }
 
 
@@ -122,10 +109,8 @@ instance HasLens MempoolVar WitnessContext MempoolVar where
     lensOf = wcMempool
 instance HasLens SDActions WitnessContext SDActions where
     lensOf = wcSDActions
-instance HasLens TxRelayInput WitnessContext TxRelayInput where
-    lensOf = wcTxRelayInput
-instance HasLens TxRelayPipe WitnessContext TxRelayPipe where
-    lensOf = wcTxRelayPipe
+instance HasLens RelayState WitnessContext RelayState where
+    lensOf = wcRelayState
 instance HasLens SDLock WitnessContext SDLock where
     lensOf = wcSDLock
 
