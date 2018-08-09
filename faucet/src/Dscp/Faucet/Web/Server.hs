@@ -9,6 +9,7 @@ module Dscp.Faucet.Web.Server
 import Data.Reflection (reify)
 import Fmt ((+|), (|+))
 import Loot.Log (logInfo)
+import Network.Wai.Middleware.Cors (simpleCors)
 import Servant ((:>), Handler, Server, hoistServer, serve)
 import Servant.Generic (toServant)
 
@@ -35,5 +36,6 @@ serveFaucetAPIReal ServerParams{..} = do
     lc <- buildServantLogConfig (<> "web")
     let faucetApiServer = mkFaucetApiServer (convertFaucetApiHandler ctx)
     serveWeb spAddr $
+        simpleCors $
         reify lc $ \(_ :: Proxy lc) ->
         serve (Proxy @(LoggingApi lc FaucetWebAPI)) faucetApiServer
