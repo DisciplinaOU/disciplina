@@ -166,11 +166,7 @@ getGradesForCourseAssignments student course = do
 
         select     Submissions.student_addr,
                    Submissions.contents_hash,
-                   Assignments.course_id,
-
-                   Assignments.contents_hash,
-                   Assignments.type,
-                   Assignments.desc,
+                   Assignments.hash,
 
                    Submissions.signature,
                    grade,
@@ -199,10 +195,7 @@ getStudentTransactions student = do
 
         select     Submissions.student_addr,
                    Submissions.contents_hash,
-                   Assignments.course_id,
-                   Assignments.contents_hash,
-                   Assignments.type,
-                   Assignments.desc,
+                   Assignments.hash,
                    Submissions.signature,
                    grade,
                    time
@@ -259,10 +252,7 @@ getProvenStudentTransactionsSince studentId sinceTime = do
 
             select     Submissions.student_addr,
                        Submissions.contents_hash,
-                       Assignments.course_id,
-                       Assignments.contents_hash,
-                       Assignments.type,
-                       Assignments.desc,
+                       Assignments.hash,
                        Submissions.signature,
                        Transactions.grade,
                        Transactions.time,
@@ -314,10 +304,7 @@ getAllNonChainedTransactions = do
         -- getAllNonChainedTransactions
         select     Submissions.student_addr,
                    Submissions.contents_hash,
-                   Assignments.course_id,
-                   Assignments.contents_hash,
-                   Assignments.type,
-                   Assignments.desc,
+                   Assignments.hash,
                    Submissions.signature,
                    grade,
                    time
@@ -408,21 +395,22 @@ createSignedSubmission sigSub = do
         student        = submission^.sStudentId
         submissionHash = submission^.idOf
         submissionCont = submission^.sContentsHash
-        assignment     = submission^.sAssignment
-
-        assignmentHash = assignment^.idOf
+        assignmentId   = submission^.sAssignmentHash
 
     _ <- existsStudent student        `assert`     StudentDoesNotExist    student
-    _ <- getAssignment assignmentHash `assertJust` AssignmentDoesNotExist assignmentHash
-    _ <- isAssignedToStudent student assignmentHash
-        `assert` StudentWasNotSubscribedOnAssignment student assignmentHash
+    _ <- getAssignment assignmentId `assertJust` AssignmentDoesNotExist assignmentId
+    _ <- isAssignedToStudent student assignmentId
+        `assert` StudentWasNotSubscribedOnAssignment student assignmentId
+
+    currentTime <- liftIO getCurrentTime
 
     execute generateSubmissionRequest
         ( submissionHash
         , student
-        , assignmentHash
+        , assignmentId
         , submissionCont
         , submissionSig
+        , currentTime
         )
 
     return submissionHash
@@ -431,7 +419,7 @@ createSignedSubmission sigSub = do
     generateSubmissionRequest = [q|
         -- generateSubmission
         insert into  Submissions
-        values       (?, ?, ?, ?, ?, null)
+        values       (?, ?, ?, ?, ?, julianday(?))
     |]
 
 setStudentAssignment :: DBM m => Id Student -> Id Assignment -> m ()
@@ -549,23 +537,23 @@ createAssignment assignment = do
     _ <- existsCourse courseId `assert` CourseDoesNotExist courseId
 
     execute createAssignmentRequest
-        ( assignmentHash
+        ( assignmentId
         , assignment^.aCourseId
         , assignment^.aContentsHash
         , assignment^.aType
         , assignment^.aDesc
         )
-    return assignmentHash
+    return assignmentId
   where
     createAssignmentRequest = [q|
         insert into  Assignments
         values       (?,?,?,?,?)
     |]
-    assignmentHash = assignment^.idOf
+    assignmentId = assignment^.idOf
 
 getAssignment :: DBM m => Id Assignment -> m (Maybe Assignment)
-getAssignment assignmentHash = do
-    listToMaybe <$> query getAssignmentQuery (Only assignmentHash)
+getAssignment assignmentId = do
+    listToMaybe <$> query getAssignmentQuery (Only assignmentId)
   where
     getAssignmentQuery = [q|
         select  course_id, contents_hash, type, desc
@@ -581,10 +569,7 @@ getSignedSubmission submissionHash = do
         -- from 'getSignedSubmission'
         select     student_addr,
                    Submissions.contents_hash,
-                   Assignments.course_id,
-                   Assignments.contents_hash,
-                   Assignments.type,
-                   Assignments.desc,
+                   Assignments.hash,
                    Submissions.signature
 
         from       Submissions
@@ -629,10 +614,7 @@ getTransaction ptid = do
 
         select     Submissions.student_addr,
                    Submissions.contents_hash,
-                   Assignments.course_id,
-                   Assignments.contents_hash,
-                   Assignments.type,
-                   Assignments.desc,
+                   Assignments.hash,
                    Submissions.signature,
                    grade,
                    time

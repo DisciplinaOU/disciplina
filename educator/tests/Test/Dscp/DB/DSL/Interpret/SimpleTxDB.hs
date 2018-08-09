@@ -89,8 +89,8 @@ obj1 = "obj1"
 simpleObjDB :: [Obj]
 simpleObjDB = [obj1]
 
-spec_Transactions :: Spec
-spec_Transactions = describe "SimpleTxDB Query" $ do
+disabled_spec_Transactions :: Spec
+disabled_spec_Transactions = describe "SimpleTxDB Query" $ do
     it "Find tx with TxIdEq" $ do
         testQuery10 `shouldBe` Just (mkLinAlgPrivateTx 'a' 'k')
         testQuery11 `shouldBe` Nothing

@@ -6,7 +6,7 @@ import Control.Lens (filtered, makePrisms, traversed)
 import Data.List (intersect, union)
 import Data.Map.Strict (Map)
 
-import Dscp.Core (Assignment (..), Course (..), SignedSubmission (..), Subject, Submission (..),
+import Dscp.Core (Assignment (..), Course (..), SignedSubmission (..), Subject,
                   activityTypeGraphIndexed, hasPathFromTo)
 import Dscp.Core.Foundation.Educator (PrivateTx (..))
 import Dscp.Crypto (hash)
@@ -142,4 +142,6 @@ runSimpleTxDBQuery dbTx dbObj query =
         cId5 = Course 5
 
 getTxCourseId :: PrivateTx -> Id Course
-getTxCourseId tx = _aCourseId (_sAssignment (_ssSubmission (_ptSignedSubmission tx)))
+getTxCourseId tx = _aCourseId (getAssignment (_ssSubmission (_ptSignedSubmission tx)))
+  where
+    getAssignment = error "Some magic should happen here here"

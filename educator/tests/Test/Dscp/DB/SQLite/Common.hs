@@ -15,10 +15,7 @@ import qualified Loot.Log as Adapter
 import Test.Hspec
 import UnliftIO (MonadUnliftIO)
 
-import Dscp.Core (Address (..), Assignment (..), AssignmentType (..), Course (..), Grade (..),
-                  PrivateTx (..), SignedSubmission (..), Submission (..), SubmissionSig,
-                  SubmissionWitness (..), aCourseId, mkGrade, ptSignedSubmission, ptTime,
-                  sAssignment, sStudentId, ssSubmission, ssWitness, swKey)
+import Dscp.Core
 import Dscp.Crypto (hash)
 import qualified Dscp.DB.SQLite.Class as Adapter
 import Dscp.DB.SQLite.Schema (ensureSchemaIsSetUp)

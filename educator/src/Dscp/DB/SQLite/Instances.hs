@@ -60,7 +60,7 @@ instance FromRow   Course            where fromRow = field
 instance FromRow   Grade             where fromRow = field
 
 instance FromRow   Assignment        where fromRow = Assignment       <$> field   <*> field <*> field <*> field
-instance FromRow   Submission        where fromRow = Submission       <$> field   <*> field <*> fromRow
+instance FromRow   Submission        where fromRow = Submission       <$> field   <*> field <*> field
 instance FromRow   SignedSubmission  where fromRow = SignedSubmission <$> fromRow <*> field
 instance FromRow   PrivateTx         where fromRow = PrivateTx        <$> fromRow <*> field <*> field
 

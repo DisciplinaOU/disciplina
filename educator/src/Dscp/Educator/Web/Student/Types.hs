@@ -30,7 +30,7 @@ import Servant (FromHttpApiData)
 import Dscp.Core
 import Dscp.Crypto
 import Dscp.Educator.Web.Types
-import Dscp.Util (Id)
+import Dscp.Util
 
 -- | Whether student is enrolled into a course.
 newtype IsEnrolled = IsEnrolled { unIsEnrolled :: Bool }
@@ -92,7 +92,7 @@ studentLiftSubmission s siGrade =
     SubmissionStudentInfo
     { siHash = hash s
     , siContentsHash = _sContentsHash s
-    , siAssignmentHash = hash (_sAssignment s)
+    , siAssignmentHash = _sAssignmentHash s
     , ..
     }
 
@@ -100,7 +100,7 @@ signedSubmissionToRequest :: SignedSubmission -> NewSubmission
 signedSubmissionToRequest sigSub =
     let submission = _ssSubmission sigSub
     in NewSubmission
-        { nsAssignmentHash = hash (_sAssignment submission)
+        { nsAssignmentHash = _sAssignmentHash submission
         , nsContentsHash = _sContentsHash submission
         , nsWitness = _ssWitness sigSub
         }

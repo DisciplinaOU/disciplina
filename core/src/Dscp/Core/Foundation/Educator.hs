@@ -29,7 +29,7 @@ module Dscp.Core.Foundation.Educator
     , sDocumentType
     , sStudentId
     , sContentsHash
-    , sAssignment
+    , sAssignmentHash
     , swKey
     , swSig
     , ssSubmission
@@ -155,11 +155,11 @@ instance HasHash Assignment => HasId Assignment where
 
 -- | Student submissions
 data Submission = Submission
-    { _sStudentId    :: !(Id Student)
+    { _sStudentId      :: !(Id Student)
     -- ^ Student who created this submission
-    , _sContentsHash :: !(Hash Raw)
+    , _sContentsHash   :: !(Hash Raw)
     -- ^ Hash of submission contents
-    , _sAssignment   :: !Assignment
+    , _sAssignmentHash :: !(Hash Assignment)
     -- ^ Assignment of this submission
     } deriving (Eq, Ord, Show, Generic)
 

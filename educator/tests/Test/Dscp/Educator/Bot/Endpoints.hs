@@ -36,11 +36,12 @@ spec_StudentApiWithBotQueries = describe "Basic properties" $ do
         sqliteProperty $ \
           ( seed
           , delayedGen
-              (genStudentSignedSubmissions
-                  (pure oneGeekSK)
-                  (arbitrary <&> \s -> s{ _sAssignment = assignmentEx }))
-            -> (_, sigsub :| _)
+            (genCoreTestEnv simpleCoreTestParams
+                            { ctpSecretKey = oneTestItem (pure oneGeekSK)
+                            , ctpAssignment = oneTestItem (pure assignmentEx) })
+             -> env
           ) -> do
+            let sigsub = tiOne $ cteSignedSubmissions env
             StudentApiEndpoints{..} <- testMakeBotHandlers seed
             void $ sMakeSubmission (signedSubmissionToRequest sigsub)
             [submission] <- sGetSubmissions Nothing Nothing Nothing

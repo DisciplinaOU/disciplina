@@ -11,7 +11,6 @@ import Dscp.Core.Foundation.Educator (PrivateTx (..))
 import Dscp.Crypto (PublicKey, SecretKey, hash, sign)
 import Dscp.Util (Id)
 
-
 -- | Create a private transaction
 mkPrivateTx :: Id Course -- ^ course id
             -> Grade -- ^ grade
@@ -37,7 +36,7 @@ mkPrivateTx courseId grade addrKey (witnessPKey, witnessSKey) =
      mkSubmission = Submission
        { _sStudentId = mkAddr addrKey
        , _sContentsHash = offlineHash
-       , _sAssignment = mkAssignment
+       , _sAssignmentHash = hash mkAssignment
        }
 
      mkSubmissionWitness :: SubmissionWitness
