@@ -18,12 +18,14 @@ module Dscp.Witness.Launcher.Mode
     , WitnessRealMode
 
       -- * Todo: move to place they belong
-    , TxRelayInput (..), newTxRelayInput
-    , TxRelayPipe (..),  newTxRelayPipe
-    , relayTx
+    , TxRelayInput (..)
+    , TxRelayPipe (..)
+
+    , SDLock (..)
     ) where
 
 import qualified Control.Concurrent.STM as STM
+import qualified Control.Concurrent.ReadWriteLock as Lock
 import Control.Lens (makeLenses)
 
 import Loot.Base.HasLens (HasLens (..), HasLens')
@@ -71,6 +73,7 @@ type WitnessWorkMode ctx m =
     , HasLens' ctx (KeyResources WitnessNode)
     , HasLens' ctx TxRelayInput
     , HasLens' ctx TxRelayPipe
+    , HasLens' ctx SDLock
     )
 
 ---------------------------------------------------------------------
@@ -79,17 +82,7 @@ type WitnessWorkMode ctx m =
 
 newtype TxRelayInput = TxRelayInput { getTxRelayInput :: STM.TQueue GTxWitnessed }
 newtype TxRelayPipe  = TxRelayPipe  { getTxRelayPipe  :: STM.TQueue GTxWitnessed }
-
-relayTx :: WitnessWorkMode ctx m => GTxWitnessed -> m ()
-relayTx tx = do
-    TxRelayInput input <- view (lensOf @TxRelayInput)
-    atomically $ STM.writeTQueue input tx
-
-newTxRelayInput :: MonadIO m => m TxRelayInput
-newTxRelayInput = TxRelayInput <$> atomically STM.newTQueue
-
-newTxRelayPipe :: MonadIO m => m TxRelayPipe
-newTxRelayPipe = TxRelayPipe <$> atomically STM.newTQueue
+newtype SDLock       = SDLock       { getSDLock       :: Lock.RWLock }
 
 -- | Context is resources plus some runtime variables.
 data WitnessContext = WitnessContext
@@ -99,6 +92,7 @@ data WitnessContext = WitnessContext
     , _wcSDActions    :: !SDActions
     , _wcTxRelayInput :: !TxRelayInput
     , _wcTxRelayPipe  :: !TxRelayPipe
+    , _wcSDLock       :: !SDLock
     }
 
 
@@ -132,6 +126,8 @@ instance HasLens TxRelayInput WitnessContext TxRelayInput where
     lensOf = wcTxRelayInput
 instance HasLens TxRelayPipe WitnessContext TxRelayPipe where
     lensOf = wcTxRelayPipe
+instance HasLens SDLock WitnessContext SDLock where
+    lensOf = wcSDLock
 
 ----------------------------------------------------------------------------
 -- Sanity check

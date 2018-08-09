@@ -4,7 +4,8 @@ module Dscp.Snowdrop.Mode
     ( IOCtx
     , SdM_
     , SdM
-    , runSdM
+    , runSdMRead
+    , runSdMWrite
     ) where
 
 import Data.Default (def)
@@ -15,6 +16,7 @@ import qualified Snowdrop.Model.State.Core as SD
 import Dscp.Snowdrop.Actions
 import Dscp.Snowdrop.Configuration
 import Dscp.Witness.Launcher.Mode
+import qualified Dscp.Witness.SDLock as Lock
 
 
 type IOCtx chgAccum = SD.IOCtx chgAccum Ids Values
@@ -26,7 +28,15 @@ type SdM_ chgacc = SD.ERoComp Exceptions Ids Values (IOCtx chgacc)
 type SdM a = SdM_ (SD.SumChangeSet Ids Values) a
 
 -- | SdM runner.
-runSdM :: WitnessWorkMode ctx m => SdM a -> m a
-runSdM action = do
+runSdMRead :: WitnessWorkMode ctx m => SdM a -> m a
+runSdMRead action = do
     blockDBA <- SD.dmaAccessActions . nsBlockDBActions <$> view (lensOf @SDActions)
-    liftIO $ SD.runERoCompIO @Exceptions blockDBA def $ action
+    Lock.reading $ do
+        liftIO $ SD.runERoCompIO @Exceptions blockDBA def $ action
+
+-- | SdM runner.
+runSdMWrite :: WitnessWorkMode ctx m => SdM a -> m a
+runSdMWrite action = do
+    blockDBA <- SD.dmaAccessActions . nsBlockDBActions <$> view (lensOf @SDActions)
+    Lock.writing $ do
+        liftIO $ SD.runERoCompIO @Exceptions blockDBA def $ action

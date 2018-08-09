@@ -14,8 +14,9 @@ import Dscp.Core
 import Dscp.Launcher.Mode
 import Dscp.Snowdrop
 import Dscp.Util (assertJust)
-import Dscp.Witness.Launcher.Mode (WitnessWorkMode, relayTx)
-import Dscp.Witness.Mempool
+import Dscp.Witness.Launcher.Mode (WitnessWorkMode)
+import qualified Dscp.Witness.Relay as Relay
+import qualified Dscp.Witness.SDLock as Lock
 import Dscp.Witness.Web.Error
 import Dscp.Witness.Web.Types
 
@@ -35,9 +36,9 @@ getAccount address = do
     blockActs <-
         views (lensOf @SDActions)
               (SD.dmaAccessActions . flip nsStateDBActions (RememberForProof False))
-    maccount <-
+    maccount <- Lock.reading $ do
         liftIO . SD.runERoCompIO @Exceptions blockActs Nothing $
-        SD.queryOne (AccountId address)
+            SD.queryOne (AccountId address)
     pure maccount `assertJust` noAccount
 
 pickAccountBalance :: WitnessWorkMode ctx m => Account -> m Balances
@@ -57,10 +58,7 @@ getAccountState addr = do
 
 -- | Applies transaction everywhere.
 submitUserTx :: WitnessWorkMode ctx m => TxWitnessed -> m ()
-submitUserTx tw = do
-    mempool <- view (lensOf @MempoolVar)
-    addTxToMempool mempool (GMoneyTxWitnessed tw)
-    relayTx (GMoneyTxWitnessed tw)
+submitUserTx = Relay.tx . GMoneyTxWitnessed
 
 -- | Applies transaction, but does not wait for a whole cycle of transaction
 -- application.

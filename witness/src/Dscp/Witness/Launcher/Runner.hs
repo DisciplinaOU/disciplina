@@ -5,26 +5,26 @@ module Dscp.Witness.Launcher.Runner
     , launchWitnessRealMode
     ) where
 
-import qualified Control.Concurrent.STM as STM
-
 import Dscp.Launcher.Rio (runRIO)
 import Dscp.Resource.Class (AllocResource (..), InitParams (..))
 import Dscp.Resource.Functions
 import Dscp.Snowdrop.Actions (initSDActions)
 import Dscp.Witness.Config
-import Dscp.Witness.Launcher.Mode (TxRelayInput (..), TxRelayPipe (..), WitnessContext (..),
-                                   WitnessRealMode)
+import Dscp.Witness.Launcher.Mode (WitnessContext (..), WitnessRealMode)
 import Dscp.Witness.Launcher.Params (WitnessParams (..))
 import Dscp.Witness.Launcher.Resource (WitnessResources (..))
 import Dscp.Witness.Mempool (newMempoolVar)
+import qualified Dscp.Witness.Relay as Relay
+import qualified Dscp.Witness.SDLock as Lock
 
 -- | Make up Witness context from dedicated pack of allocated resources.
 formWitnessContext :: WitnessParams -> WitnessResources -> IO WitnessContext
 formWitnessContext _wcParams _wcResources = do
     _wcMempool      <- newMempoolVar
     _wcSDActions    <- initSDActions
-    _wcTxRelayInput <- TxRelayInput <$> atomically STM.newTQueue
-    _wcTxRelayPipe  <- TxRelayPipe  <$> atomically STM.newTQueue
+    _wcTxRelayInput <- Relay.newInput
+    _wcTxRelayPipe  <- Relay.newPipe
+    _wcSDLock       <- Lock.new
     pure $ WitnessContext
         { _wcParams
         , _wcResources
@@ -32,6 +32,7 @@ formWitnessContext _wcParams _wcResources = do
         , _wcSDActions
         , _wcTxRelayInput
         , _wcTxRelayPipe
+        , _wcSDLock
         }
 
 -- | Given params, allocate resources, construct node context and run

@@ -20,6 +20,7 @@ import Dscp.Witness.Launcher.Marker
 import Dscp.Witness.Launcher.Mode
 import Dscp.Witness.Logic.Getters
 import Dscp.Witness.Mempool (MempoolVar, takeTxsMempool)
+import qualified Dscp.Witness.SDLock as Lock
 
 
 -- | Empty mempool(s), create block body.
@@ -29,7 +30,7 @@ createPayload v = BlockBody <$> takeTxsMempool v
 -- | Create a public block.
 createBlock :: WitnessWorkMode ctx m => SlotId -> m Block
 createBlock newSlot = do
-    tipHeader <- runSdM getTipHeader
+    tipHeader <- runSdMRead getTipHeader
     let tipHash = headerHash tipHeader
     let diff = hDifficulty tipHeader + 1
 
@@ -43,21 +44,22 @@ createBlock newSlot = do
 -- | Apply verified block.
 applyBlock :: WitnessWorkMode ctx m => Block -> m AvlProof
 applyBlock block = do
-    (sdActions :: SDActions) <- view (lensOf @SDActions)
-    let blockDBM = nsBlockDBActions sdActions
-    let stateDBM = nsStateDBActions sdActions (RememberForProof True)
+    Lock.writing $ do
+        (sdActions :: SDActions) <- view (lensOf @SDActions)
+        let blockDBM = nsBlockDBActions sdActions
+        let stateDBM = nsStateDBActions sdActions (RememberForProof True)
 
-    (blockCS, stateCS) <- reify blockPrefixes $ \(_ :: Proxy ps) ->
-        let actions = SD.constructCompositeActions @ps (SD.dmaAccessActions blockDBM)
-                                                       (SD.dmaAccessActions stateDBM)
-            rwComp = do
-              sblock <- SD.liftERoComp $ expandBlock block
-              SD.applyBlock blkStateConfig sblock
-         in liftIO $
-            SD.runERwCompIO actions def rwComp >>=
-                \((), (SD.CompositeChgAccum blockCS_ stateCS_)) -> pure (blockCS_, stateCS_)
-    proof <- liftIO $ SD.dmaApply stateDBM stateCS
-    liftIO $ SD.dmaApply blockDBM blockCS
-    pure proof
+        (blockCS, stateCS) <- reify blockPrefixes $ \(_ :: Proxy ps) ->
+            let actions = SD.constructCompositeActions @ps (SD.dmaAccessActions blockDBM)
+                                                           (SD.dmaAccessActions stateDBM)
+                rwComp = do
+                  sblock <- SD.liftERoComp $ expandBlock block
+                  SD.applyBlock blkStateConfig sblock
+             in liftIO $
+                SD.runERwCompIO actions def rwComp >>=
+                    \((), (SD.CompositeChgAccum blockCS_ stateCS_)) -> pure (blockCS_, stateCS_)
+        proof <- liftIO $ SD.dmaApply stateDBM stateCS
+        liftIO $ SD.dmaApply blockDBM blockCS
+        pure proof
   where
     blockPrefixes = S.fromList [tipPrefix, blockPrefix]

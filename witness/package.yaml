@@ -13,6 +13,7 @@ library:
     - AVL
     - bytestring
     - containers
+    - concurrent-extra
     - componentm
     - data-default
     - directory

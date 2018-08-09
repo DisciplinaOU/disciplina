@@ -88,7 +88,7 @@ blockUpdateWorker =
 
     processNewBlock nId btq block = do
         let header = bHeader block
-        tip <- runSdM getTipHeader
+        tip <- runSdMRead getTipHeader
         let tipHash = headerHash tip
         if | hPrevHash header == tipHash -> applyNewBlock block
            | hDifficulty header > hDifficulty tip -> do
@@ -105,7 +105,7 @@ blockUpdateWorker =
                   " with proof " +|| proof ||+ ", propagating"
 
     applyManyBlocks blocks = do
-        tip <- runSdM getTipBlock
+        tip <- runSdMRead getTipBlock
         if (NE.head (unOldestFirst blocks) == tip)
         then do let blocks' = NE.tail $ unOldestFirst blocks
                 logDebug $ "Will attempt to apply blocks: " +|

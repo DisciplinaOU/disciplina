@@ -111,6 +111,8 @@ instance HasLens W.TxRelayInput EducatorContext W.TxRelayInput where
     lensOf = ecWitnessCtx . lensOf @W.TxRelayInput
 instance HasLens W.TxRelayPipe EducatorContext W.TxRelayPipe where
     lensOf = ecWitnessCtx . lensOf @W.TxRelayPipe
+instance HasLens W.SDLock EducatorContext W.SDLock where
+    lensOf = ecWitnessCtx . lensOf @W.SDLock
 
 ----------------------------------------------------------------------------
 -- Sanity check

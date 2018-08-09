@@ -15,6 +15,7 @@ import Dscp.Witness.Config
 import Dscp.Witness.Launcher.Mode
 import Dscp.Witness.Launcher.Params
 import Dscp.Witness.Listeners
+import qualified Dscp.Witness.Relay as Relay
 import Dscp.Witness.Web
 import Dscp.Witness.Workers
 
@@ -24,8 +25,8 @@ witnessEntry =
     modifyLogName (<> "node") $ do
 
         failedTxs <- newFailedTxs
-        input     <- newTxRelayInput
-        pipe      <- newTxRelayPipe
+        input     <- Relay.newInput
+        pipe      <- Relay.newPipe
         -- todo git revision
         logInfo $ "Genesis header: " +| genesisHeader |+ ""
 
