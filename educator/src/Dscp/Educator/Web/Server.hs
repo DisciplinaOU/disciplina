@@ -8,6 +8,7 @@ module Dscp.Educator.Web.Server
 
 import Fmt ((+|), (|+))
 import Loot.Log (logInfo)
+import Network.Wai.Middleware.Cors (simpleCors)
 import Servant ((:<|>) (..), Handler, Server, hoistServer, serve)
 import Servant.Generic (toServant)
 
@@ -53,7 +54,9 @@ serveStudentAPIReal EducatorWebParams{..} = do
     eCtx <- ask
     let educatorApiServer = mkEducatorApiServer (convertEducatorApiHandler eCtx)
     studentApiServer <- mkStudentApiServer (convertStudentApiHandler eCtx) ewpBotParams
-    serveWeb spAddr $ serve (Proxy @EducatorWebAPI) $
-         educatorApiServer
-         :<|>
-         studentApiServer
+    serveWeb spAddr $
+        simpleCors $
+        serve (Proxy @EducatorWebAPI) $
+            educatorApiServer
+            :<|>
+            studentApiServer

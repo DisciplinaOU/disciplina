@@ -24,6 +24,7 @@ library:
     - servant-server
     - text-format
     - unliftio
+    - wai-cors
 
 executables:
   dscp-faucet:
