@@ -22,7 +22,8 @@ import Control.Lens (makePrisms)
 import Data.Aeson (ToJSON (..), Value (..), encode)
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON, deriveToJSON)
-import Servant (ServantErr (..), err403, err404, err409, err500)
+import Data.Typeable (cast)
+import Servant (ServantErr (..), err400, err403, err404, err409, err500)
 
 import qualified Dscp.Core as Core
 import Dscp.Crypto (Hash)
@@ -46,6 +47,8 @@ data ObjectAlreadyExistsError
 
 makePrisms ''ObjectAlreadyExistsError
 
+instance Exception ObjectAlreadyExistsError
+
 -- | Any error backend may return.
 data APIError
     = BadSubmissionSignature WrongSubmissionSignature
@@ -60,7 +63,14 @@ data APIError
 
 makePrisms ''APIError
 
-instance Exception APIError
+instance Exception APIError where
+    fromException e@(SomeException e') =
+        asum
+        [ cast e'
+        , BadSubmissionSignature <$> fromException e
+        , EntityAbsent           <$> fromException e
+        , EntityAlreadyPresent   <$> fromException e
+        ]
 
 -- | Contains info about error in client-convenient form.
 data ErrResponse = ErrResponse
@@ -106,8 +116,8 @@ toServantErrNoReason = \case
         CourseDoesNotExist{}                  -> err404
         StudentDoesNotExist{}                 -> err404
         AssignmentDoesNotExist{}              -> err404
-        StudentWasNotEnrolledOnTheCourse{}    -> err404
-        StudentWasNotSubscribedOnAssignment{} -> err404
+        StudentWasNotEnrolledOnTheCourse{}    -> err400
+        StudentWasNotSubscribedOnAssignment{} -> err400
         SubmissionDoesNotExist{}              -> err404
         TransactionDoesNotExist{}             -> err404
         BlockWithIndexDoesNotExist{}          -> err500

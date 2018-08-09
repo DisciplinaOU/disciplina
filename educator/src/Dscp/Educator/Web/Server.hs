@@ -49,7 +49,7 @@ mkStudentApiServer nat botSwitch = do
 serveStudentAPIReal :: HasEducatorConfig => EducatorWebParams -> EducatorRealMode ()
 serveStudentAPIReal EducatorWebParams{..} = do
     let ServerParams{..} = ewpServerParams
-    logInfo $ "Serving Student API on "+|spAddr|+""
+    logInfo $ "Serving educator APIs on "+|spAddr|+""
     eCtx <- ask
     let educatorApiServer = mkEducatorApiServer (convertEducatorApiHandler eCtx)
     studentApiServer <- mkStudentApiServer (convertStudentApiHandler eCtx) ewpBotParams
