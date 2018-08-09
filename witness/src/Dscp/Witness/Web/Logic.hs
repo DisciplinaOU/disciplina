@@ -11,7 +11,6 @@ import qualified Snowdrop.Model.State.Core as SD
 import UnliftIO.Async (async)
 
 import Dscp.Core
-import Dscp.Launcher.Mode
 import Dscp.Snowdrop
 import Dscp.Util (assertJust)
 import Dscp.Witness.Launcher.Mode (WitnessWorkMode)
@@ -62,7 +61,5 @@ submitUserTx = Relay.tx . GMoneyTxWitnessed
 
 -- | Applies transaction, but does not wait for a whole cycle of transaction
 -- application.
-submitUserTxAsync
-    :: (BasicWorkMode m, MonadReader ctx m, HasLens' ctx MempoolVar)
-    => TxWitnessed -> m ()
+submitUserTxAsync :: WitnessWorkMode ctx m => TxWitnessed -> m ()
 submitUserTxAsync tw = void . async $ submitUserTx tw
