@@ -25,7 +25,7 @@ buildStackApplication rec {
   src = runCommand "source" { cwd = lib.cleanSource ./.; } ''
     cp --no-preserve=mode,ownership -r $cwd $out
 
-    for f in $out/{core,witness,educator,tools,wallet}; do
+    for f in $out/{core,witness,educator,tools,wallet,faucet}; do
       ${haskellPackages.hpack}/bin/hpack $f
     done
   '';
