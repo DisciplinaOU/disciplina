@@ -15,7 +15,11 @@ import Dscp.Resource.Functions
 import Dscp.Witness.Launcher (formWitnessContext, wpLoggingParams)
 
 -- | Make up Educator context from dedicated pack of allocated resources.
-formEducatorContext :: EducatorParams -> EducatorResources -> IO EducatorContext
+formEducatorContext ::
+       HasEducatorConfig
+    => EducatorParams
+    -> EducatorResources
+    -> IO EducatorContext
 formEducatorContext _ecParams _ecResources = do
     _ecWitnessCtx <- formWitnessContext (epWitnessParams _ecParams)
                                         (_erWitnessResources _ecResources)
