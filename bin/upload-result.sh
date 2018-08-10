@@ -8,7 +8,7 @@ fi
 for output in $files; do
   # get nix name from path
   name=$(nix eval '(with builtins; (parseDrvName (unsafeDiscardStringContext (substring 33 (-1) (baseNameOf (storePath '"$output"'))))).name)' --raw)
-  echo buildkite-agent meta-data set "output-$name" "$(readlink "$output")";
+  buildkite-agent meta-data set "output-$name" "$(readlink "$output")";
   echo "output-$name" "->" "$(readlink "$output")"
 done
 
