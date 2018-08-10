@@ -2,6 +2,7 @@
 
 module Main where
 
+import Control.Lens (views)
 import Fmt ((+|), (|+))
 import Loot.Base.HasLens (lensOf)
 import Loot.Log (logError, logInfo)
@@ -18,23 +19,24 @@ main :: IO ()
 main = do
     (faucetParams, faucetConfig) <- getFaucetParams
     launchFaucetRealMode faucetConfig faucetParams $ do
-        printSourceInfo
+        printSourceInfo faucetParams
         serveFaucetAPIReal (_fpWebParams faucetParams)
   where
-    printSourceInfo = do
-        wc <- view (lensOf @WitnessClient)
+    printSourceInfo params = do
+        wc <- views (lensOf @WitnessClient) (hoistWitnessClient liftIO)
         pk <- view $ lensOf @(KeyResources FaucetApp) . krPublicKey
         let addr = mkAddr pk
 
         logInfo $ "Faucet source address: " +| addr |+ ""
 
-        liftIO (wPing wc)
-          `onException` logError "Failled to connect to witness node"
+        let DryRun dryRun = _fpDryRun params
+        unless dryRun $ do
+            wPing wc
+              `onException` logError "Failled to connect to witness node"
 
-        -- TODO [DSCP-187]: uncomment when genesis is filled
-        -- addrState <- liftIO (wGetAccountState wc addr)
-        -- let balance = bConfirmed (asBalances addrState)
-        -- logInfo $ "Source address current balance: " +| balance |+ ""
+            addrState <- wGetAccountState wc addr
+            let balance = bConfirmed (asBalances addrState)
+            logInfo $ "Source address current balance: " +| balance |+ ""
 
 getFaucetParams :: IO (FaucetParams, FaucetConfigRec)
 getFaucetParams = do
