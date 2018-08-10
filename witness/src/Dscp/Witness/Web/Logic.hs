@@ -1,9 +1,9 @@
 module Dscp.Witness.Web.Logic
-       ( getAccountState
-       , submitUserTx
+       ( submitUserTx
        , submitUserTxAsync
        , getBlocks
        , getBlockInfo
+       , getAccountInfo
        , getTransactionInfo
        ) where
 
@@ -51,13 +51,14 @@ pickAccountBalance blockAcc = do
         { bConfirmed = Coin . fromIntegral $ aBalance blockAcc
         }
 
-getAccountState :: WitnessWorkMode ctx m => Address -> m AccountState
-getAccountState addr = do
+getAccountInfo :: WitnessWorkMode ctx m => Address -> m AccountInfo
+getAccountInfo addr = do
     account <- getAccount addr
     balances <- pickAccountBalance account
-    return AccountState
-        { asBalances = balances
-        , asNextNonce = aNonce account + 1
+    return AccountInfo
+        { aiBalances = balances
+        , aiNextNonce = aNonce account + 1
+        , aiTransactions = Nothing
         }
 
 -- | Applies transaction everywhere.

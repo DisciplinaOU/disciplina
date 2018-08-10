@@ -22,11 +22,6 @@ data WitnessEndpoints route = WitnessEndpoints
         :- "ping"
         :> Verb 'GET 200 '[JSON] ()
 
-    , wGetAccountState :: route
-        :- "account" :> Capture "accountId" Address
-        :> "state"
-        :> Verb 'GET 200 '[JSON] AccountState
-
     , wSubmitTx :: route
         :- "tx"
         :> ReqBody '[JSON] TxWitnessed
@@ -49,6 +44,10 @@ data WitnessEndpoints route = WitnessEndpoints
     , wGetBlock :: route
         :- "blocks" :> Capture "headerHash" HeaderHash
         :> Verb 'GET 200 '[JSON] BlockInfo
+
+    , wGetAccount :: route
+        :- "accounts" :> Capture "address" Address
+        :> Verb 'GET 200 '[JSON] AccountInfo
 
     , wGetTransaction :: route
         :- "transactions" :> Capture "transactionHash" GTxId
