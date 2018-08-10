@@ -21,12 +21,10 @@ import Snowdrop.Util (RIO, runRIO)
 
 import Dscp.Snowdrop.Actions
 import Dscp.Snowdrop.Configuration
+import Dscp.Snowdrop.IOCtx (IOCtx)
 import Dscp.Snowdrop.Storage.Avlp
 import Dscp.Witness.Launcher.Mode
 import qualified Dscp.Witness.SDLock as Lock
-
-
-type IOCtx chgAccum = SD.IOCtx chgAccum Ids Values
 
 -- | Alias for ERoComp with concrete config types.
 type SdM_ chgacc = SD.ERoComp Exceptions Ids Values (IOCtx chgacc)

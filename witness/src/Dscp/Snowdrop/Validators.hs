@@ -2,6 +2,7 @@
 
 module Dscp.Snowdrop.Validators
     ( blkStateConfig
+    , validator
     ) where
 
 

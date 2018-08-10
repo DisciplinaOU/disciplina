@@ -42,6 +42,9 @@ module Dscp.Util
          -- * Catch errors and report to logs
        , dieGracefully
 
+         -- * 'Get from RIO'
+       , Provides
+
          -- * Re-exports
        , module Snowdrop.Util
        ) where
@@ -51,7 +54,10 @@ import Control.Lens (Getter, to)
 import Data.ByteArray (ByteArrayAccess)
 import Data.ByteArray.Encoding (Base (..), convertFromBase, convertToBase)
 import Fmt ((+|), (|+))
+
+import Loot.Base.HasLens (HasLens')
 import Loot.Log (MonadLogging, logError, logWarning)
+
 import Snowdrop.Util (NewestFirst (..), OldestFirst (..))
 
 import Dscp.Crypto.ByteArray (FromByteArray (..))
@@ -202,3 +208,9 @@ dieGracefully :: (MonadLogging m, MonadCatch m) => m () -> m ()
 dieGracefully action =
     action `catchAny` \e -> do
         logError $ fromString $ "Exception in transactionRelayInput: " <> show e
+
+-----------------------------------------------------------
+-- Convenient RIO projector
+-----------------------------------------------------------
+
+type Provides x ctx m = (MonadReader ctx m, HasLens' ctx x)

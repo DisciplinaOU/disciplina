@@ -31,8 +31,12 @@ import qualified Dscp.Witness.SDLock as Lock
 
 
 -- | Empty mempool(s), create block body.
-createPayload :: MonadIO m => MempoolVar -> m BlockBody
-createPayload v = BlockBody <$> takeTxsMempool v
+createPayload
+    :: forall ctx m
+    .  WitnessWorkMode ctx m
+    => MempoolVar
+    -> m BlockBody
+createPayload v = BlockBody <$> takeTxsMempool @ctx v
 
 -- | Create a public block.
 createBlock :: WitnessWorkMode ctx m => SlotId -> m Block

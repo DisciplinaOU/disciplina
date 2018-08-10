@@ -1,20 +1,20 @@
 
 module Dscp.Witness.SDLock
     ( SDLock
-    , readingSDLock
-    , writingSDLock
+    , readingSDLock, readingSDLockOf
+    , writingSDLock, writingSDLockOf
     , newSDLock
     ) where
 
-import qualified Control.Concurrent.ReadWriteLock as Lock
+import qualified Control.Concurrent.ReadWriteLock as RawLock
 import qualified UnliftIO
 
 import Loot.Base.HasLens (HasLens (..), HasLens')
 
-newtype SDLock = SDLock Lock.RWLock
+newtype SDLock = SDLock RawLock.RWLock
 
 newSDLock :: MonadIO m => m SDLock
-newSDLock = liftIO $ SDLock <$> Lock.new
+newSDLock = liftIO $ SDLock <$> RawLock.new
 
 readingSDLock
     ::  ( UnliftIO.MonadUnliftIO m
@@ -26,7 +26,7 @@ readingSDLock
 readingSDLock action = do
     SDLock lock <- view (lensOf @SDLock)
     UnliftIO.withRunInIO $ \unliftIO ->
-        Lock.withRead lock $ do
+        RawLock.withRead lock $ do
             unliftIO action
 
 writingSDLock
@@ -39,5 +39,25 @@ writingSDLock
 writingSDLock action = do
     SDLock lock <- view (lensOf @SDLock)
     UnliftIO.withRunInIO $ \unliftIO ->
-        Lock.withWrite lock $ do
+        RawLock.withWrite lock $ do
+            unliftIO action
+
+readingSDLockOf
+    :: UnliftIO.MonadUnliftIO m
+    => SDLock
+    -> m a
+    -> m a
+readingSDLockOf (SDLock lock) action = do
+    UnliftIO.withRunInIO $ \unliftIO ->
+        RawLock.withRead lock $ do
+            unliftIO action
+
+writingSDLockOf
+    :: UnliftIO.MonadUnliftIO m
+    => SDLock
+    -> m a
+    -> m a
+writingSDLockOf (SDLock lock) action = do
+    UnliftIO.withRunInIO $ \unliftIO ->
+        RawLock.withWrite lock $ do
             unliftIO action

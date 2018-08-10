@@ -141,8 +141,8 @@ makeRelay (RelayState input pipe failedTxs) =
 
         unless (hash tx `HashMap.member` hashmap) $ do
             pool    <- view (lensOf @MempoolVar @ctx)
-            isThere <- isInMempool pool tx
+            isThere <- isInMempool @ctx pool tx
 
             unless isThere $ do
-                addTxToMempool pool tx
+                addTxToMempool @ctx pool tx
                 atomically $ STM.writeTQueue pipe tx
