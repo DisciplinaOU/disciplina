@@ -198,11 +198,11 @@ validateSaneArrival
   .  (AccountId, Account)
   -> ERoComp Exceptions Ids Values ctx Integer
 validateSaneArrival (accId, account) = do
-    was <- assertExists accId ReceiverDoesNotExist
-    let received = aBalance account - aBalance was
+    was <- queryOne accId
+    let received = aBalance account - maybe 0 aBalance was
     -- Check that except for the balance the account is unchanged.
     () <- mconcat
-        [ validateIff ReceiverOnlyGetsMoney       $ was { aBalance = aBalance account } == account
+        [ validateIff ReceiverOnlyGetsMoney       $ maybe account (\w -> w{ aBalance = aBalance account }) was == account
         , validateIff ReceiverMustIncreaseBalance $ received > 0
         ]
     return received
@@ -213,6 +213,7 @@ checkThatAccountIsUpdatedOnly
   -> ERoComp Exceptions Ids Values ctx (AccountId, Account)
 checkThatAccountIsUpdatedOnly = \case
     (_, Just (accId, Upd it)) -> return (accId, it)
+    (_, Just (accId, New it)) -> return (accId, it)
     (k, _)                    -> throwLocalError $ UnexpectedPayload [idSumPrefix k]
 
 is :: AccountId -> (AccountId, Account) -> Bool
