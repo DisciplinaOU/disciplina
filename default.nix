@@ -12,7 +12,7 @@ in
 buildStackApplication rec {
   packages = [
     "disciplina-core" "disciplina-witness" "disciplina-educator"
-    "disciplina-wallet" "disciplina-tools"
+    "disciplina-wallet" "disciplina-tools" "disciplina-faucet"
   ];
 
   # Running hpack manually before the build is required
