@@ -4,7 +4,7 @@ module Dscp.Faucet.CLI
     ( faucetParamsParser
     ) where
 
-import Options.Applicative (Parser, help, long, metavar, option)
+import Options.Applicative (Parser, help, long, metavar, option, switch)
 
 import Dscp.CommonCLI
 import Dscp.Faucet.Launcher.Params
@@ -15,6 +15,11 @@ translatedAmountParser = option (TranslatedAmount <$> coinReadM) $
     metavar "COINS" <>
     help "How much money to send on each request to faucet"
 
+dryRunParser :: Parser DryRun
+dryRunParser = fmap DryRun . switch $
+    long "dry-run" <>
+    help "Do not communicate with witness backend"
+
 faucetParamsParser :: Parser FaucetParams
 faucetParamsParser = do
     _fpLoggingParams <- logParamsParser "faucet"
@@ -22,6 +27,7 @@ faucetParamsParser = do
     _fpWebParams <- serverParamsParser "faucet"
     _fpWitnessAddress <- networkAddressParser "witness-backend" witnessBackendHelp
     _fpTranslatedAmount <- translatedAmountParser
+    _fpDryRun <- dryRunParser
     return FaucetParams{..}
   where
     witnessBackendHelp = "Address of witness node to accept faucet transactions"
