@@ -9,6 +9,9 @@
 --  non integer or integer desc PK is present, some of tables are created
 --  WITHOUT ROWID.
 
+-- This pragma should be actually executed for each db connection.
+pragma foreign_keys = ON;
+
 begin transaction;
 
 -- Creating 'Courses' table.
@@ -129,10 +132,10 @@ create table if not exists Transactions (
     submission_hash  BLOB     not null,
     grade            INTEGER  not null,
     time             TIME     not null,
-    idx              INTEGER  not null,    -- Index inside a block. Can be 0 or -1 for every mempool transaction.
+    idx              INTEGER  not null,    -- Index inside a block. -1 for every mempool transaction.
 
     primary key (hash),
-    foreign key (submission_hash) references Submissions(hash)
+    foreign key (submission_hash) references Submissions(hash) on delete restrict
 
 ) without rowid;
 

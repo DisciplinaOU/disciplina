@@ -12,6 +12,7 @@ library:
     - autoexporter
     - bytestring
     - containers
+    - data-default
     - directory
     - direct-sqlite
     - disciplina-core
@@ -36,6 +37,7 @@ library:
     - servant-auth-server
     - servant-generic
     - servant-server
+    - singleton-bool
     - sqlite-simple
     - template-haskell
     - text

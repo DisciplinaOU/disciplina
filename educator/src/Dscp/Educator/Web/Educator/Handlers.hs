@@ -5,18 +5,18 @@ module Dscp.Educator.Web.Educator.Handlers
        , convertEducatorApiHandler
        ) where
 
+import Data.Default (def)
 import Servant (Handler, throwError)
 import UnliftIO (UnliftIO (..))
 
-import Dscp.Core.Arbitrary
-import Dscp.Educator.Web.Arbitrary
+import Dscp.DB.SQLite
 import Dscp.Educator.Web.Educator.API
-import Dscp.Educator.Web.Educator.Arbitrary
 import Dscp.Educator.Web.Educator.Error
-
-type EducatorApiWorkMode m =
-    ( Monad m
-    )
+import Dscp.Educator.Web.Educator.Logic
+import Dscp.Educator.Web.Educator.Queries
+import Dscp.Educator.Web.Educator.Types
+import Dscp.Educator.Web.Queries
+import Dscp.Educator.Web.Types
 
 educatorApiHandlers
     :: forall m. EducatorApiWorkMode m
@@ -26,87 +26,94 @@ educatorApiHandlers =
     {
       -- * Students
 
-      eNewStudent = \_student ->
-        pass
+      eNewStudent =
+        void ... createStudent
 
-    , eRemoveStudent = \_student ->
-        pass
+    , eRemoveStudent =
+        educatorRemoveStudent
 
-    , eGetStudents = \_courseF ->
-        return [studentEx]
+    , eGetStudents =
+        educatorGetStudents
 
       -- * Courses
 
-    , eAddCourse = \_newCourse ->
-        pass
+    , eAddCourse = \(NewCourse cid desc subjects) ->
+        void $ createCourse cid (desc ?: "") (subjects ?: [])
 
     , eGetCourses =
-        return [educatorCourseInfoEx]
+        educatorGetCourses Nothing
 
-    , eEnrollStudentToCourse = \_student _course ->
-        pass
+    , eEnrollStudentToCourse = \student (EnrollStudentToCourse course) ->
+        enrollStudentToCourse student course
 
-    , eGetStudentCourses = \_student ->
-        return [educatorCourseInfoEx]
+    , eGetStudentCourses = \student ->
+        educatorGetCourses (Just student)
 
       -- * Assignments
 
-    , eAddCourseAssignment = \_newAssign _autoAssign ->
-        pass
+    , eAddCourseAssignment = \_autoAssign na -> do
+        void $ createAssignment (requestToAssignment na)
+        error "Auto assign (in transaction!)"
 
-    , eGetStudentAssignments = \_student ->
-        return [assignmentEx]
+    , eGetStudentAssignments = \student ->
+        sqlTransaction $ commonGetAssignments EducatorCase student def
 
-    , eAssignToStudent = \_student _assignH ->
-        pass
+    , eAssignToStudent =
+        setStudentAssignment
 
-    , eUnassignFromStudent = \_student _assignH ->
-        pass
+    , eUnassignFromStudent =
+        educatorUnassignFromStudent
 
-    , eGetStudentCourseAssignments = \_student _course _isFinalF ->
-        return [assignmentEx]
+    , eGetStudentCourseAssignments = \student course afIsFinal ->
+        sqlTransaction $
+        commonGetAssignments EducatorCase student
+            def{ afCourse = Just course, afIsFinal }
 
       -- * Submissions
 
-    , eGetSubmission = \_subH ->
-        return [educatorSubmissionInfoEx]
+    , eGetSubmission =
+        educatorGetSubmission
 
-    , eDeleteSubmission = \_subH ->
-        pass
+    , eDeleteSubmission = \submissionH ->
+        sqlTransaction $ commonDeleteSubmission submissionH Nothing
 
     , eGetSubmissions =
-        return [educatorSubmissionInfoEx]
+        commonGetSubmissions EducatorCase def
 
-    , eGetStudentSubmissions = \_student ->
-        return [educatorSubmissionInfoEx]
+    , eGetStudentSubmissions = \student ->
+        commonGetSubmissions EducatorCase
+            def{ sfStudent = Just student }
 
-    , eGetStudentAssignmentSubmissions = \_student _assignH ->
-        return [educatorSubmissionInfoEx]
+    , eGetStudentAssignmentSubmissions = \student assignH ->
+        commonGetSubmissions EducatorCase
+            def{ sfStudent = Just student, sfAssignmentHash = Just assignH }
 
-    , eGetStudentCourseSubmissions = \_student _course ->
-        return [educatorSubmissionInfoEx]
+    , eGetStudentCourseSubmissions = \student course ->
+        commonGetSubmissions EducatorCase
+            def{ sfStudent = Just student, sfCourse = Just course }
 
       -- * Grades
 
-    , ePostGrade = \_newGrade ->
-        pass
+    , ePostGrade = \(NewGrade subH grade) ->
+        educatorPostGrade subH grade
 
     , eGetGrades =
-        return [gradeInfoEx]
+        educatorGetGrades Nothing Nothing Nothing
 
-    , eGetStudentGrades = \_student ->
-        return [gradeInfoEx]
+    , eGetStudentGrades = \student ->
+        educatorGetGrades (Just student) Nothing Nothing
 
-    , eGetStudentCourseGrades = \_student _course _isFinalF ->
-        return [gradeInfoEx]
+    , eGetStudentCourseGrades = \student course isFinalF ->
+        educatorGetGrades (Just student) (Just course) isFinalF
 
       -- * Proofs
 
-    , eGetStudentProofs = \_student ->
-        return [blkProofInfoEx]
+    , eGetStudentProofs = \student ->
+        sqlTransaction $ commonGetProofs student def
 
-    , eGetStudentCourseProofs = \_student _course ->
-        return [blkProofInfoEx]
+    , eGetStudentCourseProofs = \student courseF ->
+        sqlTransaction $ commonGetProofs student
+            def{ pfCourse = Just courseF }
     }
 
 convertEducatorApiHandler

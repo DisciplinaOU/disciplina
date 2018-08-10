@@ -4,10 +4,12 @@ module Dscp.DB.SQLite.Queries
        ( -- * Domain-level database errors (missing entites, mostly)
          DomainError (..)
        , DomainErrorItem (..)
+       , DatabaseSemanticError (..)
 
          -- * Prisms for constructors
        , _AbsentError
        , _AlreadyPresentError
+       , _SemanticError
        , _CourseDomain
        , _StudentDomain
        , _AssignmentDomain
@@ -16,11 +18,15 @@ module Dscp.DB.SQLite.Queries
        , _SubmissionDomain
        , _TransactionDomain
        , _BlockWithIndexDomain
+       , _DeletingGradedSubmission
+       , _StudentIsActiveError
          -- * Synonym for MonadSQLiteDB
        , DBM
 
          -- * Utils
+       , checkExists
        , ifAlreadyExistsThrow
+       , onReferenceInvalidThrow
 
          -- * Readonly actions
        , getCourseSubjects
@@ -38,6 +44,7 @@ module Dscp.DB.SQLite.Queries
        , isAssignedToStudent
        , existsCourse
        , existsStudent
+       , existsSubmission
 
          -- * Destructive actions
        , enrollStudentToCourse
@@ -67,7 +74,7 @@ import Dscp.Crypto (Hash, MerkleProof, fillEmptyMerkleTree, getEmptyMerkleTree, 
 import qualified Dscp.Crypto.MerkleTree as MerkleTree (fromList)
 import Dscp.DB.SQLite.BlockData (BlockData (..), TxInBlock (..), TxWithIdx (..))
 import Dscp.DB.SQLite.Class (MonadSQLiteDB (..), WithinSQLTransaction, transaction)
-import Dscp.DB.SQLite.Error (asAlreadyExistsError)
+import Dscp.DB.SQLite.Error (asAlreadyExistsError, asReferenceInvalidError)
 import Dscp.DB.SQLite.Instances ()
 import Dscp.DB.SQLite.Types (TxBlockIdx (TxInMempool))
 import Dscp.Util (HasId (..), idOf)
@@ -75,6 +82,7 @@ import Dscp.Util (HasId (..), idOf)
 data DomainError
     = AbsentError DomainErrorItem
     | AlreadyPresentError DomainErrorItem
+    | SemanticError DatabaseSemanticError
     deriving (Show, Eq)
 
 data DomainErrorItem
@@ -106,10 +114,24 @@ data DomainErrorItem
 
     deriving (Show, Typeable, Eq)
 
+-- | Logical errors.
+data DatabaseSemanticError
+    = StudentIsActiveError     (Id Student)
+      -- ^ Student can't be deleted because it has activities.
+    | DeletingGradedSubmission (Id Submission)
+      -- ^ Submission has potentially published grade and thus can't be deleted.
+    deriving (Show, Eq)
+
 makePrisms ''DomainError
 makePrisms ''DomainErrorItem
+makePrisms ''DatabaseSemanticError
 
 instance Exception DomainError
+
+-- | When query starts with @select(*)@, checks that non empty set of rows is
+-- returned.
+checkExists :: ToRow a => DBM m => Query -> a -> m Bool
+checkExists theQuery args = ((/= [[0]]) :: [[Int]] -> Bool) <$> query theQuery args
 
 -- | Catch "unique" constraint violation and rethrow specific error.
 ifAlreadyExistsThrow :: MonadCatch m => m a -> DomainErrorItem -> m a
@@ -123,6 +145,10 @@ assertExists action = assertJustPresent (bool Nothing (Just ()) <$> action)
 assertJustPresent :: MonadCatch m => m (Maybe a) -> DomainErrorItem -> m a
 assertJustPresent action err =
     action >>= maybe (throwM $ AbsentError err) pure
+
+onReferenceInvalidThrow :: (MonadCatch m, Exception e) => m a -> e -> m a
+onReferenceInvalidThrow action err =
+    catchJust asReferenceInvalidError action (\_ -> throwM err)
 
 type DBM m = (MonadSQLiteDB m, MonadCatch m)
 
@@ -470,7 +496,7 @@ setStudentAssignment studentId assignmentId = do
 
 isEnrolledTo :: DBM m => Id Student -> Id Course -> m Bool
 isEnrolledTo studentId courseId = do
-    exists enrollmentQuery (studentId, courseId)
+    checkExists enrollmentQuery (studentId, courseId)
   where
     enrollmentQuery = [q|
         -- isEnrolledTo
@@ -482,7 +508,7 @@ isEnrolledTo studentId courseId = do
 
 isAssignedToStudent :: DBM m => Id Student -> Id Assignment -> m Bool
 isAssignedToStudent student assignment = do
-    exists getStudentAssignmentQuery (student, assignment)
+    checkExists getStudentAssignmentQuery (student, assignment)
   where
     getStudentAssignmentQuery :: Query
     getStudentAssignmentQuery = [q|
@@ -528,7 +554,7 @@ getCourseSubjects course = do
 
 existsCourse :: DBM m => Id Course -> m Bool
 existsCourse course = do
-    exists existsCourseQuery (Only course)
+    checkExists existsCourseQuery (Only course)
   where
     existsCourseQuery = [q|
         -- existsCourse
@@ -539,12 +565,22 @@ existsCourse course = do
 
 existsStudent :: DBM m => Id Student -> m Bool
 existsStudent student = do
-    exists existsCourseQuery (Only student)
+    checkExists existsCourseQuery (Only student)
   where
     existsCourseQuery = [q|
         select  count(*)
         from    Students
         where   addr = ?
+    |]
+
+existsSubmission :: DBM m => Id Submission -> m Bool
+existsSubmission submission = do
+    checkExists existsSubmissionQuery (Only submission)
+  where
+    existsSubmissionQuery = [q|
+        select  count(*)
+        from    Submissions
+        where   hash = ?
     |]
 
 createStudent :: DBM m => Student -> m (Id Student)
@@ -659,6 +695,3 @@ getTransaction ptid = do
 
         where      Transactions.hash = ?
     |]
-
-exists :: ToRow a => DBM m => Query -> a -> m Bool
-exists theQuery args = ((/= [[0]]) :: [[Int]] -> Bool) <$> query theQuery args

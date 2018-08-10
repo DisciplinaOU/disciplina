@@ -60,7 +60,7 @@ data EducatorApiEndpoints route = EducatorApiEndpoints
         :- "students"
         :> Summary "Get a list of all registered students' addresses"
         :> QueryParam "courseId" Course
-        :> Get '[DSON] [Student]
+        :> Get '[DSON] [StudentInfo]
 
       -- * Courses
 
@@ -81,7 +81,7 @@ data EducatorApiEndpoints route = EducatorApiEndpoints
         :> Summary "Enroll a student in a new course"
         :> Description "Given existing student and course, enroll the \
                         \student to the course."
-        :> ReqBody '[DSON] CourseEducatorInfo
+        :> ReqBody '[DSON] EnrollStudentToCourse
         :> Post '[DSON] ()
 
     , eGetStudentCourses :: route
@@ -107,7 +107,7 @@ data EducatorApiEndpoints route = EducatorApiEndpoints
         :> Summary "Get active student's assignments"
         :> Description "Given student address, gets a list of all pending \
                         \assignments student has."
-        :> Get '[DSON] [Assignment]
+        :> Get '[DSON] [AssignmentEducatorInfo]
 
     , eAssignToStudent :: route
         :- "students" :> Capture "studentAddr" Student
@@ -136,7 +136,7 @@ data EducatorApiEndpoints route = EducatorApiEndpoints
                         \all pending assignments student has as a part of a \
                         \course."
         :> QueryParam "isFinal" IsFinal
-        :> Get '[DSON] [Assignment]
+        :> Get '[DSON] [AssignmentEducatorInfo]
 
       -- * Submissions
 
@@ -144,7 +144,7 @@ data EducatorApiEndpoints route = EducatorApiEndpoints
         :- "submissions" :> Capture "submissionHash" (Hash Submission)
         :> Summary "Get info about a submission"
         :> Description "Gets a submission data by given submission hash."
-        :> Get '[DSON] [SubmissionEducatorInfo]
+        :> Get '[DSON] SubmissionEducatorInfo
 
     , eDeleteSubmission :: route
         :- "submissions" :> Capture "submissionHash" (Hash Submission)

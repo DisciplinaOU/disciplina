@@ -8,6 +8,7 @@ module Dscp.Educator.Web.Educator.Types
       NewCourse (..)
     , NewGrade (..)
     , NewAssignment (..)
+    , EnrollStudentToCourse (..)
 
       -- * Responses
     , CourseEducatorInfo (..)
@@ -17,8 +18,10 @@ module Dscp.Educator.Web.Educator.Types
 
       -- * Conversions
     , educatorLiftAssignment
+    , requestToAssignment
     ) where
 
+import Control.Lens (from)
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
 
@@ -28,8 +31,8 @@ import Dscp.Educator.Web.Types
 
 data NewCourse = NewCourse
     { ncId       :: Course
-    , ncDesc     :: Text
-    , ncSubjects :: [Subject]
+    , ncDesc     :: Maybe Text
+    , ncSubjects :: Maybe [Subject]
     } deriving (Show, Eq, Generic)
 
 data NewGrade = NewGrade
@@ -40,8 +43,12 @@ data NewGrade = NewGrade
 data NewAssignment = NewAssignment
     { naCourseId     :: Course
     , naContentsHash :: (Hash Raw)
-    , naIsFinal      :: Bool
+    , naIsFinal      :: IsFinal
     , naDesc         :: Text
+    } deriving (Show, Eq, Generic)
+
+data EnrollStudentToCourse = EnrollStudentToCourse
+    { escCourseId :: Course
     } deriving (Show, Eq, Generic)
 
 data CourseEducatorInfo = CourseEducatorInfo
@@ -54,7 +61,7 @@ data AssignmentEducatorInfo = AssignmentEducatorInfo
     { aiHash         :: (Hash Assignment)
     , aiCourseId     :: Course
     , aiContentsHash :: (Hash Raw)
-    , aiIsFinal      :: Bool
+    , aiIsFinal      :: IsFinal
     , aiDesc         :: Text
     } deriving (Show, Eq, Generic)
 
@@ -70,6 +77,14 @@ eaDocumentType :: AssignmentEducatorInfo -> DocumentType
 eaDocumentType = documentType . aiContentsHash
 
 ---------------------------------------------------------------------------
+-- ResponseCase instances
+---------------------------------------------------------------------------
+
+type instance ResponseCase 'EducatorTag Course     = CourseEducatorInfo
+type instance ResponseCase 'EducatorTag Assignment = AssignmentEducatorInfo
+type instance ResponseCase 'EducatorTag Submission = SubmissionEducatorInfo
+
+---------------------------------------------------------------------------
 -- Simple conversions
 ---------------------------------------------------------------------------
 
@@ -79,8 +94,17 @@ educatorLiftAssignment a =
     { aiHash = hash a
     , aiCourseId = _aCourseId a
     , aiContentsHash = _aContentsHash a
-    , aiIsFinal = _aType a ^. assignmentTypeRaw . _IsFinal
+    , aiIsFinal = _aType a ^. assignmentTypeRaw
     , aiDesc = _aDesc a
+    }
+
+requestToAssignment :: NewAssignment -> Assignment
+requestToAssignment NewAssignment{..} =
+    Assignment
+    { _aCourseId = naCourseId
+    , _aContentsHash = naContentsHash
+    , _aType = naIsFinal ^. from assignmentTypeRaw
+    , _aDesc = naDesc
     }
 
 ---------------------------------------------------------------------------
@@ -90,6 +114,7 @@ educatorLiftAssignment a =
 deriveJSON defaultOptions ''NewCourse
 deriveJSON defaultOptions ''NewGrade
 deriveJSON defaultOptions ''NewAssignment
+deriveJSON defaultOptions ''EnrollStudentToCourse
 deriveJSON defaultOptions ''CourseEducatorInfo
 deriveJSON defaultOptions ''AssignmentEducatorInfo
 deriveJSON defaultOptions ''SubmissionEducatorInfo

@@ -87,7 +87,7 @@ listToMaybeWarn msg = \case
     [] -> pure Nothing
     [x] -> pure (Just x)
     (x:_) -> do
-        logWarning $ "listToMaybeWarn: to many entries ("+|msg|+")"
+        logWarning $ "listToMaybeWarn: too many entries ("+|msg|+")"
         return (Just x)
 
 allUniqueOrd :: Ord a => [a] -> Bool

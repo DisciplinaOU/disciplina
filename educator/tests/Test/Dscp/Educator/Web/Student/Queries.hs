@@ -2,6 +2,7 @@ module Test.Dscp.Educator.Web.Student.Queries where
 
 import Control.Concurrent (threadDelay)
 import Control.Lens (to, traversed)
+import Data.Default (def)
 import qualified Data.Foldable as F
 import Data.List (nub, (!!))
 import Data.Time.Clock (UTCTime (..))
@@ -11,6 +12,7 @@ import Dscp.Core
 import Dscp.Crypto (Hash, Raw, hash, unsafeHash)
 import Dscp.DB.SQLite
 import qualified Dscp.DB.SQLite as CoreDB
+import Dscp.Educator.Web.Queries
 import Dscp.Educator.Web.Student
 import Dscp.Educator.Web.Types
 import Dscp.Util
@@ -59,12 +61,6 @@ createCourseSimple i =
         (allCourses !! (i - 1))
         ("course " <> pretty i)
         []
-
-getAllSubmissions
-    :: (MonadStudentAPIQuery m)
-    => Student -> m [SubmissionStudentInfo]
-getAllSubmissions student =
-    sqlTx $ studentGetSubmissions student Nothing Nothing Nothing
 
 -- | For advanced queries. Puts SignedSubmissions in db, tolerates repeating
 -- entities.
@@ -192,7 +188,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                         mgrade <- studentGetGrade . hash $ _ssSubmission sigSub
                         let assignHash = _sAssignmentHash $ _ssSubmission sigSub
                         assignInfo <- sqlTx $ studentGetAssignment student assignHash
-                        return $ guard (aiIsFinal assignInfo) *> mgrade
+                        return $ guard (unIsFinal $ aiIsFinal assignInfo) *> mgrade
                 return $ res === any (isPositiveGrade . giGrade) actualGrades
 
     describe "getCourses" $ do
@@ -287,7 +283,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                         mgrade <- studentGetGrade . hash $ _ssSubmission sigSub
                         let assignHash = _sAssignmentHash $ _ssSubmission sigSub
                         assignInfo <- sqlTx $ studentGetAssignment student assignHash
-                        return $ guard (aiIsFinal assignInfo) *> mgrade
+                        return $ guard (unIsFinal $ aiIsFinal assignInfo) *> mgrade
                 return $
                     ciIsFinished courseInfo
                     ===
@@ -327,7 +323,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                     { aiHash = assignmentH
                     , aiCourseId = _aCourseId assignment
                     , aiContentsHash = _aContentsHash assignment
-                    , aiIsFinal = _aType assignment ^. assignmentTypeRaw . _IsFinal
+                    , aiIsFinal = _aType assignment ^. assignmentTypeRaw
                     , aiDesc = _aDesc assignment
                     , aiLastSubmission = Nothing
                     }
@@ -346,9 +342,6 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                     sqlTx $ studentGetAssignment student1 (getId needlessAssignment)
 
     describe "getAssignments" $ do
-        let getAssignmentsSimple student =
-                sqlTx $ studentGetAssignments student Nothing Nothing Nothing
-
         it "Student has no last submission initially" $
             sqliteProperty $ \() -> do
                 let course = _aCourseId assignment1
@@ -357,7 +350,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                 _ <- CoreDB.createAssignment assignment1
                 _ <- CoreDB.enrollStudentToCourse student1 course
                 _ <- CoreDB.setStudentAssignment student1 (hash assignment1)
-                assignments <- getAssignmentsSimple student1
+                assignments <- sqlTx $ studentGetAllAssignments student1
                 return $ all (isNothing . aiLastSubmission) assignments
 
         it "Returns existing assignment properly and only related to student" $
@@ -373,13 +366,13 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                 _ <- CoreDB.createAssignment needlessAssignment
                 _ <- CoreDB.setStudentAssignment student1 assignmentH
 
-                res <- getAssignmentsSimple student1
+                res <- sqlTx $ studentGetAllAssignments student1
                 return $ res === one AssignmentStudentInfo
                     { aiHash = hash assignment
                     , aiCourseId = _aCourseId assignment
                     , aiContentsHash = _aContentsHash assignment
                     , aiIsFinal =
-                        _aType assignment ^. assignmentTypeRaw . _IsFinal
+                        _aType assignment ^. assignmentTypeRaw
                     , aiDesc = _aDesc assignment
                     , aiLastSubmission = Nothing
                     }
@@ -387,7 +380,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
         it "Filtering works" $
             sqliteProperty $ \
               ( delayedGen listUnique -> preAssignments
-              , courseIdF
+              , courseF
               , docTypeF
               , isFinalF
               ) -> do
@@ -402,12 +395,13 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                     void $ CoreDB.setStudentAssignment student1 assignH
 
                 assignments <- sqlTx $
-                    studentGetAssignments student1 courseIdF docTypeF isFinalF
+                    commonGetAssignments StudentCase student1
+                        def{ afCourse = courseF, afDocType = docTypeF, afIsFinal = isFinalF }
 
                 let assignments' =
-                        applyFilterOn aiCourseId courseIdF $
+                        applyFilterOn aiCourseId courseF $
                         applyFilterOn saDocumentType docTypeF $
-                        applyFilterOn (IsFinal . aiIsFinal) isFinalF $
+                        applyFilterOn aiIsFinal isFinalF $
                         map (\a -> studentLiftAssignment a Nothing)
                         preAssignments
 
@@ -533,7 +527,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                 _ <- CoreDB.setStudentAssignment student1 (hash assignment1)
                 -- even after these steps there should be no submissions
 
-                submissions <- getAllSubmissions student1
+                submissions <- studentGetAllSubmissions student1
                 return $ submissions === []
 
         it "Returns existing submission properly and only related to student" $
@@ -549,7 +543,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                 else do
                     prepareAndCreateSubmission env
 
-                    res <- getAllSubmissions owner1
+                    res <- studentGetAllSubmissions owner1
                     return $ res === one SubmissionStudentInfo
                         { siHash = hash someSubmission
                         , siContentsHash = _sContentsHash someSubmission
@@ -573,7 +567,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                     sqlTx $ mapM_ CoreDB.createSignedSubmission sigSubsUnique
                     mapM_ CoreDB.createTransaction txs
 
-                    submissions' <- getAllSubmissions student
+                    submissions' <- studentGetAllSubmissions student
                     let submissionsAndGrades' =
                             map (siHash &&& fmap giGrade . siGrade) submissions'
                     let submissionsAndGrades = txs <&> \tx ->
@@ -600,9 +594,9 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                   prepareForSubmissions env
                   sqlTx $ mapM_ CoreDB.createSignedSubmission sigSubs
 
-                  submissions <-
-                      sqlTx $
-                      studentGetSubmissions student courseIdF assignHF docTypeF
+                  submissions <- commonGetSubmissions StudentCase
+                      def{ sfStudent = Just student, sfCourse = courseIdF
+                         , sfAssignmentHash = assignHF, sfDocType = docTypeF }
 
                   let submissions' =
                         map (\(s, _) -> studentLiftSubmission s Nothing) $
@@ -618,7 +612,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
             sqliteProperty $ \submission -> do
                 _ <- CoreDB.createStudent student1
                 throwsPrism (_AbsentError . _SubmissionDomain) $
-                    sqlTx $ studentDeleteSubmission student1 (hash submission)
+                    sqlTx $ commonDeleteSubmission (hash submission) (Just student1)
 
         it "Delete works" $
             sqliteProperty $
@@ -628,12 +622,12 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                       subToDel = tiOne $ cteSignedSubmissions env
 
                   prepareAndCreateSubmission env
-                  subBefore <- getAllSubmissions student
+                  subBefore <- studentGetAllSubmissions student
 
                   let submissionToDel = _ssSubmission subToDel
                   let submissionToDelH = hash submissionToDel
-                  sqlTx $ studentDeleteSubmission student submissionToDelH
-                  subAfter <- getAllSubmissions student
+                  sqlTx $ commonDeleteSubmission submissionToDelH (Just student)
+                  subAfter <- studentGetAllSubmissions student
                   let expected =
                           filter (\s -> siHash s /= submissionToDelH) subBefore
 
@@ -650,8 +644,8 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                 _ <- CoreDB.createTransaction $
                      PrivateTx sigSub gA someTime
 
-                throwsPrism _DeletingGradedSubmission $ do
-                     sqlTx $ studentDeleteSubmission student (hash sub)
+                throwsPrism (_SemanticError . _DeletingGradedSubmission) $ do
+                     sqlTx $ commonDeleteSubmission (hash sub) (Just student)
 
         it "Can not delete other student's submission" $
             sqliteProperty $
@@ -668,7 +662,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                     prepareAndCreateSubmission env
 
                     fmap property . throwsPrism (_AbsentError . _SubmissionDomain) $
-                        sqlTx $ studentDeleteSubmission otherStudent (hash sub)
+                        sqlTx $ commonDeleteSubmission (hash sub) (Just otherStudent)
 
     describe "makeSubmission" $ do
         it "Making same submission twice throws" $
@@ -692,7 +686,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                 prepareForSubmissions env
                 void $ studentMakeSubmissionVerified student submissionReq
 
-                res <- getAllSubmissions student
+                res <- studentGetAllSubmissions student
                 let submission = _ssSubmission sigSub
                 return $ res === [studentLiftSubmission submission Nothing]
 
@@ -730,12 +724,10 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
 
   describe "Transactions" $ do
     describe "getProofs" $ do
-         let getAllProofs student = sqlTx $ studentGetProofs student Nothing
-
          it "Returns nothing initially" $
              sqliteProperty $ \() -> do
                  _ <- CoreDB.createStudent student1
-                 proofs <- getAllProofs student1
+                 proofs <- sqlTx $ commonGetProofs student1 def
                  return $ proofs === []
 
          -- TODO: more tests
