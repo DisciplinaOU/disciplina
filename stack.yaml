@@ -32,9 +32,11 @@ extra-deps:
   commit: f9a0cd66f443d7b0e04a3c8ae8d475f8344b823b
 
 - git: git@github.com:serokell/snowdrop.git
-  commit: 8411adbd7603f3405795b164399302efe8785282 # master
+  commit: 5409771814447d1d6629b3fd56e658d69282bbf2 # volhovm/dscp187
   subdirs:
     - snowdrop
+    - snowdrop-core
+    - snowdrop-util
 
 - git: https://github.com/serokell/rocksdb-haskell.git
   commit: 2dd6b4ffdc4edb86b477273ee3c8416a1520f4e1

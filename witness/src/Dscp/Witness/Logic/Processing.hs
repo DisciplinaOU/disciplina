@@ -7,9 +7,9 @@ import Data.Default (def)
 import Data.Reflection (reify)
 import qualified Data.Set as S
 import Loot.Base.HasLens (lensOf)
+import qualified Snowdrop.Core as SD
 import qualified Snowdrop.Model.Block as SD
 import qualified Snowdrop.Model.Execution as SD
-import qualified Snowdrop.Model.State.Core as SD
 
 import Dscp.Core
 import Dscp.Crypto
@@ -55,11 +55,10 @@ applyBlock block = do
                 rwComp = do
                   sblock <- SD.liftERoComp $ expandBlock block
                   SD.applyBlock blkStateConfig sblock
-             in liftIO $
-                SD.runERwCompIO actions def rwComp >>=
+             in SD.runERwCompIO actions def rwComp >>=
                     \((), (SD.CompositeChgAccum blockCS_ stateCS_)) -> pure (blockCS_, stateCS_)
-        proof <- liftIO $ SD.dmaApply stateDBM stateCS
-        liftIO $ SD.dmaApply blockDBM blockCS
+        proof <- runSdRIO $ SD.dmaApply stateDBM stateCS
+        runSdRIO $ SD.dmaApply blockDBM blockCS
         pure proof
   where
     blockPrefixes = S.fromList [tipPrefix, blockPrefix]

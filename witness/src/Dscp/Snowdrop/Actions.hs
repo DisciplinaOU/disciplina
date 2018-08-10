@@ -9,8 +9,9 @@ module Dscp.Snowdrop.Actions
 import Control.Monad.Free (Free (..))
 import qualified Data.Map as M
 import qualified Data.Tree.AVL as AVL
+import Loot.Log.Rio (LoggingIO)
 import Snowdrop.Model.Execution (DbModifyActions (..), SumChangeSet)
-import Snowdrop.Util (gett)
+import Snowdrop.Util (RIO, gett)
 
 import Dscp.Core.Foundation (addrFromText)
 import Dscp.Snowdrop.Configuration (Ids (..), Values (..))
@@ -24,7 +25,7 @@ import Dscp.Util (leftToPanic)
 import Dscp.Witness.AVL (AvlHash, AvlProof)
 
 -- It should be something more complex than IO.
-type SDActions = SDActionsM IO
+type SDActions = SDActionsM (RIO LoggingIO)
 
 -- Parameter m will be instantiated with RIO Context when the context is defined.
 data SDActionsM m = SDActionsM
@@ -34,7 +35,8 @@ data SDActionsM m = SDActionsM
     }
 
 initSDActions ::
-       forall m n. (MonadIO m, MonadCatch m, MonadIO n, MonadCatch n)
+       forall m n.
+       (MonadIO m, MonadCatch m, MonadIO n, MonadCatch n )
     => m (SDActionsM n)
 initSDActions = do
     avlInitState <- initAVLPureStorage @Ids @Values initAccounts
@@ -42,7 +44,7 @@ initSDActions = do
     serverBlkDba <- blockDbActions
     let sdActions = SDActionsM serverStDba serverBlkDba
 
-    -- This is something to be used for AVL client (???)
+    -- This is something to be used by AVL client (???)
     let retrieveF :: AvlHash -> n (Maybe ByteString)
         retrieveF h = serverLookupHash h >>= \resp -> do
           whenJust resp $ \resp' -> do

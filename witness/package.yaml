@@ -49,6 +49,8 @@ library:
     - servant-generic
     - serokell-util
     - snowdrop
+    - snowdrop-core
+    - snowdrop-util
     - stm
     - text
     - text-format

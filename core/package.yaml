@@ -36,7 +36,7 @@ library:
     - serokell-util
     - servant
     - semver
-    - snowdrop
+    - snowdrop-util
     - text
     - text-format
     - time

@@ -9,10 +9,10 @@ import Control.Concurrent.STM.TVar (modifyTVar)
 import Control.Lens (at, makeLenses)
 import qualified Data.Map as M
 
+import Snowdrop.Core (HasKeyValue, Prefix, SValue, ValueOp (..), changeSetToList)
 import Snowdrop.Model.Block (BlockRef (..), TipKey (..), TipValue (..))
 import Snowdrop.Model.Execution (DbActionsException (..), DbModifyActions (..), SumChangeSet,
                                  accumToDiff, sumChangeSetDBA)
-import Snowdrop.Model.State.Core (HasKeyValue, SValue)
 import Snowdrop.Util
 
 import Dscp.Core.Foundation (HeaderHash)

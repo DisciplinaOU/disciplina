@@ -7,8 +7,8 @@ module Dscp.Snowdrop.Validators
 
 import Data.Default (def)
 import qualified Data.Map as M
+import qualified Snowdrop.Core as SD
 import qualified Snowdrop.Model.Block as SD
-import qualified Snowdrop.Model.State.Core as SD
 import qualified Snowdrop.Util as SD
 
 import Dscp.Core hiding (PublicationTxWitness)
@@ -106,8 +106,8 @@ simpleBlkStateConfiguration ::
                                 (SD.ERwComp Exceptions Ids Values (IOCtx chgAccum) chgAccum)
 simpleBlkStateConfiguration cfg vld =
     SD.BlkStateConfiguration {
-      bsfConfig = cfg
-    , bsfApplyPayload = \(SPayload txs _) -> do
+      bscConfig = cfg
+    , bscApplyPayload = \(SPayload txs _) -> do
           chg <- either SD.throwLocalError pure $
               foldM SD.mappendChangeSet def $ map SD.txBody txs
           undo <- SD.liftERoComp $ SD.computeUndo chg
@@ -115,19 +115,19 @@ simpleBlkStateConfiguration cfg vld =
               SD.liftERoComp $ SD.runValidator vld tx
               SD.modifyRwCompChgAccum (SD.txBody tx)
           pure undo
-    , bsfApplyUndo = SD.modifyRwCompChgAccum
-    , bsfStoreBlund = \blund -> do
+    , bscApplyUndo = SD.modifyRwCompChgAccum
+    , bscStoreBlund = \blund -> do
           let blockRef = SD.bcBlockRef cfg (SD.blkHeader $ SD.buBlock blund)
           let chg = SD.ChangeSet $ M.singleton (SD.inj $ SD.BlockRef blockRef)
                                                (SD.New $ SD.inj blund)
           SD.modifyRwCompChgAccum chg
-    , bsfGetBlund = SD.liftERoComp . SD.queryOne . SD.BlockRef
-    , bsfBlockExists = SD.liftERoComp . SD.queryOneExists . SD.BlockRef
-    , bsfGetTip =
+    , bscGetBlund = SD.liftERoComp . SD.queryOne . SD.BlockRef
+    , bscBlockExists = SD.liftERoComp . SD.queryOneExists . SD.BlockRef
+    , bscGetTip =
           SD.liftERoComp (SD.queryOne SD.TipKey) >>=
           maybe (SD.throwLocalError @(SD.BlockStateException Ids) SD.TipNotFound)
                 (pure . SD.unTipValue)
-    , bsfSetTip = \newTip' -> do
+    , bscSetTip = \newTip' -> do
           let newTip = SD.inj $ SD.TipValue newTip'
           let tipChg = \cons -> SD.ChangeSet $ M.singleton (SD.inj SD.TipKey) (cons newTip)
           oldTipMb <- SD.liftERoComp $ SD.queryOne SD.TipKey
@@ -141,8 +141,8 @@ simpleBlkConfiguration ::
        HasWitnessConfig
     => SD.BlkConfiguration SHeader SPayload HeaderHash
 simpleBlkConfiguration = SD.BlkConfiguration
-    { bcBlockRef     = hash
-    , bcPrevBlockRef = getPrevHash . hPrevHash
+    { bcBlockRef     = SD.CurrentBlockRef . hash
+    , bcPrevBlockRef = SD.PrevBlockRef . getPrevHash . hPrevHash
     , bcBlkVerify    = mconcat verifiers
     , bcIsBetterThan = \_ _ -> True
     , bcMaxForkDepth = 0

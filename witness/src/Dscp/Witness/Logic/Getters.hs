@@ -13,8 +13,8 @@ module Dscp.Witness.Logic.Getters
     , resolvePrevious
     ) where
 
+import qualified Snowdrop.Core as SD
 import qualified Snowdrop.Model.Block as SD
-import qualified Snowdrop.Model.State.Core as SD
 import qualified Snowdrop.Util as SD
 
 import Dscp.Core

@@ -4,14 +4,17 @@ module Dscp.Snowdrop.Mode
     ( IOCtx
     , SdM_
     , SdM
+    , runSdRIO
     , runSdMRead
     , runSdMWrite
     ) where
 
 import Data.Default (def)
 import Loot.Base.HasLens (lensOf)
+import Loot.Log.Rio (LoggingIO)
+import qualified Snowdrop.Core as SD
 import qualified Snowdrop.Model.Execution as SD
-import qualified Snowdrop.Model.State.Core as SD
+import Snowdrop.Util (RIO, runRIO)
 
 import Dscp.Snowdrop.Actions
 import Dscp.Snowdrop.Configuration
@@ -27,16 +30,21 @@ type SdM_ chgacc = SD.ERoComp Exceptions Ids Values (IOCtx chgacc)
 -- | Monad representing actions in snowdrop BaseM, related to rocksdb storage.
 type SdM a = SdM_ (SD.SumChangeSet Ids Values) a
 
--- | SdM runner.
-runSdMRead :: WitnessWorkMode ctx m => SdM a -> m a
-runSdMRead action = do
-    blockDBA <- SD.dmaAccessActions . nsBlockDBActions <$> view (lensOf @SDActions)
-    Lock.readingSDLock $ do
-        liftIO $ SD.runERoCompIO @Exceptions blockDBA def $ action
+-- This is terrible
+runSdRIO :: WitnessWorkMode ctx m => RIO LoggingIO a -> m a
+runSdRIO action = do
+    logger <- view (lensOf @LoggingIO)
+    liftIO $ runRIO logger action
 
--- | SdM runner.
-runSdMWrite :: WitnessWorkMode ctx m => SdM a -> m a
-runSdMWrite action = do
+properlyRunERoComp :: WitnessWorkMode ctx m => SdM a -> m a
+properlyRunERoComp action = do
     blockDBA <- SD.dmaAccessActions . nsBlockDBActions <$> view (lensOf @SDActions)
-    Lock.writingSDLock $ do
-        liftIO $ SD.runERoCompIO @Exceptions blockDBA def $ action
+    SD.runERoCompIO @Exceptions blockDBA def action
+
+-- | SdM runner that takes read lock.
+runSdMRead :: WitnessWorkMode ctx m => SdM a -> m a
+runSdMRead = Lock.readingSDLock . properlyRunERoComp
+
+-- | SdM runner that takes exclusive lock.
+runSdMWrite :: WitnessWorkMode ctx m => SdM a -> m a
+runSdMWrite = Lock.writingSDLock . properlyRunERoComp

@@ -7,8 +7,8 @@ module Dscp.Snowdrop.PublicationValidation
        ) where
 
 import Data.Map as Map (lookup)
-import Snowdrop.Model.State.Core (PreValidator (..), StateTx (..), StateTxType (..), Validator,
-                                  mkValidator, queryOne)
+import Snowdrop.Core (PreValidator (..), StateTx (..), StateTxType (..), Validator, ValueOp (..),
+                      changeSet, mkValidator, queryOne)
 import Snowdrop.Util
 
 import Dscp.Core
