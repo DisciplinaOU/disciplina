@@ -52,6 +52,7 @@ type EducatorWorkMode ctx m =
     , HasLens' ctx EducatorParams
     , HasLens' ctx SQLiteDB
     , HasLens' ctx (KeyResources EducatorNode)
+    , MonadThrow m
     )
 
 -- | Set of typeclasses which define capabilities both of Educator and Witness.

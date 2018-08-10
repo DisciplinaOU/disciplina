@@ -5,6 +5,8 @@
 
 module Dscp.Educator.Web.Student.API
        ( StudentApiEndpoints (..)
+       , ProtectedStudentAPI
+       , protectedStudentAPI
        , StudentAPI
        , studentAPI
        , StudentApiHandlers
@@ -13,9 +15,11 @@ module Dscp.Educator.Web.Student.API
 import Data.Time.Clock (UTCTime)
 import Servant
 import Servant.Generic
+import Servant.Auth.Server (Auth)
 
 import qualified Dscp.Core as Core
 import Dscp.Crypto (Hash)
+import Dscp.Educator.Web.Student.Auth
 import Dscp.Educator.Web.Student.Types
 import Dscp.Educator.Web.Types
 
@@ -34,10 +38,15 @@ data StudentApiEndpoints route = StudentApiEndpoints
 type StudentAPI =
     "api" :> "student" :> "v1" :> ToServant (StudentApiEndpoints AsApi)
 
+type ProtectedStudentAPI = Auth '[StudentAuth] (WithStudent AuthData) :> StudentAPI
+
 type StudentApiHandlers m = StudentApiEndpoints (AsServerT m)
 
 studentAPI :: Proxy StudentAPI
 studentAPI = Proxy
+
+protectedStudentAPI :: Proxy ProtectedStudentAPI
+protectedStudentAPI = Proxy
 
 ---------------------------------------------------------------------------
 -- Courses

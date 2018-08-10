@@ -1,5 +1,6 @@
 module Test.Dscp.Educator.Bot.Endpoints where
 
+import Dscp.Crypto
 import Dscp.Core.Arbitrary
 import Dscp.Educator.Web.Bot
 import Dscp.Educator.Web.Student
@@ -7,16 +8,21 @@ import Dscp.Util.Test
 
 import Test.Dscp.DB.SQLite.Common
 
+student :: Student
+student = studentEx
+
+studentSK :: SecretKey
+studentSK = studentSKEx
+
 testMakeBotHandlers
     :: TestSQLiteM ~ m
     => Text -> m (StudentApiHandlers m)
 testMakeBotHandlers seed =
-    addBotHandlers
+    initializeBot
         EducatorBotParams
         { ebpSeed = seed
         , ebpOperationsDelay = 0
-        }
-        studentApiHandlers
+        } $ pure $ addBotHandlers student (studentApiHandlers student)
 
 spec_StudentApiWithBotQueries :: Spec
 spec_StudentApiWithBotQueries = describe "Basic properties" $ do
@@ -37,7 +43,7 @@ spec_StudentApiWithBotQueries = describe "Basic properties" $ do
           ( seed
           , delayedGen
             (genCoreTestEnv simpleCoreTestParams
-                            { ctpSecretKey = oneTestItem (pure oneGeekSK)
+                            { ctpSecretKey = oneTestItem (pure studentSK)
                             , ctpAssignment = oneTestItem (pure assignmentEx) })
              -> env
           ) -> do
