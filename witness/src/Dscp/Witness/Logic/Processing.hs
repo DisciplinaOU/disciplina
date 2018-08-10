@@ -8,12 +8,14 @@ module Dscp.Witness.Logic.Processing
     ) where
 
 import Data.Default (def)
+import qualified Data.Map as M
 import Data.Reflection (reify)
 import qualified Data.Set as S
 import Loot.Base.HasLens (lensOf)
 import qualified Snowdrop.Core as SD
 import qualified Snowdrop.Model.Block as SD
 import qualified Snowdrop.Model.Execution as SD
+import qualified Snowdrop.Util as SD
 
 import Dscp.Core
 import Dscp.Crypto
@@ -59,13 +61,16 @@ applyBlockRaw toVerify block = do
                 rwComp = do
                   sblock <- SD.liftERoComp $ expandBlock block
                   SD.applyBlockImpl toVerify blkStateConfig sblock
+                  sequence_ . fmap addTx . bbTxs . bBody $ block
+                addTx gTx = SD.modifyRwCompChgAccum $ SD.ChangeSet $
+                    M.singleton (SD.inj . toGTxId . unGTxWitnessed $ gTx) (SD.New . TxVal $ gTx)
              in SD.runERwCompIO actions def rwComp >>=
                     \((), (SD.CompositeChgAccum blockCS_ stateCS_)) -> pure (blockCS_, stateCS_)
         proof <- runSdRIO $ SD.dmaApply stateDBM stateCS
         runSdRIO $ SD.dmaApply blockDBM blockCS
         pure proof
   where
-    blockPrefixes = S.fromList [tipPrefix, blockPrefix]
+    blockPrefixes = S.fromList [tipPrefix, blockPrefix, txPrefix]
 
 applyBlock :: WitnessWorkMode ctx m => Block -> m AvlProof
 applyBlock = applyBlockRaw True

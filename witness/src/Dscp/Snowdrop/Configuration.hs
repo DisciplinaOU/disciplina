@@ -56,11 +56,15 @@ publicationOfPrefix = Prefix 4
 publicationHeadPrefix :: Prefix
 publicationHeadPrefix = Prefix 5
 
+txPrefix :: Prefix
+txPrefix = Prefix 6
+
 -- | Sum-type for all ids used within the application.
 data Ids
     = TipKeyIds          TipKey
     | BlockRefIds       (BlockRef  HeaderHash)
     | AccountInIds       AccountId
+    | TxIds              T.GTxId
     | PublicationOfIds   T.PublicationsOf
     | PublicationHeadIds T.PublicationHead
     deriving (Eq, Ord, Show, Generic)
@@ -70,6 +74,7 @@ instance Buildable Ids where
         TipKeyIds          t            -> build t
         BlockRefIds       (BlockRef  r) -> "block ref " +| hashF r
         AccountInIds      (AccountId a) -> build a
+        TxIds              gTxId        -> build gTxId
         PublicationOfIds   p            -> build p
         PublicationHeadIds ph           -> build ph
 
@@ -77,6 +82,7 @@ instance IdSumPrefixed Ids where
     idSumPrefix (TipKeyIds          _) = tipPrefix
     idSumPrefix (BlockRefIds        _) = blockPrefix
     idSumPrefix (AccountInIds       _) = accountPrefix
+    idSumPrefix (TxIds              _) = txPrefix
     idSumPrefix (PublicationOfIds   _) = publicationOfPrefix
     idSumPrefix (PublicationHeadIds _) = publicationHeadPrefix
 
@@ -91,6 +97,7 @@ data Values
     = TipValueVal       (TipValue HeaderHash)
     | BlundVal           SBlund
     | AccountOutVal      Account
+    | TxVal              T.GTxWitnessed
     | PublicationOfVal   T.LastPublication
     | PublicationHeadVal T.PublicationNext
     deriving (Eq, Show, Generic)
@@ -98,6 +105,7 @@ data Values
 type instance SValue  TipKey               = TipValue HeaderHash
 type instance SValue (BlockRef HeaderHash) = SBlund
 type instance SValue  AccountId            = Account
+type instance SValue  T.GTxId              = T.GTxWitnessed
 type instance SValue  T.PublicationsOf     = T.LastPublication
 type instance SValue  T.PublicationHead    = T.PublicationNext
 

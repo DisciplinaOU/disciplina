@@ -91,6 +91,4 @@ getBlockInfo :: WitnessWorkMode ctx m => HeaderHash -> m BlockInfo
 getBlockInfo = runSdMRead . getBlock >=> return . toBlockInfo True
 
 getTransactionInfo :: WitnessWorkMode ctx m => GTxId -> m TxInfo
-getTransactionInfo gTxId = do
-    mTx <- runSdMRead $ getTransaction gTxId
-    maybe (throwM $ EntityAbsent "No transaction found") (return . TxInfo . unGTxWitnessed) mTx
+getTransactionInfo = runSdMRead . getTx >=> return . TxInfo . unGTxWitnessed
