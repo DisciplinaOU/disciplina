@@ -106,17 +106,19 @@ formGenesisInfo GenesisConfig{..} =
         sk = genesisSk
         pk = toPublic sk
 
-        createTx (a, c) i =
+        createTxOut (a, c) = TxOut a c
+
+        initTx =
             let fromAddr = mkAddr pk
-                twTx = Tx { txInAcc = TxInAcc fromAddr i
-                          , txInValue = c
-                          , txOuts = [TxOut a c] }
+                txOutputs = map createTxOut (Map.toList $ unGenAddressMap genesisAddrMap)
+                twTx = Tx { txInAcc = TxInAcc fromAddr 0
+                          , txInValue = totalCoinsAddrMap genesisAddrMap
+                          , txOuts = txOutputs }
                 twWitness = TxWitness { txwSig = sign sk (toTxId twTx, pk, ())
                                       , txwPk = pk }
             in GMoneyTxWitnessed $ TxWitnessed {..}
-        txs = map (uncurry createTx) (Map.toList (unGenAddressMap genesisAddrMap) `zip` [0..])
-        payload = BlockBody txs
 
+        payload = BlockBody [initTx]
 
         prevHash = unsafeHash (gcGenesisSeed :: Text)
         toSign = BlockToSign 0 0 prevHash payload
