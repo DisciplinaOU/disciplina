@@ -121,15 +121,15 @@ makeRelay (RelayState input pipe failedTxs) =
   where
     inputWorker = Worker
         "txRetranslationInitialiser"
-        [msgType @SendTx]
-        [subType @PubTx] $ \_btq ->
+        []
+        [] $ \_btq ->
             dieGracefully $ forever $ do
                 tx <- atomically $ STM.readTQueue input
                 checkThenRepublish tx
 
     republisher = Worker
         "txRetranslationRepeater"
-        [msgType @SendTx]
+        []
         [subType @PubTx] $ \btq -> do
             dieGracefully $ forever $ do
                 (_, PubTx tx) <- cliRecvUpdate btq (-1)
