@@ -7,14 +7,10 @@ module Dscp.DB.SQLite.Types
          -- * Educator schema
        , TxBlockIdx (..)
        , intTxBlockIdx
-
-         -- * SQL errors
-       , asAlreadyExistsError
        ) where
 
 import Control.Lens (Prism', prism)
-import qualified Data.Text as T
-import Database.SQLite.Simple (Connection, Error (..), SQLError (..))
+import Database.SQLite.Simple (Connection)
 
 ----------------------------------------------------------
 -- SQLite bindings
@@ -52,16 +48,3 @@ intTxBlockIdx = prism toInt fromInt
         | idx >= 0 = Right $ TxBlockIdx (fromIntegral idx)
         | idx == -1 = Right $ TxInMempool
         | otherwise = Left idx
-
-----------------------------------------------------------
--- Errors
-----------------------------------------------------------
-
--- | Matches on errors declaring violation of UNIQUE constraint,
--- returns name of fields on which constraint was violated.
-asAlreadyExistsError :: SQLError -> Maybe Text
-asAlreadyExistsError err = do
-    SQLError ErrorConstraint details _ <- pure err
-    let pat = "UNIQUE constraint failed"
-    guard $ pat `T.isPrefixOf` details
-    return $ T.drop (length pat) details

@@ -197,7 +197,7 @@ botPrepareInitialData = do
 
 -- | Ignore "Already present" errors.
 maybePresent :: MonadCatch m => m a -> m ()
-maybePresent action = catchJust asAlreadyExistsError (void action) (\_ -> pass)
+maybePresent action = catchJust (^? _AlreadyPresentError) (void action) (\_ -> pass)
 
 -- Bot does not delete entities, so "Not found" errors should not happen.
 

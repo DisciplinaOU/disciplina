@@ -15,6 +15,7 @@ import Servant.Generic
 
 import Dscp.Core
 import Dscp.Crypto
+import Dscp.Educator.Web.Educator.Error
 import Dscp.Educator.Web.Educator.Types
 import Dscp.Educator.Web.Types
 
@@ -33,8 +34,8 @@ data EducatorApiEndpoints route = EducatorApiEndpoints
       eNewStudent :: route
         :- "students"
         :> Summary "Add a new student address to a database"
-        :> ReqBody '[JSON] Student
-        :> PostCreated '[JSON] ()
+        :> ReqBody '[DSON] Student
+        :> PostCreated '[DSON] ()
 
     , eRemoveStudent :: route
         :- "students" :> Capture "studentAddr" Student
@@ -44,26 +45,26 @@ data EducatorApiEndpoints route = EducatorApiEndpoints
                         \perform a cascade deletion, because it will make \
                         \this operation particularly dangerous. If a student \
                         \attends any course, an error will be raised."
-        :> Delete '[JSON] ()
+        :> Delete '[DSON] ()
 
     , eGetStudents :: route
         :- "students"
         :> Summary "Get a list of all registered students' addresses"
         :> QueryParam "courseId" Course
-        :> Get '[JSON] [Student]
+        :> Get '[DSON] [Student]
 
       -- * Courses
 
     , eAddCourse :: route
         :- "courses"
         :> Summary "Add a new course to a database"
-        :> ReqBody '[JSON] NewCourse
-        :> PostCreated '[JSON] ()
+        :> ReqBody '[DSON] NewCourse
+        :> PostCreated '[DSON] ()
 
     , eGetCourses :: route
         :- "courses"
         :> Summary "Get all courses"
-        :> Get '[JSON] [CourseEducatorInfo]
+        :> Get '[DSON] [CourseEducatorInfo]
 
     , eEnrollStudentToCourse :: route
         :- "students" :> Capture "studentAddr" Student
@@ -71,8 +72,8 @@ data EducatorApiEndpoints route = EducatorApiEndpoints
         :> Summary "Enroll a student in a new course"
         :> Description "Given existing student and course, enroll the \
                         \student to the course."
-        :> ReqBody '[JSON] CourseEducatorInfo
-        :> Post '[JSON] ()
+        :> ReqBody '[DSON] CourseEducatorInfo
+        :> Post '[DSON] ()
 
     , eGetStudentCourses :: route
         :- "students" :> Capture "studentAddr" Student
@@ -80,7 +81,7 @@ data EducatorApiEndpoints route = EducatorApiEndpoints
         :> Summary "Get a list of student's courses"
         :> Description "Gets a list of courses which student is currently \
                         \attending."
-        :> Get '[JSON] [CourseEducatorInfo]
+        :> Get '[DSON] [CourseEducatorInfo]
 
       -- * Assignments
 
@@ -88,8 +89,8 @@ data EducatorApiEndpoints route = EducatorApiEndpoints
         :- "assignments"
         :> Summary "Add assignment to a course"
         :> QueryFlag "autoAssign"
-        :> ReqBody '[JSON] NewAssignment
-        :> PostCreated '[JSON] ()
+        :> ReqBody '[DSON] NewAssignment
+        :> PostCreated '[DSON] ()
 
     , eGetStudentAssignments :: route
         :- "students" :> Capture "studentAddr" Student
@@ -97,7 +98,7 @@ data EducatorApiEndpoints route = EducatorApiEndpoints
         :> Summary "Get active student's assignments"
         :> Description "Given student address, gets a list of all pending \
                         \assignments student has."
-        :> Get '[JSON] [Assignment]
+        :> Get '[DSON] [Assignment]
 
     , eAssignToStudent :: route
         :- "students" :> Capture "studentAddr" Student
@@ -105,8 +106,8 @@ data EducatorApiEndpoints route = EducatorApiEndpoints
         :> Summary "Assign an assignment to a student"
         :> Description "Assigns a new assignment to a student in scope of \
                         \given course."
-        :> ReqBody '[JSON] (Hash Assignment)
-        :> PostCreated '[JSON] ()
+        :> ReqBody '[DSON] (Hash Assignment)
+        :> PostCreated '[DSON] ()
 
     , eUnassignFromStudent :: route
         :- "students"    :> Capture "studentAddr" Student
@@ -115,7 +116,7 @@ data EducatorApiEndpoints route = EducatorApiEndpoints
         :> Description "If given student has been assigned a given \
                         \assignment, then unassigns it from them, otherwise \
                         \raises error."
-        :> Delete '[JSON] ()
+        :> Delete '[DSON] ()
 
     , eGetStudentCourseAssignments :: route
         :- "students" :> Capture "studentAddr" Student
@@ -126,7 +127,7 @@ data EducatorApiEndpoints route = EducatorApiEndpoints
                         \all pending assignments student has as a part of a \
                         \course."
         :> QueryParam "isFinal" IsFinal
-        :> Get '[JSON] [Assignment]
+        :> Get '[DSON] [Assignment]
 
       -- * Submissions
 
@@ -134,28 +135,28 @@ data EducatorApiEndpoints route = EducatorApiEndpoints
         :- "submissions" :> Capture "submissionHash" (Hash Submission)
         :> Summary "Get info about a submission"
         :> Description "Gets a submission data by given submission hash."
-        :> Get '[JSON] [SubmissionEducatorInfo]
+        :> Get '[DSON] [SubmissionEducatorInfo]
 
     , eDeleteSubmission :: route
         :- "submissions" :> Capture "submissionHash" (Hash Submission)
         :> Summary "Delete a submission"
         :> Description "Deletes a submission from a database. Only ungraded \
                         \submissions can be deleted."
-        :> Delete '[JSON] ()
+        :> Delete '[DSON] ()
 
     , eGetSubmissions :: route
         :- "submissions"
         :> Summary "Get all submissions"
         :> Description "Gets a list of all submissions done by all students. \
                       \This method is inaccessible by students."
-        :> Get '[JSON] [SubmissionEducatorInfo]
+        :> Get '[DSON] [SubmissionEducatorInfo]
 
     , eGetStudentSubmissions :: route
         :- "students" :> Capture "studentAddr" Student
         :> "submissions"
         :> Summary "Get all student's submissions"
         :> Description "Gets a list of all student's submissions."
-        :> Get '[JSON] [SubmissionEducatorInfo]
+        :> Get '[DSON] [SubmissionEducatorInfo]
 
     , eGetStudentAssignmentSubmissions :: route
         :- "students"    :> Capture "studentAddr" Student
@@ -164,7 +165,7 @@ data EducatorApiEndpoints route = EducatorApiEndpoints
         :> Summary "Student's submissions for an assignment"
         :> Description "Gets a list of student's submissions for a given \
                     \assignment"
-        :> Get '[JSON] [SubmissionEducatorInfo]
+        :> Get '[DSON] [SubmissionEducatorInfo]
 
     , eGetStudentCourseSubmissions :: route
         :- "students" :> Capture "studentAddr" Student
@@ -173,7 +174,7 @@ data EducatorApiEndpoints route = EducatorApiEndpoints
         :> Summary "Get student's course submissions"
         :> Description "Gets a list of student's submissions he made during \
                         \studying given course."
-        :> Get '[JSON] [SubmissionEducatorInfo]
+        :> Get '[DSON] [SubmissionEducatorInfo]
 
       -- * Grades
 
@@ -181,14 +182,14 @@ data EducatorApiEndpoints route = EducatorApiEndpoints
         :- "grades"
         :> Summary "Post a new grade"
         :> Description "Posts a new grade with a given body."
-        :> ReqBody '[JSON] NewGrade
-        :> PostCreated '[JSON] ()
+        :> ReqBody '[DSON] NewGrade
+        :> PostCreated '[DSON] ()
 
     , eGetGrades :: route
         :- "grades"
         :> Summary "Get all grades"
         :> Description "Gets a list of all grades performed by all students."
-        :> Get '[JSON] [GradeInfo]
+        :> Get '[DSON] [GradeInfo]
 
     , eGetStudentGrades :: route
         :- "students" :> Capture "studentAddr" Student
@@ -196,7 +197,7 @@ data EducatorApiEndpoints route = EducatorApiEndpoints
         :> Summary "Get all student's grades"
         :> Description "Gets a list of all students grades (aka transactions \
                         \in a private chain)"
-        :> Get '[JSON] [GradeInfo]
+        :> Get '[DSON] [GradeInfo]
 
     , eGetStudentCourseGrades :: route
         :- "students" :> Capture "studentAddr" Student
@@ -206,7 +207,7 @@ data EducatorApiEndpoints route = EducatorApiEndpoints
         :> Description "Gets a list of grades a student received during \
                         \studying given course."
         :> QueryParam "isFinal" IsFinal
-        :> Get '[JSON] [GradeInfo]
+        :> Get '[DSON] [GradeInfo]
 
       -- * Proofs
 
@@ -216,7 +217,7 @@ data EducatorApiEndpoints route = EducatorApiEndpoints
         :> Summary "Get proofs of all student's activity"
         :> Description "Gets all private transactions related to a student \
                         \together with corresponding Merkle proofs."
-        :> Get '[JSON] [BlkProofInfo]
+        :> Get '[DSON] [BlkProofInfo]
 
     , eGetStudentCourseProofs :: route
         :- "students" :> Capture "studentAddr" Student
@@ -226,6 +227,6 @@ data EducatorApiEndpoints route = EducatorApiEndpoints
         :> Description "Gets student's course grades and submissions in form \
                         \of private transactions, together with corresponding \
                         \Merkle proofs."
-        :> Get '[JSON] [BlkProofInfo]
+        :> Get '[DSON] [BlkProofInfo]
 
    } deriving (Generic)

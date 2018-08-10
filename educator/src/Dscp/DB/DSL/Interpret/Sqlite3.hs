@@ -12,7 +12,7 @@ import Dscp.DB.SQLite
 
 instance
     ( Monad m
-    , MonadThrow m
+    , MonadCatch m
     , MonadSQLiteDB m
     )
     => MonadSearchTxObj m

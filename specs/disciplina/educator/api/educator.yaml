@@ -194,6 +194,10 @@ paths:
           description: Student with given address not found
           schema:
             $ref: "#/definitions/ErrResponse"
+        409:
+          description: Student is already enrolled on this course
+          schema:
+            $ref: "#/definitions/ErrResponse"
 
   /students/{studentAddr}/courses/{courseId}/assignments:
     get:
@@ -373,6 +377,10 @@ paths:
             $ref: "#/definitions/ErrResponse"
         404:
           description: Student with given address not found
+          schema:
+            $ref: "#/definitions/ErrResponse"
+        409:
+          description: Student is already subscribed on assignment
           schema:
             $ref: "#/definitions/ErrResponse"
 
@@ -865,9 +873,11 @@ definitions:
             * `StudentAlreadyExists` - Student being added already exists.
             * `CourseAlreadyExists` - Course with such id already exists.
             * `AssignmentAlreadyExists` - Exactly the same assignment already exists.
-
             * `StudentDoesNotAttendCourse` - Student does not attend the course.
-            * `StudentIsActive` - Can not delete a student because it is attending a course.
+            * `StudentIsActive` - Can not delete a student because he is attending a course.
+
+            * `StudentAlreadyAttendsCourse` - Student already attends given course.
+            * `StudentAlreadyHasAssignment` - Student is already subscribed on given assignment.
             * `StudentHasNoAssignment` - Given student didn't have given assignment.
 parameters:
   StudentAddr:

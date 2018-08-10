@@ -4,10 +4,15 @@ module Dscp.DB.SQLite.Error
     ( SQLConnectionOpenningError (..)
     , SQLRequestError (..)
     , rethrowSQLRequestError
+
+      -- * Common SQL errors
+    , asAlreadyExistsError
     ) where
 
+import qualified Data.Text as T
 import qualified Data.Text.Buildable
 import Database.SQLite.Simple as SQLite
+import Database.SQLite.Simple (Error (..), SQLError (..))
 import Fmt ((+|), (+||), (|+), (||+))
 import qualified Text.Show
 
@@ -54,3 +59,16 @@ rethrowSQLRequestError :: MonadCatch m => m a -> m a
 rethrowSQLRequestError =
     wrapRethrow SQLFormatError .
     wrapRethrow SQLResultError
+
+----------------------------------------------------------
+-- Common SQL errors
+----------------------------------------------------------
+
+-- | Matches on errors declaring violation of UNIQUE constraint,
+-- returns name of fields on which constraint was violated.
+asAlreadyExistsError :: SQLError -> Maybe Text
+asAlreadyExistsError err = do
+    SQLError ErrorConstraint details _ <- pure err
+    let pat = "UNIQUE constraint failed"
+    guard $ pat `T.isPrefixOf` details
+    return $ T.drop (length pat) details

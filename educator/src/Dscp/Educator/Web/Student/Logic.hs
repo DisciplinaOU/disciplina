@@ -20,7 +20,7 @@ requestToSignedSubmission
     => NewSubmission -> m SignedSubmission
 requestToSignedSubmission ns = do
     assignment <- getAssignment (nsAssignmentHash ns)
-        `assertJust` AssignmentDoesNotExist (nsAssignmentHash ns)
+        `assertJust` AbsentError (AssignmentDomain $ nsAssignmentHash ns)
     let submission = Submission
             { _sStudentId = nsOwner ns
             , _sAssignmentHash = hash assignment
@@ -40,5 +40,5 @@ studentMakeSubmissionVerified student newSubmission = do
     verifyStudentSubmission student signedSubmission
         & leftToThrow BadSubmissionSignature
     sqlTransaction $ do
-        submissionId <- studentMakeSubmission signedSubmission
+        submissionId <- submitAssignment signedSubmission
         studentGetSubmission student submissionId
