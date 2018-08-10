@@ -11,6 +11,7 @@ library:
     - disciplina-core
     - disciplina-witness
     - fmt
+    - http-types
     - lens
     - loot-base
     - loot-config
