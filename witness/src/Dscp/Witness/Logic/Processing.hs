@@ -1,7 +1,11 @@
 -- | Creating and application.
 
-module Dscp.Witness.Logic.Processing where
-
+module Dscp.Witness.Logic.Processing
+    ( createPayload
+    , createBlock
+    , applyBlock
+    , applyGenesisBlock
+    ) where
 
 import Data.Default (def)
 import Data.Reflection (reify)
@@ -42,8 +46,8 @@ createBlock newSlot = do
     pure block
 
 -- | Apply verified block.
-applyBlock :: WitnessWorkMode ctx m => Block -> m AvlProof
-applyBlock block = do
+applyBlockRaw :: WitnessWorkMode ctx m => Bool -> Block -> m AvlProof
+applyBlockRaw toVerify block = do
     Lock.writingSDLock $ do
         (sdActions :: SDActions) <- view (lensOf @SDActions)
         let blockDBM = nsBlockDBActions sdActions
@@ -54,7 +58,7 @@ applyBlock block = do
                                                            (SD.dmaAccessActions stateDBM)
                 rwComp = do
                   sblock <- SD.liftERoComp $ expandBlock block
-                  SD.applyBlock blkStateConfig sblock
+                  SD.applyBlockImpl toVerify blkStateConfig sblock
              in SD.runERwCompIO actions def rwComp >>=
                     \((), (SD.CompositeChgAccum blockCS_ stateCS_)) -> pure (blockCS_, stateCS_)
         proof <- runSdRIO $ SD.dmaApply stateDBM stateCS
@@ -62,3 +66,9 @@ applyBlock block = do
         pure proof
   where
     blockPrefixes = S.fromList [tipPrefix, blockPrefix]
+
+applyBlock :: WitnessWorkMode ctx m => Block -> m AvlProof
+applyBlock = applyBlockRaw True
+
+applyGenesisBlock :: WitnessWorkMode ctx m => m ()
+applyGenesisBlock = void $ applyBlockRaw False genesisBlock

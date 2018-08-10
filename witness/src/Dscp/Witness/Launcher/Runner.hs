@@ -18,7 +18,11 @@ import qualified Dscp.Witness.Relay as Relay
 import qualified Dscp.Witness.SDLock as Lock
 
 -- | Make up Witness context from dedicated pack of allocated resources.
-formWitnessContext :: WitnessParams -> WitnessResources -> IO WitnessContext
+formWitnessContext ::
+       HasWitnessConfig
+    => WitnessParams
+    -> WitnessResources
+    -> IO WitnessContext
 formWitnessContext _wcParams _wcResources = do
     _wcMempool    <- newMempoolVar
     _wcSDActions  <- initSDActions

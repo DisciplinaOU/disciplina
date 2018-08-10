@@ -6,7 +6,9 @@ module Dscp.Core.Genesis
     , GenesisDistribution (..)
     , GenesisConfig (..)
     , GenAddressMap (..)
+    , totalCoinsAddrMap
     , distrToMap
+    , genesisSk
     , formGenesisInfo
     ) where
 
@@ -16,7 +18,7 @@ import qualified Data.Map.Strict as Map
 
 import Dscp.Core.Foundation
 import Dscp.Core.Governance
-import Dscp.Crypto (keyGen, sign, unsafeHash, withIntSeed)
+import Dscp.Crypto
 
 
 -- | Wrapper over address mapping.
@@ -31,6 +33,10 @@ instance Semigroup GenAddressMap where
 instance Monoid GenAddressMap where
     mempty = GenAddressMap mempty
     mappend = (<>)
+
+-- | Total coins in address map.
+totalCoinsAddrMap :: GenAddressMap -> Coin
+totalCoinsAddrMap (GenAddressMap m) = foldr unsafeAddCoin (Coin 0) (Map.elems m)
 
 -- | Runtime representation of the genesis info. It is built from
 -- other config parameters and genesis config in particular. It is
@@ -79,6 +85,9 @@ distrToMap :: Maybe (NonEmpty Address) -> GenesisDistribution -> GenAddressMap
 distrToMap maddrs (GenesisDistribution distrs) =
     foldl1 mappend $ fmap (distrElemToMap maddrs) distrs
 
+genesisSk :: SecretKey
+genesisSk = withIntSeed 12345 genSecretKey
+
 formGenesisInfo :: GenesisConfig -> GenesisInfo
 formGenesisInfo GenesisConfig{..} =
     GenesisInfo { giAddressMap = genesisAddrMap
@@ -94,7 +103,8 @@ formGenesisInfo GenesisConfig{..} =
     genesisBlock :: Block
     genesisBlock = Block header payload
       where
-        (sk,pk) = withIntSeed 12345 keyGen
+        sk = genesisSk
+        pk = toPublic sk
 
         createTx (a, c) i =
             let fromAddr = mkAddr pk

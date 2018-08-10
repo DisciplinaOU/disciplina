@@ -151,7 +151,7 @@ simpleBlkConfiguration = SD.BlkConfiguration
     GovCommittee com = gcGovernance $ giveL @WitnessConfig
 
     getPrevHash h
-        | h == genesisHash = Nothing
+        | h == hPrevHash genesisHeader = Nothing
         | otherwise        = Just h
 
     verifiers :: [SD.BlockIntegrityVerifier SHeader SPayload]
