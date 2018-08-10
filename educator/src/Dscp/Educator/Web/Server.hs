@@ -17,7 +17,7 @@ import Servant.Auth.Server (AuthResult (..), CookieSettings, JWTSettings, defaul
 import Servant.Generic (toServant)
 
 import Dscp.Core (Student)
-import Dscp.Crypto (PublicKey)
+import Dscp.Crypto (PublicKey, keyGen, withIntSeed)
 import Dscp.Educator.Config (HasEducatorConfig)
 import Dscp.Educator.Launcher (EducatorRealMode, EducatorWorkMode)
 import Dscp.Educator.Web.Bot (EducatorBotSwitch (..), addBotHandlers, initializeBot)
@@ -73,6 +73,10 @@ serveStudentAPIReal EducatorWebParams{..} = do
     let getStudents :: IO [PublicKey]
         getStudents = atomically . readTVar $ tvr
     let srvCtx = jwtCfg :. defaultCookieSettings :. (GetStudentsAction getStudents) :. EmptyContext
+    let (_, pk)   = withIntSeed 1000 keyGen
+    let (_, pk2) = withIntSeed 1001 keyGen
+    liftIO . atomically $ modifyTVar' tvr ([pk, pk2] ++)
+
 
     logInfo $ "Serving Student API on "+|spAddr|+""
     eCtx <- ask
