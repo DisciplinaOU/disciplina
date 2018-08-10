@@ -1,6 +1,6 @@
 swagger: "2.0"
 info:
-  description: "This is an HTTP API for interacting with Disciplina Witness node. It is used by Block Explorer frontend to request info about blocks, addresses and transactions."
+  description: "This is an HTTP API for interacting with Disciplina Witness node. It is used by Block Explorer frontend to request info about blocks, accounts and transactions."
   version: 0.1.0
   title: Disciplina Block Explorer API
   termsOfService: "https://disciplina.io/tnc.pdf"
@@ -80,16 +80,16 @@ paths:
           description: Block not found
           schema:
             $ref: "#/definitions/ErrResponse"
-  /addresses/{address}:
+  /accounts/{address}:
     get:
-      summary: Get information about an address.
-      operationId: getAddress
+      summary: Get information about an account.
+      operationId: getAccount
       produces:
       - application/json
       parameters:
       - in: path
         name: address
-        description: Address being requested.
+        description: Address of an account being requested.
         required: true
         type: string
         format: byte
@@ -98,14 +98,14 @@ paths:
           description: Successful operation
           schema:
             allOf:
-            - $ref: "#/definitions/AddressInfo"
+            - $ref: "#/definitions/AccountInfo"
             - $ref: "#/definitions/TransactionList"
         400:
           description: Invalid input
           schema:
             $ref: "#/definitions/ErrResponse"
         404:
-          description: Address not found
+          description: Account not found
           schema:
             $ref: "#/definitions/ErrResponse"
   /transactions/{transactionHash}:
@@ -179,16 +179,12 @@ definitions:
         format: int64
       prevHash:
         $ref: "#/definitions/Hash"
-  AddressInfo:
+  AccountInfo:
     type: object
     properties:
       balance:
         type: integer
         format: int32
-      transactions:
-        type: array
-        items:
-          $ref: "#/definitions/TransactionInfo"
   TransactionInfo:
     type: object
     discriminator: txType
@@ -234,14 +230,14 @@ definitions:
           - InvalidFormat
 
           - BlockNotFound
-          - AddressNotFound
+          - AccountNotFound
           - TransactionNotFound
         description: >-
           Error type:
             * `InvalidFormat` - Failed to deserialise one of parameters.
 
             * `BlockNotFound` - Specified block does not exist.
-            * `AddressNotFound` - Specified address does not exist.
+            * `AccountNotFound` - Specified account does not exist.
             * `TransactionNotFound` - Specified transaction does not exist.
 
 externalDocs:

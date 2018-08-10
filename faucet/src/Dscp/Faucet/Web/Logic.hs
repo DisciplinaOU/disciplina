@@ -53,17 +53,19 @@ faucetTransferMoneyTo dest = do
     withMVar lock $ \() -> do
         sourceState <-
             if dryRun
-            then pure AccountState
-                      { asBalances = Balances (Coin 100000)
-                      , asNextNonce = 7 }
-            else wGetAccountState wc source
+            then pure AccountInfo
+                      { aiBalances = Balances (Coin 100000)
+                      , aiNextNonce = 7
+                      , aiTransactions = Nothing
+                      }
+            else wGetAccount wc source
 
         -- TODO: take mempool's balance
-        let balance = bConfirmed $ asBalances sourceState
+        let balance = bConfirmed $ aiBalances sourceState
         when (balance < transfer) $
             throwM SourceAccountExhausted
 
-        let nonce = asNextNonce sourceState
+        let nonce = aiNextNonce sourceState
             inAcc = TxInAcc{ tiaNonce = nonce, tiaAddr = source }
             outs  = one (TxOut dest transfer)
             tx    = Tx{ txInAcc = inAcc, txInValue = transfer, txOuts = outs }

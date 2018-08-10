@@ -1,7 +1,7 @@
 module Dscp.Witness.Web.Types
     ( Balances (..)
-    , AccountState (..)
     , BlockInfo (..)
+    , AccountInfo (..)
     , TxInfo (..)
     ) where
 
@@ -23,17 +23,17 @@ data Balances = Balances
     }
 
 -- | All what user may wish to know about an account.
-data AccountState = AccountState
-    { asBalances  :: Balances
-    , asNextNonce :: Integer
-      -- TODO: add transactions list
-    }
-
 data BlockInfo = BlockInfo
     { biHeaderHash :: HeaderHash
     , biHeader :: Header
     , biIsGenesis :: Bool
     , biTransactions :: Maybe [TxInfo]
+    }
+
+data AccountInfo = AccountInfo
+    { aiBalances  :: Balances
+    , aiNextNonce :: Integer
+    , aiTransactions :: Maybe [TxInfo]
     }
 
 newtype TxInfo = TxInfo GTx
@@ -43,29 +43,24 @@ newtype TxInfo = TxInfo GTx
 -- Buildable instances
 ---------------------------------------------------------------------------
 
-instance Buildable Balances where
-    build Balances{..} = "{ confirmed = " +| bConfirmed |+ " }"
-
-instance Buildable AccountState where
-    build AccountState{..} =
-        "{ balances = " +| asBalances |+
-        ", next nonce = " +| asNextNonce |+
-        " }"
-instance Buildable (ForResponseLog AccountState) where
-    build (ForResponseLog AccountState{..}) =
-        -- will differ once transaction list in included
-        "{ balances = " +| asBalances |+
-        ", next nonce = " +| asNextNonce |+
-        " }"
 
 instance Buildable (ForResponseLog BlockInfo) where
     build (ForResponseLog BlockInfo{..}) =
         "{ headerHash = " +| biHeaderHash |+
         ", header = " +| biHeader |+
         " }"
-
 instance Buildable (ForResponseLog [BlockInfo]) where
     build (ForResponseLog blocks) = blockListF $ map biHeaderHash blocks
+
+instance Buildable Balances where
+    build Balances{..} = "{ confirmed = " +| bConfirmed |+ " }"
+
+instance Buildable (ForResponseLog AccountInfo) where
+    build (ForResponseLog AccountInfo{..}) =
+        -- will differ once transaction list in included
+        "{ balances = " +| aiBalances |+
+        ", next nonce = " +| aiNextNonce |+
+        " }"
 
 deriving instance Buildable (ForResponseLog TxInfo)
 
@@ -74,8 +69,8 @@ deriving instance Buildable (ForResponseLog TxInfo)
 ---------------------------------------------------------------------------
 
 deriveJSON defaultOptions ''Balances
-deriveJSON defaultOptions ''AccountState
 deriveJSON defaultOptions{ omitNothingFields = True } ''BlockInfo
+deriveJSON defaultOptions{ omitNothingFields = True } ''AccountInfo
 
 instance ToJSON TxInfo where
     toJSON (TxInfo gTx) = case gTx of

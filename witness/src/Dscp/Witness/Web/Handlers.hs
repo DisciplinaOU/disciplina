@@ -20,10 +20,10 @@ witnessServantHandlers
 witnessServantHandlers =
     toServant @(WitnessEndpoints (AsServerT m)) WitnessEndpoints
     { wPing = pass
-    , wGetAccountState = getAccountState
     , wSubmitTx = submitUserTx
     , wSubmitTxAsync = submitUserTxAsync
     , wGetBlocks = getBlocks
     , wGetBlock = getBlockInfo
+    , wGetAccount = getAccountInfo
     , wGetTransaction = getTransactionInfo
     }
