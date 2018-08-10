@@ -11,9 +11,9 @@ module Dscp.Witness.Messages
     , BlocksMsg (..)
     , GetTipMsg (..)
     , TipMsg (..)
+    , SendTxMsg (..)
 
     , PubBlock (..)
-    , SendTx (..)
     , PubTx (..)
     ) where
 
@@ -47,6 +47,10 @@ data TipMsg = TipMsg Block deriving (Show, Generic)
 instance Serialise TipMsg
 instance Message MsgK TipMsg where type MsgTag MsgK TipMsg = 3
 
+data SendTxMsg = SendTxMsg { getSendTx :: GTxWitnessed } deriving (Generic,Show)
+instance Serialise SendTxMsg
+instance Message MsgK SendTxMsg where type MsgTag MsgK SendTxMsg = 4
+
 ----------------------------------------------------------------------------
 -- Publications
 ----------------------------------------------------------------------------
@@ -54,10 +58,6 @@ instance Message MsgK TipMsg where type MsgTag MsgK TipMsg = 3
 data PubBlock = PubBlock Block deriving (Show,Generic)
 instance Serialise PubBlock
 instance Message SubK PubBlock where type MsgTag SubK PubBlock = 100
-
-data SendTx = SendTx { getSendTx :: GTxWitnessed } deriving (Generic,Show)
-instance Serialise SendTx
-instance Message MsgK SendTx where type MsgTag MsgK SendTx = 4
 
 data PubTx = PubTx { getPubTx :: GTxWitnessed } deriving (Generic,Show)
 instance Serialise PubTx
