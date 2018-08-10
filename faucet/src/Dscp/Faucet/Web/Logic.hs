@@ -34,9 +34,7 @@ ensureFirstGift addr = do
     when (isJust prevVal) $
         throwM AddressAlreadyGifted
 
-faucetTransferMoneyTo
-    :: forall m ctx. FaucetWorkMode ctx m
-    => Address -> m TransferMoneyResponse
+faucetTransferMoneyTo :: FaucetWorkMode ctx m => Address -> m TransferMoneyResponse
 faucetTransferMoneyTo dest = do
     ensureFirstGift dest
 
@@ -45,17 +43,20 @@ faucetTransferMoneyTo dest = do
     let pk = _krPublicKey keyRes
         !source = mkAddr pk
 
-    -- TODO [DSCP-187]: remove _
-    _wc <- views (lensOf @WitnessClient) (hoistWitnessClient $ liftIO @m)
+    wc <- views (lensOf @WitnessClient) (hoistWitnessClient liftIO)
     lock <- view (lensOf @TxSendLock)
+    DryRun dryRun <- view (lensOf @DryRun)
     TranslatedAmount transfer <- view (lensOf @TranslatedAmount)
 
     -- sad truth: we have to submit transactions sequentially in order to use
     -- sound nonces
     withMVar lock $ \() -> do
-        -- TODO [DSCP-187]: uncomment
-        -- sourceState <- wGetAccountState wc source
-        let sourceState = AccountState{ asBalances = Balances (Coin 10), asNextNonce = 1 }
+        sourceState <-
+            if dryRun
+            then pure AccountState
+                      { asBalances = Balances (Coin 100000)
+                      , asNextNonce = 7 }
+            else wGetAccountState wc source
 
         -- TODO: take mempool's balance
         let balance = bConfirmed $ asBalances sourceState
@@ -70,10 +71,10 @@ faucetTransferMoneyTo dest = do
 
             sgn = sign sk (txId, pk, ())
             witness = TxWitness{ txwSig = sgn, txwPk = pk }
-            _txWitnessed = TxWitnessed{ twTx = tx, twWitness = witness }
+            txWitnessed = TxWitnessed{ twTx = tx, twWitness = witness }
 
-        -- TODO [DSCP-187]: uncomment
-        -- wSubmitTxAsync wc txWitnessed
+        unless (dryRun) $
+            wSubmitTxAsync wc txWitnessed
 
         return TransferMoneyResponse
             { tmrTxId = AsByteString txId

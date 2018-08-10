@@ -39,6 +39,7 @@ type FaucetWorkMode ctx m =
         , WitnessClient
         , KeyResources FaucetApp
         , TranslatedAmount
+        , DryRun
         ]
     )
 
@@ -69,6 +70,7 @@ type FaucetRealMode = RIO FaucetContext
         lensOf = IMPL
 
 GenHasLens(TranslatedAmount      , fcParams . fpTranslatedAmount)
+GenHasLens(DryRun                , fcParams . fpDryRun)
 GenHasLens(Logging IO            , fcResources . frLogging)
 GenHasLens(KeyResources FaucetApp, fcResources . frKeys)
 GenHasLens(WitnessClient         , fcResources . frWitnessClient)
