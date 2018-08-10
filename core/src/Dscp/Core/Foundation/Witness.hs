@@ -269,7 +269,7 @@ instance Buildable GTx where
 -- | Unified tx id, which is actually a hash of underlying Tx or PublicationTx.
 -- NB! It's different from Hash GTx.
 newtype GTxId = GTxId (Hash GTx)
-    deriving (Eq, Show, Generic, Buildable)
+    deriving (Eq, Ord, Show, Generic, Buildable)
 
 -- | Compute tx id.
 toGTxId :: (Serialise Tx, Serialise PublicationTx) => GTx -> GTxId

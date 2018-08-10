@@ -8,7 +8,6 @@ module Dscp.Witness.Logic.Traversals
 
     , getBlocksFromTo
     , getBlocksBefore
-    , getTransaction
     ) where
 
 import Control.Monad.Trans.Except (throwE)
@@ -158,19 +157,3 @@ getBlocksBefore depthDiff (headerHash -> newerH) = runExceptT $ do
         error "getBlocksFromTo: retrieved too many"
 
     pure blocks
-
-getTransaction ::
-       HasWitnessConfig
-    => GTxId
-    -> SdM (Maybe GTxWitnessed)
-getTransaction gTxId = do
-    start <- getTipBlock
-    foldlGeneric
-        resolvePrevious
-        getBlockMaybe
-        start
-        (\_ _ -> True)
-        (\_ -> return . getTx)
-        Nothing
-  where
-    getTx (bbTxs . bBody -> txs) = find (\gTx -> (toGTxId . unGTxWitnessed $ gTx) == gTxId) txs

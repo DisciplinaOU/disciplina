@@ -73,6 +73,7 @@ instance Serialise PublicationTx
 instance Serialise PublicationTxWitness
 instance Serialise PublicationTxWitnessed
 instance Serialise GTx
+instance Serialise GTxId
 instance Serialise GTxWitnessed
 instance Serialise BlockToSign
 instance Serialise SlotId

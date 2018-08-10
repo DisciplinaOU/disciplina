@@ -11,6 +11,9 @@ module Dscp.Witness.Logic.Getters
     , getHeader
 
     , resolvePrevious
+
+    , getTxMaybe
+    , getTx
     ) where
 
 import qualified Snowdrop.Core as SD
@@ -82,3 +85,20 @@ resolvePrevious o = do
     if headerHash header == genesisHash
     then pure Nothing
     else pure $ Just $ hPrevHash header
+
+----------------------------------------------------------------------------
+-- Transaction getters
+----------------------------------------------------------------------------
+
+-- | Safely get transaction.
+getTxMaybe :: GTxId -> SdM (Maybe GTxWitnessed)
+getTxMaybe = SD.queryOne
+
+-- | Resolves transaction, throws exception if it's absent.
+getTx :: GTxId -> SdM GTxWitnessed
+getTx gTxId = do
+    tM <- getTxMaybe gTxId
+    maybe (SD.throwLocalError $ LETxAbsent $
+              "Can't get transaction with id " <> pretty gTxId)
+          pure
+          tM

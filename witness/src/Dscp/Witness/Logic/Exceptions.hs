@@ -8,6 +8,7 @@ import Control.Exception (Exception)
 
 data LogicException
     = LEBlockAbsent Text
+    | LETxAbsent Text
     | LEMalformed Text
     deriving (Eq, Show)
 
