@@ -22,16 +22,16 @@ module Dscp.Snowdrop.AccountValidation
 import Control.Monad.Error.Class (MonadError)
 import Data.List as List (partition)
 import Data.Map as Map (toList)
+import Snowdrop.Core (ERoComp, HasKeyValue, PreValidator (..), StatePException, StateTx (..),
+                      StateTxType (..), TxValidationException (..), Validator, ValueOp (..),
+                      changeSet, idSumPrefix, mkValidator, queryOne, validateIff)
+import Snowdrop.Util
 
 import Dscp.Core.Foundation (Address, TxId)
 import Dscp.Crypto (PublicKey)
 import Dscp.Snowdrop.Configuration (CanVerifyPayload, Exceptions, Ids, PersonalisedProof, Proofs,
                                     TxIds, Values)
 import Dscp.Snowdrop.Types
-import Snowdrop.Model.State.Core (ERoComp, HasKeyValue, PreValidator (..), StatePException,
-                                  StateTx (..), StateTxType (..), TxValidationException (..),
-                                  Validator, mkValidator, queryOne, validateIff)
-import Snowdrop.Util
 
 assertSigned
     :: ( VerifySign pk signature a
@@ -198,11 +198,11 @@ validateSaneArrival
   .  (AccountId, Account)
   -> ERoComp Exceptions Ids Values ctx Integer
 validateSaneArrival (accId, account) = do
-    was <- assertExists accId ReceiverDoesNotExist
-    let received = aBalance account - aBalance was
+    was <- queryOne accId
+    let received = aBalance account - maybe 0 aBalance was
     -- Check that except for the balance the account is unchanged.
     () <- mconcat
-        [ validateIff ReceiverOnlyGetsMoney       $ was { aBalance = aBalance account } == account
+        [ validateIff ReceiverOnlyGetsMoney       $ maybe account (\w -> w{ aBalance = aBalance account }) was == account
         , validateIff ReceiverMustIncreaseBalance $ received > 0
         ]
     return received
@@ -213,6 +213,7 @@ checkThatAccountIsUpdatedOnly
   -> ERoComp Exceptions Ids Values ctx (AccountId, Account)
 checkThatAccountIsUpdatedOnly = \case
     (_, Just (accId, Upd it)) -> return (accId, it)
+    (_, Just (accId, New it)) -> return (accId, it)
     (k, _)                    -> throwLocalError $ UnexpectedPayload [idSumPrefix k]
 
 is :: AccountId -> (AccountId, Account) -> Bool

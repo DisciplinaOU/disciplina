@@ -3,6 +3,7 @@ module Dscp.Core.Foundation.Witness
     (
     -- * Common
       Coin (..)
+    , unsafeAddCoin
     , StakeholderId (..)
     , coinToInteger
     , coinFromInteger
@@ -65,6 +66,11 @@ newtype StakeholderId = StakeholderId
 newtype Coin = Coin { unCoin :: Word64 }
     deriving (Eq, Ord, Show, Generic, Hashable, Bounded)
 
+-- | Add coins.
+unsafeAddCoin :: Coin -> Coin -> Coin
+unsafeAddCoin a b = case coinFromInteger $ coinToInteger a + coinToInteger b of
+    Left e  -> error $ "unsafeCoin failed: " <> show (a,b) <> " " <> e
+    Right x -> x
 
 -- | Safely convert coin to integer.
 coinToInteger :: Coin -> Integer

@@ -9,10 +9,12 @@ module Dscp.Snowdrop.Actions
 import Control.Monad.Free (Free (..))
 import qualified Data.Map as M
 import qualified Data.Tree.AVL as AVL
+import Loot.Log.Rio (LoggingIO)
 import Snowdrop.Model.Execution (DbModifyActions (..), SumChangeSet)
-import Snowdrop.Util (gett)
+import Snowdrop.Util (RIO, gett)
 
-import Dscp.Core.Foundation (addrFromText)
+import Dscp.Core
+import Dscp.Crypto
 import Dscp.Snowdrop.Configuration (Ids (..), Values (..))
 import Dscp.Snowdrop.Serialise ()
 import Dscp.Snowdrop.Storage.Avlp (AVLChgAccum, ClientError (..), RememberForProof, RootHash,
@@ -20,11 +22,11 @@ import Dscp.Snowdrop.Storage.Avlp (AVLChgAccum, ClientError (..), RememberForPro
                                    initAVLPureStorage)
 import Dscp.Snowdrop.Storage.Pure (blockDbActions)
 import Dscp.Snowdrop.Types
-import Dscp.Util (leftToPanic)
 import Dscp.Witness.AVL (AvlHash, AvlProof)
+import Dscp.Witness.Config
 
 -- It should be something more complex than IO.
-type SDActions = SDActionsM IO
+type SDActions = SDActionsM (RIO LoggingIO)
 
 -- Parameter m will be instantiated with RIO Context when the context is defined.
 data SDActionsM m = SDActionsM
@@ -34,7 +36,8 @@ data SDActionsM m = SDActionsM
     }
 
 initSDActions ::
-       forall m n. (MonadIO m, MonadCatch m, MonadIO n, MonadCatch n)
+       forall m n.
+       (MonadIO m, MonadCatch m, MonadIO n, MonadCatch n, HasWitnessConfig)
     => m (SDActionsM n)
 initSDActions = do
     avlInitState <- initAVLPureStorage @Ids @Values initAccounts
@@ -42,7 +45,7 @@ initSDActions = do
     serverBlkDba <- blockDbActions
     let sdActions = SDActionsM serverStDba serverBlkDba
 
-    -- This is something to be used for AVL client (???)
+    -- This is something to be used by AVL client (???)
     let retrieveF :: AvlHash -> n (Maybe ByteString)
         retrieveF h = serverLookupHash h >>= \resp -> do
           whenJust resp $ \resp' -> do
@@ -57,10 +60,14 @@ initSDActions = do
 
     pure sdActions
   where
+
+    genesisBlockAddress = mkAddr $ toPublic genesisSk
+    totalCoins = totalCoinsAddrMap $ giAddressMap genesisInfo
+
     initAccounts :: Map Ids Values
     initAccounts = M.fromList
-        -- TODO fill initial map with something
-        [  -- secret key: L4qSbE2SaTgGa8YOecy9F47VPTQ6TN4QKJhGASCDX0o=
-          (AccountInIds (AccountId . leftToPanic $ addrFromText "LL4qKpYPBX5SbZyXP1ctk7WcCsuRF1hzKV7KCz5bJZHRAKibmwYRde5g"),
-           AccountOutVal (Account 100 0))
+        [
+          ( AccountInIds (AccountId genesisBlockAddress)
+          , AccountOutVal (Account (coinToInteger totalCoins) 0)
+          )
         ]

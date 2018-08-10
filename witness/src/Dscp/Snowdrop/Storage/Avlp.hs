@@ -33,11 +33,11 @@ import qualified Data.Map.Strict as M
 import qualified Data.Text.Buildable as Buildable
 import Data.Tree.AVL (KVStoreMonad (..), MapLayer (..))
 import qualified Data.Tree.AVL as AVL
+import Snowdrop.Core (CSMappendException (..), ChangeSet, IdSumPrefixed (..), Prefix, StateP,
+                      StateR, ValueOp (..), changeSetToList)
 import Snowdrop.Model.Execution (DbAccessActions (..), DbActionsException (DbProtocolError),
                                  DbModifyActions (..))
-import Snowdrop.Model.State.Core (StateP, StateR)
-import Snowdrop.Util (CSMappendException (..), ChangeSet, HasGetter (..), IdSumPrefixed (..),
-                      Prefix, ValueOp (..), changeSetToList)
+import Snowdrop.Util (HasGetter (..))
 
 import Dscp.Witness.AVL (AvlHash (..))
 

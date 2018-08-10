@@ -3,15 +3,14 @@ module Dscp.Snowdrop.Configuration where
 import Control.Lens (makePrisms)
 import Fmt (build, (+|))
 
+import Snowdrop.Core (CSMappendException, ChangeSet, IdSumPrefixed (..), Prefix (..),
+                      RedundantIdException, SValue, StateModificationException, StatePException,
+                      StateTx (..), TxValidationException, ValidatorExecException)
 import Snowdrop.Model.Block (Block (..), BlockApplicationException, BlockRef (..),
-                             BlockStateException, Blund, TipKey, TipValue)
-import Snowdrop.Model.State.Core (RedundantIdException, SValue, StateModificationException,
-                                  StatePException, StateTx (..), TxValidationException,
-                                  ValidatorExecException)
+                             BlockStateException, Blund, CurrentBlockRef (..), TipKey, TipValue)
 import Snowdrop.Model.State.Restrict (RestrictionInOutException)
-import Snowdrop.Util (CSMappendException, ChangeSet, IdStorage, IdSumPrefixed (..), Prefix (..),
-                      VerifySign, WithSignature (..), deriveIdView, deriveView, withInj,
-                      withInjProj)
+import Snowdrop.Util (HasReview (..), IdStorage, VerifySign, WithSignature (..), deriveIdView,
+                      deriveView, withInj, withInjProj)
 
 import Dscp.Core.Foundation (HeaderHash)
 import qualified Dscp.Core.Foundation as T
@@ -80,6 +79,9 @@ instance IdSumPrefixed Ids where
     idSumPrefix (AccountInIds       _) = accountPrefix
     idSumPrefix (PublicationOfIds   _) = publicationOfPrefix
     idSumPrefix (PublicationHeadIds _) = publicationHeadPrefix
+
+instance HasReview Ids (BlockRef (CurrentBlockRef HeaderHash)) where
+    inj (BlockRef (CurrentBlockRef h)) = BlockRefIds (BlockRef h)
 
 ----------------------------------------------------------------------------
 -- Values

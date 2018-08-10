@@ -6,8 +6,8 @@ module Dscp.Witness.Web.Logic
 
 import Control.Lens (views)
 import Loot.Base.HasLens (lensOf)
+import qualified Snowdrop.Core as SD
 import qualified Snowdrop.Model.Execution as SD
-import qualified Snowdrop.Model.State.Core as SD
 import UnliftIO.Async (async)
 
 import Dscp.Core
@@ -36,7 +36,7 @@ getAccount address = do
         views (lensOf @SDActions)
               (SD.dmaAccessActions . flip nsStateDBActions (RememberForProof False))
     maccount <- Lock.readingSDLock $ do
-        liftIO . SD.runERoCompIO @Exceptions blockActs Nothing $
+        SD.runERoCompIO @Exceptions blockActs Nothing $
             SD.queryOne (AccountId address)
     pure maccount `assertJust` noAccount
 

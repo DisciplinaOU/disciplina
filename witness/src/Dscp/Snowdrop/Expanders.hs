@@ -9,10 +9,10 @@ import qualified Data.List as List
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 
+import Snowdrop.Core (ChgAccum, ChgAccumCtx, ERoComp, Expander (..), SeqExpanders (..), StateTx,
+                      StateTxType (..), ValueOp (..), mkDiffCS, queryOne)
 import qualified Snowdrop.Model.Block as SD
-import Snowdrop.Model.Expander (Expander (..), SeqExpanders (..), expandUnionRawTxs, mkDiffCS)
-import Snowdrop.Model.State.Core (ChgAccum, ChgAccumCtx, ERoComp, StateTx, StateTxType (..),
-                                  queryOne)
+import Snowdrop.Model.Expander (expandUnionRawTxs)
 import Snowdrop.Model.State.Restrict (RestrictCtx)
 import Snowdrop.Util
 

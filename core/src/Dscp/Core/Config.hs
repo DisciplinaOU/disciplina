@@ -18,6 +18,7 @@ module Dscp.Core.Config
     , withCoreConfig
     , fillCoreConfig
 
+    , genesisInfo
     , genesisBlock
     , genesisHeader
     , genesisHash
@@ -85,11 +86,11 @@ fillCoreConfig conf = do
         fromMaybe (error "'core.homeParam' is absent") $
         conf ^. sub #core . option #homeParam
     pure $
-        conf & sub #core . sub #generated . option #genesisInfo ?~ genesisInfo
+        conf & sub #core . sub #generated . option #genesisInfo ?~ ourGenesisInfo
              & sub #core . sub #generated . option #home ?~ dirPath
   where
-    genesisInfo :: GenesisInfo
-    genesisInfo =
+    ourGenesisInfo :: GenesisInfo
+    ourGenesisInfo =
         formGenesisInfo $ fromMaybe (error "'genesis' is absent")
                                     (conf ^. sub #core . option #genesis)
 
@@ -97,8 +98,11 @@ fillCoreConfig conf = do
 -- Getters
 ----------------------------------------------------------------------------
 
+genesisInfo :: HasCoreConfig => GenesisInfo
+genesisInfo = giveL @CoreConfig @GenesisInfo
+
 genesisBlock :: HasCoreConfig => Block
-genesisBlock = giGenesisBlock $ giveL @CoreConfig @GenesisInfo
+genesisBlock = giGenesisBlock genesisInfo
 
 genesisHeader :: HasCoreConfig => Header
 genesisHeader = bHeader genesisBlock
