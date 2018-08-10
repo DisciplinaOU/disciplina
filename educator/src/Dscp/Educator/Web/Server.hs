@@ -9,7 +9,8 @@ module Dscp.Educator.Web.Server
 import Data.Proxy (Proxy (..))
 import Fmt ((+|), (|+))
 import Loot.Log (logInfo)
-import Network.Wai.Middleware.Cors (simpleCors)
+import Network.HTTP.Types.Header (hContentType)
+import Network.Wai.Middleware.Cors (CorsResourcePolicy (..), cors, simpleCorsResourcePolicy)
 import Servant ((:<|>) (..), Context (..), Handler, Server, err401, hoistServer,
                 hoistServerWithContext, serveWithContext)
 import Servant.Auth.Server (AuthResult (..), CookieSettings, JWTSettings, defaultCookieSettings,
@@ -82,7 +83,12 @@ serveStudentAPIReal EducatorWebParams{..} = do
     eCtx <- ask
     let educatorApiServer = mkEducatorApiServer (convertEducatorApiHandler eCtx)
     studentApiServer <- mkStudentApiServer (convertStudentApiHandler eCtx) ewpBotParams
-    serveWeb spAddr . simpleCors $ serveWithContext (Proxy @EducatorWebAPI) srvCtx $
+    let ourCors = cors (const $ Just $
+                        simpleCorsResourcePolicy
+                        { corsRequestHeaders = [hContentType] })
+    serveWeb spAddr $
+      ourCors $
+      serveWithContext (Proxy @EducatorWebAPI) srvCtx $
          educatorApiServer
          :<|>
          studentApiServer
