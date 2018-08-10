@@ -20,7 +20,7 @@ let
 in
 let
 scripts = {
-  upload-result = writeShellScriptBinChecked "upload-result.sh" ''
+  upload-result = writeShellScriptBin "upload-result.sh" ''
     echo "--- Uploading result metadata"
     files=$(find . -maxdepth 1 -type l -name 'result*')
     if [ -z "$files" ]; then
@@ -34,7 +34,7 @@ scripts = {
       echo "output-$name" "->" "$(readlink "$output")"
     done
   '';
-  deploy-result = writeShellScriptBinChecked "deploy-result.sh" ''
+  deploy-result = writeShellScriptBin "deploy-result.sh" ''
     set -euo pipefail
     if [ $# -lt 1 ]; then
       echo "Usage: deploy-result.sh unit-name [output-name]"
