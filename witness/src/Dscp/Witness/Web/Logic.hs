@@ -7,10 +7,6 @@ module Dscp.Witness.Web.Logic
        , getTransactionInfo
        ) where
 
-import Control.Lens (views)
-import Loot.Base.HasLens (lensOf)
-import qualified Snowdrop.Core as SD
-import qualified Snowdrop.Model.Execution as SD
 import UnliftIO.Async (async)
 
 import Dscp.Core
@@ -18,7 +14,6 @@ import Dscp.Snowdrop
 import Dscp.Util (assertJust)
 import Dscp.Witness.Launcher.Mode (WitnessWorkMode)
 import qualified Dscp.Witness.Relay as Relay
-import qualified Dscp.Witness.SDLock as Lock
 import Dscp.Witness.Config
 import Dscp.Witness.Logic
 import Dscp.Witness.Web.Error
@@ -34,32 +29,6 @@ noAccount = EntityAbsent "No such address registered"
 ----------------------------------------------------------------------------
 -- Logic
 ----------------------------------------------------------------------------
-
-getAccount :: WitnessWorkMode ctx m => Address -> m Account
-getAccount address = do
-    blockActs <-
-        views (lensOf @SDActions)
-              (SD.dmaAccessActions . flip nsStateDBActions (RememberForProof False))
-    maccount <- Lock.readingSDLock $ do
-        SD.runERoCompIO @Exceptions blockActs Nothing $
-            SD.queryOne (AccountId address)
-    pure maccount `assertJust` noAccount
-
-pickAccountBalance :: WitnessWorkMode ctx m => Account -> m Balances
-pickAccountBalance blockAcc = do
-    return Balances
-        { bConfirmed = Coin . fromIntegral $ aBalance blockAcc
-        }
-
-getAccountInfo :: WitnessWorkMode ctx m => Address -> m AccountInfo
-getAccountInfo addr = do
-    account <- getAccount addr
-    balances <- pickAccountBalance account
-    return AccountInfo
-        { aiBalances = balances
-        , aiNextNonce = aNonce account + 1
-        , aiTransactions = Nothing
-        }
 
 -- | Applies transaction everywhere.
 submitUserTx :: WitnessWorkMode ctx m => TxWitnessed -> m ()
@@ -90,6 +59,23 @@ getBlocks mCount mFrom = do
 
 getBlockInfo :: WitnessWorkMode ctx m => HeaderHash -> m BlockInfo
 getBlockInfo = runSdMRead . getBlock >=> return . toBlockInfo True
+
+toAccountInfo :: Account -> Maybe [GTx] -> AccountInfo
+toAccountInfo account txs = AccountInfo
+    { aiBalances = Balances
+        { bConfirmed = Coin . fromIntegral $ aBalance account
+        }
+    , aiNextNonce = aNonce account + 1
+    , aiTransactions = map TxInfo <$> txs
+    }
+
+getAccountInfo :: WitnessWorkMode ctx m => Address -> Bool -> m AccountInfo
+getAccountInfo address includeTxs = do
+    account <- getAccountMaybe address `assertJust` noAccount
+    txs <- if includeTxs
+        then Just <$> getAccountTxs address
+        else return Nothing
+    return $ toAccountInfo account txs
 
 getTransactionInfo :: WitnessWorkMode ctx m => GTxId -> m TxInfo
 getTransactionInfo = runSdMRead . getTx >=> return . TxInfo . unGTxWitnessed

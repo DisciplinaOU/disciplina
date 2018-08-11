@@ -12,10 +12,14 @@ module Dscp.Witness.Logic.Getters
 
     , resolvePrevious
 
+    , getAccountMaybe
+    , getAccountTxs
+
     , getTxMaybe
     , getTx
     ) where
 
+import qualified Data.Set as Set
 import qualified Snowdrop.Core as SD
 import qualified Snowdrop.Model.Block as SD
 import qualified Snowdrop.Util as SD
@@ -23,6 +27,7 @@ import qualified Snowdrop.Util as SD
 import Dscp.Core
 import Dscp.Snowdrop
 import Dscp.Witness.Config
+import Dscp.Witness.Launcher.Mode
 import Dscp.Witness.Logic.Exceptions
 
 ----------------------------------------------------------------------------
@@ -85,6 +90,30 @@ resolvePrevious o = do
     if headerHash header == genesisHash
     then pure Nothing
     else pure $ Just $ hPrevHash header
+
+----------------------------------------------------------------------------
+-- Account getters
+----------------------------------------------------------------------------
+
+-- | Safely get an account.
+getAccountMaybe :: WitnessWorkMode ctx m => Address -> m (Maybe Account)
+getAccountMaybe = runStateSdMRead (RememberForProof False) . SD.queryOne . AccountId
+
+-- | Get a list of all transactions for a given account
+getAccountTxs :: WitnessWorkMode ctx m => Address -> m [GTx]
+getAccountTxs address =
+    runStateSdMRead (RememberForProof False) loadTxs >>=
+    runSdMRead . SD.querySet . Set.fromList >>=
+    return . map unGTxWitnessed . elems
+  where
+    loadTxs =
+        SD.queryOne (TxsOf address) >>=
+        loadNextTx [] . map unLastTx
+    loadNextTx !res = \case
+        Nothing -> return res
+        Just gTxId ->
+            SD.queryOne (TxHead address gTxId) >>=
+            loadNextTx (gTxId : res) . map unTxNext
 
 ----------------------------------------------------------------------------
 -- Transaction getters

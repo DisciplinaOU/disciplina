@@ -58,7 +58,7 @@ faucetTransferMoneyTo dest = do
                       , aiNextNonce = 7
                       , aiTransactions = Nothing
                       }
-            else wGetAccount wc source
+            else wGetAccount wc source False
 
         -- TODO: take mempool's balance
         let balance = bConfirmed $ aiBalances sourceState

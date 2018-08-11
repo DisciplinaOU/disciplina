@@ -65,7 +65,7 @@ sendTx wc eSecretKey mPassPhrase (toList -> outs) = do
         address = mkAddr publicKey
 
     -- TODO: request nonce for a given address from witness node
-    nonce <- aiNextNonce <$> wGetAccount wc address
+    nonce <- aiNextNonce <$> wGetAccount wc address False
 
     let inAcc   = TxInAcc { tiaNonce = nonce, tiaAddr   = address }
         tx      = Tx      { txInAcc  = inAcc, txInValue = inValue, txOuts = outs }
@@ -80,5 +80,5 @@ sendTx wc eSecretKey mPassPhrase (toList -> outs) = do
 
 getBalance :: WitnessClient -> Address -> IO Coin
 getBalance wc address = do
-    AccountInfo{..} <- wGetAccount wc address
+    AccountInfo{..} <- wGetAccount wc address False
     return (bConfirmed aiBalances)
