@@ -47,6 +47,7 @@ data WitnessEndpoints route = WitnessEndpoints
 
     , wGetAccount :: route
         :- "accounts" :> Capture "address" Address
+        :> QueryFlag "includeTxs"
         :> Verb 'GET 200 '[JSON] AccountInfo
 
     , wGetTransaction :: route
