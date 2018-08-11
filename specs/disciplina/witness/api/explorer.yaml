@@ -57,7 +57,7 @@ paths:
     get:
       summary: Get information about a block.
       operationId: getBlock
-      produces: 
+      produces:
       - application/json
       parameters:
       - in: path
@@ -85,7 +85,7 @@ paths:
     get:
       summary: Get information about an address.
       operationId: getAddress
-      produces: 
+      produces:
       - application/json
       parameters:
       - in: path
@@ -116,7 +116,7 @@ paths:
         `txType` field of the result object will denote the type of transaction: "money" or "publication".
         The corresponding key in the object will contain the rest of information about the transaction.
       operationId: getTransaction
-      produces: 
+      produces:
       - application/json
       parameters:
       - in: path
