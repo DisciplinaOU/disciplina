@@ -124,10 +124,6 @@ deriveJSON defaultOptions ''Publication
 deriveJSON defaultOptions ''PublicationTxWitness
 deriveJSON defaultOptions ''PublicationTxWitnessed
 deriveJSON defaultOptions ''PublicationTx
-deriveJSON defaultOptions ''PublicationsOf
-deriveJSON defaultOptions ''LastPublication
-deriveJSON defaultOptions ''PublicationHead
-deriveJSON defaultOptions ''PublicationNext
 
 deriveFromJSON defaultOptions ''Committee
 deriveJSON defaultOptions ''GenesisDistributionElem

@@ -19,6 +19,7 @@ import Snowdrop.Util
 import Dscp.Core.Foundation
 import Dscp.Snowdrop.Configuration hiding (PublicationTxWitness)
 import qualified Dscp.Snowdrop.Configuration as Conf (Proofs (..))
+import Dscp.Snowdrop.Storage.Types
 import Dscp.Snowdrop.Types
 
 ----------------------------------------------------------------------------
@@ -154,12 +155,22 @@ seqExpandersBalanceTx =
 
             pure (AccountId txOutAddr ==> ch)
 
-        pure $ mkDiffCS $ Map.fromList $ inp : outs
+        let txId = toGTxId $ GMoneyTx twTx
+
+        accList <- forM (inAddr : map txOutAddr outOther) $ \addr ->
+            queryOne (TxsOf addr) >>= return . \case
+                Nothing -> [TxsOf addr ==> New (LastTx txId)]
+                Just (LastTx prevTxId) ->
+                    [ TxsOf  addr      ==> Upd (LastTx txId)
+                    , TxHead addr txId ==> New (TxNext prevTxId)
+                    ]
+
+        pure $ mkDiffCS $ Map.fromList $ inp : outs ++ concat accList
   where
     -- Account prefixes are used during the computation to access current balance
-    inP  = Set.singleton accountPrefix
+    inP  = Set.fromList [accountPrefix, txOfPrefix]
     -- Expander returns account changes only
-    outP = Set.singleton accountPrefix
+    outP = Set.fromList [accountPrefix, txHeadPrefix, txOfPrefix]
 
 --------------------------------------------------------------------------
 -- Utils
