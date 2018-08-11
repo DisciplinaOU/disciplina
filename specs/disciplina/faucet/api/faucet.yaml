@@ -21,7 +21,7 @@ paths:
       operationId: genKeyPair
       consumes:
       - application/json
-      produces: 
+      produces:
       - application/json
       parameters:
       - in: body

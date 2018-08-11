@@ -850,7 +850,7 @@ definitions:
         type: string
         enum:
           - InvalidFormat
-          
+
           - StudentNotFound
           - CourseNotFound
           - AssignmentNotFound
