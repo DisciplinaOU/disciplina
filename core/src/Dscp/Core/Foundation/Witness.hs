@@ -24,10 +24,6 @@ module Dscp.Core.Foundation.Witness
     , PublicationTxWitnessed (..)
     , PublicationTx (..)
     , PublicationTxId
-    , PublicationsOf (..)
-    , LastPublication (..)
-    , PublicationHead (..)
-    , PublicationNext (..)
     , toPtxId
     , GTx (..)
     , GTxId (..)
@@ -216,40 +212,6 @@ data PublicationTxWitnessed = PublicationTxWitnessed
 instance Buildable PublicationTxWitnessed where
     build PublicationTxWitnessed {..} =
         "PublicationTxWitnessed { " +| ptwTx |+ ", " +| ptwWitness |+  " }"
-
--- | Actual structure in the storage.
--- |
--- | For each educator, we'll have a `PublicationOf id ~> LastPublication blockHash`
--- | (which is effectively `(educator, lastBlockHash)`)
--- | to determine the lst publication.
-newtype PublicationsOf
-    = PublicationsOf Address
-    deriving (Eq, Ord, Show, Generic)
-
-instance Buildable PublicationsOf where
-    build (PublicationsOf addr) =
-        "PublicationsOf { " +| addr |+  " }"
-
--- | Points to the `PublicationHead addr` in the database.
-data LastPublication
-    = LastPublication PrivateHeaderHash
-    deriving (Eq, Ord, Show, Generic)
-
--- | Once 'LastPublication' is known, you can walk the chain of
--- | `PublicationHead bh ~> PublicationNext bh`,
--- | (which is `(blockHash, Maybe blockHash)`)
--- | where phead contains block hash and pnext has prev block hash.
-newtype PublicationHead
-    = PublicationHead PrivateHeaderHash
-    deriving (Eq, Ord, Show, Generic)
-
-instance Buildable PublicationHead where
-    build (PublicationHead blk) =
-        "PublicationHead { " +| blk |+  " }"
-
-data PublicationNext
-    = PublicationNext (Maybe PrivateHeaderHash)
-    deriving (Eq, Ord, Show, Generic)
 
 ----------------------------------------------------------------------------
 -- Transactions (united)

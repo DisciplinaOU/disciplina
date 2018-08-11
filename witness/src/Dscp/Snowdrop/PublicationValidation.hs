@@ -15,6 +15,7 @@ import Dscp.Core
 import Dscp.Crypto (PublicKey)
 import Dscp.Snowdrop.AccountValidation
 import Dscp.Snowdrop.Configuration
+import Dscp.Snowdrop.Storage.Types
 import Dscp.Snowdrop.Types
 
 

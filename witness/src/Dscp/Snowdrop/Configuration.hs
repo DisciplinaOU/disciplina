@@ -15,6 +15,7 @@ import Snowdrop.Util (HasReview (..), IdStorage, VerifySign, WithSignature (..),
 import Dscp.Core.Foundation (HeaderHash)
 import qualified Dscp.Core.Foundation as T
 import Dscp.Crypto (PublicKey, Signature, hashF)
+import Dscp.Snowdrop.Storage.Types
 import Dscp.Snowdrop.Types (Account, AccountId (..), AccountTxTypeId (..),
                             AccountValidationException, PublicationTxTypeId (..),
                             PublicationValidationException)
@@ -59,14 +60,22 @@ publicationHeadPrefix = Prefix 5
 txPrefix :: Prefix
 txPrefix = Prefix 6
 
+txOfPrefix :: Prefix
+txOfPrefix = Prefix 7
+
+txHeadPrefix :: Prefix
+txHeadPrefix = Prefix 8
+
 -- | Sum-type for all ids used within the application.
 data Ids
     = TipKeyIds          TipKey
     | BlockRefIds       (BlockRef  HeaderHash)
     | AccountInIds       AccountId
     | TxIds              T.GTxId
-    | PublicationOfIds   T.PublicationsOf
-    | PublicationHeadIds T.PublicationHead
+    | TxOfIds            TxsOf
+    | TxHeadIds          TxHead
+    | PublicationOfIds   PublicationsOf
+    | PublicationHeadIds PublicationHead
     deriving (Eq, Ord, Show, Generic)
 
 instance Buildable Ids where
@@ -75,6 +84,8 @@ instance Buildable Ids where
         BlockRefIds       (BlockRef  r) -> "block ref " +| hashF r
         AccountInIds      (AccountId a) -> build a
         TxIds              gTxId        -> build gTxId
+        TxOfIds            t            -> build t
+        TxHeadIds          th           -> build th
         PublicationOfIds   p            -> build p
         PublicationHeadIds ph           -> build ph
 
@@ -83,6 +94,8 @@ instance IdSumPrefixed Ids where
     idSumPrefix (BlockRefIds        _) = blockPrefix
     idSumPrefix (AccountInIds       _) = accountPrefix
     idSumPrefix (TxIds              _) = txPrefix
+    idSumPrefix (TxOfIds            _) = txOfPrefix
+    idSumPrefix (TxHeadIds          _) = txHeadPrefix
     idSumPrefix (PublicationOfIds   _) = publicationOfPrefix
     idSumPrefix (PublicationHeadIds _) = publicationHeadPrefix
 
@@ -98,16 +111,20 @@ data Values
     | BlundVal           SBlund
     | AccountOutVal      Account
     | TxVal              T.GTxWitnessed
-    | PublicationOfVal   T.LastPublication
-    | PublicationHeadVal T.PublicationNext
+    | TxOfVal            LastTx
+    | TxHeadVal          TxNext
+    | PublicationOfVal   LastPublication
+    | PublicationHeadVal PublicationNext
     deriving (Eq, Show, Generic)
 
 type instance SValue  TipKey               = TipValue HeaderHash
 type instance SValue (BlockRef HeaderHash) = SBlund
 type instance SValue  AccountId            = Account
 type instance SValue  T.GTxId              = T.GTxWitnessed
-type instance SValue  T.PublicationsOf     = T.LastPublication
-type instance SValue  T.PublicationHead    = T.PublicationNext
+type instance SValue  TxsOf                = LastTx
+type instance SValue  TxHead               = TxNext
+type instance SValue  PublicationsOf       = LastPublication
+type instance SValue  PublicationHead      = PublicationNext
 
 ----------------------------------------------------------------------------
 -- Proofs
