@@ -6,10 +6,9 @@ demo:
     genesis: 
       genesisSeed: "GromakNaRechke"
       governance: 
-        govCommittee: 
-          committeeOpen: 
-            secret: "opencomittee"
-            n: 2
+        type: committeeOpen
+        secret: "opencommittee"
+        n: 2
       distribution: 
         - equal: 1000
         - specific:

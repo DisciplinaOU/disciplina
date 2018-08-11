@@ -3,7 +3,7 @@
 module Dscp.Core.Aeson () where
 
 import Data.Aeson (FromJSON (..), FromJSONKey (..), ToJSON (..), ToJSONKey, Value (..),
-                   withScientific, withText)
+                   withScientific, withText, withObject, (.:))
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveFromJSON, deriveJSON)
 
@@ -55,6 +55,20 @@ instance ToJSON SubmissionWitness where
 instance FromJSON SubmissionWitness where
     parseJSON = parseJSONSerialise Base16
 
+instance FromJSON Governance where
+  parseJSON = withObject "governance" $ \o -> do
+    (governanceType :: Text) <- o .: "type"
+    case governanceType of
+        "committeeOpen" -> do
+            commSecret <- o .: "secret"
+            commN <- o .: "n"
+            return $ GovCommittee (CommitteeOpen {..})
+        "committeeClosed" -> do
+            commParticipants <- o .: "participants"
+            return $ GovCommittee (CommitteeClosed {..})
+        "governanceOpen" -> return GovOpen
+        _ -> fail "Governance type is invalid"
+
 ---------------------------------------------------------------------------
 -- Standalone derivations for newtypes
 ---------------------------------------------------------------------------
@@ -105,7 +119,6 @@ deriveJSON defaultOptions ''PublicationHead
 deriveJSON defaultOptions ''PublicationNext
 
 deriveFromJSON defaultOptions ''Committee
-deriveFromJSON defaultOptions ''Governance
 deriveJSON defaultOptions ''GenesisDistributionElem
 deriveFromJSON defaultOptions ''GenesisConfig
 
