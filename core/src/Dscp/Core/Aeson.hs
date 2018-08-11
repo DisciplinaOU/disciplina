@@ -67,7 +67,7 @@ instance FromJSON Governance where
             commParticipants <- o .: "participants"
             return $ GovCommittee (CommitteeClosed {..})
         "governanceOpen" -> return GovOpen
-        _ -> fail "Governance type is invalid: "
+        _ -> fail "Governance type is invalid"
 
 ---------------------------------------------------------------------------
 -- Standalone derivations for newtypes
