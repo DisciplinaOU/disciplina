@@ -19,7 +19,7 @@ module Dscp.Witness.Logic.Getters
     , getTx
     ) where
 
-import qualified Data.Set as Set
+import Control.Lens (ix)
 import qualified Snowdrop.Core as SD
 import qualified Snowdrop.Model.Block as SD
 import qualified Snowdrop.Util as SD
@@ -103,8 +103,8 @@ getAccountMaybe = runStateSdMRead (RememberForProof False) . SD.queryOne . Accou
 getAccountTxs :: WitnessWorkMode ctx m => Address -> m [GTx]
 getAccountTxs address =
     runStateSdMRead (RememberForProof False) loadTxs >>=
-    runSdMRead . SD.querySet . Set.fromList >>=
-    return . map unGTxWitnessed . elems
+    mapM (runSdMRead . getTx) >>=
+    return . map unGTxWitnessed
   where
     loadTxs =
         SD.queryOne (TxsOf address) >>=
@@ -120,11 +120,17 @@ getAccountTxs address =
 ----------------------------------------------------------------------------
 
 -- | Safely get transaction.
-getTxMaybe :: GTxId -> SdM (Maybe GTxWitnessed)
-getTxMaybe = SD.queryOne
+getTxMaybe :: HasWitnessConfig => GTxId -> SdM (Maybe GTxWitnessed)
+getTxMaybe gTxId = do
+    SD.queryOne gTxId >>= \case
+        Nothing -> pure Nothing
+        Just TxBlockRef{..} ->
+            getBlockMaybe tbrBlockRef >>= pure . \case
+                Nothing -> Nothing
+                Just block -> (^? ix tbrTxIdx) . bbTxs . bBody $ block
 
 -- | Resolves transaction, throws exception if it's absent.
-getTx :: GTxId -> SdM GTxWitnessed
+getTx :: HasWitnessConfig => GTxId -> SdM GTxWitnessed
 getTx gTxId = do
     tM <- getTxMaybe gTxId
     maybe (SD.throwLocalError $ LETxAbsent $

@@ -1,5 +1,7 @@
 module Dscp.Snowdrop.Storage.Types
-    ( TxsOf (..)
+    ( TxBlockRef (..)
+
+    , TxsOf (..)
     , LastTx (..)
     , TxHead (..)
     , TxNext (..)
@@ -15,6 +17,13 @@ import Data.Text.Buildable (Buildable (..))
 import Fmt ((+|), (|+))
 
 import Dscp.Core.Foundation
+
+-- | Transaction position in blockchain
+data TxBlockRef = TxBlockRef
+    { tbrBlockRef :: HeaderHash
+    , tbrTxIdx :: Int  -- ^ Index of tx in the block
+    }
+    deriving (Eq, Ord, Show, Generic)
 
 -- | Account transaction linked-list storage structure.
 -- |
@@ -82,6 +91,7 @@ data PublicationNext
 -- Instances
 ----------------------------------------------------------------------------
 
+instance Serialise TxBlockRef
 instance Serialise LastTx
 instance Serialise TxsOf
 instance Serialise TxNext

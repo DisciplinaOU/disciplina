@@ -15,13 +15,14 @@ import Snowdrop.Model.Execution (DbActionsException (..), DbModifyActions (..), 
                                  accumToDiff, sumChangeSetDBA)
 import Snowdrop.Util
 
-import Dscp.Core.Foundation (HeaderHash, GTxId, GTxWitnessed)
+import Dscp.Core.Foundation (HeaderHash, GTxId)
 import Dscp.Snowdrop.Configuration
+import Dscp.Snowdrop.Storage.Types
 
 data BlockStorage = BlockStorage
     { _bsBlunds :: Map HeaderHash SBlund
     , _bsTip    :: TipValue HeaderHash
-    , _bsTxs    :: Map GTxId GTxWitnessed
+    , _bsTxs    :: Map GTxId TxBlockRef
     }
 makeLenses ''BlockStorage
 
