@@ -110,7 +110,7 @@ data Values
     = TipValueVal       (TipValue HeaderHash)
     | BlundVal           SBlund
     | AccountOutVal      Account
-    | TxVal              T.GTxWitnessed
+    | TxVal              TxBlockRef
     | TxOfVal            LastTx
     | TxHeadVal          TxNext
     | PublicationOfVal   LastPublication
@@ -120,7 +120,7 @@ data Values
 type instance SValue  TipKey               = TipValue HeaderHash
 type instance SValue (BlockRef HeaderHash) = SBlund
 type instance SValue  AccountId            = Account
-type instance SValue  T.GTxId              = T.GTxWitnessed
+type instance SValue  T.GTxId              = TxBlockRef
 type instance SValue  TxsOf                = LastTx
 type instance SValue  TxHead               = TxNext
 type instance SValue  PublicationsOf       = LastPublication

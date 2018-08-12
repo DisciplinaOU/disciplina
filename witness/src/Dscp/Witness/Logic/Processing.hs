@@ -16,6 +16,7 @@ import qualified Snowdrop.Core as SD
 import qualified Snowdrop.Model.Block as SD
 import qualified Snowdrop.Model.Execution as SD
 import qualified Snowdrop.Util as SD
+import Serokell.Util (enumerate)
 
 import Dscp.Core
 import Dscp.Crypto
@@ -61,9 +62,11 @@ applyBlockRaw toVerify block = do
                 rwComp = do
                   sblock <- SD.liftERoComp $ expandBlock block
                   SD.applyBlockImpl toVerify blkStateConfig sblock
-                  sequence_ . fmap addTx . bbTxs . bBody $ block
-                addTx gTx = SD.modifyRwCompChgAccum $ SD.ChangeSet $
-                    M.singleton (SD.inj . toGTxId . unGTxWitnessed $ gTx) (SD.New . TxVal $ gTx)
+                  sequence_ . fmap addTx . enumerate . bbTxs . bBody $ block
+                addTx (idx, gTx) = SD.modifyRwCompChgAccum $ SD.ChangeSet $
+                    M.singleton
+                        (SD.inj . toGTxId . unGTxWitnessed $ gTx)
+                        (SD.New . TxVal $ TxBlockRef (headerHash block) idx)
              in SD.runERwCompIO actions def rwComp >>=
                     \((), (SD.CompositeChgAccum blockCS_ stateCS_)) -> pure (blockCS_, stateCS_)
         proof <- runSdRIO $ SD.dmaApply stateDBM stateCS
