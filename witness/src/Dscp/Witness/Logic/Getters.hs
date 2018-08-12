@@ -100,11 +100,10 @@ getAccountMaybe :: WitnessWorkMode ctx m => Address -> m (Maybe Account)
 getAccountMaybe = runStateSdMRead (RememberForProof False) . SD.queryOne . AccountId
 
 -- | Get a list of all transactions for a given account
-getAccountTxs :: WitnessWorkMode ctx m => Address -> m [GTx]
+getAccountTxs :: WitnessWorkMode ctx m => Address -> m [GTxInBlock]
 getAccountTxs address =
     runStateSdMRead (RememberForProof False) loadTxs >>=
-    mapM (runSdMRead . getTx) >>=
-    return . map unGTxWitnessed
+    mapM (runSdMRead . getTx)
   where
     loadTxs =
         SD.queryOne (TxsOf address) >>=
@@ -120,17 +119,17 @@ getAccountTxs address =
 ----------------------------------------------------------------------------
 
 -- | Safely get transaction.
-getTxMaybe :: HasWitnessConfig => GTxId -> SdM (Maybe GTxWitnessed)
+getTxMaybe :: HasWitnessConfig => GTxId -> SdM (Maybe GTxInBlock)
 getTxMaybe gTxId = do
     SD.queryOne gTxId >>= \case
         Nothing -> pure Nothing
         Just TxBlockRef{..} ->
             getBlockMaybe tbrBlockRef >>= pure . \case
                 Nothing -> Nothing
-                Just block -> (^? ix tbrTxIdx) . bbTxs . bBody $ block
+                Just block -> fmap (GTxInBlock $ Just tbrBlockRef) . (^? ix tbrTxIdx) . bbTxs . bBody $ block
 
 -- | Resolves transaction, throws exception if it's absent.
-getTx :: HasWitnessConfig => GTxId -> SdM GTxWitnessed
+getTx :: HasWitnessConfig => GTxId -> SdM GTxInBlock
 getTx gTxId = do
     tM <- getTxMaybe gTxId
     maybe (SD.throwLocalError $ LETxAbsent $
