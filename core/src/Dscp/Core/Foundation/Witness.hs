@@ -30,6 +30,7 @@ module Dscp.Core.Foundation.Witness
     , toGTxId
     , GTxWitnessed (..)
     , unGTxWitnessed
+    , GTxInBlock (..)
 
     -- * Block
     , Difficulty (..)
@@ -250,6 +251,13 @@ instance Buildable GTxWitnessed where
 unGTxWitnessed :: GTxWitnessed -> GTx
 unGTxWitnessed (GMoneyTxWitnessed tw) = GMoneyTx (twTx tw)
 unGTxWitnessed (GPublicationTxWitnessed tw) = GPublicationTx (ptwTx tw)
+
+-- | Transaction with reference to block it is published in
+data GTxInBlock = GTxInBlock
+    { tbHeaderHash :: Maybe HeaderHash
+    , tbTx :: GTxWitnessed
+    }
+    deriving (Eq, Show, Generic)
 
 ----------------------------------------------------------------------------
 -- Blocks and headers

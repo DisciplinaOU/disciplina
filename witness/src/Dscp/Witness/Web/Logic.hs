@@ -41,13 +41,30 @@ submitUserTxAsync tw = void . async $ submitUserTx tw
 
 toBlockInfo :: HasWitnessConfig => Bool -> Block -> BlockInfo
 toBlockInfo includeTxs block = BlockInfo
-    { biHeaderHash = headerHash block
+    { biHeaderHash = hh
     , biHeader = bHeader block
     , biIsGenesis = block == genesisBlock
     , biTransactions =
         if includeTxs
-        then Just . map (TxInfo . unGTxWitnessed) . bbTxs . bBody $ block
+        then Just . map (TxInfo (Just hh) . unGTxWitnessed) . bbTxs . bBody $ block
         else Nothing
+    }
+  where
+    hh = headerHash block
+
+toAccountInfo :: Account -> Maybe [GTxInBlock] -> AccountInfo
+toAccountInfo account txs = AccountInfo
+    { aiBalances = Balances
+        { bConfirmed = Coin . fromIntegral $ aBalance account
+        }
+    , aiNextNonce = aNonce account + 1
+    , aiTransactions = map toTxInfo <$> txs
+    }
+
+toTxInfo :: GTxInBlock -> TxInfo
+toTxInfo tx = TxInfo
+    { tiHeaderHash = tbHeaderHash tx
+    , tiTx = unGTxWitnessed $ tbTx tx
     }
 
 getBlocks :: WitnessWorkMode ctx m => Maybe Int -> Maybe HeaderHash -> m [BlockInfo]
@@ -60,15 +77,6 @@ getBlocks mCount mFrom = do
 getBlockInfo :: WitnessWorkMode ctx m => HeaderHash -> m BlockInfo
 getBlockInfo = runSdMRead . getBlock >=> return . toBlockInfo True
 
-toAccountInfo :: Account -> Maybe [GTx] -> AccountInfo
-toAccountInfo account txs = AccountInfo
-    { aiBalances = Balances
-        { bConfirmed = Coin . fromIntegral $ aBalance account
-        }
-    , aiNextNonce = aNonce account + 1
-    , aiTransactions = map TxInfo <$> txs
-    }
-
 getAccountInfo :: WitnessWorkMode ctx m => Address -> Bool -> m AccountInfo
 getAccountInfo address includeTxs = do
     account <- getAccountMaybe address `assertJust` noAccount
@@ -78,4 +86,4 @@ getAccountInfo address includeTxs = do
     return $ toAccountInfo account txs
 
 getTransactionInfo :: WitnessWorkMode ctx m => GTxId -> m TxInfo
-getTransactionInfo = runSdMRead . getTx >=> return . TxInfo . unGTxWitnessed
+getTransactionInfo = runSdMRead . getTx >=> return . toTxInfo

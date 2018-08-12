@@ -36,8 +36,10 @@ data AccountInfo = AccountInfo
     , aiTransactions :: Maybe [TxInfo]
     }
 
-newtype TxInfo = TxInfo GTx
-    deriving (Show, Eq, Buildable)
+data TxInfo = TxInfo
+    { tiHeaderHash :: Maybe HeaderHash
+    , tiTx :: GTx
+    }
 
 ---------------------------------------------------------------------------
 -- Buildable instances
@@ -57,12 +59,15 @@ instance Buildable Balances where
 
 instance Buildable (ForResponseLog AccountInfo) where
     build (ForResponseLog AccountInfo{..}) =
-        -- will differ once transaction list in included
         "{ balances = " +| aiBalances |+
         ", next nonce = " +| aiNextNonce |+
         " }"
 
-deriving instance Buildable (ForResponseLog TxInfo)
+instance Buildable (ForResponseLog TxInfo) where
+    build (ForResponseLog TxInfo{..}) =
+        "{ txId = " +| toGTxId tiTx |+
+        ", headerHash = " +| tiHeaderHash |+
+        " }"
 
 ---------------------------------------------------------------------------
 -- JSON instances
@@ -73,22 +78,25 @@ deriveJSON defaultOptions{ omitNothingFields = True } ''BlockInfo
 deriveJSON defaultOptions{ omitNothingFields = True } ''AccountInfo
 
 instance ToJSON TxInfo where
-    toJSON (TxInfo gTx) = case gTx of
-        GMoneyTx tx -> object
-            [ "txId" .= toTxId tx
-            , "txType" .= ("money" :: Text)
-            , "money" .= tx
-            ]
-        GPublicationTx pTx -> object
-            [ "txId" .= toPtxId pTx
-            , "txType" .= ("publication" :: Text)
-            , "publication" .= pTx
-            ]
+    toJSON TxInfo{..} = object $
+        maybe [] (\hh -> ["headerHash" .= hh]) tiHeaderHash ++
+        case tiTx of
+            GMoneyTx tx ->
+                [ "txId" .= toTxId tx
+                , "txType" .= ("money" :: Text)
+                , "money" .= tx
+                ]
+            GPublicationTx pTx ->
+                [ "txId" .= toPtxId pTx
+                , "txType" .= ("publication" :: Text)
+                , "publication" .= pTx
+                ]
 
 instance FromJSON TxInfo where
     parseJSON = withObject "tx info" $ \o -> do
         txType :: Text <- o .: "txType"
-        TxInfo <$> case txType of
+        hh <- o .: "headerHash"
+        TxInfo hh <$> case txType of
             "money" -> GMoneyTx <$> o .: "money"
             "publication" -> GPublicationTx <$> o .: "publication"
             other -> fail $ "invalid transaction type: " ++ toString other
