@@ -3,15 +3,15 @@ module Dscp.Witness.Web.Client.Error
     , servantToWitnessError
     ) where
 
+import Data.Aeson (decode)
 import qualified Data.Text.Buildable as B
-import Network.HTTP.Types (statusCode)
 import Servant.Client (GenResponse (..), ServantError (..))
 import qualified Text.Show
 
 import Dscp.Witness.Web.Error
 
 data WitnessClientError
-    = WitnessClientError !WitnessWebError
+    = WitnessClientError !WitnessAPIError
     | SomeClientError !Text
 
 instance Show WitnessClientError where
@@ -30,8 +30,4 @@ servantToWitnessError servantError =
   where
     mWalletError = do
         FailureResponse Response{..} <- pure servantError
-        let body = decodeUtf8 responseBody
-        case statusCode responseStatusCode of
-            404 -> pure $ EntityAbsent body
-            500 -> pure $ InternalError body
-            _   -> Nothing
+        decode responseBody
