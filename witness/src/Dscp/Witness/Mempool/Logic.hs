@@ -13,10 +13,9 @@ import Dscp.Core.Foundation (GTxWitnessed)
 import qualified Dscp.Snowdrop as SD
 import qualified Dscp.Snowdrop.Configuration as Conf
 import qualified Dscp.Snowdrop.Storage.Avlp as AVLP
-import Dscp.Util
 import Dscp.Witness.Mempool.Type
 import qualified Dscp.Witness.SDLock as Lock
-import Loot.Base.HasLens (lensOf)
+import Loot.Base.HasLens (HasLens', lensOf)
 import qualified Snowdrop.Core as SD
 import qualified Snowdrop.Model.Execution as SD (dmaAccessActions)
 import qualified Snowdrop.Model.Mempool as Pool
@@ -33,9 +32,10 @@ newMempoolVar = do
 addTxToMempool
     :: forall ctx m
     .  ( MonadIO m
-       , Provides MempoolVar   ctx m
-       , Provides SD.SDActions ctx m
-       , Provides SD.LoggingIO ctx m
+       , MonadReader ctx m
+       , HasLens' ctx MempoolVar
+       , HasLens' ctx SD.SDActions
+       , HasLens' ctx SD.LoggingIO
        , UnliftIO.MonadUnliftIO    m
        )
     => MempoolVar
@@ -48,9 +48,10 @@ addTxToMempool (Mempool pool conf, lock) tx = do
 takeTxsMempool
     :: forall ctx m
     .  ( MonadIO m
-       , Provides MempoolVar   ctx m
-       , Provides SD.SDActions ctx m
-       , Provides SD.LoggingIO ctx m
+       , MonadReader ctx m
+       , HasLens' ctx MempoolVar
+       , HasLens' ctx SD.SDActions
+       , HasLens' ctx SD.LoggingIO
        , UnliftIO.MonadUnliftIO    m
        )
     => MempoolVar
@@ -62,9 +63,10 @@ takeTxsMempool (Mempool pool _, lock) = do
 isInMempool
     :: forall ctx m
     .  ( MonadIO m
-       , Provides MempoolVar   ctx m
-       , Provides SD.SDActions ctx m
-       , Provides SD.LoggingIO ctx m
+       , MonadReader ctx m
+       , HasLens' ctx MempoolVar
+       , HasLens' ctx SD.SDActions
+       , HasLens' ctx SD.LoggingIO
        , UnliftIO.MonadUnliftIO    m
        )
     => MempoolVar
@@ -73,27 +75,30 @@ isInMempool (Mempool pool _, lock) tx = do
     txsWithUndos <- readFromMempool @ctx pool lock (gets Pool.msTxs)
     return (tx `elem` map fst txsWithUndos)
 
+type SDM =
+    SD.ERwComp
+        Conf.Exceptions
+        Conf.Ids
+        Conf.Values
+        (SD.IOCtx (AVLP.AVLChgAccum Conf.Ids Conf.Values))
+        (Pool.MempoolState
+            Conf.Ids
+            Conf.Values
+            (AVLP.AVLChgAccum Conf.Ids Conf.Values)
+            GTxWitnessed)
+
 readFromMempool
     :: forall ctx m a
     .  ( MonadIO m
-       , Provides MempoolVar   ctx m
-       , Provides SD.SDActions ctx m
-       , Provides SD.LoggingIO ctx m
+       , MonadReader ctx m
+       , HasLens' ctx MempoolVar
+       , HasLens' ctx SD.SDActions
+       , HasLens' ctx SD.LoggingIO
        , UnliftIO.MonadUnliftIO    m
        )
     => Pool.Mempool Conf.Ids Conf.Values (AVLP.AVLChgAccum Conf.Ids Conf.Values) GTxWitnessed
     -> Lock.SDLock
-    -> SD.ERwComp
-            Conf.Exceptions
-            Conf.Ids
-            Conf.Values
-            (SD.IOCtx (AVLP.AVLChgAccum Conf.Ids Conf.Values))
-            (Pool.MempoolState
-                Conf.Ids
-                Conf.Values
-                (AVLP.AVLChgAccum Conf.Ids Conf.Values)
-                GTxWitnessed)
-            a
+    -> SDM a
     -> m a
 readFromMempool pool lock action = do
     actions <- view (lensOf @SD.SDActions)
@@ -105,24 +110,15 @@ readFromMempool pool lock action = do
 writeToMempool
     :: forall ctx m a
     .  ( MonadIO m
-       , Provides MempoolVar   ctx m
-       , Provides SD.SDActions ctx m
-       , Provides SD.LoggingIO ctx m
+       , MonadReader ctx m
+       , HasLens' ctx MempoolVar
+       , HasLens' ctx SD.SDActions
+       , HasLens' ctx SD.LoggingIO
        , UnliftIO.MonadUnliftIO    m
        )
     => Pool.Mempool Conf.Ids Conf.Values (AVLP.AVLChgAccum Conf.Ids Conf.Values) GTxWitnessed
     -> Lock.SDLock
-    -> SD.ERwComp
-            Conf.Exceptions
-            Conf.Ids
-            Conf.Values
-            (SD.IOCtx (AVLP.AVLChgAccum Conf.Ids Conf.Values))
-            (Pool.MempoolState
-                Conf.Ids
-                Conf.Values
-                (AVLP.AVLChgAccum Conf.Ids Conf.Values)
-                GTxWitnessed)
-            a
+    -> SDM a
     -> m a
 writeToMempool pool lock action = do
     actions <- view (lensOf @SD.SDActions)
