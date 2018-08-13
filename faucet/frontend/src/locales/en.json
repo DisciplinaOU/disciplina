@@ -1,0 +1,29 @@
+{
+  "welcomeMsg" : "Here you can get tokens to test DISCIPLINA Blockchain",
+  "fauset" : "faucet",
+  "walletPlaceholder": "Enter your wallet address and get tokens:",
+  "getTokensBtn" : "Get tokens",
+  "noWallet" : "No wallet? Create it here:",
+  "generateWalletBtn" : "Generate wallet",
+  "informationNote" : "For more information go to",
+  "informationLinkText" : "Release page",
+  "transfer" : {
+    "amountMsg" : "tokens sent to your wallet",
+    "transactionId" : "Transaction ID",
+    "errors" : {
+      "InvalidFormat" : "Failed to deserialise one of parameters.",
+      "AddressAlreadyGifted" : "Given address has already requested faucet for money and cannot do that again.",
+      "SourceAccountExhausted" : "Specified source account has not enough money for further transfers, the event is over!"
+    }
+  },
+  "walletModal" : {
+    "title" : "Your wallet data",
+    "address" : "Address",
+    "publicKey" : "Public key",
+    "copy" : "Copy",
+    "copied" : "Copied"
+  },
+  "footer" : {
+    "address" : "Narva mnt 7-634, 10117, Kesklinna linnaosa, Tallinn, Estonia;"
+  }
+}
