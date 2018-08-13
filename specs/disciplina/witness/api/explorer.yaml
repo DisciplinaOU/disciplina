@@ -9,7 +9,6 @@ info:
   license:
     name: Apache 2.0
     url: "http://www.apache.org/licenses/LICENSE-2.0.html"
-host: "localhost:8091"
 basePath: /api/witness/v1
 schemes:
   - https
@@ -30,13 +29,11 @@ paths:
         description: >-
           Get a batch of blocks starting with the specified one.
           If not specified, get the most recent blocks.
-        required: false
         type: string
         format: byte
       - in: query
         name: count
         description: The amount of blocks returned.
-        required: false
         default: 100
         maximum: 100
         type: integer
@@ -93,6 +90,13 @@ paths:
         required: true
         type: string
         format: byte
+      - in: query
+        name: includeTxs
+        description: >-
+          Whether to include transaction history for the account.
+          Both incoming and outgoing transactions are included
+        type: boolean
+        allowEmptyValue: true
       responses:
         200:
           description: Successful operation
@@ -148,13 +152,6 @@ definitions:
   Coin:
     type: integer
     format: int64
-  TransactionPart:
-    type: object
-    properties:
-      address:
-        $ref: "#/definitions/Address"
-      value:
-        $ref: "#/definitions/Coin"
   BlockInfo:
     type: object
     properties:
@@ -162,6 +159,8 @@ definitions:
         $ref: "#/definitions/Hash"
       header:
         $ref: "#/definitions/BlockHeader"
+      isGenesis:
+        type: boolean
   BlockHeader:
     type: object
     properties:
@@ -182,7 +181,13 @@ definitions:
   AccountInfo:
     type: object
     properties:
-      balance:
+      balances:
+        type: object
+        properties:
+          confirmed:
+            type: integer
+            format: int32
+      nextNonce:
         type: integer
         format: int32
   TransactionInfo:
@@ -194,15 +199,32 @@ definitions:
         enum:
         - money
         - publication
+      txId:
+        $ref: "#/definitions/Hash"
+      headerHash:
+        $ref: "#/definitions/Hash"
       money:
         type: object
         properties:
-          in:
-            $ref: "#/definitions/TransactionPart"
+          inAcc:
+            type: object
+            properties:
+              addr:
+                $ref: "#/definitions/Address"
+              nonce:
+                type: integer
+                format: int32
+          inValue:
+            $ref: "#/definitions/Coin"
           outs:
             type: array
             items:
-              $ref: "#/definitions/TransactionPart"
+              type: object
+              properties:
+                address:
+                  $ref: "#/definitions/Address"
+                value:
+                  $ref: "#/definitions/Coin"
       publication:
         type: object
         properties:
