@@ -57,7 +57,7 @@ expandGTx ::
        )
     => GTxWitnessed
     -> ERoComp Exceptions Ids Values ctx (StateTx Ids Proofs Values)
-expandGTx txs = do
+expandGTx txs =
     expandUnionRawTxs getByGTx [txs] >>= \case
         [expanded] -> return expanded
         _          -> error "expandGTx: did not expand 1 raw tx into 1 sd tx"
