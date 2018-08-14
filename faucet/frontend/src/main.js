@@ -12,6 +12,8 @@ import Zh from './locales/zh'
 import Jp from './locales/jp'
 import Kr from './locales/kr'
 
+import vSelect from 'vue-select'
+
 import './assets/css/index.scss'
 
 Vue.prototype.$axios = axios.create({
@@ -30,6 +32,8 @@ i18next.init({
   }
 })
 const i18n = new VueI18Next(i18next)
+
+Vue.component('v-select', vSelect)
 
 Vue.config.productionTip = false
 
