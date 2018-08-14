@@ -36,7 +36,7 @@ export default {
   i18nOptions: {
     keyPrefix: 'footer'
   },
-  data: function () {
+  data () {
     return {
       socials: [
         { icon: require('../assets/img/soc_vk.svg'), link: 'https://vk.com/tchmpls.events' },

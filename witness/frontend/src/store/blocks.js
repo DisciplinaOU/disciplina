@@ -5,21 +5,21 @@ const state = {
 }
 
 const actions = {
-  getAllCourses ({commit}) {
+  getAllBlocks ({commit}) {
     blockexplorer.getBlocks(Blocks => {
-      commit('recieveBlocks', Blocks)
+      commit('setBlocks', Blocks)
     })
   }
 }
 
 const mutations = {
-  recieveBlocks (state, blocks) {
+  setBlocks (state, blocks) {
     state.all = blocks
   }
 }
 
 const getters = {
-  allBlocks (state) {
+  blocks (state) {
     return state.all
   }
 }
