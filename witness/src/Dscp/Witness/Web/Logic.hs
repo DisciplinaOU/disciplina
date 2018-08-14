@@ -4,6 +4,7 @@ module Dscp.Witness.Web.Logic
        , getBlocks
        , getBlockInfo
        , getAccountInfo
+       , getTransactions
        , getTransactionInfo
        ) where
 
@@ -81,6 +82,12 @@ getAccountInfo address includeTxs = do
         then Just <$> getAccountTxs address
         else return Nothing
     return $ toAccountInfo account txs
+
+getTransactions :: WitnessWorkMode ctx m => Maybe Int -> m [TxInfo]
+getTransactions mCount = do
+    let count = max 100 $ fromMaybe 100 mCount
+    eTxs <- runSdMRead $ getTxs count
+    return . map toTxInfo . toList $ eTxs
 
 getTransactionInfo :: WitnessWorkMode ctx m => GTxId -> m TxInfo
 getTransactionInfo =

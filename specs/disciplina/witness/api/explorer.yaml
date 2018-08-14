@@ -112,6 +112,29 @@ paths:
           description: Account not found
           schema:
             $ref: "#/definitions/ErrResponse"
+  /transactions:
+    get:
+      summary: Get list of recent transactions.
+      description: >-
+        Return a batch of `count` most recent transactions.
+      operationId: getTransactions
+      produces:
+      - application/json
+      parameters:
+      - in: query
+        name: count
+        description: The amount of transactions returned.
+        default: 100
+        maximum: 100
+        type: integer
+        format: int32
+      responses:
+        200:
+          description: Successful operation
+          schema:
+            type: array
+            items:
+              $ref: "#/definitions/TransactionInfo"
   /transactions/{transactionHash}:
     get:
       summary: Get information about a transaction.
