@@ -69,6 +69,9 @@ instance Buildable (ForResponseLog TxInfo) where
         ", headerHash = " +| tiHeaderHash |+
         " }"
 
+instance Buildable (ForResponseLog [TxInfo]) where
+    build (ForResponseLog txs) = blockListF $ map (toGTxId . tiTx) txs
+
 ---------------------------------------------------------------------------
 -- JSON instances
 ---------------------------------------------------------------------------

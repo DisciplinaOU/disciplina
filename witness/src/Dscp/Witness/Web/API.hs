@@ -51,6 +51,11 @@ data WitnessEndpoints route = WitnessEndpoints
         :> QueryFlag "includeTxs"
         :> Verb 'GET 200 '[DSON] AccountInfo
 
+    , wGetTransactions :: route
+        :- "transactions"
+        :> QueryParam "count" Int
+        :> Verb 'GET 200 '[DSON] [TxInfo]
+
     , wGetTransaction :: route
         :- "transactions" :> Capture "transactionHash" GTxId
         :> Verb 'GET 200 '[DSON] TxInfo

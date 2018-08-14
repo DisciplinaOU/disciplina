@@ -8,6 +8,8 @@ module Dscp.Witness.Logic.Traversals
 
     , getBlocksFromTo
     , getBlocksBefore
+
+    , getTxs
     ) where
 
 import Control.Monad.Trans.Except (throwE)
@@ -157,3 +159,21 @@ getBlocksBefore depthDiff (headerHash -> newerH) = runExceptT $ do
         error "getBlocksFromTo: retrieved too many"
 
     pure blocks
+
+-- | Retrieves the requested amount of recent transactions
+getTxs ::
+       HasWitnessConfig
+    => Int
+    -> SdM (OldestFirst [] GTxInBlock)
+getTxs depth = getTipBlock >>= map OldestFirst . loadTxs [] depth
+  where
+    loadTxs !res depthLeft Block{..}
+        | depthLeft == 0 =
+            return res
+        | length txs >= depthLeft =
+            return $ drop (length txs - depthLeft) txs ++ res
+        | otherwise = runMaybeT (MaybeT (resolvePrevious bHeader) >>= MaybeT . getBlockMaybe) >>= \case
+            Nothing -> return $ txs ++ res
+            Just nextBlock -> loadTxs (txs ++ res) (depthLeft - length txs) nextBlock
+      where
+        txs = GTxInBlock (Just $ headerHash bHeader) <$> bbTxs bBody
