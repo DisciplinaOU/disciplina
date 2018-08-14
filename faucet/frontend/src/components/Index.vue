@@ -1,6 +1,7 @@
 <template>
-  <div>
+  <div class="wrapper">
     <div class="page">
+      <language-selector/>
       <div class="container">
         <div class="logo">
           <img class="logo__img" src="../assets/img/disc_logo.svg" alt="Disciplina"><span class="logo__text">{{ $t("faucet") }}</span>
@@ -44,9 +45,10 @@
 import Modal from '@/components/Modal'
 import Background from '@/components/Background'
 import TheFooter from '@/components/TheFooter'
+import LanguageSelector from '@/components/LanguageSelector'
 
 export default {
-  components: { Modal, Background, TheFooter },
+  components: { Modal, Background, TheFooter, LanguageSelector },
   name: 'Index',
   data: function () {
     return {

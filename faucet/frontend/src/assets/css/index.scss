@@ -419,9 +419,6 @@
     align-items: center;
     padding: 15px 0;
     border-top: 1px solid $color-border;
-    &:last-child {
-      border-bottom: 1px solid $color-border;
-    }
   }
   .modalContent__name {
     min-width: 100px;
@@ -441,6 +438,14 @@
     width: 90px;
     text-align: center;
     transition: background-color .3s ease-in-out, border-color .3s ease-in-out, color .9s ease-in-out;
+  }
+  .modalContent__prompt {
+    text-align: left;
+    font-weight: 300;
+  }
+
+  .modalContent__link {
+    color: $color-main;
   }
   @media screen and (max-width: 680px){
     .modalContent {

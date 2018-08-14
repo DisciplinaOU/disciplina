@@ -18,6 +18,12 @@
   padding-right: 10px;
 }
 
+.wrapper {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
 .page {
   color: $color-white;
   padding-top: 90px;
