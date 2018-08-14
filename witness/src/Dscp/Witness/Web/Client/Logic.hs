@@ -36,6 +36,7 @@ hoistWitnessClient nat es =
     , wGetAccount = nat ... wGetAccount es
     , wGetTransactions = nat ... wGetTransactions es
     , wGetTransaction = nat ... wGetTransaction es
+    , wGetHashType = nat ... wGetHashType es
     }
 
 createWitnessClient :: MonadIO m => NetworkAddress -> m WitnessClient

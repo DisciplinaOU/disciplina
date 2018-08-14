@@ -14,6 +14,34 @@ schemes:
   - https
   - http
 paths:
+  /hash/{hash}:
+    get:
+      summary: Get type of entity identified by given hash
+      operationId: getHashType
+      produces:
+      - application/json
+      parameters:
+      - in: path
+        name: hash
+        description: Block header hash, tx id or address.
+        required: true
+        type: string
+        format: byte
+      responses:
+        200:
+          description: >-
+            Type of the entity:
+              * `block`
+              * `address`
+              * `transaction`
+              * `unknown`
+          schema:
+            type: string
+            enum:
+            - block
+            - address
+            - transaction
+            - unknown
   /blocks:
     get:
       summary: Get list of blocks.
