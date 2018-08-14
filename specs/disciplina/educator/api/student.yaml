@@ -219,11 +219,15 @@ paths:
           schema:
             $ref: '#/definitions/Proofs'
 
-#securityDefinitions:
-  # api_key:
-  #   type: apiKey
-  #   name: api_key
-  #   in: header
+securityDefinitions:
+  StudentAuth:
+    type: apiKey
+    name: jwt  # TODO: name of header containing jwt data
+    in: header
+    description: Some description # TODO
+
+security:
+  - StudentAuth: []
 
 definitions:
   Hash:
