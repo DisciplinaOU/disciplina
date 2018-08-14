@@ -1,4 +1,3 @@
-
 -- | Utils for serving HTTP APIs
 
 module Dscp.Web.Server
@@ -10,7 +9,7 @@ module Dscp.Web.Server
 
 import Control.Lens (views)
 import Loot.Base.HasLens (HasLens', lensOf)
-import Loot.Log (Logging, MonadLogging, Name, _GivenName)
+import Loot.Log (Logging, MonadLogging, Name, NameSelector (..))
 import qualified Loot.Log.Internal as Log
 import Network.HTTP.Client (defaultManagerSettings, newManager)
 import qualified Network.Wai.Handler.Warp as Warp
@@ -41,7 +40,9 @@ buildServantLogConfig
 buildServantLogConfig modifyName = do
     origNameSel <- Log.logName
     logger <- views (lensOf @(Logging IO)) Log._log
-    let origName = fromMaybe mempty $ origNameSel ^? _GivenName
+    let origName = case origNameSel of
+                       GivenName x -> x
+                       _           -> mempty
         name = modifyName origName
     return ServantLogConfig
         { clcLog = \level text -> logger level name text
