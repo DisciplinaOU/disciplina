@@ -29,6 +29,7 @@
       </div>
       <modal
         :publicKey="wallet.publicKey"
+        :secretKey="wallet.secretKey"
         :address="wallet.address"
         v-if="showWalletModal"
         @close="showWalletModal = false"
@@ -56,6 +57,7 @@ export default {
       error: '',
       wallet: {
         publicKey: '',
+        secretKey: '',
         address: ''
       },
       address: '',

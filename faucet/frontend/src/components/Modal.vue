@@ -13,6 +13,11 @@
         <div class="modalContent__hash hash">{{ publicKey }}</div>
         <div class="modalContent__button btn btn--blue-white" :class="{ 'btn--blue-white--active' : publicKeyCopied }" @click="copyKey('publicKey')">{{ $t(publicKeyCopied ? "copied" : "copy") }}</div>
       </div>
+      <div class="modalLayer__content modalContent">
+        <div class="modalContent__name">{{ $t("secretKey") }}:</div>
+        <div class="modalContent__hash hash">{{ secretKey }}</div>
+        <div class="modalContent__button btn btn--blue-white" :class="{ 'btn--blue-white--active' : secretKeyCopied }" @click="copyKey('secretKey')">{{ $t(secretKeyCopied ? "copied" : "copy") }}</div>
+      </div>
     </div>
   </div>
 </template>
@@ -27,11 +32,12 @@ export default {
   i18nOptions: {
     keyPrefix: 'walletModal'
   },
-  props: ['address', 'publicKey'],
+  props: ['address', 'publicKey', 'secretKey'],
   data: function () {
     return {
       addressCopied: false,
-      publicKeyCopied: false
+      publicKeyCopied: false,
+      secretKeyCopied: false
     }
   },
   name: 'Modal',

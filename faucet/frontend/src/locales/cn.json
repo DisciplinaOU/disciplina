@@ -20,6 +20,7 @@
     "title" : "Your wallet data",
     "address" : "Address",
     "publicKey" : "Public key",
+    "secretKey" : "Private key",
     "copy" : "Copy",
     "copied" : "Copied"
   },
