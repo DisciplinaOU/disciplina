@@ -37,6 +37,7 @@ library:
     - servant
     - semver
     - snowdrop-util
+    - stm
     - text
     - text-format
     - time

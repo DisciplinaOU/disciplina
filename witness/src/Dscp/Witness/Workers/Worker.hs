@@ -19,7 +19,7 @@ import Dscp.Crypto
 import Dscp.Network.Wrapped
 import Dscp.Snowdrop.Mode
 import Dscp.Util
-import Dscp.Util (dieGracefully)
+import Dscp.Util.Concurrent.NotifyWait
 import Dscp.Witness.Launcher.Mode
 import Dscp.Witness.Logic
 import Dscp.Witness.Mempool
@@ -124,8 +124,9 @@ makeRelay (RelayState input pipe failedTxs) =
         []
         [] $ \_btq ->
             dieGracefully $ forever $ do
-                tx <- atomically $ STM.readTBQueue input
+                (tx, inMempoolNotifier) <- atomically $ STM.readTBQueue input
                 checkThenRepublish tx
+                notify inMempoolNotifier
 
     republisher = Worker
         "txRetranslationRepeater"

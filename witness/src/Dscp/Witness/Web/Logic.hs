@@ -11,15 +11,15 @@ module Dscp.Witness.Web.Logic
 
 import Codec.Serialise (serialise)
 import qualified Data.ByteString.Lazy as BS
-import UnliftIO.Async (async)
 
 import Dscp.Core
 import Dscp.Snowdrop
 import Dscp.Util (assertJust, fromHex, nothingToThrow)
-import Dscp.Witness.Launcher.Mode (WitnessWorkMode)
-import qualified Dscp.Witness.Relay as Relay
+import Dscp.Util.Concurrent.NotifyWait
 import Dscp.Witness.Config
+import Dscp.Witness.Launcher.Mode (WitnessWorkMode)
 import Dscp.Witness.Logic
+import qualified Dscp.Witness.Relay as Relay
 import Dscp.Witness.Web.Error
 import Dscp.Witness.Web.Types
 
@@ -28,13 +28,16 @@ import Dscp.Witness.Web.Types
 ----------------------------------------------------------------------------
 
 -- | Applies transaction everywhere.
+-- Once call of this function returns, transaction gets considered by
+-- 'getAccountInfo' and other endpoints.
 submitUserTx :: WitnessWorkMode ctx m => TxWitnessed -> m ()
-submitUserTx = Relay.relayTx . GMoneyTxWitnessed
+submitUserTx tw =
+    Relay.relayTx (GMoneyTxWitnessed tw) >>= wait @"tx in mempool"
 
 -- | Applies transaction, but does not wait for a whole cycle of transaction
 -- application.
 submitUserTxAsync :: WitnessWorkMode ctx m => TxWitnessed -> m ()
-submitUserTxAsync tw = void . async $ submitUserTx tw
+submitUserTxAsync = void . Relay.relayTx . GMoneyTxWitnessed
 
 toBlockInfo :: HasWitnessConfig => Bool -> Block -> BlockInfo
 toBlockInfo includeTxs block = BlockInfo
@@ -56,7 +59,7 @@ toBlockInfo includeTxs block = BlockInfo
   where
     hh = headerHash block
     txs = bbTxs . bBody $ block
-    txTotalOutput (GMoneyTx tx) = foldr sumCoins (Coin 0) $ txOutValue <$> txOuts tx
+    txTotalOutput (GMoneyTx tx)      = foldr sumCoins (Coin 0) $ txOutValue <$> txOuts tx
     txTotalOutput (GPublicationTx _) = Coin 0
 
 toAccountInfo :: HasWitnessConfig => Account -> Maybe [GTxInBlock] -> AccountInfo

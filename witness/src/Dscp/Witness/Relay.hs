@@ -15,9 +15,10 @@ import Loot.Base.HasLens (HasLens (..), HasLens')
 
 import Dscp.Core
 import Dscp.Crypto
+import Dscp.Util.Concurrent.NotifyWait
 
 data RelayState = RelayState
-    { _rsInput  :: STM.TBQueue GTxWitnessed
+    { _rsInput  :: STM.TBQueue (GTxWitnessed, Notifier "tx in mempool")
     , _rsPipe   :: STM.TBQueue GTxWitnessed
     , _rsFailed :: TVar (HashMap (Hash GTxWitnessed) GTxWitnessed)
     }
@@ -39,7 +40,9 @@ newRelayState = atomically $
 relayTx
     :: (MonadReader ctx m, HasLens' ctx RelayState, MonadIO m)
     => GTxWitnessed
-    -> m ()
+    -> m (Waiter "tx in mempool")
 relayTx tx = do
     input <- view (lensOf @RelayState . rsInput)
-    atomically $ STM.writeTBQueue input tx
+    (notifier, waiter) <- newWaitPair
+    atomically $ STM.writeTBQueue input (tx, notifier)
+    return waiter
