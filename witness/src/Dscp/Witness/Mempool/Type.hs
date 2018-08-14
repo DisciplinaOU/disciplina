@@ -1,4 +1,3 @@
--- | Memory pool. TBD.
 
 module Dscp.Witness.Mempool.Type
     ( Mempool(..)
