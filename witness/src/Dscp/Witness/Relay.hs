@@ -17,18 +17,23 @@ import Dscp.Core
 import Dscp.Crypto
 
 data RelayState = RelayState
-    { _rsInput  :: STM.TQueue GTxWitnessed
-    , _rsPipe   :: STM.TQueue GTxWitnessed
+    { _rsInput  :: STM.TBQueue GTxWitnessed
+    , _rsPipe   :: STM.TBQueue GTxWitnessed
     , _rsFailed :: TVar (HashMap (Hash GTxWitnessed) GTxWitnessed)
     }
 
 makeLenses ''RelayState
 
+-- these sized do not really matter for now
+relayInputSize, relayPipeSize :: Int
+relayInputSize = 100
+relayPipeSize = 100
+
 newRelayState :: MonadIO m => m RelayState
 newRelayState = atomically $
     pure RelayState
-        <*> STM.newTQueue
-        <*> STM.newTQueue
+        <*> STM.newTBQueue relayInputSize
+        <*> STM.newTBQueue relayPipeSize
         <*> STM.newTVar mempty
 
 relayTx
@@ -37,4 +42,4 @@ relayTx
     -> m ()
 relayTx tx = do
     input <- view (lensOf @RelayState . rsInput)
-    atomically $ STM.writeTQueue input tx
+    atomically $ STM.writeTBQueue input tx

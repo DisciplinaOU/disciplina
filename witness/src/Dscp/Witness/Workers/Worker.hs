@@ -124,7 +124,7 @@ makeRelay (RelayState input pipe failedTxs) =
         []
         [] $ \_btq ->
             dieGracefully $ forever $ do
-                tx <- atomically $ STM.readTQueue input
+                tx <- atomically $ STM.readTBQueue input
                 checkThenRepublish tx
 
     republisher = Worker
@@ -150,4 +150,4 @@ makeRelay (RelayState input pipe failedTxs) =
                     atomically $
                         STM.modifyTVar failedTxs $ HashMap.insert (hash tx) tx
 
-                atomically $ STM.writeTQueue pipe tx
+                atomically $ STM.writeTBQueue pipe tx

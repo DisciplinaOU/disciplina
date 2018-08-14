@@ -98,5 +98,5 @@ txPublisher (RelayState _ pipe _) = Listener
     "txRetranslationPublisher"
     [] $ \btq -> do
         dieGracefully $ forever $ atomically $ do
-            tx <- STM.readTQueue pipe
+            tx <- STM.readTBQueue pipe
             servPub btq (PubTx tx)
