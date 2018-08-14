@@ -6,13 +6,14 @@ module Dscp.Witness.Web.Logic
        , getAccountInfo
        , getTransactions
        , getTransactionInfo
+       , getHashType
        ) where
 
 import UnliftIO.Async (async)
 
 import Dscp.Core
 import Dscp.Snowdrop
-import Dscp.Util (assertJust, nothingToThrow)
+import Dscp.Util (assertJust, fromHex, nothingToThrow)
 import Dscp.Witness.Launcher.Mode (WitnessWorkMode)
 import qualified Dscp.Witness.Relay as Relay
 import Dscp.Witness.Config
@@ -94,3 +95,25 @@ getTransactionInfo =
     runSdMRead . getTxMaybe >=>
     nothingToThrow TransactionNotFound >=>
     return . toTxInfo
+
+-- | As we can't distinguish between different hashes, we have to check whether an entity exists.
+getHashType :: WitnessWorkMode ctx m => Text -> m HashIs
+getHashType hash = fmap (fromMaybe HashIsUnknown) . runMaybeT . asum $
+    [isBlock, isAddress, isTx] <*> [hash]
+  where
+    is hashType decode getMaybe =
+        MaybeT . return . rightToMaybe . decode >=>
+        MaybeT . getMaybe >=>
+        MaybeT . return . Just . const hashType
+    isBlock = is
+        HashIsBlock
+        (fromHex @HeaderHash)
+        (runSdMRead . getBlockMaybe)
+    isAddress = is
+        HashIsAddress
+        addrFromText
+        getAccountMaybe
+    isTx = is
+        HashIsTx
+        fromHex
+        (runSdMRead . getTxMaybe . GTxId)
