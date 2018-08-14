@@ -47,4 +47,6 @@ buildStackApplication rec {
     in {
       rocksdb-haskell = dependCabal previous.rocksdb-haskell [ rocksdb ];
     } // (lib.mapAttrs (lib.const overrideModule) (getAttrs packages previous));
+} // {
+  disciplina-faucet-frontend = pkgs.callPackage ./faucet/frontend {};
 }
