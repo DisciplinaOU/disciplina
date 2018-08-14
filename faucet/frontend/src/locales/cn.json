@@ -22,7 +22,8 @@
     "publicKey" : "Public key",
     "secretKey" : "Private key",
     "copy" : "Copy",
-    "copied" : "Copied"
+    "copied" : "Copied",
+    "info" : "You just generated a pair of Secret Key and Address. In case you lost the pair – your wallet and coins will be inaccessible. Please keep your pair in safe place. To claim free test coins you have to use this generated address on previous page. Using Private key you could make transactions and check current account status in Student [url] app or in the Ariadna [url] wallet."
   },
   "footer" : {
     "address" : "Narva mnt 7-634, 10117, Kesklinna linnaosa, Tallinn, Estonia;"

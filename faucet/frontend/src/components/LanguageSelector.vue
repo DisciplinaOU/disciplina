@@ -1,29 +1,41 @@
 <template>
-  <div class="selectBox">
-    <div class="input">en</div>
-    <div class="options">
-      <a class="option active">EN</a>
-      <a class="option">CN</a>
-      <a class="option">CN</a>
-      <a class="option">CN</a>
+  <div class="selectBox" :class="{ active: opened }" @click="opened = !opened" v-click-outside="hide">
+    <div class="input">{{ currentLanguage }}</div>
+    <div class="options" v-show="opened">
+      <a class="option"
+        v-for="lang in languages"
+        :key="lang"
+        @click.stop="changeLanguage(lang)"
+        :class="{ active: lang == currentLanguage }">
+        {{ lang }}
+      </a>
     </div>
   </div>
 </template>
 
 <script>
+import ClickOutside from 'vue-click-outside'
+
 export default {
   data: function () {
     return {
       languages: ['en', 'cn'],
-      language: 'en'
+      currentLanguage: 'en',
+      opened: false
     }
   },
   name: 'LanguageSelector',
   methods: {
     changeLanguage (lang) {
+      this.currentLanguage = lang
+      this.opened = false
       this.$i18n.i18next.changeLanguage(lang)
+    },
+    hide () {
+      this.opened = false
     }
-  }
+  },
+  directives: { ClickOutside }
 }
 </script>
 
@@ -75,6 +87,7 @@ export default {
     box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.5);
     border-radius:3px;
     margin-top: 10px;
+    transition: transform 0.3s ease-in-out;
 
   }
   .selectBox .option {
