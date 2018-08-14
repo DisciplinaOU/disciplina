@@ -34,6 +34,7 @@ hoistWitnessClient nat es =
     , wGetBlocks = nat ... wGetBlocks es
     , wGetBlock = nat ... wGetBlock es
     , wGetAccount = nat ... wGetAccount es
+    , wGetTransactions = nat ... wGetTransactions es
     , wGetTransaction = nat ... wGetTransaction es
     }
 

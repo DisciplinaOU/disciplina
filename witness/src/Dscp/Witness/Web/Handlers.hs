@@ -25,5 +25,6 @@ witnessServantHandlers =
     , wGetBlocks = getBlocks
     , wGetBlock = getBlockInfo
     , wGetAccount = getAccountInfo
+    , wGetTransactions = getTransactions
     , wGetTransaction = getTransactionInfo
     }
