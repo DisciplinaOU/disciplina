@@ -59,6 +59,10 @@ data WitnessEndpoints route = WitnessEndpoints
     , wGetTransaction :: route
         :- "transactions" :> Capture "transactionHash" GTxId
         :> Verb 'GET 200 '[DSON] TxInfo
+
+    , wGetHashType :: route
+        :- "hash" :> Capture "hash" Text
+        :> Verb 'GET 200 '[DSON] HashIs
     } deriving (Generic)
 
 type WitnessAPI =

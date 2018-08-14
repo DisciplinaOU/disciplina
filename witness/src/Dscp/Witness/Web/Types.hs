@@ -3,12 +3,13 @@ module Dscp.Witness.Web.Types
     , BlockInfo (..)
     , AccountInfo (..)
     , TxInfo (..)
+    , HashIs (..)
     ) where
 
-import Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.=), (.:))
+import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), object, withObject, withText, (.=), (.:))
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (Options (..), deriveJSON)
-import Fmt (blockListF, build, (+|), (|+))
+import Fmt (blockListF, build, genericF, (+|), (|+))
 
 import Dscp.Core
 import Dscp.Util.Servant (ForResponseLog (..))
@@ -22,7 +23,6 @@ data Balances = Balances
       -- ^ From blocks + mempool
     }
 
--- | All what user may wish to know about an account.
 data BlockInfo = BlockInfo
     { biHeaderHash :: HeaderHash
     , biHeader :: Header
@@ -30,6 +30,7 @@ data BlockInfo = BlockInfo
     , biTransactions :: Maybe [TxInfo]
     }
 
+-- | All what user may wish to know about an account.
 data AccountInfo = AccountInfo
     { aiBalances  :: Balances
     , aiNextNonce :: Integer
@@ -40,6 +41,13 @@ data TxInfo = TxInfo
     { tiHeaderHash :: Maybe HeaderHash
     , tiTx :: GTx
     }
+
+data HashIs
+    = HashIsUnknown
+    | HashIsBlock
+    | HashIsAddress
+    | HashIsTx
+    deriving (Eq, Show, Generic)
 
 ---------------------------------------------------------------------------
 -- Buildable instances
@@ -72,6 +80,9 @@ instance Buildable (ForResponseLog TxInfo) where
 instance Buildable (ForResponseLog [TxInfo]) where
     build (ForResponseLog txs) = blockListF $ map (toGTxId . tiTx) txs
 
+instance Buildable (ForResponseLog HashIs) where
+    build (ForResponseLog hashIs) = genericF hashIs
+
 ---------------------------------------------------------------------------
 -- JSON instances
 ---------------------------------------------------------------------------
@@ -103,3 +114,18 @@ instance FromJSON TxInfo where
             "money" -> GMoneyTx <$> o .: "money"
             "publication" -> GPublicationTx <$> o .: "publication"
             other -> fail $ "invalid transaction type: " ++ toString other
+
+instance ToJSON HashIs where
+    toJSON = String . \case
+        HashIsUnknown -> "unknown"
+        HashIsBlock -> "block"
+        HashIsAddress -> "address"
+        HashIsTx -> "transaction"
+
+instance FromJSON HashIs where
+    parseJSON = withText "hash type" $ \case
+        "unknown" -> pure HashIsUnknown
+        "block" -> pure HashIsBlock
+        "address" -> pure HashIsAddress
+        "transaction" -> pure HashIsTx
+        _ -> fail "Invalid hash type"

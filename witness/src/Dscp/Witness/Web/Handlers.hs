@@ -27,4 +27,5 @@ witnessServantHandlers =
     , wGetAccount = getAccountInfo
     , wGetTransactions = getTransactions
     , wGetTransaction = getTransactionInfo
+    , wGetHashType = getHashType
     }
