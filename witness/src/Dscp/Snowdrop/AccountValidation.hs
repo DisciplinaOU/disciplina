@@ -30,7 +30,7 @@ import Snowdrop.Util
 import Dscp.Core.Foundation (Address, TxId)
 import Dscp.Crypto (PublicKey)
 import Dscp.Snowdrop.Configuration (CanVerifyPayload, Exceptions, Ids, PersonalisedProof, Proofs,
-                                    TxIds, Values)
+                                    TxIds, Values, accountPrefix)
 import Dscp.Snowdrop.Types
 
 assertSigned
@@ -103,8 +103,11 @@ preValidateSimpleMoneyTransfer =
             -- Turn ChangeSet to kv-pairs.
         let updates        = Map.toList $ changeSet txBody
 
+            -- Filter out non-account updates
+            accountUpdates = filter ((==) accountPrefix . idSumPrefix . fst) updates
+
             -- Project both key and value to AccointId and (ValueOp Account).
-            accountChanges = updates <&> \pair@ (k, _) -> (k, proj pair)
+            accountChanges = accountUpdates <&> \pair@ (k, _) -> (k, proj pair)
 
         -- Check that all pairs are projected and are Updates.
         -- Strip Update ctor from values.

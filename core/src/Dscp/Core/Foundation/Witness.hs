@@ -24,13 +24,13 @@ module Dscp.Core.Foundation.Witness
     , PublicationTxWitnessed (..)
     , PublicationTx (..)
     , PublicationTxId
-    , PublicationsOf (..)
-    , LastPublication (..)
-    , PublicationHead (..)
-    , PublicationNext (..)
     , toPtxId
     , GTx (..)
+    , GTxId (..)
+    , toGTxId
     , GTxWitnessed (..)
+    , unGTxWitnessed
+    , GTxInBlock (..)
 
     -- * Block
     , Difficulty (..)
@@ -214,40 +214,6 @@ instance Buildable PublicationTxWitnessed where
     build PublicationTxWitnessed {..} =
         "PublicationTxWitnessed { " +| ptwTx |+ ", " +| ptwWitness |+  " }"
 
--- | Actual structure in the storage.
--- |
--- | For each educator, we'll have a `PublicationOf id ~> LastPublication blockHash`
--- | (which is effectively `(educator, lastBlockHash)`)
--- | to determine the lst publication.
-newtype PublicationsOf
-    = PublicationsOf Address
-    deriving (Eq, Ord, Show, Generic)
-
-instance Buildable PublicationsOf where
-    build (PublicationsOf addr) =
-        "PublicationsOf { " +| addr |+  " }"
-
--- | Points to the `PublicationHead addr` in the database.
-data LastPublication
-    = LastPublication PrivateHeaderHash
-    deriving (Eq, Ord, Show, Generic)
-
--- | Once 'LastPublication' is known, you can walk the chain of
--- | `PublicationHead bh ~> PublicationNext bh`,
--- | (which is `(blockHash, Maybe blockHash)`)
--- | where phead contains block hash and pnext has prev block hash.
-newtype PublicationHead
-    = PublicationHead PrivateHeaderHash
-    deriving (Eq, Ord, Show, Generic)
-
-instance Buildable PublicationHead where
-    build (PublicationHead blk) =
-        "PublicationHead { " +| blk |+  " }"
-
-data PublicationNext
-    = PublicationNext (Maybe PrivateHeaderHash)
-    deriving (Eq, Ord, Show, Generic)
-
 ----------------------------------------------------------------------------
 -- Transactions (united)
 ----------------------------------------------------------------------------
@@ -263,6 +229,16 @@ instance Buildable GTx where
     build (GMoneyTx       tw) = "GMoneyTx: "       +| tw |+ ""
     build (GPublicationTx pw) = "GPublciationTx: " +| pw |+ ""
 
+-- | Unified tx id, which is actually a hash of underlying Tx or PublicationTx.
+-- NB! It's different from Hash GTx.
+newtype GTxId = GTxId (Hash GTx)
+    deriving (Eq, Ord, Show, Generic, Buildable)
+
+-- | Compute tx id.
+toGTxId :: (Serialise Tx, Serialise PublicationTx) => GTx -> GTxId
+toGTxId (GMoneyTx tx) = GTxId . unsafeCastHash . toTxId $ tx
+toGTxId (GPublicationTx tx) = GTxId . unsafeCastHash . toPtxId $ tx
+
 data GTxWitnessed
     = GMoneyTxWitnessed TxWitnessed
     | GPublicationTxWitnessed PublicationTxWitnessed
@@ -271,6 +247,17 @@ data GTxWitnessed
 instance Buildable GTxWitnessed where
     build (GMoneyTxWitnessed       tw) = "GMoneyTxWitnessed: " +| tw |+ ""
     build (GPublicationTxWitnessed pw) = "GPublicationTxWitnessed: " +| pw |+ ""
+
+unGTxWitnessed :: GTxWitnessed -> GTx
+unGTxWitnessed (GMoneyTxWitnessed tw) = GMoneyTx (twTx tw)
+unGTxWitnessed (GPublicationTxWitnessed tw) = GPublicationTx (ptwTx tw)
+
+-- | Transaction with reference to block it is published in
+data GTxInBlock = GTxInBlock
+    { tbHeaderHash :: Maybe HeaderHash
+    , tbTx :: GTxWitnessed
+    }
+    deriving (Eq, Show, Generic)
 
 ----------------------------------------------------------------------------
 -- Blocks and headers

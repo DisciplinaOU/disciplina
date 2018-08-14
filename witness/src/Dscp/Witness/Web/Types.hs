@@ -1,12 +1,14 @@
 module Dscp.Witness.Web.Types
     ( Balances (..)
-    , AccountState (..)
+    , BlockInfo (..)
+    , AccountInfo (..)
+    , TxInfo (..)
     ) where
 
+import Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.=), (.:))
 import Data.Aeson.Options (defaultOptions)
-import Data.Aeson.TH (deriveJSON)
-import qualified Data.Text.Buildable
-import Fmt ((+|), (|+))
+import Data.Aeson.TH (Options (..), deriveJSON)
+import Fmt (blockListF, build, (+|), (|+))
 
 import Dscp.Core
 import Dscp.Util.Servant (ForResponseLog (..))
@@ -21,29 +23,50 @@ data Balances = Balances
     }
 
 -- | All what user may wish to know about an account.
-data AccountState = AccountState
-    { asBalances  :: Balances
-    , asNextNonce :: Integer
-      -- TODO: add transactions list
+data BlockInfo = BlockInfo
+    { biHeaderHash :: HeaderHash
+    , biHeader :: Header
+    , biIsGenesis :: Bool
+    , biTransactions :: Maybe [TxInfo]
+    }
+
+data AccountInfo = AccountInfo
+    { aiBalances  :: Balances
+    , aiNextNonce :: Integer
+    , aiTransactions :: Maybe [TxInfo]
+    }
+
+data TxInfo = TxInfo
+    { tiHeaderHash :: Maybe HeaderHash
+    , tiTx :: GTx
     }
 
 ---------------------------------------------------------------------------
 -- Buildable instances
 ---------------------------------------------------------------------------
 
+
+instance Buildable (ForResponseLog BlockInfo) where
+    build (ForResponseLog BlockInfo{..}) =
+        "{ headerHash = " +| biHeaderHash |+
+        ", header = " +| biHeader |+
+        " }"
+instance Buildable (ForResponseLog [BlockInfo]) where
+    build (ForResponseLog blocks) = blockListF $ map biHeaderHash blocks
+
 instance Buildable Balances where
     build Balances{..} = "{ confirmed = " +| bConfirmed |+ " }"
 
-instance Buildable AccountState where
-    build AccountState{..} =
-        "{ balances = " +| asBalances |+
-        ", next nonce = " +| asNextNonce |+
+instance Buildable (ForResponseLog AccountInfo) where
+    build (ForResponseLog AccountInfo{..}) =
+        "{ balances = " +| aiBalances |+
+        ", next nonce = " +| aiNextNonce |+
         " }"
-instance Buildable (ForResponseLog AccountState) where
-    build (ForResponseLog AccountState{..}) =
-        -- will differ once transaction list in included
-        "{ balances = " +| asBalances |+
-        ", next nonce = " +| asNextNonce |+
+
+instance Buildable (ForResponseLog TxInfo) where
+    build (ForResponseLog TxInfo{..}) =
+        "{ txId = " +| toGTxId tiTx |+
+        ", headerHash = " +| tiHeaderHash |+
         " }"
 
 ---------------------------------------------------------------------------
@@ -51,4 +74,29 @@ instance Buildable (ForResponseLog AccountState) where
 ---------------------------------------------------------------------------
 
 deriveJSON defaultOptions ''Balances
-deriveJSON defaultOptions ''AccountState
+deriveJSON defaultOptions{ omitNothingFields = True } ''BlockInfo
+deriveJSON defaultOptions{ omitNothingFields = True } ''AccountInfo
+
+instance ToJSON TxInfo where
+    toJSON TxInfo{..} = object $
+        maybe [] (\hh -> ["headerHash" .= hh]) tiHeaderHash ++
+        case tiTx of
+            GMoneyTx tx ->
+                [ "txId" .= toTxId tx
+                , "txType" .= ("money" :: Text)
+                , "money" .= tx
+                ]
+            GPublicationTx pTx ->
+                [ "txId" .= toPtxId pTx
+                , "txType" .= ("publication" :: Text)
+                , "publication" .= pTx
+                ]
+
+instance FromJSON TxInfo where
+    parseJSON = withObject "tx info" $ \o -> do
+        txType :: Text <- o .: "txType"
+        hh <- o .: "headerHash"
+        TxInfo hh <$> case txType of
+            "money" -> GMoneyTx <$> o .: "money"
+            "publication" -> GPublicationTx <$> o .: "publication"
+            other -> fail $ "invalid transaction type: " ++ toString other

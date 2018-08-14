@@ -7,6 +7,7 @@ module Dscp.Witness.Logic.Traversals
     , loadBlocksDownWhile
 
     , getBlocksFromTo
+    , getBlocksBefore
     ) where
 
 import Control.Monad.Trans.Except (throwE)
@@ -131,3 +132,28 @@ getBlocksFromTo (headerHash -> olderH) (headerHash -> newerH) = runExceptT $ do
             error "getBlocksFromTo: unexpected oldest block"
 
         pure blocks
+
+-- | Retrieves the requested amount of blocks starting with the given block down.
+getBlocksBefore ::
+       (HasWitnessConfig, HasHeaderHash a)
+    => Int
+    -> a
+    -> SdM (Either Text (OldestFirst NonEmpty Block))
+getBlocksBefore depthDiff (headerHash -> newerH) = runExceptT $ do
+    void $ ExceptT $ maybeToRight ("Can't get newer block: " <> show newerH) <$>
+        getBlockMaybe newerH
+
+    let loadCond _block depth = depth < depthDiff
+    blocks <- lift $ loadBlocksDownWhile newerH loadCond
+
+    let retrievedOldest = NE.head (unOldestFirst blocks)
+
+    -- sanity checks, remove them later
+    when (NE.length (unOldestFirst blocks) < depthDiff &&
+          retrievedOldest /= genesisBlock) $
+        error "getBlocksFromTo: retrieved less than expected"
+
+    when (NE.length (unOldestFirst blocks) > depthDiff) $
+        error "getBlocksFromTo: retrieved too many"
+
+    pure blocks

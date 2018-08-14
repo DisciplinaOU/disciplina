@@ -11,8 +11,15 @@ module Dscp.Witness.Logic.Getters
     , getHeader
 
     , resolvePrevious
+
+    , getAccountMaybe
+    , getAccountTxs
+
+    , getTxMaybe
+    , getTx
     ) where
 
+import Control.Lens (ix)
 import qualified Snowdrop.Core as SD
 import qualified Snowdrop.Model.Block as SD
 import qualified Snowdrop.Util as SD
@@ -20,6 +27,7 @@ import qualified Snowdrop.Util as SD
 import Dscp.Core
 import Dscp.Snowdrop
 import Dscp.Witness.Config
+import Dscp.Witness.Launcher.Mode
 import Dscp.Witness.Logic.Exceptions
 
 ----------------------------------------------------------------------------
@@ -82,3 +90,49 @@ resolvePrevious o = do
     if headerHash header == genesisHash
     then pure Nothing
     else pure $ Just $ hPrevHash header
+
+----------------------------------------------------------------------------
+-- Account getters
+----------------------------------------------------------------------------
+
+-- | Safely get an account.
+getAccountMaybe :: WitnessWorkMode ctx m => Address -> m (Maybe Account)
+getAccountMaybe = runStateSdMRead (RememberForProof False) . SD.queryOne . AccountId
+
+-- | Get a list of all transactions for a given account
+getAccountTxs :: WitnessWorkMode ctx m => Address -> m [GTxInBlock]
+getAccountTxs address =
+    runStateSdMRead (RememberForProof False) loadTxs >>=
+    mapM (runSdMRead . getTx)
+  where
+    loadTxs =
+        SD.queryOne (TxsOf address) >>=
+        loadNextTx [] . map unLastTx
+    loadNextTx !res = \case
+        Nothing -> return res
+        Just gTxId ->
+            SD.queryOne (TxHead address gTxId) >>=
+            loadNextTx (gTxId : res) . map unTxNext
+
+----------------------------------------------------------------------------
+-- Transaction getters
+----------------------------------------------------------------------------
+
+-- | Safely get transaction.
+getTxMaybe :: HasWitnessConfig => GTxId -> SdM (Maybe GTxInBlock)
+getTxMaybe gTxId = do
+    SD.queryOne gTxId >>= \case
+        Nothing -> pure Nothing
+        Just TxBlockRef{..} ->
+            getBlockMaybe tbrBlockRef >>= pure . \case
+                Nothing -> Nothing
+                Just block -> fmap (GTxInBlock $ Just tbrBlockRef) . (^? ix tbrTxIdx) . bbTxs . bBody $ block
+
+-- | Resolves transaction, throws exception if it's absent.
+getTx :: HasWitnessConfig => GTxId -> SdM GTxInBlock
+getTx gTxId = do
+    tM <- getTxMaybe gTxId
+    maybe (SD.throwLocalError $ LETxAbsent $
+              "Can't get transaction with id " <> pretty gTxId)
+          pure
+          tM

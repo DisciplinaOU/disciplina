@@ -29,9 +29,12 @@ hoistWitnessClient
 hoistWitnessClient nat es =
     WitnessEndpoints
     { wPing = nat ... wPing es
-    , wGetAccountState = nat ... wGetAccountState es
     , wSubmitTx = nat ... wSubmitTx es
     , wSubmitTxAsync = nat ... wSubmitTxAsync es
+    , wGetBlocks = nat ... wGetBlocks es
+    , wGetBlock = nat ... wGetBlock es
+    , wGetAccount = nat ... wGetAccount es
+    , wGetTransaction = nat ... wGetTransaction es
     }
 
 createWitnessClient :: MonadIO m => NetworkAddress -> m WitnessClient

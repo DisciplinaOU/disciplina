@@ -38,8 +38,8 @@ import GHC.TypeLits (KnownSymbol, symbolVal)
 import Loot.Log (Level (Info))
 import Serokell.Util ()
 import Serokell.Util.ANSI (Color (..), colorizeDull)
-import Servant.API ((:<|>) (..), (:>), Capture, Description, JSON, NoContent, QueryParam,
-                    ReflectMethod (..), ReqBody, Summary, Verb)
+import Servant.API ((:<|>) (..), (:>), Capture, Description, JSON, NoContent, QueryFlag,
+                    QueryParam, ReflectMethod (..), ReqBody, Summary, Verb)
 import Servant.API.ContentTypes (Accept (..), MimeRender (..), MimeUnrender (..))
 import Servant.Server (Handler (..), HasServer (..), ServantErr (..), Server)
 import qualified Servant.Server.Internal as SI
@@ -95,6 +95,9 @@ type ApiHasArg subApi res =
 instance KnownSymbol s => ApiHasArgClass (Capture s a)
 instance KnownSymbol s => ApiHasArgClass (QueryParam s a) where
     type ApiArg (QueryParam s a) = Maybe a
+instance KnownSymbol s => ApiHasArgClass (QueryFlag s) where
+    type ApiArg (QueryFlag s) = Bool
+    apiArgName _ = "'" +| symbolVal (Proxy @s) |+  "' flag"
 instance ApiHasArgClass (ReqBody ct a) where
     apiArgName _ = "request body"
 
@@ -238,6 +241,9 @@ instance KnownSymbol cs => ApiCanLogArg (QueryParam cs a) where
       where
         noEntry = colorizeDull White "-"
 
+instance KnownSymbol cs => ApiCanLogArg (QueryFlag cs) where
+    type ApiArgToLog (QueryFlag cs) = Bool
+
 paramRouteWithLog
     :: forall config api subApi res ctx env.
        ( api ~ (subApi :> res)
@@ -270,6 +276,12 @@ instance ( HasServer (subApi :> res) ctx
          , subApi ~ apiType a
          ) =>
          HasLoggingServer config (apiType a :> res) ctx where
+    routeWithLog = paramRouteWithLog
+
+instance ( HasLoggingServer config res ctx
+         , KnownSymbol s
+         ) =>
+         HasLoggingServer config (QueryFlag s :> res) ctx where
     routeWithLog = paramRouteWithLog
 
 instance HasLoggingServer config res ctx =>

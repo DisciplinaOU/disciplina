@@ -65,14 +65,11 @@ instance Serialise Tx
 instance Serialise TxWitness
 instance Serialise TxWitnessed
 instance Serialise Publication
-instance Serialise LastPublication
-instance Serialise PublicationsOf
-instance Serialise PublicationNext
-instance Serialise PublicationHead
 instance Serialise PublicationTx
 instance Serialise PublicationTxWitness
 instance Serialise PublicationTxWitnessed
 instance Serialise GTx
+instance Serialise GTxId
 instance Serialise GTxWitnessed
 instance Serialise BlockToSign
 instance Serialise SlotId

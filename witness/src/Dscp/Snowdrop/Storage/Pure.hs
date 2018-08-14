@@ -15,17 +15,19 @@ import Snowdrop.Model.Execution (DbActionsException (..), DbModifyActions (..), 
                                  accumToDiff, sumChangeSetDBA)
 import Snowdrop.Util
 
-import Dscp.Core.Foundation (HeaderHash)
+import Dscp.Core.Foundation (HeaderHash, GTxId)
 import Dscp.Snowdrop.Configuration
+import Dscp.Snowdrop.Storage.Types
 
 data BlockStorage = BlockStorage
     { _bsBlunds :: Map HeaderHash SBlund
     , _bsTip    :: TipValue HeaderHash
+    , _bsTxs    :: Map GTxId TxBlockRef
     }
 makeLenses ''BlockStorage
 
 emptyBlockStorage :: BlockStorage
-emptyBlockStorage = BlockStorage mempty (TipValue Nothing)
+emptyBlockStorage = BlockStorage mempty (TipValue Nothing) mempty
 
 queryMany :: (Ord id, Monad m, Foldable f) => (id -> m (Maybe value)) -> f id -> m (Map id value)
 queryMany doOne = foldM (\resp i -> maybe resp (\v -> M.insert i v resp) <$> doOne i) mempty
@@ -61,7 +63,8 @@ blockDbActions = mkActions <$> liftIO (newTVarIO emptyBlockStorage)
     queryOne :: TVar BlockStorage -> Ids -> STM (Maybe Values)
     queryOne var = \case
         (TipKeyIds TipKey)          -> Just . TipValueVal . view bsTip <$> readTVar var
-        (BlockRefIds (BlockRef hh)) -> fmap BlundVal . M.lookup hh . _bsBlunds <$> readTVar var
+        (BlockRefIds (BlockRef hh)) -> fmap BlundVal . M.lookup hh . view bsBlunds <$> readTVar var
+        (TxIds gTxId)               -> fmap TxVal . M.lookup gTxId . view bsTxs <$> readTVar var
         i -> throwM $ DbWrongIdQuery $ "Unknown query to block storage " <> show i
 
     apply :: TVar BlockStorage -> SumChangeSet Ids Values -> STM ()
@@ -73,6 +76,9 @@ blockDbActions = mkActions <$> liftIO (newTVarIO emptyBlockStorage)
     applyOne var (BlockRefIds (BlockRef hh)) =
         performActionWithTVar var (bsBlunds . at hh) (applyException hh) <=<
         projValOp @(BlockRef HeaderHash)
+    applyOne var (TxIds gTxId) =
+        performActionWithTVar var (bsTxs . at gTxId) (applyException gTxId) <=<
+        projValOp @GTxId
     applyOne _ i = applyException i '-'
 
     applyTip :: TVar BlockStorage -> ValueOp Values -> Maybe HeaderHash -> STM ()

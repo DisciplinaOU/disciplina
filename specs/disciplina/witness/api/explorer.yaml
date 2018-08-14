@@ -1,6 +1,6 @@
 swagger: "2.0"
 info:
-  description: "This is an HTTP API for interacting with Disciplina Witness node. It is used by Block Explorer frontend to request info about blocks, addresses and transactions."
+  description: "This is an HTTP API for interacting with Disciplina Witness node. It is used by Block Explorer frontend to request info about blocks, accounts and transactions."
   version: 0.1.0
   title: Disciplina Block Explorer API
   termsOfService: "https://disciplina.io/tnc.pdf"
@@ -9,7 +9,6 @@ info:
   license:
     name: Apache 2.0
     url: "http://www.apache.org/licenses/LICENSE-2.0.html"
-host: "localhost:8091"
 basePath: /api/witness/v1
 schemes:
   - https
@@ -19,25 +18,22 @@ paths:
     get:
       summary: Get list of blocks.
       description: >-
-        Only the batch of `count` most recent blocks are returned at once.
-        The hash of the last block in the batch can be passed as `before` parameter to get the next batch.
+        Return a batch of `count` most recent blocks.
+        `prevHash` of the oldest block in the batch can be passed as `from` parameter to get the next batch.
       operationId: getBlocks
       produces:
       - application/json
       parameters:
       - in: query
-        name: before
+        name: from
         description: >-
-          The hash of the oldest block in the previous batch.
-          Get the batch of blocks before (not including) the specified one.
+          Get a batch of blocks starting with the specified one.
           If not specified, get the most recent blocks.
-        required: false
         type: string
         format: byte
       - in: query
         name: count
         description: The amount of blocks returned.
-        required: false
         default: 100
         maximum: 100
         type: integer
@@ -81,32 +77,39 @@ paths:
           description: Block not found
           schema:
             $ref: "#/definitions/ErrResponse"
-  /addresses/{address}:
+  /accounts/{address}:
     get:
-      summary: Get information about an address.
-      operationId: getAddress
+      summary: Get information about an account.
+      operationId: getAccount
       produces:
       - application/json
       parameters:
       - in: path
         name: address
-        description: Address being requested.
+        description: Address of an account being requested.
         required: true
         type: string
         format: byte
+      - in: query
+        name: includeTxs
+        description: >-
+          Whether to include transaction history for the account.
+          Both incoming and outgoing transactions are included
+        type: boolean
+        allowEmptyValue: true
       responses:
         200:
           description: Successful operation
           schema:
             allOf:
-            - $ref: "#/definitions/AddressInfo"
+            - $ref: "#/definitions/AccountInfo"
             - $ref: "#/definitions/TransactionList"
         400:
           description: Invalid input
           schema:
             $ref: "#/definitions/ErrResponse"
         404:
-          description: Address not found
+          description: Account not found
           schema:
             $ref: "#/definitions/ErrResponse"
   /transactions/{transactionHash}:
@@ -149,18 +152,21 @@ definitions:
   Coin:
     type: integer
     format: int64
-  TransactionPart:
-    type: object
-    properties:
-      address:
-        $ref: "#/definitions/Address"
-      value:
-        $ref: "#/definitions/Coin"
   BlockInfo:
     type: object
     properties:
       headerHash:
         $ref: "#/definitions/Hash"
+      header:
+        $ref: "#/definitions/BlockHeader"
+      isGenesis:
+        type: boolean
+  BlockHeader:
+    type: object
+    properties:
+      signature:
+        type: string
+        format: byte
       issuer:
         type: string
         format: byte
@@ -172,16 +178,18 @@ definitions:
         format: int64
       prevHash:
         $ref: "#/definitions/Hash"
-  AddressInfo:
+  AccountInfo:
     type: object
     properties:
-      balance:
+      balances:
+        type: object
+        properties:
+          confirmed:
+            type: integer
+            format: int32
+      nextNonce:
         type: integer
         format: int32
-      transactions:
-        type: array
-        items:
-          $ref: "#/definitions/TransactionInfo"
   TransactionInfo:
     type: object
     discriminator: txType
@@ -191,15 +199,32 @@ definitions:
         enum:
         - money
         - publication
+      txId:
+        $ref: "#/definitions/Hash"
+      headerHash:
+        $ref: "#/definitions/Hash"
       money:
         type: object
         properties:
-          in:
-            $ref: "#/definitions/TransactionPart"
+          inAcc:
+            type: object
+            properties:
+              addr:
+                $ref: "#/definitions/Address"
+              nonce:
+                type: integer
+                format: int32
+          inValue:
+            $ref: "#/definitions/Coin"
           outs:
             type: array
             items:
-              $ref: "#/definitions/TransactionPart"
+              type: object
+              properties:
+                address:
+                  $ref: "#/definitions/Address"
+                value:
+                  $ref: "#/definitions/Coin"
       publication:
         type: object
         properties:
@@ -227,14 +252,14 @@ definitions:
           - InvalidFormat
 
           - BlockNotFound
-          - AddressNotFound
+          - AccountNotFound
           - TransactionNotFound
         description: >-
           Error type:
             * `InvalidFormat` - Failed to deserialise one of parameters.
 
             * `BlockNotFound` - Specified block does not exist.
-            * `AddressNotFound` - Specified address does not exist.
+            * `AccountNotFound` - Specified account does not exist.
             * `TransactionNotFound` - Specified transaction does not exist.
 
 externalDocs:

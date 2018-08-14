@@ -11,6 +11,7 @@ import Servant
 import Servant.Generic
 
 import Dscp.Core
+import Dscp.Witness.Web.Error
 import Dscp.Witness.Web.Types
 
 -- | API/implementation of witness endpoints.
@@ -20,17 +21,12 @@ data WitnessEndpoints route = WitnessEndpoints
 
       wPing :: route
         :- "ping"
-        :> Verb 'GET 200 '[JSON] ()
-
-    , wGetAccountState :: route
-        :- "account" :> Capture "accountId" Address
-        :> "state"
-        :> Verb 'GET 200 '[JSON] AccountState
+        :> Verb 'GET 200 '[DSON] ()
 
     , wSubmitTx :: route
         :- "tx"
         :> ReqBody '[JSON] TxWitnessed
-        :> Verb 'POST 201 '[JSON] ()
+        :> Verb 'POST 201 '[DSON] ()
 
       -- Like 'wSubmitTx', but does not any checks on transaction application.
       -- Useful, since submitting transaction over network may take long.
@@ -38,7 +34,26 @@ data WitnessEndpoints route = WitnessEndpoints
         :- "tx"
         :> "async"
         :> ReqBody '[JSON] TxWitnessed
-        :> Verb 'POST 202 '[JSON] ()
+        :> Verb 'POST 202 '[DSON] ()
+
+    , wGetBlocks :: route
+        :- "blocks"
+        :> QueryParam "count" Int
+        :> QueryParam "from" HeaderHash
+        :> Verb 'GET 200 '[DSON] [BlockInfo]
+
+    , wGetBlock :: route
+        :- "blocks" :> Capture "headerHash" HeaderHash
+        :> Verb 'GET 200 '[DSON] BlockInfo
+
+    , wGetAccount :: route
+        :- "accounts" :> Capture "address" Address
+        :> QueryFlag "includeTxs"
+        :> Verb 'GET 200 '[DSON] AccountInfo
+
+    , wGetTransaction :: route
+        :- "transactions" :> Capture "transactionHash" GTxId
+        :> Verb 'GET 200 '[DSON] TxInfo
     } deriving (Generic)
 
 type WitnessAPI =
