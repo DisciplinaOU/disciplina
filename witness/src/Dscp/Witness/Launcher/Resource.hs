@@ -8,7 +8,7 @@ module Dscp.Witness.Launcher.Resource
        , wrKey
        ) where
 
-import Loot.Log.Internal (logNameSelL, _GivenName)
+import Loot.Log.Internal (NameSelector (GivenName), logNameSelL)
 import Loot.Log.Rio (LoggingIO)
 
 import Control.Lens (makeLenses)
@@ -57,8 +57,10 @@ instance HasWitnessConfig => AllocResource WitnessParams WitnessResources where
     allocResource WitnessParams{..} = do
         _wrLogging <- view (lensOf @LoggingIO)
         _wrDB <- allocResource wpDBParams
-        _wrNetwork <-
-            withNetLogging (NetLogging $ _wrLogging & logNameSelL . _GivenName %~ (<> "network")) $
-            allocResource wpNetworkParams
+        _wrNetwork <- do
+            let modGivenName (GivenName x) = GivenName $ x <> "network"
+                modGivenName x             = x
+            withNetLogging (NetLogging $ _wrLogging & logNameSelL %~ modGivenName)
+                           (allocResource wpNetworkParams)
         _wrKey <- allocResource wpKeyParams
         return WitnessResources {..}

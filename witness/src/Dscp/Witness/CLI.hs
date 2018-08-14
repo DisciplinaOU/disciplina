@@ -51,13 +51,24 @@ peersParser =
 ourZTNodeIdParser :: Parser ZTNodeId
 ourZTNodeIdParser = do
     option (eitherReader parseZTNodeId)
-           (long "bind" <> metavar "HOST:PORT1:PORT2" <> help "Host/ports to bind on")
+           (long "bind" <>
+            metavar "HOST:PORT1:PORT2" <>
+            help "Host/ports to bind on, also the public address we share with other nodes")
+
+-- | Parser for ZTNodeId we will bind on.
+internalZTNodeIdParser :: Parser ZTNodeId
+internalZTNodeIdParser = do
+    option (eitherReader parseZTNodeId)
+           (long "bind-internal" <>
+            metavar "HOST:PORT1:PORT2" <>
+            help "Overrides --bind, still the --bind value must be addressable")
 
 netCliParamsParser :: Parser NetCliParams
 netCliParamsParser = NetCliParams <$> peersParser
 
 netServParamsParser :: Parser NetServParams
-netServParamsParser = NetServParams <$> peersParser <*> ourZTNodeIdParser
+netServParamsParser =
+    NetServParams <$> peersParser <*> ourZTNodeIdParser <*> optional internalZTNodeIdParser
 
 ---------------------------------------------------------------------------
 -- Utils

@@ -96,10 +96,13 @@ instance WithNetLogging => AllocResource NetCliParams NetCliResources where
 
 -- | Server networking params.
 data NetServParams = NetServParams
-    { nsPeers      :: !(Set ZTNodeId)
+    { nsPeers           :: !(Set ZTNodeId)
       -- ^ Peers we should connect to
-    , nsOurAddress :: !ZTNodeId
+    , nsOurAddress      :: !ZTNodeId
       -- ^ Our binding address
+    , nsInternalAddress :: !(Maybe ZTNodeId)
+      -- ^ Optional internal address that we'll bind to
+      -- (nsOurAddress should be an external, addressable one anyway).
     } deriving (Show)
 
 -- | Resources needed for ZMQ TCP client + server.
@@ -122,7 +125,7 @@ instance WithNetLogging => AllocResource NetServParams NetServResources where
         allocate = do
             global <- ztGlobalEnv (unNetLogging netLogging)
             cli <- createNetCliEnv global nsPeers
-            serv <- createNetServEnv global nsOurAddress
+            serv <- createNetServEnv global nsOurAddress nsInternalAddress
             pure $ NetServResources global cli serv
         release NetServResources{..} = do
             termNetCliEnv _nsClientEnv
