@@ -5,9 +5,9 @@
               <h3 class="lastSlots__title blockTitle marginBottom30">Transaction</h3>
               <div class="transactionInformBlock">
                   <div class="transactionInformBlock__title">
-                      <p class="transactionInformBlock__hash hash">8238fe78c20db47a78907795e379b6690202a120fc2543891a00ba9aaa7f00db</p>
+                      <p class="transactionInformBlock__hash hash">{{ transaction.txId }}</p>
                       <p class="transactionInformBlock__date">07/16/2018 09:33:11</p>
-                      <p class="transactionInformBlock__totalSent btn btn--blue">139,638<span class="small">.430858</span> DSCP</p>
+                      <dscp-button :value="transaction.money.outValue"/>
                   </div>
                   <div class="transactionInformBlock__fromTo">
                       <div class="transactionInformBlock__from informBlock">
@@ -41,3 +41,28 @@
       </div>
   </div>
 </template>
+
+<script>
+import DscpButton from '@/components/DscpButton'
+import { mapGetters, mapActions } from 'vuex'
+
+export default {
+  name: 'Transaction',
+  components: { DscpButton },
+  beforeRouteEnter (to, from, next) {
+    next(vm => {
+      vm.getTransaction(to.params.hash)
+    })
+  },
+  computed: {
+    ...mapGetters([
+      'transaction'
+    ])
+  },
+  methods: {
+    ...mapActions([
+      'getTransaction'
+    ])
+  }
+}
+</script>

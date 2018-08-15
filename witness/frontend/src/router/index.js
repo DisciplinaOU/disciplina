@@ -6,7 +6,7 @@ import Index from '@/pages/Index'
 import Block from '@/pages/Block'
 import Transaction from '@/pages/Transaction'
 import Address from '@/pages/Address'
-import EduTransaction from '@/pages/EduTransaction'
+import EducatorTransaction from '@/pages/EducatorTransaction'
 
 Vue.use(Router)
 
@@ -27,6 +27,7 @@ export default new Router({
         },
         {
           path: '/transaction/:hash',
+          name: 'transactionShow',
           component: Transaction
         },
         {
@@ -34,8 +35,8 @@ export default new Router({
           component: Address
         },
         {
-          path: '/edutransaction/:hash',
-          component: EduTransaction
+          path: '/educator-transaction/:hash',
+          component: EducatorTransaction
         }
       ]
     }
