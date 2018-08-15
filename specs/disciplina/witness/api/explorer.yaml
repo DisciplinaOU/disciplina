@@ -147,10 +147,18 @@ paths:
       summary: Get list of recent transactions.
       description: >-
         Return a batch of `count` most recent transactions.
+        If `nextId` key is present in the result, it can be passed as `from` parameter to get the next batch.
       operationId: getTransactions
       produces:
       - application/json
       parameters:
+      - in: query
+        name: from
+        description: >-
+          Get a batch of transactions starting with the specified one.
+          If not specified, get the most recent transactions.
+        type: string
+        format: byte
       - in: query
         name: count
         description: The amount of transactions returned.
@@ -162,11 +170,16 @@ paths:
         200:
           description: Successful operation
           schema:
-            type: array
-            items:
-              allOf:
-              - $ref: "#/definitions/TransactionInfo"
-              - $ref: "#/definitions/TransactionBlockInfo"
+            type: object
+            properties:
+              transactions:
+                type: array
+                items:
+                  allOf:
+                  - $ref: "#/definitions/TransactionInfo"
+                  - $ref: "#/definitions/TransactionBlockInfo"
+              nextId:
+                $ref: "#/definitions/Hash"
   /transactions/{transactionHash}:
     get:
       summary: Get information about a transaction.

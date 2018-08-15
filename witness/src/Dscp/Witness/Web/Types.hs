@@ -3,13 +3,14 @@ module Dscp.Witness.Web.Types
     , BlockInfo (..)
     , AccountInfo (..)
     , TxInfo (..)
+    , TxList (..)
     , HashIs (..)
     ) where
 
 import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), object, withObject, withText, (.=), (.:))
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (Options (..), deriveJSON)
-import Fmt (blockListF, build, genericF, (+|), (|+))
+import Fmt (build, genericF, (+|), (|+))
 
 import Dscp.Core
 import Dscp.Util.Servant (ForResponseLog (..))
@@ -50,6 +51,11 @@ data TxInfo = TxInfo
     , tiTx :: GTx
     }
 
+data TxList = TxList
+    { tlTransactions :: [TxInfo]
+    , tlNextId :: Maybe GTxId
+    }
+
 data HashIs
     = HashIsUnknown
     | HashIsBlock
@@ -69,7 +75,7 @@ instance Buildable (ForResponseLog BlockInfo) where
         ", header = " +| biHeader |+
         " }"
 instance Buildable (ForResponseLog [BlockInfo]) where
-    build (ForResponseLog blocks) = blockListF $ map biHeaderHash blocks
+    build (ForResponseLog blocks) = "" +| length blocks |+ " blocks"
 
 instance Buildable Balances where
     build Balances{..} = "{ confirmed = " +| bConfirmed |+ " }"
@@ -86,8 +92,8 @@ instance Buildable (ForResponseLog TxInfo) where
         ", headerHash = " +| biHeaderHash <$> tiBlock |+
         " }"
 
-instance Buildable (ForResponseLog [TxInfo]) where
-    build (ForResponseLog txs) = blockListF $ map (toGTxId . tiTx) txs
+instance Buildable (ForResponseLog TxList) where
+    build (ForResponseLog TxList{..}) = "" +| length tlTransactions |+ " transactions"
 
 instance Buildable (ForResponseLog HashIs) where
     build (ForResponseLog hashIs) = genericF hashIs
@@ -99,6 +105,7 @@ instance Buildable (ForResponseLog HashIs) where
 deriveJSON defaultOptions ''Balances
 deriveJSON defaultOptions{ omitNothingFields = True } ''BlockInfo
 deriveJSON defaultOptions{ omitNothingFields = True } ''AccountInfo
+deriveJSON defaultOptions{ omitNothingFields = True } ''TxList
 
 instance ToJSON TxInfo where
     toJSON TxInfo{..} = object $

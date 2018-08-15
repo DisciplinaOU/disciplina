@@ -14,6 +14,7 @@ module Dscp.Witness.Logic.Traversals
 
 import Control.Monad.Trans.Except (throwE)
 import qualified Data.List.NonEmpty as NE
+import qualified Snowdrop.Core as SD
 
 import Dscp.Core
 import Dscp.Snowdrop
@@ -164,16 +165,26 @@ getBlocksBefore depthDiff (headerHash -> newerH) = runExceptT $ do
 getTxs ::
        HasWitnessConfig
     => Int
-    -> SdM (OldestFirst [] GTxInBlock)
-getTxs depth = getTipBlock >>= map OldestFirst . loadTxs [] depth
+    -> Maybe GTxId
+    -> SdM (Either Text (OldestFirst [] GTxInBlock))
+getTxs depth = \case
+    Nothing -> getTipBlock >>= map (Right . OldestFirst) . loadTxs [] depth Nothing
+    Just gTxId -> runExceptT $ do
+        TxBlockRef{..} <- ExceptT $ maybeToRight ("Can't get block ref for tx " <> show gTxId) <$>
+            SD.queryOne gTxId
+        block <- ExceptT $ maybeToRight ("Can't get block " <> show tbrBlockRef) <$>
+            getBlockMaybe tbrBlockRef
+        txs <- lift $ loadTxs [] depth (Just $ tbrTxIdx + 1) block
+        pure $ OldestFirst txs
   where
-    loadTxs !res depthLeft block@Block{..}
+    loadTxs !res depthLeft mLimit block
         | depthLeft == 0 =
             return res
-        | length txs >= depthLeft =
-            return $ drop (length txs - depthLeft) txs ++ res
-        | otherwise = runMaybeT (MaybeT (resolvePrevious bHeader) >>= MaybeT . getBlockMaybe) >>= \case
+        | limit >= depthLeft =
+            return $ drop (limit - depthLeft) txs ++ res
+        | otherwise = runMaybeT (MaybeT (resolvePrevious block) >>= MaybeT . getBlockMaybe) >>= \case
             Nothing -> return $ txs ++ res
-            Just nextBlock -> loadTxs (txs ++ res) (depthLeft - length txs) nextBlock
+            Just nextBlock -> loadTxs (txs ++ res) (depthLeft - limit) Nothing nextBlock
       where
-        txs = GTxInBlock (Just block) <$> bbTxs bBody
+        limit = fromMaybe (length txs) mLimit
+        txs = map (GTxInBlock (Just block)) . bbTxs . bBody $ block

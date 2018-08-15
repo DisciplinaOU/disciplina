@@ -77,11 +77,11 @@ toTxInfo tx = TxInfo
 
 getBlocks :: WitnessWorkMode ctx m => Maybe Int -> Maybe HeaderHash -> m [BlockInfo]
 getBlocks mCount mFrom = do
-    let count = max 100 $ fromMaybe 100 mCount
+    let count = min 100 $ fromMaybe 100 mCount
     from <- maybe (runSdMRead getTipHash) return mFrom
     runSdMRead (getBlockMaybe from) >>= void . nothingToThrow BlockNotFound
     eBlocks <- runSdMRead $ getBlocksBefore count from
-    either (throwM . InternalError) (return . map (toBlockInfo False) . toList) eBlocks
+    either (throwM . InternalError) (return . map (toBlockInfo False) . reverse . toList) eBlocks
 
 getBlockInfo :: WitnessWorkMode ctx m => HeaderHash -> m BlockInfo
 getBlockInfo =
@@ -97,11 +97,18 @@ getAccountInfo address includeTxs = do
         else return Nothing
     return $ toAccountInfo account txs
 
-getTransactions :: WitnessWorkMode ctx m => Maybe Int -> m [TxInfo]
-getTransactions mCount = do
-    let count = max 100 $ fromMaybe 100 mCount
-    eTxs <- runSdMRead $ getTxs count
-    return . map toTxInfo . toList $ eTxs
+getTransactions :: WitnessWorkMode ctx m => Maybe Int -> Maybe GTxId -> m TxList
+getTransactions mCount mFrom = do
+    whenJust mFrom $
+        runSdMRead . getTxMaybe >=> void . nothingToThrow TransactionNotFound
+    eTxs <- runSdMRead $ getTxs (count + 1) mFrom
+    either (throwM . InternalError) (return . toTxList . reverse . toList) eTxs
+  where
+    count = min 100 $ fromMaybe 100 mCount
+    toTxList txs = TxList
+        { tlTransactions = toTxInfo <$> take count txs
+        , tlNextId = map (toGTxId . unGTxWitnessed . tbTx) . safeHead $ drop count txs
+        }
 
 getTransactionInfo :: WitnessWorkMode ctx m => GTxId -> m TxInfo
 getTransactionInfo =
