@@ -33,14 +33,16 @@ paths:
             Type of the entity:
               * `block`
               * `address`
-              * `transaction`
+              * `money-transaction`
+              * `publication-transaction`
               * `unknown`
           schema:
             type: string
             enum:
             - block
             - address
-            - transaction
+            - money-transaction
+            - publication-transaction
             - unknown
   /blocks:
     get:
@@ -96,7 +98,7 @@ paths:
           schema:
             allOf:
             - $ref: "#/definitions/BlockInfo"
-            - $ref: "#/definitions/TransactionList"
+            - $ref: "#/definitions/BlockTransactionList"
         400:
           description: Invalid input
           schema:
@@ -145,10 +147,18 @@ paths:
       summary: Get list of recent transactions.
       description: >-
         Return a batch of `count` most recent transactions.
+        If `nextId` key is present in the result, it can be passed as `from` parameter to get the next batch.
       operationId: getTransactions
       produces:
       - application/json
       parameters:
+      - in: query
+        name: from
+        description: >-
+          Get a batch of transactions starting with the specified one.
+          If not specified, get the most recent transactions.
+        type: string
+        format: byte
       - in: query
         name: count
         description: The amount of transactions returned.
@@ -160,9 +170,16 @@ paths:
         200:
           description: Successful operation
           schema:
-            type: array
-            items:
-              $ref: "#/definitions/TransactionInfo"
+            type: object
+            properties:
+              transactions:
+                type: array
+                items:
+                  allOf:
+                  - $ref: "#/definitions/TransactionInfo"
+                  - $ref: "#/definitions/TransactionBlockInfo"
+              nextId:
+                $ref: "#/definitions/Hash"
   /transactions/{transactionHash}:
     get:
       summary: Get information about a transaction.
@@ -183,7 +200,9 @@ paths:
         200:
           description: Successful operation
           schema:
-            $ref: "#/definitions/TransactionInfo"
+            allOf:
+            - $ref: "#/definitions/TransactionInfo"
+            - $ref: "#/definitions/TransactionBlockInfo"
         400:
           description: Invalid input
           schema:
@@ -208,10 +227,25 @@ definitions:
     properties:
       headerHash:
         $ref: "#/definitions/Hash"
+      nextHash:
+        $ref: "#/definitions/Hash"
+      merkleRootHash:
+        $ref: "#/definitions/Hash"
       header:
         $ref: "#/definitions/BlockHeader"
       isGenesis:
         type: boolean
+      since:
+        type: integer
+        format: int64
+        description: Microseconds since UNIX epoch start
+      size:
+        type: integer
+        format: int64
+        description: Size in bytes
+      transactionCount:
+        type: integer
+        format: int32
   BlockHeader:
     type: object
     properties:
@@ -229,6 +263,10 @@ definitions:
         format: int64
       prevHash:
         $ref: "#/definitions/Hash"
+      totalOutput:
+        $ref: "#/definitions/Coin"
+      totalFees:
+        $ref: "#/definitions/Coin"
   AccountInfo:
     type: object
     properties:
@@ -251,8 +289,6 @@ definitions:
         - money
         - publication
       txId:
-        $ref: "#/definitions/Hash"
-      headerHash:
         $ref: "#/definitions/Hash"
       money:
         type: object
@@ -285,7 +321,21 @@ definitions:
             $ref: "#/definitions/Hash"
           prevBlock:
             $ref: "#/definitions/Hash"
+  TransactionBlockInfo:
+    type: object
+    properties:
+      block:
+        $ref: "#/definitions/BlockInfo"
   TransactionList:
+    type: object
+    properties:
+      transactions:
+        type: array
+        items:
+          allOf:
+          - $ref: "#/definitions/TransactionInfo"
+          - $ref: "#/definitions/TransactionBlockInfo"
+  BlockTransactionList:
     type: object
     properties:
       transactions:

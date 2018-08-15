@@ -254,7 +254,7 @@ unGTxWitnessed (GPublicationTxWitnessed tw) = GPublicationTx (ptwTx tw)
 
 -- | Transaction with reference to block it is published in
 data GTxInBlock = GTxInBlock
-    { tbHeaderHash :: Maybe HeaderHash
+    { tbBlock :: Maybe Block
     , tbTx :: GTxWitnessed
     }
     deriving (Eq, Show, Generic)

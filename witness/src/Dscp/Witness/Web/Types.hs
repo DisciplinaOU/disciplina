@@ -3,13 +3,14 @@ module Dscp.Witness.Web.Types
     , BlockInfo (..)
     , AccountInfo (..)
     , TxInfo (..)
+    , TxList (..)
     , HashIs (..)
     ) where
 
 import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), object, withObject, withText, (.=), (.:))
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (Options (..), deriveJSON)
-import Fmt (blockListF, build, genericF, (+|), (|+))
+import Fmt (build, genericF, (+|), (|+))
 
 import Dscp.Core
 import Dscp.Util.Servant (ForResponseLog (..))
@@ -25,8 +26,15 @@ data Balances = Balances
 
 data BlockInfo = BlockInfo
     { biHeaderHash :: HeaderHash
+    , biNextHash :: HeaderHash
+    , biMerkleRootHash :: Text
     , biHeader :: Header
     , biIsGenesis :: Bool
+    , biSince :: Word64  -- µs since UNIX epoch start
+    , biSize :: Int64  -- bytes
+    , biTransactionCount :: Int
+    , biTotalOutput :: Coin
+    , biTotalFees :: Coin
     , biTransactions :: Maybe [TxInfo]
     }
 
@@ -34,19 +42,26 @@ data BlockInfo = BlockInfo
 data AccountInfo = AccountInfo
     { aiBalances  :: Balances
     , aiNextNonce :: Integer
+    , aiTransactionCount :: Integer
     , aiTransactions :: Maybe [TxInfo]
     }
 
 data TxInfo = TxInfo
-    { tiHeaderHash :: Maybe HeaderHash
+    { tiBlock :: Maybe BlockInfo
     , tiTx :: GTx
+    }
+
+data TxList = TxList
+    { tlTransactions :: [TxInfo]
+    , tlNextId :: Maybe GTxId
     }
 
 data HashIs
     = HashIsUnknown
     | HashIsBlock
     | HashIsAddress
-    | HashIsTx
+    | HashIsMoneyTx
+    | HashIsPublicationTx
     deriving (Eq, Show, Generic)
 
 ---------------------------------------------------------------------------
@@ -60,7 +75,7 @@ instance Buildable (ForResponseLog BlockInfo) where
         ", header = " +| biHeader |+
         " }"
 instance Buildable (ForResponseLog [BlockInfo]) where
-    build (ForResponseLog blocks) = blockListF $ map biHeaderHash blocks
+    build (ForResponseLog blocks) = "" +| length blocks |+ " blocks"
 
 instance Buildable Balances where
     build Balances{..} = "{ confirmed = " +| bConfirmed |+ " }"
@@ -74,11 +89,11 @@ instance Buildable (ForResponseLog AccountInfo) where
 instance Buildable (ForResponseLog TxInfo) where
     build (ForResponseLog TxInfo{..}) =
         "{ txId = " +| toGTxId tiTx |+
-        ", headerHash = " +| tiHeaderHash |+
+        ", headerHash = " +| biHeaderHash <$> tiBlock |+
         " }"
 
-instance Buildable (ForResponseLog [TxInfo]) where
-    build (ForResponseLog txs) = blockListF $ map (toGTxId . tiTx) txs
+instance Buildable (ForResponseLog TxList) where
+    build (ForResponseLog TxList{..}) = "" +| length tlTransactions |+ " transactions"
 
 instance Buildable (ForResponseLog HashIs) where
     build (ForResponseLog hashIs) = genericF hashIs
@@ -90,10 +105,11 @@ instance Buildable (ForResponseLog HashIs) where
 deriveJSON defaultOptions ''Balances
 deriveJSON defaultOptions{ omitNothingFields = True } ''BlockInfo
 deriveJSON defaultOptions{ omitNothingFields = True } ''AccountInfo
+deriveJSON defaultOptions{ omitNothingFields = True } ''TxList
 
 instance ToJSON TxInfo where
     toJSON TxInfo{..} = object $
-        maybe [] (\hh -> ["headerHash" .= hh]) tiHeaderHash ++
+        maybe [] (\block -> ["block" .= block]) tiBlock ++
         case tiTx of
             GMoneyTx tx ->
                 [ "txId" .= toTxId tx
@@ -109,8 +125,8 @@ instance ToJSON TxInfo where
 instance FromJSON TxInfo where
     parseJSON = withObject "tx info" $ \o -> do
         txType :: Text <- o .: "txType"
-        hh <- o .: "headerHash"
-        TxInfo hh <$> case txType of
+        block <- o .: "block"
+        TxInfo block <$> case txType of
             "money" -> GMoneyTx <$> o .: "money"
             "publication" -> GPublicationTx <$> o .: "publication"
             other -> fail $ "invalid transaction type: " ++ toString other
@@ -120,12 +136,14 @@ instance ToJSON HashIs where
         HashIsUnknown -> "unknown"
         HashIsBlock -> "block"
         HashIsAddress -> "address"
-        HashIsTx -> "transaction"
+        HashIsMoneyTx -> "money-transaction"
+        HashIsPublicationTx -> "publication-transaction"
 
 instance FromJSON HashIs where
     parseJSON = withText "hash type" $ \case
         "unknown" -> pure HashIsUnknown
         "block" -> pure HashIsBlock
         "address" -> pure HashIsAddress
-        "transaction" -> pure HashIsTx
+        "money-transaction" -> pure HashIsMoneyTx
+        "publication-transaction" -> pure HashIsPublicationTx
         _ -> fail "Invalid hash type"

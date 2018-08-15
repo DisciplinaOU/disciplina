@@ -126,7 +126,7 @@ getTxMaybe gTxId = do
         Just TxBlockRef{..} ->
             getBlockMaybe tbrBlockRef >>= pure . \case
                 Nothing -> Nothing
-                Just block -> fmap (GTxInBlock $ Just tbrBlockRef) . (^? ix tbrTxIdx) . bbTxs . bBody $ block
+                Just block -> fmap (GTxInBlock $ Just block) . (^? ix tbrTxIdx) . bbTxs . bBody $ block
 
 -- | Resolves transaction, throws exception if it's absent.
 getTx :: HasWitnessConfig => GTxId -> SdM GTxInBlock

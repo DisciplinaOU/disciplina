@@ -9,6 +9,8 @@ module Dscp.Witness.Web.Logic
        , getHashType
        ) where
 
+import Codec.Serialise (serialise)
+import qualified Data.ByteString.Lazy as BS
 import UnliftIO.Async (async)
 
 import Dscp.Core
@@ -37,38 +39,49 @@ submitUserTxAsync tw = void . async $ submitUserTx tw
 toBlockInfo :: HasWitnessConfig => Bool -> Block -> BlockInfo
 toBlockInfo includeTxs block = BlockInfo
     { biHeaderHash = hh
+    , biNextHash = hh  -- TODO
+    , biMerkleRootHash = "..." -- TODO
     , biHeader = bHeader block
     , biIsGenesis = block == genesisBlock
+    , biSince = getSlotSince . hSlotId . bHeader $ block
+    , biSize = BS.length . serialise $ block
+    , biTransactionCount = length txs
+    , biTotalOutput = Coin $ sum $ unCoin . txTotalOutput . unGTxWitnessed <$> txs
+    , biTotalFees = Coin 0  -- TODO
     , biTransactions =
         if includeTxs
-        then Just . map (TxInfo (Just hh) . unGTxWitnessed) . bbTxs . bBody $ block
+        then Just $ TxInfo Nothing . unGTxWitnessed <$> txs
         else Nothing
     }
   where
     hh = headerHash block
+    txs = bbTxs . bBody $ block
+    txTotalOutput (GMoneyTx tx) = Coin $ sum $ unCoin . txOutValue <$> txOuts tx
+    txTotalOutput (GPublicationTx _) = Coin 0
 
-toAccountInfo :: Account -> Maybe [GTxInBlock] -> AccountInfo
+toAccountInfo :: HasWitnessConfig => Account -> Maybe [GTxInBlock] -> AccountInfo
 toAccountInfo account txs = AccountInfo
     { aiBalances = Balances
         { bConfirmed = Coin . fromIntegral $ aBalance account
         }
     , aiNextNonce = aNonce account + 1
+    , aiTransactionCount = aNonce account
     , aiTransactions = map toTxInfo <$> txs
     }
 
-toTxInfo :: GTxInBlock -> TxInfo
+toTxInfo :: HasWitnessConfig => GTxInBlock -> TxInfo
 toTxInfo tx = TxInfo
-    { tiHeaderHash = tbHeaderHash tx
+    { tiBlock = toBlockInfo False <$> tbBlock tx
     , tiTx = unGTxWitnessed $ tbTx tx
     }
 
 getBlocks :: WitnessWorkMode ctx m => Maybe Int -> Maybe HeaderHash -> m [BlockInfo]
 getBlocks mCount mFrom = do
-    let count = max 100 $ fromMaybe 100 mCount
+    let count = min 100 $ fromMaybe 100 mCount
     from <- maybe (runSdMRead getTipHash) return mFrom
     runSdMRead (getBlockMaybe from) >>= void . nothingToThrow BlockNotFound
     eBlocks <- runSdMRead $ getBlocksBefore count from
-    either (throwM . InternalError) (return . map (toBlockInfo False) . toList) eBlocks
+    either (throwM . InternalError) (return . map (toBlockInfo False) . reverse . toList) eBlocks
 
 getBlockInfo :: WitnessWorkMode ctx m => HeaderHash -> m BlockInfo
 getBlockInfo =
@@ -84,11 +97,18 @@ getAccountInfo address includeTxs = do
         else return Nothing
     return $ toAccountInfo account txs
 
-getTransactions :: WitnessWorkMode ctx m => Maybe Int -> m [TxInfo]
-getTransactions mCount = do
-    let count = max 100 $ fromMaybe 100 mCount
-    eTxs <- runSdMRead $ getTxs count
-    return . map toTxInfo . toList $ eTxs
+getTransactions :: WitnessWorkMode ctx m => Maybe Int -> Maybe GTxId -> m TxList
+getTransactions mCount mFrom = do
+    whenJust mFrom $
+        runSdMRead . getTxMaybe >=> void . nothingToThrow TransactionNotFound
+    eTxs <- runSdMRead $ getTxs (count + 1) mFrom
+    either (throwM . InternalError) (return . toTxList . reverse . toList) eTxs
+  where
+    count = min 100 $ fromMaybe 100 mCount
+    toTxList txs = TxList
+        { tlTransactions = toTxInfo <$> take count txs
+        , tlNextId = map (toGTxId . unGTxWitnessed . tbTx) . safeHead $ drop count txs
+        }
 
 getTransactionInfo :: WitnessWorkMode ctx m => GTxId -> m TxInfo
 getTransactionInfo =
@@ -104,16 +124,19 @@ getHashType hash = fmap (fromMaybe HashIsUnknown) . runMaybeT . asum $
     is hashType decode getMaybe =
         MaybeT . return . rightToMaybe . decode >=>
         MaybeT . getMaybe >=>
-        MaybeT . return . Just . const hashType
+        MaybeT . return . Just . hashType
     isBlock = is
-        HashIsBlock
+        (const HashIsBlock)
         (fromHex @HeaderHash)
         (runSdMRead . getBlockMaybe)
     isAddress = is
-        HashIsAddress
+        (const HashIsAddress)
         addrFromText
         getAccountMaybe
     isTx = is
-        HashIsTx
+        (distinguishTx . unGTxWitnessed . tbTx)
         fromHex
         (runSdMRead . getTxMaybe . GTxId)
+    distinguishTx = \case
+        GMoneyTx _ -> HashIsMoneyTx
+        GPublicationTx _ -> HashIsPublicationTx
