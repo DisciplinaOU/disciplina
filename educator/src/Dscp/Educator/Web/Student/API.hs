@@ -14,7 +14,6 @@ module Dscp.Educator.Web.Student.API
 
 import Data.Time.Clock (UTCTime)
 import Servant
-import Servant.Auth.Server (Auth)
 import Servant.Generic
 
 import qualified Dscp.Core as Core
@@ -39,7 +38,7 @@ data StudentApiEndpoints route = StudentApiEndpoints
 type StudentAPI =
     "api" :> "student" :> "v1" :> ToServant (StudentApiEndpoints AsApi)
 
-type ProtectedStudentAPI = Auth '[StudentAuth] (WithStudent AuthData) :> StudentAPI
+type ProtectedStudentAPI = Auth' :> StudentAPI
 
 type StudentApiHandlers m = StudentApiEndpoints (AsServerT m)
 

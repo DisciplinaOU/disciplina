@@ -11,13 +11,10 @@ import Fmt ((+|), (|+))
 import Loot.Log (logInfo)
 import Network.HTTP.Types.Header (hContentType)
 import Network.Wai.Middleware.Cors (CorsResourcePolicy (..), cors, simpleCorsResourcePolicy)
-import Servant ((:<|>) (..), Context (..), Handler, Server, err401, hoistServer,
+import Servant ((:<|>) (..), Context (..), Handler, Server, hoistServer,
                 hoistServerWithContext, serveWithContext)
-import Servant.Auth.Server (AuthResult (..), CookieSettings, JWTSettings, defaultCookieSettings,
-                            defaultJWTSettings, generateKey, throwAll)
 import Servant.Generic (toServant)
 
-import Dscp.Core (Student)
 import Dscp.Crypto (PublicKey, keyGen, withIntSeed)
 import Dscp.Educator.Config (HasEducatorConfig)
 import Dscp.Educator.Launcher (EducatorRealMode, EducatorWorkMode)
@@ -25,8 +22,8 @@ import Dscp.Educator.Web.Bot (EducatorBotSwitch (..), addBotHandlers, initialize
 import Dscp.Educator.Web.Educator (EducatorAPI, convertEducatorApiHandler, educatorAPI,
                                    educatorApiHandlers)
 import Dscp.Educator.Web.Params (EducatorWebParams (..))
-import Dscp.Educator.Web.Student (GetStudentsAction (..), ProtectedStudentAPI, StudentAPI,
-                                  WithStudent (..), convertStudentApiHandler, studentAPI,
+import Dscp.Educator.Web.Student (GetStudentsAction (..), ProtectedStudentAPI,
+                                  convertStudentApiHandler, studentAPI,
                                   studentApiHandlers)
 import Dscp.Web (ServerParams (..), serveWeb)
 
@@ -49,35 +46,31 @@ mkStudentApiServer
     -> m (Server ProtectedStudentAPI)
 mkStudentApiServer nat botSwitch = do
     case botSwitch of
-      EducatorBotOff -> return $ addAuth (getServer . studentApiHandlers)
+      EducatorBotOff -> return $ getServer . studentApiHandlers
       EducatorBotOn params -> initializeBot params $ do
-        return . addAuth $ (\student -> getServer . addBotHandlers student . studentApiHandlers $ student)
+        return $ (\student -> getServer . addBotHandlers student . studentApiHandlers $ student)
   where
     getServer handlers = hoistServerWithContext
         studentAPI
-        (Proxy :: Proxy '[CookieSettings, JWTSettings, GetStudentsAction])
+        (Proxy :: Proxy '[GetStudentsAction])
         nat
         (toServant handlers)
-    addAuth :: (Student -> Server StudentAPI) -> Server ProtectedStudentAPI
-    addAuth h = \case
-        Authenticated (WithStudent student _) -> h student
-        _ -> throwAll err401
+
+-- This is a temporary function that provides a dummy GetStudentAction
+createGetStudentsAction :: IO GetStudentsAction
+createGetStudentsAction = do
+    (tvr :: TVar [PublicKey]) <- atomically $ newTVar []
+    let addKeyWithSeed n =
+            let pk = snd $ withIntSeed n keyGen
+            in atomically $ modifyTVar' tvr (pk:)
+    traverse_ addKeyWithSeed [1000..1100]
+    return . GetStudentsAction $ atomically . readTVar $ tvr
 
 serveStudentAPIReal :: HasEducatorConfig => EducatorWebParams -> EducatorRealMode ()
 serveStudentAPIReal EducatorWebParams{..} = do
     let ServerParams{..} = ewpServerParams
-    -- We generate a JWK here because it is required by servant-auth.
-    -- In practice it is not used anywhere.
-    key <- liftIO $ generateKey
-    let jwtCfg = (defaultJWTSettings key)
-    (tvr :: TVar [PublicKey]) <- atomically $ newTVar []
-    let getStudents :: IO [PublicKey]
-        getStudents = atomically . readTVar $ tvr
-    let srvCtx = jwtCfg :. defaultCookieSettings :. (GetStudentsAction getStudents) :. EmptyContext
-    let (_, pk)   = withIntSeed 1000 keyGen
-    let (_, pk2) = withIntSeed 1001 keyGen
-    liftIO . atomically $ modifyTVar' tvr ([pk, pk2] ++)
-
+    getStudents <- liftIO $ createGetStudentsAction
+    let srvCtx = getStudents :. EmptyContext
 
     logInfo $ "Serving Student API on "+|spAddr|+""
     eCtx <- ask
