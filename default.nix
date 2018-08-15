@@ -40,6 +40,10 @@ buildStackApplication rec {
           testDepends = [ hspec tasty tasty-discover tasty-hspec ];
         }); 
         overrideModule = prev: overrideCabal prev (overridingSet final);
+        postInstall = ''
+          mkdir $out/etc/disciplina
+          cp ${src}/configuration.yaml} $_
+        ''
     in {
       rocksdb-haskell = dependCabal previous.rocksdb-haskell [ rocksdb ];
     } // (lib.mapAttrs (lib.const overrideModule) (getAttrs packages previous));
