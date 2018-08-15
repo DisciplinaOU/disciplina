@@ -1,16 +1,28 @@
-demo:
-  core:
+demo: &demo
+  core: &demo-core
     homeParam:
       path: "./tmp/"
     slotDuration: 10000 # 10 s
-    genesis:
+    genesis: &demo-genesis
       genesisSeed: "GromakNaRechke"
       governance:
         type: committeeOpen
         secret: "opencommittee"
-        n: 2
+        n: 4
       distribution:
         - equal: 1000
         - specific:
           - - "LL4qKn62hrdLh1vkyiidEFLfCaAngaVmtu3ipGVSubhackXS4pXNbeDC"
             - 100
+clusterCi:
+   <<: *demo
+   core:
+     <<: *demo-core
+     slotDuration: 20000
+     genesis:
+       <<: *demo-genesis
+       genesisSeed: "clusterCiGenesis"
+       governance:
+         type: committeeOpen
+         secret: "clusterCiCommittee"
+         n: 3

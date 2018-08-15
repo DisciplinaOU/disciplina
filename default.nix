@@ -38,6 +38,10 @@ buildStackApplication rec {
           configureFlags = [ "--ghc-option=-Werror" ];
           doCheck = true;
           testDepends = [ hspec tasty tasty-discover tasty-hspec ];
+          postInstall = ''
+            mkdir -p $out/etc/disciplina
+            cp ${src}/configuration.yaml $_
+          '';
         }); 
         overrideModule = prev: overrideCabal prev (overridingSet final);
     in {

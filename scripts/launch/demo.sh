@@ -30,7 +30,7 @@ base=$(dirname "$0")
 # project root
 root="$base/../.."
 # number of nodes to launch
-n=3
+n=4
 
 # permanent read-only files: configs, secrets...
 files="$root/run"
