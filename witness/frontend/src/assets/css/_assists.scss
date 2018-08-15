@@ -29,9 +29,12 @@
   }
 }
 
+.btn--arrow {
+  border: 1px solid $color-main;
+  color: $color-main;
+}
+
 .btn--forward {
-  border: 1px solid $color-muted;
-  color: $color-muted;
   &:before {
     content: '➞';
     display: inline-block;
@@ -40,14 +43,18 @@
   }
 }
 
+
 .btn--back {
-  border: 1px solid $color-main;
-  color: $color-main;
   &:after {
     content: '➞';
     display: inline-block;
     margin-left: 7px;
   }
+}
+
+.btn--gray {
+  border: 1px solid $color-muted;
+  color: $color-muted;
 }
 
 .btn--more {

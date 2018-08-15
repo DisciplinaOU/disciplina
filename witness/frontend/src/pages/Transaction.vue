@@ -1,5 +1,5 @@
 <template>
-  <div class="main">
+  <div class="main transaction">
       <div class="transaction marginTop30">
           <div class="container">
               <h3 class="lastSlots__title blockTitle marginBottom30">Transaction</h3>

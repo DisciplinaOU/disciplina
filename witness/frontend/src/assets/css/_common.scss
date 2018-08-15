@@ -320,11 +320,25 @@ ul {
     display: table-row;
     transition: background $transition;
     &:hover {
-      background: $color-hover-darker;
+      background: $color-main-light;
     }
 
     .link {
       color: $color-main;
+    }
+  }
+
+  .pseudoTable__row--student {
+    .cell__hash {
+      &:before {
+        content: '';
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        background-image: url("../img/transactionEducator.png");
+        background-size: contain;
+        margin-right: 5px;
+      }
     }
   }
 
@@ -441,6 +455,23 @@ ul {
   margin-bottom: 40px;
 }
 
+.transactionInformBlock--educator {
+  .transactionInformBlock__date {
+    padding-right: 0;
+  }
+  .transactionInformBlock__hash {
+    &:before {
+      content: '';
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      background-image: url("../img/transactionEducator.png");
+      background-size: contain;
+      margin-right: 5px;
+    }
+  }
+}
+
 .transactionInformBlock__title {
   display: flex;
   padding: 0 15px;
@@ -475,6 +506,10 @@ ul {
   &:first-child {
     padding-right: 30px;
   }
+}
+
+.informBlock__hash {
+  margin-bottom: 15px;
 }
 
 .informBlock__title {
@@ -514,11 +549,11 @@ ul {
 .summary__items {
   display: flex;
   padding: 25px 0;
-  justify-content: space-between;
+  justify-content: flex-start;
 }
 
 .itemSummary {
-  padding-right: 30px;
+  padding-right: 40px;
   &:last-child {
     padding-right: 0;
   }
@@ -589,6 +624,9 @@ ul {
 
 .slotInformationBlock {
   padding: 10px 0 60px;
+  .paginationBlock {
+    justify-content: space-between;
+  }
 }
 
 .slotInform {
@@ -668,4 +706,79 @@ ul {
     }
   }
 
+}
+
+
+//address
+
+.addressItem {
+  display: flex;
+  flex-direction: row;
+  font-size: 15px;
+}
+
+.addressItem__inform {
+  border-right: 1px solid $color-border;
+  padding: 12px 15px;
+  &:last-child {
+    border: 0;
+  }
+}
+.addressItem__title {
+  display: inline-block;
+  font-weight: 600;
+  margin-right: 10px;
+}
+.addressItem__value {
+  display: inline-block;
+  vertical-align: bottom;
+}
+
+@media screen and (max-width: 1200px) {
+  .addressItem {
+    flex-direction: column;
+  }
+  .addressItem__inform {
+    border-right: 0;
+    border-bottom: 1px solid $color-border;
+  }
+  .addressItem__value.hash {
+    max-width: 100%;
+    margin-top: 5px;
+  }
+}
+
+.address {
+  .transactionInformBlock__hash {
+    padding: 7px 25px 9px 25px;
+    margin-top: 7px;
+    margin-bottom: 7px;
+    background-color: $color-main-light;
+    border-radius: 3px;
+    margin-right: 15px;
+    order: 1;
+  }
+  .transactionInformBlock__totalSent {
+    order: 2;
+  }
+  .transactionInformBlock__date {
+    order: 3;
+    padding-right: 15px;
+    padding-left: 25px;
+  }
+  .transactionInformBlock__title {
+    padding-right: 25px;
+    justify-content: flex-start;
+  }
+  .transactionInformBlock__from {
+    padding-left: 25px;
+  }
+  @media screen and (max-width: 600px){
+    .transactionInformBlock__from {
+      padding-left: 0;
+    }
+    .transactionInformBlock__date {
+      padding-left: 0;
+    }
+  }
 }
