@@ -16,10 +16,11 @@ module Dscp.Resource.Network
 
 import Control.Lens (makeLenses)
 import Data.Reflection (Given (given), give)
+import qualified Data.Set as Set
 import Loot.Base.HasLens (HasLens (..))
 import Loot.Log (Logging)
-import Loot.Network.ZMQ (ZTGlobalEnv, ZTNetCliEnv, ZTNetServEnv, ZTNodeId (..), createNetCliEnv,
-                         createNetServEnv, termNetCliEnv, termNetServEnv, ztGlobalEnv,
+import Loot.Network.ZMQ (PreZTNodeId, ZTGlobalEnv, ZTNetCliEnv, ZTNetServEnv, createNetCliEnv,
+                         createNetServEnv, mkZTNodeId, termNetCliEnv, termNetServEnv, ztGlobalEnv,
                          ztGlobalEnvRelease)
 import qualified Text.Show
 
@@ -61,7 +62,7 @@ netLogging = given
 
 -- | Client networking params.
 data NetCliParams = NetCliParams
-    { ncPeers   :: !(Set ZTNodeId)
+    { ncPeers   :: !(Set PreZTNodeId)
       -- ^ Peers we should connect to.
     } deriving (Show)
 
@@ -83,8 +84,11 @@ instance WithNetLogging => AllocResource NetCliParams NetCliResources where
         buildComponentR "netcli" allocate release
       where
         allocate = do
+            ncPeersFinal <-
+                liftIO $ Set.fromList <$> mapM mkZTNodeId (Set.toList ncPeers)
+
             global <- ztGlobalEnv (unNetLogging netLogging)
-            cli <- createNetCliEnv global ncPeers
+            cli <- createNetCliEnv global ncPeersFinal
             pure $ NetCliResources global cli
         release NetCliResources{..} = do
             termNetCliEnv _ncClientEnv
@@ -96,11 +100,11 @@ instance WithNetLogging => AllocResource NetCliParams NetCliResources where
 
 -- | Server networking params.
 data NetServParams = NetServParams
-    { nsPeers           :: !(Set ZTNodeId)
+    { nsPeers           :: !(Set PreZTNodeId)
       -- ^ Peers we should connect to
-    , nsOurAddress      :: !ZTNodeId
+    , nsOurAddress      :: !PreZTNodeId
       -- ^ Our binding address
-    , nsInternalAddress :: !(Maybe ZTNodeId)
+    , nsInternalAddress :: !(Maybe PreZTNodeId)
       -- ^ Optional internal address that we'll bind to
       -- (nsOurAddress should be an external, addressable one anyway).
     } deriving (Show)
@@ -123,9 +127,13 @@ instance WithNetLogging => AllocResource NetServParams NetServResources where
         buildComponentR "netcli" allocate release
       where
         allocate = do
+            nsPeersFinal <- liftIO $ Set.fromList <$> mapM mkZTNodeId (Set.toList nsPeers)
+            nsOurAddressFinal <- liftIO $ mkZTNodeId nsOurAddress
+
             global <- ztGlobalEnv (unNetLogging netLogging)
-            cli <- createNetCliEnv global nsPeers
-            serv <- createNetServEnv global nsOurAddress nsInternalAddress
+            cli <- createNetCliEnv global nsPeersFinal
+            serv <- createNetServEnv global nsOurAddressFinal nsInternalAddress
+
             pure $ NetServResources global cli serv
         release NetServResources{..} = do
             termNetCliEnv _nsClientEnv
