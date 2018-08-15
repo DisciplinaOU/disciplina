@@ -269,6 +269,7 @@ walletEventToUI WalletState{ selection } = \case
       Account{..} <- accounts ^? ix (fromIntegral i)
       Just $ UiSelectionWallet $ UiWalletInfo
         { uwiLabel = Just $ fromMaybe (pretty accountAddress) accountName
+        , uwiId = pretty accountAddress
         , uwiWalletIdx = i
         , uwiBalance = Nothing
         , uwiAccounts = []
