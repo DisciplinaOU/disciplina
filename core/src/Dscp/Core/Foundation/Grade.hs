@@ -7,6 +7,8 @@ module Dscp.Core.Foundation.Grade
        , gD
        , gE
        , gF
+
+       , isPositiveGrade
        ) where
 
 import Dscp.Core.Foundation.Educator (Grade (..))
@@ -18,3 +20,7 @@ gC = UnsafeGrade 60
 gD = UnsafeGrade 40
 gE = UnsafeGrade 20
 gF = UnsafeGrade 0
+
+-- | Whether assignment with this grade should be considered passed.
+isPositiveGrade :: Grade -> Bool
+isPositiveGrade _ = True  -- most easy scenario to work with, fine for alpha ver

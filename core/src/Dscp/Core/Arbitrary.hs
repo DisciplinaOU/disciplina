@@ -16,6 +16,7 @@ module Dscp.Core.Arbitrary
     , TestItem (..)
     , mkTestItem
     , oneTestItem
+    , variousItems
     , tiList
     , tiInfUnique
     , genCoreTestEnv
@@ -120,6 +121,10 @@ data TestItemParam a
 -- | Use one item everywhere.
 oneTestItem :: Gen a -> TestItemParam a
 oneTestItem gen = FixedItemSet (one <$> gen)
+
+-- | Use multiple items, but those may repeat.
+variousItems :: Arbitrary a => TestItemParam a
+variousItems = FixedItemSet arbitrary
 
 -- | Parameters to generate 'CoreTestEnv'.
 data CoreTestParams = CoreTestParams
