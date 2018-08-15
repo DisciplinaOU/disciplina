@@ -25,8 +25,15 @@ data Balances = Balances
 
 data BlockInfo = BlockInfo
     { biHeaderHash :: HeaderHash
+    , biNextHash :: HeaderHash
+    , biMerkleRootHash :: Text
     , biHeader :: Header
     , biIsGenesis :: Bool
+    , biSince :: Word64  -- µs since UNIX epoch start
+    , biSize :: Int64  -- bytes
+    , biTransactionCount :: Int
+    , biTotalOutput :: Coin
+    , biTotalFees :: Coin
     , biTransactions :: Maybe [TxInfo]
     }
 

@@ -9,6 +9,8 @@ module Dscp.Witness.Web.Logic
        , getHashType
        ) where
 
+import Codec.Serialise (serialise)
+import qualified Data.ByteString.Lazy as BS
 import UnliftIO.Async (async)
 
 import Dscp.Core
@@ -37,15 +39,25 @@ submitUserTxAsync tw = void . async $ submitUserTx tw
 toBlockInfo :: HasWitnessConfig => Bool -> Block -> BlockInfo
 toBlockInfo includeTxs block = BlockInfo
     { biHeaderHash = hh
+    , biNextHash = hh  -- TODO
+    , biMerkleRootHash = "..." -- TODO
     , biHeader = bHeader block
     , biIsGenesis = block == genesisBlock
+    , biSince = getSlotSince . hSlotId . bHeader $ block
+    , biSize = BS.length . serialise $ block
+    , biTransactionCount = length txs
+    , biTotalOutput = Coin $ sum $ unCoin . txTotalOutput . unGTxWitnessed <$> txs
+    , biTotalFees = Coin 0  -- TODO
     , biTransactions =
         if includeTxs
-        then Just . map (TxInfo (Just hh) . unGTxWitnessed) . bbTxs . bBody $ block
+        then Just $ TxInfo (Just hh) . unGTxWitnessed <$> txs
         else Nothing
     }
   where
     hh = headerHash block
+    txs = bbTxs . bBody $ block
+    txTotalOutput (GMoneyTx tx) = Coin $ sum $ unCoin . txOutValue <$> txOuts tx
+    txTotalOutput (GPublicationTx _) = Coin 0
 
 toAccountInfo :: Account -> Maybe [GTxInBlock] -> AccountInfo
 toAccountInfo account txs = AccountInfo

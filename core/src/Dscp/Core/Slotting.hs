@@ -3,6 +3,7 @@
 module Dscp.Core.Slotting
        ( SlotId (..)
        , getCurrentSlot
+       , getSlotSince
        , waitUntilNextSlot
        ) where
 
@@ -24,6 +25,9 @@ getCurrentSlot :: (HasCoreConfig, MonadIO m) => m SlotId
 getCurrentSlot = do
     curTime <- getTimeMcs
     pure $ SlotId $ curTime `div` slotLength
+
+getSlotSince :: HasCoreConfig => SlotId -> Word64
+getSlotSince (SlotId i) = i * slotLength
 
 waitUntilNextSlot :: (HasCoreConfig, MonadIO m) => m SlotId
 waitUntilNextSlot = do

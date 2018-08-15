@@ -208,10 +208,25 @@ definitions:
     properties:
       headerHash:
         $ref: "#/definitions/Hash"
+      nextHash:
+        $ref: "#/definitions/Hash"
+      merkleRootHash:
+        $ref: "#/definitions/Hash"
       header:
         $ref: "#/definitions/BlockHeader"
       isGenesis:
         type: boolean
+      since:
+        type: integer
+        format: int64
+        description: Microseconds since UNIX epoch start
+      size:
+        type: integer
+        format: int64
+        description: Size in bytes
+      transactionCount:
+        type: integer
+        format: int32
   BlockHeader:
     type: object
     properties:
@@ -229,6 +244,10 @@ definitions:
         format: int64
       prevHash:
         $ref: "#/definitions/Hash"
+      totalOutput:
+        $ref: "#/definitions/Coin"
+      totalFees:
+        $ref: "#/definitions/Coin"
   AccountInfo:
     type: object
     properties:
