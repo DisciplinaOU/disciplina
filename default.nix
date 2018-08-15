@@ -40,7 +40,7 @@ buildStackApplication rec {
           testDepends = [ hspec tasty tasty-discover tasty-hspec ];
           postInstall = ''
             mkdir -p $out/etc/disciplina
-            cp ${src}/configuration.yaml} $_
+            cp ${src}/configuration.yaml $_
           '';
         }); 
         overrideModule = prev: overrideCabal prev (overridingSet final);
