@@ -83,3 +83,26 @@
       </div>
   </div>
 </template>
+
+<script>
+import { mapGetters, mapActions } from 'vuex'
+
+export default {
+  name: 'Block',
+  beforeRouteEnter (to, from, next) {
+    next(vm => {
+      vm.getBlock(to.params.hash)
+    })
+  },
+  computed: {
+    ...mapGetters([
+      'block'
+    ])
+  },
+  methods: {
+    ...mapActions([
+      'getBlock'
+    ])
+  }
+}
+</script>
