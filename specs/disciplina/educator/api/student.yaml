@@ -46,6 +46,8 @@ paths:
             type: array
             items:
               $ref: '#/definitions/Course'
+        401:
+          $ref: "#/responses/Unauthorized"
 
   /courses/{courseId}:
     get:
@@ -65,6 +67,8 @@ paths:
             $ref: '#/definitions/Course'
         404:
           description: Course with given ID not found
+        401:
+          $ref: "#/responses/Unauthorized"
 
   /assignments:
     get:
@@ -91,6 +95,8 @@ paths:
             type: array
             items:
               $ref: '#/definitions/Assignment'
+        401:
+          $ref: "#/responses/Unauthorized"
 
   /assignments/{assignmentHash}:
     get:
@@ -110,6 +116,8 @@ paths:
             $ref: '#/definitions/Assignment'
         404:
           description: Assignment with given wasn not found (or a user has no rights to look it up)
+        401:
+          $ref: "#/responses/Unauthorized"
 
   /submissions:
     get:
@@ -132,6 +140,8 @@ paths:
             type: array
             items:
               $ref: '#/definitions/Submission'
+        401:
+          $ref: "#/responses/Unauthorized"
     post:
       tags:
         - submissions
@@ -158,6 +168,8 @@ paths:
           description: Either submission body or submission signature is invalid
           schema:
             $ref: '#/definitions/ErrResponse'
+        401:
+          $ref: "#/responses/Unauthorized"
 
   /submissions/{submissionHash}:
     get:
@@ -177,6 +189,8 @@ paths:
             $ref: '#/definitions/Submission'
         '404':
           description: Submission with given hash was not found (or a user has no rights to look it up)
+        401:
+          $ref: "#/responses/Unauthorized"
     delete:
       tags:
         - submissions
@@ -196,6 +210,8 @@ paths:
             $ref: '#/definitions/ErrResponse'
         '404':
           description: Submission with given hash not found
+        401:
+          $ref: "#/responses/Unauthorized"
 
   /proofs:
     get:
@@ -218,13 +234,36 @@ paths:
           description: successfull operation
           schema:
             $ref: '#/definitions/Proofs'
+        401:
+          $ref: "#/responses/Unauthorized"
 
 securityDefinitions:
   StudentAuth:
     type: apiKey
-    name: jwt  # TODO: name of header containing jwt data
+    name: Authorization
     in: header
-    description: Some description # TODO
+    description: |
+      Authentication system requires a signed JWT in Authorization header in `Bearer <JWT>` format. Example header:
+      ```
+      Authorization: Bearer eyJhbGciOiJFZERTQSJ9.eyJkYXQiOnsiYWRQYXRoIjoiL2FwaS9lZHVjYXRvci92MS9zdHVkZW50cyIsImFkVGltZSI6IjIwOTktMDgtMTBUMTM6MjY6NTkuNDYxOTk4MTM2WiJ9fQ.gU032BGkGwllzPtBLxsvXNZttI6qmEh4M2DGfdiIV6k2L_SuPNR8-YHGphQ2_bytOSKl4Hf8LKPt9g0wNjJbAQ
+      ```
+      The JWT should be signed by the student's private key and contain one claim "dat". The claim should have an object inside with two fields "adPath" and "adTime'. "adPath" should contain the path to the endpoint as it is going to be in the raw request and "adTime" should have the current time in ISO-8601 format. Example JWT object:
+      ```
+      {
+        "dat": {
+          "adTime": "2018-08-10T13:22:40.461998136Z",
+          "adPath": "/api/student/v1/courses"
+        }
+      }
+      ```
+      If the request's raw path doesn't match the one in "adPath" or "adTime" is more than 5 minutes behind the server current time the authentication process will fail.
+
+responses:
+  Unauthorized:
+    description: Unauthorized
+    headers:
+      WWW-Authenticate:
+        type: string
 
 security:
   - StudentAuth: []
