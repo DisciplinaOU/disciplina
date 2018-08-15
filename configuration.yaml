@@ -14,12 +14,12 @@ demo: &demo
         - specific:
           - - "LL4qKn62hrdLh1vkyiidEFLfCaAngaVmtu3ipGVSubhackXS4pXNbeDC"
             - 100
-clusterCi: 
+clusterCi:
    <<: *demo
-   core: 
+   core:
      <<: *demo-core
-     slotDuration: 20000 
-     genesis: 
+     slotDuration: 20000
+     genesis:
        <<: *demo-genesis
        genesisSeed: "clusterCiGenesis"
        governance:
