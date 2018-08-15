@@ -96,7 +96,7 @@ paths:
           schema:
             allOf:
             - $ref: "#/definitions/BlockInfo"
-            - $ref: "#/definitions/TransactionList"
+            - $ref: "#/definitions/BlockTransactionList"
         400:
           description: Invalid input
           schema:
@@ -162,7 +162,9 @@ paths:
           schema:
             type: array
             items:
-              $ref: "#/definitions/TransactionInfo"
+              allOf:
+              - $ref: "#/definitions/TransactionInfo"
+              - $ref: "#/definitions/TransactionBlockInfo"
   /transactions/{transactionHash}:
     get:
       summary: Get information about a transaction.
@@ -183,7 +185,9 @@ paths:
         200:
           description: Successful operation
           schema:
-            $ref: "#/definitions/TransactionInfo"
+            allOf:
+            - $ref: "#/definitions/TransactionInfo"
+            - $ref: "#/definitions/TransactionBlockInfo"
         400:
           description: Invalid input
           schema:
@@ -271,8 +275,6 @@ definitions:
         - publication
       txId:
         $ref: "#/definitions/Hash"
-      headerHash:
-        $ref: "#/definitions/Hash"
       money:
         type: object
         properties:
@@ -304,7 +306,21 @@ definitions:
             $ref: "#/definitions/Hash"
           prevBlock:
             $ref: "#/definitions/Hash"
+  TransactionBlockInfo:
+    type: object
+    properties:
+      block:
+        $ref: "#/definitions/BlockInfo"
   TransactionList:
+    type: object
+    properties:
+      transactions:
+        type: array
+        items:
+          allOf:
+          - $ref: "#/definitions/TransactionInfo"
+          - $ref: "#/definitions/TransactionBlockInfo"
+  BlockTransactionList:
     type: object
     properties:
       transactions:

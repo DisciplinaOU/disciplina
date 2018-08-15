@@ -56,6 +56,7 @@ faucetTransferMoneyTo dest = do
             then pure AccountInfo
                       { aiBalances = Balances (Coin 100000)
                       , aiNextNonce = 7
+                      , aiTransactionCount = 6
                       , aiTransactions = Nothing
                       }
             else wGetAccount wc source False

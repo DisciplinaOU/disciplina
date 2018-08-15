@@ -167,7 +167,7 @@ getTxs ::
     -> SdM (OldestFirst [] GTxInBlock)
 getTxs depth = getTipBlock >>= map OldestFirst . loadTxs [] depth
   where
-    loadTxs !res depthLeft Block{..}
+    loadTxs !res depthLeft block@Block{..}
         | depthLeft == 0 =
             return res
         | length txs >= depthLeft =
@@ -176,4 +176,4 @@ getTxs depth = getTipBlock >>= map OldestFirst . loadTxs [] depth
             Nothing -> return $ txs ++ res
             Just nextBlock -> loadTxs (txs ++ res) (depthLeft - length txs) nextBlock
       where
-        txs = GTxInBlock (Just $ headerHash bHeader) <$> bbTxs bBody
+        txs = GTxInBlock (Just block) <$> bbTxs bBody

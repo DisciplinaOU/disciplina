@@ -50,7 +50,7 @@ toBlockInfo includeTxs block = BlockInfo
     , biTotalFees = Coin 0  -- TODO
     , biTransactions =
         if includeTxs
-        then Just $ TxInfo (Just hh) . unGTxWitnessed <$> txs
+        then Just $ TxInfo Nothing . unGTxWitnessed <$> txs
         else Nothing
     }
   where
@@ -59,18 +59,19 @@ toBlockInfo includeTxs block = BlockInfo
     txTotalOutput (GMoneyTx tx) = Coin $ sum $ unCoin . txOutValue <$> txOuts tx
     txTotalOutput (GPublicationTx _) = Coin 0
 
-toAccountInfo :: Account -> Maybe [GTxInBlock] -> AccountInfo
+toAccountInfo :: HasWitnessConfig => Account -> Maybe [GTxInBlock] -> AccountInfo
 toAccountInfo account txs = AccountInfo
     { aiBalances = Balances
         { bConfirmed = Coin . fromIntegral $ aBalance account
         }
     , aiNextNonce = aNonce account + 1
+    , aiTransactionCount = aNonce account
     , aiTransactions = map toTxInfo <$> txs
     }
 
-toTxInfo :: GTxInBlock -> TxInfo
+toTxInfo :: HasWitnessConfig => GTxInBlock -> TxInfo
 toTxInfo tx = TxInfo
-    { tiHeaderHash = tbHeaderHash tx
+    { tiBlock = toBlockInfo False <$> tbBlock tx
     , tiTx = unGTxWitnessed $ tbTx tx
     }
 

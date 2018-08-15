@@ -41,11 +41,12 @@ data BlockInfo = BlockInfo
 data AccountInfo = AccountInfo
     { aiBalances  :: Balances
     , aiNextNonce :: Integer
+    , aiTransactionCount :: Integer
     , aiTransactions :: Maybe [TxInfo]
     }
 
 data TxInfo = TxInfo
-    { tiHeaderHash :: Maybe HeaderHash
+    { tiBlock :: Maybe BlockInfo
     , tiTx :: GTx
     }
 
@@ -81,7 +82,7 @@ instance Buildable (ForResponseLog AccountInfo) where
 instance Buildable (ForResponseLog TxInfo) where
     build (ForResponseLog TxInfo{..}) =
         "{ txId = " +| toGTxId tiTx |+
-        ", headerHash = " +| tiHeaderHash |+
+        ", headerHash = " +| biHeaderHash <$> tiBlock |+
         " }"
 
 instance Buildable (ForResponseLog [TxInfo]) where
@@ -100,7 +101,7 @@ deriveJSON defaultOptions{ omitNothingFields = True } ''AccountInfo
 
 instance ToJSON TxInfo where
     toJSON TxInfo{..} = object $
-        maybe [] (\hh -> ["headerHash" .= hh]) tiHeaderHash ++
+        maybe [] (\block -> ["block" .= block]) tiBlock ++
         case tiTx of
             GMoneyTx tx ->
                 [ "txId" .= toTxId tx
@@ -116,8 +117,8 @@ instance ToJSON TxInfo where
 instance FromJSON TxInfo where
     parseJSON = withObject "tx info" $ \o -> do
         txType :: Text <- o .: "txType"
-        hh <- o .: "headerHash"
-        TxInfo hh <$> case txType of
+        block <- o .: "block"
+        TxInfo block <$> case txType of
             "money" -> GMoneyTx <$> o .: "money"
             "publication" -> GPublicationTx <$> o .: "publication"
             other -> fail $ "invalid transaction type: " ++ toString other
