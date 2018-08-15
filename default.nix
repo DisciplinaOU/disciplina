@@ -39,7 +39,7 @@ buildStackApplication rec {
           doCheck = true;
           testDepends = [ hspec tasty tasty-discover tasty-hspec ];
           postInstall = ''
-            mkdir $out/etc/disciplina
+            mkdir -p $out/etc/disciplina
             cp ${src}/configuration.yaml} $_
           '';
         }); 
