@@ -161,7 +161,8 @@ getBlocksBefore depthDiff (headerHash -> newerH) = runExceptT $ do
 
     pure blocks
 
--- | Retrieves the requested amount of recent transactions
+-- | Retrieves the requested amount of transactions starting with the given one.
+-- If no transaction is provided, most recent transactions are retrieved.
 getTxs ::
        HasWitnessConfig
     => Int

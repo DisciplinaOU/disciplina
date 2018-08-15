@@ -60,7 +60,7 @@ data HashIs
     = HashIsUnknown
     | HashIsBlock
     | HashIsAddress
-    | HashIsTx
+    | HashIsMoneyTx
     | HashIsPublicationTx
     deriving (Eq, Show, Generic)
 
@@ -136,14 +136,14 @@ instance ToJSON HashIs where
         HashIsUnknown -> "unknown"
         HashIsBlock -> "block"
         HashIsAddress -> "address"
-        HashIsTx -> "transaction"
-        HashIsPublicationTx -> "publication"
+        HashIsMoneyTx -> "money-transaction"
+        HashIsPublicationTx -> "publication-transaction"
 
 instance FromJSON HashIs where
     parseJSON = withText "hash type" $ \case
         "unknown" -> pure HashIsUnknown
         "block" -> pure HashIsBlock
         "address" -> pure HashIsAddress
-        "transaction" -> pure HashIsTx
-        "publication" -> pure HashIsPublicationTx
+        "money-transaction" -> pure HashIsMoneyTx
+        "publication-transaction" -> pure HashIsPublicationTx
         _ -> fail "Invalid hash type"

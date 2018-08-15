@@ -33,16 +33,16 @@ paths:
             Type of the entity:
               * `block`
               * `address`
-              * `transaction`
-              * `publication`
+              * `money-transaction`
+              * `publication-transaction`
               * `unknown`
           schema:
             type: string
             enum:
             - block
             - address
-            - transaction
-            - publication
+            - money-transaction
+            - publication-transaction
             - unknown
   /blocks:
     get:

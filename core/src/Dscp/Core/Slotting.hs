@@ -26,6 +26,7 @@ getCurrentSlot = do
     curTime <- getTimeMcs
     pure $ SlotId $ curTime `div` slotLength
 
+-- Time of slot start, in microseconds
 getSlotSince :: HasCoreConfig => SlotId -> Word64
 getSlotSince (SlotId i) = i * slotLength
 

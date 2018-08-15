@@ -138,5 +138,5 @@ getHashType hash = fmap (fromMaybe HashIsUnknown) . runMaybeT . asum $
         fromHex
         (runSdMRead . getTxMaybe . GTxId)
     distinguishTx = \case
-        GMoneyTx _ -> HashIsTx
+        GMoneyTx _ -> HashIsMoneyTx
         GPublicationTx _ -> HashIsPublicationTx
