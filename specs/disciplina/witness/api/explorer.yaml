@@ -34,6 +34,7 @@ paths:
               * `block`
               * `address`
               * `transaction`
+              * `publication`
               * `unknown`
           schema:
             type: string
@@ -41,6 +42,7 @@ paths:
             - block
             - address
             - transaction
+            - publication
             - unknown
   /blocks:
     get:

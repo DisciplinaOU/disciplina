@@ -55,6 +55,7 @@ data HashIs
     | HashIsBlock
     | HashIsAddress
     | HashIsTx
+    | HashIsPublicationTx
     deriving (Eq, Show, Generic)
 
 ---------------------------------------------------------------------------
@@ -129,6 +130,7 @@ instance ToJSON HashIs where
         HashIsBlock -> "block"
         HashIsAddress -> "address"
         HashIsTx -> "transaction"
+        HashIsPublicationTx -> "publication"
 
 instance FromJSON HashIs where
     parseJSON = withText "hash type" $ \case
@@ -136,4 +138,5 @@ instance FromJSON HashIs where
         "block" -> pure HashIsBlock
         "address" -> pure HashIsAddress
         "transaction" -> pure HashIsTx
+        "publication" -> pure HashIsPublicationTx
         _ -> fail "Invalid hash type"

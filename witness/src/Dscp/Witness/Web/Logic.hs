@@ -117,16 +117,19 @@ getHashType hash = fmap (fromMaybe HashIsUnknown) . runMaybeT . asum $
     is hashType decode getMaybe =
         MaybeT . return . rightToMaybe . decode >=>
         MaybeT . getMaybe >=>
-        MaybeT . return . Just . const hashType
+        MaybeT . return . Just . hashType
     isBlock = is
-        HashIsBlock
+        (const HashIsBlock)
         (fromHex @HeaderHash)
         (runSdMRead . getBlockMaybe)
     isAddress = is
-        HashIsAddress
+        (const HashIsAddress)
         addrFromText
         getAccountMaybe
     isTx = is
-        HashIsTx
+        (distinguishTx . unGTxWitnessed . tbTx)
         fromHex
         (runSdMRead . getTxMaybe . GTxId)
+    distinguishTx = \case
+        GMoneyTx _ -> HashIsTx
+        GPublicationTx _ -> HashIsPublicationTx
