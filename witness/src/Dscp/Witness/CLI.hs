@@ -13,7 +13,7 @@ module Dscp.Witness.CLI
     ) where
 
 import qualified Data.Set as Set
-import Loot.Network.ZMQ.Common (ZTNodeId (..), parseZTNodeId)
+import Loot.Network.ZMQ.Common (PreZTNodeId (..), parsePreZTNodeId)
 import Options.Applicative (Parser, auto, eitherReader, help, long, metavar, option, strOption,
                             value)
 
@@ -40,25 +40,25 @@ rocksParamsParser = fmap RocksDBParams $ strOption $
 ----------------------------------------------------------------------------
 
 -- | Parse peers to connect to.
-peersParser :: Parser (Set ZTNodeId)
+peersParser :: Parser (Set PreZTNodeId)
 peersParser =
     fmap Set.fromList $
     many $
-    option (eitherReader parseZTNodeId)
+    option (eitherReader parsePreZTNodeId)
            (long "peer" <> metavar "HOST:PORT1:PORT2" <> help "Peer(s) we should connect to")
 
 -- | Parser for ZTNodeId we will bind on.
-ourZTNodeIdParser :: Parser ZTNodeId
+ourZTNodeIdParser :: Parser PreZTNodeId
 ourZTNodeIdParser = do
-    option (eitherReader parseZTNodeId)
+    option (eitherReader parsePreZTNodeId)
            (long "bind" <>
             metavar "HOST:PORT1:PORT2" <>
             help "Host/ports to bind on, also the public address we share with other nodes")
 
 -- | Parser for ZTNodeId we will bind on.
-internalZTNodeIdParser :: Parser ZTNodeId
+internalZTNodeIdParser :: Parser PreZTNodeId
 internalZTNodeIdParser = do
-    option (eitherReader parseZTNodeId)
+    option (eitherReader parsePreZTNodeId)
            (long "bind-internal" <>
             metavar "HOST:PORT1:PORT2" <>
             help "Overrides --bind, still the --bind value must be addressable")
