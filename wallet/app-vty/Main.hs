@@ -30,6 +30,7 @@ main = do
   let
     features = UiFeatures
       { featureStatus = False
+      , featureExport = True
       , featureAccounts = False
       , featureFullRestore = False
       , featureSecretKeyName = "Secret key"
