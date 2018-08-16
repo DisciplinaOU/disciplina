@@ -2,49 +2,37 @@ import blockexplorer from '@/api/blockexplorer'
 
 const state = {
   transactions: [],
-  current: {},
-  currentEducator: {}
+  listFinished: false
 }
 
 const actions = {
-  getAllTransactions ({commit}) {
+  checkListFinished ({commit}, page = 1, perPage = 1) {
+    blockexplorer.getTransactions(Transactions => {
+      commit('setListFinished', Transactions)
+    }, page + 1, perPage)
+  },
+  getAllTransactions ({commit}, page = 1, perPage = 1) {
     blockexplorer.getTransactions(Transactions => {
       commit('setTransactions', Transactions)
-    })
-  },
-  getTransaction ({commit, hash}) {
-    blockexplorer.getTransaction(Transaction => {
-      commit('setCurrentTransaction', Transaction)
-    }, hash)
-  },
-  getEducatorTransaction ({commit, hash}) {
-    blockexplorer.getEducatorTransaction(EducatorTransaction => {
-      commit('setCurrentEducatorTransaction', EducatorTransaction)
-    }, hash)
+    }, page, perPage)
   }
 }
 
 const mutations = {
+  setListFinished (state, transactions) {
+    state.listFinished = transactions.length === 0
+  },
   setTransactions (state, transactions) {
-    state.all = transactions
-  },
-  setCurrentTransaction (state, transaction) {
-    state.current = transaction
-  },
-  setCurrentEducatorTransaction (state, educatorTransaction) {
-    state.currentEducator = educatorTransaction
+    state.transactions.push(...transactions)
   }
 }
 
 const getters = {
+  listFinished (state) {
+    return state.listFinished
+  },
   transactions (state) {
-    return state.all
-  },
-  transaction (state) {
-    return state.current
-  },
-  educatorTransaction (state) {
-    return state.currentEducator
+    return state.transactions
   }
 }
 

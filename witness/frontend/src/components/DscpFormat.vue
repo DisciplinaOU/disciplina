@@ -1,13 +1,13 @@
 <template>
-  <p class="transactionInformBlock__totalSent btn btn--blue">
+  <span>
     {{ wholePart }}
     <span class="small" v-if="realPart">.{{ realPart }}</span> DSCP
-  </p>
+  </span>
 </template>
 
 <script>
 export default {
-  name: 'DscpButton',
+  name: 'DscpFormat',
   props: ['value'],
   computed: {
     wholePart () {
@@ -17,7 +17,7 @@ export default {
       return this.splitted[1]
     },
     splitted () {
-      return this.value.toString().split('.')
+      return this.value.toString().split('.') || []
     }
   }
 }

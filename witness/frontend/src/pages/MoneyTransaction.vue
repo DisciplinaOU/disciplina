@@ -1,18 +1,19 @@
 <template>
-  <div class="main transaction">
+  <div class="main transaction" v-if="moneyLoaded">
       <div class="transaction marginTop30">
           <div class="container">
               <h3 class="lastSlots__title blockTitle marginBottom30">Transaction</h3>
               <div class="transactionInformBlock">
                   <div class="transactionInformBlock__title">
-                      <p class="transactionInformBlock__hash hash">{{ transaction.txId }}</p>
-                      <p class="transactionInformBlock__date">07/16/2018 09:33:11</p>
-                      <dscp-button :value="transaction.money.outValue"/>
+                      <p class="transactionInformBlock__hash hash">{{ moneyTransaction.txId }}</p>
+                      <p class="transactionInformBlock__totalSent btn btn--blue">
+                        <dscp-format :value="moneyTransaction.outValue"/>
+                      </p>
                   </div>
                   <div class="transactionInformBlock__fromTo">
                       <div class="transactionInformBlock__from informBlock">
                           <p class="informBlock__title">From</p>
-                          <p class="informBlock__hash hash">DdzFFzCqrhsezA9Ue95vSMUmU9KvJ2AHkvoRKMCfoajLnqyPdeeGjMiQYGgf1zjoc33BhEGkiQZG78JWjSwlskdjfhkjfn</p>
+                          <p class="informBlock__hash hash">{{ moneyTransaction.money.inAcc.addr }}</p>
                       </div>
                       <div class="transactionInformBlock__to informBlock">
                           <p class="informBlock__title">To</p>
@@ -43,25 +44,24 @@
 </template>
 
 <script>
-import DscpButton from '@/components/DscpButton'
+import DscpFormat from '@/components/DscpFormat'
 import { mapGetters, mapActions } from 'vuex'
 
 export default {
   name: 'Transaction',
-  components: { DscpButton },
-  beforeRouteEnter (to, from, next) {
-    next(vm => {
-      vm.getTransaction(to.params.hash)
-    })
+  components: { DscpFormat },
+  beforeMount () {
+    this.getMoneyTransaction(this.$route.params.hash)
   },
   computed: {
     ...mapGetters([
-      'transaction'
+      'moneyTransaction',
+      'moneyLoaded'
     ])
   },
   methods: {
     ...mapActions([
-      'getTransaction'
+      'getMoneyTransaction'
     ])
   }
 }

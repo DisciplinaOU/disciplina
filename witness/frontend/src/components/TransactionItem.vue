@@ -1,23 +1,23 @@
 <template>
   <money :transaction="transaction" v-if="isMoney(transaction)"/>
-  <educator :transaction="transaction" v-else-if="isEducator(transaction)"/>
+  <publication :transaction="transaction" v-else-if="isPublication(transaction)"/>
 </template>
 
 <script>
 import Money from '@/components/TransactionItem/Money'
-import Educator from '@/components/TransactionItem/Educator'
+import Publication from '@/components/TransactionItem/Publication'
 
 export default {
   name: 'TransactionItem',
   props: {
     transaction: Object
   },
-  components: { Money, Educator },
+  components: { Money, Publication },
   methods: {
     isMoney: (transaction) =>
       transaction.txType === 'money',
-    isEducator: (transaction) =>
-      transaction.txType === 'educator'
+    isPublication: (transaction) =>
+      transaction.txType === 'publication'
   }
 }
 </script>

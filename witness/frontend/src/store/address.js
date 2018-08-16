@@ -8,10 +8,10 @@ const state = {
 }
 
 const actions = {
-  getAddress ({commit, hash}) {
+  getAddress ({commit}, hash) {
     blockexplorer.getAddress(Address => {
       commit('setAddress', Address)
-    })
+    }, hash)
   }
 }
 

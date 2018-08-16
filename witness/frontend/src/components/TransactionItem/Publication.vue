@@ -2,7 +2,7 @@
   <div class="transactionInformBlock transactionInformBlock--educator">
       <div class="transactionInformBlock__title">
           <p class="transactionInformBlock__hash hash">
-            <router-link :to="{ name: 'transactionShow', params: {hash: transaction.txId} }" class="link link--colorBlue">{{ transaction.txId }}</router-link>
+            <router-link :to="{ name: 'publicationTransactionShow', params: {hash: transaction.txId} }" class="link link--colorBlue">{{ transaction.txId }}</router-link>
           </p>
           <p class="transactionInformBlock__date">07/16/2018 09:33:11</p>
       </div>

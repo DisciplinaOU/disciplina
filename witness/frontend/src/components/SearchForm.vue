@@ -1,14 +1,24 @@
 <template>
-  <form action="#">
+  <form action="#" v-on:submit.prevent="searchHash">
       <div class="mainForm">
-          <input type="text" id="js-search" class="mainForm__input" name="s" placeholder="Search addresses, transactions, epochs & slots on the DISCIPLINA network">
-          <button class="mainForm__send" id="js-send">Search</button>
+          <input type="text" class="mainForm__input" v-model="query" placeholder="Search addresses, transactions, epochs & slots on the DISCIPLINA network">
+          <button class="mainForm__send">Search</button>
       </div>
   </form>
 </template>
 
 <script>
 export default {
-  name: 'SearchForm'
+  name: 'SearchForm',
+  data () {
+    return {
+      query: ''
+    }
+  },
+  methods: {
+    searchHash () {
+      return true
+    }
+  }
 }
 </script>

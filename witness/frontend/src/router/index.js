@@ -4,39 +4,42 @@ import Router from 'vue-router'
 import Base from '@/pages/Base'
 import Index from '@/pages/Index'
 import Block from '@/pages/Block'
-import Transaction from '@/pages/Transaction'
 import Address from '@/pages/Address'
-import EducatorTransaction from '@/pages/EducatorTransaction'
+import MoneyTransaction from '@/pages/MoneyTransaction'
+import PublicationTransaction from '@/pages/PublicationTransaction'
 
 Vue.use(Router)
 
 export default new Router({
   routes: [
-
     {
       path: '/',
       component: Base,
       children: [
         {
           path: '',
+          name: 'index',
           component: Index
         },
         {
           path: '/block/:hash',
+          name: 'blockShow',
           component: Block
         },
         {
-          path: '/transaction/:hash',
-          name: 'transactionShow',
-          component: Transaction
-        },
-        {
           path: '/address/:hash',
+          name: 'addressShow',
           component: Address
         },
         {
-          path: '/educator-transaction/:hash',
-          component: EducatorTransaction
+          path: '/money-transaction/:hash',
+          name: 'moneyTransactionShow',
+          component: MoneyTransaction
+        },
+        {
+          path: '/publication-transaction/:hash',
+          name: 'publicationTransactionShow',
+          component: PublicationTransaction
         }
       ]
     }

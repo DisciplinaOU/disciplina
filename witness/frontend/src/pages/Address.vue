@@ -40,7 +40,7 @@ export default {
     ])
   },
   mounted () {
-    this.getAddress()
+    this.getAddress(this.$route.params.hash)
   },
   components: { TransactionList },
   methods: {

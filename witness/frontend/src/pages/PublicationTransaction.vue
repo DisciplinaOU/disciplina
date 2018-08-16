@@ -1,21 +1,21 @@
 <template>
-  <div class="main eduTransaction">
+  <div class="main eduTransaction" v-if="loaded">
     <div class="transaction marginTop30">
       <div class="container">
         <h3 class="lastSlots__title blockTitle marginBottom30">Educator transaction</h3>
         <div class="transactionInformBlock">
           <div class="transactionInformBlock__title">
-            <p class="transactionInformBlock__hash hash">{{ educatorTransaction.txId }}</p>
+            <p class="transactionInformBlock__hash hash">{{ publicationTransaction.txId }}</p>
             <p class="transactionInformBlock__date">07/16/2018 09:33:11</p>
           </div>
           <div class="transactionInformBlock__fromTo">
             <div class="transactionInformBlock__from informBlock">
               <p class="informBlock__title">Educator</p>
-              <p class="informBlock__hash hash">{{ educatorTransaction.publication.author }}</p>
+              <p class="informBlock__hash hash">{{ publicationTransaction.publication.author }}</p>
             </div>
             <div class="transactionInformBlock__to informBlock">
               <p class="informBlock__title">Update</p>
-              <p class="informBlock__hash hash">{{ educatorTransaction.publication.block }}</p>
+              <p class="informBlock__hash hash">{{ publicationTransaction.publication.block }}</p>
             </div>
           </div>
         </div>
@@ -42,20 +42,21 @@
 import { mapGetters, mapActions } from 'vuex'
 
 export default {
-  name: 'EducatorTransaction',
+  name: 'PublicationTransaction',
   beforeRouteEnter (to, from, next) {
     next(vm => {
-      vm.getEducatorTransaction(to.params.hash)
+      vm.getPublicationTransaction(to.params.hash)
     })
   },
   computed: {
     ...mapGetters([
-      'educatorTransaction'
+      'publicationTransaction',
+      'loaded'
     ])
   },
   methods: {
     ...mapActions([
-      'getEducatorTransaction'
+      'getPublicationTransaction'
     ])
   }
 }
