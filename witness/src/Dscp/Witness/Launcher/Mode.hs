@@ -36,7 +36,7 @@ import Dscp.Witness.Config (HasWitnessConfig, withWitnessConfig)
 import Dscp.Witness.Launcher.Marker (WitnessNode)
 import Dscp.Witness.Launcher.Params (WitnessParams)
 import Dscp.Witness.Launcher.Resource (WitnessResources, wrDB, wrKey, wrLogging, wrNetwork)
-import Dscp.Witness.Mempool (MempoolVar)
+import Dscp.Witness.Mempool.Type (MempoolVar)
 import Dscp.Witness.Relay (RelayState)
 import Dscp.Witness.SDLock (SDLock)
 

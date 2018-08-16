@@ -1,6 +1,7 @@
 module Dscp.Snowdrop.Expanders
     ( expandBlock
     , expandGTxs
+    , expandGTx
     ) where
 
 import Control.Lens (contramap)
@@ -47,6 +48,19 @@ expandGTxs ::
     => [GTxWitnessed]
     -> ERoComp Exceptions Ids Values ctx [StateTx Ids Proofs Values]
 expandGTxs txs = expandUnionRawTxs getByGTx txs
+
+-- | Expand list of global txs.
+expandGTx ::
+       ( Default (ChgAccum ctx)
+       , HasLens ctx RestrictCtx
+       , HasLens ctx (ChgAccumCtx ctx)
+       )
+    => GTxWitnessed
+    -> ERoComp Exceptions Ids Values ctx (StateTx Ids Proofs Values)
+expandGTx txs =
+    expandUnionRawTxs getByGTx [txs] >>= \case
+        [expanded] -> return expanded
+        _          -> error "expandGTx: did not expand 1 raw tx into 1 sd tx"
 
 getByGTx ::
        GTxWitnessed

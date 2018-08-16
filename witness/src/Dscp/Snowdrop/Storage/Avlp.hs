@@ -24,6 +24,7 @@ module Dscp.Snowdrop.Storage.Avlp
     , initAVLPureStorage
     , ClientError (..)
     , deserialiseM
+    , modAccum
     ) where
 
 import Codec.Serialise (Serialise (..))
