@@ -49,6 +49,7 @@ let
   };
 in
   dscp-packages // {
+  disciplina-faucet-frontend = pkgs.callPackage ./faucet/frontend {};
   disciplina-bin = pkgs.runCommandNoCC "disciplina-bin-${dscp-packages.disciplina-core.version}" {}
   ''
     mkdir $out
@@ -56,3 +57,4 @@ in
       ${lib.concatMapStringsSep " " (f: "${f}/") (builtins.attrValues dscp-packages)} $out/
   '';
   }
+}
