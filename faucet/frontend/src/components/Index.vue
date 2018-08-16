@@ -12,7 +12,7 @@
         <div class="formBox">
           <form action="#" v-on:submit.prevent="transferTokens">
             <div class="mainForm">
-              <input type="text" id="js-search" class="mainForm__input" v-model="address" :placeholder="$t('walletPlaceholder')">
+              <input type="text" id="js-search" class="mainForm__input" v-model="address" :placeholder="$t('walletPlaceholder')" @change="walletInputChanged = true">
               <button class="mainForm__send" id="js-send">{{ $t("getTokensBtn") }}</button>
             </div>
           </form>
@@ -63,11 +63,18 @@ export default {
         address: ''
       },
       address: '',
-      showWalletModal: false
+      showWalletModal: false,
+      walletInputChanged: false
     }
   },
   methods: {
     transferTokens: function (event) {
+      if (!this.walletInputChanged) {
+        return false
+      }
+
+      this.error = ''
+
       this.transfer = {}
       this.$axios
         .post('/transfer', {
@@ -78,6 +85,9 @@ export default {
         ))
         .catch(error => (
           this.error = error.response.data.error
+        ))
+        .then(response => (
+          this.walletInputChanged = false
         ))
     },
     generateWallet: function (event) {

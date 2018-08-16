@@ -1,5 +1,5 @@
 <template>
-  <div class="selectBox" :class="{ active: opened }" @click="opened = !opened" v-click-outside="hide">
+  <div class="selectBox" :class="{ active: opened }" @click="opened = !opened" v-click-outside="hide" v-if="languages.length > 1">
     <div class="input">{{ currentLanguage }}</div>
     <div class="options" v-show="opened">
       <a class="option"
@@ -19,7 +19,7 @@ import ClickOutside from 'vue-click-outside'
 export default {
   data: function () {
     return {
-      languages: ['en', 'cn'],
+      languages: ['en'],
       currentLanguage: 'en',
       opened: false
     }
