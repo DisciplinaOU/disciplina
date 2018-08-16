@@ -7,9 +7,7 @@ with haskell.lib;
 
 let
   getAttrs = attrs: set: lib.genAttrs attrs (name: set.${name});
-in
-
-buildStackApplication rec {
+  dscp-packages = buildStackApplication rec {
   packages = [
     "disciplina-core" "disciplina-witness" "disciplina-educator"
     "disciplina-wallet" "disciplina-tools" "disciplina-faucet"
@@ -48,4 +46,13 @@ buildStackApplication rec {
     in {
       rocksdb-haskell = dependCabal previous.rocksdb-haskell [ rocksdb ];
     } // (lib.mapAttrs (lib.const overrideModule) (getAttrs packages previous));
-}
+  };
+in
+  dscp-packages // {
+  disciplina-bin = pkgs.runCommandNoCC "disciplina-bin-${dscp-packages.disciplina-core.version}" {}
+  ''
+    mkdir $out
+    ${pkgs.rsync}/bin/rsync -Labu --no-perms --exclude lib/ --exclude propagated-build-inputs --inplace \
+      ${lib.concatMapStringsSep " " (f: "${f}/") (builtins.attrValues dscp-packages)} $out/
+  '';
+  }
