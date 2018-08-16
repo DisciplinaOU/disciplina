@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="mainWrapper">
     <the-header/>
     <router-view/>
     <the-footer/>

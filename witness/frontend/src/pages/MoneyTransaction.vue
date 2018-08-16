@@ -1,5 +1,5 @@
 <template>
-  <div class="main transaction" v-if="moneyLoaded">
+  <div class="main mainTransaction" v-if="moneyLoaded">
       <div class="transaction marginTop30">
           <div class="container">
               <h3 class="lastSlots__title blockTitle marginBottom30">Transaction</h3>
@@ -17,6 +17,8 @@
                       </div>
                       <div class="transactionInformBlock__to informBlock">
                           <p class="informBlock__title">To</p>
+                          <p class="informBlock__hash hash">DdzFFzCqrhsezA9Ue95vSMUmU9KvJ2AHkvoRKMCfoajLnqyPdeeGjMiQYGgf1zjoc33BhEGkiQZG78JWjSwldsfkjslfkjwel</p>
+                          <p class="informBlock__hash hash">DdzFFzCqrhsezA9Ue95vSMUmU9KvJ2AHkvoRKMCfoajLnqyPdeeGjMiQYGgf1zjoc33BhEGkiQZG78JWjSwldsfkjslfkjwel</p>
                           <p class="informBlock__hash hash">DdzFFzCqrhsezA9Ue95vSMUmU9KvJ2AHkvoRKMCfoajLnqyPdeeGjMiQYGgf1zjoc33BhEGkiQZG78JWjSwldsfkjslfkjwel</p>
                       </div>
                   </div>

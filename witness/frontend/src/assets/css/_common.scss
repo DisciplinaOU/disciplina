@@ -40,10 +40,11 @@ ul {
   }
 }
 
-.body {
+.mainWrapper {
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
+  min-height: 100vh;
 }
 
 .container {
@@ -60,10 +61,6 @@ ul {
   padding-top: 12px;
   flex: 0 0 auto;
   overflow: hidden;
-}
-
-.main {
-  min-height: 100%;
 }
 
 @media screen and (max-width: 500px){
@@ -780,5 +777,11 @@ ul {
     .transactionInformBlock__date {
       padding-left: 0;
     }
+  }
+}
+
+.mainTransaction {
+  .informBlock__hash {
+    margin-bottom: 5px;
   }
 }
