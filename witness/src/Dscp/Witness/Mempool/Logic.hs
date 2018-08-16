@@ -22,6 +22,15 @@ import qualified Snowdrop.Model.Execution as SD (dmaAccessActions)
 import qualified Snowdrop.Model.Mempool as Pool
 import qualified Snowdrop.Util as SD
 
+type MempoolCtx ctx m =
+    ( MonadIO         m
+    , MonadUnliftIO   m
+    , MonadReader ctx m
+    , HasLens' ctx MempoolVar
+    , HasLens' ctx SD.SDActions
+    , HasLens' ctx SD.LoggingIO
+    )
+
 newMempoolVar :: MonadIO m => m MempoolVar
 newMempoolVar = do
     lock <- Lock.newSDLock
@@ -31,13 +40,7 @@ newMempoolVar = do
 
 addTxToMempool
     :: forall ctx m
-    .  ( MonadIO         m
-       , MonadUnliftIO   m
-       , MonadReader ctx m
-       , HasLens' ctx MempoolVar
-       , HasLens' ctx SD.SDActions
-       , HasLens' ctx SD.LoggingIO
-       )
+    .  MempoolCtx ctx m
     => MempoolVar
     -> GTxWitnessed
     -> m ()
@@ -47,13 +50,7 @@ addTxToMempool (Mempool pool conf, lock) tx =
 
 takeTxsMempool
     :: forall ctx m
-    .  ( MonadIO         m
-       , MonadUnliftIO   m
-       , MonadReader ctx m
-       , HasLens' ctx MempoolVar
-       , HasLens' ctx SD.SDActions
-       , HasLens' ctx SD.LoggingIO
-       )
+    .  MempoolCtx ctx m
     => MempoolVar
     -> m [GTxWitnessed]
 takeTxsMempool (Mempool pool _, lock) = do
@@ -62,13 +59,7 @@ takeTxsMempool (Mempool pool _, lock) = do
 
 isInMempool
     :: forall ctx m
-    .  ( MonadIO         m
-       , MonadUnliftIO   m
-       , MonadReader ctx m
-       , HasLens' ctx MempoolVar
-       , HasLens' ctx SD.SDActions
-       , HasLens' ctx SD.LoggingIO
-       )
+    .  MempoolCtx ctx m
     => MempoolVar
     -> GTxWitnessed -> m Bool
 isInMempool (Mempool pool _, lock) tx = do
@@ -89,13 +80,7 @@ type SDM =
 
 readFromMempool
     :: forall ctx m a
-    .  ( MonadIO         m
-       , MonadUnliftIO   m
-       , MonadReader ctx m
-       , HasLens' ctx MempoolVar
-       , HasLens' ctx SD.SDActions
-       , HasLens' ctx SD.LoggingIO
-       )
+    .  MempoolCtx ctx m
     => Pool.Mempool Ids Values (AVLP.AVLChgAccum Ids Values) GTxWitnessed
     -> Lock.SDLock
     -> SDM a
@@ -110,13 +95,7 @@ readFromMempool pool lock action = do
 
 writeToMempool
     :: forall ctx m a
-    .  ( MonadIO         m
-       , MonadUnliftIO   m
-       , MonadReader ctx m
-       , HasLens' ctx MempoolVar
-       , HasLens' ctx SD.SDActions
-       , HasLens' ctx SD.LoggingIO
-       )
+    .  MempoolCtx ctx m
     => Pool.Mempool Ids Values (AVLP.AVLChgAccum Ids Values) GTxWitnessed
     -> Lock.SDLock
     -> SDM a
