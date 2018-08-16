@@ -290,6 +290,8 @@ definitions:
         - publication
       txId:
         $ref: "#/definitions/Hash"
+      outValue:
+        $ref: "#/definitions/Coin"
       money:
         type: object
         properties:

@@ -58,6 +58,7 @@ library:
     - transformers
     - unliftio
     - unordered-containers
+    - wai-cors
     - warp
 
 tests:
