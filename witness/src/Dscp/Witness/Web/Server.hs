@@ -7,6 +7,8 @@ module Dscp.Witness.Web.Server
 import Data.Reflection (Reifies, reify)
 import Fmt ((+|), (|+))
 import Loot.Log (logInfo)
+import Network.HTTP.Types.Header (hContentType)
+import Network.Wai.Middleware.Cors (CorsResourcePolicy (..), cors, simpleCorsResourcePolicy)
 import Servant (Handler, Server, hoistServer, serve, throwError)
 
 import Dscp.Launcher.Rio (runRIO)
@@ -39,7 +41,11 @@ serveWitnessAPIReal ServerParams{..} = do
     logInfo $ "Serving wallet API on "+|spAddr|+""
     wCtx <- ask
     lc <- buildServantLogConfig (<> "web")
+    let ourCors = cors (const $ Just $
+                        simpleCorsResourcePolicy
+                        { corsRequestHeaders = [hContentType] })
     serveWeb spAddr $
+        ourCors $
         reify lc $ \logConfigP ->
         serve (servedApi logConfigP) $
         witnessAPIServer $
