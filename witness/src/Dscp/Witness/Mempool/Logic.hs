@@ -7,20 +7,21 @@ module Dscp.Witness.Mempool.Logic
     , isInMempool
     ) where
 
-import Dscp.Core.Foundation (GTxWitnessed)
-import Dscp.Snowdrop.Configuration (Exceptions, Ids, Values)
-import Dscp.Witness.Mempool.Type
-import Loot.Base.HasLens (HasLens', lensOf)
-
 import UnliftIO (MonadUnliftIO)
 
-import qualified Dscp.Snowdrop as SD
-import qualified Dscp.Snowdrop.Storage.Avlp as AVLP
-import qualified Dscp.Witness.SDLock as Lock
+import Loot.Base.HasLens (HasLens', lensOf)
+
 import qualified Snowdrop.Core as SD
 import qualified Snowdrop.Model.Execution as SD (dmaAccessActions)
 import qualified Snowdrop.Model.Mempool as Pool
 import qualified Snowdrop.Util as SD
+
+import Dscp.Core.Foundation (GTxWitnessed)
+import Dscp.Snowdrop.Configuration (Exceptions, Ids, Values)
+import Dscp.Witness.Mempool.Type
+import qualified Dscp.Snowdrop as SD
+import qualified Dscp.Snowdrop.Storage.Avlp as AVLP
+import qualified Dscp.Witness.SDLock as Lock
 
 type MempoolCtx ctx m =
     ( MonadIO         m
