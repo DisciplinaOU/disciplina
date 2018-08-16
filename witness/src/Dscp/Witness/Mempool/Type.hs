@@ -8,7 +8,7 @@ module Dscp.Witness.Mempool.Type
 
 import Control.Lens (makeLenses)
 import Dscp.Core.Foundation (GTxWitnessed)
-import qualified Dscp.Snowdrop.Configuration
+import Dscp.Snowdrop.Configuration
 import qualified Dscp.Snowdrop.IOCtx as SD
 import qualified Dscp.Snowdrop.Storage.Avlp as AVLP
 import qualified Dscp.Witness.SDLock as Lock
