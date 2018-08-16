@@ -14,14 +14,17 @@ module Dscp.Witness.CLI
 
 import qualified Data.Set as Set
 import Loot.Network.ZMQ.Common (PreZTNodeId (..), parsePreZTNodeId)
+import Mon.Network (Endpoint)
 import Options.Applicative (Parser, auto, eitherReader, help, long, metavar, option, strOption,
                             value)
 
-import Dscp.CommonCLI (baseKeyParamsParser, logParamsParser, serverParamsParser, appDirParamParser)
+import Dscp.CommonCLI (appDirParamParser, baseKeyParamsParser, logParamsParser,
+                       networkAddressParser, serverParamsParser)
 import Dscp.Core.Governance (CommitteeSecret (..))
 import Dscp.DB.Rocks.Real.Types (RocksDBParams (..))
 import Dscp.Resource.Keys
 import Dscp.Resource.Network (NetCliParams (..), NetServParams (..))
+import Dscp.Web.Types (naHost, naPort)
 import Dscp.Witness.Launcher.Params
 
 ----------------------------------------------------------------------------
@@ -73,6 +76,14 @@ netServParamsParser :: Parser NetServParams
 netServParamsParser =
     NetServParams <$> peersParser <*> ourZTNodeIdParser <*> optional internalZTNodeIdParser
 
+----------------------------------------------------------------------------
+-- Metrics server
+----------------------------------------------------------------------------
+
+metricsServerParser :: Parser Endpoint
+metricsServerParser = liftA2 (,) naHost (fromIntegral . naPort) <$>
+  networkAddressParser "metrics-server" "Server to report the metrics to"
+
 ---------------------------------------------------------------------------
 -- Utils
 ---------------------------------------------------------------------------
@@ -115,4 +126,5 @@ witnessParamsParser = do
     wpKeyParams <- witnessKeyParamsParser
     wpWalletServerParams <- serverParamsParser "Witness"
     wpAppDirParam <- appDirParamParser
+    wpMetricsEndpoint <- optional $ metricsServerParser
     pure $ WitnessParams {..}

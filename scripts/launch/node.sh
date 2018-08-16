@@ -10,6 +10,7 @@ base=$(dirname "$0")
 # project root
 root="$base/../.."
 
+
 ##################
 # Parsing params
 ##################
@@ -71,6 +72,7 @@ witness_params="
 --witness-listen $witness_web_addr
 --witness-keyfile $tmp_files/witness.key
 --witness-gen-key
+--metrics-server 127.0.0.1:8125
 "
 
 # parameters for faucet

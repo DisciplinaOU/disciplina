@@ -4,6 +4,7 @@ module Dscp.Util
        ( anyMapM
        , listToMaybeWarn
        , allUniqueOrd
+       , reportTime
 
          -- * Exceptions processing
        , wrapRethrow
@@ -50,7 +51,11 @@ import Codec.Serialise (Serialise)
 import Control.Lens (Getter, to)
 import Data.ByteArray (ByteArrayAccess)
 import Data.ByteArray.Encoding (Base (..), convertFromBase, convertToBase)
+import Data.Time.Clock.POSIX (getPOSIXTime)
 import Fmt ((+|), (|+))
+import Mon (recordTimer)
+import Mon.Network (Endpoint)
+import Mon.Types (Name)
 
 import Loot.Log (MonadLogging, logError, logWarning)
 
@@ -86,6 +91,17 @@ listToMaybeWarn msg = \case
 
 allUniqueOrd :: Ord a => [a] -> Bool
 allUniqueOrd = all (null . drop 1) . group . sort
+
+reportTime :: MonadIO m => Name -> Endpoint -> m a -> m a
+reportTime name endpoint m = do
+    t <- liftIO $ getPOSIXTime
+    a <- m
+    t' <- liftIO $ getPOSIXTime
+    let diff :: Double
+        diff = fromRational . toRational $ t' - t
+    -- mon accepts only Int as metric value and expects amount of milliseconds in recordTimer
+    liftIO $ recordTimer endpoint name 1 [] (round $ diff * 1000)
+    return a
 
 -----------------------------------------------------------
 -- Exceptions processing
