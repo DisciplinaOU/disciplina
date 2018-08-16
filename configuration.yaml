@@ -26,3 +26,8 @@ clusterCi:
          type: committeeOpen
          secret: "clusterCiCommittee"
          n: 3
+       distribution:
+         - equal: 3
+         - specific:
+           - - "LL4qKmuUkqHGMSXpBKzDyA9g2VCAwVNLRbfGtXeHv55MCeewkKcpLGNR"
+             - 100500
