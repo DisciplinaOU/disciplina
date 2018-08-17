@@ -7,7 +7,7 @@
               <img src="../assets/img/disc_logo.svg" alt="">
             </router-link>
           </div>
-          <div class="titleBlock__text titleText">DISCIPLINA blockchain explorer</div>
+          <div class="titleBlock__text titleText">{{ $t("header.title") }}</div>
       </div>
       <div class="formBox marginTop20">
           <search-form/>

@@ -1,8 +1,8 @@
 <template>
   <form action="#" v-on:submit.prevent="searchHash">
       <div class="mainForm">
-          <input type="text" class="mainForm__input" v-model="query" placeholder="Search addresses, transactions, epochs & slots on the DISCIPLINA network">
-          <button class="mainForm__send">Search</button>
+          <input type="text" class="mainForm__input" v-model="query" :placeholder="$t('placeholder')">
+          <button class="mainForm__send">{{ $t('buttonText') }}</button>
       </div>
   </form>
 </template>
@@ -19,6 +19,9 @@ const ROUTE_BY_TYPE = {
 
 export default {
   name: 'SearchForm',
+  i18nOptions: {
+    keyPrefix: 'search'
+  },
   data () {
     return {
       query: ''

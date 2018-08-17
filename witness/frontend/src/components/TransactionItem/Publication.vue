@@ -8,11 +8,11 @@
       </div>
       <div class="transactionInformBlock__fromTo">
           <div class="transactionInformBlock__from informBlock">
-              <p class="informBlock__title">From</p>
+              <p class="informBlock__title">{{ $("transaction.from") }}</p>
               <p class="informBlock__hash hash">{{ transaction.publication.author }}</p>
           </div>
           <div class="transactionInformBlock__to informBlock">
-              <p class="informBlock__title">To</p>
+              <p class="informBlock__title">{{ $("transaction.to") }}</p>
               <p class="informBlock__hash hash">{{ transaction.publication.block }}</p>
           </div>
       </div>

@@ -6,6 +6,11 @@ import App from './App'
 import axios from 'axios'
 import VueAxios from 'vue-axios'
 
+import i18next from 'i18next'
+import VueI18Next from '@panter/vue-i18next'
+import En from './locales/en'
+import Cn from './locales/cn'
+
 import router from './router'
 import store from './store/index'
 import './assets/css/index.scss'
@@ -13,6 +18,16 @@ import './assets/css/index.scss'
 Vue.use(VueAxios, axios)
 Vue.axios.defaults.baseURL = 'https://witness-1.disciplina.serokell.team/api/witness/v1'
 Vue.axios.defaults.headers.common['Content-Type'] = 'application/json'
+
+Vue.use(VueI18Next)
+i18next.init({
+  lng: 'en',
+  resources: {
+    en: { translation: En },
+    cn: { translation: Cn }
+  }
+})
+const i18n = new VueI18Next(i18next)
 
 Vue.use(require('vue-moment'))
 
@@ -24,5 +39,6 @@ new Vue({
   router,
   store,
   components: { App },
-  template: '<App/>'
+  template: '<App/>',
+  i18n: i18n
 })

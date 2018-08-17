@@ -6,7 +6,7 @@
         </div>
     </div>
     <div class="paginationBlock marginTop40">
-        <div class="paginationBlock__btnBack btn btn--more" v-if="nextTransactionHash" @click="getAllTransactions(nextTransactionHash)">Show more</div>
+        <div class="paginationBlock__btnBack btn btn--more" v-if="nextTransactionHash" @click="getAllTransactions(nextTransactionHash)">{{ $t("showMore") }}</div>
     </div>
   </div>
 </template>
