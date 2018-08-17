@@ -9,7 +9,9 @@ import VueAxios from 'vue-axios'
 import i18next from 'i18next'
 import VueI18Next from '@panter/vue-i18next'
 import En from './locales/en'
-import Cn from './locales/cn'
+import Zh from './locales/zh'
+import Jp from './locales/jp'
+import Kr from './locales/kr'
 
 import router from './router'
 import store from './store/index'
@@ -24,7 +26,9 @@ i18next.init({
   lng: 'en',
   resources: {
     en: { translation: En },
-    cn: { translation: Cn }
+    zh: { translation: Zh },
+    jp: { translation: Jp },
+    kr: { translation: Kr }
   }
 })
 const i18n = new VueI18Next(i18next)
