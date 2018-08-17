@@ -16,6 +16,7 @@ import Dscp.Witness.Launcher.Mode
 import Dscp.Witness.Launcher.Params
 import Dscp.Witness.Listeners
 import Dscp.Witness.Logic
+import Dscp.Witness.SDLock
 import Dscp.Witness.Web
 import Dscp.Witness.Workers
 
@@ -27,7 +28,7 @@ witnessEntry =
         -- this should be done only if resource is not initialised,
         -- and this call should be in SDActions allocation code, but
         -- now we always start with the empty state.
-        applyGenesisBlock
+        writingSDLock applyGenesisBlock
 
         -- todo git revision
         logInfo $ "Genesis header: " +| genesisHeader |+ ""

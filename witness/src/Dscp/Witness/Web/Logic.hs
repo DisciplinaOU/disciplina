@@ -14,12 +14,13 @@ import qualified Data.ByteString.Lazy as BS
 
 import Dscp.Core
 import Dscp.Snowdrop
-import Dscp.Util (assertJust, fromHex, nothingToThrow)
+import Dscp.Util (assertJust, fromHex, nothingToPanic, nothingToThrow)
 import Dscp.Util.Concurrent.NotifyWait
 import Dscp.Witness.Config
 import Dscp.Witness.Launcher.Mode (WitnessWorkMode)
 import Dscp.Witness.Logic
 import qualified Dscp.Witness.Relay as Relay
+import Dscp.Witness.SDLock
 import Dscp.Witness.Web.Error
 import Dscp.Witness.Web.Types
 
@@ -62,15 +63,15 @@ toBlockInfo includeTxs block = BlockInfo
     txTotalOutput (GMoneyTx tx)      = foldr sumCoins (Coin 0) $ txOutValue <$> txOuts tx
     txTotalOutput (GPublicationTx _) = Coin 0
 
-toAccountInfo :: HasWitnessConfig => Account -> Maybe [GTxInBlock] -> AccountInfo
+toAccountInfo :: HasWitnessConfig => BlocksOrMempool Account -> Maybe [GTxInBlock] -> AccountInfo
 toAccountInfo account txs = AccountInfo
-    { aiBalances = Balances
-        { bConfirmed = Coin . fromIntegral $ aBalance account
-        }
-    , aiNextNonce = aNonce account + 1
-    , aiTransactionCount = aNonce account
+    { aiBalances = Coin . fromIntegral . aBalance <$> account
+    , aiNextNonce = nonce + 1
+    , aiTransactionCount = nonce
     , aiTransactions = map toTxInfo <$> txs
     }
+  where
+    nonce = aNonce $ bmTotal account
 
 toTxInfo :: HasWitnessConfig => GTxInBlock -> TxInfo
 toTxInfo tx = TxInfo
@@ -94,11 +95,21 @@ getBlockInfo =
 
 getAccountInfo :: WitnessWorkMode ctx m => Address -> Bool -> m AccountInfo
 getAccountInfo address includeTxs = do
-    account <- getAccountMaybe address `assertJust` AccountNotFound
+    account <- readingSDLock $ do
+        blockAccount <- getAccountMaybe address `assertJust` AccountNotFound
+        poolAccount  <- nothingToPanic noMempoolAccount <$>
+                        getMempoolAccountMaybe address
+        return BlocksOrMempool
+              { bmConfirmed = blockAccount
+              , bmTotal     = poolAccount }
     txs <- if includeTxs
         then Just <$> getAccountTxs address
         else return Nothing
     return $ toAccountInfo account txs
+  where
+    noMempoolAccount =
+        "'getMempoolAccountMaybe' returned Nothing while 'getAccountMaybe' \
+        \succeeded"
 
 getTransactions :: WitnessWorkMode ctx m => Maybe Int -> Maybe GTxId -> m TxList
 getTransactions mCount mFrom = do

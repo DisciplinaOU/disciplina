@@ -6,10 +6,10 @@ module Dscp.Snowdrop.Mode
     , SdM
     , StateSdM
     , runSdRIO
+    , runSdM
     , runSdMRead
-    , runSdMWrite
+    , runStateSdM
     , runStateSdMRead
-    , runStateSdMWrite
     ) where
 
 import Data.Default (def)
@@ -41,28 +41,24 @@ runSdRIO action = do
     logger <- view (lensOf @LoggingIO)
     liftIO $ runRIO logger action
 
-properlyRunERoComp :: WitnessWorkMode ctx m => SdM a -> m a
-properlyRunERoComp action = do
+-- | SdM runner, should be protected by some lock.
+runSdM :: (WitnessWorkMode ctx m, Lock.WithinReadSDLock) => SdM a -> m a
+runSdM action = do
     blockDBA <- SD.dmaAccessActions . nsBlockDBActions <$> view (lensOf @SDActions)
     SD.runERoCompIO @Exceptions blockDBA def action
 
 -- | SdM runner that takes read lock.
 runSdMRead :: WitnessWorkMode ctx m => SdM a -> m a
-runSdMRead = Lock.readingSDLock . properlyRunERoComp
+runSdMRead action = Lock.readingSDLock $ runSdM action
 
--- | SdM runner that takes exclusive lock.
-runSdMWrite :: WitnessWorkMode ctx m => SdM a -> m a
-runSdMWrite = Lock.writingSDLock . properlyRunERoComp
-
-properlyRunStateERoComp :: WitnessWorkMode ctx m => RememberForProof -> StateSdM a -> m a
-properlyRunStateERoComp recForProof action = do
+-- | SdM runner, should be protected by some lock.
+runStateSdM
+    :: (WitnessWorkMode ctx m, Lock.WithinReadSDLock)
+    => RememberForProof -> StateSdM a -> m a
+runStateSdM recForProof action = do
     stateDBA <- SD.dmaAccessActions . flip nsStateDBActions recForProof <$> view (lensOf @SDActions)
     SD.runERoCompIO @Exceptions stateDBA def action
 
 -- | SdM runner that takes read lock.
 runStateSdMRead :: WitnessWorkMode ctx m => RememberForProof -> StateSdM a -> m a
-runStateSdMRead recForProof = Lock.readingSDLock . properlyRunStateERoComp recForProof
-
--- | SdM runner that takes exclusive lock.
-runStateSdMWrite :: WitnessWorkMode ctx m => RememberForProof -> StateSdM a -> m a
-runStateSdMWrite recForProof = Lock.writingSDLock . properlyRunStateERoComp recForProof
+runStateSdMRead recForProof action = Lock.readingSDLock $ runStateSdM recForProof action

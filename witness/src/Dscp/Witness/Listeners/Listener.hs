@@ -24,6 +24,7 @@ import Dscp.Witness.Launcher.Mode
 import Dscp.Witness.Logic
 import Dscp.Witness.Messages
 import Dscp.Witness.Relay
+import Dscp.Witness.SDLock
 
 
 witnessListeners :: WitnessWorkMode ctx m => m [Listener m]
@@ -56,9 +57,12 @@ blockIssuingListener =
         else logInfo "We don't own current slot, skipping"
       where
         issueBlock slotId = do
-            block <- createBlock slotId
-            logInfo $ "Created a new block: \n" +| block |+ ""
-            proof <- applyBlock block
+            (block, proof) <-
+                writingSDLock $ do
+                    block <- writingSDLock $ createBlock slotId
+                    logInfo $ "Created a new block: \n" +| block |+ ""
+                    proof <- applyBlock block
+                    return (block, proof)
             logInfo $ "Applied block, proof: " +| proof |+ ", propagating"
             atomically $ servPub btq (PubBlock block)
 
