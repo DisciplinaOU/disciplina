@@ -2,25 +2,23 @@ import blockexplorer from '@/api/blockexplorer'
 
 const state = {
   transactions: [],
-  listFinished: false
+  perPage: 5,
+  nextTransactionHash: undefined
 }
 
 const actions = {
-  checkListFinished ({commit}, page = 1, perPage = 1) {
+  getAllTransactions ({commit}, from = state.nextTransactionHash, perPage = state.perPage + 1) {
     blockexplorer.getTransactions(Transactions => {
-      commit('setListFinished', Transactions)
-    }, page + 1, perPage)
-  },
-  getAllTransactions ({commit}, page = 1, perPage = 1) {
-    blockexplorer.getTransactions(Transactions => {
+      const nextTransactionHash = Transactions.length === (state.perPage + 1) ? Transactions.pop().txId : undefined
+      commit('setNextTransactionHash', nextTransactionHash)
       commit('setTransactions', Transactions)
-    }, page, perPage)
+    }, from, perPage)
   }
 }
 
 const mutations = {
-  setListFinished (state, transactions) {
-    state.listFinished = transactions.length === 0
+  setNextTransactionHash (state, hash) {
+    state.nextTransactionHash = hash
   },
   setTransactions (state, transactions) {
     state.transactions.push(...transactions)
@@ -28,8 +26,8 @@ const mutations = {
 }
 
 const getters = {
-  listFinished (state) {
-    return state.listFinished
+  nextTransactionHash (state) {
+    return state.nextTransactionHash
   },
   transactions (state) {
     return state.transactions

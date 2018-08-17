@@ -1,11 +1,9 @@
 import Vue from 'vue'
 
 export default {
-  getBlocks (cb, page, perPage) {
-    // const from = ((page - 1) * perPage)
-    // const to = (page * perPage) || 1
+  getBlocks (cb, from, count) {
     Vue.axios
-      .get('/blocks')
+      .get('/blocks', { params: {count, from} })
       .then(response => cb(response.data))
   },
   getBlock (cb, blockHash) {
@@ -13,11 +11,9 @@ export default {
       .get(`/blocks/${blockHash}`)
       .then(response => cb(response.data))
   },
-  getTransactions (cb, page, perPage) {
-    // const from = ((page - 1) * perPage)
-    // const to = (page * perPage) || 1
+  getTransactions (cb, from, count) {
     Vue.axios
-      .get('/transactions')
+      .get('/transactions', { params: {count, from} })
       .then(response => cb(response.data.transactions))
   },
   getTransaction (cb, transactionHash) {
@@ -27,7 +23,12 @@ export default {
   },
   getAddress (cb, addressHash) {
     Vue.axios
-      .get(`/address/${addressHash}`)
+      .get(`/accounts/${addressHash}`)
+      .then(response => cb(response.data))
+  },
+  getType (cb, hash) {
+    Vue.axios
+      .get(`/hash/${hash}`)
       .then(response => cb(response.data))
   }
 }

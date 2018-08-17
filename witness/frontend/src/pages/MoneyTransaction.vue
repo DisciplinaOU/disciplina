@@ -17,26 +17,35 @@
                       </div>
                       <div class="transactionInformBlock__to informBlock">
                           <p class="informBlock__title">To</p>
-                          <p class="informBlock__hash hash">DdzFFzCqrhsezA9Ue95vSMUmU9KvJ2AHkvoRKMCfoajLnqyPdeeGjMiQYGgf1zjoc33BhEGkiQZG78JWjSwldsfkjslfkjwel</p>
-                          <p class="informBlock__hash hash">DdzFFzCqrhsezA9Ue95vSMUmU9KvJ2AHkvoRKMCfoajLnqyPdeeGjMiQYGgf1zjoc33BhEGkiQZG78JWjSwldsfkjslfkjwel</p>
-                          <p class="informBlock__hash hash">DdzFFzCqrhsezA9Ue95vSMUmU9KvJ2AHkvoRKMCfoajLnqyPdeeGjMiQYGgf1zjoc33BhEGkiQZG78JWjSwldsfkjslfkjwel</p>
+                          <div class="transactionInformBlock">
+                          <p class="informBlock__hash hash"
+                            v-for="addr in moneyTransaction.money.outs"
+                            :key="addr.outAddr">
+                            {{ addr.outAddr }}
+                          </p>
                       </div>
                   </div>
+                </div>
               </div>
               <div class="transaction__summary marginTop30 summary">
                   <div class="summary__title">Summary</div>
                   <div class="summary__items itemsSummary">
                       <div class="itemsSummary_item itemSummary itemSummary--date">
-                          <p class="itemSummary__title">Received time</p><p class="itemSummary__content">07/16/2018 10:53:11</p>
+                          <p class="itemSummary__title">Received time</p><p class="itemSummary__content">{{ new Date(moneyTransaction.block.since / 1000) | moment('DD/MM/YYYY HH:MM:SS') }}</p>
                       </div>
                       <div class="itemsSummary_item itemSummary itemSummary--included">
-                          <p class="itemSummary__title">Included in</p><p class="itemSummary__content">Epoch 59 / Slot 2365</p>
+                          <p class="itemSummary__title">Included in</p>
+                          <router-link class="itemSummary__content" :to="{ name: 'blockShow', params: {hash: moneyTransaction.block.headerHash} }">Block {{ moneyTransaction.block.header.difficulty }}</router-link>
                       </div>
                       <div class="itemsSummary_item itemSummary itemSummary--output">
-                          <p class="itemSummary__title">Total Output</p><p class="itemSummary__content">139,638<span class="small">.439587</span> DSCP</p>
+                          <p class="itemSummary__title">Total Output</p>
+                          <p class="itemSummary__content"><dscp-format :value="moneyTransaction.block.totalOutput"/></p>
                       </div>
                       <div class="itemsSummary_item itemSummary itemSummary--fee">
-                          <p class="itemSummary__title">Transaction fee</p><p class="itemSummary__content">19,638<span class="small">.439587</span> DSCP</p>
+                          <p class="itemSummary__title">Transaction fee</p>
+                          <p class="itemSummary__content">
+                            <dscp-format :value="moneyTransaction.block.totalFees"/>
+                          </p>
                       </div>
                   </div>
               </div>
@@ -54,6 +63,10 @@ export default {
   components: { DscpFormat },
   beforeMount () {
     this.getMoneyTransaction(this.$route.params.hash)
+  },
+  beforeRouteUpdate (to, from, next) {
+    this.getMoneyTransaction(to.params.hash)
+    next()
   },
   computed: {
     ...mapGetters([

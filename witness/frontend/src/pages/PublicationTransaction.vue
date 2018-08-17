@@ -1,5 +1,5 @@
 <template>
-  <div class="main eduTransaction" v-if="loaded">
+  <div class="main eduTransaction" v-if="publicationLoaded">
     <div class="transaction marginTop30">
       <div class="container">
         <h3 class="lastSlots__title blockTitle marginBottom30">Educator transaction</h3>
@@ -43,15 +43,17 @@ import { mapGetters, mapActions } from 'vuex'
 
 export default {
   name: 'PublicationTransaction',
-  beforeRouteEnter (to, from, next) {
-    next(vm => {
-      vm.getPublicationTransaction(to.params.hash)
-    })
+  beforeMount () {
+    this.getPublicationTransaction(this.$route.params.hash)
+  },
+  beforeRouteUpdate (to, from, next) {
+    this.getPublicationTransaction(to.params.hash)
+    next()
   },
   computed: {
     ...mapGetters([
       'publicationTransaction',
-      'loaded'
+      'publicationLoaded'
     ])
   },
   methods: {

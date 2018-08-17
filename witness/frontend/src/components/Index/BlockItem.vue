@@ -5,7 +5,7 @@
           {{ block.header.difficulty }}
         </router-link>
       </div>
-      <div class="pseudoTable__cell cell cell__since">{{ new Date(block.since/1000) | moment('from', true) }}</div>
+      <div class="pseudoTable__cell cell cell__since">{{ new Date(block.since/1000) | moment('from') }}</div>
       <div class="pseudoTable__cell cell cell__transactions">{{ block.transactionCount }}</div>
       <div class="pseudoTable__cell cell cell__totalSent">{{ block.totalOutput }}</div>
       <div class="pseudoTable__cell cell cell__slotLeader">{{ block.header.issuer }}</div>

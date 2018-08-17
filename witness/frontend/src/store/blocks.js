@@ -3,25 +3,29 @@ import blockexplorer from '@/api/blockexplorer'
 const state = {
   all: [],
   current: {},
-  perPage: 1,
-  total: 0
+  perPage: 10,
+  currentPage: 1,
+  totalPages: 0,
+  firstBlockDifficulty: 0,
+  fromBlockHash: '',
+  fromBlockHashPrev: '',
+  loaded: false
 }
 
 const actions = {
-  getAllBlocks ({commit}, page = 1, perPage = state.perPage) {
-    blockexplorer.getBlocks(Blocks => {
+  getAllBlocks ({commit}, from, count = state.perPage + 1) {
+    blockexplorer.getBlocks((Blocks) => {
+      const lastBlock = Blocks.pop()
+      commit('setFromBlockHashPrev', Blocks[0])
       commit('setBlocks', Blocks)
-    }, page, perPage)
+      commit('calcTotal', Blocks[0])
+      commit('setFromBlockHash', lastBlock)
+    }, from, count)
   },
-  getBlock ({commit, hash}) {
+  getBlock ({commit}, hash) {
     blockexplorer.getBlock(Block => {
       commit('setCurrentBlock', Block)
     }, hash)
-  },
-  getTotal ({commit}) {
-    blockexplorer.getBlocks(Blocks => {
-      commit('setTotal', Blocks[0])
-    }, 1, 1)
   }
 }
 
@@ -31,9 +35,24 @@ const mutations = {
   },
   setCurrentBlock (state, block) {
     state.current = block
+    state.loaded = true
   },
-  setTotal (state, block) {
-    state.total = Math.ceil(block.header.difficulty / state.perPage)
+  calcTotal (state, block) {
+    if (state.totalPages === 0) {
+      state.firstBlockDifficulty = block.header.difficulty
+      state.totalPages = Math.ceil(state.firstBlockDifficulty / state.perPage)
+    }
+  },
+  setFromBlockHash (state, block) {
+    state.fromBlockHash = block.headerHash
+  },
+  setFromBlockHashPrev (state, block) {
+    if (state.all.length && block.header.difficulty !== state.firstBlockDifficulty) {
+      state.fromBlockHashPrev = state.all[0].headerHash
+    }
+  },
+  setPage (state, page) {
+    state.currentPage = page
   }
 }
 
@@ -44,11 +63,23 @@ const getters = {
   block (state) {
     return state.current
   },
+  blockLoaded (state) {
+    return state.loaded
+  },
   totalPages (state) {
-    return state.total
+    return state.totalPages
   },
   perPage (state) {
     return state.perPage
+  },
+  fromBlockHash (state) {
+    return state.fromBlockHash
+  },
+  fromBlockHashPrev (state) {
+    return state.fromBlockHashPrev
+  },
+  currentPage (state) {
+    return state.currentPage
   }
 }
 

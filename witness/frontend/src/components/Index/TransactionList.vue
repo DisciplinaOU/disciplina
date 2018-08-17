@@ -6,7 +6,7 @@
         </div>
     </div>
     <div class="paginationBlock marginTop40">
-        <div class="paginationBlock__btnBack btn btn--more" v-if="!listFinished" @click="fetchTransactions(currentPage + 1)">Show more</div>
+        <div class="paginationBlock__btnBack btn btn--more" v-if="nextTransactionHash" @click="getAllTransactions(nextTransactionHash)">Show more</div>
     </div>
   </div>
 </template>
@@ -31,23 +31,13 @@ export default {
   computed: {
     ...mapGetters([
       'transactions',
-      'listFinished'
+      'nextTransactionHash'
     ])
   },
   methods: {
     ...mapActions([
-      'getAllTransactions',
-      'checkListFinished'
-    ]),
-    fetchTransactions (page) {
-      if (page < 1) {
-        return false
-      }
-
-      this.getAllTransactions(page)
-      this.checkListFinished(page)
-      this.currentPage = page
-    }
+      'getAllTransactions'
+    ])
   }
 }
 </script>

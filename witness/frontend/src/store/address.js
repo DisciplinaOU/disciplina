@@ -1,10 +1,8 @@
 import blockexplorer from '@/api/blockexplorer'
 
 const state = {
-  current: {
-    transactions: [],
-    balances: {}
-  }
+  current: {},
+  loaded: false
 }
 
 const actions = {
@@ -18,12 +16,16 @@ const actions = {
 const mutations = {
   setAddress (state, address) {
     state.current = address
+    state.loaded = true
   }
 }
 
 const getters = {
   address (state) {
     return state.current
+  },
+  loaded (state) {
+    return state.loaded
   }
 }
 

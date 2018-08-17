@@ -2,7 +2,11 @@
   <header class="header">
   <div class="container">
       <div class="titleBlock">
-          <div class="titleBlock__logo logo"><img src="../assets/img/disc_logo.svg" alt=""></div>
+          <div class="titleBlock__logo logo">
+            <router-link to='/'>
+              <img src="../assets/img/disc_logo.svg" alt="">
+            </router-link>
+          </div>
           <div class="titleBlock__text titleText">DISCIPLINA blockchain explorer</div>
       </div>
       <div class="formBox marginTop20">

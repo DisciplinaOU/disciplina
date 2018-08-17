@@ -8,6 +8,15 @@
 </template>
 
 <script>
+import api from '@/api/blockexplorer'
+const ROUTE_BY_TYPE = {
+  block: 'blockShow',
+  address: 'addressShow',
+  'money-transaction': 'moneyTransactionShow',
+  'publication-transaction': false,
+  unknown: false
+}
+
 export default {
   name: 'SearchForm',
   data () {
@@ -17,7 +26,11 @@ export default {
   },
   methods: {
     searchHash () {
-      return true
+      api.getType((type) => {
+        if (ROUTE_BY_TYPE[type]) {
+          this.$router.push({name: ROUTE_BY_TYPE[type], params: { hash: this.query }})
+        }
+      }, this.query)
     }
   }
 }
