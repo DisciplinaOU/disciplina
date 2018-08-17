@@ -1,5 +1,6 @@
 <template>
-  <div>
+  <div class="wrapper">
+    <div class="preLoader"><img class="preLoader__img" src="../assets/img/loading.svg" alt="..."></div>
     <the-header/>
     <router-view/>
     <the-footer/>

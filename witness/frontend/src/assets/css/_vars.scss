@@ -8,8 +8,9 @@ $fonts: '../fonts';
 $color-white: #fff;
 $color-black: #000;
 
+$color-main-darker: #011F76 ;
 $color-main: #002590;
-$color-main-darken: #01419A;
+$color-main-lighter: #01419A;
 $color-linear-gradient-substitute: #0276AA;
 $color-main-light: #EAF3FF;
 
@@ -29,7 +30,7 @@ $color-border: #D8D8D8;
 $color-gray: #F8F8F8;
 $color-gray-text: #787878;
 
-$linear-gradient: linear-gradient(90deg, $color-main-darken, $color-accent-darken);
+$linear-gradient: linear-gradient(90deg, $color-main-lighter, $color-accent-darken);
 
 //Colors-text
 $color-text: #212121;

@@ -161,10 +161,9 @@
       font-weight: 400;
     }
   }
-
   &__text {
     @include font(14px, 16px);
-    flex:0 0 auto;
+    flex: 0 0 auto;
     overflow: auto;
   }
 }
