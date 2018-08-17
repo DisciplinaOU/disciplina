@@ -87,6 +87,13 @@ knitFaceToUI walletStateRef UiFace{..} WalletFace{..} KnitFace{..} =
               writeIORef walletStateRef $ walletState{ selection = Nothing }
               walletRefreshState
               return $ Left "No further action"
+        UiExport -> do
+          case selection walletState >>= (accounts walletState ^?) . ix . fromIntegral of
+            Nothing -> return $ Left "No account selected"
+            Just Account{..} -> do
+              cid <- flip commandIdToUI Nothing <$> newUnique
+              putUiEvent . UiCommandResult cid . UiExportCommandResult . UiExportCommandSuccess . show $ accountSecretKey
+              return $ Right cid
         _ -> case opToExpr walletState op of
           Left err -> return $ Left err
           Right expr -> fmap Right $ putCommand (uiCommandHandle op) expr
