@@ -50,6 +50,7 @@ data CourseStudentInfo = CourseStudentInfo
     , ciDesc       :: Text
     , ciSubjects   :: [Subject]
     , ciIsEnrolled :: Bool
+    , ciIsFinished :: Bool
     } deriving (Show, Eq, Generic)
 
 data AssignmentStudentInfo = AssignmentStudentInfo

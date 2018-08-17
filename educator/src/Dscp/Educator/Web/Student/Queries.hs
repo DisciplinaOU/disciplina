@@ -76,6 +76,26 @@ type MonadStudentAPIQuery m =
     , MonadCatch m
     )
 
+studentIsCourseFinished
+    :: MonadStudentAPIQuery m
+    => Id Student -> Course -> m Bool
+studentIsCourseFinished studentId courseId = do
+    finalAssignmentsGrades <- query queryText (CourseFinal, courseId, studentId)
+    return $ any isPositiveGrade finalAssignmentsGrades
+  where
+    queryText :: Query
+    queryText = [q|
+        select    grade
+        from      Transactions
+        left join Submissions
+               on Transactions.submission_hash = Submissions.hash
+        left join Assignments
+               on Submissions.assignment_hash = Assignments.hash
+        where     Assignments.type = ?
+              and Assignments.course_id = ?
+              and Submissions.student_addr = ?
+    |]
+
 studentGetCourse
     :: MonadStudentAPIQuery m
     => Id Student -> Course -> m CourseStudentInfo
@@ -89,6 +109,7 @@ studentGetCourse studentId courseId =
 
         ciIsEnrolled <- Base.isEnrolledTo studentId courseId
         ciSubjects <- Base.getCourseSubjects courseId
+        ciIsFinished <- studentIsCourseFinished studentId courseId
         let ciDesc = fromMaybe "" mdesc
         return CourseStudentInfo{ ciId = courseId, .. }
   where
@@ -110,11 +131,12 @@ studentGetCourses studentId (coerce -> isEnrolledF) = do
     courses <- query (queryText <> enrolledClause)
                       enrolledParam
 
-    forM courses $ \(courceId, mdesc) -> do
-        ciIsEnrolled <- Base.isEnrolledTo studentId courceId
-        ciSubjects <- Base.getCourseSubjects courceId
+    forM courses $ \(courseId, mdesc) -> do
+        ciIsEnrolled <- Base.isEnrolledTo studentId courseId
+        ciSubjects <- Base.getCourseSubjects courseId
+        ciIsFinished <- studentIsCourseFinished studentId courseId
         let ciDesc = fromMaybe "" mdesc
-        return CourseStudentInfo{ ciId = courceId, .. }
+        return CourseStudentInfo{ ciId = courseId, .. }
   where
     queryText :: Query
     queryText = [q|

@@ -298,6 +298,7 @@ definitions:
       - desc
       - subjects
       - isEnrolled
+      - isFinished
     properties:
       id:
         $ref: '#/definitions/CourseId'
@@ -308,6 +309,8 @@ definitions:
         items:
           $ref: '#/definitions/Subject'
       isEnrolled:
+        type: boolean
+      isFinished:
         type: boolean
 
   Assignment:

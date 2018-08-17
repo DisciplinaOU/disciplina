@@ -1,7 +1,7 @@
 module Test.Dscp.Educator.Web.Student.Queries where
 
 import Control.Concurrent (threadDelay)
-import Control.Lens (to)
+import Control.Lens (to, traversed)
 import qualified Data.Foldable as F
 import Data.List (nub, (!!))
 import Data.Time.Clock (UTCTime (..))
@@ -104,6 +104,11 @@ sqlTx = sqlTransaction
 someTime :: UTCTime
 someTime = UTCTime (toEnum 0) 0
 
+assignmentItemsForSameCourse :: TestItemParam Assignment
+assignmentItemsForSameCourse = FixedItemSet $ do
+    assignments <- arbitrary
+    return $ assignments & traversed . aCourseId .~ Course 1
+
 {- The plan is to have following tests for each endpoint (where applicable):
 
 1. Simple negative test;
@@ -147,6 +152,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                     , ciDesc = fromMaybe "" desc
                     , ciSubjects = subjects
                     , ciIsEnrolled = False
+                    , ciIsFinished = False
                     }
 
         it "Student has vision proper for him" $
@@ -159,6 +165,35 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
 
                 course <- studentGetCourse student2 courseId1
                 return (not $ ciIsEnrolled course)
+
+        it "Course 'isFinished' flag is correct" $
+            sqliteProperty $
+              \( delayedGen
+                 (genCoreTestEnv simpleCoreTestParams
+                  { ctpAssignment = assignmentItemsForSameCourse }) -> env
+               , delayedGen (infiniteList @(Maybe Grade)) -> mgrades
+               ) -> do
+                let student = tiOne $ cteStudents env
+                    course  = tiOne $ cteCourses env
+                    sigSubs = nub . tiList $ cteSignedSubmissions env
+                    gradedSigSubs = [(ss, g) | (ss, Just g) <- zip sigSubs mgrades]
+                prepareForSubmissions env
+                forM_ sigSubs $ \sigSub -> sqlTx $ submitAssignment sigSub
+                forM_ gradedSigSubs $ \(sigSub, grade) ->
+                    createTransaction PrivateTx
+                    { _ptSignedSubmission = sigSub
+                    , _ptGrade = grade
+                    , _ptTime = someTime
+                    }
+
+                res <- ciIsFinished <$> studentGetCourse student course
+                actualGrades <-
+                    fmap catMaybes . forM sigSubs $ \sigSub -> do
+                        mgrade <- studentGetGrade . hash $ _ssSubmission sigSub
+                        let assignHash = _sAssignmentHash $ _ssSubmission sigSub
+                        assignInfo <- sqlTx $ studentGetAssignment student assignHash
+                        return $ guard (aiIsFinal assignInfo) *> mgrade
+                return $ res === any (isPositiveGrade . giGrade) actualGrades
 
     describe "getCourses" $ do
         it "Student is not enrolled initially" $
@@ -192,6 +227,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                     , ciDesc = fromMaybe "" desc
                     , ciSubjects = subjects
                     , ciIsEnrolled = False
+                    , ciIsFinished = False
                     }
 
         it "Student has vision proper for him" $
@@ -225,6 +261,37 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                     map ciDesc enrolled === ["course 2"]
                   .&&.
                     map ciDesc notEnrolled === ["course 1"]
+
+        it "Course 'isFinished' flag is correct" $
+            sqliteProperty $
+              \( delayedGen
+                 (genCoreTestEnv simpleCoreTestParams
+                  { ctpAssignment = assignmentItemsForSameCourse }) -> env
+               , delayedGen (infiniteList @(Maybe Grade)) -> mgrades
+               ) -> do
+                let student = tiOne $ cteStudents env
+                    sigSubs = nub . tiList $ cteSignedSubmissions env
+                    gradedSigSubs = [(ss, g) | (ss, Just g) <- zip sigSubs mgrades]
+                prepareForSubmissions env
+                forM_ sigSubs $ \sigSub -> sqlTx $ submitAssignment sigSub
+                forM_ gradedSigSubs $ \(sigSub, grade) ->
+                    createTransaction PrivateTx
+                    { _ptSignedSubmission = sigSub
+                    , _ptGrade = grade
+                    , _ptTime = someTime
+                    }
+
+                [courseInfo] <- sqlTx $ studentGetCourses student Nothing
+                actualGrades <-
+                    fmap catMaybes . forM sigSubs $ \sigSub -> do
+                        mgrade <- studentGetGrade . hash $ _ssSubmission sigSub
+                        let assignHash = _sAssignmentHash $ _ssSubmission sigSub
+                        assignInfo <- sqlTx $ studentGetAssignment student assignHash
+                        return $ guard (aiIsFinal assignInfo) *> mgrade
+                return $
+                    ciIsFinished courseInfo
+                    ===
+                    any (isPositiveGrade . giGrade) actualGrades
 
   describe "Assignments" $ do
     describe "getAssignment" $ do
