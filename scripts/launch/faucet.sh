@@ -1,6 +1,7 @@
 ### Run a disciplina faucet
 
 faucet_params="
+--path ./tmp/
 --config ./configuration.yaml
 --config-key demo
 --faucet-listen 127.0.0.1:8095
