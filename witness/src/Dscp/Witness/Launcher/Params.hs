@@ -9,6 +9,7 @@ import Dscp.DB.Rocks.Real.Types (RocksDBParams)
 import Dscp.Resource.Keys (BaseKeyParams, CommitteeParams)
 import Dscp.Resource.Logging (LoggingParams)
 import Dscp.Resource.Network (NetServParams)
+import Dscp.Resource.AppDir (AppDirParam)
 import Dscp.Web (ServerParams)
 
 -- | Witness key parameters.
@@ -30,4 +31,6 @@ data WitnessParams = WitnessParams
     -- ^ Witness key params.
     , wpWalletServerParams :: ServerParams
     -- ^ Wallet server params.
+    , wpAppDirParam        :: AppDirParam
+    -- ^ Application folder param
     } deriving Show

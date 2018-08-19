@@ -3,6 +3,7 @@
 module Dscp.Educator.Launcher.Resource
        ( EducatorResources (..)
        , erWitnessResources
+       , erAppDir
        ) where
 
 import Control.Lens (makeLenses)
@@ -18,6 +19,7 @@ import Dscp.Educator.Launcher.Params (EducatorKeyParams (..), EducatorParams (..
 import Dscp.Resource.Class (AllocResource (..), buildComponentR)
 import Dscp.Resource.Keys (KeyResources (..), linkStore)
 import Dscp.Resource.SQLite ()
+import Dscp.Resource.AppDir
 import qualified Dscp.Witness.Launcher.Resource as Witness
 
 -- SQL resource should be here too (in the future).
@@ -27,6 +29,7 @@ data EducatorResources = EducatorResources
     { _erWitnessResources :: !Witness.WitnessResources
     , _erDB               :: !SQLiteDB
     , _erKeys             :: !(KeyResources EducatorNode)
+    , _erAppDir           :: !AppDir
     }
 
 makeLenses ''EducatorResources
@@ -47,15 +50,16 @@ instance HasLens ZTNetServEnv EducatorResources ZTNetServEnv where
     lensOf = erWitnessResources . lensOf @ZTNetServEnv
 
 instance HasEducatorConfig =>
-         AllocResource EducatorKeyParams (KeyResources EducatorNode) where
-    allocResource (EducatorKeyParams baseParams) =
+         AllocResource (EducatorKeyParams, AppDir) (KeyResources EducatorNode) where
+    allocResource (EducatorKeyParams baseParams, appDir) =
         buildComponentR "educator keys"
-            (linkStore baseParams Nothing)
+            (linkStore baseParams Nothing appDir)
             (\_ -> pass)
 
 instance HasEducatorConfig => AllocResource EducatorParams EducatorResources where
     allocResource EducatorParams{..} = do
         _erWitnessResources <- allocResource epWitnessParams
         _erDB <- allocResource epDBParams
-        _erKeys <- allocResource epKeyParams
+        _erAppDir <- allocResource epAppDirParam
+        _erKeys <- allocResource (epKeyParams, _erAppDir)
         return EducatorResources {..}

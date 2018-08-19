@@ -8,7 +8,7 @@ module Dscp.Educator.CLI
 
 import Options.Applicative (Parser, help, long, metavar, option, strOption, switch, value)
 
-import Dscp.CommonCLI (baseKeyParamsParser, serverParamsParser, timeReadM)
+import Dscp.CommonCLI (baseKeyParamsParser, serverParamsParser, timeReadM, appDirParamParser)
 import Dscp.DB.SQLite (SQLiteDBLocation (..), SQLiteParams (..))
 import Dscp.Educator.Launcher.Params (EducatorKeyParams (..), EducatorParams (..))
 import Dscp.Educator.Web.Bot.Params (EducatorBotParams (..), EducatorBotSwitch (..))
@@ -58,4 +58,5 @@ educatorParamsParser = do
     epDBParams <- sqliteParamsParser
     epKeyParams <- educatorKeyParamsParser
     epWebParams <- educatorWebParamsParser
+    epAppDirParam <- appDirParamParser
     return EducatorParams{..}

@@ -10,6 +10,7 @@ module Dscp.Faucet.Launcher.Params
     , fpWitnessAddress
     , fpTranslatedAmount
     , fpDryRun
+    , fpAppDirParam
     ) where
 
 import Control.Lens (makeLenses)
@@ -17,6 +18,7 @@ import Control.Lens (makeLenses)
 import Dscp.Core
 import Dscp.Resource.Keys
 import Dscp.Resource.Logging
+import Dscp.Resource.AppDir
 import Dscp.Web
 
 -- | How much money would be traslated on each request.
@@ -38,6 +40,7 @@ data FaucetParams = FaucetParams
       -- ^ How much money to send on request.
     , _fpDryRun           :: DryRun
       -- ^ Do not actually communicate with witness backend.
+    , _fpAppDirParam      :: AppDirParam
     }
 
 makeLenses ''FaucetParams

@@ -79,6 +79,7 @@ function witness_args {
 
     # witness params (and educator's as well)
     local witness_params="
+    --path ./tmp/
     --config ./configuration.yaml
     --config-key demo
     --bind $bind

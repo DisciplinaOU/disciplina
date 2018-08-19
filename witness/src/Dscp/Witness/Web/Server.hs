@@ -11,7 +11,7 @@ import Network.HTTP.Types.Header (hContentType)
 import Network.Wai.Middleware.Cors (CorsResourcePolicy (..), cors, simpleCorsResourcePolicy)
 import Servant (Handler, Server, hoistServer, serve, throwError)
 
-import Dscp.Launcher.Rio (runRIO)
+import Dscp.Rio (runRIO)
 import Dscp.Util.Servant (LoggingApi, ServantLogConfig (..))
 import Dscp.Web (ServerParams (..), buildServantLogConfig, serveWeb)
 import Dscp.Witness.Config (HasWitnessConfig)

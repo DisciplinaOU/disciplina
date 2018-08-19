@@ -1,6 +1,6 @@
 -- | RIO monad we may wish to use all over the project.
 
-module Dscp.Launcher.Rio
+module Dscp.Rio
     ( RIO (..)
     , runRIO
     ) where

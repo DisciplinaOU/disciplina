@@ -11,6 +11,7 @@ module Dscp.CommonCLI
        , coinReadM
        , networkAddressParser
        , serverParamsParser
+       , appDirParamParser
        ) where
 
 import Data.Char (toLower)
@@ -29,6 +30,7 @@ import Dscp.Core.Foundation.Witness
 import Dscp.Crypto (mkPassPhrase)
 import Dscp.Resource.Keys (BaseKeyParams (..))
 import Dscp.Resource.Logging (LoggingParams (..))
+import Dscp.Resource.AppDir
 import Dscp.Util (leftToFail)
 import Dscp.Web (NetworkAddress (..), ServerParams (..))
 import Paths_disciplina_witness (version)
@@ -76,6 +78,12 @@ baseKeyParamsParser who = do
          metavar "PASSWORD" <>
          help "Password of secret key."
     passphraseReadM = leftToFail . first pretty . mkPassPhrase =<< str
+
+appDirParamParser :: Parser AppDirParam
+appDirParamParser = fmap AppDirectorySpecific $ strOption $
+    long "path" <>
+    metavar "FILEPATH" <>
+    help "Path to application folder"
 
 -- | Parses time with specified unit of measurement, e.g. @10s@.
 timeReadM :: KnownRat unit => ReadM (Time unit)

@@ -28,6 +28,7 @@ faucetParamsParser = do
     _fpWitnessAddress <- networkAddressParser "witness-backend" witnessBackendHelp
     _fpTranslatedAmount <- translatedAmountParser
     _fpDryRun <- dryRunParser
+    _fpAppDirParam <- appDirParamParser
     return FaucetParams{..}
   where
     witnessBackendHelp = "Address of witness node to accept faucet transactions"
