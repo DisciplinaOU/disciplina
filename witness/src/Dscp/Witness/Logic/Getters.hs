@@ -101,7 +101,8 @@ resolvePrevious o = do
 
 -- | Safely get an account.
 getAccountMaybe :: WitnessWorkMode ctx m => Address -> m (Maybe Account)
-getAccountMaybe = runStateSdMRead (RememberForProof False) . SD.queryOne . AccountId
+getAccountMaybe =
+    runStateSdMRead (RememberForProof False) . SD.queryOne . AccountId
 
 -- | Safely get an account taking mempool into consideration.
 getMempoolAccountMaybe

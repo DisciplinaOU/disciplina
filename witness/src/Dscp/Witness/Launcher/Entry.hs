@@ -28,7 +28,7 @@ witnessEntry =
         -- this should be done only if resource is not initialised,
         -- and this call should be in SDActions allocation code, but
         -- now we always start with the empty state.
-        writingSDLock applyGenesisBlock
+        writingSDLock "apply genesis block" applyGenesisBlock
 
         -- todo git revision
         logInfo $ "Genesis header: " +| genesisHeader |+ ""

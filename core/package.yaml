@@ -27,6 +27,7 @@ library:
     - loot-log
     - lens
     - memory
+    - o-clock
     - optparse-applicative
     - QuickCheck
     - quickcheck-instances

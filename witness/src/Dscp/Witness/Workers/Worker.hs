@@ -92,7 +92,7 @@ blockUpdateWorker =
            | otherwise -> logDebug "blockUpdateWorker: block is useless"
 
     applyNewBlock block =
-        writingSDLock $ do
+        writingSDLock "apply new block" $ do
             logDebug $ "Block " +| hashF (headerHash block) |+
                       " is a direct continuation of our tip, applying"
             proof <- applyBlock block
@@ -105,7 +105,7 @@ blockUpdateWorker =
     applyManyBlocks blocks = do
         tip <- runSdMRead getTipBlock
         if (NE.head (unOldestFirst blocks) == tip)
-        then writingSDLock $ do
+        then writingSDLock "apply many blocks" $ do
                 let blocks' = NE.tail $ unOldestFirst blocks
                 logDebug $ "Will attempt to apply blocks: " +|
                           listF' hashF (map headerHash blocks) |+ ""
@@ -153,7 +153,7 @@ makeRelay (RelayState input pipe failedTxs) =
             isThere <- readingSDLock $ isInMempool @ctx tx
 
             unless isThere $ do
-                good <- writingSDLock $ addTxToMempool @ctx tx
+                good <- writingSDLock "add to mempool" $ addTxToMempool @ctx tx
 
                 unless good $
                     atomically $
