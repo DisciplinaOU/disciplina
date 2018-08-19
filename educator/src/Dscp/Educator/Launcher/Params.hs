@@ -26,6 +26,6 @@ data EducatorParams = EducatorParams
     -- ^ Parameters for educator secret key storage.
     , epWebParams     :: EducatorWebParams
     -- ^ Parameters for HTTP APIs
-    , epAppDirParam   :: AppDirParam      
+    , epAppDirParam   :: AppDirParam
     -- ^ Application folder param
     }
