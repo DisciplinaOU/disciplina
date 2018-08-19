@@ -3,7 +3,7 @@
 -- | Functions to serve Student HTTP API
 
 module Dscp.Educator.Web.Server
-       ( serveStudentAPIReal
+       ( serveEducatorAPIsReal
        ) where
 
 import Data.Proxy (Proxy (..))
@@ -11,13 +11,14 @@ import Fmt ((+|), (|+))
 import Loot.Log (logInfo)
 import Network.HTTP.Types.Header (hAuthorization, hContentType)
 import Network.Wai.Middleware.Cors (CorsResourcePolicy (..), cors, simpleCorsResourcePolicy)
-import Servant ((:<|>) (..), Context (..), Handler, Server, hoistServer, hoistServerWithContext,
-                serveWithContext)
+import Servant ((:<|>) (..), Context (..), Handler, Server, err405, errBody, hoistServer,
+                hoistServerWithContext, serveWithContext)
+import Servant.Auth.Server.Internal.ThrowAll (throwAll)
 import Servant.Generic (toServant)
+import UnliftIO (askUnliftIO)
 
 import Dscp.Crypto (PublicKey, keyGen, withIntSeed)
-import Dscp.Educator.Config (HasEducatorConfig)
-import Dscp.Educator.Launcher (EducatorRealMode, EducatorWorkMode)
+import Dscp.Educator.Launcher.Mode (CombinedWorkMode, EducatorWorkMode)
 import Dscp.Educator.Web.Bot (EducatorBotSwitch (..), addBotHandlers, initializeBot)
 import Dscp.Educator.Web.Educator (EducatorAPI, convertEducatorApiHandler, educatorAPI,
                                    educatorApiHandlers)
@@ -25,11 +26,14 @@ import Dscp.Educator.Web.Params (EducatorWebParams (..))
 import Dscp.Educator.Web.Student (GetStudentsAction (..), ProtectedStudentAPI,
                                   convertStudentApiHandler, studentAPI, studentApiHandlers)
 import Dscp.Web (ServerParams (..), serveWeb)
+import Dscp.Witness.Web
 
 type EducatorWebAPI =
     EducatorAPI
     :<|>
     ProtectedStudentAPI
+    :<|>
+    WitnessAPI
 
 mkEducatorApiServer
     :: forall ctx m. EducatorWorkMode ctx m
@@ -65,16 +69,19 @@ createGetStudentsAction = do
     traverse_ addKeyWithSeed [1000..1100]
     return . GetStudentsAction $ atomically . readTVar $ tvr
 
-serveStudentAPIReal :: HasEducatorConfig => EducatorWebParams -> EducatorRealMode ()
-serveStudentAPIReal EducatorWebParams{..} = do
+serveEducatorAPIsReal :: CombinedWorkMode ctx m => Bool -> EducatorWebParams -> m ()
+serveEducatorAPIsReal withWitnessApi EducatorWebParams{..} = do
     let ServerParams{..} = ewpServerParams
     getStudents <- liftIO $ createGetStudentsAction
     let srvCtx = getStudents :. EmptyContext
 
     logInfo $ "Serving Student API on "+|spAddr|+""
-    eCtx <- ask
-    let educatorApiServer = mkEducatorApiServer (convertEducatorApiHandler eCtx)
-    studentApiServer <- mkStudentApiServer (convertStudentApiHandler eCtx) ewpBotParams
+    unliftIO <- askUnliftIO
+    let educatorApiServer = mkEducatorApiServer (convertEducatorApiHandler unliftIO)
+    studentApiServer <- mkStudentApiServer (convertStudentApiHandler unliftIO) ewpBotParams
+    let witnessApiServer = if withWitnessApi
+          then mkWitnessAPIServer (convertWitnessHandler unliftIO)
+          else throwAll err405{ errBody = "Witness API disabled at this port" }
     let ourCors = cors (const $ Just $
                         simpleCorsResourcePolicy
                         { corsRequestHeaders = [hContentType, hAuthorization] })
@@ -84,3 +91,5 @@ serveStudentAPIReal EducatorWebParams{..} = do
          educatorApiServer
          :<|>
          studentApiServer
+         :<|>
+         witnessApiServer

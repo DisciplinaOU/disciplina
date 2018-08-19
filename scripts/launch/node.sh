@@ -32,7 +32,7 @@ done
 if [[ "$node" == "" ]]; then
     echo "Please specify which node to run (e.g. \"educator\" or just \"e\")"
     exit 1
-else
+fi
 
 ##################
 # Launch
@@ -103,7 +103,7 @@ elif [[ "$node" == "witness" ]]; then
     stack exec "dscp-witness" -- $witness_params
 elif [[ "$node" == "faucet" ]]; then
     stack exec "dscp-faucet" -- $faucet_params
-fi
+else
     echo "Unknown node type \"$node\""
     exit 1
 fi
