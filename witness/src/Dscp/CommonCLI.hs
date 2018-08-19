@@ -1,7 +1,7 @@
 {-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE QuasiQuotes   #-}
 
--- | Common (among witness and educator) CLI params.
+-- | Common CLI params.
 
 module Dscp.CommonCLI
        ( logParamsParser
@@ -80,10 +80,12 @@ baseKeyParamsParser who = do
     passphraseReadM = leftToFail . first pretty . mkPassPhrase =<< str
 
 appDirParamParser :: Parser AppDirParam
-appDirParamParser = fmap AppDirectorySpecific $ strOption $
-    long "path" <>
-    metavar "FILEPATH" <>
-    help "Path to application folder"
+appDirParamParser = 
+    AppDirectorySpecific <$> (strOption $
+        long "path" <>
+        metavar "FILEPATH" <>
+        help "Path to application folder") <|>
+    pure AppDirectoryOS
 
 -- | Parses time with specified unit of measurement, e.g. @10s@.
 timeReadM :: KnownRat unit => ReadM (Time unit)
