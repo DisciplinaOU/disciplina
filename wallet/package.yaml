@@ -1,7 +1,7 @@
 <<: !include "../hpack/module.yaml"
 
-name:        disciplina-wallet
-description: This package contains Ariadne-based wallet for Disciplina
+name: disciplina-wallet
+description: Ariadne-based wallet for Disciplina
 
 library:
   <<: *lib-common
@@ -36,26 +36,9 @@ library:
     - -Wno-unused-top-binds
 
 executables:
-  disciplina-wallet:
+  dscp-wallet:
     <<: *exec-common
-    source-dirs: app
-    default-extensions:
-      - DataKinds
-    dependencies:
-      - ansi-wl-pprint
-      - ariadne-cli-lib
-      - ariadne-core
-      - disciplina-core
-      - disciplina-wallet
-      - disciplina-witness
-      - ii-extras
-      - knit
-      - optparse-applicative
-      - text
-
-  disciplina-wallet-vty:
-    <<: *exec-common
-    source-dirs: app-vty
+    source-dirs: exec
     default-extensions:
       - DataKinds
     dependencies:
@@ -74,3 +57,20 @@ executables:
       - serokell-util
       - text
       - vector
+
+  dscp-wallet-cli:
+    <<: *exec-common
+    source-dirs: exec-cli
+    default-extensions:
+      - DataKinds
+    dependencies:
+      - ansi-wl-pprint
+      - ariadne-cli-lib
+      - ariadne-core
+      - disciplina-core
+      - disciplina-wallet
+      - disciplina-witness
+      - ii-extras
+      - knit
+      - optparse-applicative
+      - text
