@@ -101,6 +101,6 @@ txPublisher :: WitnessWorkMode ctx m => RelayState -> Listener m
 txPublisher (RelayState _ pipe _) = Listener
     "txRetranslationPublisher"
     [] $ \btq -> do
-        dieGracefully $ forever $ atomically $ do
+        dieGracefully "tx retranslation publisher" $ forever $ atomically $ do
             tx <- STM.readTBQueue pipe
             servPub btq (PubTx tx)

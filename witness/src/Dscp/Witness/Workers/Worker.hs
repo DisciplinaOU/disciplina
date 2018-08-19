@@ -132,7 +132,7 @@ makeRelay (RelayState input pipe failedTxs) =
         "txRetranslationInitialiser"
         []
         [] $ \_btq ->
-            dieGracefully $ forever $ do
+            dieGracefully "tx retranslation initializer" $ forever $ do
                 (tx, inMempoolNotifier) <- atomically $ STM.readTBQueue input
                 checkThenRepublish tx
                 notify inMempoolNotifier
@@ -141,7 +141,7 @@ makeRelay (RelayState input pipe failedTxs) =
         "txRetranslationRepeater"
         []
         [subType @PubTx] $ \btq -> do
-            dieGracefully $ forever $ do
+            dieGracefully "tx retranslation repeater" $ forever $ do
                 (_, PubTx tx) <- cliRecvUpdate btq (-1)
                 checkThenRepublish tx
 
