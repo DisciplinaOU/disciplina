@@ -40,9 +40,10 @@ witnessEntry =
         witnessListeners >>= mapM_ (void . async . runListener identity)
 
         witnessParams <- view (lensOf @WitnessParams)
-        logInfo "Forking wallet server"
-        void . async $
-            serveWitnessAPIReal (wpWalletServerParams witnessParams)
+        whenJust (wpWitnessServerParams witnessParams) $ \serverParams -> do
+            logInfo "Forking witness API server"
+            void . async $
+                serveWitnessAPIReal serverParams
 
         logInfo "All done"
         forever $ liftIO $ threadDelay 10000000
