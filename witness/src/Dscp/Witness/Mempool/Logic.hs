@@ -8,6 +8,7 @@ module Dscp.Witness.Mempool.Logic
     ) where
 
 import UnliftIO (MonadUnliftIO)
+import Control.Monad.Except (catchError)
 
 import Loot.Base.HasLens (HasLens', lensOf)
 
@@ -44,10 +45,13 @@ addTxToMempool
     .  MempoolCtx ctx m
     => MempoolVar
     -> GTxWitnessed
-    -> m ()
-addTxToMempool (Mempool pool conf, lock) tx =
-    writeToMempool @ctx pool lock
-        $ Pool.processTxAndInsertToMempool conf tx
+    -> m Bool
+addTxToMempool (Mempool pool conf, lock) tx = do
+    writeToMempool @ctx pool lock $ do
+        Pool.processTxAndInsertToMempool conf tx
+        return True
+      `catchError` \_ -> do
+        return False
 
 takeTxsMempool
     :: forall ctx m

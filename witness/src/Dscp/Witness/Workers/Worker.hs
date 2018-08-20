@@ -144,5 +144,10 @@ makeRelay (RelayState input pipe failedTxs) =
             isThere <- isInMempool @ctx pool tx
 
             unless isThere $ do
-                addTxToMempool @ctx pool tx
+                good <- addTxToMempool @ctx pool tx
+
+                unless good $
+                    atomically $
+                        STM.modifyTVar failedTxs $ HashMap.insert (hash tx) tx
+
                 atomically $ STM.writeTQueue pipe tx
