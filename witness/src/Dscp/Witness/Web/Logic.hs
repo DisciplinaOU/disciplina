@@ -11,10 +11,11 @@ module Dscp.Witness.Web.Logic
 
 import Codec.Serialise (serialise)
 import qualified Data.ByteString.Lazy as BS
+import Data.Default (def)
 
 import Dscp.Core
 import Dscp.Snowdrop
-import Dscp.Util (assertJust, fromHex, nothingToPanic, nothingToThrow)
+import Dscp.Util (fromHex, nothingToThrow)
 import Dscp.Util.Concurrent.NotifyWait
 import Dscp.Witness.Config
 import Dscp.Witness.Launcher.Mode (WitnessWorkMode)
@@ -96,9 +97,8 @@ getBlockInfo =
 getAccountInfo :: WitnessWorkMode ctx m => Address -> Bool -> m AccountInfo
 getAccountInfo address includeTxs = do
     account <- readingSDLock $ do
-        blockAccount <- getAccountMaybe address `assertJust` AccountNotFound
-        poolAccount  <- nothingToPanic noMempoolAccount <$>
-                        getMempoolAccountMaybe address
+        blockAccount <- fromMaybe def <$> getAccountMaybe address
+        poolAccount  <- fromMaybe def <$> getMempoolAccountMaybe address
         return BlocksOrMempool
               { bmConfirmed = blockAccount
               , bmTotal     = poolAccount }
@@ -106,10 +106,6 @@ getAccountInfo address includeTxs = do
         then Just <$> getAccountTxs address
         else return Nothing
     return $ toAccountInfo account txs
-  where
-    noMempoolAccount =
-        "'getMempoolAccountMaybe' returned Nothing while 'getAccountMaybe' \
-        \succeeded"
 
 getTransactions :: WitnessWorkMode ctx m => Maybe Int -> Maybe GTxId -> m TxList
 getTransactions mCount mFrom = do

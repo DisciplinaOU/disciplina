@@ -19,7 +19,6 @@ import Dscp.Util.Servant
 
 data WitnessAPIError
     = BlockNotFound
-    | AccountNotFound
     | TransactionNotFound
     | InternalError Text
     | InvalidFormat
@@ -28,7 +27,6 @@ data WitnessAPIError
 instance Buildable WitnessAPIError where
     build = \case
         BlockNotFound -> "Specified block does not exist."
-        AccountNotFound -> "Specified account does not exist."
         TransactionNotFound -> "Specified transaction does not exist."
         InternalError msg -> B.build msg
         InvalidFormat -> "Failed to deserialise one of parameters."
@@ -53,7 +51,6 @@ deriveJSON defaultOptions ''ErrResponse
 instance ToJSON WitnessAPIError where
     toJSON = String . \case
         BlockNotFound -> "BlockNotFound"
-        AccountNotFound -> "AccountNotFound"
         TransactionNotFound -> "TransactionNotFound"
         InternalError msg -> msg
         InvalidFormat -> "InvalidFormat"
@@ -61,7 +58,6 @@ instance ToJSON WitnessAPIError where
 instance FromJSON WitnessAPIError where
     parseJSON = withText "error" $ pure . \case
         "BlockNotFound" -> BlockNotFound
-        "AccountNotFound" -> AccountNotFound
         "TransactionNotFound" -> TransactionNotFound
         "InvalidFormat" -> InvalidFormat
         msg -> InternalError msg
@@ -74,7 +70,6 @@ instance FromJSON WitnessAPIError where
 toServantErrNoReason :: WitnessAPIError -> ServantErr
 toServantErrNoReason = \case
     BlockNotFound       -> err404
-    AccountNotFound     -> err404
     TransactionNotFound -> err404
     InternalError{}     -> err500
     InvalidFormat       -> err400
