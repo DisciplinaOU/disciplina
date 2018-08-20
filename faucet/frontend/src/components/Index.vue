@@ -17,7 +17,7 @@
             </div>
           </form>
         </div>
-        <div class="checkResult" id="js-result">
+        <div class="checkResult" v-if="transfer.amount || error">
           <b class="checkResult__title" v-if="transfer.amount">{{transfer.amount}} DSCP <span>{{ $t("transfer.amountMsg") }}</span></b>
           <p class="checkResult__text" v-if="transfer.txId">{{ $t("transfer.transactionId") }}: {{transfer.txId}}</p>
           <b class="checkResult__title color-alert" v-if="error">{{ $t(`transfer.errors.${error}`) }}</b>

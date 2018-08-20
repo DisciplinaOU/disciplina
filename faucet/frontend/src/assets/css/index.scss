@@ -145,10 +145,11 @@
 .checkResult {
   text-align: center;
   text-shadow: 1px 1px 0 rgba($color-black, 0.05);
-  min-height: 116px;
-  padding-top: 24px;
-  padding-bottom: 24px;
-  // opacity: 0;
+  padding: 20px 50px;
+  margin-top: 25px;
+  margin-bottom: 25px;
+  background-color: $color-white-transparent;
+  border-radius: 5px;
 
   &__title {
     @include font(23px, 28px);
