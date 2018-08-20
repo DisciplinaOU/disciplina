@@ -54,17 +54,22 @@ addBotHandlers student StudentApiEndpoints{..} = botEndpoints
             botProvideInitSetting student
             res <- sMakeSubmission newSub
 
-            delayed $ requestToSignedSubmission newSub >>= botGradeSubmission
+            delayed $ do
+                requestToSignedSubmission newSub >>= botGradeSubmission
 
-            allAssigns <- sGetAssignments Nothing Nothing Nothing
-            botProvideUnlockedAssignments student res allAssigns
+                allAssigns <- sGetAssignments Nothing Nothing Nothing
+                botProvideUnlockedAssignments student res allAssigns
 
-            -- cheat: on 3 submissions for the same assignment unlock all courses
-            let assignH = nsAssignmentHash newSub
-            courseSubs <- sGetSubmissions Nothing (Just assignH) Nothing
-            -- remembering about race conditions
-            when (length courseSubs `elem` [3..4]) $
+            -- Easter egg: once a couple of courses is completed,
+            -- unlock all courses
+            -- Not doing this too early in order not to confuse the user.
+            -- Frontend team can still unlock courses quickly if they need
+            -- because assignments for first two courses are fixed disregard
+            -- the seed.
+            courses <- sGetCourses (Just $ IsEnrolled True)
+            when (length (filter ciIsFinished courses) >= 2) $
                 botProvideAdvancedSetting student
+
             return res
 
         , sDeleteSubmission = \subH -> do
