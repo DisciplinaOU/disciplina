@@ -35,7 +35,7 @@ main = do
               `onException` logError "Failled to connect to witness node"
 
             addrState <- wGetAccount wc addr False
-            let balance = bConfirmed (aiBalances addrState)
+            let balance = bmConfirmed (aiBalances addrState)
             logInfo $ "Source address current balance: " +| balance |+ ""
 
 getFaucetParams :: IO (FaucetParams, FaucetConfigRec)

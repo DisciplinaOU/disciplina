@@ -45,7 +45,7 @@ module Dscp.Core.Foundation.Witness
 import Codec.Serialise (Serialise)
 import Data.Coerce (coerce)
 
-import Fmt (blockListF, build, indentF, listF, nameF, (+|), (+||), (|+), (||+))
+import Fmt (blockListF, build, indentF, listF, nameF, whenF, (+|), (+||), (|+), (||+))
 
 import Dscp.Core.Foundation.Address
 import Dscp.Core.Foundation.Educator (PrivateHeaderHash)
@@ -91,7 +91,7 @@ unsafeMkCoin :: Integral i => i -> Coin
 unsafeMkCoin = Coin . fromIntegral -- also do checks
 
 instance Buildable Coin where
-    build (Coin c) = c ||+ " coin(s)"
+    build (Coin c) = c ||+ " coin" +|| whenF (c /= 1) "s"
 
 sumCoins :: Coin -> Coin -> Coin
 sumCoins = coerce $ (+) @Word64
@@ -151,7 +151,7 @@ toTxId = hash
 data TxWitness = TxWitness
     { txwSig :: Signature (TxId, PublicKey, ())
     , txwPk  :: PublicKey
-    } deriving (Eq, Show, Generic)
+    } deriving (Eq, Ord, Show, Generic)
 
 instance Buildable TxWitness where
     build TxWitness {..} =
@@ -161,7 +161,7 @@ instance Buildable TxWitness where
 data TxWitnessed = TxWitnessed
     { twTx      :: Tx
     , twWitness :: TxWitness
-    } deriving (Eq, Show, Generic)
+    } deriving (Eq, Ord, Show, Generic)
 
 instance Buildable TxWitnessed where
     build TxWitnessed {..} =
@@ -198,7 +198,7 @@ data Publication = Publication
 data PublicationTxWitness = PublicationTxWitness
     { pwSig :: Signature (PublicationTxId, PublicKey, Publication)
     , pwPk  :: PublicKey
-    } deriving (Eq, Show, Generic)
+    } deriving (Eq, Ord, Show, Generic)
 
 instance Buildable PublicationTxWitness where
     build PublicationTxWitness {..} =
@@ -208,7 +208,7 @@ instance Buildable PublicationTxWitness where
 data PublicationTxWitnessed = PublicationTxWitnessed
     { ptwTx      :: PublicationTx
     , ptwWitness :: PublicationTxWitness
-    } deriving (Eq, Show, Generic)
+    } deriving (Eq, Ord, Show, Generic)
 
 instance Buildable PublicationTxWitnessed where
     build PublicationTxWitnessed {..} =
@@ -236,26 +236,26 @@ newtype GTxId = GTxId (Hash GTx)
 
 -- | Compute tx id.
 toGTxId :: (Serialise Tx, Serialise PublicationTx) => GTx -> GTxId
-toGTxId (GMoneyTx tx) = GTxId . unsafeCastHash . toTxId $ tx
+toGTxId (GMoneyTx tx)       = GTxId . unsafeCastHash . toTxId $ tx
 toGTxId (GPublicationTx tx) = GTxId . unsafeCastHash . toPtxId $ tx
 
 data GTxWitnessed
     = GMoneyTxWitnessed TxWitnessed
     | GPublicationTxWitnessed PublicationTxWitnessed
-    deriving (Generic, Eq, Show)
+    deriving (Generic, Eq, Ord, Show)
 
 instance Buildable GTxWitnessed where
     build (GMoneyTxWitnessed       tw) = "GMoneyTxWitnessed: " +| tw |+ ""
     build (GPublicationTxWitnessed pw) = "GPublicationTxWitnessed: " +| pw |+ ""
 
 unGTxWitnessed :: GTxWitnessed -> GTx
-unGTxWitnessed (GMoneyTxWitnessed tw) = GMoneyTx (twTx tw)
+unGTxWitnessed (GMoneyTxWitnessed tw)       = GMoneyTx (twTx tw)
 unGTxWitnessed (GPublicationTxWitnessed tw) = GPublicationTx (ptwTx tw)
 
 -- | Transaction with reference to block it is published in
 data GTxInBlock = GTxInBlock
     { tbBlock :: Maybe Block
-    , tbTx :: GTxWitnessed
+    , tbTx    :: GTxWitnessed
     }
     deriving (Eq, Show, Generic)
 

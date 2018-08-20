@@ -10,6 +10,7 @@ module Dscp.Snowdrop.Types
     , Author(..)
     ) where
 
+import Data.Default (Default (..))
 import Data.Text.Buildable (Buildable (..))
 import Formatting (bprint, build, int, (%))
 
@@ -56,6 +57,10 @@ data Account = Account
     { aBalance :: Integer  -- ^ Account balance.
     , aNonce   :: Integer  -- ^ Count of transactions originated _from_ this account.
     } deriving (Eq, Ord, Show, Generic)
+
+-- | How absense of account in db should look like outside.
+instance Default Account where
+    def = Account{ aBalance = 0, aNonce = 0 }
 
 instance Buildable Account where
     build Account{..} = bprint ("account: bal "%int%", nonce "%int) aBalance aNonce

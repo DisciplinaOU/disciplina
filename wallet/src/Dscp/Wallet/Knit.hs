@@ -16,6 +16,7 @@ import Dscp.Core (TxOut (..), addrFromText, coinToInteger, toTxId)
 import Dscp.Crypto (decrypt, emptyPassPhrase, encrypt, fromByteArray, mkPassPhrase)
 import Dscp.Util (toHex)
 import Dscp.Wallet.Face
+import Dscp.Witness.Web.Types
 
 import Knit
 
@@ -169,7 +170,9 @@ instance AllConstrained (Elem components) '[Wallet, Core] => ComponentCommandPro
             address <- getArg tyAddress "address"
             pure (address)
         , cpRepr = \(address) -> CommandAction $ \WalletFace{..} -> do
-            toValue . ValueCoin <$> walletGetBalance address
+            BlocksOrMempool{..} <- walletGetBalance address
+            return . toValue . ValueList $
+              map (toValue . ValueCoin) [bmConfirmed, bmTotal]
         , cpHelp = "Get address balance."
         }
     ]

@@ -200,7 +200,7 @@ idOf = to getId
 -- Wrapper, that prints an error happened
 -----------------------------------------------------------
 
-dieGracefully :: (MonadLogging m, MonadCatch m) => m () -> m ()
-dieGracefully action =
+dieGracefully :: (MonadLogging m, MonadCatch m) => Text -> m () -> m ()
+dieGracefully desc action =
     action `catchAny` \e -> do
-        logError $ fromString $ "Exception in transactionRelayInput: " <> show e
+        logError $ fromString $ "Exception in " <> toString desc <> ": " <> show e

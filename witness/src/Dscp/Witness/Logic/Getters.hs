@@ -13,6 +13,7 @@ module Dscp.Witness.Logic.Getters
     , resolvePrevious
 
     , getAccountMaybe
+    , getMempoolAccountMaybe
     , getAccountTxs
 
     , getTxMaybe
@@ -20,6 +21,7 @@ module Dscp.Witness.Logic.Getters
     ) where
 
 import Control.Lens (ix)
+import Loot.Base.HasLens (lensOf)
 import qualified Snowdrop.Core as SD
 import qualified Snowdrop.Model.Block as SD
 import qualified Snowdrop.Util as SD
@@ -29,6 +31,8 @@ import Dscp.Snowdrop
 import Dscp.Witness.Config
 import Dscp.Witness.Launcher.Mode
 import Dscp.Witness.Logic.Exceptions
+import Dscp.Witness.Mempool
+import Dscp.Witness.SDLock
 
 ----------------------------------------------------------------------------
 -- Block/Header/Tip getters
@@ -97,7 +101,18 @@ resolvePrevious o = do
 
 -- | Safely get an account.
 getAccountMaybe :: WitnessWorkMode ctx m => Address -> m (Maybe Account)
-getAccountMaybe = runStateSdMRead (RememberForProof False) . SD.queryOne . AccountId
+getAccountMaybe =
+    runStateSdMRead (RememberForProof False) . SD.queryOne . AccountId
+
+-- | Safely get an account taking mempool into consideration.
+getMempoolAccountMaybe
+    :: WitnessWorkMode ctx m
+    => Address -> m (Maybe Account)
+getMempoolAccountMaybe addr = do
+    Mempool pool _ <- view (lensOf @MempoolVar)
+    lock           <- view (lensOf @SDLock)
+    readFromMempoolLocked pool lock $
+        SD.liftERoComp $ SD.queryOne (AccountId addr)
 
 -- | Get a list of all transactions for a given account
 getAccountTxs :: WitnessWorkMode ctx m => Address -> m [GTxInBlock]

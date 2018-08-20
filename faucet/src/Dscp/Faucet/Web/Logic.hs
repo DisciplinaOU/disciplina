@@ -54,15 +54,14 @@ faucetTransferMoneyTo dest = do
         sourceState <-
             if dryRun
             then pure AccountInfo
-                      { aiBalances = Balances (Coin 100000)
+                      { aiBalances = join BlocksOrMempool (Coin 100000)
                       , aiNextNonce = 7
                       , aiTransactionCount = 6
                       , aiTransactions = Nothing
                       }
             else wGetAccount wc source False
 
-        -- TODO: take mempool's balance
-        let balance = bConfirmed $ aiBalances sourceState
+        let balance = bmTotal $ aiBalances sourceState
         when (balance < transfer) $
             throwM SourceAccountExhausted
 

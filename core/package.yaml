@@ -27,6 +27,7 @@ library:
     - loot-log
     - lens
     - memory
+    - o-clock
     - optparse-applicative
     - QuickCheck
     - quickcheck-instances
@@ -37,6 +38,7 @@ library:
     - servant
     - semver
     - snowdrop-util
+    - stm
     - text
     - text-format
     - time
