@@ -40,7 +40,7 @@ ul {
   }
 }
 
-.mainWrapper {
+.wrapper {
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
@@ -61,6 +61,21 @@ ul {
   padding-top: 12px;
   flex: 0 0 auto;
   overflow: hidden;
+}
+
+.preLoader {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  background-color: $color-white;
+  z-index: 99;
+  .preLoader__img{
+    vertical-align: center;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+  }
 }
 
 @media screen and (max-width: 500px){
@@ -316,7 +331,7 @@ ul {
   .pseudoTable__row {
     display: table-row;
     transition: background $transition;
-    &:hover {
+    &:hover:not(.pseudoTable__row--caption) {
       background: $color-main-light;
     }
 
@@ -336,6 +351,9 @@ ul {
         background-size: contain;
         margin-right: 5px;
       }
+    }
+    .cell__since {
+      white-space: nowrap;
     }
   }
 
@@ -507,6 +525,7 @@ ul {
 
 .informBlock__hash {
   margin-bottom: 15px;
+  font-size: 16px;
 }
 
 .informBlock__title {
@@ -593,6 +612,14 @@ ul {
 }
 
 @media screen and (max-width: 600px){
+  .transactionInformBlock {
+    .transactionInformBlock__hash {
+      padding-right: 0;
+    }
+    .transactionInformBlock__date {
+      padding-right: 15px;
+    }
+  }
   .transactionInformBlock__fromTo {
     flex-direction: column;
     .informBlock {
@@ -635,6 +662,7 @@ ul {
   flex-basis: auto;
   .slotInformBlock__name {
     min-width: 22%;
+    font-weight: 500;
   }
 
   .slotInformBlock__value {
@@ -650,6 +678,7 @@ ul {
 
 .slotInformBlock__value {
   display: inline-block;
+  vertical-align: middle;
 }
 
 .slotInform__about {

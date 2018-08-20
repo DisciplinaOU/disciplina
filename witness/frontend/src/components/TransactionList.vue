@@ -20,6 +20,9 @@ import TransactionItem from '@/components/TransactionItem'
 export default {
   name: 'TransactionList',
   props: ['transactions', 'timestamp'],
-  components: { TransactionItem }
+  components: { TransactionItem },
+  i18nOptions: {
+    keyPrefix: ''
+  }
 }
 </script>

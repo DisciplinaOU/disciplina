@@ -13,11 +13,11 @@
     </div>
     <div class="transactionInformBlock__fromTo">
       <div class="transactionInformBlock__from informBlock">
-        <p class="informBlock__title">{{ $("transaction.from") }}</p>
+        <p class="informBlock__title">{{ $t("transaction.from") }}</p>
         <p class="informBlock__hash hash">{{ transaction.money.inAcc.addr }}</p>
       </div>
       <div class="transactionInformBlock__to informBlock">
-        <p class="informBlock__title">{{ $("transaction.to") }}</p>
+        <p class="informBlock__title">{{ $t("transaction.to") }}</p>
         <p class="informBlock__hash hash"
           v-for="addr in transaction.money.outs"
           :key="addr.outAddr">

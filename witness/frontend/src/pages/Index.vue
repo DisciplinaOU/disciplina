@@ -1,19 +1,18 @@
 <template>
-  <div class="main ">
-  <div class="lastSlots">
+  <div class="main">
+    <div class="lastSlots">
       <div class="container">
-          <h3 class="lastSlots__title blockTitle marginBottom30 marginTop30">{{ $t("blocks") }}</h3>
-          <block-list/>
+        <h3 class="lastSlots__title blockTitle marginBottom30 marginTop30">{{ $t("blocks") }}</h3>
+        <block-list/>
       </div>
-  </div>
-
-  <div class="lastTransactions">
+    </div>
+    <div class="lastTransactions">
       <div class="container">
-          <h3 class="lastTransactions__title blockTitle marginBottom30">{{ $t("transactions") }}</h3>
-          <transaction-list/>
+        <h3 class="lastTransactions__title blockTitle marginBottom30">{{ $t("transactions") }}</h3>
+        <transaction-list/>
       </div>
+    </div>
   </div>
-</div>
 </template>
 
 <script>
