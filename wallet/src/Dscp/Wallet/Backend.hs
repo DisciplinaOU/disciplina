@@ -4,6 +4,7 @@ module Dscp.Wallet.Backend
        ) where
 
 import Control.Exception (throwIO)
+import Control.Monad.Component (ComponentM, buildComponent_)
 
 import Dscp.Core (Tx (..), TxInAcc (..), TxWitness (..), TxWitnessed (..), mkAddr, toTxId)
 import Dscp.Crypto (decrypt, emptyPassPhrase, encrypt, keyGen, sign, toPublic)
@@ -13,8 +14,8 @@ import Dscp.Web
 import Dscp.Witness.Web.Client
 import Dscp.Witness.Web.Types
 
-createWalletFace :: BaseUrl -> (WalletEvent -> IO ()) -> IO WalletFace
-createWalletFace serverAddress sendEvent = do
+createWalletFace :: BaseUrl -> (WalletEvent -> IO ()) -> ComponentM WalletFace
+createWalletFace serverAddress sendEvent = buildComponent_ "Wallet" $ do
     sendStateUpdateEvent sendEvent
     wc <- createWitnessClient serverAddress
     return WalletFace

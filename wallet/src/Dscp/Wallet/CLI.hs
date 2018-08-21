@@ -1,5 +1,6 @@
 module Dscp.Wallet.CLI
-       ( getWalletCLIParams
+       ( BaseUrl
+       , getWalletCLIParams
        ) where
 
 import Options.Applicative (execParser, fullDesc, helper, info, progDesc)
