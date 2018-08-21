@@ -27,6 +27,9 @@ module Dscp.Crypto.Impl
        , verify
        , unsafeVerify
        , Signed (..)
+       , DscpSigScheme
+       , toDscpPK
+       , toDscpSig
        ) where
 
 import Crypto.Error (CryptoFailable (..))
@@ -40,6 +43,8 @@ import Dscp.Crypto.Hash (AbstractHash (..), CryptoniteFunc, HasAbstractHash (..)
 import Dscp.Crypto.Signing (AbstractPK (..), AbstractSK (..), AbstractSig (..), CryptoEd25519,
                             HasAbstractSignature (..), MonadRandom, SignatureScheme (..),
                             abstractSign, abstractVerify)
+
+import qualified Snowdrop.Util as SD
 
 ------------------------------------------------------
 -- Hashing
@@ -74,6 +79,27 @@ type HasSignature a = HasAbstractSignature SigScheme a
 type PublicKey = AbstractPK SigScheme
 type SecretKey = AbstractSK SigScheme
 type Signature a = AbstractSig SigScheme a
+
+data DscpSigScheme
+data instance SD.PublicKey DscpSigScheme = DscpPK PublicKey
+    deriving (Eq, Show, Generic)
+data instance SD.Signature DscpSigScheme msg = DscpSig (Signature msg)
+    deriving (Eq, Show, Generic)
+
+toDscpPK :: PublicKey -> SD.PublicKey DscpSigScheme
+toDscpPK = DscpPK
+
+toDscpSig :: Signature msg -> SD.Signature DscpSigScheme msg
+toDscpSig = DscpSig
+
+instance Buildable (SD.PublicKey DscpSigScheme) where
+    build (DscpPK key) = build key
+
+instance Buildable (SD.Signature DscpSigScheme msg) where
+    build (DscpSig sig) = build sig
+
+instance HasAbstractSignature SigScheme msg => SD.VerifySign DscpSigScheme msg where
+    verifySignature (DscpPK pk) msg (DscpSig sig) = verify pk msg sig
 
 -- | Convert secret key to public.
 toPublic :: SecretKey -> PublicKey

@@ -26,6 +26,8 @@ in
       binutils
       git
       rocksdb
+      snappy
+      google-gflags
       gmp
       hsPkgs.cpphs
       hsPkgs.happy
