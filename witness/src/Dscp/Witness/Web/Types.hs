@@ -1,5 +1,7 @@
+{-# LANGUAGE DeriveFunctor #-}
+
 module Dscp.Witness.Web.Types
-    ( Balances (..)
+    ( BlocksOrMempool (..)
     , BlockInfo (..)
     , AccountInfo (..)
     , TxInfo (..)
@@ -7,7 +9,7 @@ module Dscp.Witness.Web.Types
     , HashIs (..)
     ) where
 
-import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), object, withObject, withText, (.=), (.:))
+import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), object, withObject, withText, (.:), (.=))
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (Options (..), deriveJSON)
 import Fmt (build, genericF, (+|), (|+))
@@ -15,45 +17,44 @@ import Fmt (build, genericF, (+|), (|+))
 import Dscp.Core
 import Dscp.Util.Servant (ForResponseLog (..))
 
--- | All balances related to account.
-data Balances = Balances
-    { bConfirmed :: !Coin
+-- | Distinguishes stuff on whether does it take mempool in consideration.
+data BlocksOrMempool a = BlocksOrMempool
+    { bmConfirmed :: a
       -- ^ Only looking at blocks
-
-    -- , bTotal     :: !Coin
+    , bmTotal     :: a
       -- ^ From blocks + mempool
-    }
+    } deriving (Functor)
 
 data BlockInfo = BlockInfo
-    { biHeaderHash :: HeaderHash
-    , biNextHash :: HeaderHash
-    , biMerkleRootHash :: Text
-    , biHeader :: Header
-    , biIsGenesis :: Bool
-    , biSince :: Word64  -- µs since UNIX epoch start
-    , biSize :: Int64  -- bytes
+    { biHeaderHash       :: HeaderHash
+    , biNextHash         :: HeaderHash
+    , biMerkleRootHash   :: Text
+    , biHeader           :: Header
+    , biIsGenesis        :: Bool
+    , biSince            :: Word64  -- µs since UNIX epoch start
+    , biSize             :: Int64  -- bytes
     , biTransactionCount :: Int
-    , biTotalOutput :: Coin
-    , biTotalFees :: Coin
-    , biTransactions :: Maybe [TxInfo]
+    , biTotalOutput      :: Coin
+    , biTotalFees        :: Coin
+    , biTransactions     :: Maybe [TxInfo]
     }
 
 -- | All what user may wish to know about an account.
 data AccountInfo = AccountInfo
-    { aiBalances  :: Balances
-    , aiNextNonce :: Integer
+    { aiBalances         :: BlocksOrMempool Coin
+    , aiNextNonce        :: Integer
     , aiTransactionCount :: Integer
-    , aiTransactions :: Maybe [TxInfo]
+    , aiTransactions     :: Maybe [TxInfo]
     }
 
 data TxInfo = TxInfo
     { tiBlock :: Maybe BlockInfo
-    , tiTx :: GTx
+    , tiTx    :: GTx
     }
 
 data TxList = TxList
     { tlTransactions :: [TxInfo]
-    , tlNextId :: Maybe GTxId
+    , tlNextId       :: Maybe GTxId
     }
 
 data HashIs
@@ -77,8 +78,11 @@ instance Buildable (ForResponseLog BlockInfo) where
 instance Buildable (ForResponseLog [BlockInfo]) where
     build (ForResponseLog blocks) = "" +| length blocks |+ " blocks"
 
-instance Buildable Balances where
-    build Balances{..} = "{ confirmed = " +| bConfirmed |+ " }"
+instance Buildable a => Buildable (BlocksOrMempool a) where
+    build BlocksOrMempool{..} =
+        "{ confirmed = " +| bmConfirmed |+
+        ", total = " +| bmTotal |+
+        " }"
 
 instance Buildable (ForResponseLog AccountInfo) where
     build (ForResponseLog AccountInfo{..}) =
@@ -102,7 +106,7 @@ instance Buildable (ForResponseLog HashIs) where
 -- JSON instances
 ---------------------------------------------------------------------------
 
-deriveJSON defaultOptions ''Balances
+deriveJSON defaultOptions ''BlocksOrMempool
 deriveJSON defaultOptions{ omitNothingFields = True } ''BlockInfo
 deriveJSON defaultOptions{ omitNothingFields = True } ''AccountInfo
 deriveJSON defaultOptions{ omitNothingFields = True } ''TxList
@@ -128,9 +132,9 @@ instance FromJSON TxInfo where
         txType :: Text <- o .: "txType"
         block <- o .: "block"
         TxInfo block <$> case txType of
-            "money" -> GMoneyTx <$> o .: "money"
+            "money"       -> GMoneyTx <$> o .: "money"
             "publication" -> GPublicationTx <$> o .: "publication"
-            other -> fail $ "invalid transaction type: " ++ toString other
+            other         -> fail $ "invalid transaction type: " ++ toString other
 
 instance ToJSON HashIs where
     toJSON = String . \case

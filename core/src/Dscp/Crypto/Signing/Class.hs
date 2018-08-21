@@ -85,7 +85,6 @@ deriving instance Ord (Sig ss) => Ord (AbstractSig ss a)
 deriving instance Show (Sig ss) => Show (AbstractSig ss a)
 deriving instance Monoid (Sig ss) => Monoid (AbstractSig ss a)
 
-
 -- | Provide 'ByteArrayAccess' instances for signatures and keys.
 deriving instance ByteArrayAccess (PK ss) => ByteArrayAccess (AbstractPK ss)
 deriving instance ByteArrayAccess (SK ss) => ByteArrayAccess (AbstractSK ss)

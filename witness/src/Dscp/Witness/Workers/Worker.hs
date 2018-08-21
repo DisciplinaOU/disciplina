@@ -19,12 +19,13 @@ import Dscp.Crypto
 import Dscp.Network.Wrapped
 import Dscp.Snowdrop.Mode
 import Dscp.Util
-import Dscp.Util (dieGracefully)
+import Dscp.Util.Concurrent.NotifyWait
 import Dscp.Witness.Launcher.Mode
 import Dscp.Witness.Logic
 import Dscp.Witness.Mempool
 import Dscp.Witness.Messages
 import Dscp.Witness.Relay
+import Dscp.Witness.SDLock
 
 witnessWorkers
     :: WitnessWorkMode ctx m
@@ -90,21 +91,29 @@ blockUpdateWorker =
            | headerHash header == tipHash -> logDebug "blockUpdateWorker: block is same as our tip"
            | otherwise -> logDebug "blockUpdateWorker: block is useless"
 
-    applyNewBlock block = do
-        logDebug $ "Block " +| hashF (headerHash block) |+
-                  " is a direct continuation of our tip, applying"
-        proof <- applyBlock block
-        logInfo $ "Applied received block: " +| block |+
-                  " with proof " +|| proof ||+ ", propagating"
+    applyNewBlock block =
+        writingSDLock "apply new block" $ do
+            logDebug $ "Block " +| hashF (headerHash block) |+
+                      " is a direct continuation of our tip, applying"
+            proof <- applyBlock block
+            logInfo $ "Applied received block: " +| block |+
+                      " with proof " +|| proof ||+ ", propagating"
+            rejectedTxs <- normalizeMempool
+            logInfo $ "Normalizing mempool by the way, lost transactions: "
+                      +| listF (onlyLostTxs rejectedTxs (one $ bBody block)) |+ ""
 
     applyManyBlocks blocks = do
         tip <- runSdMRead getTipBlock
         if (NE.head (unOldestFirst blocks) == tip)
-        then do let blocks' = NE.tail $ unOldestFirst blocks
+        then writingSDLock "apply many blocks" $ do
+                let blocks' = NE.tail $ unOldestFirst blocks
                 logDebug $ "Will attempt to apply blocks: " +|
                           listF' hashF (map headerHash blocks) |+ ""
                 forM_ blocks' applyBlock
                 logInfo $ "Applied received blocks: " +| listF blocks |+ ""
+                rejectedTxs <- normalizeMempool
+                logInfo $ "Normalized mempool, lost transactions: "
+                          +| listF (onlyLostTxs rejectedTxs (map bBody blocks')) |+ ""
         else logWarning "blockUpdateWorker: received sequence of blocks can't be applied"
 
 ----------------------------------------------------------------------------
@@ -123,15 +132,16 @@ makeRelay (RelayState input pipe failedTxs) =
         "txRetranslationInitialiser"
         []
         [] $ \_btq ->
-            dieGracefully $ forever $ do
-                tx <- atomically $ STM.readTQueue input
+            dieGracefully "tx retranslation initializer" $ forever $ do
+                (tx, inMempoolNotifier) <- atomically $ STM.readTBQueue input
                 checkThenRepublish tx
+                notify inMempoolNotifier
 
     republisher = Worker
         "txRetranslationRepeater"
         []
         [subType @PubTx] $ \btq -> do
-            dieGracefully $ forever $ do
+            dieGracefully "tx retranslation repeater" $ forever $ do
                 (_, PubTx tx) <- cliRecvUpdate btq (-1)
                 checkThenRepublish tx
 
@@ -140,9 +150,13 @@ makeRelay (RelayState input pipe failedTxs) =
         hashmap <- atomically $ readTVar failedTxs
 
         unless (hash tx `HashMap.member` hashmap) $ do
-            pool    <- view (lensOf @MempoolVar @ctx)
-            isThere <- isInMempool @ctx pool tx
+            isThere <- readingSDLock $ isInMempool @ctx tx
 
             unless isThere $ do
-                addTxToMempool @ctx pool tx
-                atomically $ STM.writeTQueue pipe tx
+                good <- writingSDLock "add to mempool" $ addTxToMempool @ctx tx
+
+                unless good $
+                    atomically $
+                        STM.modifyTVar failedTxs $ HashMap.insert (hash tx) tx
+
+                atomically $ STM.writeTBQueue pipe tx

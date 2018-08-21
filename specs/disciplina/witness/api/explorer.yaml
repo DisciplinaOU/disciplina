@@ -276,6 +276,11 @@ definitions:
           confirmed:
             type: integer
             format: int32
+            description: Balance according to current chain.
+          total:
+            type: integer
+            format: int32
+            description: Balance derived from both chain and transactions which are not yet in blocks.
       nextNonce:
         type: integer
         format: int32

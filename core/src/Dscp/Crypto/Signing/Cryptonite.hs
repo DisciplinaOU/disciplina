@@ -8,6 +8,7 @@ module Dscp.Crypto.Signing.Cryptonite
 
 import qualified Crypto.PubKey.Ed25519 as Ed25519
 import Data.ByteArray (ByteArrayAccess, Bytes)
+import qualified Data.ByteArray as BA
 import qualified Data.ByteString.Lazy as BSL
 
 import Dscp.Crypto.Hash.Class (AbstractHash (..))
@@ -53,3 +54,13 @@ instance {-# OVERLAPPING #-} (SignatureScheme ss, HasAbstractSignature ss ByteSt
          HasAbstractSignature ss LByteString where
     unsafeAbstractSign sk = unsafeAbstractSign sk . BSL.toStrict
     unsafeAbstractVerify pk = unsafeAbstractVerify pk . BSL.toStrict
+
+-- | Missing instances we'd actually like to have.
+instance Ord Ed25519.PublicKey where
+    compare = compare `on` BA.unpack
+
+instance Ord Ed25519.SecretKey where
+    compare = compare `on` BA.unpack
+
+instance Ord Ed25519.Signature where
+    compare = compare `on` BA.unpack

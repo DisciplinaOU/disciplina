@@ -11,15 +11,17 @@ module Dscp.Witness.Web.Logic
 
 import Codec.Serialise (serialise)
 import qualified Data.ByteString.Lazy as BS
-import UnliftIO.Async (async)
+import Data.Default (def)
 
 import Dscp.Core
 import Dscp.Snowdrop
-import Dscp.Util (assertJust, fromHex, nothingToThrow)
-import Dscp.Witness.Launcher.Mode (WitnessWorkMode)
-import qualified Dscp.Witness.Relay as Relay
+import Dscp.Util (fromHex, nothingToThrow)
+import Dscp.Util.Concurrent.NotifyWait
 import Dscp.Witness.Config
+import Dscp.Witness.Launcher.Mode (WitnessWorkMode)
 import Dscp.Witness.Logic
+import qualified Dscp.Witness.Relay as Relay
+import Dscp.Witness.SDLock
 import Dscp.Witness.Web.Error
 import Dscp.Witness.Web.Types
 
@@ -28,13 +30,16 @@ import Dscp.Witness.Web.Types
 ----------------------------------------------------------------------------
 
 -- | Applies transaction everywhere.
+-- Once call of this function returns, transaction gets considered by
+-- 'getAccountInfo' and other endpoints.
 submitUserTx :: WitnessWorkMode ctx m => TxWitnessed -> m ()
-submitUserTx = Relay.relayTx . GMoneyTxWitnessed
+submitUserTx tw =
+    Relay.relayTx (GMoneyTxWitnessed tw) >>= wait @"tx in mempool"
 
 -- | Applies transaction, but does not wait for a whole cycle of transaction
 -- application.
 submitUserTxAsync :: WitnessWorkMode ctx m => TxWitnessed -> m ()
-submitUserTxAsync tw = void . async $ submitUserTx tw
+submitUserTxAsync = void . Relay.relayTx . GMoneyTxWitnessed
 
 toBlockInfo :: HasWitnessConfig => Bool -> Block -> BlockInfo
 toBlockInfo includeTxs block = BlockInfo
@@ -56,18 +61,18 @@ toBlockInfo includeTxs block = BlockInfo
   where
     hh = headerHash block
     txs = bbTxs . bBody $ block
-    txTotalOutput (GMoneyTx tx) = foldr sumCoins (Coin 0) $ txOutValue <$> txOuts tx
+    txTotalOutput (GMoneyTx tx)      = foldr sumCoins (Coin 0) $ txOutValue <$> txOuts tx
     txTotalOutput (GPublicationTx _) = Coin 0
 
-toAccountInfo :: HasWitnessConfig => Account -> Maybe [GTxInBlock] -> AccountInfo
+toAccountInfo :: HasWitnessConfig => BlocksOrMempool Account -> Maybe [GTxInBlock] -> AccountInfo
 toAccountInfo account txs = AccountInfo
-    { aiBalances = Balances
-        { bConfirmed = Coin . fromIntegral $ aBalance account
-        }
-    , aiNextNonce = aNonce account + 1
-    , aiTransactionCount = aNonce account
+    { aiBalances = Coin . fromIntegral . aBalance <$> account
+    , aiNextNonce = nonce + 1
+    , aiTransactionCount = nonce
     , aiTransactions = map toTxInfo <$> txs
     }
+  where
+    nonce = aNonce $ bmTotal account
 
 toTxInfo :: HasWitnessConfig => GTxInBlock -> TxInfo
 toTxInfo tx = TxInfo
@@ -91,7 +96,12 @@ getBlockInfo =
 
 getAccountInfo :: WitnessWorkMode ctx m => Address -> Bool -> m AccountInfo
 getAccountInfo address includeTxs = do
-    account <- getAccountMaybe address `assertJust` AccountNotFound
+    account <- readingSDLock $ do
+        blockAccount <- fromMaybe def <$> getAccountMaybe address
+        poolAccount  <- fromMaybe def <$> getMempoolAccountMaybe address
+        return BlocksOrMempool
+              { bmConfirmed = blockAccount
+              , bmTotal     = poolAccount }
     txs <- if includeTxs
         then Just <$> getAccountTxs address
         else return Nothing

@@ -17,9 +17,9 @@ module Glue
 import Control.Exception (displayException)
 import Control.Lens (ix)
 import Data.Text (pack)
-import Data.Tree (Tree(..))
+import Data.Tree (Tree (..))
 import Data.Unique
-import Dscp.Core (addrFromText)
+import Dscp.Core (addrFromText, coinToInteger)
 import IiExtras
 
 import qualified Serokell.Util.Base64 as Base64
@@ -95,7 +95,7 @@ knitFaceToUI walletStateRef UiFace{..} WalletFace{..} KnitFace{..} =
               putUiEvent . UiCommandResult cid . UiExportCommandResult . UiExportCommandSuccess . show $ accountSecretKey
               return $ Right cid
         _ -> case opToExpr walletState op of
-          Left err -> return $ Left err
+          Left err   -> return $ Left err
           Right expr -> fmap Right $ putCommand (uiCommandHandle op) expr
     uiCommandHandle op commandId = KnitCommandHandle
       { putCommandResult = \mtid result ->
@@ -153,7 +153,16 @@ knitFaceToUI walletStateRef UiFace{..} WalletFace{..} KnitFace{..} =
       UiBalance{} ->
         Just . UiBalanceCommandResult . either UiBalanceCommandFailure UiBalanceCommandSuccess $
           fromResult result >>= fromValue >>= \case
-            Knit.ValueCoin n -> Right $ pretty n
+            Knit.ValueList l ->
+              mapM fromValue l >>= \case
+                [Knit.ValueCoin confirmed, Knit.ValueCoin total] ->
+                  let diff = coinToInteger total - coinToInteger confirmed
+                      sign = if diff < 0 then " - " else " + "
+                      pending = if diff == 0 then ""
+                                else sign <> pretty (abs diff) <> " pending \
+                                     \= " <> pretty total
+                  in Right $ pretty confirmed <> pending
+                _ -> Left "Unrecognized return value"
             _ -> Left "Unrecognized return value"
       UiSend{} ->
         Just . UiSendCommandResult . either UiSendCommandFailure UiSendCommandSuccess $
@@ -221,7 +230,7 @@ knitCommandOutputToUI commandId doc = UiCommandEvent commandId (UiCommandOutput 
 
 data WalletState = WalletState
   { selection :: Maybe Word
-  , accounts :: [Account]
+  , accounts  :: [Account]
   }
 
 type WalletStateRef = IORef WalletState
