@@ -16,6 +16,9 @@ module Dscp.Witness.Launcher.Mode
 
       -- * RealMode
     , WitnessRealMode
+
+    , -- to avoid importing snowdrop imn Educator
+      SD.OSParamsBuilder
     ) where
 
 import Control.Lens (makeLenses)
@@ -24,6 +27,7 @@ import Loot.Base.HasLens (HasLens (..), HasLens')
 import Loot.Log.Rio (LoggingIO)
 import Loot.Network.Class (NetworkingCli, NetworkingServ)
 import Loot.Network.ZMQ as Z
+import qualified Snowdrop.Block as SD
 
 import Dscp.DB.Rocks.Class (MonadDB)
 import Dscp.DB.Rocks.Real.Types (RocksDB)
@@ -65,6 +69,7 @@ type WitnessWorkMode ctx m =
     , HasLens' ctx SDActions
     , HasLens' ctx (KeyResources WitnessNode)
     , HasLens' ctx RelayState
+    , HasLens' ctx SD.OSParamsBuilder
     , HasLens' ctx SDLock
     )
 
@@ -74,12 +79,13 @@ type WitnessWorkMode ctx m =
 
 -- | Context is resources plus some runtime variables.
 data WitnessContext = WitnessContext
-    { _wcParams     :: !WitnessParams     -- ^ Parameters witness was started with.
-    , _wcResources  :: !WitnessResources  -- ^ Resources, allocated from params.
-    , _wcMempool    :: !MempoolVar
-    , _wcSDActions  :: !SDActions
-    , _wcRelayState :: !RelayState
-    , _wcSDLock     :: !SDLock
+    { _wcParams          :: !WitnessParams     -- ^ Parameters witness was started with.
+    , _wcResources       :: !WitnessResources  -- ^ Resources, allocated from params.
+    , _wcMempool         :: !MempoolVar
+    , _wcSDActions       :: !SDActions
+    , _wcRelayState      :: !RelayState
+    , _wcSDParamsBuilder :: !SD.OSParamsBuilder
+    , _wcSDLock          :: !SDLock
     }
 
 
@@ -111,6 +117,8 @@ instance HasLens SDActions WitnessContext SDActions where
     lensOf = wcSDActions
 instance HasLens RelayState WitnessContext RelayState where
     lensOf = wcRelayState
+instance HasLens SD.OSParamsBuilder WitnessContext SD.OSParamsBuilder where
+    lensOf = wcSDParamsBuilder
 instance HasLens SDLock WitnessContext SDLock where
     lensOf = wcSDLock
 

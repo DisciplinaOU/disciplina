@@ -4,7 +4,7 @@ module Dscp.Snowdrop.IOCtx
     ( IOCtx
     ) where
 
-import qualified Snowdrop.Model.Execution as SD
+import qualified Snowdrop.Execution as SD
 
 import Dscp.Snowdrop.Configuration
 

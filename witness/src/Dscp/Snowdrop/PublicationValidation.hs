@@ -12,7 +12,7 @@ import Snowdrop.Core (PreValidator (..), StateTx (..), StateTxType (..), Validat
 import Snowdrop.Util
 
 import Dscp.Core
-import Dscp.Crypto (PublicKey)
+import qualified Dscp.Crypto as DC (PublicKey)
 import Dscp.Snowdrop.AccountValidation
 import Dscp.Snowdrop.Configuration
 import Dscp.Snowdrop.Storage.Types
@@ -22,7 +22,7 @@ import Dscp.Snowdrop.Types
 validatePublication ::
        forall ctx.
        ( HasPrism Proofs (PersonalisedProof PublicationTxId Publication)
-       , HasGetter PublicKey Address
+       , HasGetter DC.PublicKey Address
        , HasPrism Proofs PublicationTxId
        , CanVerifyPayload PublicationTxId Publication
        )
@@ -34,7 +34,7 @@ validatePublication = mkValidator ty [preValidatePublication]
 preValidatePublication ::
        forall ctx.
        ( HasPrism Proofs (PersonalisedProof PublicationTxId Publication)
-       , HasGetter PublicKey Address
+       , HasGetter DC.PublicKey Address
        , HasPrism Proofs PublicationTxId
        , CanVerifyPayload PublicationTxId Publication
        )
