@@ -9,10 +9,10 @@ module Dscp.Educator.Web.Server
 import Data.Proxy (Proxy (..))
 import Fmt ((+|), (|+))
 import Loot.Log (logInfo)
-import Network.HTTP.Types.Header (hContentType)
+import Network.HTTP.Types.Header (hAuthorization, hContentType)
 import Network.Wai.Middleware.Cors (CorsResourcePolicy (..), cors, simpleCorsResourcePolicy)
-import Servant ((:<|>) (..), Context (..), Handler, Server, hoistServer,
-                hoistServerWithContext, serveWithContext)
+import Servant ((:<|>) (..), Context (..), Handler, Server, hoistServer, hoistServerWithContext,
+                serveWithContext)
 import Servant.Generic (toServant)
 
 import Dscp.Crypto (PublicKey, keyGen, withIntSeed)
@@ -23,8 +23,7 @@ import Dscp.Educator.Web.Educator (EducatorAPI, convertEducatorApiHandler, educa
                                    educatorApiHandlers)
 import Dscp.Educator.Web.Params (EducatorWebParams (..))
 import Dscp.Educator.Web.Student (GetStudentsAction (..), ProtectedStudentAPI,
-                                  convertStudentApiHandler, studentAPI,
-                                  studentApiHandlers)
+                                  convertStudentApiHandler, studentAPI, studentApiHandlers)
 import Dscp.Web (ServerParams (..), serveWeb)
 
 type EducatorWebAPI =
@@ -78,7 +77,7 @@ serveStudentAPIReal EducatorWebParams{..} = do
     studentApiServer <- mkStudentApiServer (convertStudentApiHandler eCtx) ewpBotParams
     let ourCors = cors (const $ Just $
                         simpleCorsResourcePolicy
-                        { corsRequestHeaders = [hContentType] })
+                        { corsRequestHeaders = [hContentType, hAuthorization] })
     serveWeb spAddr $
       ourCors $
       serveWithContext (Proxy @EducatorWebAPI) srvCtx $
