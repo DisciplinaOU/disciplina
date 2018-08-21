@@ -15,7 +15,7 @@ import Data.Aeson.TH (Options (..), deriveJSON)
 import Fmt (build, genericF, (+|), (|+))
 
 import Dscp.Core
-import Dscp.Util.Servant (ForResponseLog (..))
+import Dscp.Util.Servant (ForResponseLog (..), buildForResponse)
 
 -- | Distinguishes stuff on whether does it take mempool in consideration.
 data BlocksOrMempool a = BlocksOrMempool
@@ -101,6 +101,9 @@ instance Buildable (ForResponseLog TxList) where
 
 instance Buildable (ForResponseLog HashIs) where
     build (ForResponseLog hashIs) = genericF hashIs
+
+instance Buildable (ForResponseLog TxId) where
+    build = buildForResponse
 
 ---------------------------------------------------------------------------
 -- JSON instances

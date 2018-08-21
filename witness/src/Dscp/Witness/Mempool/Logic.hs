@@ -12,7 +12,6 @@ module Dscp.Witness.Mempool.Logic
     , onlyLostTxs
     ) where
 
-import Control.Monad.Except (catchError)
 import UnliftIO (MonadUnliftIO)
 
 import qualified Data.Set as S
@@ -51,14 +50,11 @@ addTxToMempool
     :: forall ctx m
     .  (MempoolCtx ctx m, WithinWriteSDLock)
     => GTxWitnessed
-    -> m Bool
+    -> m ()
 addTxToMempool tx = do
     Mempool pool conf <- view (lensOf @MempoolVar)
     writeToMempool @ctx pool $ do
         Pool.processTxAndInsertToMempool conf tx
-        return True
-      `catchError` \_ -> do
-        return False
 
 -- | Take all mempool transactions, leaving it empty.
 takeTxsMempool
@@ -113,6 +109,7 @@ readFromMempool pool action = do
     logger  <- view (lensOf @SD.LoggingIO)
     let dbActions = SD.dmaAccessActions $ SD.nsStateDBActions actions (AVLP.RememberForProof False)
     SD.runRIO logger $
+        SD.unwrapSDBaseRethrow $
         Pool.actionWithMempool pool dbActions action
 
 readFromMempoolLocked
@@ -137,6 +134,7 @@ writeToMempool pool action = do
     logger  <- view (lensOf @SD.LoggingIO)
     let dbActions = SD.dmaAccessActions $ SD.nsStateDBActions actions (AVLP.RememberForProof False)
     SD.runRIO logger $
+        SD.unwrapSDBaseRethrow $
         Pool.actionWithMempool pool dbActions action
 
 ----------------------------------------------------------------------------

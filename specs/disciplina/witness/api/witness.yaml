@@ -367,6 +367,7 @@ definitions:
             * `InvalidFormat` - Failed to deserialise one of parameters.
 
             * `BlockNotFound` - Specified block does not exist.
+            * `NotEnoughMoney` - Transaction's source account has not enough money to make this transaction.
             * `AccountNotFound` - Specified account does not exist.
             * `TransactionNotFound` - Specified transaction does not exist.
 

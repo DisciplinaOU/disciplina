@@ -24,17 +24,17 @@ data WitnessEndpoints route = WitnessEndpoints
         :> Verb 'GET 200 '[DSON] ()
 
     , wSubmitTx :: route
-        :- "tx"
+        :- "transactions"
         :> ReqBody '[JSON] TxWitnessed
-        :> Verb 'POST 201 '[DSON] ()
+        :> Verb 'POST 201 '[DSON] TxId
 
       -- Like 'wSubmitTx', but does not any checks on transaction application.
       -- Useful, since submitting transaction over network may take long.
     , wSubmitTxAsync :: route
-        :- "tx"
+        :- "transactions"
         :> "async"
         :> ReqBody '[JSON] TxWitnessed
-        :> Verb 'POST 202 '[DSON] ()
+        :> Verb 'POST 202 '[DSON] TxId
 
     , wGetBlocks :: route
         :- "blocks"

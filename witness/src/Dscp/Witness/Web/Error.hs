@@ -15,32 +15,37 @@ import qualified Data.Text.Buildable as B
 import Data.Typeable (cast)
 import Servant (ServantErr (..), err400, err404, err500)
 
+import Dscp.Snowdrop
 import Dscp.Util.Servant
+import Dscp.Witness.Web.Util
 
 data WitnessAPIError
     = BlockNotFound
     | TransactionNotFound
+    | TxError AccountValidationException
     | InternalError Text
     | InvalidFormat
-    deriving (Show, Eq, Generic, Typeable)
+    deriving (Show, Generic, Typeable)
 
 instance Buildable WitnessAPIError where
     build = \case
         BlockNotFound -> "Specified block does not exist."
         TransactionNotFound -> "Specified transaction does not exist."
-        InternalError msg -> B.build msg
+        TxError err -> B.build err
+        InternalError msg -> "Internal error: " <> B.build msg
         InvalidFormat -> "Failed to deserialise one of parameters."
 
 instance Exception WitnessAPIError where
-    fromException (SomeException e') =
+    fromException e@(SomeException e') =
         asum
         [ cast e'
+        , fmap TxError . (^? _AccountValidationError) =<< fromException e
         ]
 
 -- | Contains info about error in client-convenient form.
 data ErrResponse = ErrResponse
     { erError :: !WitnessAPIError
-    } deriving (Show, Eq, Generic)
+    } deriving (Show, Generic)
 
 ---------------------------------------------------------------------------
 -- JSON instances
@@ -52,6 +57,7 @@ instance ToJSON WitnessAPIError where
     toJSON = String . \case
         BlockNotFound -> "BlockNotFound"
         TransactionNotFound -> "TransactionNotFound"
+        TxError err -> snowdropErrorToShortJSON err
         InternalError msg -> msg
         InvalidFormat -> "InvalidFormat"
 
@@ -60,6 +66,8 @@ instance FromJSON WitnessAPIError where
         "BlockNotFound" -> BlockNotFound
         "TransactionNotFound" -> TransactionNotFound
         "InvalidFormat" -> InvalidFormat
+        msg | Just err <- parseShortJSONToSnowdropError msg
+            -> TxError err
         msg -> InternalError msg
 
 ---------------------------------------------------------------------------
@@ -71,6 +79,7 @@ toServantErrNoReason :: WitnessAPIError -> ServantErr
 toServantErrNoReason = \case
     BlockNotFound       -> err404
     TransactionNotFound -> err404
+    TxError err         -> snowdropToServantErrNoReason err
     InternalError{}     -> err500
     InvalidFormat       -> err400
 

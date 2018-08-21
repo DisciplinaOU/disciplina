@@ -138,7 +138,8 @@ makeRelay (RelayState input pipe failedTxs) =
             dieGracefully "tx retranslation initializer" $ forever $ do
                 (tx, inMempoolNotifier) <- atomically $ STM.readTBQueue input
                 checkThenRepublish tx
-                notify inMempoolNotifier
+                    `finallyNotify` inMempoolNotifier
+                    `catchAny` \e -> logInfo $ "Transaction failed: " +| e |+ ""
 
     republisher = Worker
         "txRetranslationRepeater"
@@ -152,14 +153,17 @@ makeRelay (RelayState input pipe failedTxs) =
     checkThenRepublish tx = do
         hashmap <- atomically $ readTVar failedTxs
 
-        unless (hash tx `HashMap.member` hashmap) $ do
-            isThere <- readingSDLock $ isInMempool @ctx tx
+        let hasFailed = hash tx `HashMap.lookup` hashmap
+        whenJust hasFailed $ \(_, e) ->
+            throwM e
 
-            unless isThere $ do
-                good <- writingSDLock "add to mempool" $ addTxToMempool @ctx tx
+        isThere <- readingSDLock $ isInMempool @ctx tx
 
-                unless good $
-                    atomically $
-                        STM.modifyTVar failedTxs $ HashMap.insert (hash tx) tx
+        unless isThere $ do
+            writingSDLock "add to mempool" $ addTxToMempool @ctx tx
+                `onAnException` \e -> addFailedTx (tx, e)
 
-                atomically $ STM.writeTBQueue pipe tx
+            atomically $ STM.writeTBQueue pipe tx
+
+    addFailedTx entry@(tx, _) =
+        atomically $ STM.modifyTVar failedTxs $ HashMap.insert (hash tx) entry
