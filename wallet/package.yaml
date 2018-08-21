@@ -17,6 +17,7 @@ library:
     - Earley
     - aeson
     - bytestring
+    - componentm
     - directory
     - disciplina-core
     - disciplina-witness
@@ -47,6 +48,7 @@ executables:
       - ansi-wl-pprint
       - ariadne-core
       - ariadne-vty-lib
+      - componentm
       - containers
       - double-conversion
       - disciplina-core
@@ -67,6 +69,7 @@ executables:
       - ansi-wl-pprint
       - ariadne-cli-lib
       - ariadne-core
+      - componentm
       - disciplina-core
       - disciplina-wallet
       - ii-extras

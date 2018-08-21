@@ -16,6 +16,7 @@ module Glue
 
 import Control.Exception (displayException)
 import Control.Lens (ix)
+import Control.Monad.Component (ComponentM, buildComponent_)
 import Data.Text (pack)
 import Data.Tree (Tree (..))
 import Data.Unique
@@ -235,8 +236,8 @@ data WalletState = WalletState
 
 type WalletStateRef = IORef WalletState
 
-createWalletState :: IO WalletStateRef
-createWalletState = newIORef WalletState
+createWalletState :: ComponentM WalletStateRef
+createWalletState = buildComponent_ "WalletState" $ newIORef WalletState
   { selection = Nothing
   , accounts = []
   }
