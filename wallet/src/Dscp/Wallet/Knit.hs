@@ -12,7 +12,7 @@ import IiExtras
 import qualified Serokell.Util.Base64 as Base64
 import Text.Earley
 
-import Dscp.Core (TxOut (..), addrFromText, coinToInteger, toTxId)
+import Dscp.Core (GTx (..), Tx (..), TxId, TxInAcc (..), TxOut (..), addrFromText, coinToInteger, toTxId)
 import Dscp.Crypto (decrypt, emptyPassPhrase, encrypt, fromByteArray, mkPassPhrase)
 import Dscp.Util (toHex)
 import Dscp.Wallet.Face
@@ -26,16 +26,27 @@ data Wallet
 data instance ComponentValue _ Wallet
   = ValueAddress Address
   | ValueCoin Coin
+  | ValueTx TxId Address Coin [TxOut]
   | ValueTxOut TxOut
   | ValueCryptoKey ByteString
   deriving (Eq, Ord, Show)
 
 makePrisms 'ValueAddress
 
-instance (Elem components Core, Elem components Wallet) => ComponentInflate components Wallet where
+instance
+  ( Elem components Core
+  , Elem components Wallet
+  , AllConstrained (ComponentInflate components) components
+  ) => ComponentInflate components Wallet where
   componentInflate = \case
       ValueAddress a -> ExprLit $ toLit (LitAddress a)
       ValueCoin c -> ExprLit $ toLit (LitNumber . fromIntegral . coinToInteger $ c)
+      ValueTx txId inAddr inValue outs -> componentInflate . ValueList $
+        [ toValue . ValueString . toHex $ txId
+        , toValue . ValueAddress $ inAddr
+        , toValue . ValueCoin $ inValue
+        , toValue . ValueList $ toValue . ValueTxOut <$> outs
+        ]
       ValueTxOut txOut -> ExprProcCall $ ProcCall "tx-out" $ txOutToArgs txOut
       ValueCryptoKey sk -> ExprLit $ toLit (LitString . Base64.encode $ sk)
     where
@@ -175,7 +186,25 @@ instance AllConstrained (Elem components) '[Wallet, Core] => ComponentCommandPro
               map (toValue . ValueCoin) [bmConfirmed, bmTotal]
         , cpHelp = "Get address balance."
         }
+    , CommandProc
+        { cpName = "tx-history"
+        , cpArgumentPrepare = identity
+        , cpArgumentConsumer = do
+            address <- getArg tyAddress "address"
+            pure (address)
+        , cpRepr = \(address) -> CommandAction $ \WalletFace{..} -> do
+            txs <- walletGetTxHistory address
+            return . toValue . ValueList . catMaybes $ renderTx <$> txs
+        , cpHelp = "Get transaction history for an address."
+        }
     ]
+
+renderTx
+  :: AllConstrained (Elem components) '[Wallet, Core]
+  => GTx
+  -> Maybe (Value components)  -- TODO: remove Maybe when we support publication txs
+renderTx (GPublicationTx _) = Nothing  -- TODO: we don't display publication txs yet
+renderTx (GMoneyTx tx@Tx{..}) = Just . toValue $ ValueTx (toTxId tx) (tiaAddr txInAcc) txInValue txOuts
 
 renderAccount
   :: AllConstrained (Elem components) '[Wallet, Core]
