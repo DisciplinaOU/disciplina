@@ -20,7 +20,8 @@ import Control.Monad.Component (ComponentM, buildComponent_)
 import Data.Text (pack)
 import Data.Tree (Tree (..))
 import Data.Unique
-import Dscp.Core (addrFromText, coinToInteger)
+import Dscp.Core (TxOut (..), addrFromText, coinToInteger)
+import Dscp.Util (toHex)
 import IiExtras
 
 import qualified Serokell.Util.Base64 as Base64
@@ -114,6 +115,12 @@ knitFaceToUI walletStateRef UiFace{..} WalletFace{..} KnitFace{..} =
           (Knit.ProcCall "get-balance"
             [Knit.ArgPos . Knit.ExprLit . Knit.toLit . Knit.LitAddress . accountAddress $ account]
           )
+      UiTxHistory -> do
+        account <- maybeToRight "No account selected" $ selection >>= (accounts ^?) . ix . fromIntegral
+        Right $ Knit.ExprProcCall
+          (Knit.ProcCall "tx-history"
+            [Knit.ArgPos . Knit.ExprLit . Knit.toLit . Knit.LitAddress . accountAddress $ account]
+          )
       UiSend UiSendArgs{..} -> do
         account <- maybeToRight "No account selected" $ selection >>= (accounts ^?) . ix . fromIntegral
         argOutputs <- forM usaOutputs $ \UiSendOutput{..} -> do
@@ -164,6 +171,15 @@ knitFaceToUI walletStateRef UiFace{..} WalletFace{..} KnitFace{..} =
                                      \= " <> pretty total
                   in Right $ pretty confirmed <> pending
                 _ -> Left "Unrecognized return value"
+            _ -> Left "Unrecognized return value"
+      UiTxHistory{} ->
+        Just . UiTxHistoryCommandResult . either UiTxHistoryCommandFailure UiTxHistoryCommandSuccess $
+          fromResult result >>= fromValue >>= \case
+            Knit.ValueList l -> forM l $ fromValue >=> \case
+              Knit.ValueTx txId inAddr inValue outs -> Right $
+                UiTxHistoryRow (toHex txId) (pretty inValue) [UiTxHistoryRowPart (pretty inAddr) (pretty inValue)] $
+                map (\TxOut{..} -> UiTxHistoryRowPart (pretty txOutAddr) (pretty txOutValue)) outs
+              _ -> Left "Unrecognized return value"
             _ -> Left "Unrecognized return value"
       UiSend{} ->
         Just . UiSendCommandResult . either UiSendCommandFailure UiSendCommandSuccess $

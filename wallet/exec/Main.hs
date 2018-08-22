@@ -33,6 +33,7 @@ initializeEverything serverAddress = do
             { featureStatus = False
             , featureExport = True
             , featureAccounts = False
+            , featureTxHistory = True
             , featureFullRestore = False
             , featureSecretKeyName = "Secret key"
             }
