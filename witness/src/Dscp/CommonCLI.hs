@@ -82,7 +82,7 @@ baseKeyParamsParser who = do
 appDirParamParser :: Parser AppDirParam
 appDirParamParser = AppDirectorySpecific <$>
                         (strOption $
-                        long "path" <>
+                        long "appdir" <>
                         metavar "FILEPATH" <>
                         help "Path to application folder") <|>
                     pure AppDirectoryOS
