@@ -190,7 +190,7 @@ botPrepareInitialData = do
     exists <- existsCourse (head . Exts.fromList $ bsBasicCourses botSetting)
     unless exists $ do
         forM_ (bsCourses botSetting) $
-            \(c, t, s) -> createCourse c (Just t) s
+            \(c, t, s) -> createCourse c t s
         mapM_ createAssignment (bsAssignments botSetting)
 
 -- REMEMBER that all operations below should be no-throw

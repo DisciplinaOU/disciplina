@@ -19,7 +19,7 @@ create table if not exists Courses (
     --  null with autoincremented key (while sqlite2 won't).
     --
     id    INTEGER,
-    desc  TEXT     null,
+    desc  TEXT     not null,
 
     primary key (id asc)
 );
@@ -29,7 +29,7 @@ create table if not exists Courses (
 create table if not exists Subjects (
     id         INTEGER  not null,
     course_id  INTEGER  not null,
-    desc       TEXT     null,
+    desc       TEXT     not null,
 
     primary key (id, course_id),
     foreign key (course_id) references Courses (id)
@@ -75,7 +75,7 @@ create table if not exists Assignments (
     course_id      INTEGER  not null,
     contents_hash  BLOB     not null,
     type           INTEGER  not null,
-    desc           TEXT     null,
+    desc           TEXT     not null,
 
     primary key (hash),
     foreign key (course_id) references Courses(id)

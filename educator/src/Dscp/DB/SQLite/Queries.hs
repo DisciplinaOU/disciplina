@@ -494,7 +494,7 @@ isAssignedToStudent student assignment = do
     |]
 
 
-createCourse :: DBM m => Course -> Maybe Text -> [Id Subject] -> m (Id Course)
+createCourse :: DBM m => Course -> Text -> [Id Subject] -> m (Id Course)
 createCourse course desc subjects = do
     transaction $ do
         execute createCourseRequest (course, desc)

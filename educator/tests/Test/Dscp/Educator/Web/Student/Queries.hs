@@ -57,7 +57,7 @@ createCourseSimple :: CoreDB.DBM m => Int -> m Course
 createCourseSimple i =
     CoreDB.createCourse
         (allCourses !! (i - 1))
-        (Just $ "course " <> pretty i)
+        ("course " <> pretty i)
         []
 
 getAllSubmissions
@@ -77,7 +77,7 @@ prepareForSubmissions CoreTestEnv{..} = do
         owners = F.toList cteStudents
     mapM_ CoreDB.createStudent (ordNub owners)
     forM_ (ordNub courses) $ \course -> do
-          void $ CoreDB.createCourse course Nothing []
+          void $ CoreDB.createCourse course "" []
           forM_ (ordNub owners) $ \owner ->
               CoreDB.enrollStudentToCourse owner course
     forM_ (ordNub assignments) $ \assignment -> do
@@ -149,7 +149,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                 course <- studentGetCourse student1 courseId
                 return $ course === CourseStudentInfo
                     { ciId = courseId
-                    , ciDesc = fromMaybe "" desc
+                    , ciDesc = desc
                     , ciSubjects = subjects
                     , ciIsEnrolled = False
                     , ciIsFinished = False
@@ -224,7 +224,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                 courses <- sqlTx $ studentGetCourses student1 Nothing
                 return $ courses === one CourseStudentInfo
                     { ciId = courseId
-                    , ciDesc = fromMaybe "" desc
+                    , ciDesc = desc
                     , ciSubjects = subjects
                     , ciIsEnrolled = False
                     , ciIsFinished = False
@@ -307,7 +307,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
             sqliteProperty $ \assignment -> do
                 let course = _aCourseId assignment
                 _ <- CoreDB.createStudent student1
-                _ <- CoreDB.createCourse course Nothing []
+                _ <- CoreDB.createCourse course "" []
                 _ <- CoreDB.createAssignment assignment
                 throwsPrism (_AbsentError . _AssignmentDomain) $
                     sqlTx $ studentGetAssignment student1 (hash assignment1)
@@ -317,7 +317,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                 let assignmentH = hash assignment
                 let course = _aCourseId assignment
                 _ <- CoreDB.createStudent student1
-                _ <- CoreDB.createCourse course Nothing []
+                _ <- CoreDB.createCourse course "" []
                 _ <- CoreDB.createAssignment assignment
                 _ <- CoreDB.enrollStudentToCourse student1 course
                 _ <- CoreDB.setStudentAssignment student1 assignmentH
@@ -338,7 +338,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
               ) -> do
                 let course = _aCourseId assignment
                 _ <- CoreDB.createStudent student1
-                _ <- CoreDB.createCourse course Nothing []
+                _ <- CoreDB.createCourse course "" []
                 _ <- CoreDB.createAssignment assignment
                 _ <- CoreDB.enrollStudentToCourse student1 course
                 _ <- CoreDB.setStudentAssignment student1 (hash assignment)
@@ -353,7 +353,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
             sqliteProperty $ \() -> do
                 let course = _aCourseId assignment1
                 _ <- CoreDB.createStudent student1
-                _ <- CoreDB.createCourse course Nothing []
+                _ <- CoreDB.createCourse course "" []
                 _ <- CoreDB.createAssignment assignment1
                 _ <- CoreDB.enrollStudentToCourse student1 course
                 _ <- CoreDB.setStudentAssignment student1 (hash assignment1)
@@ -367,7 +367,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                 let assignmentH = hash assignment
                 _ <- CoreDB.createStudent student1
                 forM_ (ordNub $ map _aCourseId assignments) $ \course -> do
-                    void $ CoreDB.createCourse course Nothing []
+                    void $ CoreDB.createCourse course "" []
                     void $ CoreDB.enrollStudentToCourse student1 course
                 _ <- CoreDB.createAssignment assignment
                 _ <- CoreDB.createAssignment needlessAssignment
@@ -394,7 +394,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                 let courseIds = ordNub $ map _aCourseId preAssignments
                 _ <- CoreDB.createStudent student1
                 forM_ courseIds $ \courseId -> do
-                    void $ CoreDB.createCourse courseId Nothing []
+                    void $ CoreDB.createCourse courseId "" []
                     void $ CoreDB.enrollStudentToCourse student1 courseId
                 forM_ preAssignments $ \assignment -> do
                     void $ CoreDB.createAssignment assignment
@@ -464,7 +464,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                     submission = _ssSubmission sigSub
                     course = _aCourseId assignment
                 _ <- CoreDB.createStudent owner
-                _ <- CoreDB.createCourse course Nothing []
+                _ <- CoreDB.createCourse course "" []
                 _ <- CoreDB.createAssignment assignment
                 _ <- CoreDB.enrollStudentToCourse owner course
                 _ <- CoreDB.setStudentAssignment owner (hash assignment)
@@ -494,7 +494,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                 else do
                     _ <- CoreDB.createStudent owner
                     _ <- CoreDB.createStudent user
-                    _ <- CoreDB.createCourse course Nothing []
+                    _ <- CoreDB.createCourse course "" []
                     _ <- CoreDB.createAssignment assignment
                     _ <- CoreDB.enrollStudentToCourse owner course
                     _ <- CoreDB.setStudentAssignment owner (hash assignment)
@@ -527,7 +527,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
             sqliteProperty $ \() -> do
                 let course = _aCourseId assignment1
                 _ <- CoreDB.createStudent student1
-                _ <- CoreDB.createCourse course Nothing []
+                _ <- CoreDB.createCourse course "" []
                 _ <- CoreDB.createAssignment assignment1
                 _ <- CoreDB.enrollStudentToCourse student1 course
                 _ <- CoreDB.setStudentAssignment student1 (hash assignment1)
