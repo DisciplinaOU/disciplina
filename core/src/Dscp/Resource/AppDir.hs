@@ -2,7 +2,10 @@
 -- For now we create it strictly on application startup,
 -- which makes sense because logs go there anyway.
 
-module Dscp.Resource.AppDir where
+module Dscp.Resource.AppDir
+       ( AppDirParam(..)
+       , AppDir
+       ) where
 
 import Fmt ((+|), (|+))
 import System.Directory (XdgDirectory (XdgData), createDirectoryIfMissing, getXdgDirectory)
