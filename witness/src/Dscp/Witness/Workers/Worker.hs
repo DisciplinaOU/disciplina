@@ -97,7 +97,7 @@ blockUpdateWorker =
             params <- view (lensOf @WitnessParams)
             logDebug $ "Block " +| hashF (headerHash block) |+
                       " is a direct continuation of our tip, applying"
-            proof <- maybe id (reportTime "disciplina.timer.block_apply") (wpMetricsEndpoint params) $
+            proof <- reportTime "disciplina.timer.block_apply" (wpMetricsEndpoint params) $
                 applyBlock block
             logInfo $ "Applied received block: " +| block |+
                       " with proof " +|| proof ||+ ", propagating"

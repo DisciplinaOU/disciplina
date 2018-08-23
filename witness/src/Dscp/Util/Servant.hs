@@ -453,6 +453,6 @@ instance (FromJSON a, Reifies err String) => MimeUnrender (SimpleJSON err) a whe
 -- Response time metrics
 -------------------------------------------------------------------------
 
-responseTimeMetric :: Endpoint -> Middleware
+responseTimeMetric :: Maybe Endpoint -> Middleware
 responseTimeMetric endpoint app = \request f ->
     reportTime "disciplina.timer.http_request" endpoint  (app request f)

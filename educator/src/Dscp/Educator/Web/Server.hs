@@ -82,7 +82,7 @@ serveStudentAPIReal EducatorWebParams{..} = do
                         simpleCorsResourcePolicy
                         { corsRequestHeaders = [hContentType, hAuthorization] })
     params <- view (lensOf @WitnessParams)
-    serveWeb spAddr $ maybe id (responseTimeMetric) (wpMetricsEndpoint params) $
+    serveWeb spAddr $ responseTimeMetric (wpMetricsEndpoint params) $
       ourCors $
       serveWithContext (Proxy @EducatorWebAPI) srvCtx $
          educatorApiServer
