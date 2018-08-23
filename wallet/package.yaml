@@ -25,6 +25,7 @@ library:
     - knit
     - lens
     - memory
+    - optparse-applicative
     - scientific
     - serialise
     - serokell-util
@@ -49,11 +50,9 @@ executables:
       - double-conversion
       - disciplina-core
       - disciplina-wallet
-      - disciplina-witness
       - ii-extras
       - knit
       - lens
-      - optparse-applicative
       - serokell-util
       - text
       - vector
@@ -69,8 +68,6 @@ executables:
       - ariadne-core
       - disciplina-core
       - disciplina-wallet
-      - disciplina-witness
       - ii-extras
       - knit
-      - optparse-applicative
       - text

@@ -8,7 +8,7 @@ Two frontends are provided:
 
 Running the wallet requires specifying a witness node address:
 ```
-dscp-wallet --wallet-server 18.136.123.101:4030
+dscp-wallet --witness witness-1.disciplina.serokell.team
 ```
 
 Some useful Knit commands:

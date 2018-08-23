@@ -25,7 +25,7 @@ library:
     - free
     - hashable
     - http-types
-    - http-client
+    - http-client-tls
     - interpolatedstring-perl6
     - lens
     - loot-base
