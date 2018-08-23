@@ -12,7 +12,7 @@ import qualified Data.Text.Prettyprint.Doc as Doc (pretty)
 import Fmt ((+||), (||+))
 import Loot.Log (logError)
 
-import Dscp.Launcher.Rio (runRIO)
+import Dscp.Rio (runRIO)
 import Dscp.Resource.Class (InitContext (..), InitParams (..))
 import Dscp.Resource.Logging (allocLogging)
 

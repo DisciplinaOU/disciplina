@@ -14,7 +14,7 @@ import Dscp.Faucet.Web.API
 import Dscp.Faucet.Web.Error
 import Dscp.Faucet.Web.Logic
 import Dscp.Faucet.Web.Types
-import Dscp.Launcher.Rio
+import Dscp.Rio
 import Dscp.Util.Aeson
 
 faucetApiHandlers

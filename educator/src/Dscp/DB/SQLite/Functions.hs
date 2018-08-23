@@ -15,7 +15,7 @@ import Loot.Base.HasLens (HasLens (..))
 import Dscp.DB.SQLite.Class (MonadSQLiteDB (..))
 import Dscp.DB.SQLite.Error (SQLConnectionOpenningError (..), rethrowSQLRequestError)
 import Dscp.DB.SQLite.Types (SQLiteDB (..), SQLiteDBLocation (..), SQLiteParams (..))
-import Dscp.Launcher.Rio (RIO, runRIO)
+import Dscp.Rio (RIO, runRIO)
 import Dscp.Util (wrapRethrowIO)
 
 -----------------------------------------------------------

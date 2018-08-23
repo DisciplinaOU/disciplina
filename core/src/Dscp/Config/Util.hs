@@ -116,11 +116,12 @@ configParamsParser = do
         Opt.short 'c' <>
         Opt.long "config" <>
         Opt.metavar "FILEPATH" <>
-        Opt.help "Path to configuration file"
+        Opt.help "Path to configuration file."
     confKeyParser = Opt.strOption $
         Opt.long "config-key" <>
         Opt.metavar "STRING" <>
-        Opt.help "Configuration key"
+        Opt.help "Configuration key. Name of top-level section of \
+                 \configuration to use."
 
 ----------------------------------------------------------------------------
 -- Accessing config with lens

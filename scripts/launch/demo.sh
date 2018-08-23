@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+# Launches a cluster of witness nodes.
+
 set -e -o pipefail
 
 # Make sure we're in a tmux session.
@@ -79,6 +81,7 @@ function witness_args {
 
     # witness params (and educator's as well)
     local witness_params="
+    --appdir ./tmp/
     --config ./configuration.yaml
     --config-key demo
     --bind $bind

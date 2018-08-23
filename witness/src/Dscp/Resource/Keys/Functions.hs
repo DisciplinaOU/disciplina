@@ -20,6 +20,7 @@ import Dscp.Crypto (PassPhrase, decrypt, emptyPassPhrase, encrypt, keyGen, runSe
 import Dscp.Resource.Keys.Error (KeyInitError (..), rewrapKeyIOErrors)
 import Dscp.Resource.Keys.Types (BaseKeyParams (..), CommitteeParams (..), KeyJson (..),
                                  KeyResources (..), KeyfileContent)
+import Dscp.Resource.AppDir
 import Dscp.System (ensureModeIs, mode600, setMode, whenPosix)
 import Dscp.Util (leftToThrow)
 import Dscp.Util.Aeson (CustomEncoding (..), Versioned (..))
@@ -47,11 +48,8 @@ fromSecretJson pp KeyJson{..} = do
 -- | Where keyfile would lie.
 storePath
     :: (HasWitnessConfig, Buildable (Proxy node))
-    => BaseKeyParams -> Proxy node -> FilePath
-storePath BaseKeyParams{..} nodeNameP =
-    fromMaybe defPath bkpPath
-  where
-    defPath = giveLC @'["core", "generated", "home"] @WitnessConfig </> (nodeNameP |+ ".key")
+    => AppDir -> Proxy node -> FilePath
+storePath appDir nodeNameP = appDir </> (nodeNameP |+ ".key")
 
 -- | Generate store randomly.
 genStore ::
@@ -150,9 +148,9 @@ linkStore
     :: forall m n.
        (MonadIO m, MonadCatch m, MonadLogging m,
         HasWitnessConfig, Buildable (Proxy n))
-    => BaseKeyParams -> Maybe CommitteeParams -> m (KeyResources n)
-linkStore params@BaseKeyParams{..} commParamsM = do
-    let path = storePath params (Proxy :: Proxy n)
+    => BaseKeyParams -> Maybe CommitteeParams -> AppDir -> m (KeyResources n)
+linkStore BaseKeyParams{..} commParamsM appDir = do
+    let path = storePath appDir (Proxy :: Proxy n)
         pp = fromMaybe emptyPassPhrase bkpPassphrase
     keyExists <- liftIO . rewrapKeyIOErrors $ D.doesFileExist path
     if bkpGenNew && not keyExists
