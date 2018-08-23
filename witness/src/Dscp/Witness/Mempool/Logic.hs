@@ -19,15 +19,16 @@ import qualified Data.Set as S
 import Loot.Base.HasLens (HasLens', lensOf)
 
 import qualified Snowdrop.Core as SD
-import qualified Snowdrop.Model.Execution as SD (dmaAccessActions)
-import qualified Snowdrop.Model.Mempool as Pool
+import qualified Snowdrop.Execution as SD (dmaAccessActions)
+import qualified Snowdrop.Execution as Pool
+import qualified Snowdrop.Execution as AVLP
 import qualified Snowdrop.Util as SD
 
 import Dscp.Core.Foundation (GTxWitnessed)
 import Dscp.Core.Foundation.Witness
 import qualified Dscp.Snowdrop as SD
 import Dscp.Snowdrop.Configuration (Exceptions, Ids, Values)
-import qualified Dscp.Snowdrop.Storage.Avlp as AVLP
+import Dscp.Witness.AVL (AvlHash)
 import Dscp.Witness.Mempool.Type
 import Dscp.Witness.SDLock
 
@@ -95,17 +96,17 @@ type SDM =
         Exceptions
         Ids
         Values
-        (SD.IOCtx (AVLP.AVLChgAccum Ids Values))
+        (SD.IOCtx (AVLP.AVLChgAccum AvlHash Ids Values))
         (Pool.MempoolState
             Ids
             Values
-            (AVLP.AVLChgAccum Ids Values)
+            (AVLP.AVLChgAccum AvlHash Ids Values)
             GTxWitnessed)
 
 readFromMempool
     :: forall ctx m a
     .  (MempoolCtx ctx m, WithinReadSDLock)
-    => Pool.Mempool Ids Values (AVLP.AVLChgAccum Ids Values) GTxWitnessed
+    => Pool.Mempool Ids Values (AVLP.AVLChgAccum AvlHash Ids Values) GTxWitnessed
     -> SDM a
     -> m a
 readFromMempool pool action = do
@@ -118,7 +119,7 @@ readFromMempool pool action = do
 readFromMempoolLocked
     :: forall ctx m a
     .  MempoolCtx ctx m
-    => Pool.Mempool Ids Values (AVLP.AVLChgAccum Ids Values) GTxWitnessed
+    => Pool.Mempool Ids Values (AVLP.AVLChgAccum AvlHash Ids Values) GTxWitnessed
     -> SDLock
     -> SDM a
     -> m a
@@ -129,7 +130,7 @@ readFromMempoolLocked pool lock action = do
 writeToMempool
     :: forall ctx m a
     .  (MempoolCtx ctx m, WithinWriteSDLock)
-    => Pool.Mempool Ids Values (AVLP.AVLChgAccum Ids Values) GTxWitnessed
+    => Pool.Mempool Ids Values (AVLP.AVLChgAccum AvlHash Ids Values) GTxWitnessed
     -> SDM a
     -> m a
 writeToMempool pool action = do

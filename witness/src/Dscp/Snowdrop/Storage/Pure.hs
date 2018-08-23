@@ -10,9 +10,9 @@ import Control.Lens (at, makeLenses)
 import qualified Data.Map as M
 
 import Snowdrop.Core (HasKeyValue, Prefix, SValue, ValueOp (..), changeSetToList)
-import Snowdrop.Model.Block (BlockRef (..), TipKey (..), TipValue (..))
-import Snowdrop.Model.Execution (DbActionsException (..), DbModifyActions (..), SumChangeSet,
-                                 accumToDiff, sumChangeSetDBA)
+import Snowdrop.Block (BlockRef (..), TipKey (..), TipValue (..))
+import Snowdrop.Execution (DbActionsException (..), DbModifyActions (..), SumChangeSet,
+                           accumToDiff, sumChangeSetDBA)
 import Snowdrop.Util
 
 import Dscp.Core.Foundation (HeaderHash, GTxId)
@@ -42,7 +42,7 @@ _getterLogger impl accum reqIds = do
     pure resp
 
 blockDbActions ::
-       (MonadIO m, MonadIO n)
+       (MonadIO m, MonadIO n, MonadCatch n)
     => m (DbModifyActions (SumChangeSet Ids Values) Ids Values n ())
 blockDbActions = mkActions <$> liftIO (newTVarIO emptyBlockStorage)
   where

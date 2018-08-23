@@ -16,14 +16,15 @@ import Data.Default (def)
 import Loot.Base.HasLens (lensOf)
 import Loot.Log.Rio (LoggingIO)
 import qualified Snowdrop.Core as SD
-import qualified Snowdrop.Model.Execution as SD
+import qualified Snowdrop.Execution as SD
 import Snowdrop.Util (RIO, runRIO)
 
 import Dscp.Snowdrop.Actions
 import Dscp.Snowdrop.Configuration
 import Dscp.Snowdrop.IOCtx (IOCtx)
-import Dscp.Snowdrop.Storage.Avlp
+import Snowdrop.Execution (AVLChgAccum, RememberForProof)
 import Dscp.Witness.Launcher.Mode
+import Dscp.Witness.AVL (AvlHash)
 import qualified Dscp.Witness.SDLock as Lock
 
 -- | Alias for ERoComp with concrete config types.
@@ -33,7 +34,7 @@ type SdM_ chgacc = SD.ERoComp Exceptions Ids Values (IOCtx chgacc)
 type SdM a = SdM_ (SD.SumChangeSet Ids Values) a
 
 -- | Monad representing actions in snowdrop BaseM, related to AVL+ storage.
-type StateSdM a = SdM_ (AVLChgAccum Ids Values) a
+type StateSdM a = SdM_ (AVLChgAccum AvlHash Ids Values) a
 
 -- This is terrible
 runSdRIO :: WitnessWorkMode ctx m => RIO LoggingIO a -> m a

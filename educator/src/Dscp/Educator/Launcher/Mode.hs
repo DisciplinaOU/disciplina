@@ -111,6 +111,8 @@ instance HasLens SDActions EducatorContext SDActions where
     lensOf = ecWitnessCtx . lensOf @SDActions
 instance HasLens RelayState EducatorContext RelayState where
     lensOf = ecWitnessCtx . lensOf @RelayState
+instance HasLens W.OSParamsBuilder EducatorContext W.OSParamsBuilder where
+    lensOf = ecWitnessCtx . lensOf @W.OSParamsBuilder
 instance HasLens W.SDLock EducatorContext W.SDLock where
     lensOf = ecWitnessCtx . lensOf @W.SDLock
 

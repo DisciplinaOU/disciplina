@@ -1,7 +1,9 @@
 -- | Functions to serve wallet API.
 
 module Dscp.Witness.Web.Server
-       ( serveWitnessAPIReal
+       ( mkWitnessAPIServer
+       , convertWitnessHandler
+       , serveWitnessAPIReal
        ) where
 
 import Data.Reflection (Reifies, reify)
@@ -10,36 +12,35 @@ import Loot.Log (logInfo)
 import Network.HTTP.Types.Header (hContentType)
 import Network.Wai.Middleware.Cors (CorsResourcePolicy (..), cors, simpleCorsResourcePolicy)
 import Servant (Handler, Server, hoistServer, serve, throwError)
+import UnliftIO (UnliftIO (..), askUnliftIO)
 
-import Dscp.Rio (runRIO)
 import Dscp.Util.Servant (LoggingApi, ServantLogConfig (..))
 import Dscp.Web (ServerParams (..), buildServantLogConfig, serveWeb)
-import Dscp.Witness.Config (HasWitnessConfig)
-import Dscp.Witness.Launcher.Mode (WitnessContext, WitnessRealMode, WitnessWorkMode)
+import Dscp.Witness.Launcher.Mode (WitnessWorkMode)
 import Dscp.Witness.Web.API (WitnessAPI, witnessAPI)
 import Dscp.Witness.Web.Error
 import Dscp.Witness.Web.Handlers (witnessServantHandlers)
 
-witnessAPIServer
+mkWitnessAPIServer
     :: forall ctx m. WitnessWorkMode ctx m
     => (forall x. m x -> Handler x)
     -> Server WitnessAPI
-witnessAPIServer nat =
+mkWitnessAPIServer nat =
     hoistServer witnessAPI nat witnessServantHandlers
 
 convertWitnessHandler
-    :: WitnessContext
-    -> WitnessRealMode a
+    :: UnliftIO m
+    -> m a
     -> Handler a
-convertWitnessHandler ctx handler =
-    liftIO (runRIO ctx handler)
+convertWitnessHandler (UnliftIO unliftIO) handler =
+    liftIO (unliftIO handler)
         `catch` (throwError . witnessToServantErr)
         `catchAny` (throwError . witnessToServantErr . InternalError . show)
 
-serveWitnessAPIReal :: HasWitnessConfig => ServerParams -> WitnessRealMode ()
+serveWitnessAPIReal :: WitnessWorkMode ctx m => ServerParams -> m ()
 serveWitnessAPIReal ServerParams{..} = do
     logInfo $ "Serving wallet API on "+|spAddr|+""
-    wCtx <- ask
+    unliftIO <- askUnliftIO
     lc <- buildServantLogConfig (<> "web")
     let ourCors = cors (const $ Just $
                         simpleCorsResourcePolicy
@@ -48,8 +49,8 @@ serveWitnessAPIReal ServerParams{..} = do
         ourCors $
         reify lc $ \logConfigP ->
         serve (servedApi logConfigP) $
-        witnessAPIServer $
-        convertWitnessHandler wCtx
+        mkWitnessAPIServer $
+        convertWitnessHandler unliftIO
   where
     servedApi
         :: Reifies config ServantLogConfig
