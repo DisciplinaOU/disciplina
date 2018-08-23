@@ -45,7 +45,7 @@ witnessEntry =
         passiveWitnessEntry
 
         witnessParams <- view (lensOf @WitnessParams)
-        whenJust (wpWitnessServerParams witnessParams) $ \serverParams -> do
+        whenJust (wpWalletServerParams witnessParams) $ \serverParams -> do
             logInfo "Forking witness API server"
             void . async $
                 serveWitnessAPIReal serverParams
