@@ -14,7 +14,7 @@ import Dscp.Educator.Web.Student.API
 import Dscp.Educator.Web.Student.Error
 import Dscp.Educator.Web.Student.Logic
 import Dscp.Educator.Web.Student.Queries
-import Dscp.Launcher.Rio
+import Dscp.Rio
 
 type StudentApiWorkMode m =
     ( MonadStudentAPIQuery m

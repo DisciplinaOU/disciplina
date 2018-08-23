@@ -8,6 +8,7 @@ module Dscp.Educator.Launcher.Params
 import Dscp.DB.SQLite (SQLiteParams)
 import Dscp.Educator.Web.Params (EducatorWebParams)
 import Dscp.Resource.Keys (BaseKeyParams)
+import Dscp.Resource.AppDir
 import Dscp.Witness.Launcher.Params (WitnessParams)
 
 -- | Educator key parameters.
@@ -25,4 +26,6 @@ data EducatorParams = EducatorParams
     -- ^ Parameters for educator secret key storage.
     , epWebParams     :: EducatorWebParams
     -- ^ Parameters for HTTP APIs
+    , epAppDirParam   :: AppDirParam
+    -- ^ Application folder param
     }

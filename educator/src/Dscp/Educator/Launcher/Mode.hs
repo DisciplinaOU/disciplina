@@ -29,7 +29,7 @@ import Dscp.Educator.Launcher.Marker (EducatorNode)
 import Dscp.Educator.Launcher.Params (EducatorParams)
 import Dscp.Educator.Launcher.Resource (EducatorResources)
 import qualified Dscp.Launcher.Mode as Basic
-import Dscp.Launcher.Rio (RIO)
+import Dscp.Rio (RIO)
 import Dscp.Resource.Keys (KeyResources)
 import Dscp.Snowdrop.Actions (SDActions)
 import qualified Dscp.Witness as W

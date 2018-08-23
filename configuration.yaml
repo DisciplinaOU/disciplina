@@ -1,7 +1,5 @@
 demo: &demo
   core: &demo-core
-    homeParam:
-      path: "./tmp/"
     slotDuration: 10000 # 10 s
     genesis: &demo-genesis
       genesisSeed: "GromakNaRechke"

@@ -17,7 +17,7 @@ import Loot.Network.ZMQ.Common (PreZTNodeId (..), parsePreZTNodeId)
 import Options.Applicative (Parser, auto, eitherReader, help, long, metavar, option, strOption,
                             value)
 
-import Dscp.CommonCLI (baseKeyParamsParser, logParamsParser, serverParamsParser)
+import Dscp.CommonCLI (baseKeyParamsParser, logParamsParser, serverParamsParser, appDirParamParser)
 import Dscp.Core.Governance (CommitteeSecret (..))
 import Dscp.DB.Rocks.Real.Types (RocksDBParams (..))
 import Dscp.Resource.Keys
@@ -107,4 +107,5 @@ witnessParamsParser = do
     wpNetworkParams <- netServParamsParser
     wpKeyParams <- witnessKeyParamsParser
     wpWalletServerParams <- serverParamsParser "Witness"
+    wpAppDirParam <- appDirParamParser
     pure $ WitnessParams {..}
