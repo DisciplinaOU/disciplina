@@ -10,6 +10,7 @@ module Dscp.CommonCLI
        , timeReadM
        , coinReadM
        , networkAddressParser
+       , clientAddressParser
        , serverParamsParser
        , appDirParamParser
        ) where
@@ -19,6 +20,7 @@ import Data.Version (showVersion)
 import qualified Loot.Log as Log
 import Options.Applicative (Parser, ReadM, auto, eitherReader, help, infoOption, long, metavar,
                             option, str, strOption, switch)
+import Servant.Client (BaseUrl (..), parseBaseUrl)
 import Text.InterpolatedString.Perl6 (qc)
 import Text.Parsec (eof, many1, parse, sepBy)
 import Text.Parsec.Char (char, digit)
@@ -126,6 +128,13 @@ networkAddressParser pName helpTxt =
     option (eitherReader parseNetAddr) $
     long pName <>
     metavar "HOST:PORT" <>
+    help helpTxt
+
+clientAddressParser :: String -> String -> Parser BaseUrl
+clientAddressParser pName helpTxt =
+    option (eitherReader $ first displayException . parseBaseUrl) $
+    long pName <>
+    metavar "URL" <>
     help helpTxt
 
 serverParamsParser :: String -> Parser ServerParams
