@@ -19,6 +19,7 @@ module Dscp.Snowdrop.Configuration
     , txPrefix
     , txOfPrefix
     , txHeadPrefix
+    , blockPrefixes
     , Ids (..)
     , Values (..)
 
@@ -36,6 +37,7 @@ module Dscp.Snowdrop.Configuration
 
 
 import Control.Lens (makePrisms)
+import qualified Data.Set as S
 import qualified Data.Text.Buildable as B
 import Fmt (build, (+|))
 import qualified Text.Show
@@ -129,6 +131,18 @@ txOfPrefix = Prefix 7
 
 txHeadPrefix :: Prefix
 txHeadPrefix = Prefix 8
+
+-- | Prefixes stored in block storage
+blockPrefixes :: Set Prefix
+blockPrefixes = S.fromList
+    [ tipPrefix
+    , blockPrefix
+    , publicationOfPrefix
+    , publicationHeadPrefix
+    , txPrefix
+    , txOfPrefix
+    , txHeadPrefix
+    ]
 
 -- | Sum-type for all ids used within the application.
 data Ids
