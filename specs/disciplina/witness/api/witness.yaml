@@ -1,8 +1,8 @@
 swagger: "2.0"
 info:
-  description: "This is an HTTP API for interacting with Disciplina Witness node. It is used by Block Explorer frontend to request info about blocks, accounts and transactions."
+  description: "This is an HTTP API for interacting with Disciplina Witness node. It is used by Block Explorer frontend to request info about blocks, accounts and transactions, and by Disciplina Wallet to make transactions."
   version: 0.1.0
-  title: Disciplina Block Explorer API
+  title:  Disciplina Witness API
   termsOfService: "https://disciplina.io/tnc.pdf"
   contact:
     email: hi@serokell.io
