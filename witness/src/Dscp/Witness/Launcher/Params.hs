@@ -21,16 +21,16 @@ data WitnessKeyParams = WitnessKeyParams
 
 -- | Contains all initialization parameters of Witness node.
 data WitnessParams = WitnessParams
-    { wpLoggingParams      :: LoggingParams
+    { wpLoggingParams       :: LoggingParams
     -- ^ Logging parameters.
-    , wpDBParams           :: RocksDBParams
+    , wpDBParams            :: RocksDBParams
     -- ^ DB parameters
-    , wpNetworkParams      :: NetServParams
+    , wpNetworkParams       :: NetServParams
     -- ^ Networking params.
-    , wpKeyParams          :: WitnessKeyParams
+    , wpKeyParams           :: WitnessKeyParams
     -- ^ Witness key params.
-    , wpWalletServerParams :: ServerParams
-    -- ^ Wallet server params.
     , wpAppDirParam        :: AppDirParam
     -- ^ Application folder param
+    , wpWitnessServerParams :: Maybe ServerParams
+    -- ^ Witness server params, if need to serve it.
     } deriving Show

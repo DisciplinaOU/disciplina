@@ -113,6 +113,6 @@ witnessParamsParser = do
     wpDBParams <- rocksParamsParser
     wpNetworkParams <- netServParamsParser
     wpKeyParams <- witnessKeyParamsParser
-    wpWalletServerParams <- serverParamsParser "Witness"
+    wpWitnessServerParams <- optional $ serverParamsParser "Witness"
     wpAppDirParam <- appDirParamParser
     pure $ WitnessParams {..}
