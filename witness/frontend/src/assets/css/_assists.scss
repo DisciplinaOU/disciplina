@@ -1,0 +1,202 @@
+//Colors
+.color-alert {
+  color: $color-alert;
+}
+
+//Btn
+.btn {
+  text-align: center;
+  display: inline-block;
+  vertical-align: middle;
+  text-decoration: none;
+  cursor: pointer;
+  user-select: none;
+  border-radius: 3px;
+  transition: background-color $transition, color $transition;
+  padding: 7px 15px 8px;
+  &:active {
+    transform: translateY(2px);
+  }
+}
+
+.btn--blue {
+  border: 1px solid $color-main;
+  background-color: $color-main;
+  color: $color-white;
+  font-weight: 300;
+  .small {
+    color: $color-white;
+  }
+  &:hover {
+    background-color: $color-main-darker;
+  }
+}
+
+.btn--arrow {
+  border: 1px solid $color-main;
+  color: $color-main;
+  &:hover:not(.btn--gray) {
+    background-color: $color-main;
+    color: $color-white;
+  }
+}
+
+.btn--forward {
+  &:before {
+    content: '➞';
+    display: inline-block;
+    margin-right: 7px;
+    transform: rotate(180deg);
+  }
+}
+
+
+.btn--back {
+  &:after {
+    content: '➞';
+    display: inline-block;
+    margin-left: 7px;
+  }
+}
+
+.btn--gray {
+  border: 1px solid $color-muted;
+  color: $color-muted;
+}
+
+.btn--more {
+  border: 1px solid $color-main;
+  color: $color-main;
+  &:after {
+    content: '➞';
+    display: inline-block;
+    margin-left: 7px;
+    transform: rotate(90deg);
+  }
+  &:hover{
+    background-color: $color-main;
+    color: $color-white;
+  }
+}
+
+.btnHollow {
+  border: 1px solid $color-white;
+  color: $color-white;
+  padding-left: 16px;
+  padding-right: 16px;
+  box-shadow: 0 0 0 transparent;
+  transition: background-color $transition;
+  text-shadow: 1px 1px 0 rgba($color-black, 0.1);
+
+  &:hover {
+    text-decoration: none;
+    color: $color-accent;
+    background: $color-white;
+    text-shadow: none;
+    box-shadow: 0 0 5px rgba(255, 255, 255, 0.3);
+  }
+}
+
+
+//BORDERED LINK
+.link {
+  position: relative;
+  display: inline-block;
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: none;
+  }
+
+  &:before {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 1px;
+    bottom: 0;
+    left: 0;
+    background-color: currentColor;
+    visibility: hidden;
+    transform: scaleX(0);
+    transition: all 0.2s ease-in-out 0s;
+  }
+
+  &:hover:before {
+    visibility: visible;
+    transform: scaleX(1);
+  }
+}
+
+.link--colorBlue {
+  color: $color-main;
+}
+
+.small {
+  font-size: 80%;
+  color: $color-gray-text;
+}
+
+.hash {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.marginTop5 {
+  margin-top: 5px;
+}
+
+.marginTop10 {
+  margin-top: 10px;
+}
+
+.marginTop15 {
+  margin-top: 15px;
+}
+
+.marginTop20 {
+  margin-top: 20px;
+}
+
+.marginTop25 {
+  margin-top: 25px;
+}
+
+.marginTop30 {
+  margin-top: 30px;
+}
+
+.marginTop40 {
+  margin-top: 40px;
+}
+
+.marginTop50 {
+  margin-top: 50px;
+}
+
+.marginBottom5 {
+  margin-bottom: 5px;
+}
+
+.marginBottom10 {
+  margin-bottom: 10px;
+}
+
+.marginBottom15 {
+  margin-bottom: 15px;
+}
+
+.marginBottom20 {
+  margin-bottom: 20px;
+}
+
+.marginBottom30 {
+  margin-bottom: 30px;
+}
+
+.marginBottom40 {
+  margin-bottom: 40px;
+}
+
+.marginBottom50 {
+  margin-bottom: 50px;
+}
