@@ -18,6 +18,7 @@ import Servant.Generic
 
 import qualified Dscp.Core as Core
 import Dscp.Crypto (Hash)
+import Dscp.Educator.Web.Auth
 import Dscp.Educator.Web.Student.Auth
 import Dscp.Educator.Web.Student.Error (DSON)
 import Dscp.Educator.Web.Student.Types
@@ -38,7 +39,7 @@ data StudentApiEndpoints route = StudentApiEndpoints
 type StudentAPI =
     "api" :> "student" :> "v1" :> ToServant (StudentApiEndpoints AsApi)
 
-type ProtectedStudentAPI = Auth' :> StudentAPI
+type ProtectedStudentAPI = Auth' StudentAuth Core.Student :> StudentAPI
 
 type StudentApiHandlers m = StudentApiEndpoints (AsServerT m)
 

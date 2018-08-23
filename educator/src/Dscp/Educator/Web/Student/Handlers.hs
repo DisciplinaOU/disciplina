@@ -6,15 +6,14 @@ module Dscp.Educator.Web.Student.Handlers
        ) where
 
 import Servant (Handler, throwError)
+import UnliftIO (UnliftIO (..))
 
 import Dscp.Core (Student)
 import Dscp.DB.SQLite (sqlTransaction)
-import Dscp.Educator.Launcher
 import Dscp.Educator.Web.Student.API
 import Dscp.Educator.Web.Student.Error
 import Dscp.Educator.Web.Student.Logic
 import Dscp.Educator.Web.Student.Queries
-import Dscp.Rio
 
 type StudentApiWorkMode m =
     ( MonadStudentAPIQuery m
@@ -54,10 +53,10 @@ studentApiHandlers student =
     }
 
 convertStudentApiHandler
-    :: EducatorContext
-    -> EducatorRealMode a
+    :: UnliftIO m
+    -> m a
     -> Handler a
-convertStudentApiHandler ctx handler =
-    liftIO (runRIO ctx handler)
+convertStudentApiHandler (UnliftIO unliftIO) handler =
+    liftIO (unliftIO handler)
         `catch` (throwError . toServantErr)
         `catchAny` (throwError . unexpectedToServantErr)

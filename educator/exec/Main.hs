@@ -2,23 +2,16 @@
 
 module Main where
 
-import Loot.Log (logInfo, logWarning, modifyLogName)
 import Options.Applicative (execParser, fullDesc, helper, info, progDesc)
 
 import Dscp.CommonCLI (versionOption)
 import Dscp.Config (buildConfig, configParamsParser)
 import Dscp.Educator
-import Dscp.Educator.Web.Server
 
 main :: IO ()
 main = do
     (educatorParams, educatorConfig) <- getEducatorParams
-    launchEducatorRealMode educatorConfig educatorParams $
-      modifyLogName (<> "node") $ do
-        logInfo "This is the stub for Educator node executable"
-        logWarning "Please don't forget to implement everything else!"
-
-        serveStudentAPIReal (epWebParams educatorParams)
+    launchEducatorRealMode educatorConfig educatorParams educatorEntry
 
 getEducatorParams :: IO (EducatorParams, EducatorConfigRec)
 getEducatorParams = do

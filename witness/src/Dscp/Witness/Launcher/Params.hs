@@ -6,10 +6,10 @@ module Dscp.Witness.Launcher.Params
        ) where
 
 import Dscp.DB.Rocks.Real.Types (RocksDBParams)
+import Dscp.Resource.AppDir (AppDirParam)
 import Dscp.Resource.Keys (BaseKeyParams, CommitteeParams)
 import Dscp.Resource.Logging (LoggingParams)
 import Dscp.Resource.Network (NetServParams)
-import Dscp.Resource.AppDir (AppDirParam)
 import Dscp.Web (ServerParams)
 
 -- | Witness key parameters.
@@ -21,16 +21,16 @@ data WitnessKeyParams = WitnessKeyParams
 
 -- | Contains all initialization parameters of Witness node.
 data WitnessParams = WitnessParams
-    { wpLoggingParams      :: LoggingParams
+    { wpLoggingParams       :: LoggingParams
     -- ^ Logging parameters.
-    , wpDBParams           :: RocksDBParams
+    , wpDBParams            :: RocksDBParams
     -- ^ DB parameters
-    , wpNetworkParams      :: NetServParams
+    , wpNetworkParams       :: NetServParams
     -- ^ Networking params.
-    , wpKeyParams          :: WitnessKeyParams
+    , wpKeyParams           :: WitnessKeyParams
     -- ^ Witness key params.
-    , wpWalletServerParams :: ServerParams
-    -- ^ Wallet server params.
-    , wpAppDirParam        :: AppDirParam
+    , wpWitnessServerParams :: Maybe ServerParams
+    -- ^ Witness server params, if need to serve it.
+    , wpAppDirParam         :: AppDirParam
     -- ^ Application folder param
     } deriving Show
