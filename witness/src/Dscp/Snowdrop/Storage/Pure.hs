@@ -20,14 +20,18 @@ import Dscp.Snowdrop.Configuration
 import Dscp.Snowdrop.Storage.Types
 
 data BlockStorage = BlockStorage
-    { _bsBlunds :: Map HeaderHash SBlund
-    , _bsTip    :: TipValue HeaderHash
-    , _bsTxs    :: Map GTxId TxBlockRef
+    { _bsBlunds      :: Map HeaderHash SBlund
+    , _bsTip         :: TipValue HeaderHash
+    , _bsTxs         :: Map GTxId TxBlockRef
+    , _bsAccLastTxs  :: Map TxsOf LastTx
+    , _bsAccNextTxs  :: Map TxHead TxNext
+    , _bsAccLastPubs :: Map PublicationsOf LastPublication
+    , _bsAccNextPubs :: Map PublicationHead PublicationNext
     }
 makeLenses ''BlockStorage
 
 emptyBlockStorage :: BlockStorage
-emptyBlockStorage = BlockStorage mempty (TipValue Nothing) mempty
+emptyBlockStorage = BlockStorage mempty (TipValue Nothing) mempty mempty mempty mempty mempty
 
 queryMany :: (Ord id, Monad m, Foldable f) => (id -> m (Maybe value)) -> f id -> m (Map id value)
 queryMany doOne = foldM (\resp i -> maybe resp (\v -> M.insert i v resp) <$> doOne i) mempty
@@ -57,14 +61,28 @@ blockDbActions = mkActions <$> liftIO (newTVarIO emptyBlockStorage)
         foldr foldF b . (\tip -> [(TipKeyIds TipKey, TipValueVal tip)]) . _bsTip <$> readTVar var
       | prefix == blockPrefix =
         foldr foldF b . map (bimap (BlockRefIds . BlockRef) BlundVal) . M.toList . _bsBlunds <$> readTVar var
+      | prefix == txPrefix =
+        foldr foldF b . map (bimap TxIds TxVal) . M.toList . _bsTxs <$> readTVar var
+      | prefix == txOfPrefix =
+        foldr foldF b . map (bimap TxOfIds TxOfVal) . M.toList . _bsAccLastTxs <$> readTVar var
+      | prefix == txHeadPrefix =
+        foldr foldF b . map (bimap TxHeadIds TxHeadVal) . M.toList . _bsAccNextTxs <$> readTVar var
+      | prefix == publicationOfPrefix =
+        foldr foldF b . map (bimap PublicationOfIds PublicationOfVal) . M.toList . _bsAccLastPubs <$> readTVar var
+      | prefix == publicationHeadPrefix =
+        foldr foldF b . map (bimap PublicationHeadIds PublicationHeadVal) . M.toList . _bsAccNextPubs <$> readTVar var
       | otherwise =
         throwM $ DbWrongPrefixIter $ "Unknown iteration on block storage " <> show prefix
 
     queryOne :: TVar BlockStorage -> Ids -> STM (Maybe Values)
     queryOne var = \case
-        (TipKeyIds TipKey)          -> Just . TipValueVal . view bsTip <$> readTVar var
-        (BlockRefIds (BlockRef hh)) -> fmap BlundVal . M.lookup hh . view bsBlunds <$> readTVar var
-        (TxIds gTxId)               -> fmap TxVal . M.lookup gTxId . view bsTxs <$> readTVar var
+        (TipKeyIds TipKey)           -> Just . TipValueVal . view bsTip <$> readTVar var
+        (BlockRefIds (BlockRef hh))  -> fmap BlundVal . M.lookup hh . view bsBlunds <$> readTVar var
+        (TxIds gTxId)                -> fmap TxVal . M.lookup gTxId . view bsTxs <$> readTVar var
+        (TxOfIds txOf)               -> fmap TxOfVal . M.lookup txOf . view bsAccLastTxs <$> readTVar var
+        (TxHeadIds txHead)           -> fmap TxHeadVal . M.lookup txHead . view bsAccNextTxs <$> readTVar var
+        (PublicationOfIds pubOf)     -> fmap PublicationOfVal . M.lookup pubOf . view bsAccLastPubs <$> readTVar var
+        (PublicationHeadIds pubHead) -> fmap PublicationHeadVal . M.lookup pubHead . view bsAccNextPubs <$> readTVar var
         i -> throwM $ DbWrongIdQuery $ "Unknown query to block storage " <> show i
 
     apply :: TVar BlockStorage -> SumChangeSet Ids Values -> STM ()
@@ -79,6 +97,18 @@ blockDbActions = mkActions <$> liftIO (newTVarIO emptyBlockStorage)
     applyOne var (TxIds gTxId) =
         performActionWithTVar var (bsTxs . at gTxId) (applyException gTxId) <=<
         projValOp @GTxId
+    applyOne var (TxOfIds txOf) =
+        performActionWithTVar var (bsAccLastTxs . at txOf) (applyException txOf) <=<
+        projValOp @TxsOf
+    applyOne var (TxHeadIds txHead) =
+        performActionWithTVar var (bsAccNextTxs . at txHead) (applyException txHead) <=<
+        projValOp @TxHead
+    applyOne var (PublicationOfIds pubOf) =
+        performActionWithTVar var (bsAccLastPubs . at pubOf) (applyException pubOf) <=<
+        projValOp @PublicationsOf
+    applyOne var (PublicationHeadIds pubHead) =
+        performActionWithTVar var (bsAccNextPubs . at pubHead) (applyException pubHead) <=<
+        projValOp @PublicationHead
     applyOne _ i = applyException i '-'
 
     applyTip :: TVar BlockStorage -> ValueOp Values -> Maybe HeaderHash -> STM ()

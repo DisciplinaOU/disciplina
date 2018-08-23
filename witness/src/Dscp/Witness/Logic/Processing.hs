@@ -10,7 +10,6 @@ module Dscp.Witness.Logic.Processing
 import Data.Default (def)
 import qualified Data.Map as M
 import Data.Reflection (reify)
-import qualified Data.Set as S
 import Loot.Base.HasLens (lensOf)
 import Serokell.Util (enumerate)
 import qualified Snowdrop.Core as SD
@@ -62,7 +61,7 @@ applyBlockRaw toVerify block = do
 
     (blockCS, stateCS) <- reify blockPrefixes $ \(_ :: Proxy ps) ->
         let actions = SD.constructCompositeActions @ps (SD.dmaAccessActions blockDBM)
-                                                        (SD.dmaAccessActions stateDBM)
+                                                       (SD.dmaAccessActions stateDBM)
             rwComp = do
               sblock <- SD.liftERoComp $ expandBlock block
               SD.applyBlockImpl toVerify blkStateConfig sblock
@@ -76,8 +75,6 @@ applyBlockRaw toVerify block = do
     proof <- runSdRIO $ SD.dmaApply stateDBM stateCS
     runSdRIO $ SD.dmaApply blockDBM blockCS
     pure proof
-  where
-    blockPrefixes = S.fromList [tipPrefix, blockPrefix, txPrefix]
 
 applyBlock :: (WitnessWorkMode ctx m, WithinWriteSDLock) => Block -> m AvlProof
 applyBlock = applyBlockRaw True

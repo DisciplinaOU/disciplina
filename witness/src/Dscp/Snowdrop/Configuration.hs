@@ -1,6 +1,7 @@
 module Dscp.Snowdrop.Configuration where
 
 import Control.Lens (makePrisms)
+import qualified Data.Set as S
 import Fmt (build, (+|))
 
 import Snowdrop.Core (CSMappendException, ChangeSet, IdSumPrefixed (..), Prefix (..),
@@ -65,6 +66,18 @@ txOfPrefix = Prefix 7
 
 txHeadPrefix :: Prefix
 txHeadPrefix = Prefix 8
+
+-- | Prefixes stored in block storage
+blockPrefixes :: Set Prefix
+blockPrefixes = S.fromList
+    [ tipPrefix
+    , blockPrefix
+    , publicationOfPrefix
+    , publicationHeadPrefix
+    , txPrefix
+    , txOfPrefix
+    , txHeadPrefix
+    ]
 
 -- | Sum-type for all ids used within the application.
 data Ids
