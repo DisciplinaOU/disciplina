@@ -8,7 +8,7 @@ module Dscp.Witness.Launcher.Runner
 import Data.Time.Clock (UTCTime (..))
 import qualified Snowdrop.Block as SD
 
-import Dscp.Launcher.Rio (runRIO)
+import Dscp.Rio (runRIO)
 import Dscp.Resource.Class (AllocResource (..), InitParams (..))
 import Dscp.Resource.Functions
 import Dscp.Snowdrop.Actions (initSDActions)
