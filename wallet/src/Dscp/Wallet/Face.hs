@@ -14,7 +14,7 @@ module Dscp.Wallet.Face
        , TxOut (..)
        ) where
 
-import Dscp.Core (Address, Coin (..), Tx, TxOut (..))
+import Dscp.Core (Address, Coin (..), GTx, Tx, TxOut (..))
 import Dscp.Crypto (Encrypted, PassPhrase, PublicKey, SecretKey)
 import Dscp.Witness.Web.Types
 
@@ -25,6 +25,7 @@ data WalletFace = WalletFace
     , walletListKeys     :: IO [Account]
     , walletSendTx       :: Encrypted SecretKey -> Maybe PassPhrase -> NonEmpty TxOut -> IO Tx
     , walletGetBalance   :: Address -> IO (BlocksOrMempool Coin)
+    , walletGetTxHistory :: Address -> IO [GTx]
     }
 
 data Account = Account
