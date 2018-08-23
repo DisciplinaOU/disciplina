@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+# Launches a cluster of witness nodes.
+
 set -e -o pipefail
 
 # Make sure we're in a tmux session.

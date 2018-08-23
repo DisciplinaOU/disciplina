@@ -10,7 +10,8 @@ demo: &demo
       distribution:
         - equal: 1000
         - specific:
-          - - "LL4qKn62hrdLh1vkyiidEFLfCaAngaVmtu3ipGVSubhackXS4pXNbeDC"
+          - # faucet
+            - "LL4qKn62hrdLh1vkyiidEFLfCaAngaVmtu3ipGVSubhackXS4pXNbeDC"
             - 100
 clusterCi:
    <<: *demo
@@ -27,5 +28,6 @@ clusterCi:
        distribution:
          - equal: 3
          - specific:
-           - - "LL4qKmuUkqHGMSXpBKzDyA9g2VCAwVNLRbfGtXeHv55MCeewkKcpLGNR"
+           - # faucet
+             - "LL4qKmuUkqHGMSXpBKzDyA9g2VCAwVNLRbfGtXeHv55MCeewkKcpLGNR"
              - 100500

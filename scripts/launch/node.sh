@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# Launches a single node, be it witness, educator or other one,
+# with predefined parameters.
+
 set -e -o pipefail
 
 # directory with script
