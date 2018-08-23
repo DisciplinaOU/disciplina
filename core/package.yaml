@@ -30,6 +30,7 @@ library:
     - loot-log
     - lens
     - memory
+    - mon
     - o-clock
     - optparse-applicative
     - prettyprinter
@@ -60,5 +61,6 @@ tests:
       - disciplina-core
       - hspec
       - tasty
+      - tasty-discover
       - tasty-hspec
       - QuickCheck

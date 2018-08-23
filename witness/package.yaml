@@ -35,6 +35,7 @@ library:
     - log-warper
     - memory
     - mtl
+    - mon
     - optparse-applicative
     - o-clock
     - parsec
@@ -60,6 +61,7 @@ library:
     - unordered-containers
     - wai-cors
     - warp
+    - wai
 
 tests:
   disciplina-witness-test:

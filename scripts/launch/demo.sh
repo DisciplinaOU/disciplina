@@ -92,6 +92,7 @@ function witness_args {
     --comm-n $index
     --witness-keyfile $witness_dir/witness.key
     --witness-gen-key
+    --metrics-server 127.0.0.1:8125
     $peers
     "
     echo $witness_params
