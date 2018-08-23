@@ -5,7 +5,7 @@ module Dscp.Witness.Web.Client.Logic
        , hoistWitnessClient
        ) where
 
-import Servant.Client (Client, ClientM, Scheme (..), client, runClientM)
+import Servant.Client (Client, ClientM, client, runClientM)
 import Servant.Generic ((:-), fromServant)
 
 import Dscp.Resource.Class
@@ -39,9 +39,9 @@ hoistWitnessClient nat es =
     , wGetHashType = nat ... wGetHashType es
     }
 
-createWitnessClient :: MonadIO m => NetworkAddress -> m WitnessClient
+createWitnessClient :: MonadIO m => BaseUrl -> m WitnessClient
 createWitnessClient netAddr = do
-    cliEnv <- buildClientEnv Http netAddr
+    cliEnv <- buildClientEnv netAddr
     let nat :: ClientM a -> IO a
         nat act = runClientM act cliEnv >>= leftToThrow servantToWitnessError
 
@@ -53,7 +53,7 @@ createWitnessClient netAddr = do
 -- Instances
 ----------------------------------------------------------------------------
 
-instance AllocResource NetworkAddress WitnessClient where
+instance AllocResource BaseUrl WitnessClient where
     allocResource params =
         buildComponentR "witness client"
             (createWitnessClient params)

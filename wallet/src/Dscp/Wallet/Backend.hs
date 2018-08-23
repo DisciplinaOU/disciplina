@@ -13,7 +13,7 @@ import Dscp.Web
 import Dscp.Witness.Web.Client
 import Dscp.Witness.Web.Types
 
-createWalletFace :: NetworkAddress -> (WalletEvent -> IO ()) -> IO WalletFace
+createWalletFace :: BaseUrl -> (WalletEvent -> IO ()) -> IO WalletFace
 createWalletFace serverAddress sendEvent = do
     sendStateUpdateEvent sendEvent
     wc <- createWitnessClient serverAddress

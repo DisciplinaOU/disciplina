@@ -32,7 +32,7 @@ data FaucetParams = FaucetParams
       -- ^ Corresponds to source of transactions made by faucet.
     , _fpWebParams        :: ServerParams
       -- ^ Parameters of faucet API server.
-    , _fpWitnessAddress   :: NetworkAddress
+    , _fpWitnessAddress   :: BaseUrl
       -- ^ Address of transactions processing backend.
     , _fpTranslatedAmount :: TranslatedAmount
       -- ^ How much money to send on request.
