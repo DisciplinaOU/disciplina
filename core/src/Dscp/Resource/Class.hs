@@ -17,7 +17,7 @@ import Control.Monad.Component (ComponentM, buildComponent)
 import Loot.Base.HasLens (HasLens (..))
 import Loot.Log.Rio (LoggingIO)
 
-import Dscp.Launcher.Rio (RIO, runRIO)
+import Dscp.Rio (RIO, runRIO)
 import Dscp.Resource.Logging (LoggingParams)
 
 -- | Contains parameters required for most of resources allocation.

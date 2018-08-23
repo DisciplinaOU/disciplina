@@ -13,7 +13,7 @@ import Dscp.Educator.Web.Arbitrary
 import Dscp.Educator.Web.Educator.API
 import Dscp.Educator.Web.Educator.Arbitrary
 import Dscp.Educator.Web.Educator.Error
-import Dscp.Launcher.Rio
+import Dscp.Rio
 
 type EducatorApiWorkMode m =
     ( Monad m

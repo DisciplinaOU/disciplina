@@ -22,7 +22,7 @@ import Dscp.Faucet.Launcher.Marker
 import Dscp.Faucet.Launcher.Params
 import Dscp.Faucet.Launcher.Resource
 import Dscp.Faucet.Variables
-import Dscp.Launcher.Rio (RIO)
+import Dscp.Rio (RIO)
 import Dscp.Resource.Keys
 import Dscp.Witness.Web.Client
 

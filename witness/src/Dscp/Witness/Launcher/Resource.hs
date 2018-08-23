@@ -6,6 +6,7 @@ module Dscp.Witness.Launcher.Resource
        , wrDB
        , wrNetwork
        , wrKey
+       , wrAppDir
        ) where
 
 import Loot.Log.Internal (NameSelector (GivenName), logNameSelL)
@@ -20,6 +21,7 @@ import Dscp.Resource.Class (AllocResource (..), buildComponentR)
 import Dscp.Resource.Keys (KeyResources (..), linkStore)
 import Dscp.Resource.Network (NetLogging (..), NetServResources, withNetLogging)
 import Dscp.Resource.Rocks ()
+import Dscp.Resource.AppDir
 import Dscp.Witness.Config (HasWitnessConfig)
 import Dscp.Witness.Launcher.Marker (WitnessNode)
 import Dscp.Witness.Launcher.Params (WitnessKeyParams (..), WitnessParams (..))
@@ -31,6 +33,7 @@ data WitnessResources = WitnessResources
     , _wrDB      :: !RocksDB
     , _wrNetwork :: !NetServResources
     , _wrKey     :: !(KeyResources WitnessNode)
+    , _wrAppDir  :: !AppDir
     }
 
 makeLenses ''WitnessResources
@@ -47,10 +50,10 @@ instance HasLens ZTNetServEnv WitnessResources ZTNetServEnv where
     lensOf = wrNetwork . lensOf @ZTNetServEnv
 
 instance HasWitnessConfig =>
-         AllocResource WitnessKeyParams (KeyResources WitnessNode) where
-    allocResource WitnessKeyParams{..} =
+         AllocResource (WitnessKeyParams, AppDir) (KeyResources WitnessNode) where
+    allocResource (WitnessKeyParams{..}, appDir) =
         buildComponentR "witness keys"
-            (linkStore wkpBase wkpCommittee)
+            (linkStore wkpBase wkpCommittee appDir)
             (\_ -> pass)
 
 instance HasWitnessConfig => AllocResource WitnessParams WitnessResources where
@@ -62,5 +65,6 @@ instance HasWitnessConfig => AllocResource WitnessParams WitnessResources where
                 modGivenName x             = x
             withNetLogging (NetLogging $ _wrLogging & logNameSelL %~ modGivenName)
                            (allocResource wpNetworkParams)
-        _wrKey <- allocResource wpKeyParams
+        _wrAppDir <- allocResource wpAppDirParam
+        _wrKey <- allocResource (wpKeyParams, _wrAppDir)
         return WitnessResources {..}
