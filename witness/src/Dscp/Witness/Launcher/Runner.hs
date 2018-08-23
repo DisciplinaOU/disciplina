@@ -5,7 +5,7 @@ module Dscp.Witness.Launcher.Runner
     , launchWitnessRealMode
     ) where
 
-import Dscp.Launcher.Rio (runRIO)
+import Dscp.Rio (runRIO)
 import Dscp.Resource.Class (AllocResource (..), InitParams (..))
 import Dscp.Resource.Functions
 import Dscp.Snowdrop.Actions (initSDActions)

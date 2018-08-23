@@ -13,7 +13,7 @@ import Loot.Log.Warper (LoggerConfig, prepareLogWarper)
 import System.Wlog (debugPlus, lcTree, ltSeverity, maybeLogsDirB, parseLoggerConfig, productionB,
                     removeAllHandlers, showTidB)
 
-import Dscp.Launcher.Rio (runRIO)
+import Dscp.Rio (runRIO)
 
 ----------------------------------------------------------------------------
 -- Params

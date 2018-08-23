@@ -1,0 +1,69 @@
+{
+  "address" : {
+    "title" : "Address",
+    "transactions": "Transactions",
+    "finalBalance": "Final balance"
+  },
+  "block" : {
+    "title" : "Block",
+    "about" : {
+      "title" : "About block",
+      "difficulty" : "Difficulty",
+      "transactions" : "Transactions",
+      "totalOutput" : "Total output",
+      "fees" : "Fees"
+    },
+    "hashes" : {
+      "title" : "Hashes",
+      "hash" : "Hash",
+      "prev" : "Previous block",
+      "next" : "Next block",
+      "merkleRoot" : "Merkle root"
+    },
+    "nav" : {
+      "prev" : "Previous block",
+      "next" : "Next block"
+    }
+  },
+  "index" : {
+    "blocks" : "Last blocks",
+    "transactions" : "Last transactions",
+    "showMore" : "Show more"
+  },
+  "transaction" : {
+    "title" : "Transaction",
+    "from" : "From",
+    "to" : "To",
+    "summary" : {
+      "title" : "Summary",
+      "time" : "Received time",
+      "includedIn" : {
+        "title" : "Included in",
+        "block" : "Block"
+      },
+      "totalOutput" : "Total Output",
+      "fee" : "Transaction fee"
+    }
+  },
+  "search" : {
+    "buttonText": "Search",
+    "placeholder" : "Search addresses, transactions, epochs & slots on the DISCIPLINA network"
+  },
+  "footer" : {
+    "address" : "Narva mnt 7-634, 10117, Kesklinna linnaosa, Tallinn, Estonia;"
+  },
+  "header" : {
+    "title" : "DISCIPLINA blockchain explorer"
+  },
+  "showMore" : "Show more",
+  "blockList" : {
+    "difficulty" : "Difficulty",
+    "since" : "Since",
+    "transaction" : "Transaction",
+    "totalSent" : "Total send",
+    "blockLeader" : "Block Leader",
+    "size" : "Size (bytes)",
+    "newerBlocks" : "Newer blocks",
+    "olderBlocks" : "Older blocks"
+  }
+}

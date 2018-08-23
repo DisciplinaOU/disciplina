@@ -1,6 +1,5 @@
 module Main where
 
-import Control.Monad.Component (ComponentM, runComponentM)
 import IiExtras
 import Text.PrettyPrint.ANSI.Leijen (Doc)
 
@@ -16,29 +15,26 @@ import qualified Knit
 
 import Glue
 
-type UiComponents = '[Knit.Core, Knit.TaskManager, Knit.Wallet]
+type Components = '[Knit.Core, Knit.TaskManager, Knit.Wallet]
 
 main :: IO ()
 main = do
-    serverAddress <- getWalletCLIParams
-    runComponentM "ariadne" (initializeEverything serverAddress) id
+  serverAddress <- getWalletCLIParams
+  taskManagerFace <- createTaskManagerFace
+  walletFace <- createWalletFace serverAddress (void . return)
+  (uiFace, mkUiAction) <- createAriadneUI
 
-initializeEverything :: BaseUrl -> ComponentM (IO ())
-initializeEverything serverAddress = do
-    taskManagerFace <- createTaskManagerFace
-    walletFace <- createWalletFace serverAddress (void . return)
-    (uiFace, mkUiAction) <- createAriadneUI
+  let
+    knitExecContext :: (Doc -> IO ()) -> Knit.ExecContext IO Components
+    knitExecContext putCommandOutput =
+      Knit.CoreExecCtx (putCommandOutput . Knit.ppValue) :&
+      Knit.TaskManagerExecCtx taskManagerFace :&
+      Knit.WalletExecCtx walletFace :&
+      RNil
 
-    let knitExecContext :: (Doc -> IO ()) -> Knit.ExecContext IO UiComponents
-        knitExecContext putCommandOutput =
-            Knit.CoreExecCtx (putCommandOutput . Knit.ppValue) :&
-            Knit.TaskManagerExecCtx taskManagerFace :&
-            Knit.WalletExecCtx walletFace :&
-            RNil
+    knitFace = createKnitBackend knitExecContext taskManagerFace
 
-        knitFace = createKnitBackend knitExecContext taskManagerFace
+    uiAction :: IO ()
+    uiAction = mkUiAction (knitFaceToUI uiFace knitFace)
 
-        uiAction :: IO ()
-        uiAction = mkUiAction (knitFaceToUI uiFace knitFace)
-
-    return uiAction
+  uiAction

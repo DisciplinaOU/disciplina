@@ -30,8 +30,8 @@ let
 
   ghc = haskell.compiler.ghc822;
 
-  overrides = 
-    final: previous: 
+  overrides =
+    final: previous:
     let overridingSet = (super: with final; {
           configureFlags = [ "--ghc-option=-Werror" ];
           doCheck = true;
@@ -41,7 +41,7 @@ let
             cp ${src}/configuration.yaml $_
             find ${src}/specs -name '*.yaml' -exec cp '{}' $out/share/disciplina/specs \;
           '';
-        }); 
+        });
         overrideModule = prev: overrideCabal prev (overridingSet final);
     in {
       rocksdb-haskell = dependCabal previous.rocksdb-haskell [ rocksdb ];

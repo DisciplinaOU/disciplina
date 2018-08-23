@@ -6,6 +6,7 @@ module Dscp.Witness.Launcher.Params
        ) where
 
 import Dscp.DB.Rocks.Real.Types (RocksDBParams)
+import Dscp.Resource.AppDir (AppDirParam)
 import Dscp.Resource.Keys (BaseKeyParams, CommitteeParams)
 import Dscp.Resource.Logging (LoggingParams)
 import Dscp.Resource.Network (NetServParams)
@@ -30,4 +31,6 @@ data WitnessParams = WitnessParams
     -- ^ Witness key params.
     , wpWitnessServerParams :: Maybe ServerParams
     -- ^ Witness server params, if need to serve it.
+    , wpAppDirParam         :: AppDirParam
+    -- ^ Application folder param
     } deriving Show
