@@ -6,7 +6,9 @@
 module Dscp.Educator.Web.Educator.API
     ( EducatorApiEndpoints (..)
     , EducatorAPI
+    , ProtectedEducatorAPI
     , educatorAPI
+    , protectedEducatorAPI
     , EducatorApiHandlers
     ) where
 
@@ -15,6 +17,8 @@ import Servant.Generic
 
 import Dscp.Core
 import Dscp.Crypto
+import Dscp.Educator.Web.Auth
+import Dscp.Educator.Web.Educator.Auth
 import Dscp.Educator.Web.Educator.Error
 import Dscp.Educator.Web.Educator.Types
 import Dscp.Educator.Web.Types
@@ -22,10 +26,15 @@ import Dscp.Educator.Web.Types
 type EducatorAPI =
     "api" :> "educator" :> "v1" :> ToServant (EducatorApiEndpoints AsApi)
 
+type ProtectedEducatorAPI = Auth' EducatorAuth () :> EducatorAPI
+
 type EducatorApiHandlers m = EducatorApiEndpoints (AsServerT m)
 
 educatorAPI :: Proxy EducatorAPI
 educatorAPI = Proxy
+
+protectedEducatorAPI :: Proxy ProtectedEducatorAPI
+protectedEducatorAPI = Proxy
 
 data EducatorApiEndpoints route = EducatorApiEndpoints
     {

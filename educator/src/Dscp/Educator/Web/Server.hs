@@ -8,28 +8,31 @@ module Dscp.Educator.Web.Server
 
 import Data.Proxy (Proxy (..))
 import Fmt ((+|), (|+))
+import Loot.Base.HasLens (lensOf)
 import Loot.Log (logInfo)
 import Network.HTTP.Types.Header (hAuthorization, hContentType)
 import Network.Wai.Middleware.Cors (CorsResourcePolicy (..), cors, simpleCorsResourcePolicy)
-import Servant ((:<|>) (..), Context (..), Handler, Server, err405, errBody, hoistServer,
+import Servant ((:<|>) (..), Context (..), Handler, ServantErr (..), Server, err405,
                 hoistServerWithContext, serveWithContext)
 import Servant.Auth.Server.Internal.ThrowAll (throwAll)
 import Servant.Generic (toServant)
 import UnliftIO (askUnliftIO)
 
 import Dscp.Crypto (PublicKey, keyGen, withIntSeed)
-import Dscp.Educator.Launcher.Mode (CombinedWorkMode, EducatorWorkMode)
+import Dscp.Educator.Launcher.Mode (CombinedWorkMode, EducatorNode, EducatorWorkMode)
 import Dscp.Educator.Web.Bot (EducatorBotSwitch (..), addBotHandlers, initializeBot)
-import Dscp.Educator.Web.Educator (EducatorAPI, convertEducatorApiHandler, educatorAPI,
-                                   educatorApiHandlers)
+import Dscp.Educator.Web.Educator (EducatorPublicKey (..), ProtectedEducatorAPI,
+                                   convertEducatorApiHandler, educatorApiHandlers,
+                                   protectedEducatorAPI)
 import Dscp.Educator.Web.Params (EducatorWebParams (..))
 import Dscp.Educator.Web.Student (GetStudentsAction (..), ProtectedStudentAPI,
                                   convertStudentApiHandler, studentAPI, studentApiHandlers)
+import Dscp.Resource.Keys (KeyResources, krPublicKey)
 import Dscp.Web (ServerParams (..), serveWeb)
 import Dscp.Witness.Web
 
 type EducatorWebAPI =
-    EducatorAPI
+    ProtectedEducatorAPI
     :<|>
     ProtectedStudentAPI
     :<|>
@@ -38,9 +41,13 @@ type EducatorWebAPI =
 mkEducatorApiServer
     :: forall ctx m. EducatorWorkMode ctx m
     => (forall x. m x -> Handler x)
-    -> Server EducatorAPI
+    -> Server ProtectedEducatorAPI
 mkEducatorApiServer nat =
-    hoistServer educatorAPI nat (toServant educatorApiHandlers)
+    hoistServerWithContext
+        protectedEducatorAPI
+        (Proxy :: Proxy '[EducatorPublicKey])
+        nat
+        (\() -> toServant educatorApiHandlers)
 
 mkStudentApiServer
     :: forall ctx m. EducatorWorkMode ctx m
@@ -72,8 +79,10 @@ createGetStudentsAction = do
 serveEducatorAPIsReal :: CombinedWorkMode ctx m => Bool -> EducatorWebParams -> m ()
 serveEducatorAPIsReal withWitnessApi EducatorWebParams{..} = do
     let ServerParams{..} = ewpServerParams
+    educatorKeyResources <- view (lensOf @(KeyResources EducatorNode))
     getStudents <- liftIO $ createGetStudentsAction
-    let srvCtx = getStudents :. EmptyContext
+    let educatorPublicKey = EducatorPublicKey $ educatorKeyResources ^. krPublicKey
+    let srvCtx = educatorPublicKey :. getStudents :. EmptyContext
 
     logInfo $ "Serving Student API on "+|spAddr|+""
     unliftIO <- askUnliftIO
