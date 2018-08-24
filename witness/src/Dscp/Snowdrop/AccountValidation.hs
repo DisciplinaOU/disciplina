@@ -29,9 +29,8 @@ import Snowdrop.Util
 
 import Dscp.Core.Foundation (Address, TxId)
 import qualified Dscp.Crypto as DC (PublicKey)
-import Dscp.Crypto (toDscpPK)
 import Dscp.Snowdrop.Configuration (CanVerifyPayload, Exceptions, Ids, PersonalisedProof, Proofs,
-                                    TxIds, Values, accountPrefix)
+                                    TxIds, Values, accountPrefix, toDscpPK)
 import Dscp.Snowdrop.Types
 
 assertSigned

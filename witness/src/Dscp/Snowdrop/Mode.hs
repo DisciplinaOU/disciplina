@@ -45,7 +45,7 @@ runSdRIO action = do
 -- | SdM runner, should be protected by some lock.
 runSdM :: (WitnessWorkMode ctx m, Lock.WithinReadSDLock) => SdM a -> m a
 runSdM action = do
-    blockDBA <- SD.dmaAccessActions . nsBlockDBActions <$> view (lensOf @SDActions)
+    blockDBA <- SD.dmaAccessActions . nsBlockDBActions <$> view (lensOf @SDVars)
     SD.runERoCompIO @Exceptions blockDBA def action
 
 -- | Often used SdM runner that takes read lock.
@@ -57,7 +57,7 @@ runStateSdM
     :: (WitnessWorkMode ctx m, Lock.WithinReadSDLock)
     => RememberForProof -> StateSdM a -> m a
 runStateSdM recForProof action = do
-    stateDBA <- SD.dmaAccessActions . flip nsStateDBActions recForProof <$> view (lensOf @SDActions)
+    stateDBA <- SD.dmaAccessActions . flip nsStateDBActions recForProof <$> view (lensOf @SDVars)
     SD.runERoCompIO @Exceptions stateDBA def action
 
 -- | Often used SdM runner that takes read lock.

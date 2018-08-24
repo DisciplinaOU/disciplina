@@ -57,8 +57,8 @@ createBlock newSlot = do
 -- | Apply verified block.
 applyBlockRaw :: (WitnessWorkMode ctx m, WithinWriteSDLock) => Bool -> Block -> m AvlProof
 applyBlockRaw toVerify block = do
-    (sdActions :: SDActions) <- view (lensOf @SDActions)
-    (sdOSParamsBuilder :: SD.OSParamsBuilder) <- view (lensOf @SD.OSParamsBuilder)
+    (sdActions :: SDVars) <- view (lensOf @SDVars)
+    let sdOSParamsBuilder = nsSDParamsBuilder sdActions
     let blockDBM = nsBlockDBActions sdActions
     let stateDBM = nsStateDBActions sdActions (SD.RememberForProof True)
 

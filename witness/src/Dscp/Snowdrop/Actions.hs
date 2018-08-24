@@ -1,7 +1,7 @@
 -- | DB-related actions.
 
 module Dscp.Snowdrop.Actions
-    ( SDActions
+    ( SDVars
     , SDActionsM (..)
     , initSDActions
     ) where
@@ -12,6 +12,9 @@ import qualified Data.Tree.AVL as AVL
 import Loot.Log.Rio (LoggingIO)
 import Snowdrop.Execution (DbModifyActions (..), SumChangeSet, avlClientDbActions)
 import Snowdrop.Util (RIO, gett)
+
+import Data.Time.Clock (UTCTime (..))
+import qualified Snowdrop.Block as SD
 
 import Dscp.Core
 import Dscp.Crypto
@@ -25,13 +28,14 @@ import Snowdrop.Execution (AVLChgAccum, ClientError (..), RememberForProof, Root
                            avlServerDbActions, deserialiseM, initAVLPureStorage)
 
 -- It should be something more complex than IO.
-type SDActions = SDActionsM (RIO LoggingIO)
+type SDVars = SDActionsM (RIO LoggingIO)
 
 -- Parameter m will be instantiated with RIO Context when the context is defined.
 data SDActionsM m = SDActionsM
-    { nsStateDBActions :: RememberForProof
-                       -> DbModifyActions (AVLChgAccum AvlHash Ids Values) Ids Values m AvlProof
-    , nsBlockDBActions :: DbModifyActions (SumChangeSet Ids Values) Ids Values m ()
+    { nsStateDBActions  :: RememberForProof
+                        -> DbModifyActions (AVLChgAccum AvlHash Ids Values) Ids Values m AvlProof
+    , nsBlockDBActions  :: DbModifyActions (SumChangeSet Ids Values) Ids Values m ()
+    , nsSDParamsBuilder :: SD.OSParamsBuilder
     }
 
 initSDActions ::
@@ -42,21 +46,23 @@ initSDActions = do
     avlInitState <- liftIO $ initAVLPureStorage @Ids @Values initAccounts
     (serverStDba, serverLookupHash) <- avlServerDbActions @Ids @Values @n avlInitState
     serverBlkDba <- liftIO $ blockDbActions
-    let sdActions = SDActionsM serverStDba serverBlkDba
+    let startTime = UTCTime (toEnum 0) (toEnum 0)
+    let nsSDParamsBuilder = SD.OSParamsBuilder (const $ SD.OSParams startTime startTime)
+    let sdActions = SDActionsM serverStDba serverBlkDba nsSDParamsBuilder
 
     -- This is something to be used by AVL client (???)
-    let _retrieveF :: AvlHash -> m (Maybe ByteString)
-        _retrieveF h = serverLookupHash h >>= \resp -> do
+    let retrieveF :: AvlHash -> m (Maybe ByteString)
+        retrieveF h = serverLookupHash h >>= \resp -> do
           whenJust resp $ \resp' -> do
             (respV :: AVL.MapLayer AvlHash Ids Values AvlHash) <- deserialiseM resp'
             let respProof = AVL.Proof . Free $ pure <$> respV
             when (not $ AVL.checkProof h respProof) $ throwM BrokenProofError
           pure resp
-    let (_rootHash :: RootHash AvlHash) = gett avlInitState
+    let (rootHash :: RootHash AvlHash) = gett avlInitState
 
     -- What am I supposed to do with it?
     -- pva701: it will be used in a AVL client, keep it compatible
-    _clientStDba <- avlClientDbActions @Ids @Values @m _retrieveF _rootHash
+    _clientStDba <- avlClientDbActions @Ids @Values @m retrieveF rootHash
 
     pure sdActions
   where

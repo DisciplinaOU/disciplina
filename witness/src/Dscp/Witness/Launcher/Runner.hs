@@ -5,9 +5,6 @@ module Dscp.Witness.Launcher.Runner
     , launchWitnessRealMode
     ) where
 
-import Data.Time.Clock (UTCTime (..))
-import qualified Snowdrop.Block as SD
-
 import Dscp.Rio (runRIO)
 import Dscp.Resource.Class (AllocResource (..), InitParams (..))
 import Dscp.Resource.Functions
@@ -30,8 +27,6 @@ formWitnessContext _wcParams _wcResources = do
     _wcMempool    <- newMempoolVar
     _wcSDActions  <- initSDActions
     _wcRelayState <- Relay.newRelayState
-    let startTime = UTCTime (toEnum 0) (toEnum 0)
-    let _wcSDParamsBuilder = SD.OSParamsBuilder (const $ SD.OSParams startTime startTime)
     _wcSDLock     <- Lock.newSDLock
     pure $ WitnessContext
         { _wcParams
@@ -39,7 +34,6 @@ formWitnessContext _wcParams _wcResources = do
         , _wcMempool
         , _wcSDActions
         , _wcRelayState
-        , _wcSDParamsBuilder
         , _wcSDLock
         }
 

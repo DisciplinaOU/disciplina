@@ -10,17 +10,44 @@ import Snowdrop.Core (CSMappendException, IdSumPrefixed (..), Prefix (..), Redun
                       TxValidationException, Undo, ValidatorExecException)
 import Snowdrop.Execution (RestrictionInOutException)
 import Snowdrop.Util (HasReview (..), IdStorage, VerifySign, WithSignature (..), deriveIdView,
-                      deriveView, withInj, withInjProj)
+                      deriveView, withInj, withInjProj, verifySignature)
 import qualified Snowdrop.Util as SD (PublicKey, Signature)
 
 import Dscp.Core.Foundation (HeaderHash)
 import qualified Dscp.Core.Foundation as T
-import Dscp.Crypto (DscpSigScheme, Hash, PublicKey, hashF)
+import Dscp.Crypto (Hash, PublicKey, hashF, Signature, PublicKey, HasAbstractSignature,
+                    verify, SigScheme)
 import Dscp.Snowdrop.Storage.Types
 import Dscp.Snowdrop.Types (Account, AccountId (..), AccountTxTypeId (..),
                             AccountValidationException, PublicationTxTypeId (..),
                             PublicationValidationException)
 import Dscp.Witness.Logic.Exceptions (LogicException)
+
+----------------------------------------------------------------------------
+-- Snowdrop signing types
+----------------------------------------------------------------------------
+
+data DscpSigScheme
+data instance SD.PublicKey DscpSigScheme = DscpPK PublicKey
+    deriving (Eq, Show, Generic)
+data instance SD.Signature DscpSigScheme msg = DscpSig (Signature msg)
+    deriving (Eq, Show, Generic)
+
+toDscpPK :: PublicKey -> SD.PublicKey DscpSigScheme
+toDscpPK = DscpPK
+
+toDscpSig :: Signature msg -> SD.Signature DscpSigScheme msg
+toDscpSig = DscpSig
+
+instance Buildable (SD.PublicKey DscpSigScheme) where
+    build (DscpPK key) = build key
+
+instance Buildable (SD.Signature DscpSigScheme msg) where
+    build (DscpSig sig) = build sig
+
+instance HasAbstractSignature SigScheme msg => VerifySign DscpSigScheme msg where
+    verifySignature (DscpPK pk) msg (DscpSig sig) = verify pk msg sig
+
 
 ----------------------------------------------------------------------------
 -- Snowdrop block-related types

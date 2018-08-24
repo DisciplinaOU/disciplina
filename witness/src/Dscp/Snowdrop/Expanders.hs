@@ -17,7 +17,7 @@ import Snowdrop.Execution (RestrictCtx, expandUnionRawTxs)
 import Snowdrop.Util
 
 import Dscp.Core.Foundation
-import Dscp.Crypto (hash, toDscpPK, toDscpSig)
+import Dscp.Crypto (hash)
 import Dscp.Snowdrop.Configuration hiding (PublicationTxWitness)
 import qualified Dscp.Snowdrop.Configuration as Conf (Proofs (..))
 import Dscp.Snowdrop.Storage.Types

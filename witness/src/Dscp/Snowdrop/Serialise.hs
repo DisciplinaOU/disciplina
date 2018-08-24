@@ -8,7 +8,6 @@ import qualified Snowdrop.Core as SD
 import qualified Snowdrop.Util as SD
 
 import Dscp.Core ()
-import Dscp.Crypto (DscpSigScheme)
 import Dscp.Snowdrop.Configuration
 import Dscp.Snowdrop.Types
 

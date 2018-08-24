@@ -36,7 +36,7 @@ type MempoolCtx ctx m =
     , MonadUnliftIO   m
     , MonadReader ctx m
     , HasLens' ctx MempoolVar
-    , HasLens' ctx SD.SDActions
+    , HasLens' ctx SD.SDVars
     , HasLens' ctx SD.LoggingIO
     )
 
@@ -109,7 +109,7 @@ readFromMempool
     -> SDM a
     -> m a
 readFromMempool pool action = do
-    actions <- view (lensOf @SD.SDActions)
+    actions <- view (lensOf @SD.SDVars)
     logger  <- view (lensOf @SD.LoggingIO)
     let dbActions = SD.dmaAccessActions $ SD.nsStateDBActions actions (AVLP.RememberForProof False)
     SD.runRIO logger $
@@ -133,7 +133,7 @@ writeToMempool
     -> SDM a
     -> m a
 writeToMempool pool action = do
-    actions <- view (lensOf @SD.SDActions)
+    actions <- view (lensOf @SD.SDVars)
     logger  <- view (lensOf @SD.LoggingIO)
     let dbActions = SD.dmaAccessActions $ SD.nsStateDBActions actions (AVLP.RememberForProof False)
     SD.runRIO logger $
