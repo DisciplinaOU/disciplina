@@ -28,7 +28,6 @@ import Dscp.Core.Foundation (GTxWitnessed)
 import Dscp.Core.Foundation.Witness
 import qualified Dscp.Snowdrop as SD
 import Dscp.Snowdrop.Configuration (Exceptions, Ids, Values)
-import Dscp.Witness.AVL (AvlHash)
 import Dscp.Witness.Mempool.Type
 import Dscp.Witness.SDLock
 
@@ -96,17 +95,17 @@ type SDM =
         Exceptions
         Ids
         Values
-        (SD.IOCtx (AVLP.AVLChgAccum AvlHash Ids Values))
+        (SD.IOCtx ChgAccum)
         (Pool.MempoolState
             Ids
             Values
-            (AVLP.AVLChgAccum AvlHash Ids Values)
+            ChgAccum
             GTxWitnessed)
 
 readFromMempool
     :: forall ctx m a
     .  (MempoolCtx ctx m, WithinReadSDLock)
-    => Pool.Mempool Ids Values (AVLP.AVLChgAccum AvlHash Ids Values) GTxWitnessed
+    => Pool.Mempool Ids Values ChgAccum GTxWitnessed
     -> SDM a
     -> m a
 readFromMempool pool action = do
@@ -119,7 +118,7 @@ readFromMempool pool action = do
 readFromMempoolLocked
     :: forall ctx m a
     .  MempoolCtx ctx m
-    => Pool.Mempool Ids Values (AVLP.AVLChgAccum AvlHash Ids Values) GTxWitnessed
+    => Pool.Mempool Ids Values ChgAccum GTxWitnessed
     -> SDLock
     -> SDM a
     -> m a
@@ -130,7 +129,7 @@ readFromMempoolLocked pool lock action = do
 writeToMempool
     :: forall ctx m a
     .  (MempoolCtx ctx m, WithinWriteSDLock)
-    => Pool.Mempool Ids Values (AVLP.AVLChgAccum AvlHash Ids Values) GTxWitnessed
+    => Pool.Mempool Ids Values ChgAccum GTxWitnessed
     -> SDM a
     -> m a
 writeToMempool pool action = do

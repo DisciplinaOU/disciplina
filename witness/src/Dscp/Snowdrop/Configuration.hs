@@ -27,7 +27,7 @@ import Dscp.Witness.Logic.Exceptions (LogicException)
 ----------------------------------------------------------------------------
 
 type SHeader  = T.Header
-data SPayload = SPayload { sPayStateTxs     :: ![StateTx Ids Proofs Values]
+data SPayload = SPayload { sPayStateTxs     :: ![SStateTx]
                          , sPayOrigBodyHash :: !(Hash T.BlockBody)
                          } deriving (Eq, Show, Generic)
 type SBlock   = Block SHeader SPayload
@@ -36,6 +36,8 @@ type SBlund   = Blund SHeader T.BlockBody SUndo
 
 sBlockReconstruct :: SBlund -> T.Block
 sBlockReconstruct (buBlock -> Block h b) = T.Block h b
+
+type SStateTx = StateTx Ids Proofs Values
 
 ----------------------------------------------------------------------------
 -- Identities/prefixes

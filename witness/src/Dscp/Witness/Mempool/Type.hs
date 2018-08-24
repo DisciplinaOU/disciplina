@@ -4,6 +4,7 @@ module Dscp.Witness.Mempool.Type
     , MempoolVar
     , mpSDPool
     , mPSDConfig
+    , ChgAccum
     ) where
 
 import Control.Lens (makeLenses)
@@ -17,10 +18,12 @@ import Dscp.Witness.AVL (AvlHash)
 import qualified Snowdrop.Execution as AVLP
 import qualified Snowdrop.Execution as Pool
 
-type MempoolVar = Mempool (SD.IOCtx (AVLP.AVLChgAccum AvlHash Ids Values))
+type ChgAccum = AVLP.AVLChgAccum AvlHash Ids Values
+
+type MempoolVar = Mempool (SD.IOCtx ChgAccum)
 
 data Mempool ctx = Mempool
-    { _mpSDPool   :: Pool.Mempool Ids Values (AVLP.AVLChgAccum AvlHash Ids Values) GTxWitnessed
+    { _mpSDPool   :: Pool.Mempool Ids Values ChgAccum GTxWitnessed
     , _mPSDConfig :: Pool.MempoolConfig Exceptions Ids Proofs Values ctx GTxWitnessed
     }
 

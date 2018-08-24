@@ -11,7 +11,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 
 import qualified Snowdrop.Block as SD
-import Snowdrop.Core (ChgAccum, ChgAccumCtx, ERoComp, Expander (..), SeqExpanders (..), StateTx,
+import Snowdrop.Core (ChgAccum, ChgAccumCtx, ERoComp, Expander (..), SeqExpanders (..),
                       StateTxType (..), ValueOp (..), mkDiffCS, queryOne)
 import Snowdrop.Execution (RestrictCtx, expandUnionRawTxs)
 import Snowdrop.Util
@@ -46,7 +46,7 @@ expandGTxs ::
        , HasLens ctx (ChgAccumCtx ctx)
        )
     => [GTxWitnessed]
-    -> ERoComp Exceptions Ids Values ctx [StateTx Ids Proofs Values]
+    -> ERoComp Exceptions Ids Values ctx [SStateTx]
 expandGTxs txs = expandUnionRawTxs getByGTx txs
 
 -- | Expand list of global txs.
@@ -56,7 +56,7 @@ expandGTx ::
        , HasLens ctx (ChgAccumCtx ctx)
        )
     => GTxWitnessed
-    -> ERoComp Exceptions Ids Values ctx (StateTx Ids Proofs Values)
+    -> ERoComp Exceptions Ids Values ctx SStateTx
 expandGTx txs =
     expandUnionRawTxs getByGTx [txs] >>= \case
         [expanded] -> return expanded

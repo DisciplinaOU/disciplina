@@ -76,20 +76,20 @@ _baseValidator =
 
 blkStateConfig
     :: HasWitnessConfig
-    => SD.BlkStateConfiguration SHeader SPayload BlockBody (SD.Undo Ids Values) HeaderHash
+    => SD.BlkStateConfiguration SHeader SPayload BlockBody SUndo HeaderHash
                                 (SD.ERwComp Exceptions Ids Values (IOCtx chgAccum) chgAccum)
 blkStateConfig = blkStateConfig'
     { SD.bscApplyPayload = \(SPayload txs _) -> SD.bscApplyPayload blkStateConfig' txs
     , SD.bscConfig = simpleBlkConfiguration
     }
   where
-    cfg' :: SD.BlkConfiguration SHeader [SD.StateTx Ids Proofs Values] HeaderHash
+    cfg' :: SD.BlkConfiguration SHeader [SStateTx] HeaderHash
     cfg' = simpleBlkConfiguration
         { SD.bcBlkVerify = mempty
         }
 
     blkStateConfig'
-        :: SD.BlkStateConfiguration SHeader [SD.StateTx Ids Proofs Values] BlockBody (SD.Undo Ids Values) HeaderHash
+        :: SD.BlkStateConfiguration SHeader [SStateTx] BlockBody SUndo HeaderHash
                                     (SD.ERwComp Exceptions Ids Values (IOCtx chgAccum) chgAccum)
     blkStateConfig' = SD.inmemoryBlkStateConfiguration cfg' validator
 
