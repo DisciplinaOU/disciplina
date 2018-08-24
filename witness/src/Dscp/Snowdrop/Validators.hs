@@ -63,6 +63,9 @@ instance SD.HasGetter Proofs PublicKey where
     gett (AddressTxWitness     (SD.WithSignature { wsBody = (_, it, _) })) = it
     gett (PublicationTxWitness (SD.WithSignature { wsBody = (_, it, _) })) = it
 
+instance SD.HasGetter SPayload [SStateTx] where
+    gett = sPayStateTxs
+
 _baseValidator ::
        forall chgAccum.
        SD.Validator Exceptions Ids Proofs Values (IOCtx chgAccum)
@@ -78,20 +81,12 @@ blkStateConfig
     :: HasWitnessConfig
     => SD.BlkStateConfiguration SHeader SPayload BlockBody SUndo HeaderHash
                                 (SD.ERwComp Exceptions Ids Values (IOCtx chgAccum) chgAccum)
-blkStateConfig = blkStateConfig'
-    { SD.bscApplyPayload = \(SPayload txs _) -> SD.bscApplyPayload blkStateConfig' txs
-    , SD.bscConfig = simpleBlkConfiguration
-    }
+blkStateConfig = SD.inmemoryBlkStateConfiguration cfg' validator
   where
-    cfg' :: SD.BlkConfiguration SHeader [SStateTx] HeaderHash
+    cfg' :: SD.BlkConfiguration SHeader SPayload HeaderHash
     cfg' = simpleBlkConfiguration
         { SD.bcBlkVerify = mempty
         }
-
-    blkStateConfig'
-        :: SD.BlkStateConfiguration SHeader [SStateTx] BlockBody SUndo HeaderHash
-                                    (SD.ERwComp Exceptions Ids Values (IOCtx chgAccum) chgAccum)
-    blkStateConfig' = SD.inmemoryBlkStateConfiguration cfg' validator
 
 simpleBlkConfiguration ::
        HasWitnessConfig
