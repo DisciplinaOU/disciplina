@@ -25,7 +25,7 @@ faucetParamsParser = do
     _fpLoggingParams <- logParamsParser "faucet"
     _fpKeyParams <- baseKeyParamsParser "faucet"
     _fpWebParams <- serverParamsParser "faucet"
-    _fpWitnessAddress <- networkAddressParser "witness-backend" witnessBackendHelp
+    _fpWitnessAddress <- clientAddressParser "witness-backend" witnessBackendHelp
     _fpTranslatedAmount <- translatedAmountParser
     _fpDryRun <- dryRunParser
     _fpAppDirParam <- appDirParamParser

@@ -1,7 +1,8 @@
 -- | Utils for serving HTTP APIs
 
 module Dscp.Web.Server
-       ( Scheme (..)
+       ( BaseUrl (..)
+       , Scheme (..)
        , serveWeb
        , buildServantLogConfig
        , buildClientEnv
@@ -11,7 +12,7 @@ import Control.Lens (views)
 import Loot.Base.HasLens (HasLens', lensOf)
 import Loot.Log (Logging, MonadLogging, Name, NameSelector (..))
 import qualified Loot.Log.Internal as Log
-import Network.HTTP.Client (defaultManagerSettings, newManager)
+import Network.HTTP.Client.TLS (newTlsManager)
 import qualified Network.Wai.Handler.Warp as Warp
 import Servant (Application)
 import Servant.Client (BaseUrl (..), ClientEnv, Scheme (..), mkClientEnv)
@@ -53,13 +54,7 @@ buildServantLogConfig modifyName = do
 ----------------------------------------------------------------------------
 
 -- | Construct common client networking environment.
-buildClientEnv :: MonadIO m => Scheme -> NetworkAddress -> m ClientEnv
-buildClientEnv scheme netAddr = do
-    let baseUrl = BaseUrl
-            { baseUrlScheme = scheme
-            , baseUrlHost = toString $ naHost netAddr
-            , baseUrlPort = fromIntegral $ naPort netAddr
-            , baseUrlPath = ""
-            }
-    manager <- liftIO $ newManager defaultManagerSettings
+buildClientEnv :: MonadIO m => BaseUrl -> m ClientEnv
+buildClientEnv baseUrl = do
+    manager <- liftIO $ newTlsManager
     return $ mkClientEnv manager baseUrl

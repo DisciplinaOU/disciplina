@@ -10,6 +10,7 @@ module Dscp.CommonCLI
        , timeReadM
        , coinReadM
        , networkAddressParser
+       , clientAddressParser
        , serverParamsParser
        , appDirParamParser
        ) where
@@ -19,6 +20,7 @@ import Data.Version (showVersion)
 import qualified Loot.Log as Log
 import Options.Applicative (Parser, ReadM, auto, eitherReader, help, infoOption, long, metavar,
                             option, str, strOption, switch)
+import Servant.Client (BaseUrl (..), parseBaseUrl)
 import Text.InterpolatedString.Perl6 (qc)
 import Text.Parsec (eof, many1, parse, sepBy)
 import Text.Parsec.Char (char, digit)
@@ -28,9 +30,9 @@ import Time.Units (Microsecond, Millisecond, Minute, Second, Time, toUnit)
 
 import Dscp.Core.Foundation.Witness
 import Dscp.Crypto (mkPassPhrase)
+import Dscp.Resource.AppDir
 import Dscp.Resource.Keys (BaseKeyParams (..))
 import Dscp.Resource.Logging (LoggingParams (..))
-import Dscp.Resource.AppDir
 import Dscp.Util (leftToFail)
 import Dscp.Web (NetworkAddress (..), ServerParams (..))
 import Paths_disciplina_witness (version)
@@ -48,11 +50,11 @@ logParamsParser lpDefaultName = do
     logConfigParser = optional $ strOption $
         long "log-config" <>
         metavar "FILEPATH" <>
-        help "Path to logger configuration."
+        help "Path to logger configuration. If not specified, some default config is used."
     logDirParser = optional $ strOption $
         long "log-dir" <>
         metavar "FILEPATH" <>
-        help "Path to logs directory."
+        help "Path to logs directory. If not specified, logs are not writen on disk."
 
 versionOption :: Parser (a -> a)
 versionOption = infoOption ("disciplina-" <> (showVersion version)) $
@@ -69,10 +71,12 @@ baseKeyParamsParser who = do
     kpKeyPathParser = optional . strOption $
          long [qc|{who}-keyfile|] <>
          metavar "FILEPATH" <>
-         help [qc|Path to the secret key of {who}.|]
+         help [qc|Path to the secret key of the {who}. If not specified, \
+                 \<homeDir>/{who}.key is used.|]
     kpGenKeyParser = switch $
          long [qc|{who}-gen-key|] <>
-         help [qc|Generate the key and write it to '{who}-keyfile-path' path.|]
+         help [qc|Generate the key and write it to '{who}-keyfile-path' path.
+                 If file already exists at given path, secret in it used.|]
     kpPassphraseParser = optional . option passphraseReadM $
          long [qc|{who}-keyfile-pass|] <>
          metavar "PASSWORD" <>
@@ -84,7 +88,9 @@ appDirParamParser = AppDirectorySpecific <$>
                         (strOption $
                         long "appdir" <>
                         metavar "FILEPATH" <>
-                        help "Path to application folder") <|>
+                        help "Path to application folder. If not specified, \
+                             \OS-dependent folder for applications will be \
+                             \used, for instance '%APPDIR%/Disciplina'.") <|>
                     pure AppDirectoryOS
 
 -- | Parses time with specified unit of measurement, e.g. @10s@.
@@ -128,8 +134,15 @@ networkAddressParser pName helpTxt =
     metavar "HOST:PORT" <>
     help helpTxt
 
+clientAddressParser :: String -> String -> Parser BaseUrl
+clientAddressParser pName helpTxt =
+    option (eitherReader $ first displayException . parseBaseUrl) $
+    long pName <>
+    metavar "URL" <>
+    help helpTxt
+
 serverParamsParser :: String -> Parser ServerParams
 serverParamsParser desc = do
     spAddr <- networkAddressParser (map toLower desc <> "-listen")
-        ("Host/port for serving " <> desc <> " API")
+        ("Host/port for serving " <> desc <> " API.")
     return ServerParams{..}

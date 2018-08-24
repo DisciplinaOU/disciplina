@@ -86,6 +86,10 @@ extra-deps:
 - git: https://github.com/mokus0/dependent-sum
   commit: f8909cb323b4ffa63af6c4e7cb3a9745e6199080
 
+# for monitoring
+- git: https://github.com/serokell/mon.git
+  commit: 19d35c9895468c22397187420fe9e63379aef4db
+
 # Lootbox dependencies end #
 
 # for snowdrop, will be removed

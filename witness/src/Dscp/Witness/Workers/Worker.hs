@@ -21,6 +21,7 @@ import Dscp.Snowdrop.Mode
 import Dscp.Util
 import Dscp.Util.Concurrent.NotifyWait
 import Dscp.Witness.Launcher.Mode
+import Dscp.Witness.Launcher.Params (WitnessParams (..))
 import Dscp.Witness.Logic
 import Dscp.Witness.Mempool
 import Dscp.Witness.Messages
@@ -93,9 +94,11 @@ blockUpdateWorker =
 
     applyNewBlock block =
         writingSDLock "apply new block" $ do
+            params <- view (lensOf @WitnessParams)
             logDebug $ "Block " +| hashF (headerHash block) |+
                       " is a direct continuation of our tip, applying"
-            proof <- applyBlock block
+            proof <- reportTime "disciplina.timer.block_apply" (wpMetricsEndpoint params) $
+                applyBlock block
             logInfo $ "Applied received block: " +| block |+
                       " with proof " +|| proof ||+ ", propagating"
             rejectedTxs <- normalizeMempool

@@ -8,6 +8,7 @@ module Dscp.Educator.Web.Server
 
 import Data.Proxy (Proxy (..))
 import Fmt ((+|), (|+))
+import Loot.Base.HasLens (lensOf)
 import Loot.Log (logInfo)
 import Network.HTTP.Types.Header (hAuthorization, hContentType)
 import Network.Wai.Middleware.Cors (CorsResourcePolicy (..), cors, simpleCorsResourcePolicy)
@@ -24,7 +25,9 @@ import Dscp.Educator.Web.Educator (EducatorAPI, convertEducatorApiHandler, educa
 import Dscp.Educator.Web.Params (EducatorWebParams (..))
 import Dscp.Educator.Web.Student (GetStudentsAction (..), ProtectedStudentAPI,
                                   convertStudentApiHandler, studentAPI, studentApiHandlers)
+import Dscp.Util.Servant (responseTimeMetric)
 import Dscp.Web (ServerParams (..), serveWeb)
+import Dscp.Witness.Launcher.Params (WitnessParams, wpMetricsEndpoint)
 
 type EducatorWebAPI =
     EducatorAPI
@@ -78,7 +81,8 @@ serveStudentAPIReal EducatorWebParams{..} = do
     let ourCors = cors (const $ Just $
                         simpleCorsResourcePolicy
                         { corsRequestHeaders = [hContentType, hAuthorization] })
-    serveWeb spAddr $
+    params <- view (lensOf @WitnessParams)
+    serveWeb spAddr $ responseTimeMetric (wpMetricsEndpoint params) $
       ourCors $
       serveWithContext (Proxy @EducatorWebAPI) srvCtx $
          educatorApiServer
