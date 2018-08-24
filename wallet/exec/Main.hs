@@ -1,7 +1,10 @@
 module Main where
 
+import Control.Concurrent (threadDelay)
+import Control.Concurrent.Async (race_)
 import Control.Monad.Component (ComponentM, runComponentM)
 import NType (N (..))
+import System.Random (randomRIO)
 import Text.PrettyPrint.ANSI.Leijen (Doc)
 
 import Ariadne.Knit.Backend
@@ -57,4 +60,10 @@ initializeEverything serverAddress = do
         uiAction :: IO ()
         uiAction = mkUiAction (knitFaceToUI uiWalletState uiFace walletFace knitFace)
 
-    return uiAction
+        refreshAction :: IO ()
+        refreshAction = forever $ do
+            delay <- randomRIO (15, 25)
+            threadDelay $ delay * 10 ^ (6 :: Int)
+            walletRefreshState walletFace
+
+    return $ uiAction `race_` refreshAction
