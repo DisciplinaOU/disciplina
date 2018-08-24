@@ -81,12 +81,7 @@ blkStateConfig
     :: HasWitnessConfig
     => SD.BlkStateConfiguration SHeader SPayload BlockBody SUndo HeaderHash
                                 (SD.ERwComp Exceptions Ids Values (IOCtx chgAccum) chgAccum)
-blkStateConfig = SD.inmemoryBlkStateConfiguration cfg' validator
-  where
-    cfg' :: SD.BlkConfiguration SHeader SPayload HeaderHash
-    cfg' = simpleBlkConfiguration
-        { SD.bcBlkVerify = mempty
-        }
+blkStateConfig = SD.inmemoryBlkStateConfiguration simpleBlkConfiguration validator
 
 simpleBlkConfiguration ::
        HasWitnessConfig
