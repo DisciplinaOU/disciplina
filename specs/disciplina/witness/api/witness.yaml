@@ -14,6 +14,13 @@ schemes:
   - https
   - http
 paths:
+  /ping:
+    get:
+      summary: Ping a node
+      operationId: ping
+      responses:
+        200:
+          description: Successful operation.
   /hash/{hash}:
     get:
       summary: Get type of entity identified by given hash
@@ -180,6 +187,31 @@ paths:
                   - $ref: "#/definitions/TransactionBlockInfo"
               nextId:
                 $ref: "#/definitions/Hash"
+
+    post:
+      summary: Submit a formed transaction.
+      operationId: submitTx
+      produces:
+      - application/json
+      parameters:
+      - in: body
+        name: txWitnessed
+        schema:
+          $ref: "#/definitions/TxWitnessed"
+      responses:
+        201:
+          description: Transaction passed validation. If no transactions spending money from the same account are submitted concurrently to other witness node, transaction will eventually appear in blockchain. Returns transaction id.
+          schema:
+            $ref: "#/definitions/Hash"
+        400:
+          description: Formed transaction is invalid.
+          schema:
+            $ref: '#/definitions/TxValidationError'
+        403:
+          description: Transaction cannot be applied.
+          schema:
+            $ref: '#/definitions/TxValidationError'
+
   /transactions/{transactionHash}:
     get:
       summary: Get information about a transaction.
@@ -211,11 +243,28 @@ paths:
           description: Transaction not found
           schema:
             $ref: "#/definitions/ErrResponse"
+  /transactions/async:
+    post:
+      summary: Submit a formed transaction asynchronously.
+      operationId: submitTxAsync
+      produces:
+      - application/json
+      parameters:
+      - in: body
+        name: txWitnessed
+        schema:
+          $ref: "#/definitions/TxWitnessed"
+      responses:
+        202:
+          description: Transaction accepted. Returns transaction id.
+          schema:
+            $ref: "#/definitions/Hash"
 
 definitions:
   Hash:
     type: string
     format: byte
+    description: Hex-encoded hash value.
   Address:
     type: string
     format: byte
@@ -349,6 +398,52 @@ definitions:
         type: array
         items:
           $ref: "#/definitions/TransactionInfo"
+  TxInAcc:
+    type: object
+    description: Transaction source account info.
+    properties:
+      nonce:
+        type: integer
+        format: int32
+        description: Next account nonce, received in /accounts/{address} endpoint.
+      addr:
+        $ref: "#/definitions/Address"
+  TxOut:
+    type: object
+    description: Transaction output.
+    properties:
+      outAddr:
+        $ref: "#/definitions/Address"
+      outValue:
+        $ref: "#/definitions/Coin"
+  Tx:
+    type: object
+    description: Transaction content.
+    properties:
+      inAcc:
+        $ref: "#/definitions/TxInAcc"
+      inValue:
+        $ref: "#/definitions/Coin"
+      outs:
+        type: array
+        items:
+          $ref: "#/definitions/TxOut"
+  TxWitness:
+    type: object
+    properties:
+      sig:
+        type: string
+        description: Evaluated as 'signEd25519(sourceSecretKey, blake2bHash(Tx) + sourcePublicKey)', and passed in hex-encoded form to the endpoint.
+      pk:
+        type: string
+        description: Hex-encoded public key of the source account.
+  TxWitnessed:
+    type: object
+    properties:
+      tx:
+        $ref: "#/definitions/Tx"
+      witness:
+        $ref: "#/definitions/TxWitness"
   ErrResponse:
     type: object
     required:
@@ -367,9 +462,35 @@ definitions:
             * `InvalidFormat` - Failed to deserialise one of parameters.
 
             * `BlockNotFound` - Specified block does not exist.
-            * `NotEnoughMoney` - Transaction's source account has not enough money to make this transaction.
             * `AccountNotFound` - Specified account does not exist.
             * `TransactionNotFound` - Specified transaction does not exist.
+
+  TxValidationError:
+    type: object
+    required:
+      - error
+    properties:
+      error:
+        type: string
+        enum:
+          - InvalidFormat
+          - AuthorDoesNotExist
+          - SignatureIsCorrupted
+          - NotASingletonSelfUpdate
+          - NonceMustBeIncremented
+          - PaymentMustBePositive
+          - ReceiverMustIncreaseBalance
+          - SumMustBeNonNegative
+        description: >-
+          Error type:
+            * `InvalidFormat` - Failed to deserialise one of parameters.
+            * `AuthorDoesNotExist` - Source account has never received money.
+            * `SignatureIsCorrupted` - Bad signature provided.
+            * `NotASingletonSelfUpdate` - Cannot send money to yourself more than once in transaction.
+            * `NonceMustBeIncremented` - Bad nonce for source account is used. Should be exactly "nextNonce" returned by /accounts/{address} endpoint.
+            * `PaymentMustBePositive` - You can only decrease your funds by outcoming transaction.
+            * `ReceiverMustIncreaseBalance` - You can only increase the funds of receiver by outcoming transaction.
+            * `SumMustBeNonNegative` - Sum of payments plus fee must be less or equal to amount of money you spend.
 
 externalDocs:
   description: Find out more about Swagger
