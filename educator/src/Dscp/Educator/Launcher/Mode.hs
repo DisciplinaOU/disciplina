@@ -31,7 +31,7 @@ import Dscp.Educator.Launcher.Resource (EducatorResources)
 import qualified Dscp.Launcher.Mode as Basic
 import Dscp.Rio (RIO)
 import Dscp.Resource.Keys (KeyResources)
-import Dscp.Snowdrop.Actions (SDActions)
+import Dscp.Snowdrop.Actions (SDVars)
 import qualified Dscp.Witness as W
 import Dscp.Witness.Mempool (MempoolVar)
 import Dscp.Witness.Relay
@@ -107,12 +107,10 @@ instance HasLens (KeyResources W.WitnessNode) EducatorContext (KeyResources W.Wi
     lensOf = ecWitnessCtx . lensOf @(KeyResources W.WitnessNode)
 instance HasLens MempoolVar EducatorContext MempoolVar where
     lensOf = ecWitnessCtx . lensOf @MempoolVar
-instance HasLens SDActions EducatorContext SDActions where
-    lensOf = ecWitnessCtx . lensOf @SDActions
+instance HasLens SDVars EducatorContext SDVars where
+    lensOf = ecWitnessCtx . lensOf @SDVars
 instance HasLens RelayState EducatorContext RelayState where
     lensOf = ecWitnessCtx . lensOf @RelayState
-instance HasLens W.OSParamsBuilder EducatorContext W.OSParamsBuilder where
-    lensOf = ecWitnessCtx . lensOf @W.OSParamsBuilder
 instance HasLens W.SDLock EducatorContext W.SDLock where
     lensOf = ecWitnessCtx . lensOf @W.SDLock
 
