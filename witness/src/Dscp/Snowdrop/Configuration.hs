@@ -1,4 +1,38 @@
-module Dscp.Snowdrop.Configuration where
+module Dscp.Snowdrop.Configuration
+    ( DscpSigScheme
+    , toDscpPK
+    , toDscpSig
+
+    , SHeader
+    , SPayload (..)
+    , SBlock
+    , SUndo
+    , SBlund
+    , SStateTx
+    , sBlockReconstruct
+
+    , tipPrefix
+    , blockPrefix
+    , accountPrefix
+    , publicationOfPrefix
+    , publicationHeadPrefix
+    , txPrefix
+    , txOfPrefix
+    , txHeadPrefix
+    , Ids (..)
+    , Values (..)
+
+    , CanVerifyPayload
+    , PersonalisedProof
+    , AddrTxProof
+    , PublicationTxProof
+    , Proofs (..)
+    , ExpanderException (..)
+    , Exceptions (..)
+
+    , TxIds (..)
+    ) where
+
 
 import Control.Lens (makePrisms)
 import Fmt (build, (+|))

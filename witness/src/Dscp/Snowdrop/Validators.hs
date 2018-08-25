@@ -13,7 +13,7 @@ import qualified Snowdrop.Util as SD
 import Dscp.Core hiding (PublicationTxWitness)
 import Dscp.Crypto (PublicKey, hash, verify)
 import Dscp.Snowdrop.AccountValidation
-import Dscp.Snowdrop.Configuration hiding (PublicKey)
+import Dscp.Snowdrop.Configuration
 import Dscp.Snowdrop.Mode
 import Dscp.Snowdrop.PublicationValidation
 import Dscp.Witness.Config

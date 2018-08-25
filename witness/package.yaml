@@ -12,7 +12,6 @@ library:
     - autoexporter
     - AVL
     - bytestring
-    - cereal
     - containers
     - concurrent-extra
     - componentm

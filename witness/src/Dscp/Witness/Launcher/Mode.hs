@@ -78,12 +78,12 @@ type WitnessWorkMode ctx m =
 
 -- | Context is resources plus some runtime variables.
 data WitnessContext = WitnessContext
-    { _wcParams          :: !WitnessParams     -- ^ Parameters witness was started with.
-    , _wcResources       :: !WitnessResources  -- ^ Resources, allocated from params.
-    , _wcMempool         :: !MempoolVar
-    , _wcSDActions       :: !SDVars
-    , _wcRelayState      :: !RelayState
-    , _wcSDLock          :: !SDLock
+    { _wcParams     :: !WitnessParams     -- ^ Parameters witness was started with.
+    , _wcResources  :: !WitnessResources  -- ^ Resources, allocated from params.
+    , _wcMempool    :: !MempoolVar
+    , _wcSDActions  :: !SDVars
+    , _wcRelayState :: !RelayState
+    , _wcSDLock     :: !SDLock
     }
 
 
