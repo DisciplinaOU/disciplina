@@ -49,8 +49,9 @@ library:
     - servant-server
     - servant-generic
     - serokell-util
-    - snowdrop
+    - snowdrop-block
     - snowdrop-core
+    - snowdrop-execution
     - snowdrop-util
     - stm
     - text

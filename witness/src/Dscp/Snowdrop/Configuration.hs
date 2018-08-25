@@ -1,20 +1,56 @@
-module Dscp.Snowdrop.Configuration where
+module Dscp.Snowdrop.Configuration
+    ( DscpSigScheme
+    , toDscpPK
+    , toDscpSig
+
+    , SHeader
+    , SPayload (..)
+    , SBlock
+    , SUndo
+    , SBlund
+    , SStateTx
+    , sBlockReconstruct
+
+    , tipPrefix
+    , blockPrefix
+    , accountPrefix
+    , publicationOfPrefix
+    , publicationHeadPrefix
+    , txPrefix
+    , txOfPrefix
+    , txHeadPrefix
+    , Ids (..)
+    , Values (..)
+
+    , CanVerifyPayload
+    , PersonalisedProof
+    , AddrTxProof
+    , PublicationTxProof
+    , Proofs (..)
+    , ExpanderException (..)
+    , Exceptions (..)
+
+    , TxIds (..)
+    ) where
+
 
 import Control.Lens (makePrisms)
 import Fmt (build, (+|))
 
-import Snowdrop.Core (CSMappendException, ChangeSet, IdSumPrefixed (..), Prefix (..),
-                      RedundantIdException, SValue, StateModificationException, StatePException,
-                      StateTx (..), TxValidationException, ValidatorExecException)
-import Snowdrop.Model.Block (Block (..), BlockApplicationException, BlockRef (..),
-                             BlockStateException, Blund, CurrentBlockRef (..), TipKey, TipValue)
-import Snowdrop.Model.State.Restrict (RestrictionInOutException)
+import Snowdrop.Block (Block (..), BlockApplicationException, BlockRef (..), BlockStateException,
+                       Blund (buBlock), CurrentBlockRef (..), TipKey, TipValue)
+import Snowdrop.Core (CSMappendException, IdSumPrefixed (..), Prefix (..), RedundantIdException,
+                      SValue, StateModificationException, StatePException, StateTx (..),
+                      TxValidationException, Undo, ValidatorExecException)
+import Snowdrop.Execution (RestrictionInOutException)
 import Snowdrop.Util (HasReview (..), IdStorage, VerifySign, WithSignature (..), deriveIdView,
-                      deriveView, withInj, withInjProj)
+                      deriveView, withInj, withInjProj, verifySignature)
+import qualified Snowdrop.Util as SD (PublicKey, Signature)
 
 import Dscp.Core.Foundation (HeaderHash)
 import qualified Dscp.Core.Foundation as T
-import Dscp.Crypto (PublicKey, Signature, hashF)
+import Dscp.Crypto (Hash, PublicKey, hashF, Signature, PublicKey, HasAbstractSignature,
+                    verify, SigScheme)
 import Dscp.Snowdrop.Storage.Types
 import Dscp.Snowdrop.Types (Account, AccountId (..), AccountTxTypeId (..),
                             AccountValidationException, PublicationTxTypeId (..),
@@ -22,21 +58,47 @@ import Dscp.Snowdrop.Types (Account, AccountId (..), AccountTxTypeId (..),
 import Dscp.Witness.Logic.Exceptions (LogicException)
 
 ----------------------------------------------------------------------------
+-- Snowdrop signing types
+----------------------------------------------------------------------------
+
+data DscpSigScheme
+data instance SD.PublicKey DscpSigScheme = DscpPK PublicKey
+    deriving (Eq, Show, Generic)
+data instance SD.Signature DscpSigScheme msg = DscpSig (Signature msg)
+    deriving (Eq, Show, Generic)
+
+toDscpPK :: PublicKey -> SD.PublicKey DscpSigScheme
+toDscpPK = DscpPK
+
+toDscpSig :: Signature msg -> SD.Signature DscpSigScheme msg
+toDscpSig = DscpSig
+
+instance Buildable (SD.PublicKey DscpSigScheme) where
+    build (DscpPK key) = build key
+
+instance Buildable (SD.Signature DscpSigScheme msg) where
+    build (DscpSig sig) = build sig
+
+instance HasAbstractSignature SigScheme msg => VerifySign DscpSigScheme msg where
+    verifySignature (DscpPK pk) msg (DscpSig sig) = verify pk msg sig
+
+
+----------------------------------------------------------------------------
 -- Snowdrop block-related types
 ----------------------------------------------------------------------------
 
 type SHeader  = T.Header
--- We store payload twice b/c snowdrop can't into blocks. This allows
--- us to reconstruct block back from SDBlock. DSCP-175
-data SPayload = SPayload { sPayStateTxs :: [StateTx Ids Proofs Values]
-                         , sPayOrigBody :: T.BlockBody
+data SPayload = SPayload { sPayStateTxs     :: ![SStateTx]
+                         , sPayOrigBodyHash :: !(Hash T.BlockBody)
                          } deriving (Eq, Show, Generic)
 type SBlock   = Block SHeader SPayload
-type SUndo    = ChangeSet Ids Values
-type SBlund   = Blund SHeader SPayload SUndo
+type SUndo    = Undo Ids Values
+type SBlund   = Blund SHeader T.BlockBody SUndo
 
-sBlockReconstruct :: SBlock -> T.Block
-sBlockReconstruct (Block h (SPayload _ b)) = T.Block h b
+sBlockReconstruct :: SBlund -> T.Block
+sBlockReconstruct (buBlock -> Block h b) = T.Block h b
+
+type SStateTx = StateTx Ids Proofs Values
 
 ----------------------------------------------------------------------------
 -- Identities/prefixes
@@ -130,22 +192,14 @@ type instance SValue  PublicationHead      = PublicationNext
 -- Proofs
 ----------------------------------------------------------------------------
 
-deriving instance (Eq   pk, Eq   sig, Eq   a) => Eq   (WithSignature pk sig a)
-deriving instance (Show pk, Show sig, Show a) => Show (WithSignature pk sig a)
+deriving instance (Eq (SD.Signature sigScheme a), Eq (SD.PublicKey sigScheme), Eq a) => Eq (WithSignature sigScheme a)
+deriving instance (Show (SD.Signature sigScheme a), Show (SD.PublicKey sigScheme), Show a) => Show (WithSignature sigScheme a)
 
 type CanVerifyPayload txid payload =
-    VerifySign
-        PublicKey
-        (Signature
-            (txid, PublicKey, payload))
-        (txid, PublicKey, payload)
+    VerifySign DscpSigScheme (txid, PublicKey, payload)
 
-
-type PersonalisedProof txid  payload =
-    WithSignature
-        PublicKey
-        (Signature (txid, PublicKey, payload))
-        (txid, PublicKey, payload)
+type PersonalisedProof txid payload =
+    WithSignature DscpSigScheme (txid, PublicKey, payload)
 
 type AddrTxProof =
     PersonalisedProof T.TxId ()

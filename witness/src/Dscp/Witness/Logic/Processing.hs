@@ -11,11 +11,12 @@ import Data.Default (def)
 import qualified Data.Map as M
 import Data.Reflection (reify)
 import qualified Data.Set as S
+import Data.Time.Clock (UTCTime (..))
 import Loot.Base.HasLens (lensOf)
 import Serokell.Util (enumerate)
+import qualified Snowdrop.Block as SD
 import qualified Snowdrop.Core as SD
-import qualified Snowdrop.Model.Block as SD
-import qualified Snowdrop.Model.Execution as SD
+import qualified Snowdrop.Execution as SD
 import qualified Snowdrop.Util as SD
 
 import Dscp.Core
@@ -48,7 +49,7 @@ createBlock newSlot = do
 
     payload <- createPayload
     sk <- ourSecretKey @WitnessNode
-    let sgn = sign sk $ BlockToSign diff newSlot tipHash payload
+    let sgn = sign sk $ BlockToSign diff newSlot tipHash (hash payload)
     let header = Header sgn (toPublic sk) diff newSlot tipHash
     let block = Block header payload
     pure block
@@ -56,18 +57,21 @@ createBlock newSlot = do
 -- | Apply verified block.
 applyBlockRaw :: (WitnessWorkMode ctx m, WithinWriteSDLock) => Bool -> Block -> m AvlProof
 applyBlockRaw toVerify block = do
-    (sdActions :: SDActions) <- view (lensOf @SDActions)
+    (sdActions :: SDVars) <- view (lensOf @SDVars)
+    let sdOSParamsBuilder = nsSDParamsBuilder sdActions
     let blockDBM = nsBlockDBActions sdActions
-    let stateDBM = nsStateDBActions sdActions (RememberForProof True)
+    let stateDBM = nsStateDBActions sdActions (SD.RememberForProof True)
 
     (blockCS, stateCS) <- reify blockPrefixes $ \(_ :: Proxy ps) ->
         let actions = SD.constructCompositeActions @ps (SD.dmaAccessActions blockDBM)
                                                         (SD.dmaAccessActions stateDBM)
             rwComp = do
               sblock <- SD.liftERoComp $ expandBlock block
-              SD.applyBlockImpl toVerify blkStateConfig sblock
+              -- getCurrentTime requires MonadIO
+              let osParams = SD.unOSParamsBuilder sdOSParamsBuilder $ UTCTime (toEnum 0) (toEnum 0)
+              SD.applyBlockImpl toVerify osParams blkStateConfig (bBody block) sblock
               sequence_ . fmap addTx . enumerate . bbTxs . bBody $ block
-            addTx (idx, gTx) = SD.modifyRwCompChgAccum $ SD.ChangeSet $
+            addTx (idx, gTx) = SD.modifyRwCompChgAccum $ SD.CAMChange $ SD.ChangeSet $
                 M.singleton
                     (SD.inj . toGTxId . unGTxWitnessed $ gTx)
                     (SD.New . TxVal $ TxBlockRef (headerHash block) idx)
