@@ -29,20 +29,18 @@ import Dscp.Witness.Web.Types
 -- Logic
 ----------------------------------------------------------------------------
 
--- | Applies transaction everywhere.
--- Once call of this function returns, transaction gets considered by
--- 'getAccountInfo' and other endpoints.
-submitUserTx :: WitnessWorkMode ctx m => TxWitnessed -> m TxId
-submitUserTx tw = do
+-- | Applies transaction.
+-- Once call of this function returns, transaction is put to mempool gets
+-- considered by 'getAccountInfo' and other endpoints. It may be not send
+-- into network yet.
+submitUserTx :: WitnessWorkMode ctx m => TxWitnessed -> m ()
+submitUserTx tw =
     Relay.relayTx (GMoneyTxWitnessed tw) >>= wait @"tx in mempool"
-    return $ toTxId (twTx tw)
 
--- | Applies transaction, but does not wait for a whole cycle of transaction
--- application.
-submitUserTxAsync :: WitnessWorkMode ctx m => TxWitnessed -> m TxId
-submitUserTxAsync tw = do
+-- | Applies transaction, but does not wait transaction to appear in mempool.
+submitUserTxAsync :: WitnessWorkMode ctx m => TxWitnessed -> m ()
+submitUserTxAsync tw =
     void . Relay.relayTx $ GMoneyTxWitnessed tw
-    return $ toTxId (twTx tw)
 
 toBlockInfo :: HasWitnessConfig => Bool -> Block -> BlockInfo
 toBlockInfo includeTxs block = BlockInfo
