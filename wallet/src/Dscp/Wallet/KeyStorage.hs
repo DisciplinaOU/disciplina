@@ -7,11 +7,12 @@ import Data.Aeson (eitherDecode, encode)
 import Data.Aeson.TH (defaultOptions, deriveJSON)
 import Dscp.Core (mkAddr)
 import Dscp.Util.Aeson (Versioned (..))
-import System.Directory (doesFileExist)
+import System.Directory (XdgDirectory (..), createDirectoryIfMissing, doesFileExist, getXdgDirectory)
 import System.FileLock (SharedExclusive (..), withFileLock)
 
 import qualified Data.ByteString.Lazy as LBS
 
+import Dscp.System (appName)
 import Dscp.Util.Aeson (Base64Encoded, CustomEncoding (..))
 import Dscp.Wallet.Face
 
@@ -28,11 +29,17 @@ data StorageAccount = StorageAccount
 deriveJSON defaultOptions ''Storage
 deriveJSON defaultOptions ''StorageAccount
 
-storageFileName :: FilePath
-storageFileName = "run/tmp/wallet.json"
+getDataDir :: IO FilePath
+getDataDir = do
+    dir <- getXdgDirectory XdgData appName
+    createDirectoryIfMissing True dir
+    return dir
 
-storageLockFileName :: FilePath
-storageLockFileName = "run/tmp/wallet.json.lock"
+getStoragePath :: IO FilePath
+getStoragePath = getDataDir >>= return . (<> "/wallet.json")
+
+getStorageLockPath :: IO FilePath
+getStorageLockPath = getDataDir >>= return . (<> "/wallet.json.lock")
 
 getAccounts :: IO [Account]
 getAccounts = do
@@ -57,15 +64,20 @@ addAccount account = modifyStorage (\(Storage accs) -> Storage $ accs ++ [fromAc
 
 readOrCreateStorage :: IO Storage
 readOrCreateStorage = do
-    exists <- doesFileExist storageFileName
+    exists <- doesFileExist =<< getStoragePath
     if exists
-        then LBS.readFile storageFileName >>= either fail (\(Versioned a) -> return a) . eitherDecode
+        then getStoragePath >>= LBS.readFile >>= either fail (\(Versioned a) -> return a) . eitherDecode
         else return $ Storage []
 
 readStorage :: IO Storage
-readStorage = withFileLock storageLockFileName Shared $ \_ -> readOrCreateStorage
+readStorage = do
+    storageLockPath <- getStorageLockPath
+    withFileLock storageLockPath Shared $ \_ -> readOrCreateStorage
 
 modifyStorage :: (Storage -> Storage) -> IO ()
-modifyStorage f = withFileLock storageLockFileName Exclusive $ \_ -> do
-    storage <- readOrCreateStorage
-    LBS.writeFile storageFileName . encode . Versioned $ f storage
+modifyStorage f = do
+    storageLockPath <- getStorageLockPath
+    withFileLock storageLockPath Exclusive $ \_ -> do
+        storage <- readOrCreateStorage
+        storagePath <- getStoragePath
+        LBS.writeFile storagePath . encode . Versioned $ f storage
