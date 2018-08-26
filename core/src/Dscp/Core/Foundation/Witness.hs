@@ -8,17 +8,30 @@ module Dscp.Core.Foundation.Witness
     , coinToInteger
     , coinFromInteger
     , unsafeAddCoin
+    , addCoins
+    , sumCoins
     , SlotId (..)
 
     -- * Transaction
     , Nonce (..)
     , TxInAcc (..)
+    , tiaAddrL
+    , tiaNonceL
     , TxOut (..)
+    , txOutAddrL
+    , txOutValueL
     , Tx (..)
+    , txInAccL
+    , txInValueL
+    , txOutsL
     , TxId
     , toTxId
     , TxWitness (..)
+    , txwSigL
+    , txwPkL
     , TxWitnessed (..)
+    , twTxL
+    , twWitnessL
     , PublicationTxWitness (..)
     , PublicationTxWitnessed (..)
     , PublicationTx (..)
@@ -42,12 +55,14 @@ module Dscp.Core.Foundation.Witness
     ) where
 
 import Codec.Serialise (Serialise)
+import Control.Lens (makeLensesWith)
 
 import Fmt (blockListF, build, indentF, listF, nameF, whenF, (+|), (+||), (|+), (||+))
 
 import Dscp.Core.Foundation.Address
 import Dscp.Core.Foundation.Educator
 import Dscp.Crypto
+import Dscp.Util
 
 ----------------------------------------------------------------------------
 -- General
@@ -91,6 +106,12 @@ unsafeMkCoin = either error identity . coinFromInteger . fromIntegral
 instance Buildable Coin where
     build (Coin c) = c ||+ " coin" +|| whenF (c /= 1) "s"
 
+addCoins :: Coin -> Coin -> Either Text Coin
+addCoins a b = sumCoins [a, b]
+
+sumCoins :: [Coin] -> Either Text Coin
+sumCoins = coinFromInteger . sum . map coinToInteger
+
 ----------------------------------------------------------------------------
 -- Transactions
 ----------------------------------------------------------------------------
@@ -117,6 +138,8 @@ data TxInAcc = TxInAcc
     , tiaNonce :: Nonce
     } deriving (Eq, Ord, Generic, Show)
 
+makeLensesWith postfixLFields ''TxInAcc
+
 instance Buildable TxInAcc where
     build TxInAcc{..} = "TxInnAcc {" +| tiaAddr |+ " nonce " +|| tiaNonce ||+ "}"
 
@@ -125,6 +148,8 @@ data TxOut = TxOut
     { txOutAddr  :: Address
     , txOutValue :: Coin
     } deriving (Eq, Ord, Generic, Show)
+
+makeLensesWith postfixLFields ''TxOut
 
 instance Buildable TxOut where
     build TxOut{..} = "<" +| txOutAddr |+ ", " +| txOutValue |+ ">"
@@ -135,6 +160,8 @@ data Tx = Tx
     , txInValue :: Coin
     , txOuts    :: [TxOut]
     } deriving (Eq, Ord, Generic, Show)
+
+makeLensesWith postfixLFields ''Tx
 
 instance Buildable Tx where
     build Tx{..} =
@@ -155,6 +182,8 @@ data TxWitness = TxWitness
     , txwPk  :: PublicKey
     } deriving (Eq, Ord, Show, Generic)
 
+makeLensesWith postfixLFields ''TxWitness
+
 instance Buildable TxWitness where
     build TxWitness {..} =
         "TxWitness { " +| txwSig |+ ", pk: " +| txwPk |+ " }"
@@ -164,6 +193,8 @@ data TxWitnessed = TxWitnessed
     { twTx      :: Tx
     , twWitness :: TxWitness
     } deriving (Eq, Ord, Show, Generic)
+
+makeLensesWith postfixLFields ''TxWitnessed
 
 instance Buildable TxWitnessed where
     build TxWitnessed {..} =

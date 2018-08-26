@@ -19,7 +19,7 @@ import qualified Data.Map.Strict as Map
 import Dscp.Core.Foundation
 import Dscp.Core.Governance
 import Dscp.Crypto
-
+import Dscp.Util
 
 -- | Wrapper over address mapping.
 newtype GenAddressMap = GenAddressMap
@@ -36,7 +36,7 @@ instance Monoid GenAddressMap where
 
 -- | Total coins in address map.
 totalCoinsAddrMap :: GenAddressMap -> Coin
-totalCoinsAddrMap (GenAddressMap m) = foldr unsafeAddCoin (Coin 0) (Map.elems m)
+totalCoinsAddrMap (GenAddressMap m) = leftToPanic $ sumCoins (Map.elems m)
 
 -- | Runtime representation of the genesis info. It is built from
 -- other config parameters and genesis config in particular. It is

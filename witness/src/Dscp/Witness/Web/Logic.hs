@@ -16,6 +16,7 @@ import Data.Default (def)
 import Dscp.Core
 import Dscp.Snowdrop
 import Dscp.Util (fromHex, nothingToThrow)
+import Dscp.Util
 import Dscp.Util.Concurrent.NotifyWait
 import Dscp.Witness.Launcher.Mode (WitnessWorkMode)
 import Dscp.Witness.Logic
@@ -53,7 +54,7 @@ toBlockInfo includeTxs block = do
         , biSince = getSlotSince . hSlotId . bHeader $ block
         , biSize = BS.length . serialise $ block
         , biTransactionCount = length txs
-        , biTotalOutput = foldr unsafeAddCoin (Coin 0) $ txTotalOutput . unGTxWitnessed <$> txs
+        , biTotalOutput = leftToPanic . sumCoins $ txTotalOutput . unGTxWitnessed <$> txs
         , biTotalFees = Coin 0  -- TODO
         , biTransactions =
             if includeTxs
@@ -63,7 +64,7 @@ toBlockInfo includeTxs block = do
   where
     hh = headerHash block
     txs = bbTxs . bBody $ block
-    txTotalOutput (GMoneyTx tx)      = foldr unsafeAddCoin (Coin 0) $ txOutValue <$> txOuts tx
+    txTotalOutput (GMoneyTx tx)      = leftToPanic $ sumCoins $ txOutValue <$> txOuts tx
     txTotalOutput (GPublicationTx _) = Coin 0
 
 toAccountInfo :: WitnessWorkMode ctx m => BlocksOrMempool Account -> Maybe [GTxInBlock] -> m AccountInfo

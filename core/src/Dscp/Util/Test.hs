@@ -1,9 +1,4 @@
-{-# LANGUAGE ExplicitForAll             #-}
-{-# LANGUAGE FlexibleContexts           #-}
-{-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE LambdaCase                 #-}
-{-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE PartialTypeSignatures      #-}
 {-# LANGUAGE RankNTypes                 #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
@@ -26,9 +21,11 @@ import Control.Lens (Prism')
 import Crypto.Random (ChaChaDRG, MonadPseudoRandom)
 import Data.Aeson (FromJSON, ToJSON, eitherDecode, encode)
 import qualified Data.Hashable as H
+import Data.List (zipWith3)
 import qualified Data.Text.Buildable
 import Data.Typeable (typeRep)
 import Fmt ((+|), (+||), (|+), (||+))
+import qualified GHC.Generics as G
 import GHC.Show (Show (show))
 import qualified Loot.Log as Log
 import Test.Hspec as T
@@ -38,8 +35,10 @@ import Test.QuickCheck as T (Arbitrary (..), Fixed (..), Gen, Property, Testable
                              sublistOf, suchThat, suchThatMap, vectorOf, (.&&.), (===), (==>))
 import Test.QuickCheck (sized)
 import qualified Test.QuickCheck as Q
+import Test.QuickCheck.Arbitrary.Generic as T (genericArbitrary, genericShrink)
 import Test.QuickCheck.Gen (Gen (..))
 import Test.QuickCheck.Instances as T ()
+import Test.QuickCheck.Monadic as T (PropertyM, monadic, pick, stop)
 import Test.QuickCheck.Property as T (rejected)
 import Test.QuickCheck.Random (QCGen, mkQCGen)
 
@@ -136,6 +135,9 @@ throws action = do
     (action >> return False) `catch` \(_ :: e) ->
         return True
 
+throwsSome :: forall m . (MonadCatch m) => m () -> m Bool
+throwsSome = throws @SomeException
+
 throwsPrism
     :: forall e m a b.
       (MonadCatch m, Exception e)
@@ -209,3 +211,45 @@ aesonRoundtripProp
     => Spec
 aesonRoundtripProp =
     it (show $ typeRep $ Proxy @a) $ aesonRoundtrip @a
+
+----------------------------------------------------------------------------
+-- Generics fun
+----------------------------------------------------------------------------
+
+-- | Combines two objects, randomly borrowing a field from one of them for each
+-- field of the constructed object.
+class ArbitraryMixture a where
+    arbitraryMixture :: a -> a -> Gen a
+    default arbitraryMixture
+        :: (Generic a, GArbitraryMixture (G.Rep a))
+        => a -> a -> Gen a
+    arbitraryMixture x y = G.to <$> gArbitraryMixture (G.from x) (G.from y)
+
+-- | Implementation of 'ArbitraryMixture' for "primitive" types.
+primitiveArbitraryMixture :: a -> a -> Gen a
+primitiveArbitraryMixture a b = elements [a, b]
+
+instance ArbitraryMixture [a] where
+    arbitraryMixture l1 l2 = do
+        selectors <- infiniteList
+        return $ zipWith3 bool l1 l2 selectors
+
+instance ArbitraryMixture Integer where
+    arbitraryMixture = primitiveArbitraryMixture
+
+-- | Helps to automatically derive 'ArbitraryMixture' for sum types.
+class GArbitraryMixture (rep :: * -> *) where
+    gArbitraryMixture :: rep p -> rep p -> Gen (rep p)
+
+instance ArbitraryMixture inner => GArbitraryMixture (G.Rec0 inner) where
+    gArbitraryMixture (G.K1 a) (G.K1 b) = G.K1 <$> arbitraryMixture a b
+
+instance GArbitraryMixture G.U1 where
+    gArbitraryMixture G.U1 G.U1 = pure G.U1
+
+instance GArbitraryMixture inner => GArbitraryMixture (G.M1 ty meta inner) where
+    gArbitraryMixture (G.M1 a) (G.M1 b) = G.M1 <$> gArbitraryMixture a b
+
+instance Each '[GArbitraryMixture] [l, r] => GArbitraryMixture (l G.:*: r) where
+    gArbitraryMixture (l1 G.:*: l2) (r1 G.:*: r2) =
+        (G.:*:) <$> gArbitraryMixture l1 r1 <*> gArbitraryMixture l2 r2

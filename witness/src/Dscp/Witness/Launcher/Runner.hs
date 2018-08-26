@@ -5,9 +5,11 @@ module Dscp.Witness.Launcher.Runner
     , launchWitnessRealMode
     ) where
 
-import Dscp.Rio (runRIO)
+import Loot.Log (MonadLogging)
+
 import Dscp.Resource.Class (AllocResource (..), InitParams (..))
 import Dscp.Resource.Functions
+import Dscp.Rio
 import Dscp.Snowdrop.Actions (initSDActions)
 import Dscp.Witness.Config
 import Dscp.Witness.Launcher.Mode (WitnessContext (..), WitnessRealMode)
@@ -19,11 +21,11 @@ import qualified Dscp.Witness.Relay as Relay
 import qualified Dscp.Witness.SDLock as Lock
 
 -- | Make up Witness context from dedicated pack of allocated resources.
-formWitnessContext ::
-       HasWitnessConfig
+formWitnessContext
+    :: (MonadIO m, MonadCatch m, MonadLogging m, HasWitnessConfig)
     => WitnessParams
     -> WitnessResources
-    -> IO WitnessContext
+    -> m WitnessContext
 formWitnessContext _wcParams _wcResources = do
     _wcMempool    <- newMempoolVar $ _wcResources^.wrKey.krPublicKey
     _wcSDActions  <- initSDActions

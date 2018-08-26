@@ -39,6 +39,9 @@ module Dscp.Util
        , toHex
        , fromHex
 
+         -- * Lenses
+       , postfixLFields
+
          -- * Ids for databases
        , HasId (..)
        , idOf
@@ -52,7 +55,7 @@ module Dscp.Util
        ) where
 
 import Codec.Serialise (Serialise, serialise)
-import Control.Lens (Getter, to)
+import Control.Lens (Getter, LensRules, lensField, lensRules, mappingNamer, to)
 import Data.ByteArray (ByteArrayAccess)
 import Data.ByteArray.Encoding (Base (..), convertFromBase, convertToBase)
 import qualified Data.ByteString.Lazy as BSL
@@ -218,6 +221,14 @@ toHex    = toBase Base16
 fromBase64, fromHex :: FromByteArray ba => Text -> Either String ba
 fromBase64 = fromBase Base64
 fromHex    = fromBase Base16
+
+-----------------------------------------------------------
+-- Lens fun
+-----------------------------------------------------------
+
+-- | For datatype with "myNyan" field it will create "myNyanL" lens.
+postfixLFields :: LensRules
+postfixLFields = lensRules & lensField .~ mappingNamer (\s -> [s++"L"])
 
 -----------------------------------------------------------
 -- Helper to establish notion of SQLite/db ID

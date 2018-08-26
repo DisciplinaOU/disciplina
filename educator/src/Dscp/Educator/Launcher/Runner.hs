@@ -5,6 +5,8 @@ module Dscp.Educator.Launcher.Runner
     , launchEducatorRealMode
     ) where
 
+import Loot.Log (MonadLogging)
+
 import Dscp.Educator.Config
 import Dscp.Educator.Launcher.Mode (EducatorContext (..), EducatorRealMode)
 import Dscp.Educator.Launcher.Params (EducatorParams (..))
@@ -15,11 +17,11 @@ import Dscp.Resource.Functions
 import Dscp.Witness.Launcher (formWitnessContext, wpLoggingParams)
 
 -- | Make up Educator context from dedicated pack of allocated resources.
-formEducatorContext ::
-       HasEducatorConfig
+formEducatorContext
+    :: (MonadIO m, MonadCatch m, MonadLogging m, HasEducatorConfig)
     => EducatorParams
     -> EducatorResources
-    -> IO EducatorContext
+    -> m EducatorContext
 formEducatorContext _ecParams _ecResources = do
     _ecWitnessCtx <- formWitnessContext (epWitnessParams _ecParams)
                                         (_erWitnessResources _ecResources)
