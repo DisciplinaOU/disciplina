@@ -29,6 +29,9 @@ import qualified Dscp.Crypto.ByteArray as BA
 import Dscp.Util (Base (..), fromBase, leftToFail, toBase)
 import Dscp.Util.Test
 
+import qualified Debug.Trace as Debug
+import qualified Data.Attoparsec.Text as P
+
 -- | Often one wants to convert bytestring to JSON, but such convertion
 -- is encoding-dependent so we have no corresponding instance because it would
 -- be ambiguous.
@@ -71,15 +74,19 @@ newtype Versioned a = Versioned a
 theVersion :: SemVer.Version
 theVersion = SemVer.version 1 0 0 [] []
 
+instance Arbitrary SemVer.Version where
+    arbitrary = return theVersion
+
 instance ToJSON a => ToJSON (Versioned a) where
     toJSON (Versioned content) = object
         [ "version" .= theVersion
         , "content" .= content
         ]
 
-instance FromJSON a => FromJSON (Versioned a) where
+instance (Show a, FromJSON a) => FromJSON (Versioned a) where
     parseJSON = withObject "Versioned content" $ \o -> do
         ver <- o .: "version"
+
         unless (ver == theVersion) $
             fail $ "Only "+||theVersion||+" version is supported"
 
@@ -107,6 +114,15 @@ parseJSONSerialise base v =
 ---------------------------------------------------------------------
 
 instance ToJSON SemVer.Version where
-    toJSON = String . SemVer.toText
+    toJSON = Debug.traceShowId . String . SemVer.toText
 instance FromJSON SemVer.Version where
-    parseJSON = withText "version" $ leftToFail . SemVer.fromText
+    parseJSON = withText "version"
+        $ leftToFail
+        . Debug.traceShowId
+        . SemVer.fromText
+        . fst
+        . (\t -> Debug.traceShow ("all chars" :: Text, t) t)
+        . (\t -> (t, P.parseOnly p t))
+        . (\t -> Debug.traceShow ("input text" :: Text, t) t)
+      where
+        p = P.many' P.anyChar

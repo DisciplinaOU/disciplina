@@ -10,6 +10,7 @@ library:
     - aeson
     - aeson-options
     - autoexporter
+    - attoparsec
     - bytestring
     - bytestring
     - base58-bytestring
@@ -64,3 +65,4 @@ tests:
       - tasty-discover
       - tasty-hspec
       - QuickCheck
+      - semver
