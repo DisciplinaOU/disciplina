@@ -44,6 +44,7 @@ See [configuration section](/docs/configuration.md) document.
   ```
 
 * [Witnesses cluster launcher](../scripts/launch/demo.sh)
+  <a name="launch-witness-cluster"></a>
 
   Example:
   ```bash
