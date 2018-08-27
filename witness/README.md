@@ -1,6 +1,6 @@
 # Disciplina witness
 
-Main node/witness library and executable
+Main node/witness library and executable.
 
 ## Building from the source code
 
@@ -26,7 +26,7 @@ For ready scripts see [scripts section](#scripts).
 For the most actual information run
 
 ```bash
-> stack build disciplina-witness -- --help
+> stack exec dscp-witness -- --help
 ```
 
 ### Configuration

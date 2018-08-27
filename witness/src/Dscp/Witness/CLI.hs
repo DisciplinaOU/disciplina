@@ -82,7 +82,7 @@ netServParamsParser =
 
 metricsServerParser :: Parser Endpoint
 metricsServerParser = liftA2 (,) naHost (fromIntegral . naPort) <$>
-  networkAddressParser "metrics-server" "Server to report the metrics to"
+  networkAddressParser "metrics-server" "Server to report the metrics to."
 
 ---------------------------------------------------------------------------
 -- Utils

@@ -71,8 +71,8 @@ baseKeyParamsParser who = do
     kpKeyPathParser = optional . strOption $
          long [qc|{who}-keyfile|] <>
          metavar "FILEPATH" <>
-         help [qc|Path to the secret key of the {who}. If not specified, \
-                 \<homeDir>/{who}.key is used.|]
+         help [qc|Path to the secret key of the {who}. If not specified,
+                 <homeDir>/{who}.key is used.|]
     kpGenKeyParser = switch $
          long [qc|{who}-gen-key|] <>
          help [qc|Generate the key and write it to '{who}-keyfile-path' path.
@@ -144,5 +144,6 @@ clientAddressParser pName helpTxt =
 serverParamsParser :: String -> Parser ServerParams
 serverParamsParser desc = do
     spAddr <- networkAddressParser (map toLower desc <> "-listen")
-        ("Host/port for serving " <> desc <> " API.")
+        ("Host/port for serving " <> desc <> " API. If executable supports \
+         \multiple APIs, they are allowed to have the same port.")
     return ServerParams{..}
