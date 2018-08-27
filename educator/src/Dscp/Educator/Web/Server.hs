@@ -11,6 +11,7 @@ import Fmt ((+|), (|+))
 import Loot.Base.HasLens (lensOf)
 import Loot.Log (logInfo)
 import Network.HTTP.Types.Header (hAuthorization, hContentType)
+import Network.Wai (Middleware)
 import Network.Wai.Middleware.Cors (CorsResourcePolicy (..), cors, simpleCorsResourcePolicy)
 import Servant ((:<|>) (..), Context (..), Handler, ServantErr (..), Server, err405,
                 hoistServerWithContext, serveWithContext)
@@ -76,6 +77,17 @@ createGetStudentsAction = do
     traverse_ addKeyWithSeed [1000..1100]
     return . GetStudentsAction $ atomically . readTVar $ tvr
 
+-- | CORS is enabled to ease development for frontend team.
+educatorCors :: Middleware
+educatorCors = cors $ const $ Just $
+    simpleCorsResourcePolicy
+    { -- We use @Access-Control-Allow-Origin: *@ as soon as our JWT based
+      -- authentication prevents CSRF attacks, and API is public anyway.
+      corsOrigins = Nothing
+    , corsRequestHeaders = [hContentType, hAuthorization]
+    , corsMethods = ["GET", "POST", "DELETE"]
+    }
+
 serveEducatorAPIsReal :: CombinedWorkMode ctx m => Bool -> EducatorWebParams -> m ()
 serveEducatorAPIsReal withWitnessApi EducatorWebParams{..} = do
     let ServerParams{..} = ewpServerParams
@@ -91,11 +103,8 @@ serveEducatorAPIsReal withWitnessApi EducatorWebParams{..} = do
     let witnessApiServer = if withWitnessApi
           then mkWitnessAPIServer (convertWitnessHandler unliftIO)
           else throwAll err405{ errBody = "Witness API disabled at this port" }
-    let ourCors = cors (const $ Just $
-                        simpleCorsResourcePolicy
-                        { corsRequestHeaders = [hContentType, hAuthorization] })
     serveWeb spAddr $
-      ourCors $
+      educatorCors $
       serveWithContext (Proxy @EducatorWebAPI) srvCtx $
          educatorApiServer
          :<|>

@@ -10,6 +10,7 @@ import Data.Reflection (reify)
 import Fmt ((+|), (|+))
 import Loot.Log (logInfo)
 import Network.HTTP.Types.Header (hContentType)
+import Network.Wai (Middleware)
 import Network.Wai.Middleware.Cors (CorsResourcePolicy (..), cors, simpleCorsResourcePolicy)
 import Servant ((:>), Handler, Server, hoistServer, serve)
 import Servant.Generic (toServant)
@@ -30,16 +31,22 @@ mkFaucetApiServer
 mkFaucetApiServer nat =
     hoistServer faucetAPI nat (toServant faucetApiHandlers)
 
+-- | CORS is enabled to ease development for frontend team.
+faucetCors :: Middleware
+faucetCors = cors $ const $ Just $
+    simpleCorsResourcePolicy
+    { -- We use @Access-Control-Allow-Origin: *@ as soon as API is public.
+      corsOrigins = Nothing
+    , corsRequestHeaders = [hContentType]
+    }
+
 serveFaucetAPIReal :: ServerParams -> FaucetRealMode ()
 serveFaucetAPIReal ServerParams{..} = do
     logInfo $ "Serving faucet API on "+|spAddr|+""
     ctx <- ask
     lc <- buildServantLogConfig (<> "web")
     let faucetApiServer = mkFaucetApiServer (convertFaucetApiHandler ctx)
-    let ourCors = cors (const $ Just $
-                        simpleCorsResourcePolicy
-                        { corsRequestHeaders = [hContentType] })
     serveWeb spAddr $
-        ourCors $
+        faucetCors $
         reify lc $ \(_ :: Proxy lc) ->
         serve (Proxy @(LoggingApi lc FaucetWebAPI)) faucetApiServer
