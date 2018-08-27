@@ -5,8 +5,23 @@ description: This package contains tools for development of Disciplina
              platform, such as simulators of cryptographic protocols.
 
 executables:
-  disciplina-simulacrum:
+  dscp-simulacrum:
     <<: *exec-common
     source-dirs: src/simulacrum
     dependencies:
       - mtl
+  dscp-txperf:
+    <<: *exec-common
+    source-dirs: src/txperf
+    dependencies:
+      - aeson
+      - aeson-options
+      - bytestring
+      - disciplina-core
+      - disciplina-witness
+      - memory
+      - QuickCheck
+      - optparse-applicative
+      - reflection
+      - serokell-util
+      - servant-client
