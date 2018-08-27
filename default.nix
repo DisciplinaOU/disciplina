@@ -50,8 +50,8 @@ let
 in
   dscp-packages // {
   disciplina-faucet-frontend = pkgs.callPackage ./faucet/frontend {};
-  disciplina-bin = pkgs.runCommandNoCC "disciplina-bin-${dscp-packages.disciplina-core.version}" {}
-  ''
+  disciplina-wallet = haskell.lib.justStaticExecutables dscp-packages.disciplina-wallet;
+  disciplina-bin = pkgs.runCommandNoCC "disciplina-bin-${dscp-packages.disciplina-core.version}" {} ''
     mkdir $out
     ${pkgs.rsync}/bin/rsync -Labu --no-perms --exclude lib/ --exclude propagated-build-inputs --inplace \
       ${lib.concatMapStringsSep " " (f: "${f}/") (builtins.attrValues dscp-packages)} $out/
