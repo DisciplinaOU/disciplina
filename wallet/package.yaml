@@ -70,6 +70,7 @@ executables:
       - ansi-wl-pprint
       - ariadne-cli-lib
       - ariadne-core
+      - async
       - componentm
       - disciplina-core
       - disciplina-wallet
