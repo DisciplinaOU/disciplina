@@ -1,11 +1,14 @@
 module Main where
 
+import Control.Concurrent.Async (waitCatch)
 import Control.Monad.Component (ComponentM, runComponentM)
 import NType (N (..))
 import Text.PrettyPrint.ANSI.Leijen (Doc)
 
 import Ariadne.Knit.Backend
+import Ariadne.Knit.Face
 import Ariadne.TaskManager.Backend
+import Ariadne.TaskManager.Face
 import Ariadne.UI.Cli
 import Dscp.Wallet.Backend
 import Dscp.Wallet.CLI
@@ -20,13 +23,13 @@ type UiComponents = '[Knit.Core, Knit.TaskManager, Knit.Wallet]
 
 main :: IO ()
 main = do
-    serverAddress <- getWalletCLIParams
-    runComponentM "ariadne" (initializeEverything serverAddress) id
+    params <- getWalletCLIParams
+    runComponentM "ariadne" (initializeEverything params) id
 
-initializeEverything :: BaseUrl -> ComponentM (IO ())
-initializeEverything serverAddress = do
+initializeEverything :: WalletCLIParams -> ComponentM (IO ())
+initializeEverything WalletCLIParams{..} = do
     taskManagerFace <- createTaskManagerFace
-    walletFace <- createWalletFace serverAddress (void . return)
+    walletFace <- createWalletFace wpWitness (void . return)
     (uiFace, mkUiAction) <- createAriadneUI
 
     let knitExecContext :: (Doc -> IO ()) -> Knit.ExecContext IO UiComponents
@@ -42,6 +45,23 @@ initializeEverything serverAddress = do
         knitFace = createKnitBackend knitExecContext taskManagerFace
 
         uiAction :: IO ()
-        uiAction = mkUiAction (knitFaceToUI uiFace knitFace)
+        uiAction = case wpKnitCommand of
+            Nothing -> mkUiAction (knitFaceToUI uiFace knitFace)
+            Just cmd -> case Knit.parse @UiComponents cmd of
+                Right expr -> do
+                    whenJustM (putKnitCommand knitFace handle expr) $
+                        \tid -> whenJustM (lookupTask taskManagerFace tid) $ void . waitCatch
+                Left err -> print $ Knit.ppParseError err
+              where
+                handle = KnitCommandHandle
+                    { putCommandResult = \_ -> handleResult
+                    , putCommandOutput = \_ doc -> print doc
+                    }
+                handleResult = \case
+                    KnitCommandSuccess v -> print $ Knit.ppValue v
+                    KnitCommandEvalError e -> print $ Knit.ppEvalError e
+                    KnitCommandProcError e -> print $ Knit.ppResolveErrors e
+                    KnitCommandException e -> print $ displayException e
+
 
     return uiAction
