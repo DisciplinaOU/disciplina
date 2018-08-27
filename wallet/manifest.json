@@ -1,0 +1,4 @@
+{
+	"app-id": "io.disciplina.Wallet",
+	"finish-args": ["--share=network"]
+}
