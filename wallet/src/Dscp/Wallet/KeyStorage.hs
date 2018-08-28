@@ -9,6 +9,7 @@ import Dscp.Core (mkAddr)
 import Dscp.Util.Aeson (Versioned (..))
 import System.Directory (XdgDirectory (..), createDirectoryIfMissing, doesFileExist, getXdgDirectory)
 import System.FileLock (SharedExclusive (..), withFileLock)
+import System.FilePath.Posix ((</>))
 
 import qualified Data.ByteString.Lazy as LBS
 
@@ -36,10 +37,10 @@ getDataDir = do
     return dir
 
 getStoragePath :: IO FilePath
-getStoragePath = getDataDir >>= return . (<> "/wallet.json")
+getStoragePath = getDataDir >>= return . (</> "wallet.json")
 
 getStorageLockPath :: IO FilePath
-getStorageLockPath = getDataDir >>= return . (<> "/wallet.json.lock")
+getStorageLockPath = getDataDir >>= return . (</> "wallet.json.lock")
 
 getAccounts :: IO [Account]
 getAccounts = do
