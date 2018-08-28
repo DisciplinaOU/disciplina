@@ -54,7 +54,6 @@ witness_web_addr="127.0.0.1:8091"
 
 # educator-only params
 educator_params="
---appdir ./tmp/
 --educator-keyfile $tmp_files/educator.key
 --educator-gen-key
 --sql-path $tmp_files/educator.db

@@ -3,7 +3,6 @@
 module Dscp.Educator.Launcher.Resource
        ( EducatorResources (..)
        , erWitnessResources
-       , erAppDir
        ) where
 
 import Control.Lens (makeLenses)
@@ -16,10 +15,10 @@ import Dscp.DB.SQLite (SQLiteDB)
 import Dscp.Educator.Config (HasEducatorConfig)
 import Dscp.Educator.Launcher.Marker (EducatorNode)
 import Dscp.Educator.Launcher.Params (EducatorKeyParams (..), EducatorParams (..))
+import Dscp.Resource.AppDir
 import Dscp.Resource.Class (AllocResource (..), buildComponentR)
 import Dscp.Resource.Keys (KeyResources (..), linkStore)
 import Dscp.Resource.SQLite ()
-import Dscp.Resource.AppDir
 import qualified Dscp.Witness.Launcher.Resource as Witness
 
 -- SQL resource should be here too (in the future).
@@ -29,7 +28,6 @@ data EducatorResources = EducatorResources
     { _erWitnessResources :: !Witness.WitnessResources
     , _erDB               :: !SQLiteDB
     , _erKeys             :: !(KeyResources EducatorNode)
-    , _erAppDir           :: !AppDir
     }
 
 makeLenses ''EducatorResources
@@ -60,6 +58,6 @@ instance HasEducatorConfig => AllocResource EducatorParams EducatorResources whe
     allocResource EducatorParams{..} = do
         _erWitnessResources <- allocResource epWitnessParams
         _erDB <- allocResource epDBParams
-        _erAppDir <- allocResource epAppDirParam
-        _erKeys <- allocResource (epKeyParams, _erAppDir)
+        let appDir = Witness._wrAppDir _erWitnessResources
+        _erKeys <- allocResource (epKeyParams, appDir)
         return EducatorResources {..}
