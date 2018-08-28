@@ -10,6 +10,7 @@ module Dscp.Witness.Web.Handlers
 import Servant
 import Servant.Generic (AsServerT, toServant)
 
+import Dscp.Core
 import Dscp.Witness.Launcher.Mode
 import Dscp.Witness.Web.API
 import Dscp.Witness.Web.Logic
@@ -20,8 +21,10 @@ witnessServantHandlers
 witnessServantHandlers =
     toServant @(WitnessEndpoints (AsServerT m)) WitnessEndpoints
     { wPing = pass
-    , wSubmitTx = submitUserTx
-    , wSubmitTxAsync = submitUserTxAsync
+    , wSubmitTx = \tw ->
+        submitUserTx tw $> toTxId (twTx tw)
+    , wSubmitTxAsync = \tw ->
+        submitUserTxAsync tw $> toTxId (twTx tw)
     , wGetBlocks = getBlocks
     , wGetBlock = getBlockInfo
     , wGetAccount = getAccountInfo

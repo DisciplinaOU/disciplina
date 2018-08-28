@@ -9,6 +9,7 @@ module Dscp.Util
          -- * Exceptions processing
        , wrapRethrow
        , wrapRethrowIO
+       , onAnException
 
          -- * Error handling
        , assert
@@ -121,6 +122,10 @@ wrapRethrowIO
     :: (Exception e1, Exception e2, MonadCatch m, MonadIO m)
     => (e1 -> e2) -> IO a -> m a
 wrapRethrowIO wrap action = wrapRethrow wrap (liftIO action)
+
+-- | Similar to 'onException', but provides exception itself.
+onAnException :: (MonadCatch m, Exception e) => m a -> (e -> m ()) -> m a
+onAnException action onExc = action `catch` \e -> onExc e >> throwM e
 
 -----------------------------------------------------------
 -- Do-or-throw error handlers

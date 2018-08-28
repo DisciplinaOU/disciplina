@@ -13,6 +13,7 @@ module Dscp.Snowdrop.Types
 import Data.Default (Default (..))
 import Data.Text.Buildable (Buildable (..))
 import Formatting (bprint, build, int, (%))
+import qualified Text.Show
 
 import Dscp.Core.Foundation (Address)
 
@@ -26,27 +27,51 @@ data PublicationValidationException
     | PublicationPrevBlockIsIncorrect
     | StorageIsCorrupted
     | PublicationIsBroken
-    deriving (Eq, Ord, Show)
+    deriving (Eq, Ord)
+
+instance Show PublicationValidationException where
+    show = toString . pretty
+
+instance Buildable PublicationValidationException where
+    build = \case
+        PublicationSignatureIsIncorrect -> "Publication signature is incorrect"
+        PublicationPrevBlockIsIncorrect -> "Publication previous block is incorrect"
+        StorageIsCorrupted -> "Storage is inconsistent"
+        PublicationIsBroken -> "Bad publication"
 
 data AccountTxTypeId = AccountTxTypeId deriving (Eq, Ord, Show, Generic)
 
 -- | Type for possible failures during transaction validation.
+--
+-- NOTE: this exception is thrown by witness API, keep 'witness.yaml' doc
+-- updated.
 data AccountValidationException
     = AuthorDoesNotExist
     | SignatureIsMissing
     | SignatureIsCorrupted
-    | KeysMismatch
     | TransactionIsCorrupted
-    | NoncesMismatch
     | NotASingletonSelfUpdate      -- ^ 'Author' account updated multiple times.
     | NonceMustBeIncremented
     | PaymentMustBePositive
-    | ReceiverDoesNotExist
     | ReceiverOnlyGetsMoney        -- ^ Receiver can only change its 'aBalance', never 'aNonce'.
     | ReceiverMustIncreaseBalance  -- ^ Receiver cannot decrease in its 'aBalance'.
     | SumMustBeNonNegative         -- ^ Amount of money sent must be greater of equal
                                    -- to the total amount received.
-    deriving (Eq, Ord, Show)
+    deriving (Eq, Ord, Enum, Bounded, Show)
+
+instance Buildable AccountValidationException where
+    build = \case
+        AuthorDoesNotExist -> "Source account has never received any money"
+        SignatureIsMissing -> "Transaction has no correct signature"
+        SignatureIsCorrupted -> "Bad signature"
+        TransactionIsCorrupted -> "Transaction is corrupted"
+        NotASingletonSelfUpdate -> "Author account is updated multiple times"
+        NonceMustBeIncremented -> "Nonce should've been incremented by one"
+        PaymentMustBePositive -> "Spent amount of money must be positive"
+        ReceiverOnlyGetsMoney -> "Improper changes of receiver account (its is \
+                                 \only possible to add tokens)"
+        ReceiverMustIncreaseBalance -> "Receiver's balance decreased"
+        SumMustBeNonNegative -> "Tx input value < tx sum of outputs"
 
 -- | Wrapper for address.
 newtype AccountId = AccountId { unAccountId :: Address }

@@ -29,13 +29,16 @@ module Dscp.Snowdrop.Configuration
     , Proofs (..)
     , ExpanderException (..)
     , Exceptions (..)
+    , _AccountValidationError
 
     , TxIds (..)
     ) where
 
 
 import Control.Lens (makePrisms)
+import qualified Data.Text.Buildable as B
 import Fmt (build, (+|))
+import qualified Text.Show
 
 import Snowdrop.Block (Block (..), BlockApplicationException, BlockRef (..), BlockStateException,
                        Blund (buBlock), CurrentBlockRef (..), TipKey, TipValue)
@@ -44,13 +47,12 @@ import Snowdrop.Core (CSMappendException, IdSumPrefixed (..), Prefix (..), Redun
                       TxValidationException, Undo, ValidatorExecException)
 import Snowdrop.Execution (RestrictionInOutException)
 import Snowdrop.Util (HasReview (..), IdStorage, VerifySign, WithSignature (..), deriveIdView,
-                      deriveView, withInj, withInjProj, verifySignature)
+                      deriveView, verifySignature, withInj, withInjProj)
 import qualified Snowdrop.Util as SD (PublicKey, Signature)
 
 import Dscp.Core.Foundation (HeaderHash)
 import qualified Dscp.Core.Foundation as T
-import Dscp.Crypto (Hash, PublicKey, hashF, Signature, PublicKey, HasAbstractSignature,
-                    verify, SigScheme)
+import Dscp.Crypto (HasAbstractSignature, Hash, PublicKey, SigScheme, Signature, hashF, verify)
 import Dscp.Snowdrop.Storage.Types
 import Dscp.Snowdrop.Types (Account, AccountId (..), AccountTxTypeId (..),
                             AccountValidationException, PublicationTxTypeId (..),
@@ -219,7 +221,14 @@ data Proofs
 data ExpanderException =
     MTxDuplicateOutputs
     | CantResolveSender
-    deriving (Show)
+
+instance Show ExpanderException where
+    show = toString . pretty
+
+instance Buildable ExpanderException where
+    build = \case
+        MTxDuplicateOutputs -> "Duplicated transaction outputs"
+        CantResolveSender -> "Source account is not registered in chain"
 
 data Exceptions
     = ExpanderRestrictionError   RestrictionInOutException
@@ -235,9 +244,29 @@ data Exceptions
     | StatePError                StatePException
     | ExpanderError              ExpanderException
     | LogicError                 LogicException
-    deriving (Show)
+
+makePrisms ''Exceptions
 
 instance Exception Exceptions
+
+instance Show Exceptions where
+    show = toString . pretty
+
+instance Buildable Exceptions where
+    build = \case
+        ExpanderRestrictionError err -> B.build err
+        BlockStateError err -> B.build err
+        BlockApplicationError err -> B.build err
+        StateModificationError err -> B.build err
+        AccountValidationError err -> B.build err
+        PublicationValidationError err -> B.build err
+        RedundantIdError err -> B.build err
+        ValidatorExecError err -> B.build err
+        CSMappendError err -> B.build err
+        TxValidationError err -> B.build err
+        StatePError err -> B.build err
+        ExpanderError err -> B.build err
+        LogicError err -> B.build err
 
 ----------------------------------------------------------------------------
 -- TxIds

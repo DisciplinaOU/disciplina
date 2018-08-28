@@ -30,4 +30,5 @@ servantToWitnessError servantError =
   where
     mWalletError = do
         FailureResponse Response{..} <- pure servantError
-        decode responseBody
+        errResponse <- decode @ErrResponse responseBody
+        return (erError errResponse)

@@ -30,7 +30,7 @@ import Snowdrop.Util
 import Dscp.Core.Foundation (Address, TxId)
 import qualified Dscp.Crypto as DC (PublicKey)
 import Dscp.Snowdrop.Configuration (CanVerifyPayload, Exceptions, Ids, PersonalisedProof, Proofs,
-                                    TxIds, Values, accountPrefix, toDscpPK)
+                                    TxIds, Values, accountPrefix)
 import Dscp.Snowdrop.Types
 
 assertSigned
@@ -79,8 +79,7 @@ authenticate proof = do
 
     realHashfromExpander <- requirePart proof TransactionIsCorrupted
 
-    (hash, pk, payload) <- signedHash                   `assertSigned` SignatureIsCorrupted
-    ()                  <- toDscpPK pk == wsPublicKey signedHash `check`        KeysMismatch
+    (hash, pk, payload) <- signedHash `assertSigned` SignatureIsCorrupted
 
     let authorId = gett pk
 
