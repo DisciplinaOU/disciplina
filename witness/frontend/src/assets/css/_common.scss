@@ -368,6 +368,10 @@ ul {
     }
   }
 
+  .cell__slotLeader {
+    max-width: 500px;
+  }
+
   @media screen and (max-width: 1200px){
     .cell__hash .link {
       max-width: 300px;

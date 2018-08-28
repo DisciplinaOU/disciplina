@@ -16,6 +16,9 @@ const actions = {
   getAllBlocks ({commit}, from, count = state.perPage + 1) {
     blockexplorer.getBlocks((Blocks) => {
       const lastBlock = Blocks.pop()
+      if (state.all.length === 0) {
+        setAutoupdateList(this)
+      }
       commit('setFromBlockHashPrev', Blocks[0])
       commit('setBlocks', Blocks)
       commit('calcTotal', Blocks[0])
@@ -81,6 +84,14 @@ const getters = {
   currentPage (state) {
     return state.currentPage
   }
+}
+
+function setAutoupdateList (store) {
+  setInterval(() => {
+    if (store.getters.currentPage === 1) {
+      store.dispatch('getAllBlocks')
+    }
+  }, 20000)
 }
 
 export default {

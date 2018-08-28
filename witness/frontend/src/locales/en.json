@@ -59,8 +59,8 @@
   "blockList" : {
     "difficulty" : "Difficulty",
     "since" : "Since",
-    "transaction" : "Transaction",
-    "totalSent" : "Total send",
+    "transaction" : "Transactions",
+    "totalSent" : "Total sent",
     "blockLeader" : "Block Leader",
     "size" : "Size (bytes)",
     "newerBlocks" : "Newer blocks",
