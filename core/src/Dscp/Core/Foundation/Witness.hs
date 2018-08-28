@@ -35,6 +35,9 @@ module Dscp.Core.Foundation.Witness
     , PublicationTxWitness (..)
     , PublicationTxWitnessed (..)
     , PublicationTx (..)
+    , ptAuthorL
+    , ptFeesAmount
+    , ptHeaderL
     , PublicationTxId
     , toPtxId
     , GTx (..)
@@ -213,6 +216,8 @@ data PublicationTx = PublicationTx
     , ptHeader     :: PrivateBlockHeader
       -- ^ Private block header to publish.
     } deriving (Eq, Ord, Generic, Show)
+
+makeLensesWith postfixLFields ''PublicationTx
 
 instance Buildable PublicationTx where
     build PublicationTx { ptAuthor, ptFeesAmount, ptHeader } =

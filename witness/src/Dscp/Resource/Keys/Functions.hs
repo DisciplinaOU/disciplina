@@ -3,7 +3,8 @@
 -- the predefined test genesis instead of providing a key explicitly.
 
 module Dscp.Resource.Keys.Functions
-    ( linkStore
+    ( genStore
+    , linkStore
     ) where
 
 import Data.Aeson (eitherDecode', encode)
@@ -54,7 +55,8 @@ storePath BaseKeyParams{..} appDir nodeNameP =
   where
     defPath = appDir </> (nodeNameP |+ ".key")
 
--- | Generate store randomly.
+-- | Generate key resources with respect to given committe parameters if
+-- specified, otherwise randomly.
 genStore ::
        (HasWitnessConfig, MonadThrow m, MonadIO m, MonadLogging m)
     => Maybe CommitteeParams

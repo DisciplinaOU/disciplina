@@ -17,10 +17,11 @@ import qualified Data.Map as M
 import Fmt ((+|), (+||), (|+), (||+))
 import Loot.Base.HasLens (HasLens (..))
 import Loot.Config.Record (finaliseDeferedUnsafe, option, sub)
-import Loot.Log (Level (Error, Warning), Logging (..))
+import Loot.Log (Level (Warning), Logging (..))
 
 import Dscp.Core
 import Dscp.Crypto
+import Dscp.Resource.Keys
 import Dscp.Rio
 import Dscp.Snowdrop
 import Dscp.Util.Test
@@ -35,6 +36,7 @@ data TestWitnessCtx = TestWitnessCtx
     , _twcSDVars     :: SDVars
     , _twcSDLock     :: SDLock
     , _twcLogging    :: Logging IO
+    , _twcKeys       :: KeyResources WitnessNode
     }
 
 makeLenses ''TestWitnessCtx
@@ -47,6 +49,7 @@ GenHasLens(MempoolVar, twcMempoolVar)
 GenHasLens(SDVars, twcSDVars)
 GenHasLens(SDLock, twcSDLock)
 GenHasLens(Logging IO, twcLogging)
+GenHasLens(KeyResources WitnessNode, twcKeys)
 
 type WitnessTestMode = RIO TestWitnessCtx
 
@@ -62,6 +65,9 @@ testGenesisAddresses = mkAddr . toPublic <$> testGenesisSecrets
 
 testGenesisAddressAmount :: Coin
 testGenesisAddressAmount = Coin 10000
+
+testCommitteeParams :: CommitteeParams
+testCommitteeParams = undefined
 
 -- | Witness test configuration.
 -- Only those parts are defined which are actually used in tests.
@@ -82,18 +88,24 @@ testWitnessConfig =
 -- Runner
 ----------------------------------------------------------------------------
 
+withTestNetwork :: m a -> m a
+withTestNetwork = undefined
+
 runWitnessTestMode :: WitnessTestMode a -> IO a
 runWitnessTestMode action =
     withWitnessConfig testWitnessConfig $ do
         _twcMempoolVar <- newMempoolVar
         _twcSDVars <- runRIO _twcLogging initSDActions
         _twcSDLock <- newSDLock
+        _twcKeys <- genStore (Just testCommitteeParams)
         let ctx = TestWitnessCtx{..}
-        runRIO ctx action
+        runRIO ctx $ do
+            applyGenesisBlock
+            action
   where
     _twcLogging = Logging
         { _log = \lvl _ txt ->
-            when (lvl == Warning || lvl == Error) $
+            when (lvl >= Warning) $
                 putTextLn $ "[" +|| lvl ||+ "] " +| txt |+ ""
         , _logName = pure (error "No logging name in tests")
         }

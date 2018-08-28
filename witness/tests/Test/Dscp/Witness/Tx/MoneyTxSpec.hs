@@ -1,4 +1,4 @@
-module Test.Dscp.Witness.TxSpec where
+module Test.Dscp.Witness.Tx.MoneyTxSpec where
 
 import Control.Lens (makeLenses, makeLensesWith, traversed)
 import Data.List (scanl1)
@@ -68,19 +68,16 @@ makeTxsChain n steps dat
             let steps' = steps & tcsInAcc %~ \f addr -> (f addr){ tiaNonce = i }
             in makeTx steps' dat
 
--- TODO: remove this once addTxToMempool throws error on validation fail (DSCP-209)
-ololo :: Monad m => m Bool -> m ()
-ololo action = action >>= bool (error "Lool") pass
 
--- TODO multiple transactions in a row
+applyTx :: WithinWriteSDLock => TxWitnessed -> WitnessTestMode ()
+applyTx tw = void $ addTxToMempool (GMoneyTxWitnessed tw)
 
 spec :: Spec
-spec = describe "Witness tx validation" $ do
-  describe "Money tx expansion + validation" $ do
+spec = describe "Money tx expansion + validation" $ do
     it "Correct tx is fine" $ witnessProperty_ $ do
         txData <- pick arbitrary
         let tx = makeTx properSteps txData
-        lift $ ololo $ addTxToMempool (GMoneyTxWitnessed tx)
+        lift $ applyTx tx
 
     describe "Transaction input part" $ do
         it "Bad nonce is not fine" $ witnessProperty $ do
@@ -88,7 +85,7 @@ spec = describe "Witness tx validation" $ do
             nonce <- pick $ arbitrary `suchThat` (/= 0)
             let steps = properSteps & tcsInAcc .~ \addr -> TxInAcc addr nonce
             let tx = makeTx steps txData
-            lift $ throwsSome $ ololo $ addTxToMempool (GMoneyTxWitnessed tx)
+            lift $ throwsSome $ applyTx tx
 
         it "Bad input address is not fine" $ witnessProperty $ do
             txData <- pick arbitrary
@@ -98,7 +95,7 @@ spec = describe "Witness tx validation" $ do
             let steps = properSteps
                     & tcsInAcc %~ \f addr -> (f addr){ tiaAddr = sourceAddr }
             let tx = makeTx steps txData
-            lift $ throwsSome $ ololo $ addTxToMempool (GMoneyTxWitnessed tx)
+            lift $ throwsSome $ applyTx tx
 
         it "Having not enough money is not fine" $ witnessProperty $ do
             txData' <- pick arbitrary
@@ -106,7 +103,7 @@ spec = describe "Witness tx validation" $ do
             let txData = txData'{ tdSecret = secret }
 
             let tx = makeTx properSteps txData
-            lift $ throwsSome $ ololo $ addTxToMempool (GMoneyTxWitnessed tx)
+            lift $ throwsSome $ applyTx tx
 
         it "Too high input is processed fine" $ witnessProperty $ do
             txData <- pick arbitrary
@@ -117,7 +114,7 @@ spec = describe "Witness tx validation" $ do
             let steps = properSteps
                     & tcsTx %~ \f inAcc _ outs -> f inAcc spent outs
             let tx = makeTx steps txData
-            lift $ throwsSome $ ololo $ addTxToMempool (GMoneyTxWitnessed tx)
+            lift $ throwsSome $ applyTx tx
 
         it "Can't spend more money than currently present" $ witnessProperty $ do
             txOuts' <- pick infiniteList
@@ -127,7 +124,7 @@ spec = describe "Witness tx validation" $ do
             let txOuts = Exts.fromList $ take manyEnough txOuts'
             txData <- pick $ arbitrary <&> \td -> td{ tdOuts = txOuts }
             let tx = makeTx properSteps txData
-            lift $ throwsSome $ ololo $ addTxToMempool (GMoneyTxWitnessed tx)
+            lift $ throwsSome $ applyTx tx
 
     describe "Transaction output part" $ do
         it "Empty transaction output is not fine" $ witnessProperty $ do
@@ -135,7 +132,7 @@ spec = describe "Witness tx validation" $ do
             let steps = properSteps
                     & tcsTx %~ \f inAcc inVal _ -> f inAcc inVal []
             let tx = makeTx steps txData
-            lift $ throwsSome $ ololo $ addTxToMempool (GMoneyTxWitnessed tx)
+            lift $ throwsSome $ applyTx tx
 
         it "Large outputs are fine" $ witnessProperty $ do
             -- large input value was already tested above, so we ignore
@@ -146,18 +143,15 @@ spec = describe "Witness tx validation" $ do
             let steps = properSteps
                     & tcsTx %~ \f inAcc _ outs -> f inAcc (maxBound @Coin) outs
             let tx = makeTx steps txData
-            lift $ throwsSome $ ololo $ addTxToMempool (GMoneyTxWitnessed tx)
+            lift $ throwsSome $ applyTx tx
 
     describe "Transaction signature" $ do
         it "Changing tx parts without updating signature fails" $ witnessProperty $ do
             txData <- pick arbitrary
             let saneTw = makeTx properSteps txData
-                saneTx = twTx saneTw
-            fakeTx <- pick arbitrary
-            mixTx <- pick $ arbitraryMixture saneTx fakeTx
-            pre (mixTx /= saneTx)
-            let mixTw = saneTw{ twTx = mixTx }
-            lift $ throwsSome $ ololo $ addTxToMempool (GMoneyTxWitnessed mixTw)
+            fakeTw <- pick arbitrary
+            mixTw <- pick $ arbitraryUniqueMixture saneTw fakeTw
+            lift $ throwsSome $ applyTx mixTw
 
     describe "Overall sanity" $ do
         it "Tx input < sum tx outs + eps => failure" $ witnessProperty $ do
@@ -167,7 +161,7 @@ spec = describe "Witness tx validation" $ do
                 steps = properSteps & tcsTx %~
                     \f inAcc _ outs -> f inAcc spent outs
                 tx = makeTx steps txData
-            lift $ throwsSome $ ololo $ addTxToMempool (GMoneyTxWitnessed tx)
+            lift $ throwsSome $ applyTx tx
 
     describe "State modifications are correct" $ do
         it "Several transactions and invalid nonce" $ witnessProperty $ do
@@ -176,10 +170,8 @@ spec = describe "Witness tx validation" $ do
             let txs = makeTxsChain txNum properSteps txData
             -- going to skip transaction before the last one
             let initTxs = init . Exts.fromList $ init txs
-            lift $ forM_ initTxs $ \tx ->
-                ololo $ addTxToMempool (GMoneyTxWitnessed tx)
-            lift $ throwsSome $
-                ololo $ addTxToMempool (GMoneyTxWitnessed (last txs))
+            lift $ forM_ initTxs applyTx
+            lift $ throwsSome $ applyTx (last txs)
 
         it "Several transactions exhausting account" $ witnessProperty $ do
             txData' <- pick arbitrary
@@ -188,5 +180,4 @@ spec = describe "Witness tx validation" $ do
                              (coinToInteger testGenesisAddressAmount * 3) `div` 4
                 txData = txData'{ tdOuts = one $ TxOut destination spentPerTx }
                 txs = makeTxsChain 2 properSteps txData
-            lift $ throwsSome $ forM_ txs $ \tx ->
-                ololo $ addTxToMempool (GMoneyTxWitnessed tx)
+            lift $ throwsSome $ forM_ txs applyTx

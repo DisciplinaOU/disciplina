@@ -1,6 +1,7 @@
 
 module Dscp.Witness.Mempool.Logic
     ( MempoolVar
+    , MempoolCtx
     , newMempoolVar
     , addTxToMempool
     , takeTxsMempool

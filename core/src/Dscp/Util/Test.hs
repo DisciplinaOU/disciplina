@@ -25,6 +25,7 @@ import Data.List (zipWith3)
 import qualified Data.Text.Buildable
 import Data.Typeable (typeRep)
 import Fmt ((+|), (+||), (|+), (||+))
+import qualified GHC.Exts as Exts
 import qualified GHC.Generics as G
 import GHC.Show (Show (show))
 import qualified Loot.Log as Log
@@ -33,8 +34,8 @@ import Test.QuickCheck as T (Arbitrary (..), Fixed (..), Gen, Property, Testable
                              conjoin, cover, elements, expectFailure, forAll, frequency,
                              infiniteList, ioProperty, label, listOf, listOf1, oneof, property,
                              sublistOf, suchThat, suchThatMap, vectorOf, (.&&.), (===), (==>))
-import Test.QuickCheck (sized)
-import qualified Test.QuickCheck as Q
+import Test.QuickCheck (shuffle, sized)
+import qualified Test.QuickCheck as Q (counterexample)
 import Test.QuickCheck.Arbitrary.Generic as T (genericArbitrary, genericShrink)
 import Test.QuickCheck.Gen (Gen (..))
 import Test.QuickCheck.Instances as T ()
@@ -108,6 +109,9 @@ takeSome :: [a] -> Gen (NonEmpty a)
 takeSome l = sized $ \n -> do
     k <- choose (1, n)
     return (take k l) `suchThatMap` nonEmpty
+
+shuffleNE :: NonEmpty a -> Gen (NonEmpty a)
+shuffleNE = fmap Exts.fromList . shuffle . toList
 
 -- | Create public key from seed
 mkPubKey :: Char -> PublicKey
@@ -218,6 +222,7 @@ aesonRoundtripProp =
 
 -- | Combines two objects, randomly borrowing a field from one of them for each
 -- field of the constructed object.
+-- Default implementation automatically combines product types.
 class ArbitraryMixture a where
     arbitraryMixture :: a -> a -> Gen a
     default arbitraryMixture
@@ -229,15 +234,25 @@ class ArbitraryMixture a where
 primitiveArbitraryMixture :: a -> a -> Gen a
 primitiveArbitraryMixture a b = elements [a, b]
 
-instance ArbitraryMixture [a] where
-    arbitraryMixture l1 l2 = do
-        selectors <- infiniteList
-        return $ zipWith3 bool l1 l2 selectors
+-- | Similar to 'arbitraryMixture', makes sure that mixture differs from the
+-- original entities.
+arbitraryUniqueMixture :: (ArbitraryMixture a, Eq a) => a -> a -> Gen a
+arbitraryUniqueMixture a b =
+    arbitraryMixture a b `suchThat` \r -> r /= a && r /= b
+
+instance ArbitraryMixture a => ArbitraryMixture [a] where
+    arbitraryMixture l1 l2 = forM (zip l1 l2) $ uncurry arbitraryMixture
+
+instance ArbitraryMixture a => ArbitraryMixture (Maybe a) where
+    arbitraryMixture (Just a) (Just b) = Just <$> arbitraryMixture a b
+    arbitraryMixture _        _        = pure Nothing
 
 instance ArbitraryMixture Integer where
     arbitraryMixture = primitiveArbitraryMixture
+instance ArbitraryMixture Word32 where
+    arbitraryMixture = primitiveArbitraryMixture
 
--- | Helps to automatically derive 'ArbitraryMixture' for sum types.
+-- | Helps to automatically derive 'ArbitraryMixture' for product types.
 class GArbitraryMixture (rep :: * -> *) where
     gArbitraryMixture :: rep p -> rep p -> Gen (rep p)
 

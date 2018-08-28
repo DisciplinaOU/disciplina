@@ -145,10 +145,6 @@ instance Arbitrary PublicationTx where
     arbitrary = genericArbitrary
     shrink    = genericShrink
 
-instance Arbitrary GTxWitnessed where
-    arbitrary = genericArbitrary
-    shrink    = genericShrink
-
 instance Arbitrary PublicationTxWitness where
     arbitrary = genericArbitrary
     shrink    = genericShrink
@@ -156,6 +152,35 @@ instance Arbitrary PublicationTxWitness where
 instance Arbitrary PublicationTxWitnessed where
     arbitrary = genericArbitrary
     shrink    = genericShrink
+
+instance ArbitraryMixture (AbstractSK ss) where
+    arbitraryMixture = primitiveArbitraryMixture
+instance ArbitraryMixture (AbstractPK ss) where
+    arbitraryMixture = primitiveArbitraryMixture
+instance ArbitraryMixture (AbstractSig ss a) where
+    arbitraryMixture = primitiveArbitraryMixture
+instance ArbitraryMixture (AbstractHash ss a) where
+    arbitraryMixture = primitiveArbitraryMixture
+instance ArbitraryMixture Address where
+    arbitraryMixture = primitiveArbitraryMixture
+instance ArbitraryMixture Nonce where
+    arbitraryMixture = primitiveArbitraryMixture
+instance ArbitraryMixture Coin where
+    arbitraryMixture = primitiveArbitraryMixture
+instance ArbitraryMixture ATGDelta where
+    arbitraryMixture = primitiveArbitraryMixture
+instance ArbitraryMixture (MerkleSignature a) where
+    arbitraryMixture = primitiveArbitraryMixture
+
+instance ArbitraryMixture TxInAcc
+instance ArbitraryMixture TxOut
+instance ArbitraryMixture Tx
+instance ArbitraryMixture TxWitness
+instance ArbitraryMixture TxWitnessed
+instance ArbitraryMixture PrivateBlockHeader
+instance ArbitraryMixture PublicationTx
+instance ArbitraryMixture PublicationTxWitness
+instance ArbitraryMixture PublicationTxWitnessed
 
 ---------------------------------------------------------------------
 -- Test case input

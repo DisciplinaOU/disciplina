@@ -40,6 +40,7 @@ module Dscp.Util
        , fromHex
 
          -- * Lenses
+       , _tailNE
        , postfixLFields
 
          -- * Ids for databases
@@ -225,6 +226,9 @@ fromHex    = fromBase Base16
 -----------------------------------------------------------
 -- Lens fun
 -----------------------------------------------------------
+
+_tailNE :: Lens' (NonEmpty a) [a]
+_tailNE f (x :| l) = (x :| ) <$> f l
 
 -- | For datatype with "myNyan" field it will create "myNyanL" lens.
 postfixLFields :: LensRules
