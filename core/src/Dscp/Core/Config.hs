@@ -32,7 +32,6 @@ import Data.Reflection (Given (..), give)
 import Loot.Config ((:::), (::<), ConfigKind (Final, Partial), ConfigRec, option, sub)
 
 import Dscp.Config (giveL, giveLC)
-import Dscp.Config.AppDir (AppDirectoryParam (..), prepareAppDir)
 import Dscp.Core.Foundation
 import Dscp.Core.Genesis
 import Dscp.Crypto (hash)
@@ -51,13 +50,11 @@ newtype SlotDuration = SlotDuration { unSlotDuration :: Word64 }
 
 type CoreConfig =
    '[ "core" ::<
-       '[ "homeParam" ::: AppDirectoryParam
-        , "genesis" ::: GenesisConfig
+       '[ "genesis" ::: GenesisConfig
         , "slotDuration" ::: SlotDuration
 
         , "generated" ::<
             '[ "genesisInfo" ::: GenesisInfo
-             , "home" ::: FilePath
              ]
         ]
     ]
@@ -81,13 +78,8 @@ withCoreConfig = give
 fillCoreConfig :: CoreConfigRecP -> IO CoreConfigRecP
 fillCoreConfig conf = do
     -- TODO make deep lenses that will fail automatically
-    dirPath <-
-        prepareAppDir $
-        fromMaybe (error "'core.homeParam' is absent") $
-        conf ^. sub #core . option #homeParam
     pure $
         conf & sub #core . sub #generated . option #genesisInfo ?~ ourGenesisInfo
-             & sub #core . sub #generated . option #home ?~ dirPath
   where
     ourGenesisInfo :: GenesisInfo
     ourGenesisInfo =

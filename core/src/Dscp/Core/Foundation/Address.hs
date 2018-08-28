@@ -23,6 +23,8 @@ data Address = Address
     { addrHash :: !(Hash PublicKey)
     } deriving (Eq, Ord, Show, Generic)
 
+instance Hashable Address
+
 -- | Address constructor from public key.
 mkAddr :: PublicKey -> Address
 mkAddr = Address . hash

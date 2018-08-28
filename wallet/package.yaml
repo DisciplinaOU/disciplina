@@ -22,6 +22,7 @@ library:
     - disciplina-core
     - disciplina-witness
     - filelock
+    - filepath
     - ii-extras
     - knit
     - lens

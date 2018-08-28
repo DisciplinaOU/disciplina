@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
 
+# Launches a single node, be it witness, educator or other one,
+# with predefined parameters.
+
 set -e -o pipefail
 
 # directory with script
 base=$(dirname "$0")
 # project root
 root="$base/../.."
+
 
 ##################
 # Parsing params
@@ -58,6 +62,7 @@ educator_params="
 
 # witness params (and educator's as well)
 witness_params="
+--appdir ./tmp/
 --config ./configuration.yaml
 --config-key demo
 --bind 127.0.0.1:4010:4011
@@ -66,10 +71,12 @@ witness_params="
 --witness-listen $witness_web_addr
 --witness-keyfile $tmp_files/witness.key
 --witness-gen-key
+--metrics-server 127.0.0.1:8125
 "
 
 # parameters for faucet
 faucet_params="
+--appdir ./tmp/
 --faucet-listen 127.0.0.1:8095
 --witness-backend $witness_web_addr
 --translated-amount 20

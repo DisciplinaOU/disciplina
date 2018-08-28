@@ -30,8 +30,8 @@ let
 
   ghc = haskell.compiler.ghc822;
 
-  overrides = 
-    final: previous: 
+  overrides =
+    final: previous:
     let overridingSet = (super: with final; {
           configureFlags = [ "--ghc-option=-Werror" ];
           doCheck = true;
@@ -41,7 +41,7 @@ let
             cp ${src}/configuration.yaml $_
             find ${src}/specs -name '*.yaml' -exec cp '{}' $out/share/disciplina/specs \;
           '';
-        }); 
+        });
         overrideModule = prev: overrideCabal prev (overridingSet final);
     in {
       rocksdb-haskell = dependCabal previous.rocksdb-haskell [ rocksdb ];
@@ -50,8 +50,8 @@ let
 in
   dscp-packages // {
   disciplina-faucet-frontend = pkgs.callPackage ./faucet/frontend {};
-  disciplina-bin = pkgs.runCommandNoCC "disciplina-bin-${dscp-packages.disciplina-core.version}" {}
-  ''
+  disciplina-wallet = haskell.lib.justStaticExecutables dscp-packages.disciplina-wallet;
+  disciplina-bin = pkgs.runCommandNoCC "disciplina-bin-${dscp-packages.disciplina-core.version}" {} ''
     mkdir $out
     ${pkgs.rsync}/bin/rsync -Labu --no-perms --exclude lib/ --exclude propagated-build-inputs --inplace \
       ${lib.concatMapStringsSep " " (f: "${f}/") (builtins.attrValues dscp-packages)} $out/

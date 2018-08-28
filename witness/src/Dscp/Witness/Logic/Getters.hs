@@ -22,8 +22,9 @@ module Dscp.Witness.Logic.Getters
 
 import Control.Lens (ix)
 import Loot.Base.HasLens (lensOf)
+import qualified Snowdrop.Block as SD
 import qualified Snowdrop.Core as SD
-import qualified Snowdrop.Model.Block as SD
+import qualified Snowdrop.Execution as SD
 import qualified Snowdrop.Util as SD
 
 import Dscp.Core
@@ -52,7 +53,7 @@ getTipBlock = do
     tipHash <- getTipHash
     if tipHash == genesisHash
     then pure genesisBlock
-    else sBlockReconstruct . SD.buBlock <$>
+    else sBlockReconstruct <$>
          (maybe (SD.throwLocalError $ LEMalformed "Tip block is absent") pure =<<
           SD.queryOne (SD.BlockRef tipHash))
 
@@ -65,7 +66,7 @@ getBlockMaybe :: (HasWitnessConfig, HasHeaderHash x) => x -> SdM (Maybe Block)
 getBlockMaybe (headerHash -> h)
     | h == genesisHash = pure $ Just genesisBlock
     | otherwise =
-          fmap (sBlockReconstruct . SD.buBlock) <$>
+          sBlockReconstruct <<$>>
           SD.queryOne (SD.BlockRef h)
 
 -- | Resolves block, throws exception if it's absent.
@@ -102,7 +103,7 @@ resolvePrevious o = do
 -- | Safely get an account.
 getAccountMaybe :: WitnessWorkMode ctx m => Address -> m (Maybe Account)
 getAccountMaybe =
-    runStateSdMRead (RememberForProof False) . SD.queryOne . AccountId
+    runStateSdMRead (SD.RememberForProof False) . SD.queryOne . AccountId
 
 -- | Safely get an account taking mempool into consideration.
 getMempoolAccountMaybe

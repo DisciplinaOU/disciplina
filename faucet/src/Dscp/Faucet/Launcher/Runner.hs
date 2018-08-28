@@ -10,7 +10,7 @@ import Dscp.Faucet.Launcher.Mode
 import Dscp.Faucet.Launcher.Params
 import Dscp.Faucet.Launcher.Resource
 import Dscp.Faucet.Variables
-import Dscp.Launcher.Rio (runRIO)
+import Dscp.Rio (runRIO)
 import Dscp.Resource.Class (AllocResource (..), InitParams (..))
 import Dscp.Resource.Functions
 

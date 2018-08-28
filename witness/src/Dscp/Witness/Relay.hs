@@ -20,7 +20,7 @@ import Dscp.Util.Concurrent.NotifyWait
 data RelayState = RelayState
     { _rsInput  :: STM.TBQueue (GTxWitnessed, Notifier "tx in mempool")
     , _rsPipe   :: STM.TBQueue GTxWitnessed
-    , _rsFailed :: TVar (HashMap (Hash GTxWitnessed) GTxWitnessed)
+    , _rsFailed :: TVar (HashMap (Hash GTxWitnessed) (GTxWitnessed, SomeException))
     }
 
 makeLenses ''RelayState

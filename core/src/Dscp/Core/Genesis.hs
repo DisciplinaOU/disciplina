@@ -121,7 +121,7 @@ formGenesisInfo GenesisConfig{..} =
         payload = BlockBody [initTx]
 
         prevHash = unsafeHash (gcGenesisSeed :: Text)
-        toSign = BlockToSign 0 0 prevHash payload
+        toSign = BlockToSign 0 0 prevHash (hash payload)
         header = Header { hSignature = sign sk toSign
                         , hIssuer = pk
                         , hSlotId = 0

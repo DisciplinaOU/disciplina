@@ -29,7 +29,9 @@ import Dscp.Educator.Web.Params (EducatorWebParams (..))
 import Dscp.Educator.Web.Student (GetStudentsAction (..), ProtectedStudentAPI,
                                   convertStudentApiHandler, studentAPI, studentApiHandlers)
 import Dscp.Resource.Keys (KeyResources, krPublicKey)
+import Dscp.Util.Servant (responseTimeMetric)
 import Dscp.Web (ServerParams (..), serveWeb)
+import Dscp.Witness.Launcher.Params (WitnessParams, wpMetricsEndpoint)
 import Dscp.Witness.Web
 
 type EducatorWebAPI =
@@ -103,7 +105,9 @@ serveEducatorAPIsReal withWitnessApi EducatorWebParams{..} = do
     let witnessApiServer = if withWitnessApi
           then mkWitnessAPIServer (convertWitnessHandler unliftIO)
           else throwAll err405{ errBody = "Witness API disabled at this port" }
+    params <- view (lensOf @WitnessParams)
     serveWeb spAddr $
+      responseTimeMetric (wpMetricsEndpoint params) $
       educatorCors $
       serveWithContext (Proxy @EducatorWebAPI) srvCtx $
          educatorApiServer

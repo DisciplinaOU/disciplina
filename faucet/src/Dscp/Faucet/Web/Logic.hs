@@ -75,8 +75,8 @@ faucetTransferMoneyTo dest = do
             witness = TxWitness{ txwSig = sgn, txwPk = pk }
             txWitnessed = TxWitnessed{ twTx = tx, twWitness = witness }
 
-        unless (dryRun) $
-            wSubmitTxAsync wc txWitnessed
+        unless dryRun $
+            void $ wSubmitTx wc txWitnessed
 
         return TransferMoneyResponse
             { tmrTxId = AsByteString txId

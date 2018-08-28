@@ -10,14 +10,14 @@ import qualified Data.List as List
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 
-import Snowdrop.Core (ChgAccum, ChgAccumCtx, ERoComp, Expander (..), SeqExpanders (..), StateTx,
+import qualified Snowdrop.Block as SD
+import Snowdrop.Core (ChgAccum, ChgAccumCtx, ERoComp, Expander (..), SeqExpanders (..),
                       StateTxType (..), ValueOp (..), mkDiffCS, queryOne)
-import qualified Snowdrop.Model.Block as SD
-import Snowdrop.Model.Expander (expandUnionRawTxs)
-import Snowdrop.Model.State.Restrict (RestrictCtx)
+import Snowdrop.Execution (RestrictCtx, expandUnionRawTxs)
 import Snowdrop.Util
 
 import Dscp.Core.Foundation
+import Dscp.Crypto (hash)
 import Dscp.Snowdrop.Configuration hiding (PublicationTxWitness)
 import qualified Dscp.Snowdrop.Configuration as Conf (Proofs (..))
 import Dscp.Snowdrop.Storage.Types
@@ -37,7 +37,7 @@ expandBlock ::
     -> ERoComp Exceptions Ids Values ctx SBlock
 expandBlock Block{..} = do
     stateTxs <- expandGTxs (bbTxs bBody)
-    pure $ SD.Block bHeader (SPayload stateTxs bBody)
+    pure $ SD.Block bHeader (SPayload stateTxs $ hash bBody)
 
 -- | Expand list of global txs.
 expandGTxs ::
@@ -46,7 +46,7 @@ expandGTxs ::
        , HasLens ctx (ChgAccumCtx ctx)
        )
     => [GTxWitnessed]
-    -> ERoComp Exceptions Ids Values ctx [StateTx Ids Proofs Values]
+    -> ERoComp Exceptions Ids Values ctx [SStateTx]
 expandGTxs txs = expandUnionRawTxs getByGTx txs
 
 -- | Expand list of global txs.
@@ -56,7 +56,7 @@ expandGTx ::
        , HasLens ctx (ChgAccumCtx ctx)
        )
     => GTxWitnessed
-    -> ERoComp Exceptions Ids Values ctx (StateTx Ids Proofs Values)
+    -> ERoComp Exceptions Ids Values ctx SStateTx
 expandGTx txs =
     expandUnionRawTxs getByGTx [txs] >>= \case
         [expanded] -> return expanded
@@ -79,8 +79,8 @@ getByGTx t = case t of
 toProofPublicationTx :: PublicationTxWitnessed -> (StateTxType, Proofs)
 toProofPublicationTx (PublicationTxWitnessed tx (PublicationTxWitness {..})) =
     (txType, Conf.PublicationTxWitness $ WithSignature
-        { wsSignature = pwSig
-        , wsPublicKey = pwPk
+        { wsSignature = toDscpSig pwSig
+        , wsPublicKey = toDscpPK pwPk
         , wsBody = (toPtxId tx, pwPk, Publication prev new)
         })
   where
@@ -124,9 +124,9 @@ toProofBalanceTx (TxWitnessed tx (TxWitness {..})) =
     (txType, AddressTxWitness $ WithSignature {..})
   where
     txType = StateTxType $ getId (Proxy @TxIds) AccountTxTypeId
-    wsSignature = txwSig
-    wsPublicKey = txwPk
-    wsBody = (toTxId tx, wsPublicKey, ())
+    wsSignature = toDscpSig txwSig
+    wsPublicKey = toDscpPK txwPk
+    wsBody = (toTxId tx, txwPk, ())
 
 seqExpandersBalanceTx :: SeqExpanders Exceptions Ids Proofs Values ctx TxWitnessed
 seqExpandersBalanceTx =

@@ -7,7 +7,7 @@ import Loot.Network.Class (NetworkingCli (..), NetworkingServ (..))
 import Loot.Network.ZMQ (ZTGlobalEnv, ZTNetCliEnv, ZTNetServEnv, ZmqTcp)
 import qualified Loot.Network.ZMQ.Instance as Z
 
-import Dscp.Launcher.Rio (RIO)
+import Dscp.Rio (RIO)
 
 
 instance (HasLens' ctx ZTGlobalEnv, HasLens' ctx ZTNetCliEnv) =>
