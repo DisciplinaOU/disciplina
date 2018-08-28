@@ -9,6 +9,7 @@ module Dscp.Witness.Launcher.Resource
        , wrNetwork
        , wrKey
        , wrAppDir
+       , WitnessNode
        ) where
 
 import Loot.Log (MonadLogging)

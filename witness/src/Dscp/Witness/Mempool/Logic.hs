@@ -20,7 +20,6 @@ import Loot.Log (MonadLogging)
 
 import qualified Snowdrop.Core as SD
 import qualified Snowdrop.Execution as Pool
-import qualified Snowdrop.Execution as AVLP
 import qualified Snowdrop.Util as SD
 
 import Dscp.Core.Config
@@ -109,7 +108,7 @@ readFromMempool
 readFromMempool pool action = do
     actions <- view (lensOf @SD.SDVars)
     logger  <- view (lensOf @SD.LoggingIO)
-    let dbActions = sdActionsComposition (AVLP.RememberForProof False) actions
+    let dbActions = sdActionsComposition actions
     SD.runRIO logger $
         SD.unwrapSDBaseRethrow $
         Pool.actionWithMempool pool dbActions $ SD.liftERoComp action
@@ -123,7 +122,7 @@ writeToMempool
 writeToMempool pool action = do
     actions <- view (lensOf @SD.SDVars)
     logger  <- view (lensOf @SD.LoggingIO)
-    let dbActions = sdActionsComposition (AVLP.RememberForProof False) actions
+    let dbActions = sdActionsComposition actions
     SD.runRIO logger $
         SD.unwrapSDBaseRethrow $
         Pool.actionWithMempool pool dbActions action

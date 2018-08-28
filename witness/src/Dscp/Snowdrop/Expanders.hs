@@ -12,7 +12,7 @@ import qualified Data.Set as Set
 
 import qualified Snowdrop.Block as SD
 import Snowdrop.Core (ChgAccum, ChgAccumCtx, ERoComp, Expander (..), SeqExpanders (..),
-                      StateTxType (..), ValueOp (..), mkDiffCS, queryOne)
+                      StateTxType (..), ValueOp (..), mkDiffCS, queryOne, queryOneExists)
 import Snowdrop.Execution (RestrictCtx, expandUnionRawTxs)
 import Snowdrop.Util
 
@@ -122,7 +122,9 @@ seqExpandersPublicationTx feesReceiverAddr (Fees minFee) =
             let (prevHashM :: Maybe PrivateHeaderHash) =
                     prevHash <$ guard (prevHash /= genesisHeaderHash)
 
-            when (prevHash == phHash) $
+            headerWasEarlier <- queryOneExists (PublicationHead phHash)
+            let headerIsLast = prevHash == phHash
+            when (headerWasEarlier || headerIsLast) $
                 throwLocalError PublicationLocalLoop
 
             let feeAmount = fromIntegral $ coinToInteger ptFeesAmount

@@ -25,7 +25,7 @@ import Dscp.Util.Concurrent.NotifyWait
 import Dscp.Util.Timing
 import Dscp.Web.Metrics
 import Dscp.Witness.Config
-import Dscp.Witness.Launcher.Mode
+import Dscp.Witness.Launcher.Context
 import Dscp.Witness.Logic
 import Dscp.Witness.Mempool
 import Dscp.Witness.Messages

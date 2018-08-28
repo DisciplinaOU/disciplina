@@ -7,7 +7,7 @@ module Dscp.Witness.Listeners.Listener
     ) where
 
 import qualified Control.Concurrent.STM as STM
-import Fmt ((+|), (|+))
+import Fmt ((+|), (+||), (|+), (||+))
 import Time (sec)
 
 import Loot.Base.HasLens (HasLens (..))
@@ -19,8 +19,7 @@ import Dscp.Resource.Keys (ourPublicKey)
 import Dscp.Snowdrop
 import Dscp.Util.Timing
 import Dscp.Witness.Config
-import Dscp.Witness.Launcher.Marker
-import Dscp.Witness.Launcher.Mode
+import Dscp.Witness.Launcher.Context
 import Dscp.Witness.Logic
 import Dscp.Witness.Messages
 import Dscp.Witness.Relay
@@ -59,11 +58,11 @@ blockIssuingListener =
         issueBlock slotId = do
             (block, proof) <-
                 writingSDLock "create & apply block" $ do
-                    block <- createBlock slotId
+                    block <- createBlock runSdM slotId
                     logInfo $ "Created a new block: \n" +| block |+ ""
                     proof <- applyBlock block
                     return (block, proof)
-            logInfo $ "Applied block, proof: " +| proof |+ ", propagating"
+            logInfo $ "Applied block, proof: " +|| proof ||+ ", propagating"
             atomically $ servPub btq (PubBlock block)
 
 ----------------------------------------------------------------------------

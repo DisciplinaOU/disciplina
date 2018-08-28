@@ -10,13 +10,14 @@ module Dscp.Witness.Launcher.Runner
 import Loot.Config (option, sub)
 import Loot.Log (MonadLogging)
 
+import Dscp.DB.CanProvideDB.Rocks as Rocks
 import Dscp.Resource.Class (AllocResource (..), InitParams (..))
 import Dscp.Resource.Functions
 import Dscp.Resource.Keys (krPublicKey)
 import Dscp.Rio (runRIO)
 import Dscp.Snowdrop.Actions (initSDActions)
 import Dscp.Witness.Config
-import Dscp.Witness.Launcher.Mode
+import Dscp.Witness.Launcher.Context (WitnessContext (..), WitnessRealMode)
 import Dscp.Witness.Launcher.Resource (WitnessResources (..), wrKey)
 import Dscp.Witness.Mempool (newMempoolVar)
 import qualified Dscp.Witness.Relay as Relay
@@ -28,16 +29,18 @@ formWitnessContext
     => WitnessResources
     -> m WitnessContext
 formWitnessContext _wcResources = do
-    _wcMempool    <- newMempoolVar $ _wcResources^.wrKey.krPublicKey
-    _wcSDActions  <- initSDActions
-    _wcRelayState <- Relay.newRelayState
-    _wcSDLock     <- Lock.newSDLock
+    _wcMempool     <- newMempoolVar $ _wcResources^.wrKey.krPublicKey
+    let _wcDBPlugin = Rocks.plugin $ _wrDB _wcResources
+    _wcSDActions   <- liftIO $ runReaderT initSDActions _wcDBPlugin
+    _wcRelayState  <- Relay.newRelayState
+    _wcSDLock      <- Lock.newSDLock
     pure $ WitnessContext
         { _wcResources
         , _wcMempool
         , _wcSDActions
         , _wcRelayState
         , _wcSDLock
+        , _wcDBPlugin
         }
 
 -- | Given params, allocate resources, construct node context and run

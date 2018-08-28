@@ -11,7 +11,7 @@ import Servant
 import Servant.Generic (AsServerT, toServant)
 
 import Dscp.Core
-import Dscp.Witness.Launcher.Mode
+import Dscp.Witness.Launcher.Context
 import Dscp.Witness.Web.API
 import Dscp.Witness.Web.Logic
 

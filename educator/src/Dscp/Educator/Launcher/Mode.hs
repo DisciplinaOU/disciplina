@@ -18,9 +18,10 @@ module Dscp.Educator.Launcher.Mode
     ) where
 
 import Control.Lens (makeLenses)
-import Loot.Base.HasLens (HasLens')
+import Loot.Base.HasLens (HasLens', HasLens (..))
 
 import Dscp.DB.SQLite (SQLiteDB)
+import Dscp.DB.CanProvideDB as DB
 import Dscp.Educator.Config (HasEducatorConfig, withEducatorConfig)
 import Dscp.Educator.Launcher.Marker (EducatorNode)
 import Dscp.Educator.Launcher.Resource (EducatorResources)
@@ -43,6 +44,7 @@ type EducatorWorkMode ctx m =
 
     , MonadReader ctx m
 
+    , HasLens' ctx DB.Plugin
     , HasLens' ctx SQLiteDB
     , HasLens' ctx (KeyResources EducatorNode)
     , MonadThrow m
@@ -77,6 +79,10 @@ deriveHasLens 'ecResources ''EducatorContext ''EducatorResources
 deriveHasLens 'ecWitnessCtx ''EducatorContext ''W.WitnessResources
 deriveHasLens 'ecWitnessCtx ''EducatorContext ''W.WitnessVariables
 deriveHasLens 'ecWitnessCtx ''EducatorContext ''NetServResources
+
+-- I get weird errors from 'deriveHasLens' when I'm tryng to derive it
+instance HasLens DB.Plugin EducatorContext DB.Plugin where
+    lensOf = (lensOf @W.WitnessContext) . (lensOf @DB.Plugin)
 
 ----------------------------------------------------------------------------
 -- Sanity check

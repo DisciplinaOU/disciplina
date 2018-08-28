@@ -1,3 +1,4 @@
+-- | Memory pool.
 
 module Dscp.Witness.Mempool.Type
     ( Mempool(..)
@@ -8,20 +9,18 @@ module Dscp.Witness.Mempool.Type
     ) where
 
 import Control.Lens (makeLenses)
+import qualified Snowdrop.Execution as Pool
 
 import Dscp.Core.Foundation (GTxWitnessed)
 import Dscp.Snowdrop.Configuration
-
 import qualified Dscp.Snowdrop.IOCtx as SD
-
+import Dscp.Snowdrop.Storage.Avlp as Avlp
 import Dscp.Witness.AVL (AvlHash)
-import qualified Snowdrop.Execution as AVLP
-import qualified Snowdrop.Execution as Pool
 
 type ChgAccum =
     Pool.CompositeChgAccum
         (Pool.SumChangeSet Ids Values)
-        (AVLP.AVLChgAccum AvlHash Ids Values)
+        (Avlp.AVLChgAccum AvlHash Ids Values)
         BlockPlusAVLComposition
 
 type MempoolVar = Mempool (SD.IOCtx ChgAccum)

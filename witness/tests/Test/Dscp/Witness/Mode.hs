@@ -3,7 +3,7 @@
 {-# LANGUAGE OverloadedLists  #-}
 
 module Test.Dscp.Witness.Mode
-    ( WitnessTestMode
+    ( WitnessTestMode'
     , witnessProperty
 
     , testGenesisSecrets
@@ -33,6 +33,8 @@ import Dscp.Util
 import Dscp.Util.Test
 import Dscp.Web.Metrics
 import Dscp.Witness
+import Dscp.DB.CanProvideDB as DB
+import Dscp.DB.CanProvideDB.Pure as Pure
 
 ----------------------------------------------------------------------------
 -- Test witness mode
@@ -45,6 +47,7 @@ data TestWitnessCtx = TestWitnessCtx
     , _twcLogging    :: Logging IO
     , _twcKeys       :: KeyResources WitnessNode
     , _twcRelayState :: RelayState
+    , _twcPureDB     :: DB.Plugin
     }
 
 makeLenses ''TestWitnessCtx
@@ -60,8 +63,9 @@ GenHasLens(Logging IO, twcLogging)
 GenHasLens(KeyResources WitnessNode, twcKeys)
 GenHasLens(RelayState, twcRelayState)
 GenHasLens(MetricsEndpoint, seeOnly (MetricsEndpoint Nothing))
+GenHasLens(DB.Plugin, twcPureDB)
 
-type WitnessTestMode = RIO TestWitnessCtx
+type WitnessTestMode' = RIO TestWitnessCtx
 
 ----------------------------------------------------------------------------
 -- Configuration
@@ -133,15 +137,18 @@ testWitnessConfig =
 -- Runner
 ----------------------------------------------------------------------------
 
-runWitnessTestMode :: WitnessTestMode a -> IO a
+runWitnessTestMode :: WitnessTestMode' a -> IO a
 runWitnessTestMode action =
     withWitnessConfig testWitnessConfig $ runRIO _twcLogging $ do
-        _twcSDVars <- initSDActions
-        _twcSDLock <- newSDLock
+        _twcPureDB     <- Pure.plugin <$> liftIO Pure.newCtxVar
+        _twcSDVars     <- initSDActions `runReaderT` _twcPureDB
+        _twcSDLock     <- newSDLock
         _twcRelayState <- newRelayState
-        _twcKeys <- genStore (Just $ CommitteeParamsOpen 0)
+        _twcKeys       <- genStore (Just $ CommitteeParamsOpen 0)
         _twcMempoolVar <- newMempoolVar (_krPublicKey _twcKeys)
+
         let ctx = TestWitnessCtx{..}
+
         runRIO ctx $ do
             markWithinWriteSDLockUnsafe applyGenesisBlock
             action
@@ -155,7 +162,7 @@ runWitnessTestMode action =
 
 witnessProperty
     :: Testable prop
-    => ((HasWitnessConfig, WithinWriteSDLock) => PropertyM WitnessTestMode prop)
+    => ((HasWitnessConfig, WithinWriteSDLock) => PropertyM WitnessTestMode' prop)
     -> Property
 witnessProperty action =
     -- Note on 'execUnmasked': for some reason, tests are run under 'mask'.

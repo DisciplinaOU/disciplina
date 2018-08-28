@@ -27,13 +27,13 @@ extra-deps:
 - serialise-0.2.1.0
 
 - git: https://github.com/serokell/auth-data-structures.git
-  commit: f9a0cd66f443d7b0e04a3c8ae8d475f8344b823b
+  commit: 4a95f4dd32a82195f49ceb0113c9f05bc260ca7d
 
 - git: https://github.com/serokell/direct-sqlite.git
   commit: 333a2b2cf113e115ea2ec450dc706d3f47ee54e4
 
 - git: https://github.com/serokell/blockchain-util.git
-  commit: 4d8e26e7f1f00449082444ebcdf8ecd6bf422843 # dscp/release-alpha
+  commit: acf7fb3ad3a96739beb7282e01e89f1ff44db3af # volhovm/dscp193
   subdirs:
     - snowdrop-core
     - snowdrop-util
