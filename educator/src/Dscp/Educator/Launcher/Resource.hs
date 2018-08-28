@@ -15,6 +15,7 @@ import Dscp.DB.SQLite (SQLiteDB)
 import Dscp.Educator.Config (HasEducatorConfig)
 import Dscp.Educator.Launcher.Marker (EducatorNode)
 import Dscp.Educator.Launcher.Params (EducatorKeyParams (..), EducatorParams (..))
+import Dscp.Resource.AppDir
 import Dscp.Resource.Class (AllocResource (..), buildComponentR)
 import Dscp.Resource.Keys (KeyResources (..), linkStore)
 import Dscp.Resource.SQLite ()
@@ -47,15 +48,16 @@ instance HasLens ZTNetServEnv EducatorResources ZTNetServEnv where
     lensOf = erWitnessResources . lensOf @ZTNetServEnv
 
 instance HasEducatorConfig =>
-         AllocResource EducatorKeyParams (KeyResources EducatorNode) where
-    allocResource (EducatorKeyParams baseParams) =
+         AllocResource (EducatorKeyParams, AppDir) (KeyResources EducatorNode) where
+    allocResource (EducatorKeyParams baseParams, appDir) =
         buildComponentR "educator keys"
-            (linkStore baseParams Nothing)
+            (linkStore baseParams Nothing appDir)
             (\_ -> pass)
 
 instance HasEducatorConfig => AllocResource EducatorParams EducatorResources where
     allocResource EducatorParams{..} = do
         _erWitnessResources <- allocResource epWitnessParams
         _erDB <- allocResource epDBParams
-        _erKeys <- allocResource epKeyParams
+        let appDir = Witness._wrAppDir _erWitnessResources
+        _erKeys <- allocResource (epKeyParams, appDir)
         return EducatorResources {..}

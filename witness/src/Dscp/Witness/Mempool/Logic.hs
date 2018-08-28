@@ -12,22 +12,21 @@ module Dscp.Witness.Mempool.Logic
     , onlyLostTxs
     ) where
 
-import Control.Monad.Except (catchError)
 import UnliftIO (MonadUnliftIO)
 
 import qualified Data.Set as S
 import Loot.Base.HasLens (HasLens', lensOf)
 
 import qualified Snowdrop.Core as SD
-import qualified Snowdrop.Model.Execution as SD (dmaAccessActions)
-import qualified Snowdrop.Model.Mempool as Pool
+import qualified Snowdrop.Execution as SD (dmaAccessActions)
+import qualified Snowdrop.Execution as Pool
+import qualified Snowdrop.Execution as AVLP
 import qualified Snowdrop.Util as SD
 
 import Dscp.Core.Foundation (GTxWitnessed)
 import Dscp.Core.Foundation.Witness
 import qualified Dscp.Snowdrop as SD
 import Dscp.Snowdrop.Configuration (Exceptions, Ids, Values)
-import qualified Dscp.Snowdrop.Storage.Avlp as AVLP
 import Dscp.Witness.Mempool.Type
 import Dscp.Witness.SDLock
 
@@ -36,7 +35,7 @@ type MempoolCtx ctx m =
     , MonadUnliftIO   m
     , MonadReader ctx m
     , HasLens' ctx MempoolVar
-    , HasLens' ctx SD.SDActions
+    , HasLens' ctx SD.SDVars
     , HasLens' ctx SD.LoggingIO
     )
 
@@ -51,14 +50,11 @@ addTxToMempool
     :: forall ctx m
     .  (MempoolCtx ctx m, WithinWriteSDLock)
     => GTxWitnessed
-    -> m Bool
+    -> m ()
 addTxToMempool tx = do
     Mempool pool conf <- view (lensOf @MempoolVar)
     writeToMempool @ctx pool $ do
         Pool.processTxAndInsertToMempool conf tx
-        return True
-      `catchError` \_ -> do
-        return False
 
 -- | Take all mempool transactions, leaving it empty.
 takeTxsMempool
@@ -95,30 +91,31 @@ type SDM =
         Exceptions
         Ids
         Values
-        (SD.IOCtx (AVLP.AVLChgAccum Ids Values))
+        (SD.IOCtx ChgAccum)
         (Pool.MempoolState
             Ids
             Values
-            (AVLP.AVLChgAccum Ids Values)
+            ChgAccum
             GTxWitnessed)
 
 readFromMempool
     :: forall ctx m a
     .  (MempoolCtx ctx m, WithinReadSDLock)
-    => Pool.Mempool Ids Values (AVLP.AVLChgAccum Ids Values) GTxWitnessed
+    => Pool.Mempool Ids Values ChgAccum GTxWitnessed
     -> SDM a
     -> m a
 readFromMempool pool action = do
-    actions <- view (lensOf @SD.SDActions)
+    actions <- view (lensOf @SD.SDVars)
     logger  <- view (lensOf @SD.LoggingIO)
     let dbActions = SD.dmaAccessActions $ SD.nsStateDBActions actions (AVLP.RememberForProof False)
     SD.runRIO logger $
+        SD.unwrapSDBaseRethrow $
         Pool.actionWithMempool pool dbActions action
 
 readFromMempoolLocked
     :: forall ctx m a
     .  MempoolCtx ctx m
-    => Pool.Mempool Ids Values (AVLP.AVLChgAccum Ids Values) GTxWitnessed
+    => Pool.Mempool Ids Values ChgAccum GTxWitnessed
     -> SDLock
     -> SDM a
     -> m a
@@ -129,14 +126,15 @@ readFromMempoolLocked pool lock action = do
 writeToMempool
     :: forall ctx m a
     .  (MempoolCtx ctx m, WithinWriteSDLock)
-    => Pool.Mempool Ids Values (AVLP.AVLChgAccum Ids Values) GTxWitnessed
+    => Pool.Mempool Ids Values ChgAccum GTxWitnessed
     -> SDM a
     -> m a
 writeToMempool pool action = do
-    actions <- view (lensOf @SD.SDActions)
+    actions <- view (lensOf @SD.SDVars)
     logger  <- view (lensOf @SD.LoggingIO)
     let dbActions = SD.dmaAccessActions $ SD.nsStateDBActions actions (AVLP.RememberForProof False)
     SD.runRIO logger $
+        SD.unwrapSDBaseRethrow $
         Pool.actionWithMempool pool dbActions action
 
 ----------------------------------------------------------------------------

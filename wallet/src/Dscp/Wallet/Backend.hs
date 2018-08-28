@@ -82,7 +82,7 @@ sendTx wc sendEvent eSecretKey mPassPhrase (toList -> outs) = do
         witness     = TxWitness   { txwSig = signature, txwPk = publicKey }
         txWitnessed = TxWitnessed { twTx   = tx, twWitness = witness }
 
-    wSubmitTx wc txWitnessed
+    void $ wSubmitTx wc txWitnessed
     sendStateUpdateEvent sendEvent
     return tx
 

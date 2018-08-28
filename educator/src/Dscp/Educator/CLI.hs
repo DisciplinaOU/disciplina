@@ -30,12 +30,12 @@ educatorBotParamsParser = do
     ebpSeed <- strOption $
         long "educator-bot-seed" <>
         metavar "TEXT" <>
-        help "Seed for bot pregenerated data" <>
+        help "Seed for bot pregenerated data." <>
         value "Memes generator"
     ebpOperationsDelay <- option timeReadM $
         long "educator-bot-delay" <>
         metavar "TIME" <>
-        help "Delay before user action and bot reaction on it" <>
+        help "Delay before user action and bot reaction on it." <>
         value 0
     return $
       if enabled
@@ -44,7 +44,7 @@ educatorBotParamsParser = do
 
 educatorWebParamsParser :: Parser EducatorWebParams
 educatorWebParamsParser = do
-    ewpServerParams <- serverParamsParser "Student"
+    ewpServerParams <- serverParamsParser "Educator"
     ewpBotParams <- educatorBotParamsParser
     return EducatorWebParams{..}
 

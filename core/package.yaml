@@ -14,21 +14,26 @@ library:
     - bytestring
     - base58-bytestring
     - containers
+    - componentm
     - cryptonite
     - cryptonite-openssl
     - data-default
     - digest
     - directory
+    - exceptions
     - fmt
     - hashable
     - hspec
+    - log-warper
     - loot-base
     - loot-config
     - loot-log
     - lens
     - memory
+    - mon
     - o-clock
     - optparse-applicative
+    - prettyprinter
     - QuickCheck
     - quickcheck-instances
     - reflection
@@ -56,5 +61,6 @@ tests:
       - disciplina-core
       - hspec
       - tasty
+      - tasty-discover
       - tasty-hspec
       - QuickCheck

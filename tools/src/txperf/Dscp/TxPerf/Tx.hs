@@ -11,7 +11,7 @@ import Dscp.Witness.Web
 
 sendTx :: WitnessClient -> Bool -> Account -> [(Account, Coin)] -> IO Tx
 sendTx wc async from tos = do
-    (if async then wSubmitTxAsync else wSubmitTx) wc txWitnessed
+    void $ (if async then wSubmitTxAsync else wSubmitTx) wc txWitnessed
     print . toHex . toTxId $ tx
     print . pretty $ tx
     return tx

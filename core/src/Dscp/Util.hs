@@ -4,10 +4,12 @@ module Dscp.Util
        ( anyMapM
        , listToMaybeWarn
        , allUniqueOrd
+       , reportTime
 
          -- * Exceptions processing
        , wrapRethrow
        , wrapRethrowIO
+       , onAnException
 
          -- * Error handling
        , assert
@@ -50,7 +52,11 @@ import Codec.Serialise (Serialise)
 import Control.Lens (Getter, to)
 import Data.ByteArray (ByteArrayAccess)
 import Data.ByteArray.Encoding (Base (..), convertFromBase, convertToBase)
+import Data.Time.Clock.POSIX (getPOSIXTime)
 import Fmt ((+|), (|+))
+import Mon (recordTimer)
+import Mon.Network (Endpoint)
+import Mon.Types (Name)
 
 import Loot.Log (MonadLogging, logError, logWarning)
 
@@ -87,6 +93,19 @@ listToMaybeWarn msg = \case
 allUniqueOrd :: Ord a => [a] -> Bool
 allUniqueOrd = all (null . drop 1) . group . sort
 
+reportTime :: MonadIO m => Name -> Maybe Endpoint -> m a -> m a
+reportTime name mEndpoint m = case mEndpoint of
+    Nothing -> m
+    Just (endpoint) -> do
+        t <- liftIO $ getPOSIXTime
+        a <- m
+        t' <- liftIO $ getPOSIXTime
+        let diff :: Double
+            diff = fromRational . toRational $ t' - t
+        -- mon accepts only Int as metric value and expects amount of milliseconds in recordTimer
+        liftIO $ recordTimer endpoint name 1 [] (round $ diff * 1000)
+        return a
+
 -----------------------------------------------------------
 -- Exceptions processing
 -----------------------------------------------------------
@@ -103,6 +122,10 @@ wrapRethrowIO
     :: (Exception e1, Exception e2, MonadCatch m, MonadIO m)
     => (e1 -> e2) -> IO a -> m a
 wrapRethrowIO wrap action = wrapRethrow wrap (liftIO action)
+
+-- | Similar to 'onException', but provides exception itself.
+onAnException :: (MonadCatch m, Exception e) => m a -> (e -> m ()) -> m a
+onAnException action onExc = action `catch` \e -> onExc e >> throwM e
 
 -----------------------------------------------------------
 -- Do-or-throw error handlers

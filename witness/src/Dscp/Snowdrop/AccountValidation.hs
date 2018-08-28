@@ -28,17 +28,17 @@ import Snowdrop.Core (ERoComp, HasKeyValue, PreValidator (..), StatePException, 
 import Snowdrop.Util
 
 import Dscp.Core.Foundation (Address, TxId)
-import Dscp.Crypto (PublicKey)
+import qualified Dscp.Crypto as DC (PublicKey)
 import Dscp.Snowdrop.Configuration (CanVerifyPayload, Exceptions, Ids, PersonalisedProof, Proofs,
                                     TxIds, Values, accountPrefix)
 import Dscp.Snowdrop.Types
 
 assertSigned
-    :: ( VerifySign pk signature a
+    :: ( VerifySign sigScheme a
        , HasReview e e1
        , MonadError e m
        )
-    => WithSignature pk signature a
+    => WithSignature sigScheme a
     -> e1
     -> m a
 assertSigned WithSignature {..} message = do
@@ -56,7 +56,7 @@ validateSimpleMoneyTransfer
     .  CanVerifyPayload TxId ()
     => HasPrism Proofs (PersonalisedProof TxId ())
     => HasPrism Proofs TxId
-    => HasGetter PublicKey Address
+    => HasGetter DC.PublicKey Address
     => Validator Exceptions Ids Proofs Values ctx
 validateSimpleMoneyTransfer = mkValidator ty
     [preValidateSimpleMoneyTransfer @ctx]
@@ -68,7 +68,7 @@ authenticate
     .  Eq txid
     => HasPrism Proofs (PersonalisedProof txid payload)
     => HasPrism Proofs txid
-    => HasGetter PublicKey Address
+    => HasGetter DC.PublicKey Address
     => CanVerifyPayload txid payload
     => Proofs
     -> ERoComp Exceptions Ids Values ctx (AccountId, Account, payload)
@@ -79,8 +79,7 @@ authenticate proof = do
 
     realHashfromExpander <- requirePart proof TransactionIsCorrupted
 
-    (hash, pk, payload) <- signedHash                   `assertSigned` SignatureIsCorrupted
-    ()                  <- pk == wsPublicKey signedHash `check`        KeysMismatch
+    (hash, pk, payload) <- signedHash `assertSigned` SignatureIsCorrupted
 
     let authorId = gett pk
 
@@ -94,7 +93,7 @@ preValidateSimpleMoneyTransfer
     .  CanVerifyPayload TxId ()
     => HasPrism Proofs (PersonalisedProof TxId ())
     => HasPrism Proofs TxId
-    => HasGetter PublicKey Address
+    => HasGetter DC.PublicKey Address
     => PreValidator Exceptions Ids Proofs Values ctx
 preValidateSimpleMoneyTransfer =
     PreValidator $ \_trans@StateTx {..} -> do
