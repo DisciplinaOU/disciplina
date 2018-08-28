@@ -147,7 +147,7 @@ mkBotSetting params =
         assignAndDeps <- genDependencies assignmentsWithEx
         return (course, assignAndDeps)
     where
-      courseSizes = 2 : 5 : botGen (vectorOf 5 $ choose (1, 7))
+      courseSizes = 2 : 3 : botGen (vectorOf 5 $ choose (1, 7))
 
   bsAssignments = map wdItem $ fold bsCourseAssignments
 
@@ -251,8 +251,9 @@ botProvideInitSetting student = do
 -- | Only for the chosen ones.
 botProvideAdvancedSetting :: (BotWorkMode m, HasBotSetting) => Student -> m ()
 botProvideAdvancedSetting student = do
-    botProvideCourses student (bsAdvancedCourses botSetting)
-    botLog . logInfo $ "Student " +| student |+ " has discovered all courses"
+    maybePresent $ do
+        botProvideCourses student (bsAdvancedCourses botSetting)
+        botLog . logInfo $ "Student " +| student |+ " has discovered all courses"
 
 -- | Add a grade immediatelly after student submission.
 botGradeSubmission :: BotWorkMode m => SignedSubmission -> m ()
