@@ -37,3 +37,25 @@ clusterCi:
            - # faucet
              - "LL4qKmuUkqHGMSXpBKzDyA9g2VCAwVNLRbfGtXeHv55MCeewkKcpLGNR"
              - 100500
+
+alpha:
+  <<: *demo
+  core:
+    <<: *demo-core
+    slotDuration: 20000 # 20s
+    genesis:
+      <<: *demo-genesis
+      genesisSeed: "disciplina-alpha"
+      governance:
+        type: committeeClosed
+        participants:
+          - "LL4qKmQ2bqfmZzVwFYWVtgcFM2Gbku3vD8zrsq7wSGxcHHeG2Sg2dMF7"
+          - "LL4qKrReykH2tVzJ3URSd3iq77Bhua5rbdHvjQ92VLnUMyXY7vp5YbAV"
+          - "LL4qKq3Q31CurnN2DRKuC6iim3JQc46cnT6fL3V6qJAi979zV4zKM34J"
+          - "LL4qKsoarNjaVHLxM8pD5Yoo5kwsEeUWm8E5iACF993t3R41yYbuwa6a"
+      distribution:
+        - equal: 4
+        - specific:
+          - # faucet
+            - "LL4qKkm96QnsHmNpYPrfRmToHEZfYForxUKwtJ8CmnbGwzN4TpP4gPx8"
+            - 20000000
