@@ -1,4 +1,4 @@
-{ stenv, nodejs, yarn }:
+{ stdenv, nodejs, yarn }:
 
 stdenv.mkDerivation {
   name = "disciplina-frontend";
