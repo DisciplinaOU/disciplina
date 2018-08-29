@@ -69,7 +69,8 @@ ul {
   position: absolute;
   background-color: $color-white;
   z-index: 99;
-  .preLoader__img{
+
+  .preLoader__img {
     vertical-align: center;
     position: absolute;
     top: 50%;
@@ -78,7 +79,11 @@ ul {
   }
 }
 
-@media screen and (max-width: 500px){
+.text-center {
+  text-align: center;
+}
+
+@media screen and (max-width: 500px) {
   .container {
     padding-right: 15px;
     padding-left: 15px;
@@ -89,6 +94,7 @@ ul {
 .logo {
   max-width: 200px;
   width: 100%;
+
   &__img {
     display: inline-block;
     vertical-align: top;
@@ -331,6 +337,7 @@ ul {
   .pseudoTable__row {
     display: table-row;
     transition: background $transition;
+
     &:hover:not(.pseudoTable__row--caption) {
       background: $color-main-light;
     }
@@ -347,11 +354,12 @@ ul {
         display: inline-block;
         width: 16px;
         height: 16px;
-        background-image: url("../img/transactionEducator.png");
+        background-image: url('../img/transactionEducator.png');
         background-size: contain;
         margin-right: 5px;
       }
     }
+
     .cell__since {
       white-space: nowrap;
     }
@@ -360,29 +368,47 @@ ul {
   .pseudoTable__cell {
     display: table-cell;
     padding: 12px 15px;
+
     &:first-child {
       padding-left: 30px;
     }
+
     &:last-child {
       padding-right: 30px;
+    }
+
+    &.cell__since {
+      white-space: nowrap;
     }
   }
 
   .cell__slotLeader {
-    max-width: 500px;
+    max-width: 400px;
   }
 
-  @media screen and (max-width: 1200px){
+  @media screen and (max-width: 1200px) {
     .cell__hash .link {
       max-width: 300px;
       overflow: hidden;
       text-overflow: ellipsis;
     }
+
+    .cell__slotLeader {
+      .cell__size {
+        display: none;
+      }
+
+      max-width: 350px;
+    }
   }
 
-  @media screen and (max-width: 890px){
-    .cell__slot,
-    .cell__transactions,
+  @media screen and (max-width: 960px) {
+    .cell__transactions {
+      display: none;
+    }
+  }
+
+  @media screen and (max-width: 890px) {
     .cell__slotLeader {
       display: none;
     }
@@ -392,36 +418,13 @@ ul {
     }
   }
 
-  @media screen and (max-width: 500px){
+  @media screen and (max-width: 500px) {
     .cell__totalSent {
       display: none;
     }
+
     .pseudoTable__cell {
       padding: 10px;
-    }
-  }
-}
-
-.lastTransactions {
-  @media screen and (max-width: 890px){
-    .pseudoTable__row {
-      display: flex;
-      flex-wrap: wrap-reverse;
-      padding-bottom: 15px;
-      .cell {
-        display: block;
-        padding: 10px 15px;
-      }
-    }
-    .pseudoTable {
-      display: block;
-    }
-    .cell__hash {
-      width: 100%;
-      .link {
-        max-width: none;
-        display: block;
-      }
     }
   }
 }
@@ -431,19 +434,47 @@ ul {
 .lastSlots {
   padding-bottom: 65px;
 }
-.blockTitle{
+
+.blockTitle {
   text-align: center;
 }
 
 .caption {
   font-weight: 500;
   border-bottom: 1px solid $color-border;
+  white-space: nowrap;
 }
 
 // lastTransactions
 .lastTransactions {
   padding: 50px 0;
   background-color: $color-gray;
+
+  @media screen and (max-width: 890px) {
+    .pseudoTable__row {
+      display: flex;
+      flex-wrap: wrap-reverse;
+      padding-bottom: 15px;
+
+      .cell {
+        display: block;
+        padding: 10px 15px;
+      }
+    }
+
+    .pseudoTable {
+      display: block;
+    }
+
+    .cell__hash {
+      width: 100%;
+
+      .link {
+        max-width: none;
+        display: block;
+      }
+    }
+  }
 }
 
 //paginationBlock
@@ -452,7 +483,9 @@ ul {
   display: flex;
   align-items: center;
   justify-content: center;
-  .paginationBlock__btnForward, .paginationBlock__pagination {
+
+  .paginationBlock__btnForward,
+  .paginationBlock__pagination {
     margin-right: 25px;
   }
 }
@@ -462,7 +495,9 @@ ul {
   font-style: italic;
   font-weight: 300;
 }
-.paginationBlock__page, .paginationBlock__allPage {
+
+.paginationBlock__page,
+.paginationBlock__allPage {
   color: $color-black;
   font-style: normal;
   font-weight: 600;
@@ -478,13 +513,14 @@ ul {
   .transactionInformBlock__date {
     padding-right: 0;
   }
+
   .transactionInformBlock__hash {
     &:before {
       content: '';
       display: inline-block;
       width: 16px;
       height: 16px;
-      background-image: url("../img/transactionEducator.png");
+      background-image: url('../img/transactionEducator.png');
       background-size: contain;
       margin-right: 5px;
     }
@@ -503,6 +539,7 @@ ul {
   margin-right: auto;
   padding: 15px 15px 15px 0;
   font-weight: 500;
+
   .link {
     display: inline;
   }
@@ -522,6 +559,7 @@ ul {
   padding: 5px 0 10px;
   width: 50%;
   font-size: 12px;
+
   &:first-child {
     padding-right: 30px;
   }
@@ -530,6 +568,7 @@ ul {
 .informBlock__hash {
   margin-bottom: 15px;
   font-size: 16px;
+  display: block;
 }
 
 .informBlock__title {
@@ -539,6 +578,7 @@ ul {
 
 .transactionInformBlock__from {
   position: relative;
+
   &::after {
     content: '';
     display: block;
@@ -574,6 +614,7 @@ ul {
 
 .itemSummary {
   padding-right: 40px;
+
   &:last-child {
     padding-right: 0;
   }
@@ -591,47 +632,58 @@ ul {
   }
 }
 
-@media screen and (max-width: 800px){
+@media screen and (max-width: 800px) {
   .summary__items {
     flex-direction: column;
   }
-  .itemSummary__title, .itemSummary__content {
+
+  .itemSummary__title,
+  .itemSummary__content {
     display: inline-block;
   }
+
   .itemSummary {
-    padding: 0 0 15px 0;
+    padding: 0 0 15px;
   }
+
   .transaction__summary {
     max-width: 400px;
   }
+
   .itemSummary__title {
     width: 40%;
     padding-right: 15px;
     font-size: 16px;
   }
+
   .itemSummary__content {
     width: 60%;
     vertical-align: top;
   }
 }
 
-@media screen and (max-width: 600px){
+@media screen and (max-width: 600px) {
   .transactionInformBlock {
     .transactionInformBlock__hash {
       padding-right: 0;
     }
+
     .transactionInformBlock__date {
       padding-right: 15px;
     }
   }
+
   .transactionInformBlock__fromTo {
     flex-direction: column;
+
     .informBlock {
       width: 100%;
       padding-right: 0;
     }
+
     .transactionInformBlock__from {
       padding-bottom: 20px;
+
       &:after {
         transform: rotate(45deg);
         top: 55px;
@@ -652,6 +704,7 @@ ul {
 
 .slotInformationBlock {
   padding: 10px 0 60px;
+
   .paginationBlock {
     justify-content: space-between;
   }
@@ -664,6 +717,7 @@ ul {
 .slotInform__hashes {
   flex-grow: 2;
   flex-basis: auto;
+
   .slotInformBlock__name {
     min-width: 22%;
     font-weight: 500;
@@ -707,37 +761,36 @@ ul {
   border-bottom: 1px solid $color-border;
   margin-bottom: 10px;
 }
+
 .slotInformBlock__item {
   padding: 15px 0 0;
 }
 
-@media screen and (max-width: 1040px){
-
+@media screen and (max-width: 1040px) {
   .slotInform {
     flex-direction: column;
   }
 
   .slotInform__hashes {
     margin-top: 40px;
-  }
 
-  .slotInform__about {
-    flex-basis: auto;
-  }
-
-  .slotInform__hashes {
     .slotInformBlock__name {
       min-width: 170px;
     }
   }
+
   .slotInform__about {
+    flex-basis: auto;
+
     .slotInformBlock__name {
       min-width: 140px;
     }
+
+    .slotInformBlock__value {
+      min-width: auto;
+    }
   }
-
 }
-
 
 //address
 
@@ -750,15 +803,18 @@ ul {
 .addressItem__inform {
   border-right: 1px solid $color-border;
   padding: 12px 15px;
+
   &:last-child {
     border: 0;
   }
 }
+
 .addressItem__title {
   display: inline-block;
   font-weight: 600;
   margin-right: 10px;
 }
+
 .addressItem__value {
   display: inline-block;
   vertical-align: bottom;
@@ -768,10 +824,12 @@ ul {
   .addressItem {
     flex-direction: column;
   }
+
   .addressItem__inform {
     border-right: 0;
     border-bottom: 1px solid $color-border;
   }
+
   .addressItem__value.hash {
     max-width: 100%;
     margin-top: 5px;
@@ -780,7 +838,7 @@ ul {
 
 .address {
   .transactionInformBlock__hash {
-    padding: 7px 25px 9px 25px;
+    padding: 7px 25px 9px;
     margin-top: 7px;
     margin-bottom: 7px;
     background-color: $color-main-light;
@@ -788,25 +846,31 @@ ul {
     margin-right: 15px;
     order: 1;
   }
+
   .transactionInformBlock__totalSent {
     order: 2;
   }
+
   .transactionInformBlock__date {
     order: 3;
     padding-right: 15px;
     padding-left: 25px;
   }
+
   .transactionInformBlock__title {
     padding-right: 25px;
     justify-content: flex-start;
   }
+
   .transactionInformBlock__from {
     padding-left: 25px;
   }
-  @media screen and (max-width: 600px){
+
+  @media screen and (max-width: 600px) {
     .transactionInformBlock__from {
       padding-left: 0;
     }
+
     .transactionInformBlock__date {
       padding-left: 0;
     }
