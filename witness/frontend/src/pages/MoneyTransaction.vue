@@ -6,7 +6,7 @@
               <div class="transactionInformBlock">
                   <div class="transactionInformBlock__title">
                       <p class="transactionInformBlock__hash hash">{{ moneyTransaction.txId }}</p>
-                      <p class="transactionInformBlock__totalSent btn btn--blue">
+                      <p class="transactionInformBlock__totalSent btn btn--blue btn--noclick">
                         <dscp-format :value="moneyTransaction.outValue"/>
                       </p>
                   </div>
