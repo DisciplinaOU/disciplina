@@ -3,7 +3,7 @@
     <div class="pseudoTableWrapper">
       <div class="pseudoTable">
         <div class="pseudoTable__row pseudoTable__row--caption">
-            <div class="pseudoTable__cell cell cell__block caption">{{ $t("difficulty") }}</div>
+            <div class="pseudoTable__cell cell cell__block caption">{{ $t("blockIndex") }}</div>
             <div class="pseudoTable__cell cell cell__since caption">{{ $t("since") }}</div>
             <div class="pseudoTable__cell cell cell__transactions caption">{{ $t("transaction") }}</div>
             <div class="pseudoTable__cell cell cell__totalSent caption">{{ $t("totalSent") }}</div>
