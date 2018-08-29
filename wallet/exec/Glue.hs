@@ -22,7 +22,7 @@ import Data.Tree (Tree (..))
 import Data.Unique
 import Dscp.Core (TxOut (..), addrFromText, coinToInteger)
 import Dscp.Util (toHex)
-import IiExtras
+import NType (AllConstrained, Elem, KnownSpine)
 
 import qualified Serokell.Util.Base64 as Base64
 import qualified Text.PrettyPrint.ANSI.Leijen as PP

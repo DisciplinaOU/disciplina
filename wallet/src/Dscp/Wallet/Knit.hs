@@ -8,7 +8,6 @@ import Control.Lens
 import qualified Data.ByteArray as BA
 import qualified Data.ByteString.Lazy as BSL
 import Data.Scientific (toBoundedInteger)
-import IiExtras
 import qualified Serokell.Util.Base64 as Base64
 import Text.Earley
 
@@ -83,7 +82,7 @@ instance ComponentDetokenizer Wallet where
 instance Elem components Wallet => ComponentLitGrammar components Wallet where
   componentLitGrammar =
     rule $ asum
-      [ toLit . LitAddress <$> tok (_Token . uprismElem . _TokenAddress)
+      [ toLit . LitAddress <$> tok (_Token . uprism . _TokenAddress)
       ]
 
 instance ComponentPrinter Wallet where

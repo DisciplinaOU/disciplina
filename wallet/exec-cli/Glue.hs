@@ -5,7 +5,7 @@ module Glue
 import Control.Exception (displayException)
 import Data.Text (pack)
 import Data.Unique
-import IiExtras
+import NType (AllConstrained, Elem, KnownSpine)
 import qualified Text.PrettyPrint.ANSI.Leijen as PP
 
 import Ariadne.Knit.Face

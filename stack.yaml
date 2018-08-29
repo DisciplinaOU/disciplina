@@ -58,12 +58,12 @@ extra-deps:
     - knit
     - ui/cli-lib
     - ui/vty-lib
-    - util
 
 # for ariadne
 - loc-0.1.3.2
 - brick-0.38
 - named-0.1.0.0
+- ntype-0.1.0.0
 - vty-5.22
 
 # Forced by lootbox #
