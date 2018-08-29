@@ -48,8 +48,11 @@ fromSecretJson pp KeyJson{..} = do
 -- | Where keyfile would lie.
 storePath
     :: (HasWitnessConfig, Buildable (Proxy node))
-    => AppDir -> Proxy node -> FilePath
-storePath appDir nodeNameP = appDir </> (nodeNameP |+ ".key")
+    => BaseKeyParams -> AppDir -> Proxy node -> FilePath
+storePath BaseKeyParams{..} appDir nodeNameP =
+    fromMaybe defPath bkpPath
+  where
+    defPath = appDir </> (nodeNameP |+ ".key")
 
 -- | Generate store randomly.
 genStore ::
@@ -149,8 +152,8 @@ linkStore
        (MonadIO m, MonadCatch m, MonadLogging m,
         HasWitnessConfig, Buildable (Proxy n))
     => BaseKeyParams -> Maybe CommitteeParams -> AppDir -> m (KeyResources n)
-linkStore BaseKeyParams{..} commParamsM appDir = do
-    let path = storePath appDir (Proxy :: Proxy n)
+linkStore params@BaseKeyParams{..} commParamsM appDir = do
+    let path = storePath params appDir (Proxy :: Proxy n)
         pp = fromMaybe emptyPassPhrase bkpPassphrase
     keyExists <- liftIO . rewrapKeyIOErrors $ D.doesFileExist path
     if bkpGenNew && not keyExists
