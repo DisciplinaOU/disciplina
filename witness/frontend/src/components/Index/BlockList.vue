@@ -7,6 +7,7 @@
             <div class="pseudoTable__cell cell cell__since caption">{{ $t("since") }}</div>
             <div class="pseudoTable__cell cell cell__transactions caption">{{ $t("transaction") }}</div>
             <div class="pseudoTable__cell cell cell__totalSent caption">{{ $t("totalSent") }}</div>
+            <div class="pseudoTable__cell cell cell__slotHash caption">{{ $t("blockHash") }}</div>
             <div class="pseudoTable__cell cell cell__slotLeader caption">{{ $t("blockLeader") }}</div>
             <div class="pseudoTable__cell cell cell__size caption">{{ $t("size") }}</div>
         </div>
@@ -14,7 +15,8 @@
       </div>
     </div>
     <div class="paginationBlock marginTop40">
-        <div class="paginationBlock__btnForward btn btn--arrow btn--forward" :class="{ 'btn--gray': currentPage == 1 }" @click="fetchBlocks(fromBlockHashPrev, currentPage - 1)">{{ $t("newerBlocks") }}</div>
+        <!-- <div class="paginationBlock__btnForward btn btn--arrow btn--forward" :class="{ 'btn--gray': currentPage == 1 }" @click="fetchBlocks(fromBlockHashPrev, currentPage - 1)">{{ $t("newerBlocks") }}</div> -->
+        <div class="paginationBlock__btnForward btn btn--arrow btn--forward" :class="{ 'btn--gray': currentPage == 1 }" @click="fetchBlocks(fromBlockHashPrev, 1)">{{ $t("newerBlocks") }}</div>
         <div class="paginationBlock__pagination">Page <span class="paginationBlock__page">{{ currentPage }}</span> of&nbsp;<span class="paginationBlock__allPage">{{ totalPages }}</span></div>
         <div class="paginationBlock__btnBack btn btn--arrow btn--back" :class="{ 'btn--gray': currentPage == totalPages }" @click="fetchBlocks(fromBlockHash, currentPage + 1)">{{ $t("olderBlocks") }}</div>
     </div>
@@ -33,7 +35,7 @@ export default {
   components: { BlockItem },
   mounted () {
     if (!this.blocks.length) {
-      return this.getAllBlocks()
+      this.getAllBlocks()
     }
   },
   computed: {
@@ -57,7 +59,7 @@ export default {
         return false
       }
 
-      this.getAllBlocks(hash, page)
+      this.getAllBlocks(page === 1 ? undefined : hash, page)
       this.$store.commit('setPage', page)
     }
   }

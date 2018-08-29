@@ -32,6 +32,8 @@ export default {
       api.getType((type) => {
         if (ROUTE_BY_TYPE[type]) {
           this.$router.push({name: ROUTE_BY_TYPE[type], params: { hash: this.query }})
+        } else {
+          this.$router.push({name: '404', query: { query: this.query }})
         }
       }, this.query)
     }

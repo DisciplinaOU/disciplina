@@ -8,11 +8,11 @@
               v-if="block.header.prevHash">
               {{ $t("nav.prev") }}
             </router-link>
-            <router-link :to="{ name: 'blockShow', params: {hash: block.nextHash} }"
+            <!-- <router-link :to="{ name: 'blockShow', params: {hash: block.nextHash} }"
               class="paginationBlock__btnBack btn--arrow btn btn--back"
               v-if="block.nextHash">
               {{ $t("nav.next") }}
-            </router-link>
+            </router-link> -->
           </div>
         </div>
           <div class="container">
@@ -44,9 +44,9 @@
                       <div class="slotInformBlock__item">
                           <span class="slotInformBlock__name">{{ $t("hashes.next") }}</span><span class="slotInformBlock__value hash">{{ block.nextHash }}</span>
                       </div>
-                      <div class="slotInformBlock__item">
+                      <!-- <div class="slotInformBlock__item">
                           <span class="slotInformBlock__name">{{ $t("hashes.merkleRoot") }}</span><span class="slotInformBlock__value hash">{{ block.merkleRootHash }}</span>
-                      </div>
+                      </div> -->
                   </div>
               </div>
           </div>

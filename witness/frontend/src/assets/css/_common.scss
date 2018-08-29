@@ -40,6 +40,10 @@ ul {
   }
 }
 
+.cursorPointer {
+  cursor: pointer;
+}
+
 .wrapper {
   display: flex;
   flex-direction: column;
@@ -279,25 +283,19 @@ ul {
   flex: 0 0 auto;
 
   &__list {
-    overflow: hidden;
-    margin-bottom: -11px;
-    transform: translateX(6px);
-    line-height: 1;
+    display: flex;
+    max-width: 180px;
+    flex-direction: row;
+    flex-wrap: wrap;
   }
 
   &__item {
     display: inline-block;
-    float: left;
-    vertical-align: top;
     width: 20px;
-    text-align: center;
-    margin-left: 6px;
-    margin-right: 6px;
+    height: 20px;
+    margin-left: 4px;
+    margin-right: 4px;
     margin-bottom: 11px;
-
-    &:nth-child(5n) {
-      clear: both;
-    }
   }
 
   &__link {
@@ -318,8 +316,8 @@ ul {
 
   @media screen and (max-width: 800px) {
     &__list {
-      display: inline-block;
-      vertical-align: top;
+      max-width: 100%;
+      justify-content: center;
     }
 
     &__item:nth-child(5n) {
@@ -382,8 +380,8 @@ ul {
     }
   }
 
-  .cell__slotLeader {
-    max-width: 400px;
+  .cell__slotHash {
+    max-width: 330px;
   }
 
   @media screen and (max-width: 1200px) {
@@ -393,38 +391,45 @@ ul {
       text-overflow: ellipsis;
     }
 
-    .cell__slotLeader {
+    .cell__slotHash {
       .cell__size {
         display: none;
       }
 
       max-width: 350px;
     }
-  }
+    .cell__size, .cell__transactions {
+      display: none;
+    }
 
-  @media screen and (max-width: 960px) {
-    .cell__transactions {
+    .cell__slotHash {
       display: none;
     }
   }
+
+  // @media screen and (max-width: 960px) {
+  // }
 
   @media screen and (max-width: 890px) {
-    .cell__slotLeader {
-      display: none;
-    }
 
     .cell__hash .link {
       max-width: 200px;
     }
   }
 
-  @media screen and (max-width: 500px) {
-    .cell__totalSent {
-      display: none;
+  @media screen and (max-width: 720px) {
+    .cell__slotLeader {
+      display: none
     }
+  }
 
+  @media screen and (max-width: 500px) {
     .pseudoTable__cell {
       padding: 10px;
+      font-size: 14px
+    }
+    .caption {
+      white-space: normal;
     }
   }
 }
