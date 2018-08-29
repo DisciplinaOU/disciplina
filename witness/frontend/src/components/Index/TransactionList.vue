@@ -24,7 +24,7 @@ export default {
     }
   },
   mounted () {
-    if (this.currentPage === 1) {
+    if (!this.transactions.length) {
       return this.getAllTransactions()
     }
   },

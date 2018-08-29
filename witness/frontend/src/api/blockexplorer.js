@@ -14,7 +14,7 @@ export default {
   getTransactions (cb, from, count) {
     Vue.axios
       .get('/transactions', { params: {count, from} })
-      .then(response => cb(response.data.transactions))
+      .then(response => cb(response.data.nextId, response.data.transactions))
   },
   getTransaction (cb, transactionHash) {
     Vue.axios
