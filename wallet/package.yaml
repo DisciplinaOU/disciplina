@@ -17,12 +17,12 @@ library:
     - Earley
     - aeson
     - bytestring
+    - componentm
     - directory
     - disciplina-core
     - disciplina-witness
     - filelock
     - filepath
-    - ii-extras
     - knit
     - lens
     - memory
@@ -47,13 +47,14 @@ executables:
       - ansi-wl-pprint
       - ariadne-core
       - ariadne-vty-lib
+      - componentm
       - containers
       - double-conversion
       - disciplina-core
       - disciplina-wallet
-      - ii-extras
       - knit
       - lens
+      - ntype
       - serokell-util
       - text
       - vector
@@ -67,8 +68,9 @@ executables:
       - ansi-wl-pprint
       - ariadne-cli-lib
       - ariadne-core
+      - componentm
       - disciplina-core
       - disciplina-wallet
-      - ii-extras
       - knit
+      - ntype
       - text

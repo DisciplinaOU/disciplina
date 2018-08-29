@@ -4,8 +4,9 @@ module Dscp.Wallet.Backend
        ) where
 
 import Control.Exception (throwIO)
+import Control.Monad.Component (ComponentM, buildComponent_)
 
-import Dscp.Core (Tx (..), TxInAcc (..), TxWitness (..), TxWitnessed (..), mkAddr, toTxId)
+import Dscp.Core (GTx, Tx (..), TxInAcc (..), TxWitness (..), TxWitnessed (..), mkAddr, toTxId)
 import Dscp.Crypto (decrypt, emptyPassPhrase, encrypt, keyGen, sign, toPublic)
 import Dscp.Wallet.Face
 import Dscp.Wallet.KeyStorage
@@ -13,8 +14,8 @@ import Dscp.Web
 import Dscp.Witness.Web.Client
 import Dscp.Witness.Web.Types
 
-createWalletFace :: BaseUrl -> (WalletEvent -> IO ()) -> IO WalletFace
-createWalletFace serverAddress sendEvent = do
+createWalletFace :: BaseUrl -> (WalletEvent -> IO ()) -> ComponentM WalletFace
+createWalletFace serverAddress sendEvent = buildComponent_ "Wallet" $ do
     sendStateUpdateEvent sendEvent
     wc <- createWitnessClient serverAddress
     return WalletFace
@@ -24,6 +25,7 @@ createWalletFace serverAddress sendEvent = do
         , walletListKeys = listKeys
         , walletSendTx = sendTx wc
         , walletGetBalance = getBalance wc
+        , walletGetTxHistory = getTxHistory wc
         }
 
 sendStateUpdateEvent :: (WalletEvent -> IO ()) -> IO ()
@@ -79,3 +81,6 @@ sendTx wc eSecretKey mPassPhrase (toList -> outs) = do
 
 getBalance :: WitnessClient -> Address -> IO (BlocksOrMempool Coin)
 getBalance wc address = aiBalances <$> wGetAccount wc address False
+
+getTxHistory :: WitnessClient -> Address -> IO [GTx]
+getTxHistory wc address = map tiTx . fromMaybe [] . aiTransactions <$> wGetAccount wc address True

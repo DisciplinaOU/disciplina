@@ -1,6 +1,7 @@
 module Main where
 
-import IiExtras
+import Control.Monad.Component (ComponentM, runComponentM)
+import NType (N (..))
 import Text.PrettyPrint.ANSI.Leijen (Doc)
 
 import Ariadne.Knit.Backend
@@ -17,38 +18,43 @@ import qualified Knit
 
 import Glue
 
-type Components = '[Knit.Core, Knit.Wallet, Knit.TaskManager, Knit.UI]
+type UiComponents = '[Knit.Core, Knit.Wallet, Knit.TaskManager, Knit.UI]
 
 main :: IO ()
 main = do
-  serverAddress <- getWalletCLIParams
+    serverAddress <- getWalletCLIParams
+    runComponentM "ariadne" (initializeEverything serverAddress) id
 
-  uiWalletState <- createWalletState
+initializeEverything :: BaseUrl -> ComponentM (IO ())
+initializeEverything serverAddress = do
+    uiWalletState <- createWalletState
 
-  let
-    features = UiFeatures
-      { featureStatus = False
-      , featureExport = True
-      , featureAccounts = False
-      , featureFullRestore = False
-      , featureSecretKeyName = "Secret key"
-      }
-  (uiFace, mkUiAction) <- createAriadneUI features historyToUI
-  taskManagerFace <- createTaskManagerFace
-  walletFace <- createWalletFace serverAddress (putWalletEventToUI uiWalletState uiFace)
+    let features = UiFeatures
+            { featureStatus = False
+            , featureExport = True
+            , featureAccounts = False
+            , featureTxHistory = True
+            , featureFullRestore = False
+            , featureSecretKeyName = "Secret key"
+            }
+    (uiFace, mkUiAction) <- createAriadneUI features historyToUI
+    taskManagerFace <- createTaskManagerFace
+    walletFace <- createWalletFace serverAddress (putWalletEventToUI uiWalletState uiFace)
 
-  let
-    knitExecContext :: (Doc -> IO ()) -> Knit.ExecContext IO Components
-    knitExecContext putCommandOutput =
-      Knit.CoreExecCtx (putCommandOutput . Knit.ppValue) :&
-      Knit.WalletExecCtx walletFace :&
-      Knit.TaskManagerExecCtx taskManagerFace :&
-      Knit.UiExecCtx uiFace :&
-      RNil
+    let knitExecContext :: (Doc -> IO ()) -> Knit.ExecContext IO UiComponents
+        knitExecContext putCommandOutput =
+            Knit.CoreExecCtx (putCommandOutput . Knit.ppValue) &:
+            Knit.WalletExecCtx walletFace &:
+            Knit.TaskManagerExecCtx taskManagerFace &:
+            Knit.UiExecCtx uiFace &:
+            Base ()
+          where
+            a &: b = Step (a, b)
+            infixr &:
 
-    knitFace = createKnitBackend knitExecContext taskManagerFace
+        knitFace = createKnitBackend knitExecContext taskManagerFace
 
-    uiAction :: IO ()
-    uiAction = mkUiAction (knitFaceToUI uiWalletState uiFace walletFace knitFace)
+        uiAction :: IO ()
+        uiAction = mkUiAction (knitFaceToUI uiWalletState uiFace walletFace knitFace)
 
-  uiAction
+    return uiAction
