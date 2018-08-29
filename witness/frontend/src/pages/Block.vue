@@ -21,7 +21,7 @@
                   <div class="slotInform__about slotInformBlock red">
                       <p class="slotInformBlock__title">{{ $t("about.title") }}</p>
                       <div class="slotInformBlock__item">
-                          <span class="slotInformBlock__name">{{ $t("about.difficulty") }}</span><span class="slotInformBlock__value">{{ block.header.difficulty }}</span>
+                          <span class="slotInformBlock__name">{{ $t("about.blockIndex") }}</span><span class="slotInformBlock__value">{{ block.header.difficulty }}</span>
                       </div>
                       <div class="slotInformBlock__item">
                           <span class="slotInformBlock__name">{{ $t("about.transactions") }}</span><span class="slotInformBlock__value">{{ block.transactionCount }}</span>
