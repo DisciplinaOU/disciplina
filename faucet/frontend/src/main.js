@@ -15,7 +15,7 @@ import Kr from './locales/kr'
 import './assets/css/index.scss'
 
 Vue.prototype.$axios = axios.create({
-  baseURL: 'https://dscp-faucet.serokell.io/api/faucet/v1'
+  baseURL: 'https://faucet.disciplina.io/api/faucet/v1'
 })
 Vue.prototype.$axios.defaults.headers.post['Content-Type'] = 'application/json'
 

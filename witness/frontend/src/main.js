@@ -18,7 +18,7 @@ import store from './store/index'
 import './assets/css/index.scss'
 
 Vue.use(VueAxios, axios)
-Vue.axios.defaults.baseURL = 'https://witness-1.disciplina.serokell.team/api/witness/v1'
+Vue.axios.defaults.baseURL = 'http://explorer.disciplina.io/api/witness/v1'
 Vue.axios.defaults.headers.common['Content-Type'] = 'application/json'
 
 Vue.use(VueI18Next)
