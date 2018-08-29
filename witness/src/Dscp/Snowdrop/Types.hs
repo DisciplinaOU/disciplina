@@ -57,6 +57,7 @@ data AccountValidationException
     | ReceiverMustIncreaseBalance  -- ^ Receiver cannot decrease in its 'aBalance'.
     | SumMustBeNonNegative         -- ^ Amount of money sent must be greater of equal
                                    -- to the total amount received.
+    | BalanceCannotBecomeNegative
     deriving (Eq, Ord, Enum, Bounded, Show)
 
 instance Buildable AccountValidationException where
@@ -72,6 +73,7 @@ instance Buildable AccountValidationException where
                                  \only possible to add tokens)"
         ReceiverMustIncreaseBalance -> "Receiver's balance decreased"
         SumMustBeNonNegative -> "Tx input value < tx sum of outputs"
+        BalanceCannotBecomeNegative -> "Balance cannot become negative"
 
 -- | Wrapper for address.
 newtype AccountId = AccountId { unAccountId :: Address }
