@@ -189,6 +189,7 @@ validateSaneDeparture self before = do
             () <- mconcat
                 [ validateIff NonceMustBeIncremented $ aNonce account == aNonce before + 1
                 , validateIff PaymentMustBePositive  $ paid > 0
+                , validateIff BalanceCannotBecomeNegative $ aBalance account >= 0
                 ]
 
             return paid

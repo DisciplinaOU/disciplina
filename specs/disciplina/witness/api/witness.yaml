@@ -481,6 +481,7 @@ definitions:
           - PaymentMustBePositive
           - ReceiverMustIncreaseBalance
           - SumMustBeNonNegative
+          - BalanceCannotBecomeNegative
         description: >-
           Error type:
             * `InvalidFormat` - Failed to deserialise one of parameters.
@@ -491,6 +492,7 @@ definitions:
             * `PaymentMustBePositive` - You can only decrease your funds by outcoming transaction.
             * `ReceiverMustIncreaseBalance` - You can only increase the funds of receiver by outcoming transaction.
             * `SumMustBeNonNegative` - Sum of payments plus fee must be less or equal to amount of money you spend.
+            * `BalanceCannotBecomeNegative` - Balance cannot become negative.
 
 externalDocs:
   description: Find out more about Swagger
