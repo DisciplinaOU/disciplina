@@ -1,7 +1,7 @@
 { stdenv, nodejs, yarn }:
 
 stdenv.mkDerivation {
-  name = "disciplina-frontend";
+  name = "disciplina-witness-frontend";
   src = stdenv.lib.cleanSource ./.;
 
   buildInputs = [ nodejs yarn ];
