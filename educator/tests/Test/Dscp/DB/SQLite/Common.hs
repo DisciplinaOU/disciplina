@@ -9,10 +9,13 @@ module Test.Dscp.DB.SQLite.Common
 
 import Prelude hiding (fold)
 
+import qualified Data.Text.Buildable
 import Database.SQLite.Simple (Connection, execute, fold, query, setTrace, withConnection,
                                withTransaction)
-import qualified Loot.Log as Adapter
+import Fmt ((+|), (+||), (|+), (||+))
+import qualified Loot.Log as Log
 import Test.Hspec
+import qualified Text.Show
 import UnliftIO (MonadUnliftIO)
 
 import Dscp.Core
@@ -78,11 +81,28 @@ instance Adapter.MonadSQLiteDB TestSQLiteM where
         setTrace conn (Nothing)
         return res
 
-instance Adapter.MonadLogging TestSQLiteM where
-  log _ _ _ = pass
+-- | When warning or error are logged, this exception is thrown.
+data TestLoggedError = TestLoggedError
+    { tleLvl :: Log.Level
+    , tleMsg :: Text
+    }
+
+instance Exception TestLoggedError
+
+instance Show TestLoggedError where
+    show = toString . pretty
+
+instance Buildable TestLoggedError where
+    build TestLoggedError{..} =
+        "Bad situation was logged with level " +|| tleLvl ||+ ": " +| tleMsg |+ ""
+
+instance Log.MonadLogging TestSQLiteM where
+  log lvl _ msg =
+      when (lvl == Log.Warning || lvl == Log.Error) $
+          throwM $ TestLoggedError lvl msg
   logName = return $ error "Logger name requested in test"
 
-instance Adapter.ModifyLogName TestSQLiteM where
+instance Log.ModifyLogName TestSQLiteM where
   modifyLogNameSel _ = identity
 
 orIfItFails :: MonadCatch m => m a -> a -> m a
