@@ -1,4 +1,4 @@
-{ stdenv, nodejs, yarn }:
+{ stdenv, nodejs, yarn, witnessURL ? "" }:
 
 stdenv.mkDerivation {
   name = "disciplina-witness-frontend";
@@ -6,6 +6,7 @@ stdenv.mkDerivation {
 
   buildInputs = [ nodejs yarn ];
 
+  WITNESS_API_URL = witnessURL;
   HOME = ".";
 
   buildPhase = ''
