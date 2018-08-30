@@ -42,8 +42,8 @@ instance Show RelayException where
 
 -- these sized do not really matter for now
 relayInputSize, relayPipeSize :: Int
-relayInputSize = 500
-relayPipeSize = 500
+relayInputSize = 100
+relayPipeSize = 100
 
 newRelayState :: MonadIO m => m RelayState
 newRelayState = atomically $
