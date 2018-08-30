@@ -6,8 +6,8 @@
           {{ transaction.txId }}
         </router-link>
       </p>
-      <p class="transactionInformBlock__date">{{ new Date(timestamp) | moment('DD/MM/YYYY HH:MM:SS') }}</p>
-      <p class="transactionInformBlock__totalSent btn btn--blue">
+      <p class="transactionInformBlock__date">{{ new Date(calcTimestamp) | moment('DD/MM/YYYY HH:MM:SS') }}</p>
+      <p class="transactionInformBlock__totalSent btn btn--blue btn--noclick">
         <dscp-format :value="transaction.outValue"/>
       </p>
     </div>
@@ -38,6 +38,15 @@ export default {
     transaction: Object,
     timestamp: Number
   },
-  components: { DscpFormat }
+  components: { DscpFormat },
+  computed: {
+    calcTimestamp () {
+      if (this.timestamp) {
+        return this.timestamp
+      } else {
+        return this.transaction.block.since / 1000
+      }
+    }
+  }
 }
 </script>

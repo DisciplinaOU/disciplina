@@ -19,13 +19,13 @@
         </div>
         <div class="checkResult" v-if="transfer.amount || error">
           <b class="checkResult__title" v-if="transfer.amount">{{transfer.amount}} DSCP <span>{{ $t("transfer.amountMsg") }}</span></b>
-          <p class="checkResult__text" v-if="transfer.txId">{{ $t("transfer.transactionId") }}: {{transfer.txId}}</p>
+          <p class="checkResult__text" v-if="transfer.txId">{{ $t("transfer.transactionId") }}: <a :href="transactionUrl" target="_blank">{{transfer.txId}}</a></p>
           <b class="checkResult__title color-alert" v-if="error">{{ $t(`transfer.errors.${error}`) }}</b>
         </div>
         <div class="pageHelper">
           <p class="pageHelper__nowallet">{{ $t("noWallet") }}</p>
           <a href="#" class="pageHelper__btn btn btn--green" @click.prevent="generateWallet">{{ $t("generateWalletBtn") }}</a>
-          <p class="pageHelper__more">{{ $t("informationNote") }} <a class="link" href="#">{{ $t("informationLinkText") }}</a></p>
+          <p class="pageHelper__more">{{ $t("informationNote") }} <a class="link" href="https://alpha.disciplina.io">{{ $t("informationLinkText") }}</a></p>
         </div>
       </div>
       <modal
@@ -65,6 +65,11 @@ export default {
       address: '',
       showWalletModal: false,
       walletInputChanged: false
+    }
+  },
+  computed: {
+    transactionUrl () {
+      return `https://explorer.disciplina.io/#/money-transaction/${this.transfer.txId}`
     }
   },
   methods: {

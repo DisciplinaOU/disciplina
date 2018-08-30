@@ -23,7 +23,7 @@ export default {
   },
   getAddress (cb, addressHash) {
     Vue.axios
-      .get(`/accounts/${addressHash}`)
+      .get(`/accounts/${addressHash}`, {params: { includeTxs: true }})
       .then(response => cb(response.data))
   },
   getType (cb, hash) {
