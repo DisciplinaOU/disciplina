@@ -11,6 +11,7 @@ module Dscp.Witness.Logic.Getters
     , getHeader
 
     , resolvePrevious
+    , resolveNext
 
     , getAccountMaybe
     , getMempoolAccountMaybe
@@ -96,6 +97,10 @@ resolvePrevious o = do
     then pure Nothing
     else pure $ Just $ hPrevHash header
 
+-- | Given the element, get the next one.
+resolveNext :: (HasWitnessConfig, HasHeaderHash x) => x -> SdM (Maybe HeaderHash)
+resolveNext = SD.queryOne . NextBlockOf . headerHash >=> pure . map unNextBlock
+
 ----------------------------------------------------------------------------
 -- Account getters
 ----------------------------------------------------------------------------
@@ -117,9 +122,7 @@ getMempoolAccountMaybe addr = do
 
 -- | Get a list of all transactions for a given account
 getAccountTxs :: WitnessWorkMode ctx m => Address -> m [GTxInBlock]
-getAccountTxs address =
-    runStateSdMRead (SD.RememberForProof False) loadTxs >>=
-    mapM (runSdMRead . getTx)
+getAccountTxs address = runSdMRead $ loadTxs >>= mapM getTx
   where
     loadTxs =
         SD.queryOne (TxsOf address) >>=

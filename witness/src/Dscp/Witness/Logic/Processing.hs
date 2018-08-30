@@ -10,7 +10,6 @@ module Dscp.Witness.Logic.Processing
 import Data.Default (def)
 import qualified Data.Map as M
 import Data.Reflection (reify)
-import qualified Data.Set as S
 import Data.Time.Clock (UTCTime (..))
 import Loot.Base.HasLens (lensOf)
 import Serokell.Util (enumerate)
@@ -64,12 +63,17 @@ applyBlockRaw toVerify block = do
 
     (blockCS, stateCS) <- reify blockPrefixes $ \(_ :: Proxy ps) ->
         let actions = SD.constructCompositeActions @ps (SD.dmaAccessActions blockDBM)
-                                                        (SD.dmaAccessActions stateDBM)
+                                                       (SD.dmaAccessActions stateDBM)
             rwComp = do
               sblock <- SD.liftERoComp $ expandBlock block
               -- getCurrentTime requires MonadIO
               let osParams = SD.unOSParamsBuilder sdOSParamsBuilder $ UTCTime (toEnum 0) (toEnum 0)
               SD.applyBlockImpl toVerify osParams blkStateConfig (bBody block) sblock
+              -- TODO: move the changeset expanding below to Dscp.Snowdrop.Expanders.expandBlock
+              void $ SD.modifyRwCompChgAccum $ SD.CAMChange $ SD.ChangeSet $
+                  M.singleton
+                      (SD.inj . NextBlockOf . hPrevHash . bHeader $ block)
+                      (SD.New . NextBlockOfVal . NextBlock $ headerHash block)
               sequence_ . fmap addTx . enumerate . bbTxs . bBody $ block
             addTx (idx, gTx) = SD.modifyRwCompChgAccum $ SD.CAMChange $ SD.ChangeSet $
                 M.singleton
@@ -80,8 +84,6 @@ applyBlockRaw toVerify block = do
     proof <- runSdRIO $ SD.dmaApply stateDBM stateCS
     runSdRIO $ SD.dmaApply blockDBM blockCS
     pure proof
-  where
-    blockPrefixes = S.fromList [tipPrefix, blockPrefix, txPrefix]
 
 applyBlock :: (WitnessWorkMode ctx m, WithinWriteSDLock) => Block -> m AvlProof
 applyBlock = applyBlockRaw True

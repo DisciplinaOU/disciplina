@@ -19,6 +19,8 @@ module Dscp.Snowdrop.Configuration
     , txPrefix
     , txOfPrefix
     , txHeadPrefix
+    , nextBlockPrefix
+    , blockPrefixes
     , Ids (..)
     , Values (..)
 
@@ -36,6 +38,7 @@ module Dscp.Snowdrop.Configuration
 
 
 import Control.Lens (makePrisms)
+import qualified Data.Set as S
 import qualified Data.Text.Buildable as B
 import Fmt (build, (+|))
 import qualified Text.Show
@@ -130,6 +133,22 @@ txOfPrefix = Prefix 7
 txHeadPrefix :: Prefix
 txHeadPrefix = Prefix 8
 
+nextBlockPrefix :: Prefix
+nextBlockPrefix = Prefix 9
+
+-- | Prefixes stored in block storage
+blockPrefixes :: Set Prefix
+blockPrefixes = S.fromList
+    [ tipPrefix
+    , blockPrefix
+    , publicationOfPrefix
+    , publicationHeadPrefix
+    , txPrefix
+    , txOfPrefix
+    , txHeadPrefix
+    , nextBlockPrefix
+    ]
+
 -- | Sum-type for all ids used within the application.
 data Ids
     = TipKeyIds          TipKey
@@ -140,6 +159,7 @@ data Ids
     | TxHeadIds          TxHead
     | PublicationOfIds   PublicationsOf
     | PublicationHeadIds PublicationHead
+    | NextBlockOfIds     NextBlockOf
     deriving (Eq, Ord, Show, Generic)
 
 instance Buildable Ids where
@@ -152,6 +172,7 @@ instance Buildable Ids where
         TxHeadIds          th           -> build th
         PublicationOfIds   p            -> build p
         PublicationHeadIds ph           -> build ph
+        NextBlockOfIds     hh           -> build hh
 
 instance IdSumPrefixed Ids where
     idSumPrefix (TipKeyIds          _) = tipPrefix
@@ -162,6 +183,7 @@ instance IdSumPrefixed Ids where
     idSumPrefix (TxHeadIds          _) = txHeadPrefix
     idSumPrefix (PublicationOfIds   _) = publicationOfPrefix
     idSumPrefix (PublicationHeadIds _) = publicationHeadPrefix
+    idSumPrefix (NextBlockOfIds     _) = nextBlockPrefix
 
 instance HasReview Ids (BlockRef (CurrentBlockRef HeaderHash)) where
     inj (BlockRef (CurrentBlockRef h)) = BlockRefIds (BlockRef h)
@@ -179,6 +201,7 @@ data Values
     | TxHeadVal          TxNext
     | PublicationOfVal   LastPublication
     | PublicationHeadVal PublicationNext
+    | NextBlockOfVal     NextBlock
     deriving (Eq, Show, Generic)
 
 type instance SValue  TipKey               = TipValue HeaderHash
@@ -189,6 +212,7 @@ type instance SValue  TxsOf                = LastTx
 type instance SValue  TxHead               = TxNext
 type instance SValue  PublicationsOf       = LastPublication
 type instance SValue  PublicationHead      = PublicationNext
+type instance SValue  NextBlockOf          = NextBlock
 
 ----------------------------------------------------------------------------
 -- Proofs
