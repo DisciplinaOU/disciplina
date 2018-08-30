@@ -5,17 +5,17 @@
       <div class="modalLayer__title">{{ $t("title") }}:</div>
       <div class="modalLayer__content modalContent">
         <div class="modalContent__name">{{ $t("address") }}:</div>
-        <div class="modalContent__hash hash">{{ address }}</div>
+        <input type="text" class="modalContent__hash hash" v-model="address" spellcheck="false" readonly>
         <div class="modalContent__button btn btn--blue-white" :class="{ 'btn--blue-white--active' : addressCopied }" @click="copyKey('address')">{{ $t(addressCopied ? "copied" : "copy") }}</div>
       </div>
       <div class="modalLayer__content modalContent">
         <div class="modalContent__name">{{ $t("publicKey") }}:</div>
-        <div class="modalContent__hash hash">{{ publicKey }}</div>
+        <input type="text" class="modalContent__hash hash" v-model="publicKey" spellcheck="false" readonly>
         <div class="modalContent__button btn btn--blue-white" :class="{ 'btn--blue-white--active' : publicKeyCopied }" @click="copyKey('publicKey')">{{ $t(publicKeyCopied ? "copied" : "copy") }}</div>
       </div>
       <div class="modalLayer__content modalContent">
         <div class="modalContent__name">{{ $t("secretKey") }}:</div>
-        <div class="modalContent__hash hash">{{ secretKey }}</div>
+        <input type="text" class="modalContent__hash hash" v-model="secretKey" spellcheck="false" readonly>
         <div class="modalContent__button btn btn--blue-white" :class="{ 'btn--blue-white--active' : secretKeyCopied }" @click="copyKey('secretKey')">{{ $t(secretKeyCopied ? "copied" : "copy") }}</div>
       </div>
       <div class="modalLayer__content modalContent">
@@ -56,3 +56,13 @@ export default {
   }
 }
 </script>
+
+<style scoped>
+.modalContent__hash {
+  display: block;
+  flex-grow: 1;
+  border: 0;
+  outline: none;
+  appearance: none;
+}
+</style>
