@@ -16,7 +16,7 @@ import './assets/css/index.scss'
 
 const apiBaseUrl = process.env.FAUCET_API_URL || 'https://faucet.disciplina.io'
 Vue.prototype.$axios = axios.create({
-  baseURL: apiBaseUrl + '/api/witness/v1'
+  baseURL: apiBaseUrl + '/api/faucet/v1'
 })
 Vue.prototype.$axios.defaults.headers.post['Content-Type'] = 'application/json'
 
