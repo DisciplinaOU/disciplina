@@ -8,11 +8,11 @@
               v-if="block.header.prevHash">
               {{ $t("nav.prev") }}
             </router-link>
-            <!-- <router-link :to="{ name: 'blockShow', params: {hash: block.nextHash} }"
+            <router-link :to="{ name: 'blockShow', params: {hash: block.nextHash} }"
               class="paginationBlock__btnBack btn--arrow btn btn--back"
               v-if="block.nextHash">
               {{ $t("nav.next") }}
-            </router-link> -->
+            </router-link>
           </div>
         </div>
           <div class="container">
