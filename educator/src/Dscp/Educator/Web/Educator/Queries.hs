@@ -4,7 +4,7 @@ module Dscp.Educator.Web.Educator.Queries
     ( module Dscp.Educator.Web.Educator.Queries
     ) where
 
-import Control.Lens (from, mapping, traversed)
+import Control.Lens (from, mapping, traversed, _Just)
 import Data.List (groupBy)
 import Data.Time.Clock (getCurrentTime)
 import Database.SQLite.Simple (Only (..), Query)
@@ -54,18 +54,18 @@ educatorGetStudents courseF = do
         from      Students
         left join StudentCourses
                on Students.addr = StudentCourses.student_addr
-        where     course_id = ?
+        where     1 = 1
     |]
       `filterClauses` [clauseF]
 
 educatorGetCourses :: DBM m => Maybe Student -> m [CourseEducatorInfo]
 educatorGetCourses studentF = do
-    res <- query queryText paramF
+    res :: [(Course, Text, Maybe Subject)] <- query queryText paramF
     return $
         -- group "subject" fields
         [ CourseEducatorInfo{..}
         | course@((ciId, ciDesc, _) : _) <- groupBy ((==) `on` view _1) res
-        , let ciSubjects = course ^.. traversed . _3
+        , let ciSubjects = course ^.. traversed . _3 . _Just
         ]
   where
     (clauseF, paramF) = mkFilterOn "student_addr" studentF
@@ -77,7 +77,7 @@ educatorGetCourses studentF = do
                on Courses.id = Subjects.course_id
         left join StudentCourses
                on StudentCourses.course_id = Courses.id
-        order by  Courses.id asc  -- TODO: is it necessary?
+        where     1 = 1
     |]
       `filterClauses` [clauseF]
 

@@ -24,7 +24,7 @@ spec_Instances = do
 
             it "Course does exist after it is created" $
                 sqliteProperty $ \courseId -> do
-                    _       <- DB.createCourse courseId "foo" []
+                    _       <- DB.createCourse (simpleCourse courseId)
                     isThere <- DB.existsCourse courseId
 
                     return isThere
@@ -46,7 +46,7 @@ spec_Instances = do
             it "Assignment is created and retrieved by hash" $
                 sqliteProperty $ \assignment -> do
 
-                    _              <- DB.createCourse    (assignment^.aCourseId) "" []
+                    _              <- DB.createCourse    (simpleCourse $ assignment^.aCourseId)
                     assignmentHash <- DB.createAssignment assignment
                     assignment'    <- DB.getAssignment    assignmentHash
 
@@ -74,7 +74,7 @@ spec_Instances = do
 
                     let course     = assignment   ^.aCourseId
 
-                    _ <- DB.createCourse           course "" []
+                    _ <- DB.createCourse           (simpleCourse course)
                     _ <- DB.createAssignment       assignment
 
                     throws @DomainError $ do
@@ -93,7 +93,7 @@ spec_Instances = do
                             course     = assignment^.aCourseId
                             student    = submission^.sStudentId
 
-                        _ <- DB.createCourse           course "" []
+                        _ <- DB.createCourse           (simpleCourse course)
                         _ <- DB.createStudent          student
                         _ <- DB.createAssignment       assignment
                         _ <- sqlTransaction $
@@ -114,7 +114,7 @@ spec_Instances = do
                         course        = assignment   ^.aCourseId
                         student       = submission   ^.sStudentId
 
-                    courseId  <- DB.createCourse           course "" []
+                    courseId  <- DB.createCourse           (simpleCourse course)
                     studentId <- DB.createStudent          student
                     _         <- DB.enrollStudentToCourse  studentId courseId
                     aHash     <- DB.createAssignment       assignment
@@ -143,7 +143,7 @@ spec_Instances = do
                     "Student should be enrolled to no courses initially"
 
                 for_ courses $ \course -> do
-                    courseId <- DB.createCourse course "foo" []
+                    courseId <- DB.createCourse (simpleCourse course)
                     DB.enrollStudentToCourse studentId courseId
 
                 courseIds' <- DB.getStudentCourses student
@@ -162,8 +162,8 @@ spec_Instances = do
 
                     studentId <- DB.createStudent student
 
-                    courseId1 <- DB.createCourse course1 "" []
-                    courseId2 <- DB.createCourse course2 "" []
+                    courseId1 <- DB.createCourse $ CourseDetails course1 "" []
+                    courseId2 <- DB.createCourse $ CourseDetails course2 "" []
 
                     DB.enrollStudentToCourse studentId courseId1
                     DB.enrollStudentToCourse studentId courseId2
@@ -210,7 +210,7 @@ spec_Instances = do
                     course     = assignment   ^.aCourseId
                     student    = submission   ^.sStudentId
 
-                courseId  <- DB.createCourse           course "" []
+                courseId  <- DB.createCourse           (simpleCourse course)
                 studentId <- DB.createStudent          student
                 _         <- DB.enrollStudentToCourse  studentId courseId
                 aHash     <- DB.createAssignment       assignment
@@ -244,8 +244,8 @@ spec_Instances = do
                 then do
                     _studentId <- DB.createStudent          student
 
-                    courseId   <- DB.createCourse           course "" []
-                    courseId2  <- DB.createCourse           course2 "" []
+                    courseId   <- DB.createCourse           (simpleCourse course)
+                    courseId2  <- DB.createCourse           (simpleCourse course2)
 
                     _          <- DB.enrollStudentToCourse  student courseId
                     _          <- DB.enrollStudentToCourse  student courseId2
@@ -290,7 +290,7 @@ spec_Instances = do
                         let sigSubmission = trans        ^.ptSignedSubmission
                             course        = assignment   ^.aCourseId
 
-                        cId <- DB.createCourse           course "" [] `orIfItFails` getId course
+                        cId <- DB.createCourse           (simpleCourse course) `orIfItFails` getId course
                         _   <- DB.enrollStudentToCourse  studentId cId     `orIfItFails` ()
                         aId <- DB.createAssignment       assignment        `orIfItFails` getId assignment
                         _   <- DB.setStudentAssignment   studentId aId     `orIfItFails` ()

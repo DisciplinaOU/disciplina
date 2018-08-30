@@ -38,7 +38,11 @@ educatorApiHandlers =
       -- * Courses
 
     , eAddCourse = \(NewCourse cid desc subjects) ->
-        void $ createCourse cid (desc ?: "") (subjects ?: [])
+        void $ createCourse CourseDetails
+            { cdCourseId = cid
+            , cdDesc = desc ?: ""
+            , cdSubjects = subjects ?: []
+            }
 
     , eGetCourses =
         educatorGetCourses Nothing

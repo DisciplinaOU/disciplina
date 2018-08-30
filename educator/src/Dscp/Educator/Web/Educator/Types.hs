@@ -18,6 +18,7 @@ module Dscp.Educator.Web.Educator.Types
 
       -- * Conversions
     , educatorLiftAssignment
+    , educatorLiftSubmission
     , requestToAssignment
     ) where
 
@@ -55,7 +56,7 @@ data CourseEducatorInfo = CourseEducatorInfo
     { ciId       :: Course
     , ciDesc     :: Text
     , ciSubjects :: [Subject]
-    } deriving (Show, Eq, Generic)
+    } deriving (Show, Eq, Ord, Generic)
 
 data AssignmentEducatorInfo = AssignmentEducatorInfo
     { aiHash         :: (Hash Assignment)
@@ -97,6 +98,18 @@ educatorLiftAssignment a =
     , aiIsFinal = _aType a ^. assignmentTypeRaw
     , aiDesc = _aDesc a
     }
+
+educatorLiftSubmission :: SignedSubmission -> Maybe GradeInfo -> SubmissionEducatorInfo
+educatorLiftSubmission ss siGrade =
+    SubmissionEducatorInfo
+    { siHash = hash s
+    , siContentsHash = _sContentsHash s
+    , siAssignmentHash = _sAssignmentHash s
+    , siWitness = _ssWitness ss
+    , ..
+    }
+  where
+    s = _ssSubmission ss
 
 requestToAssignment :: NewAssignment -> Assignment
 requestToAssignment NewAssignment{..} =

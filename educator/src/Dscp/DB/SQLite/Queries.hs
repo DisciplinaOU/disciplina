@@ -47,6 +47,8 @@ module Dscp.DB.SQLite.Queries
        , existsSubmission
 
          -- * Destructive actions
+       , CourseDetails (..)
+       , simpleCourse
        , enrollStudentToCourse
        , submitAssignment
        , createBlock
@@ -519,13 +521,22 @@ isAssignedToStudent student assignment = do
            and  assignment_hash = ?
     |]
 
+data CourseDetails = CourseDetails
+    { cdCourseId :: Course
+    , cdDesc     :: Text
+    , cdSubjects :: [Id Subject]
+    } deriving (Show, Generic)
 
-createCourse :: DBM m => Course -> Text -> [Id Subject] -> m (Id Course)
-createCourse course desc subjects = do
+simpleCourse :: Course -> CourseDetails
+simpleCourse i = CourseDetails i "" []
+
+createCourse :: DBM m => CourseDetails -> m (Id Course)
+createCourse params = do
+    let course = cdCourseId params
     transaction $ do
-        execute createCourseRequest (course, desc)
+        execute createCourseRequest (course, cdDesc params)
             `ifAlreadyExistsThrow` CourseDomain course
-        for_ subjects $ \subject -> do
+        for_ (cdSubjects params) $ \subject -> do
             execute attachSubjectToCourseRequest (subject, course)
         return course
   where

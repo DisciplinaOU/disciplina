@@ -15,6 +15,8 @@ import Database.SQLite.Simple (Connection, execute, fold, query, setTrace, withC
 import Fmt ((+|), (+||), (|+), (||+))
 import qualified Loot.Log as Log
 import Test.Hspec
+import Test.QuickCheck (ioProperty)
+import Test.QuickCheck.Monadic (PropertyM, monadic, stop)
 import qualified Text.Show
 import UnliftIO (MonadUnliftIO)
 
@@ -60,6 +62,10 @@ sqliteProperty ::
        (a -> TestSQLiteM prop) -> Property
 sqliteProperty action =
   property $ \input -> ioProperty $ do runTestSQLiteM (action input)
+
+sqlitePropertyM :: Testable prop => PropertyM TestSQLiteM prop -> Property
+sqlitePropertyM action =
+    monadic (ioProperty . runTestSQLiteM) (void $ action >>= stop)
 
 instance Adapter.MonadSQLiteDB TestSQLiteM where
   query theQuery args =

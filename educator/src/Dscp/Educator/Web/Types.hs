@@ -77,14 +77,14 @@ newtype HasProof = HasProof { unHasProof :: Bool }
 
 data StudentInfo = StudentInfo
     { siAddr :: Student
-    } deriving (Show, Eq, Generic)
+    } deriving (Show, Eq, Ord, Generic)
 
 data GradeInfo = GradeInfo
     { giSubmissionHash :: (Hash Submission)
     , giGrade          :: Grade
     , giTimestamp      :: UTCTime
     , giHasProof       :: Bool
-    } deriving (Show, Eq, Generic)
+    } deriving (Show, Eq, Ord, Generic)
 
 data BlkProofInfo = BlkProofInfo
     { bpiMtreeSerialized :: (AsByteString HexEncoded ByteString)

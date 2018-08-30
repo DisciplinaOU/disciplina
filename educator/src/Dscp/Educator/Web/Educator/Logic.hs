@@ -2,6 +2,7 @@ module Dscp.Educator.Web.Educator.Logic
     ( EducatorApiWorkMode
 
     , educatorGetSubmission
+    , educatorGetAllSubmissions
     ) where
 
 import Data.Default (def)
@@ -29,3 +30,8 @@ educatorGetSubmission submissionH = do
     commonGetSubmissions EducatorCase def{ sfSubmissionHash = Just submissionH }
         >>= listToMaybeWarn "submission"
         >>= nothingToThrow (AbsentError $ SubmissionDomain submissionH)
+
+educatorGetAllSubmissions
+    :: EducatorApiWorkMode m
+    => m [SubmissionEducatorInfo]
+educatorGetAllSubmissions = commonGetSubmissions EducatorCase def
