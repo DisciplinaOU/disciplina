@@ -1,0 +1,22 @@
+(version 1)
+(deny default)
+
+(allow file-read*
+  (literal "/dev/random")
+  (literal "/dev/urandom")
+  (subpath "/usr/lib")
+  (subpath "/usr/share")
+  (subpath (param "root")))
+
+(allow file*
+  (subpath "/tmp")
+  (regex #"/dev/tty[0-9a-z]+")
+  (literal (string-append (param "HOME") "/.terminfo"))
+  (subpath (string-append (param "HOME") "/.local/share")))
+
+(allow process-exec)
+(allow process-fork)
+(allow sysctl-read)
+
+(allow network-outbound
+  (remote tcp))
