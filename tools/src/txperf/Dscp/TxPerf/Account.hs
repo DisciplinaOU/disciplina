@@ -7,11 +7,11 @@ import Dscp.Crypto
 import Dscp.Witness.Web
 
 data Account = Account
-    { sk :: SecretKey
-    , pk :: PublicKey
-    , addr :: Address
-    , nextNonce :: Integer
-    , balance :: Int
+    { sk           :: SecretKey
+    , pk           :: PublicKey
+    , addr         :: Address
+    , currentNonce :: Integer
+    , balance      :: Int
     }
     deriving (Ord, Show)
 
@@ -30,7 +30,7 @@ skToAcc wc sk = do
         { sk
         , pk
         , addr
-        , nextNonce = aiNextNonce
+        , currentNonce = aiCurrentNonce
         , balance = fromIntegral . unCoin $ bmTotal aiBalances
         }
   where

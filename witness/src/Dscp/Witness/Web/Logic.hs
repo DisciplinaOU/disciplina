@@ -68,7 +68,7 @@ toBlockInfo includeTxs block = BlockInfo
 toAccountInfo :: HasWitnessConfig => BlocksOrMempool Account -> Maybe [GTxInBlock] -> AccountInfo
 toAccountInfo account txs = AccountInfo
     { aiBalances = Coin . fromIntegral . aBalance <$> account
-    , aiNextNonce = nonce + 1
+    , aiCurrentNonce = nonce
     , aiTransactionCount = nonce
     , aiTransactions = map toTxInfo <$> txs
     }
