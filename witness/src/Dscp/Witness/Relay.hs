@@ -10,6 +10,9 @@ module Dscp.Witness.Relay
 
 import qualified Control.Concurrent.STM as STM
 import Control.Lens (makeLenses)
+import qualified Data.Text.Buildable
+import qualified Text.Show
+import qualified UnliftIO.Exception as UIO
 
 import Loot.Base.HasLens (HasLens (..), HasLens')
 
@@ -25,10 +28,22 @@ data RelayState = RelayState
 
 makeLenses ''RelayState
 
+data RelayException
+    = TxQueueFull
+    deriving (Eq, Generic, Typeable)
+
+instance Exception RelayException
+
+instance Buildable RelayException where
+    build TxQueueFull = "Transaction queue overflow"
+
+instance Show RelayException where
+    show = toString . pretty
+
 -- these sized do not really matter for now
 relayInputSize, relayPipeSize :: Int
-relayInputSize = 100
-relayPipeSize = 100
+relayInputSize = 500
+relayPipeSize = 500
 
 newRelayState :: MonadIO m => m RelayState
 newRelayState = atomically $
@@ -44,5 +59,11 @@ relayTx
 relayTx tx = do
     input <- view (lensOf @RelayState . rsInput)
     (notifier, waiter) <- newWaitPair
-    atomically $ STM.writeTBQueue input (tx, notifier)
+    isFull <- atomically $ do
+        full <- STM.isFullTBQueue input
+        when (not full) $
+            STM.writeTBQueue input (tx, notifier)
+        return full
+    when isFull $
+        UIO.throwIO TxQueueFull
     return waiter
