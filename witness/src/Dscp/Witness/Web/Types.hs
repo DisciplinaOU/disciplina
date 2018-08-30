@@ -27,7 +27,7 @@ data BlocksOrMempool a = BlocksOrMempool
 
 data BlockInfo = BlockInfo
     { biHeaderHash       :: HeaderHash
-    , biNextHash         :: HeaderHash
+    , biNextHash         :: Maybe HeaderHash
     , biMerkleRootHash   :: Text
     , biHeader           :: Header
     , biIsGenesis        :: Bool

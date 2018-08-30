@@ -11,6 +11,7 @@ module Dscp.Witness.Logic.Getters
     , getHeader
 
     , resolvePrevious
+    , resolveNext
 
     , getAccountMaybe
     , getMempoolAccountMaybe
@@ -95,6 +96,10 @@ resolvePrevious o = do
     if headerHash header == genesisHash
     then pure Nothing
     else pure $ Just $ hPrevHash header
+
+-- | Given the element, get the next one.
+resolveNext :: (HasWitnessConfig, HasHeaderHash x) => x -> SdM (Maybe HeaderHash)
+resolveNext = SD.queryOne . NextBlockOf . headerHash >=> pure . map unNextBlock
 
 ----------------------------------------------------------------------------
 -- Account getters
