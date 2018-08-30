@@ -304,7 +304,14 @@ data BlockBody = BlockBody
     } deriving (Eq, Show, Generic)
 
 instance Buildable BlockBody where
-    build (BlockBody txs) = listF txs
+    build (BlockBody txs) =
+        listF displayedTxs +|
+        whenF (n > displayed) (" + "+|left|+" more transactions.")
+      where
+        n = length txs
+        displayed = 10
+        displayedTxs = take displayed txs
+        left = n - displayed
 
 -- | Block.
 data Block = Block
