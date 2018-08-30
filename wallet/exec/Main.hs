@@ -25,11 +25,11 @@ type UiComponents = '[Knit.Core, Knit.Wallet, Knit.TaskManager, Knit.UI]
 
 main :: IO ()
 main = do
-    serverAddress <- getWalletCLIParams
-    runComponentM "ariadne" (initializeEverything serverAddress) id
+    params <- getWalletCLIParams
+    runComponentM "ariadne" (initializeEverything params) id
 
-initializeEverything :: BaseUrl -> ComponentM (IO ())
-initializeEverything serverAddress = do
+initializeEverything :: WalletCLIParams -> ComponentM (IO ())
+initializeEverything WalletCLIParams{..} = do
     uiWalletState <- createWalletState
 
     let features = UiFeatures
@@ -42,7 +42,7 @@ initializeEverything serverAddress = do
             }
     (uiFace, mkUiAction) <- createAriadneUI features historyToUI
     taskManagerFace <- createTaskManagerFace
-    walletFace <- createWalletFace serverAddress (putWalletEventToUI uiWalletState uiFace)
+    walletFace <- createWalletFace wpWitness (putWalletEventToUI uiWalletState uiFace)
 
     let knitExecContext :: (Doc -> IO ()) -> Knit.ExecContext IO UiComponents
         knitExecContext putCommandOutput =
