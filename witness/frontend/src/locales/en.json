@@ -31,7 +31,7 @@
     "showMore" : "Show more"
   },
   "transaction" : {
-    "title" : "Transaction",
+    "title" : "Transactions",
     "from" : "From",
     "to" : "To",
     "summary" : {
@@ -41,7 +41,7 @@
         "title" : "Included in",
         "block" : "Block"
       },
-      "totalOutput" : "Total Output",
+      "totalOutput" : "Block Total Output",
       "fee" : "Transaction fee"
     }
   },

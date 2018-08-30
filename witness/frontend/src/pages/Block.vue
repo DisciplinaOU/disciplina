@@ -36,13 +36,13 @@
                   <div class="slotInform__hashes slotInformBlock">
                       <p class="slotInformBlock__title">{{ $t("hashes.title") }}</p>
                       <div class="slotInformBlock__item">
-                          <span class="slotInformBlock__name">{{ $t("hashes.hash") }}</span><span class="slotInformBlock__value hash">{{ block.headerHash }}</span>
+                          <span class="slotInformBlock__name">{{ $t("hashes.hash") }} </span><span class="slotInformBlock__value hash">{{ block.headerHash }}</span>
                       </div>
                       <div class="slotInformBlock__item">
-                          <span class="slotInformBlock__name">{{ $t("hashes.prev") }}</span><span class="slotInformBlock__value hash">{{ block.header.prevHash }}</span>
+                          <span class="slotInformBlock__name">{{ $t("hashes.prev") }} </span><span class="slotInformBlock__value hash">{{ block.header.prevHash }}</span>
                       </div>
                       <div class="slotInformBlock__item">
-                          <span class="slotInformBlock__name">{{ $t("hashes.next") }}</span><span class="slotInformBlock__value hash">{{ block.nextHash }}</span>
+                          <span class="slotInformBlock__name">{{ $t("hashes.next") }} </span><span class="slotInformBlock__value hash">{{ block.nextHash }}</span>
                       </div>
                       <!-- <div class="slotInformBlock__item">
                           <span class="slotInformBlock__name">{{ $t("hashes.merkleRoot") }}</span><span class="slotInformBlock__value hash">{{ block.merkleRootHash }}</span>
