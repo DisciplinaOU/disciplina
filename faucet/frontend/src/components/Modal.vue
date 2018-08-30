@@ -19,7 +19,7 @@
         <div class="modalContent__button btn btn--blue-white" :class="{ 'btn--blue-white--active' : secretKeyCopied }" @click="copyKey('secretKey')">{{ $t(secretKeyCopied ? "copied" : "copy") }}</div>
       </div>
       <div class="modalLayer__content modalContent">
-        <p class="modalContent__prompt">{{ $t("info") }}</p>
+        <p class="modalContent__prompt" v-html="$t('info')"></p>
       </div>
     </div>
   </div>

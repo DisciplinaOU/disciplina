@@ -29,44 +29,7 @@
     </div>
   </footer>
 </template>
-<div class="footer__social">
-                        <a class="footer__socbutton" target="_blank" href="https://www.facebook.com/tchmpls.events/">
-                            <div class="footer__socbutton-icon footer__socbutton-icon--fb"></div>
-                        </a>
-                        <a class="footer__socbutton" target="_blank" href="https://twitter.com/tchmpls_events">
-                            <div class="footer__socbutton-icon footer__socbutton-icon--tw"></div>
-                        </a>
-                        <a class="footer__socbutton" target="_blank" href="https://www.weibo.com/DISCIPLINA">
-                            <div class="footer__socbutton-icon footer__socbutton-icon--wb"></div>
-                        </a>
-                        <a class="footer__socbutton" target="_blank" href="https://open.kakao.com/o/gpaA9eN">
-                            <div class="footer__socbutton-icon footer__socbutton-icon--kt"></div>
-                        </a>
-                        <a class="footer__socbutton" target="_blank" href="https://www.reddit.com/user/tchmpls_events">
-                            <div class="footer__socbutton-icon footer__socbutton-icon--rd"></div>
-                        </a>
-                        <a class="footer__socbutton" target="_blank" href="https://www.instagram.com/disciplina.io/">
-                            <div class="footer__socbutton-icon footer__socbutton-icon--ig"></div>
-                        </a>
-                        <a class="footer__socbutton" target="_blank" href="https://t.me/tchmpls">
-                            <div class="footer__socbutton-icon footer__socbutton-icon--tg"></div>
-                        </a>
-                        <a class="footer__socbutton" target="_blank" href="https://www.linkedin.com/company/disciplina-blockchain/">
-                            <div class="footer__socbutton-icon footer__socbutton-icon--li"></div>
-                        </a>
-                        <a class="footer__socbutton" target="_blank" href="https://www.youtube.com/c/TCHMPLSEVENTS">
-                            <div class="footer__socbutton-icon footer__socbutton-icon--yt"></div>
-                        </a>
-                        <a class="footer__socbutton" target="_blank" href="https://medium.com/@tchmpls_events">
-                            <div class="footer__socbutton-icon footer__socbutton-icon--md"></div>
-                        </a>
-                        <a class="footer__socbutton" target="_blank" href="https://bitcointalk.org/index.php?topic=2325715">
-                            <div class="footer__socbutton-icon footer__socbutton-icon--bt"></div>
-                        </a>
-                        <a class="footer__socbutton" target="_blank" href="https://github.com/DisciplinaOU/disciplina">
-                            <div class="footer__socbutton-icon footer__socbutton-icon--gh"></div>
-                        </a>
-                    </div>
+
 <script>
 export default {
   name: 'TheFooter',
