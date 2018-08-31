@@ -49,6 +49,9 @@
     "buttonText": "搜索",
     "placeholder": "在DISCIPLINA網絡上搜索地址，交易"
   },
+  "footer": {
+    "address": "Narva mnt 7-634, 10117, Kesklinna linnaosa，塔林，爱沙尼亚"
+  },
   "header": {
     "title": "DISCIPLINA 区块链资源管理器"
   },

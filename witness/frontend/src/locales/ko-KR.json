@@ -49,6 +49,9 @@
     "buttonText": "검색",
     "placeholder": "DISCIPLINA 네트워크에서 주소, 트랜잭션 검색"
   },
+  "footer": {
+    "address": "Narva mnt 7-634, 10117, Kesklinna linnaosa, Tallinn, Estonia;"
+  },
   "header": {
     "title": "DISCIPLINA 블록체인 탐색기"
   },
@@ -59,6 +62,7 @@
     "transaction": "거래",
     "totalSent": "총 송금액",
     "blockLeader": "슬롯 리더",
+    "blockHash": "해시 차단",
     "size": "사이즈 (바이트)",
     "newerBlocks": "신 블록",
     "olderBlocks": "구 블록"
