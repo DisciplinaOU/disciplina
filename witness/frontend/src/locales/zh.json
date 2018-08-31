@@ -1,13 +1,14 @@
 {
   "address": {
     "title": "地址",
-    "transactions": "交易",
+    "transactions": "外發交易",
     "finalBalance": "最后的余额"
   },
   "block": {
     "title": "区块",
     "about": {
       "title": "区块信息",
+      "blockIndex": "阻止指數",
       "transactions": "交易",
       "totalOutput": "总产量",
       "fees": "费用"
@@ -46,19 +47,25 @@
   },
   "search": {
     "buttonText": "搜索",
-    "placeholder": "通过 DISCIPLINA 网络来搜索地址、交易、时期和位置"
+    "placeholder": "在DISCIPLINA網絡上搜索地址，交易"
   },
   "header": {
     "title": "DISCIPLINA 区块链资源管理器"
   },
   "showMore": "显示更多",
   "blockList": {
+    "blockIndex": "阻止指數",
     "since": "自从",
     "transaction": "交易",
     "totalSent": "已发送的总额",
     "blockLeader": "区块领导",
+    "blockHash": "塊哈希",
     "size": "大小（字节）",
     "newerBlocks": "较新的区块",
     "olderBlocks": "较旧的区块"
+  },
+  "notFound": {
+    "title": "未找到匹配的記錄",
+    "back": "返回主頁"
   }
 }
