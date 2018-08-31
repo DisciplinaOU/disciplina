@@ -8,10 +8,10 @@ import VueAxios from 'vue-axios'
 
 import i18next from 'i18next'
 import VueI18Next from '@panter/vue-i18next'
-import En from './locales/en'
-import Zh from './locales/zh'
-import Jp from './locales/jp'
-import Kr from './locales/kr'
+import En from './locales/en-US.json'
+import Zh from './locales/zh-CN.json'
+import Ja from './locales/ja-JP.json'
+import Ko from './locales/ko-KR.json'
 
 import router from './router'
 import store from './store/index'
@@ -28,8 +28,8 @@ i18next.init({
   resources: {
     en: { translation: En },
     zh: { translation: Zh },
-    jp: { translation: Jp },
-    kr: { translation: Kr }
+    ja: { translation: Ja },
+    ko: { translation: Ko }
   }
 })
 const i18n = new VueI18Next(i18next)
