@@ -1,13 +1,13 @@
 <template>
-  <div class="selectBox" :class="{ active: opened }" @click="opened = !opened" v-click-outside="hide" v-if="languages.length > 1">
+  <div class="selectBox" :class="{ active: opened }" @click="opened = !opened" v-click-outside="hide">
     <div class="input">{{ currentLanguage }}</div>
     <div class="options" v-show="opened">
       <a class="option"
         v-for="lang in languages"
-        :key="lang"
+        :key="lang[0]"
         @click.stop="changeLanguage(lang)"
-        :class="{ active: lang == currentLanguage }">
-        {{ lang }}
+        :class="{ active: lang[1] == currentLanguage }">
+        {{ lang[1] }}
       </a>
     </div>
   </div>
@@ -19,17 +19,22 @@ import ClickOutside from 'vue-click-outside'
 export default {
   data: function () {
     return {
-      languages: ['en'],
-      currentLanguage: 'en',
+      languages: [
+        ['en', 'EN'],
+        ['zh', '中文'],
+        ['ko', '한국어'],
+        ['ja', '日本語']
+      ],
+      currentLanguage: 'EN',
       opened: false
     }
   },
   name: 'LanguageSelector',
   methods: {
     changeLanguage (lang) {
-      this.currentLanguage = lang
+      this.currentLanguage = lang[1]
       this.opened = false
-      this.$i18n.i18next.changeLanguage(lang)
+      this.$i18n.i18next.changeLanguage(lang[0])
     },
     hide () {
       this.opened = false
@@ -56,8 +61,9 @@ export default {
 
   .selectBox .input {
     padding-right: 15px;
-    width: 40px;
+    width: 65px;
     position: relative;
+    text-align: right;
   }
 
   .selectBox .input::after {
@@ -82,7 +88,7 @@ export default {
   }
 
   .selectBox .options {
-    width: 65px;
+    width: 66px;
     padding: 8px;
     box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.5);
     border-radius:3px;
