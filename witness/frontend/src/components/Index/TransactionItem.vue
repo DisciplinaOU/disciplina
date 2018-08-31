@@ -3,7 +3,7 @@
       <div class="pseudoTable__cell cell cell__hash hash">
           {{ transaction.txId }}
       </div>
-      <div class="pseudoTable__cell cell cell__time">{{ new Date(transaction.block.since/1000) | moment('DD/MM/YYYY HH:MM:SS') }}</div>
+      <div class="pseudoTable__cell cell cell__time">{{ new Date(transaction.block.since/1000) | moment('DD/MM/YYYY HH:mm:ss') }}</div>
       <div class="pseudoTable__cell cell cell__totalSent" v-if="isMoney(transaction)">
         <dscp-format :value="transaction.outValue"/>
       </div>
