@@ -1,0 +1,64 @@
+{
+  "address": {
+    "title": "주소",
+    "transactions": "거래내역",
+    "finalBalance": "최종 잔액"
+  },
+  "block": {
+    "title": "블록",
+    "about": {
+      "title": "블록에 대해",
+      "transactions": "거래내역",
+      "totalOutput": "총 생산량",
+      "fees": "요금"
+    },
+    "hashes": {
+      "title": "해쉬",
+      "hash": "해쉬",
+      "prev": "이전 블록",
+      "next": "다음 블록",
+      "merkleRoot": "머클 트리"
+    },
+    "nav": {
+      "prev": "이전 블록",
+      "next": "다음 블록"
+    }
+  },
+  "index": {
+    "blocks": "최근 블록",
+    "transactions": "최근 거래",
+    "showMore": "더보기"
+  },
+  "transaction": {
+    "title": "거래",
+    "from": "From",
+    "to": "To",
+    "summary": {
+      "title": "요약",
+      "time": "입금 시각",
+      "includedIn": {
+        "title": "포함",
+        "block": "블록"
+      },
+      "totalOutput": "총 생산량",
+      "fee": "거래 수수료"
+    }
+  },
+  "search": {
+    "buttonText": "검색",
+    "placeholder": "DISCIPLINA 네트워크에서 주소, 거래, 에포크, 슬롯 검색하기"
+  },
+  "header": {
+    "title": "DISCIPLINA 블록체인 탐색기"
+  },
+  "showMore": "더보기",
+  "blockList": {
+    "since": "경과시간",
+    "transaction": "거래",
+    "totalSent": "총 송금액",
+    "blockLeader": "슬롯 리더",
+    "size": "사이즈 (바이트)",
+    "newerBlocks": "신 블록",
+    "olderBlocks": "구 블록"
+  }
+}
