@@ -55,7 +55,7 @@ faucetTransferMoneyTo dest = do
             if dryRun
             then pure AccountInfo
                       { aiBalances = join BlocksOrMempool (Coin 100000)
-                      , aiNextNonce = 7
+                      , aiCurrentNonce = 6
                       , aiTransactionCount = 6
                       , aiTransactions = Nothing
                       }
@@ -65,7 +65,7 @@ faucetTransferMoneyTo dest = do
         when (balance < transfer) $
             throwM SourceAccountExhausted
 
-        let nonce = aiNextNonce sourceState
+        let nonce = aiCurrentNonce sourceState
             inAcc = TxInAcc{ tiaNonce = nonce, tiaAddr = source }
             outs  = one (TxOut dest transfer)
             tx    = Tx{ txInAcc = inAcc, txInValue = transfer, txOuts = outs }

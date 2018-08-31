@@ -16,7 +16,7 @@ sendTx wc async from tos = do
     print . pretty $ tx
     return tx
   where
-    inAcc = TxInAcc{ tiaNonce = nextNonce from, tiaAddr = addr from }
+    inAcc = TxInAcc { tiaNonce = currentNonce from, tiaAddr = addr from }
     inValue = foldr sumCoins (Coin 0) $ snd <$> tos
     outs = (\(acc, value) -> TxOut (addr acc) value) <$> tos
     tx = Tx{ txInAcc = inAcc, txInValue = inValue, txOuts = outs }
@@ -39,12 +39,12 @@ genTx wc async = do
             (\acc -> if acc == accFrom
                 then acc
                     { balance = balance acc - toCount
-                    , nextNonce = nextNonce acc + 1
+                    , currentNonce = currentNonce acc + 1
                     }
                 else acc
             ) .
             (\acc -> if acc `elem` accsTo
-                then acc{ balance = balance acc + 1 }
+                then acc { balance = balance acc + 1 }
                 else acc
             )
     put $ map upd accounts

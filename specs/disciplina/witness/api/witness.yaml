@@ -330,7 +330,7 @@ definitions:
             type: integer
             format: int32
             description: Balance derived from both chain and transactions which are not yet in blocks.
-      nextNonce:
+      currentNonce:
         type: integer
         format: int32
   TransactionInfo:
@@ -405,7 +405,7 @@ definitions:
       nonce:
         type: integer
         format: int32
-        description: Next account nonce, received in /accounts/{address} endpoint.
+        description: Current account nonce, received in /accounts/{address} endpoint.
       addr:
         $ref: "#/definitions/Address"
   TxOut:
@@ -487,7 +487,7 @@ definitions:
             * `AuthorDoesNotExist` - Source account has never received money.
             * `SignatureIsCorrupted` - Bad signature provided.
             * `NotASingletonSelfUpdate` - Cannot send money to yourself more than once in transaction.
-            * `NonceMustBeIncremented` - Bad nonce for source account is used. Should be exactly "nextNonce" returned by /accounts/{address} endpoint.
+            * `NonceMustBeIncremented` - Bad nonce for source account is used. Should be exactly "currentNonce" returned by /accounts/{address} endpoint.
             * `PaymentMustBePositive` - You can only decrease your funds by outcoming transaction.
             * `ReceiverMustIncreaseBalance` - You can only increase the funds of receiver by outcoming transaction.
             * `SumMustBeNonNegative` - Sum of payments plus fee must be less or equal to amount of money you spend.
