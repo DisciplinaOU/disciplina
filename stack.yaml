@@ -32,7 +32,7 @@ extra-deps:
   commit: f9a0cd66f443d7b0e04a3c8ae8d475f8344b823b
 
 - git: https://github.com/serokell/blockchain-util.git
-  commit: 496f064199abaf810599acdab985a1db41f315b3 # master
+  commit: 0252789e6b3d562fd189cbc66e4bfa76d363138f # dscp/release-alpha
   subdirs:
     - snowdrop-core
     - snowdrop-util
