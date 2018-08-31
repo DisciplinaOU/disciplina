@@ -24,6 +24,7 @@
     border-left: 1px solid $color-white;
     font-size: 24px;
     line-height: 1.1;
+    font-weight: 300;
   }
 }
 
@@ -38,12 +39,12 @@
 
   &__title {
     @include font(36px, 42px);
-    font-weight: 400;
+    font-weight: 500;
   }
 
   &__text {
     @include font(24px, 28px);
-    font-weight: 300;
+    font-weight: 400;
     padding-top: 16px;
   }
 }
@@ -61,7 +62,7 @@
     text-align: center;
     line-height: 1;
     text-shadow: 1px 1px 0 rgba($color-black, 0.05);
-    font-weight: 300;
+    font-weight: 400;
   }
 }
 
@@ -79,12 +80,12 @@
     outline: none;
     color: $color-text;
     transition: box-shadow 0.3s ease;
-    font-weight: 400;
+    font-weight: 500;
 
     &::placeholder {
       opacity: 1;
       color: $color-muted;
-      font-weight: 300;
+      font-weight: 400;
     }
 
     &:focus {
@@ -155,11 +156,11 @@
     @include font(23px, 28px);
     display: block;
     margin-bottom: 15px;
-    font-weight: 400;
+    font-weight: 500;
     flex:0 0 auto;
 
     span {
-      font-weight: 400;
+      font-weight: 500;
     }
   }
 
@@ -403,7 +404,7 @@
   .modalLayer__title {
     font-size: 24px;
     margin-bottom: 25px;
-    font-weight: 400;
+    font-weight: 500;
   }
   .modalContent {
     display: flex;
@@ -421,7 +422,7 @@
   }
   .modalContent__hash {
     margin-right: 30px;
-    font-weight: 300;
+    font-weight: 400;
   }
   .modalContent__button {
     margin-left: auto;
@@ -433,7 +434,7 @@
   }
   .modalContent__prompt {
     text-align: left;
-    font-weight: 300;
+    font-weight: 400;
   }
 
   .modalContent__link {
