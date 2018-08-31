@@ -1,6 +1,6 @@
 <template>
-  <money :transaction="transaction" :timestamp="timestamp" v-if="isMoney(transaction)"/>
-  <publication :transaction="transaction" :timestamp="timestamp" v-else-if="isPublication(transaction)"/>
+  <money :transaction="transaction" :timestamp="timestamp" :currentAddress="currentAddress" v-if="isMoney(transaction)"/>
+  <publication :transaction="transaction" :timestamp="timestamp" :currentAddress="currentAddress" v-else-if="isPublication(transaction)"/>
 </template>
 
 <script>
@@ -11,7 +11,8 @@ export default {
   name: 'TransactionItem',
   props: {
     transaction: Object,
-    timestamp: Number
+    timestamp: Number,
+    currentAddress: String
   },
   components: { Money, Publication },
   methods: {

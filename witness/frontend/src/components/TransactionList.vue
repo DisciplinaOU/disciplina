@@ -6,6 +6,7 @@
         v-for="transaction in transactions"
         :transaction="transaction"
         :timestamp="timestamp"
+        :currentAddress="currentAddress"
         :key="transaction.txId"/>
       <div class="paginationBlock marginTop40" v-if="false">
         <div class="paginationBlock__btnBack btn btn--more">{{ $t("showMore") }}</div>
@@ -19,7 +20,7 @@ import TransactionItem from '@/components/TransactionItem'
 
 export default {
   name: 'TransactionList',
-  props: ['transactions', 'timestamp'],
+  props: ['transactions', 'timestamp', 'currentAddress'],
   components: { TransactionItem },
   i18nOptions: {
     keyPrefix: ''
