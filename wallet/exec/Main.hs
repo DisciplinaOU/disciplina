@@ -1,7 +1,10 @@
 module Main where
 
+import Control.Concurrent (threadDelay)
+import Control.Concurrent.Async (race_)
 import Control.Monad.Component (ComponentM, runComponentM)
 import NType (N (..))
+import System.Random (randomRIO)
 import Text.PrettyPrint.ANSI.Leijen (Doc)
 
 import Ariadne.Knit.Backend
@@ -22,11 +25,11 @@ type UiComponents = '[Knit.Core, Knit.Wallet, Knit.TaskManager, Knit.UI]
 
 main :: IO ()
 main = do
-    serverAddress <- getWalletCLIParams
-    runComponentM "ariadne" (initializeEverything serverAddress) id
+    params <- getWalletCLIParams
+    runComponentM "ariadne" (initializeEverything params) id
 
-initializeEverything :: BaseUrl -> ComponentM (IO ())
-initializeEverything serverAddress = do
+initializeEverything :: WalletCLIParams -> ComponentM (IO ())
+initializeEverything WalletCLIParams{..} = do
     uiWalletState <- createWalletState
 
     let features = UiFeatures
@@ -39,7 +42,7 @@ initializeEverything serverAddress = do
             }
     (uiFace, mkUiAction) <- createAriadneUI features historyToUI
     taskManagerFace <- createTaskManagerFace
-    walletFace <- createWalletFace serverAddress (putWalletEventToUI uiWalletState uiFace)
+    walletFace <- createWalletFace wpWitness (putWalletEventToUI uiWalletState uiFace)
 
     let knitExecContext :: (Doc -> IO ()) -> Knit.ExecContext IO UiComponents
         knitExecContext putCommandOutput =
@@ -57,4 +60,10 @@ initializeEverything serverAddress = do
         uiAction :: IO ()
         uiAction = mkUiAction (knitFaceToUI uiWalletState uiFace walletFace knitFace)
 
-    return uiAction
+        refreshAction :: IO ()
+        refreshAction = forever $ do
+            delay <- randomRIO (15, 25)
+            threadDelay $ delay * 10 ^ (6 :: Int)
+            walletRefreshState walletFace
+
+    return $ uiAction `race_` refreshAction

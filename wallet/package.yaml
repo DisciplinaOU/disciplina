@@ -16,6 +16,7 @@ library:
   dependencies:
     - Earley
     - aeson
+    - async
     - bytestring
     - componentm
     - directory
@@ -47,6 +48,7 @@ executables:
       - ansi-wl-pprint
       - ariadne-core
       - ariadne-vty-lib
+      - async
       - componentm
       - containers
       - double-conversion
@@ -55,6 +57,7 @@ executables:
       - knit
       - lens
       - ntype
+      - random
       - serokell-util
       - text
       - vector
@@ -68,6 +71,7 @@ executables:
       - ansi-wl-pprint
       - ariadne-cli-lib
       - ariadne-core
+      - async
       - componentm
       - disciplina-core
       - disciplina-wallet

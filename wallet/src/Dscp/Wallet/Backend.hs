@@ -23,7 +23,7 @@ createWalletFace serverAddress sendEvent = buildComponent_ "Wallet" $ do
         , walletGenKeyPair = genKeyPair sendEvent
         , walletRestoreKey = restoreKey sendEvent
         , walletListKeys = listKeys
-        , walletSendTx = sendTx wc
+        , walletSendTx = sendTx wc sendEvent
         , walletGetBalance = getBalance wc
         , walletGetTxHistory = getTxHistory wc
         }
@@ -60,8 +60,14 @@ restoreKey sendEvent mName eSecretKey mPassPhrase = do
 listKeys :: IO [Account]
 listKeys = getAccounts
 
-sendTx :: WitnessClient -> Encrypted SecretKey -> Maybe PassPhrase -> NonEmpty TxOut -> IO Tx
-sendTx wc eSecretKey mPassPhrase (toList -> outs) = do
+sendTx
+    :: WitnessClient
+    -> (WalletEvent -> IO ())
+    -> Encrypted SecretKey
+    -> Maybe PassPhrase
+    -> NonEmpty TxOut
+    -> IO Tx
+sendTx wc sendEvent eSecretKey mPassPhrase (toList -> outs) = do
     secretKey <- either throwIO return . decrypt (fromMaybe emptyPassPhrase mPassPhrase) $ eSecretKey
     let publicKey = toPublic secretKey
         address = mkAddr publicKey
@@ -77,6 +83,7 @@ sendTx wc eSecretKey mPassPhrase (toList -> outs) = do
         txWitnessed = TxWitnessed { twTx   = tx, twWitness = witness }
 
     void $ wSubmitTx wc txWitnessed
+    sendStateUpdateEvent sendEvent
     return tx
 
 getBalance :: WitnessClient -> Address -> IO (BlocksOrMempool Coin)
