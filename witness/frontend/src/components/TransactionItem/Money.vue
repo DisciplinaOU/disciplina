@@ -6,7 +6,7 @@
           {{ transaction.txId }}
         </router-link>
       </p>
-      <p class="transactionInformBlock__date">{{ new Date(calcTimestamp) | moment('DD/MM/YYYY HH:MM:SS') }}</p>
+      <p class="transactionInformBlock__date">{{ new Date(calcTimestamp) | moment('DD/MM/YYYY HH:mm:ss') }}</p>
       <p class="transactionInformBlock__totalSent btn btn--blue btn--noclick">
         <dscp-format :value="transaction.outValue"/>
       </p>
