@@ -15,10 +15,9 @@
       </div>
     </div>
     <div class="paginationBlock marginTop40">
-        <!-- <div class="paginationBlock__btnForward btn btn--arrow btn--forward" :class="{ 'btn--gray': currentPage == 1 }" @click="fetchBlocks(fromBlockHashPrev, currentPage - 1)">{{ $t("newerBlocks") }}</div> -->
-        <div class="paginationBlock__btnForward btn btn--arrow btn--forward" :class="{ 'btn--gray': currentPage == 1 }" @click="fetchBlocks(fromBlockHashPrev, 1)">{{ $t("newerBlocks") }}</div>
+        <div class="paginationBlock__btnForward btn btn--arrow btn--forward" :class="{ 'btn--gray': currentPage == 1 }" @click="fetchBlocks(currentPage - 1)">{{ $t("newerBlocks") }}</div>
         <div class="paginationBlock__pagination">{{ $t("pagenav.page") }} <span class="paginationBlock__page">{{ currentPage }}</span> {{ $t("pagenav.of") }} &nbsp;<span class="paginationBlock__allPage">{{ totalPages }}</span></div>
-        <div class="paginationBlock__btnBack btn btn--arrow btn--back" :class="{ 'btn--gray': currentPage == totalPages }" @click="fetchBlocks(fromBlockHash, currentPage + 1)">{{ $t("olderBlocks") }}</div>
+        <div class="paginationBlock__btnBack btn btn--arrow btn--back" :class="{ 'btn--gray': currentPage == totalPages }" @click="fetchBlocks(currentPage + 1)">{{ $t("olderBlocks") }}</div>
     </div>
   </div>
 </template>
@@ -43,8 +42,6 @@ export default {
       'blocks',
       'totalPages',
       'perPage',
-      'fromBlockHash',
-      'fromBlockHashPrev',
       'currentPage'
     ])
   },
@@ -54,12 +51,12 @@ export default {
       'getTotalPages',
       'setPage'
     ]),
-    fetchBlocks (hash, page) {
+    fetchBlocks (page) {
       if (page < 1 || page > this.totalPages) {
         return false
       }
 
-      this.getAllBlocks(page === 1 ? undefined : hash, page)
+      this.getAllBlocks(page)
       this.$store.commit('setPage', page)
     }
   }

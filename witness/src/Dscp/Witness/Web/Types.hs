@@ -3,6 +3,7 @@
 module Dscp.Witness.Web.Types
     ( BlocksOrMempool (..)
     , BlockInfo (..)
+    , BlockList (..)
     , AccountInfo (..)
     , TxInfo (..)
     , TxList (..)
@@ -37,6 +38,11 @@ data BlockInfo = BlockInfo
     , biTotalOutput      :: Coin
     , biTotalFees        :: Coin
     , biTransactions     :: Maybe [TxInfo]
+    }
+
+data BlockList = BlockList
+    { blBlocks :: [BlockInfo]
+    , blTotalCount :: Word64
     }
 
 -- | All what user may wish to know about an account.
@@ -75,8 +81,8 @@ instance Buildable (ForResponseLog BlockInfo) where
         "{ headerHash = " +| biHeaderHash |+
         ", header = " +| biHeader |+
         " }"
-instance Buildable (ForResponseLog [BlockInfo]) where
-    build (ForResponseLog blocks) = "" +| length blocks |+ " blocks"
+instance Buildable (ForResponseLog BlockList) where
+    build (ForResponseLog BlockList{..}) = "" +| length blBlocks |+ " blocks"
 
 instance Buildable a => Buildable (BlocksOrMempool a) where
     build BlocksOrMempool{..} =
@@ -110,6 +116,7 @@ instance Buildable (ForResponseLog TxId) where
 ---------------------------------------------------------------------------
 
 deriveJSON defaultOptions ''BlocksOrMempool
+deriveJSON defaultOptions ''BlockList
 deriveJSON defaultOptions{ omitNothingFields = True } ''BlockInfo
 deriveJSON defaultOptions{ omitNothingFields = True } ''AccountInfo
 deriveJSON defaultOptions{ omitNothingFields = True } ''TxList

@@ -86,13 +86,17 @@ toTxInfo tx = do
         , tiTx = unGTxWitnessed $ tbTx tx
         }
 
-getBlocks :: WitnessWorkMode ctx m => Maybe Int -> Maybe HeaderHash -> m [BlockInfo]
-getBlocks mCount mFrom = do
-    let count = min 100 $ fromMaybe 100 mCount
-    from <- maybe (runSdMRead getTipHash) return mFrom
-    runSdMRead (getBlockMaybe from) >>= void . nothingToThrow BlockNotFound
-    eBlocks <- runSdMRead $ getBlocksBefore count from
-    either (throwM . InternalError) (mapM (toBlockInfo False) . reverse . toList) eBlocks
+getBlocks :: WitnessWorkMode ctx m => Maybe Word64 -> Maybe Int -> m BlockList
+getBlocks mSkip mCount = do
+    (eBlocks, totalCount) <- runSdMRead $ do
+        eBlocks <- getBlocksFrom skip count
+        totalCount <- (+ 1) . unDifficulty . hDifficulty <$> getTipHeader
+        return (eBlocks, totalCount)
+    either (throwM . InternalError) (toBlockList totalCount <=< mapM (toBlockInfo False) . reverse . toList) eBlocks
+  where
+    count = min 100 $ fromMaybe 100 mCount
+    skip = fromMaybe 0 mSkip
+    toBlockList blTotalCount blBlocks = pure BlockList{..}
 
 getBlockInfo :: WitnessWorkMode ctx m => HeaderHash -> m BlockInfo
 getBlockInfo =

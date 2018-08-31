@@ -64,7 +64,7 @@
     "blockLeader": "Block Leader",
     "blockHash": "Block hash",
     "size": "Size (bytes)",
-    "newerBlocks": "To first page",
+    "newerBlocks": "Newer blocks",
     "olderBlocks": "Older blocks",
     "pagenav" : {
       "page" : "Page",

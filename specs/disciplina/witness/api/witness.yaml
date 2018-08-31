@@ -55,19 +55,17 @@ paths:
     get:
       summary: Get list of blocks.
       description: >-
-        Return a batch of `count` most recent blocks.
-        `prevHash` of the oldest block in the batch can be passed as `from` parameter to get the next batch.
+        Return a batch of `count` most recent blocks, skipping `skip` blocks from the tip.
       operationId: getBlocks
       produces:
       - application/json
       parameters:
       - in: query
-        name: from
-        description: >-
-          Get a batch of blocks starting with the specified one.
-          If not specified, get the most recent blocks.
-        type: string
-        format: byte
+        name: skip
+        description: The amount of blocks to skip.
+        default: 0
+        type: integer
+        format: int64
       - in: query
         name: count
         description: The amount of blocks returned.
@@ -79,9 +77,15 @@ paths:
         200:
           description: Successful operation
           schema:
-            type: array
-            items:
-              $ref: "#/definitions/BlockInfo"
+            type: object
+            properties:
+              transactions:
+                type: array
+                items:
+                  $ref: "#/definitions/BlockInfo"
+              totalCount:
+                type: integer
+                format: int64
         400:
           description: Invalid input
           schema:

@@ -38,9 +38,9 @@ data WitnessEndpoints route = WitnessEndpoints
 
     , wGetBlocks :: route
         :- "blocks"
+        :> QueryParam "skip" Word64
         :> QueryParam "count" Int
-        :> QueryParam "from" HeaderHash
-        :> Verb 'GET 200 '[DSON] [BlockInfo]
+        :> Verb 'GET 200 '[DSON] BlockList
 
     , wGetBlock :: route
         :- "blocks" :> Capture "headerHash" HeaderHash
