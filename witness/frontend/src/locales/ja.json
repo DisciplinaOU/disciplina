@@ -1,0 +1,71 @@
+{
+  "address": {
+    "title": "アドレス",
+    "transactions": "発信トランザクション",
+    "finalBalance": "最終残高"
+  },
+  "block": {
+    "title": "ブロック",
+    "about": {
+      "title": "ブロックについて",
+      "blockIndex": "ブロックインデックス",
+      "transactions": "トランザクション",
+      "totalOutput": "全生産量",
+      "fees": "料金"
+    },
+    "hashes": {
+      "title": "ハッシュ",
+      "hash": "ハッシュ",
+      "prev": "前のブロック",
+      "next": "次のブロック",
+      "merkleRoot": "マークル・ルート"
+    },
+    "nav": {
+      "prev": "前のブロック",
+      "next": "次のブロック"
+    }
+  },
+  "index": {
+    "blocks": "最後のブロック",
+    "transactions": "最後のトランザクション",
+    "showMore": "もっと表示する"
+  },
+  "transaction": {
+    "title": "トランザクション",
+    "from": "送付元",
+    "to": "送付先",
+    "summary": {
+      "title": "まとめ",
+      "time": "受信時刻",
+      "includedIn": {
+        "title": "～に含まれる",
+        "block": "ブロック"
+      },
+      "totalOutput": "全生産量",
+      "fee": "トランザクション料金"
+    }
+  },
+  "search": {
+    "buttonText": "検索",
+    "placeholder": "DISCIPLINAネットワーク上のアドレス、トランザクションの検索"
+  },
+  "header": {
+    "title": "DISCIPLINAブロックチェーン・エクスプローラー"
+  },
+  "showMore": "もっと表示する",
+  "blockList": {
+    "blockIndex": "ブロックインデックス",
+    "since": "時期",
+    "transaction": "トランザクション",
+    "totalSent": "送信数合計",
+    "blockLeader": "ブロックリーダー",
+    "blockHash": "ブロックハッシュ",
+    "size": "容量（バイト）",
+    "newerBlocks": "比較的新しいブロック",
+    "olderBlocks": "比較的古いブロック"
+  },
+  "notFound": {
+    "title": "該当する記録が見つかりません",
+    "back": "ホームページに戻る"
+  }
+}
