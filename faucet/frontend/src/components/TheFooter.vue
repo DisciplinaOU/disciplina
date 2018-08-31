@@ -12,7 +12,7 @@
         </div>
         <span class="footer__sep"></span>
         <div class="footer__address footerAddres">
-          <p class="footer__p">{{ $t("address") }}</p>
+          <p class="footer__p">Narva mnt 7-634, 10117, Kesklinna linnaosa, Tallinn, Estonia;</p>
           <p class="footer__p">2018 © Disciplina OÜ</p>
         </div>
         <span class="footer__sep"></span>

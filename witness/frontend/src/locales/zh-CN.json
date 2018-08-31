@@ -1,1 +1,71 @@
-{ }
+{
+  "address": {
+    "title": "地址",
+    "transactions": "外發交易",
+    "finalBalance": "最后的余额"
+  },
+  "block": {
+    "title": "区块",
+    "about": {
+      "title": "区块信息",
+      "blockIndex": "阻止指數",
+      "transactions": "交易",
+      "totalOutput": "总产量",
+      "fees": "费用"
+    },
+    "hashes": {
+      "title": "散列值",
+      "hash": "散列值",
+      "prev": "上一块",
+      "next": "下一块",
+      "merkleRoot": "默克尔树"
+    },
+    "nav": {
+      "prev": "上一块",
+      "next": "下一块"
+    }
+  },
+  "index": {
+    "blocks": "最后的区块",
+    "transactions": "最后的交易",
+    "showMore": "显示更多"
+  },
+  "transaction": {
+    "title": "交易",
+    "from": "从 ",
+    "to": "至",
+    "summary": {
+      "title": "概要",
+      "time": "收到的时间",
+      "includedIn": {
+        "title": "包括在",
+        "block": "区块"
+      },
+      "totalOutput": "总产量",
+      "fee": "手续费"
+    }
+  },
+  "search": {
+    "buttonText": "搜索",
+    "placeholder": "在DISCIPLINA網絡上搜索地址，交易"
+  },
+  "header": {
+    "title": "DISCIPLINA 区块链资源管理器"
+  },
+  "showMore": "显示更多",
+  "blockList": {
+    "blockIndex": "阻止指數",
+    "since": "自从",
+    "transaction": "交易",
+    "totalSent": "已发送的总额",
+    "blockLeader": "区块领导",
+    "blockHash": "塊哈希",
+    "size": "大小（字节）",
+    "newerBlocks": "较新的区块",
+    "olderBlocks": "较旧的区块"
+  },
+  "notFound": {
+    "title": "未找到匹配的記錄",
+    "back": "返回主頁"
+  }
+}
