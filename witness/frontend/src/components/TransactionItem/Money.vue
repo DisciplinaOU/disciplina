@@ -14,11 +14,17 @@
     <div class="transactionInformBlock__fromTo">
       <div class="transactionInformBlock__from informBlock">
         <p class="informBlock__title">{{ $t("transaction.from") }}</p>
-        <router-link :to="{ name: 'addressShow', params: {hash: transaction.money.inAcc.addr} }" class="informBlock__hash hash">{{ transaction.money.inAcc.addr }}</router-link>
+        <router-link
+          :to="{ name: 'addressShow', params: {hash: transaction.money.inAcc.addr} }"
+          :class="{fat: isCurrent(transaction.money.inAcc.addr) }"
+          class="informBlock__hash hash">
+          {{ transaction.money.inAcc.addr }}
+        </router-link>
       </div>
       <div class="transactionInformBlock__to informBlock">
         <p class="informBlock__title">{{ $t("transaction.to") }}</p>
         <router-link class="informBlock__hash hash"
+          :class="{fat: isCurrent(addr.outAddr) }"
           :to="{ name: 'addressShow', params: {hash: addr.outAddr} }"
           v-for="addr in transaction.money.outs"
           :key="addr.outAddr">
@@ -36,7 +42,8 @@ export default {
   name: 'TransactionItemMoney',
   props: {
     transaction: Object,
-    timestamp: Number
+    timestamp: Number,
+    currentAddress: String
   },
   components: { DscpFormat },
   computed: {
@@ -47,6 +54,17 @@ export default {
         return this.transaction.block.since / 1000
       }
     }
+  },
+  methods: {
+    isCurrent (addr) {
+      return (this.currentAddress && this.currentAddress === addr)
+    }
   }
 }
 </script>
+
+<style scoped>
+.fat {
+  font-weight: 500
+}
+</style>
