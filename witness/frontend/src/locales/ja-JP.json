@@ -49,6 +49,9 @@
     "buttonText": "検索",
     "placeholder": "DISCIPLINAネットワーク上のアドレス、トランザクションの検索"
   },
+  "footer": {
+    "address": "Narva mnt 7-634, 10117, Kesklinna linnaosa, Tallinn, Estonia;"
+  },
   "header": {
     "title": "DISCIPLINAブロックチェーン・エクスプローラー"
   },
