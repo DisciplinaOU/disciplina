@@ -12,6 +12,7 @@ import En from './locales/en-US.json'
 import Zh from './locales/zh-CN.json'
 import Ja from './locales/ja-JP.json'
 import Ko from './locales/ko-KR.json'
+import { momentLocale } from '@/utils'
 
 import router from './router'
 import store from './store/index'
@@ -24,8 +25,7 @@ Vue.axios.defaults.headers.common['Content-Type'] = 'application/json'
 
 Vue.use(VueI18Next)
 i18next.init({
-  lng: 'en',
-  fallbackLng: 'en',
+  lng: process.env.DEFAULT_LOCALE,
   resources: {
     en: { translation: En },
     zh: { translation: Zh },
@@ -35,9 +35,19 @@ i18next.init({
 })
 const i18n = new VueI18Next(i18next)
 
-Vue.use(require('vue-moment'))
+const moment = require('moment')
+// Import additional moment locales
+require('moment/locale/ja')
+require('moment/locale/ko')
+require('moment/locale/zh-cn')
+
+Vue.use(require('vue-moment'), { moment })
+Vue.moment.locale(momentLocale(i18next.language))
 
 Vue.config.productionTip = false
+
+// Global Event Bus
+Vue.prototype.$eventHub = new Vue()
 
 /* eslint-disable no-new */
 new Vue({

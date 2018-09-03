@@ -4,7 +4,7 @@
           <p class="transactionInformBlock__hash hash">
             <router-link :to="{ name: 'publicationTransactionShow', params: {hash: transaction.txId} }" class="link link--colorBlue">{{ transaction.txId }}</router-link>
           </p>
-          <p class="transactionInformBlock__date">{{ new Date(timestamp) | moment('DD/MM/YYYY HH:MM:SS') }}</p>
+          <p class="transactionInformBlock__date"><datetime :dt="timestamp"/></p>
       </div>
       <div class="transactionInformBlock__fromTo">
           <div class="transactionInformBlock__from informBlock">
@@ -20,11 +20,14 @@
 </template>
 
 <script>
+import Datetime from '@/components/Datetime'
+
 export default {
   name: 'TransactionItemEducator',
   props: {
     transaction: Object,
     timestamp: Number
-  }
+  },
+  components: { Datetime }
 }
 </script>

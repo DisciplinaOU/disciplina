@@ -6,7 +6,7 @@
           {{ transaction.txId }}
         </router-link>
       </p>
-      <p class="transactionInformBlock__date">{{ new Date(calcTimestamp) | moment('DD/MM/YYYY HH:MM:SS') }}</p>
+      <p class="transactionInformBlock__date"><datetime :dt="calcTimestamp"/></p>
       <p class="transactionInformBlock__totalSent btn btn--blue btn--noclick">
         <dscp-format :value="transaction.outValue"/>
       </p>
@@ -37,6 +37,7 @@
 
 <script>
 import DscpFormat from '@/components/DscpFormat'
+import Datetime from '@/components/Datetime'
 
 export default {
   name: 'TransactionItemMoney',
@@ -45,7 +46,7 @@ export default {
     timestamp: Number,
     currentAddress: String
   },
-  components: { DscpFormat },
+  components: { DscpFormat, Datetime },
   computed: {
     calcTimestamp () {
       if (this.timestamp) {
