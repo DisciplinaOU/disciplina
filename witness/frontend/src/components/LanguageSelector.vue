@@ -6,7 +6,7 @@
         v-for="lang in languages"
         :key="lang[0]"
         @click.stop="changeLanguage(lang)"
-        :class="{ active: lang[1] == currentLanguage }">
+        :class="{ active: lang[0] == currentLanguage }">
         {{ lang[1] }}
       </a>
     </div>
@@ -14,6 +14,7 @@
 </template>
 
 <script>
+import { momentLocale } from '@/utils'
 import ClickOutside from 'vue-click-outside'
 
 export default {
@@ -25,7 +26,7 @@ export default {
         ['ko', '한국어'],
         ['ja', '日本語']
       ],
-      currentLanguage: 'EN',
+      currentLanguage: process.env.DEFAULT_LOCALE,
       opened: false
     }
   },
@@ -35,6 +36,7 @@ export default {
       this.currentLanguage = lang[1]
       this.opened = false
       this.$i18n.i18next.changeLanguage(lang[0])
+      this.$moment.locale(momentLocale(lang[0]))
     },
     hide () {
       this.opened = false
