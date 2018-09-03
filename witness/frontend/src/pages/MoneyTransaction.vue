@@ -32,7 +32,7 @@
                   <div class="summary__title">{{ $t("summary.title") }}</div>
                   <div class="summary__items itemsSummary">
                       <div class="itemsSummary_item itemSummary itemSummary--date">
-                          <p class="itemSummary__title">{{ $t("summary.time") }}</p><p class="itemSummary__content">{{ new Date(moneyTransaction.block.since / 1000) | moment('DD/MM/YYYY HH:MM:SS') }}</p>
+                          <p class="itemSummary__title">{{ $t("summary.time") }}</p><p class="itemSummary__content"><datetime :dt="moneyTransaction.block.since / 1000"/></p>
                       </div>
                       <div class="itemsSummary_item itemSummary itemSummary--included">
                           <p class="itemSummary__title">{{ $t("summary.includedIn.title") }}</p>
@@ -57,6 +57,7 @@
 
 <script>
 import DscpFormat from '@/components/DscpFormat'
+import Datetime from '@/components/Datetime'
 import { mapGetters, mapActions } from 'vuex'
 
 export default {
@@ -64,7 +65,7 @@ export default {
   i18nOptions: {
     keyPrefix: 'transaction'
   },
-  components: { DscpFormat },
+  components: { DscpFormat, Datetime },
   beforeMount () {
     this.getMoneyTransaction(this.$route.params.hash)
   },
