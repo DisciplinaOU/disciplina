@@ -37,6 +37,7 @@ export default {
       this.opened = false
       this.$i18n.i18next.changeLanguage(lang[0])
       this.$moment.locale(momentLocale(lang[0]))
+      this.$eventHub.$emit('language-changed')
     },
     hide () {
       this.opened = false

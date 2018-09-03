@@ -42,10 +42,12 @@ require('moment/locale/ko')
 require('moment/locale/zh-cn')
 
 Vue.use(require('vue-moment'), { moment })
-console.log(i18next.language)
 Vue.moment.locale(momentLocale(i18next.language))
 
 Vue.config.productionTip = false
+
+// Global Event Bus
+Vue.prototype.$eventHub = new Vue()
 
 /* eslint-disable no-new */
 new Vue({
