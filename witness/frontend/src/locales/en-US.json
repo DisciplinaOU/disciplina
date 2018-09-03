@@ -65,7 +65,11 @@
     "blockHash": "Block hash",
     "size": "Size (bytes)",
     "newerBlocks": "To first page",
-    "olderBlocks": "Older blocks"
+    "olderBlocks": "Older blocks",
+    "pagenav" : {
+      "page" : "Page",
+      "of" : "of"
+    }
   },
   "notFound": {
     "title": "No matching records for",
