@@ -71,7 +71,7 @@ toAccountInfo account txs = do
     transactions <- mapM (mapM toTxInfo) txs
     pure AccountInfo
         { aiBalances = Coin . fromIntegral . aBalance <$> account
-        , aiNextNonce = nonce + 1
+        , aiCurrentNonce = nonce
         , aiTransactionCount = nonce
         , aiTransactions = transactions
         }

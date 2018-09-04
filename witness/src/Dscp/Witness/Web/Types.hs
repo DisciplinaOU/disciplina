@@ -42,7 +42,7 @@ data BlockInfo = BlockInfo
 -- | All what user may wish to know about an account.
 data AccountInfo = AccountInfo
     { aiBalances         :: BlocksOrMempool Coin
-    , aiNextNonce        :: Integer
+    , aiCurrentNonce     :: Integer
     , aiTransactionCount :: Integer
     , aiTransactions     :: Maybe [TxInfo]
     }
@@ -87,7 +87,7 @@ instance Buildable a => Buildable (BlocksOrMempool a) where
 instance Buildable (ForResponseLog AccountInfo) where
     build (ForResponseLog AccountInfo{..}) =
         "{ balances = " +| aiBalances |+
-        ", next nonce = " +| aiNextNonce |+
+        ", current nonce = " +| aiCurrentNonce |+
         " }"
 
 instance Buildable (ForResponseLog TxInfo) where

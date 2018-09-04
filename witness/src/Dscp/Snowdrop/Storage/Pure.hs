@@ -9,13 +9,13 @@ import Control.Concurrent.STM.TVar (modifyTVar)
 import Control.Lens (at, makeLenses)
 import qualified Data.Map as M
 
-import Snowdrop.Core (HasKeyValue, Prefix, SValue, ValueOp (..), changeSetToList)
 import Snowdrop.Block (BlockRef (..), TipKey (..), TipValue (..))
-import Snowdrop.Execution (DbActionsException (..), DbModifyActions (..), SumChangeSet,
-                           accumToDiff, sumChangeSetDBA)
+import Snowdrop.Core (HasKeyValue, Prefix, SValue, ValueOp (..), changeSetToList)
+import Snowdrop.Execution (DbActionsException (..), DbModifyActions (..), SumChangeSet, accumToDiff,
+                           sumChangeSetDBA)
 import Snowdrop.Util
 
-import Dscp.Core.Foundation (HeaderHash, GTxId)
+import Dscp.Core.Foundation (GTxId, HeaderHash)
 import Dscp.Snowdrop.Configuration
 import Dscp.Snowdrop.Storage.Types
 

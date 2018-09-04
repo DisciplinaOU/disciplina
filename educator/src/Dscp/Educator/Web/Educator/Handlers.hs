@@ -6,14 +6,13 @@ module Dscp.Educator.Web.Educator.Handlers
        ) where
 
 import Servant (Handler, throwError)
+import UnliftIO (UnliftIO (..))
 
 import Dscp.Core.Arbitrary
-import Dscp.Educator.Launcher
 import Dscp.Educator.Web.Arbitrary
 import Dscp.Educator.Web.Educator.API
 import Dscp.Educator.Web.Educator.Arbitrary
 import Dscp.Educator.Web.Educator.Error
-import Dscp.Rio
 
 type EducatorApiWorkMode m =
     ( Monad m
@@ -111,10 +110,10 @@ educatorApiHandlers =
     }
 
 convertEducatorApiHandler
-    :: EducatorContext
-    -> EducatorRealMode a
+    :: UnliftIO m
+    -> m a
     -> Handler a
-convertEducatorApiHandler ctx handler =
-    liftIO (runRIO ctx handler)
+convertEducatorApiHandler (UnliftIO unliftIO) handler =
+    liftIO (unliftIO handler)
         `catch` (throwError . toServantErr)
         `catchAny` (throwError . unexpectedToServantErr)

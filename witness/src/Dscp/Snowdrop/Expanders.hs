@@ -154,7 +154,7 @@ seqExpandersBalanceTx =
         let inpNewBal     = aBalance inpPrevAcc + inputBack - inputSent
         let newInpAccount = Account
                 { aBalance = inpNewBal
-                , aNonce   = tiaNonce (txInAcc twTx)
+                , aNonce   = tiaNonce (txInAcc twTx) + 1
                 }
 
         let inp = AccountId inAddr ==> Upd newInpAccount

@@ -1,10 +1,10 @@
 {-# LANGUAGE DataKinds     #-}
 {-# LANGUAGE TypeOperators #-}
 
--- | Necessary types and implementation for Student authenthication
-module Dscp.Educator.Web.Student.Auth
-       ( GetStudentsAction (..)
-       , StudentAuth
+-- | Necessary types and implementation for Educator authenthication
+module Dscp.Educator.Web.Educator.Auth
+       ( EducatorPublicKey (..)
+       , EducatorAuth
        ) where
 
 import Crypto.JOSE.JWK (KeyMaterial (..), KeyOp (..), OKPKeyParameters (..), jwkKeyOps)
@@ -12,7 +12,6 @@ import Crypto.JWT (fromKeyMaterial)
 import Servant.Auth.Server (AuthCheck (..), defaultJWTSettings, jwtAuthCheck)
 import Servant.Auth.Server.Internal.Class (AuthArgs (..), IsAuth (..))
 
-import Dscp.Core (Student, mkAddr)
 import Dscp.Crypto (AbstractPK (..), PublicKey)
 import Dscp.Educator.Web.Auth (WithCommonAuthData (..))
 
@@ -21,25 +20,23 @@ import Dscp.Educator.Web.Auth (WithCommonAuthData (..))
 ---------------------------------------------------------------------------
 
 -- | Custom authentication type for auth-servant
-data StudentAuth
+data EducatorAuth
 
--- | Action to get students' public keys
-newtype GetStudentsAction = GetStudentsAction (IO [PublicKey])
+-- | Type that holds Educator's public key
+newtype EducatorPublicKey = EducatorPublicKey PublicKey
 
-instance IsAuth StudentAuth (WithCommonAuthData Student) where
-    type AuthArgs StudentAuth = '[GetStudentsAction]
-    runAuth _ _ = studentAuthCheck
+instance IsAuth EducatorAuth (WithCommonAuthData ()) where
+    type AuthArgs EducatorAuth = '[EducatorPublicKey]
+    runAuth _ _ = educatorAuthCheck
 
 ---------------------------------------------------------------------------
 -- Helpers
 ---------------------------------------------------------------------------
 
 -- | This function returns AuthCheck that checks the signature of the JWT.
-studentAuthCheck :: GetStudentsAction -> AuthCheck (WithCommonAuthData Student)
-studentAuthCheck (GetStudentsAction getStudents) = do
-    students <- liftIO $ getStudents
-    let pubKeyToJwk (AbstractPK pub) =
+educatorAuthCheck :: EducatorPublicKey -> AuthCheck (WithCommonAuthData ())
+educatorAuthCheck (EducatorPublicKey (AbstractPK pub)) = do
+    let jwk =
           fromKeyMaterial (OKPKeyMaterial $ Ed25519Key pub Nothing) & jwkKeyOps .~ Just [Verify]
-        tryAuth pub = fmap (pub,) . jwtAuthCheck . defaultJWTSettings . pubKeyToJwk $ pub
-    (publicKey, authData) <- asum . map tryAuth $ students
-    return $ WithCommonAuthData authData (mkAddr publicKey)
+    authData <- jwtAuthCheck . defaultJWTSettings $ jwk
+    return $ WithCommonAuthData authData ()
