@@ -52,18 +52,18 @@ extra-deps:
     - code/prelude
 
 - git: https://github.com/serokell/ariadne.git
-  commit: 971fa6f7164fd06b9e8a19174f9a2612e1a63884
+  commit: ab1af6d30de2147c340b401a738a00ec4c41dd49
   subdirs:
     - ariadne/core
     - knit
     - ui/cli-lib
     - ui/vty-lib
-    - util
 
 # for ariadne
 - loc-0.1.3.2
 - brick-0.38
 - named-0.1.0.0
+- ntype-0.1.0.0
 - vty-5.22
 
 # Forced by lootbox #

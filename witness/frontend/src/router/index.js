@@ -6,6 +6,7 @@ import Index from '@/pages/Index'
 import Block from '@/pages/Block'
 import Address from '@/pages/Address'
 import MoneyTransaction from '@/pages/MoneyTransaction'
+import NotFound from '@/pages/NotFound'
 // import PublicationTransaction from '@/pages/PublicationTransaction'
 
 Vue.use(Router)
@@ -35,6 +36,11 @@ export default new Router({
           path: '/money-transaction/:hash',
           name: 'moneyTransactionShow',
           component: MoneyTransaction
+        },
+        {
+          path: '/404',
+          name: '404',
+          component: NotFound
         }
         // {
         //   path: '/publication-transaction/:hash',

@@ -21,7 +21,7 @@
                   <div class="slotInform__about slotInformBlock red">
                       <p class="slotInformBlock__title">{{ $t("about.title") }}</p>
                       <div class="slotInformBlock__item">
-                          <span class="slotInformBlock__name">{{ $t("about.difficulty") }}</span><span class="slotInformBlock__value">{{ block.header.difficulty }}</span>
+                          <span class="slotInformBlock__name">{{ $t("about.blockIndex") }}</span><span class="slotInformBlock__value">{{ block.header.difficulty }}</span>
                       </div>
                       <div class="slotInformBlock__item">
                           <span class="slotInformBlock__name">{{ $t("about.transactions") }}</span><span class="slotInformBlock__value">{{ block.transactionCount }}</span>
@@ -36,17 +36,17 @@
                   <div class="slotInform__hashes slotInformBlock">
                       <p class="slotInformBlock__title">{{ $t("hashes.title") }}</p>
                       <div class="slotInformBlock__item">
-                          <span class="slotInformBlock__name">{{ $t("hashes.hash") }}</span><span class="slotInformBlock__value hash">{{ block.headerHash }}</span>
+                          <span class="slotInformBlock__name">{{ $t("hashes.hash") }} </span><span class="slotInformBlock__value hash">{{ block.headerHash }}</span>
                       </div>
                       <div class="slotInformBlock__item">
-                          <span class="slotInformBlock__name">{{ $t("hashes.prev") }}</span><span class="slotInformBlock__value hash">{{ block.header.prevHash }}</span>
+                          <span class="slotInformBlock__name">{{ $t("hashes.prev") }} </span><span class="slotInformBlock__value hash">{{ block.header.prevHash }}</span>
                       </div>
                       <div class="slotInformBlock__item">
-                          <span class="slotInformBlock__name">{{ $t("hashes.next") }}</span><span class="slotInformBlock__value hash">{{ block.nextHash }}</span>
+                          <span class="slotInformBlock__name">{{ $t("hashes.next") }} </span><span class="slotInformBlock__value hash">{{ block.nextHash }}</span>
                       </div>
-                      <div class="slotInformBlock__item">
+                      <!-- <div class="slotInformBlock__item">
                           <span class="slotInformBlock__name">{{ $t("hashes.merkleRoot") }}</span><span class="slotInformBlock__value hash">{{ block.merkleRootHash }}</span>
-                      </div>
+                      </div> -->
                   </div>
               </div>
           </div>

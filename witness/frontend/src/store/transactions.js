@@ -7,10 +7,9 @@ const state = {
 }
 
 const actions = {
-  getAllTransactions ({commit}, from = state.nextTransactionHash, perPage = state.perPage + 1) {
-    blockexplorer.getTransactions(Transactions => {
-      const nextTransactionHash = Transactions.length === (state.perPage + 1) ? Transactions.pop().txId : undefined
-      commit('setNextTransactionHash', nextTransactionHash)
+  getAllTransactions ({commit}, from = state.nextTransactionHash, perPage = state.perPage) {
+    blockexplorer.getTransactions((nextId, Transactions) => {
+      commit('setNextTransactionHash', nextId)
       commit('setTransactions', Transactions)
     }, from, perPage)
   }

@@ -10,6 +10,9 @@ module Dscp.Snowdrop.Storage.Types
     , LastPublication (..)
     , PublicationHead (..)
     , PublicationNext (..)
+
+    , NextBlockOf (..)
+    , NextBlock (..)
     ) where
 
 import Codec.Serialise (Serialise (..))
@@ -87,6 +90,13 @@ data PublicationNext
     = PublicationNext (Maybe PrivateHeaderHash)
     deriving (Eq, Ord, Show, Generic)
 
+-- | Key/value types for nextBlock chain storage
+newtype NextBlockOf = NextBlockOf { unNextBlockOf :: HeaderHash }
+    deriving (Eq, Ord, Show, Buildable, Generic)
+
+newtype NextBlock = NextBlock { unNextBlock :: HeaderHash }
+    deriving (Eq, Ord, Show, Buildable, Generic)
+
 ----------------------------------------------------------------------------
 -- Instances
 ----------------------------------------------------------------------------
@@ -100,3 +110,5 @@ instance Serialise LastPublication
 instance Serialise PublicationsOf
 instance Serialise PublicationNext
 instance Serialise PublicationHead
+instance Serialise NextBlockOf
+instance Serialise NextBlock

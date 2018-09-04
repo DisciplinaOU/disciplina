@@ -187,5 +187,6 @@ getTxs depth = \case
             Nothing -> return $ txs ++ res
             Just nextBlock -> loadTxs (txs ++ res) (depthLeft - limit) Nothing nextBlock
       where
-        limit = fromMaybe (length txs) mLimit
-        txs = map (GTxInBlock (Just block)) . bbTxs . bBody $ block
+        blockTxs = bbTxs . bBody $ block
+        limit = fromMaybe (length blockTxs) mLimit
+        txs = GTxInBlock (Just block) <$> take limit blockTxs

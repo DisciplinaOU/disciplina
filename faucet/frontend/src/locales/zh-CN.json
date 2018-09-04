@@ -1,0 +1,28 @@
+{
+  "welcomeMsg": "您可以在这里获得测试 DISCIPLINA 区块链的代币",
+  "fauset": "水龙头",
+  "walletPlaceholder": "输入您的钱包地址，然后获取代币",
+  "getTokensBtn": "获取代币",
+  "noWallet": "没有钱包？请在这里创建：",
+  "generateWalletBtn": "创建钱包",
+  "informationNote": "请转至",
+  "informationLinkText": "发布页面",
+  "transfer": {
+    "amountMsg": "个 代币已发送至您的钱包",
+    "transactionId": "交易编号",
+    "errors": {
+      "InvalidFormat": "无法解析其中一个参数。",
+      "AddressAlreadyGifted": "所述地址已向水龙头索取资金，无法重复要求。",
+      "SourceAccountExhausted": "指定的源帐户没有足够的资金执行进一步转账，因此活动结束了！"
+    }
+  },
+  "walletModal": {
+    "title": "您的钱包数据",
+    "address": "地址",
+    "publicKey": "公钥",
+    "secretKey": "私钥",
+    "copy": "复制",
+    "copied": "已复制",
+    "info": "您刚生成一对密钥和地址。如果您丢失密 钥对 - 您将无法访问您的钱包和货币。请将您的 密钥对存在安全的位置。 若要获取免费的试用货币，您必须在上一 页使用所生成的地址。您可以通过密钥在<a href=\"//alpha.disciplina.io/index-ch.html#3\" target=\"_blank\">学生应用程序</a>或<a href=\"//alpha.disciplina.io/index-ch.html#2\" target=\"_blank\"> Ariadne 钱包</a>中处理事务，也可以检查当前帐户状态。粘贴密钥至钱包应用程序中，并将密码短语的字段留空。"
+  }
+}

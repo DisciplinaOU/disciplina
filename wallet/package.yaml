@@ -16,6 +16,7 @@ library:
   dependencies:
     - Earley
     - aeson
+    - async
     - bytestring
     - componentm
     - directory
@@ -23,7 +24,6 @@ library:
     - disciplina-witness
     - filelock
     - filepath
-    - ii-extras
     - knit
     - lens
     - memory
@@ -54,9 +54,9 @@ executables:
       - double-conversion
       - disciplina-core
       - disciplina-wallet
-      - ii-extras
       - knit
       - lens
+      - ntype
       - random
       - serokell-util
       - text
@@ -75,6 +75,6 @@ executables:
       - componentm
       - disciplina-core
       - disciplina-wallet
-      - ii-extras
       - knit
+      - ntype
       - text

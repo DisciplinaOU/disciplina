@@ -1,11 +1,7 @@
 <template>
-  <div class="pseudoTable__row" :class="{ ' pseudoTable__row--student': isPublication(transaction) }">
+  <div class="pseudoTable__row cursorPointer" :class="{ ' pseudoTable__row--student': isPublication(transaction) }" @click="goToTransaction">
       <div class="pseudoTable__cell cell cell__hash hash">
-        <router-link
-          :to="{ name: isMoney(transaction) ? 'moneyTransactionShow' : 'publicationTransactionShow', params: {hash: transaction.txId} }"
-          class="link">
           {{ transaction.txId }}
-        </router-link>
       </div>
       <div class="pseudoTable__cell cell cell__time">{{ new Date(transaction.block.since/1000) | moment('DD/MM/YYYY HH:MM:SS') }}</div>
       <div class="pseudoTable__cell cell cell__totalSent" v-if="isMoney(transaction)">
@@ -26,7 +22,12 @@ export default {
   methods: {
     isMoney: (transaction) => transaction.txType === 'money',
     isPublication: (transaction) => transaction.txType === 'publication',
-    routeName: (transaction) => this.isMoney(transaction) ? 'moneyTransactionShow' : 'publicationTransactionShow'
+    routeName (transaction) {
+      return this.isMoney(transaction) ? 'moneyTransactionShow' : 'publicationTransactionShow'
+    },
+    goToTransaction () {
+      this.$router.push({name: this.routeName(this.transaction), params: {hash: this.transaction.txId}})
+    }
   }
 }
 </script>

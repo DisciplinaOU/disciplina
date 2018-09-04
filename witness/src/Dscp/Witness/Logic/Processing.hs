@@ -69,6 +69,11 @@ applyBlockRaw toVerify block = do
               -- getCurrentTime requires MonadIO
               let osParams = SD.unOSParamsBuilder sdOSParamsBuilder $ UTCTime (toEnum 0) (toEnum 0)
               SD.applyBlockImpl toVerify osParams blkStateConfig (bBody block) sblock
+              -- TODO: move the changeset expanding below to Dscp.Snowdrop.Expanders.expandBlock
+              void $ SD.modifyRwCompChgAccum $ SD.CAMChange $ SD.ChangeSet $
+                  M.singleton
+                      (SD.inj . NextBlockOf . hPrevHash . bHeader $ block)
+                      (SD.New . NextBlockOfVal . NextBlock $ headerHash block)
               sequence_ . fmap addTx . enumerate . bbTxs . bBody $ block
             addTx (idx, gTx) = SD.modifyRwCompChgAccum $ SD.CAMChange $ SD.ChangeSet $
                 M.singleton

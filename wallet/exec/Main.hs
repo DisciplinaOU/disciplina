@@ -3,7 +3,7 @@ module Main where
 import Control.Concurrent (threadDelay)
 import Control.Concurrent.Async (race_)
 import Control.Monad.Component (ComponentM, runComponentM)
-import IiExtras
+import NType (N (..))
 import System.Random (randomRIO)
 import Text.PrettyPrint.ANSI.Leijen (Doc)
 
@@ -46,11 +46,14 @@ initializeEverything WalletCLIParams{..} = do
 
     let knitExecContext :: (Doc -> IO ()) -> Knit.ExecContext IO UiComponents
         knitExecContext putCommandOutput =
-            Knit.CoreExecCtx (putCommandOutput . Knit.ppValue) :&
-            Knit.WalletExecCtx walletFace :&
-            Knit.TaskManagerExecCtx taskManagerFace :&
-            Knit.UiExecCtx uiFace :&
-            RNil
+            Knit.CoreExecCtx (putCommandOutput . Knit.ppValue) &:
+            Knit.WalletExecCtx walletFace &:
+            Knit.TaskManagerExecCtx taskManagerFace &:
+            Knit.UiExecCtx uiFace &:
+            Base ()
+          where
+            a &: b = Step (a, b)
+            infixr &:
 
         knitFace = createKnitBackend knitExecContext taskManagerFace
 

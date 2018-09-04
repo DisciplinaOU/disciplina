@@ -9,13 +9,13 @@ import Control.Concurrent.STM.TVar (modifyTVar)
 import Control.Lens (at, makeLenses)
 import qualified Data.Map as M
 
-import Snowdrop.Core (HasKeyValue, Prefix, SValue, ValueOp (..), changeSetToList)
 import Snowdrop.Block (BlockRef (..), TipKey (..), TipValue (..))
-import Snowdrop.Execution (DbActionsException (..), DbModifyActions (..), SumChangeSet,
-                           accumToDiff, sumChangeSetDBA)
+import Snowdrop.Core (HasKeyValue, Prefix, SValue, ValueOp (..), changeSetToList)
+import Snowdrop.Execution (DbActionsException (..), DbModifyActions (..), SumChangeSet, accumToDiff,
+                           sumChangeSetDBA)
 import Snowdrop.Util
 
-import Dscp.Core.Foundation (HeaderHash, GTxId)
+import Dscp.Core.Foundation (GTxId, HeaderHash)
 import Dscp.Snowdrop.Configuration
 import Dscp.Snowdrop.Storage.Types
 
@@ -27,11 +27,12 @@ data BlockStorage = BlockStorage
     , _bsAccNextTxs  :: Map TxHead TxNext
     , _bsAccLastPubs :: Map PublicationsOf LastPublication
     , _bsAccNextPubs :: Map PublicationHead PublicationNext
+    , _bsNextBlocks  :: Map NextBlockOf NextBlock
     }
 makeLenses ''BlockStorage
 
 emptyBlockStorage :: BlockStorage
-emptyBlockStorage = BlockStorage mempty (TipValue Nothing) mempty mempty mempty mempty mempty
+emptyBlockStorage = BlockStorage mempty (TipValue Nothing) mempty mempty mempty mempty mempty mempty
 
 queryMany :: (Ord id, Monad m, Foldable f) => (id -> m (Maybe value)) -> f id -> m (Map id value)
 queryMany doOne = foldM (\resp i -> maybe resp (\v -> M.insert i v resp) <$> doOne i) mempty
@@ -71,6 +72,8 @@ blockDbActions = mkActions <$> liftIO (newTVarIO emptyBlockStorage)
         foldr foldF b . map (bimap PublicationOfIds PublicationOfVal) . M.toList . _bsAccLastPubs <$> readTVar var
       | prefix == publicationHeadPrefix =
         foldr foldF b . map (bimap PublicationHeadIds PublicationHeadVal) . M.toList . _bsAccNextPubs <$> readTVar var
+      | prefix == nextBlockPrefix =
+        foldr foldF b . map (bimap NextBlockOfIds NextBlockOfVal) . M.toList . _bsNextBlocks <$> readTVar var
       | otherwise =
         throwM $ DbWrongPrefixIter $ "Unknown iteration on block storage " <> show prefix
 
@@ -83,6 +86,7 @@ blockDbActions = mkActions <$> liftIO (newTVarIO emptyBlockStorage)
         (TxHeadIds txHead)           -> fmap TxHeadVal . M.lookup txHead . view bsAccNextTxs <$> readTVar var
         (PublicationOfIds pubOf)     -> fmap PublicationOfVal . M.lookup pubOf . view bsAccLastPubs <$> readTVar var
         (PublicationHeadIds pubHead) -> fmap PublicationHeadVal . M.lookup pubHead . view bsAccNextPubs <$> readTVar var
+        (NextBlockOfIds hh)          -> fmap NextBlockOfVal . M.lookup hh . view bsNextBlocks <$> readTVar var
         i -> throwM $ DbWrongIdQuery $ "Unknown query to block storage " <> show i
 
     apply :: TVar BlockStorage -> SumChangeSet Ids Values -> STM ()
@@ -109,6 +113,9 @@ blockDbActions = mkActions <$> liftIO (newTVarIO emptyBlockStorage)
     applyOne var (PublicationHeadIds pubHead) =
         performActionWithTVar var (bsAccNextPubs . at pubHead) (applyException pubHead) <=<
         projValOp @PublicationHead
+    applyOne var (NextBlockOfIds hh) =
+        performActionWithTVar var (bsNextBlocks . at hh) (applyException hh) <=<
+        projValOp @NextBlockOf
     applyOne _ i = applyException i '-'
 
     applyTip :: TVar BlockStorage -> ValueOp Values -> Maybe HeaderHash -> STM ()

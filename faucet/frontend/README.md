@@ -1,6 +1,6 @@
 ## Frontend For Disciplina Faucet App
 
-Build with [Vue.js](https://vuejs.org/) and Webpack.  
+Build with [Vue.js](https://vuejs.org/) and Webpack.
 [Yarn](https://yarnpkg.com/) as dependency manager.
 
 ``` bash
@@ -11,5 +11,5 @@ yarn install
 yarn run dev
 
 # build for production with minification and put it into ./dist directory
-yarn build
+FAUCET_API_URL="https://faucet.disciplina.io" yarn build
 ```

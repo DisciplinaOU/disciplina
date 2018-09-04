@@ -19,7 +19,7 @@
         </div>
       </div>
     </div>
-    <transaction-list :transactions="address.transactions" v-if="address.transactions"/>
+    <transaction-list :transactions="reservedTransactions" :currentAddress="currentAddress" v-if="address.transactions"/>
   </div>
 </template>
 
@@ -36,10 +36,16 @@ export default {
     ...mapGetters([
       'address',
       'loaded'
-    ])
+    ]),
+    reservedTransactions () {
+      return this.address.transactions.slice().reverse()
+    },
+    currentAddress () {
+      return this.$route.params.hash
+    }
   },
   mounted () {
-    this.getAddress(this.$route.params.hash)
+    this.getAddress(this.currentAddress)
   },
   beforeRouteUpdate (to, from, next) {
     this.getAddress(to.params.hash)

@@ -24,6 +24,7 @@
     border-left: 1px solid $color-white;
     font-size: 24px;
     line-height: 1.1;
+    font-weight: 300;
   }
 }
 
@@ -38,12 +39,12 @@
 
   &__title {
     @include font(36px, 42px);
-    font-weight: 400;
+    font-weight: 500;
   }
 
   &__text {
     @include font(24px, 28px);
-    font-weight: 300;
+    font-weight: 400;
     padding-top: 16px;
   }
 }
@@ -61,7 +62,7 @@
     text-align: center;
     line-height: 1;
     text-shadow: 1px 1px 0 rgba($color-black, 0.05);
-    font-weight: 300;
+    font-weight: 400;
   }
 }
 
@@ -79,12 +80,12 @@
     outline: none;
     color: $color-text;
     transition: box-shadow 0.3s ease;
-    font-weight: 400;
+    font-weight: 500;
 
     &::placeholder {
       opacity: 1;
       color: $color-muted;
-      font-weight: 300;
+      font-weight: 400;
     }
 
     &:focus {
@@ -96,7 +97,7 @@
     position: absolute;
     right: 0;
     top: 0;
-    width: 137px;
+    width: 142px;
     height: $height-search;
     background: $color-accent-light;
     color: $color-white;
@@ -155,11 +156,11 @@
     @include font(23px, 28px);
     display: block;
     margin-bottom: 15px;
-    font-weight: 400;
+    font-weight: 500;
     flex:0 0 auto;
 
     span {
-      font-weight: 400;
+      font-weight: 500;
     }
   }
 
@@ -334,33 +335,25 @@
   flex: 0 0 auto;
 
   &__list {
-    overflow: hidden;
-    margin-bottom: -11px;
-    transform: translateX(6px);
-    line-height: 1;
+    display: flex;
+    max-width: 180px;
+    flex-direction: row;
+    flex-wrap: wrap;
   }
 
   &__item {
     display: inline-block;
-    float: left;
-    vertical-align: top;
     width: 20px;
-    text-align: center;
-    margin-left: 6px;
-    margin-right: 6px;
+    height: 20px;
+    margin-left: 4px;
+    margin-right: 4px;
     margin-bottom: 11px;
-
-    &:nth-child(5n){
-      clear: both;
-
-
-    }
   }
 
   &__link {
     display: inline-block;
     vertical-align: top;
-    transition: opacity 0.3s ease;
+    transition: opacity $transition-main;
 
     &:hover {
       opacity: 0.7;
@@ -373,11 +366,10 @@
     width: 20px;
   }
 
-
-  @media screen and (max-width: $media-1) {
+  @media screen and (max-width: 800px) {
     &__list {
-      display: inline-block;
-      vertical-align: top;
+      max-width: 100%;
+      justify-content: center;
     }
 
     &__item:nth-child(5n) {
@@ -412,7 +404,7 @@
   .modalLayer__title {
     font-size: 24px;
     margin-bottom: 25px;
-    font-weight: 400;
+    font-weight: 500;
   }
   .modalContent {
     display: flex;
@@ -430,7 +422,7 @@
   }
   .modalContent__hash {
     margin-right: 30px;
-    font-weight: 300;
+    font-weight: 400;
   }
   .modalContent__button {
     margin-left: auto;
@@ -442,7 +434,7 @@
   }
   .modalContent__prompt {
     text-align: left;
-    font-weight: 300;
+    font-weight: 400;
   }
 
   .modalContent__link {

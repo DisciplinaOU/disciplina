@@ -149,7 +149,7 @@ seqExpandersBalanceTx =
         -- How much money user has spent as the tx input.
         let inputSent = coinToInteger $ txInValue twTx
 
-        inpPrevAcc <- maybe (throwLocalError CantResolveSender) pure =<< getCurAcc inAddr
+        inpPrevAcc <- maybe (throwLocalError AuthorDoesNotExist) pure =<< getCurAcc inAddr
 
         let inpNewBal     = aBalance inpPrevAcc + inputBack - inputSent
         let newInpAccount = Account

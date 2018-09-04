@@ -2,7 +2,7 @@ module Main where
 
 import Control.Concurrent.Async (waitCatch)
 import Control.Monad.Component (ComponentM, runComponentM)
-import IiExtras
+import NType (N (..))
 import Text.PrettyPrint.ANSI.Leijen (Doc)
 
 import Ariadne.Knit.Backend
@@ -34,10 +34,13 @@ initializeEverything WalletCLIParams{..} = do
 
     let knitExecContext :: (Doc -> IO ()) -> Knit.ExecContext IO UiComponents
         knitExecContext putCommandOutput =
-            Knit.CoreExecCtx (putCommandOutput . Knit.ppValue) :&
-            Knit.TaskManagerExecCtx taskManagerFace :&
-            Knit.WalletExecCtx walletFace :&
-            RNil
+            Knit.CoreExecCtx (putCommandOutput . Knit.ppValue) &:
+            Knit.TaskManagerExecCtx taskManagerFace &:
+            Knit.WalletExecCtx walletFace &:
+            Base ()
+          where
+            a &: b = Step (a, b)
+            infixr &:
 
         knitFace = createKnitBackend knitExecContext taskManagerFace
 

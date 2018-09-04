@@ -6,23 +6,30 @@
           {{ transaction.txId }}
         </router-link>
       </p>
-      <p class="transactionInformBlock__date">{{ new Date(timestamp) | moment('DD/MM/YYYY HH:MM:SS') }}</p>
-      <p class="transactionInformBlock__totalSent btn btn--blue">
+      <p class="transactionInformBlock__date">{{ new Date(calcTimestamp) | moment('DD/MM/YYYY HH:MM:SS') }}</p>
+      <p class="transactionInformBlock__totalSent btn btn--blue btn--noclick">
         <dscp-format :value="transaction.outValue"/>
       </p>
     </div>
     <div class="transactionInformBlock__fromTo">
       <div class="transactionInformBlock__from informBlock">
         <p class="informBlock__title">{{ $t("transaction.from") }}</p>
-        <p class="informBlock__hash hash">{{ transaction.money.inAcc.addr }}</p>
+        <router-link
+          :to="{ name: 'addressShow', params: {hash: transaction.money.inAcc.addr} }"
+          :class="{fat: isCurrent(transaction.money.inAcc.addr) }"
+          class="informBlock__hash hash">
+          {{ transaction.money.inAcc.addr }}
+        </router-link>
       </div>
       <div class="transactionInformBlock__to informBlock">
         <p class="informBlock__title">{{ $t("transaction.to") }}</p>
-        <p class="informBlock__hash hash"
+        <router-link class="informBlock__hash hash"
+          :class="{fat: isCurrent(addr.outAddr) }"
+          :to="{ name: 'addressShow', params: {hash: addr.outAddr} }"
           v-for="addr in transaction.money.outs"
           :key="addr.outAddr">
           {{ addr.outAddr }}
-        </p>
+        </router-link >
       </div>
     </div>
   </div>
@@ -35,8 +42,29 @@ export default {
   name: 'TransactionItemMoney',
   props: {
     transaction: Object,
-    timestamp: Number
+    timestamp: Number,
+    currentAddress: String
   },
-  components: { DscpFormat }
+  components: { DscpFormat },
+  computed: {
+    calcTimestamp () {
+      if (this.timestamp) {
+        return this.timestamp
+      } else {
+        return this.transaction.block.since / 1000
+      }
+    }
+  },
+  methods: {
+    isCurrent (addr) {
+      return (this.currentAddress && this.currentAddress === addr)
+    }
+  }
 }
 </script>
+
+<style scoped>
+.fat {
+  font-weight: 500
+}
+</style>

@@ -1,0 +1,28 @@
+{
+  "welcomeMsg": "ここで、DISCIPLINAブロックチェーンをテストするためのトークンを入手できます。",
+  "fauset": "フォーセット",
+  "walletPlaceholder": "ウォレットアドレスを入力してトークンを取得：",
+  "getTokensBtn": "トークンを獲得",
+  "noWallet": "ウォレットがありませんか？ここから作成できます：",
+  "generateWalletBtn": "ウォレットを作成する",
+  "informationNote": "詳細については、",
+  "informationLinkText": "リリースページ",
+  "transfer": {
+    "amountMsg": "ウォレットに枚のトークンが送信されました",
+    "transactionId": "トランザクションID：",
+    "errors": {
+      "InvalidFormat": "パラメータのうちの１つを解析できませんでした",
+      "AddressAlreadyGifted": "入力されたアドレスは既に使われており、再度ご利用になることはできません。",
+      "SourceAccountExhausted": "指定のアカウントには送金するための十分な金額がありません。イベントは終了しています！"
+    }
+  },
+  "walletModal": {
+    "title": "ウォレットデータ：",
+    "address": "アドレス",
+    "publicKey": "公開鍵：",
+    "secretKey": "秘密鍵",
+    "copy": "コピー",
+    "copied": "コピーしました",
+    "info": "秘密鍵とアドレスの組み合わせを作成しました。この組み合わせを紛失した場合、ウォレットやコインにはアクセスすることができません。安全な場所に保管してください。テスト用の無料コインを申請するためには、前のページで作成されたアドレスを使用しなければなりません。秘密鍵を使用して、トランザクションを行い、<a href=\"//alpha.disciplina.io/index-jp.html#3\" target=\"_blank\">Student</a> アプリまたは<a href=\"//alpha.disciplina.io/index-jp.html#2\" target=\"_blank\">Ariadne</a>ウォレットの現在のアカウント状況をご確認いただけます。"
+  }
+}

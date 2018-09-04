@@ -6,9 +6,10 @@ module Dscp.Witness.Listeners.Listener
     ( witnessListeners
     ) where
 
+import Control.Concurrent (threadDelay)
 import qualified Control.Concurrent.STM as STM
 
-import Fmt ((+|), (|+))
+import Fmt ((+|), (+||), (|+), (||+))
 
 import Loot.Base.HasLens (HasLens (..))
 import Loot.Log (logDebug, logError, logInfo)
@@ -43,11 +44,16 @@ witnessListeners = do
 
 blockIssuingListener :: forall ctx m. WitnessWorkMode ctx m => Listener m
 blockIssuingListener =
-    Listener "blockIssuingListener" [] (\btq -> action btq `catchAny` handler)
+    Listener "blockIssuingListener" [] $ \btq ->
+        forever (action btq `catchAny` handler)
   where
-    handler e = logError $ fromString $ "Exception in blockIssuingListener: " <> show e
+    handler e = do
+        logError $
+            "BlockIssuingListener has failed with an error: " +|| e ||+
+            ". Recovering (in 2sec)."
+        liftIO $ threadDelay $ 2000000
     action :: ListenerEnv NetTag -> m ()
-    action btq = forever $ do
+    action btq = do
         let GovCommittee committee = gcGovernance $ giveL @WitnessConfig @GenesisConfig
         slotId <- waitUntilNextSlot
         ourAddr <- mkAddr <$> ourPublicKey @WitnessNode
