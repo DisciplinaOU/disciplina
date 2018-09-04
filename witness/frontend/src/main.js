@@ -25,8 +25,7 @@ Vue.axios.defaults.headers.common['Content-Type'] = 'application/json'
 
 Vue.use(VueI18Next)
 i18next.init({
-  lng: 'en',
-  fallbackLng: 'en',
+  lng: process.env.DEFAULT_LOCALE,
   resources: {
     en: { translation: En },
     zh: { translation: Zh },
