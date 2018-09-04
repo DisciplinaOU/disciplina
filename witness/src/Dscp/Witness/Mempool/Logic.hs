@@ -17,7 +17,6 @@ import qualified Data.Set as S
 import Loot.Base.HasLens (HasLens', lensOf)
 
 import qualified Snowdrop.Core as SD
-import qualified Snowdrop.Execution as SD (dmaAccessActions)
 import qualified Snowdrop.Execution as Pool
 import qualified Snowdrop.Execution as AVLP
 import qualified Snowdrop.Util as SD
@@ -25,6 +24,7 @@ import qualified Snowdrop.Util as SD
 import Dscp.Core.Foundation (GTxWitnessed)
 import Dscp.Core.Foundation.Witness
 import qualified Dscp.Snowdrop as SD
+import Dscp.Snowdrop.Actions (sdActionsComposition)
 import Dscp.Snowdrop.Configuration (Exceptions, Ids, Values)
 import Dscp.Witness.Mempool.Type
 import Dscp.Witness.SDLock
@@ -100,7 +100,7 @@ readFromMempool
 readFromMempool pool action = do
     actions <- view (lensOf @SD.SDVars)
     logger  <- view (lensOf @SD.LoggingIO)
-    let dbActions = SD.dmaAccessActions $ SD.nsStateDBActions actions (AVLP.RememberForProof False)
+    let dbActions = sdActionsComposition (AVLP.RememberForProof False) actions
     SD.runRIO logger $
         SD.unwrapSDBaseRethrow $
         Pool.actionWithMempool pool dbActions action
@@ -125,7 +125,7 @@ writeToMempool
 writeToMempool pool action = do
     actions <- view (lensOf @SD.SDVars)
     logger  <- view (lensOf @SD.LoggingIO)
-    let dbActions = SD.dmaAccessActions $ SD.nsStateDBActions actions (AVLP.RememberForProof False)
+    let dbActions = sdActionsComposition (AVLP.RememberForProof False) actions
     SD.runRIO logger $
         SD.unwrapSDBaseRethrow $
         Pool.actionWithMempool pool dbActions action

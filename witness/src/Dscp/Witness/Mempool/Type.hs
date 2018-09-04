@@ -18,7 +18,11 @@ import Dscp.Witness.AVL (AvlHash)
 import qualified Snowdrop.Execution as AVLP
 import qualified Snowdrop.Execution as Pool
 
-type ChgAccum = AVLP.AVLChgAccum AvlHash Ids Values
+type ChgAccum =
+    Pool.CompositeChgAccum
+        (Pool.SumChangeSet Ids Values)
+        (AVLP.AVLChgAccum AvlHash Ids Values)
+        BlockPlusAVLComposition
 
 type MempoolVar = Mempool (SD.IOCtx ChgAccum)
 
