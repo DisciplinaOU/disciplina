@@ -148,6 +148,8 @@ makeRelay (RelayState input pipe failedTxs) =
             dieGracefully "tx retranslation repeater" $ forever $ do
                 (_, PubTx tx) <- cliRecvUpdate btq (-1)
                 checkThenRepublish tx
+                    `catchAny` \e -> logWarning $
+                                     "Exception in republisher: " +| e |+ ""
 
     -- Check that the transaction is neither failed nor in a mempool and republish it.
     checkThenRepublish tx = do
@@ -157,12 +159,11 @@ makeRelay (RelayState input pipe failedTxs) =
         whenJust hasFailed $ \(_, e) ->
             throwM e
 
-        isThere <- readingSDLock $ isInMempool @ctx tx
+        isNew <- writingSDLock "add to mempool" $
+                     addTxToMempool @ctx tx
+                        `onAnException` \e -> addFailedTx (tx, e)
 
-        unless isThere $ do
-            writingSDLock "add to mempool" $ addTxToMempool @ctx tx
-                `onAnException` \e -> addFailedTx (tx, e)
-
+        when isNew $
             atomically $ STM.writeTBQueue pipe tx
 
     addFailedTx entry@(tx, _) =

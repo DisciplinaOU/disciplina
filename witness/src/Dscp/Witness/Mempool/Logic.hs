@@ -4,7 +4,6 @@ module Dscp.Witness.Mempool.Logic
     , newMempoolVar
     , addTxToMempool
     , takeTxsMempool
-    , isInMempool
     , normalizeMempool
     , readFromMempoolLocked
 
@@ -50,11 +49,15 @@ addTxToMempool
     :: forall ctx m
     .  (MempoolCtx ctx m, WithinWriteSDLock)
     => GTxWitnessed
-    -> m ()
+    -> m Bool
 addTxToMempool tx = do
     Mempool pool conf <- view (lensOf @MempoolVar)
     writeToMempool @ctx pool $ do
-        Pool.processTxAndInsertToMempool conf tx
+        txsWithUndos <- gets Pool.msTxs
+        let isNew = tx `notElem` map fst txsWithUndos
+        when isNew $
+            Pool.processTxAndInsertToMempool conf tx
+        return isNew
 
 -- | Take all mempool transactions, leaving it empty.
 takeTxsMempool
@@ -65,16 +68,6 @@ takeTxsMempool = do
     Mempool pool _ <- view (lensOf @MempoolVar)
     txsWithUndos <- writeToMempool @ctx pool Pool.evictMempool
     return (map fst txsWithUndos)
-
--- | Check whether is this transaction already in mempool.
-isInMempool
-    :: forall ctx m
-    .  (MempoolCtx ctx m, WithinReadSDLock)
-    => GTxWitnessed -> m Bool
-isInMempool tx = do
-    Mempool pool _ <- view (lensOf @MempoolVar)
-    txsWithUndos <- readFromMempool @ctx pool (gets Pool.msTxs)
-    return (tx `elem` map fst txsWithUndos)
 
 -- | Drop all transactions from mempool which are not valid with current
 -- chain.
