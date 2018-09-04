@@ -15,6 +15,7 @@ import Dscp.Educator.Web.Educator.Error
 import Dscp.Educator.Web.Educator.Logic
 import Dscp.Educator.Web.Educator.Queries
 import Dscp.Educator.Web.Educator.Types
+import Dscp.Educator.Web.Logic
 import Dscp.Educator.Web.Queries
 import Dscp.Educator.Web.Types
 
@@ -57,7 +58,7 @@ educatorApiHandlers =
 
     , eAddCourseAssignment = \_autoAssign na -> do
         void $ createAssignment (requestToAssignment na)
-        error "Auto assign (in transaction!)"
+        -- TODO [DSCP-176]: consider autoassign
 
     , eGetStudentAssignments = \student ->
         sqlTransaction $ commonGetAssignments EducatorCase student def

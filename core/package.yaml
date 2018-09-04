@@ -22,6 +22,7 @@ library:
     - directory
     - exceptions
     - fmt
+    - generic-arbitrary
     - hashable
     - hspec
     - log-warper

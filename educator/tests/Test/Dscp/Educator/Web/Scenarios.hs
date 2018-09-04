@@ -4,9 +4,12 @@ module Test.Dscp.Educator.Web.Scenarios
      ( prepareForAssignments
      , prepareForSubmissions
      , prepareAndCreateSubmission
+     , prepareAndCreateSubmissions
+     , prepareAndCreateTransactions
      ) where
 
 import qualified Data.Foldable as F
+import Data.List (nub)
 
 import Dscp.Core
 import Dscp.Crypto
@@ -49,3 +52,23 @@ prepareAndCreateSubmission env = do
     prepareForSubmissions env
     let sigSub = tiOne $ cteSignedSubmissions env
     void $ sqlTransaction $ submitAssignment sigSub
+
+-- | Add all submissions from given test env to the database.
+prepareAndCreateSubmissions
+    :: (MonadSQLiteDB m, MonadCatch m)
+    => CoreTestEnv -> m ()
+prepareAndCreateSubmissions env@CoreTestEnv{..} = do
+    prepareForSubmissions env
+    let sigSubs = nub $ tiList cteSignedSubmissions
+    forM_ sigSubs $ \sigSub ->
+        sqlTransaction $ submitAssignment sigSub
+
+-- | Add all transactions from given test env to the database.
+-- Transactions will have no block assiged to them.
+prepareAndCreateTransactions
+    :: (MonadSQLiteDB m, MonadCatch m)
+    => CoreTestEnv -> m ()
+prepareAndCreateTransactions env@CoreTestEnv{..} = do
+    prepareAndCreateSubmissions env
+    let txs = nub $ tiList ctePrivateTxs
+    forM_ txs createTransaction

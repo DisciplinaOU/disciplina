@@ -5,6 +5,7 @@ module Test.Dscp.DB.SQLite.Queries where
 import Prelude
 
 import Control.Lens (mapped)
+import Data.Default (Default (..))
 
 import Dscp.Core.Arbitrary
 import qualified Dscp.Crypto.MerkleTree as MerkleTree
@@ -162,8 +163,8 @@ spec_Instances = do
 
                     studentId <- DB.createStudent student
 
-                    courseId1 <- DB.createCourse $ CourseDetails course1 "" []
-                    courseId2 <- DB.createCourse $ CourseDetails course2 "" []
+                    courseId1 <- DB.createCourse $ simpleCourse course1
+                    courseId2 <- DB.createCourse $ simpleCourse course2
 
                     DB.enrollStudentToCourse studentId courseId1
                     DB.enrollStudentToCourse studentId courseId2
@@ -272,13 +273,13 @@ spec_Instances = do
                     return True
 
     describe "Retrieval of proven transactions" $ do
-        it "getProvenStudentTransactionsSince" $
+        it "getProvenStudentTransactions" $
             sqliteProperty $ \
                 ( delayedGen (genCoreTestEnv simpleCoreTestParams) -> env
                 ) -> do
                     let student      = tiOne $ cteStudents env
                         assignment   = tiOne $ cteAssignments env
-                        transactions = tiInfUnique $ ctePrivateTxs env
+                        transactions = take 3 $ tiInfUnique $ ctePrivateTxs env
 
                     studentId <- DB.createStudent student
 
@@ -302,15 +303,19 @@ spec_Instances = do
 
                     DB.createBlock Nothing
 
-                    transPacksSince <- DB.getProvenStudentTransactionsSince studentId pointSince
+                    transPacksSince <- DB.getProvenStudentTransactions studentId def{ pfSince = Just pointSince }
 
-                    let transSince = join . map (map snd . snd) $ transPacksSince
+                    let transSince = join $ map (map snd . snd) transPacksSince
 
                     let equal = (==) `on` sortWith getId
 
                     (transSince `equal` rest) `assertThat`
-                        "Incorrect set of transactions is returned"
+                        ("Incorrect set of transactions is returned: "
+                        <> show (length transSince) <> " vs "
+                        <> show (length rest)
+                        )
 
-                    return $ flip all transPacksSince $ \(proof, txSet) ->
-                        flip all txSet $ \(idx, tx) ->
+                    return $ conjoin $ transPacksSince <&> \(proof, txSet) ->
+                        conjoin $ txSet <&> \(idx, tx) ->
+                            counterexample ("Tx not present in tree: " <> show tx) $
                             MerkleTree.validateElementExistAt idx tx proof

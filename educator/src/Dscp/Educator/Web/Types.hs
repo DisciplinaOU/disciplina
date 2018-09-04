@@ -40,7 +40,7 @@ import Dscp.Util.Type (type (==))
 import Dscp.Core
 import Dscp.Crypto
 import Dscp.DB.SQLite.Instances ()
-import Dscp.Util.Aeson (AsByteString, HexEncoded)
+import Dscp.Util.Aeson (CustomEncoding, HexEncoded)
 
 -- | Tag indicating an API.
 data ApiTag = StudentTag | EducatorTag
@@ -87,7 +87,7 @@ data GradeInfo = GradeInfo
     } deriving (Show, Eq, Ord, Generic)
 
 data BlkProofInfo = BlkProofInfo
-    { bpiMtreeSerialized :: (AsByteString HexEncoded ByteString)
+    { bpiMtreeSerialized :: (CustomEncoding HexEncoded (MerkleProof PrivateTx))
     , bpiTxs             :: [PrivateTx]
     } deriving (Show, Eq, Generic)
 

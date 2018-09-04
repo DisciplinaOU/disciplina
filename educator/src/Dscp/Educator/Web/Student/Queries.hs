@@ -20,7 +20,6 @@ import Dscp.Util (Id, assertJust, listToMaybeWarn)
 
 import Dscp.Educator.Web.Student.Types
 import Dscp.Educator.Web.Types
-import Dscp.Educator.Web.Util
 
 type MonadStudentAPIQuery m =
     ( MonadSQLiteDB m
@@ -105,8 +104,6 @@ studentGetCourses studentId (coerce -> isEnrolledF) = do
         )
     |]
 
--- TODO: only student's grade!
--- TODO: detect warnings in tests?
 studentGetGrade :: MonadStudentAPIQuery m => Hash Submission -> m (Maybe GradeInfo)
 studentGetGrade submissionH = do
     mgrade <-

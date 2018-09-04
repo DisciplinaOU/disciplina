@@ -21,6 +21,6 @@ instance Arbitrary GetSubmissionsFilters where
     arbitrary = genericArbitrary
     shrink = genericShrink
 
-instance Arbitrary GetProofsFilters where
+instance Arbitrary GetProvenStudentTransactionsFilters where
     arbitrary = genericArbitrary
     shrink = genericShrink

@@ -29,12 +29,13 @@ module Dscp.DB.SQLite.Queries
        , onReferenceInvalidThrow
 
          -- * Readonly actions
+       , GetProvenStudentTransactionsFilters (..)
        , getCourseSubjects
        , getStudentCourses
        , getStudentAssignments
        , getGradesForCourseAssignments
        , getStudentTransactions
-       , getProvenStudentTransactionsSince
+       , getProvenStudentTransactions
        , getAssignment
        , getSignedSubmission
        , getTransaction
@@ -64,6 +65,7 @@ module Dscp.DB.SQLite.Queries
 import Control.Exception.Safe (catchJust)
 import Control.Lens (makePrisms)
 import Data.Coerce (coerce)
+import Data.Default (Default (..))
 import qualified Data.Map as Map (empty, fromList, insertWith, toList)
 import Data.Time.Clock (UTCTime, getCurrentTime)
 import Database.SQLite.Simple (Only (..), Query)
@@ -79,6 +81,7 @@ import Dscp.DB.SQLite.Class (MonadSQLiteDB (..), WithinSQLTransaction, transacti
 import Dscp.DB.SQLite.Error (asAlreadyExistsError, asReferenceInvalidError)
 import Dscp.DB.SQLite.Instances ()
 import Dscp.DB.SQLite.Types (TxBlockIdx (TxInMempool))
+import Dscp.DB.SQLite.Util
 import Dscp.Util (HasId (..), idOf)
 
 data DomainError
@@ -262,9 +265,19 @@ getStudentTransactions student = do
         where      student_addr = ?
     |]
 
+data GetProvenStudentTransactionsFilters = GetProvenStudentTransactionsFilters
+    { pfCourse :: Maybe Course
+    , pfSince  :: Maybe UTCTime
+    } deriving (Show, Generic)
+
+instance Default GetProvenStudentTransactionsFilters where
+    def = GetProvenStudentTransactionsFilters def def
+
 -- | Returns list of transaction blocks along with block-proof of a student since given moment.
-getProvenStudentTransactionsSince :: DBM m => Id Student -> UTCTime -> m [(MerkleProof PrivateTx, [(Word32, PrivateTx)])]
-getProvenStudentTransactionsSince studentId sinceTime = do
+getProvenStudentTransactions
+    :: DBM m
+    => Id Student -> GetProvenStudentTransactionsFilters -> m [(MerkleProof PrivateTx, [(Word32, PrivateTx)])]
+getProvenStudentTransactions studentId filters = do
     transaction $ do
         -- Contains `(tx, idx, blockId)` map.
         txsBlockList <- getTxsBlockMap
@@ -296,8 +309,13 @@ getProvenStudentTransactionsSince studentId sinceTime = do
     -- Returns, effectively, `[(tx, idx, blockId)]`.
     getTxsBlockMap :: DBM m => m [TxInBlock]
     getTxsBlockMap = do
-        query getTxsBlockMapQuery (studentId, sinceTime)
+        query getTxsBlockMapQuery (oneParam studentId <> mconcat filteringParams)
       where
+        (filteringClauses, filteringParams) = unzip
+            [ mkFilter "time >= ?"     $ pfSince filters
+            , mkFilter "course_id = ?" $ pfCourse filters
+            ]
+
         getTxsBlockMapQuery = [q|
             -- getTxsBlockMapQuery
 
@@ -324,9 +342,9 @@ getProvenStudentTransactionsSince studentId sinceTime = do
                    on  StudentAssignments.assignment_hash = Assignments.hash
 
             where      StudentAssignments.student_addr  =  ?
-                  and  time                            >=  ?
                   and  Transactions.idx                <> -1
         |]
+          `filterClauses` filteringClauses
 
     -- Returns `PrivateBlock` in normalized format, with metadata.
     getBlockData :: DBM m => Word32 -> m BlockData

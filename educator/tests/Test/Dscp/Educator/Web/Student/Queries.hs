@@ -404,8 +404,26 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                     -- ===
                     -- Just (studentLiftSubmission lastSubmission Nothing)
 
-    -- TODO: check that last submission is not other's student submission
-    -- TODO: check that grade of the last submission is not other's student grade
+        it "Cannot see the last submission of other students" $
+            sqlitePropertyM $ do
+                env <- pick $ genCoreTestEnv wildCoreTestParams
+                let student = tiOne $ cteStudents env
+                    submissions = tiList $ cteSubmissions env
+
+                lift $ prepareAndCreateSubmissions env
+
+                assignments <- lift $ sqlTx $ studentGetAllAssignments student
+                let lastSubs = map aiLastSubmission assignments
+                    expectedSubmissions =
+                        map hash $
+                        filter ((== student) . _sStudentId) submissions
+
+                let someFilteredOut = length submissions /= length expectedSubmissions
+                return $
+                    cover someFilteredOut 20 "Not all submissions are visible" $
+                        conjoin $ (catMaybes lastSubs) <&> \sub ->
+                            counterexample ("Extra visible submission: " <> show sub) $
+                            siHash sub `elem` expectedSubmissions
 
   describe "Submissions" $ do
     describe "getSubmission" $ do
@@ -572,13 +590,3 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                 prepareForSubmissions env
                 fmap property $ throwsPrism (_BadSubmissionSignature . _SubmissionSignatureInvalid) $
                     studentMakeSubmissionVerified student newSubmission
-
-  describe "Transactions" $ do
-    describe "getProofs" $ do
-         it "Returns nothing initially" $
-             sqliteProperty $ \() -> do
-                 _ <- createStudent student1
-                 proofs <- sqlTx $ commonGetProofs student1 def
-                 return $ proofs === []
-
-         -- TODO: more tests

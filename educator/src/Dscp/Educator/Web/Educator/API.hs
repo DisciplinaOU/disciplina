@@ -36,7 +36,7 @@ educatorAPI = Proxy
 protectedEducatorAPI :: Proxy ProtectedEducatorAPI
 protectedEducatorAPI = Proxy
 
--- TODO: add a way to fetch ALL assignments, even whose which are not assigned to any student
+-- TODO [DSCP-176]: add a way to fetch ALL assignments, even whose which are not assigned to any student
 
 data EducatorApiEndpoints route = EducatorApiEndpoints
     {

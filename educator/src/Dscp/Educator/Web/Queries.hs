@@ -8,8 +8,6 @@ module Dscp.Educator.Web.Queries
     ) where
 
 import Control.Lens (from, mapping)
-import Data.Time.Clock (UTCTime)
-import Dscp.Util.Aeson (AsByteString (..))
 import Database.SQLite.Simple (Only (..), (:.) (..))
 import Loot.Log (MonadLogging)
 import Data.Default (Default (..))
@@ -22,7 +20,6 @@ import Dscp.Educator.Web.Educator.Types
 import Dscp.Educator.Web.Student.Types
 import Dscp.Educator.Web.Student.Queries -- remove
 import Dscp.Educator.Web.Types
-import Dscp.Educator.Web.Util
 import Dscp.Util
 import Dscp.Util.Type (type (==))
 
@@ -69,13 +66,13 @@ commonGetAssignments apiCase student filters = do
                 aiLastSubmission <- studentGetLastAssignmentSubmission student assignH
                 return AssignmentStudentInfo{ aiHash = assignH, .. }
   where
-    assignFilter = mkFilterOn "Assignments.hash" (afAssignmentHash filters)
-    courseFilter = mkFilterOn "course_id" (afCourse filters)
-    assignTypeF = afIsFinal filters ^. mapping (from assignmentTypeRaw)
-    assignTypeFilter = mkFilterOn "type" assignTypeF
-    docTypeFilter = mkDocTypeFilter "Assignments.hash" (afDocType filters)
-    (clausesF, paramsF) =
-        unzip [assignFilter, courseFilter, assignTypeFilter, docTypeFilter]
+    (clausesF, paramsF) = unzip
+        [ mkFilter "Assignments.hash = ?" (afAssignmentHash filters)
+        , mkFilter "course_id = ?" (afCourse filters)
+        , mkDocTypeFilter "Assignments.hash" (afDocType filters)
+        , let assignTypeF = afIsFinal filters ^. mapping (from assignmentTypeRaw)
+          in mkFilter "type = ?" assignTypeF
+        ]
 
     queryText = [q|
         select    hash, course_id, contents_hash, type, desc
@@ -125,13 +122,13 @@ commonGetSubmissions apiCase filters = do
                             { siHash = submissionH
                             , siWitness = fromOnly $ positiveFetch witness, .. }
   where
-    studentFilter = mkFilterOn "S.student_addr" (sfStudent filters)
-    courseFilter  = mkFilterOn "course_id" (sfCourse filters)
-    assignFilter  = mkFilterOn "A.hash" (sfAssignmentHash filters)
-    subFilter     = mkFilterOn "S.hash" (sfSubmissionHash filters)
-    docTypeFilter = mkDocTypeFilter "A.hash" (sfDocType filters)
-    (clausesF, paramsF) =
-        unzip [studentFilter, courseFilter, assignFilter, subFilter, docTypeFilter]
+    (clausesF, paramsF) = unzip
+        [ mkFilter "S.student_addr = ?" (sfStudent filters)
+        , mkFilter "course_id = ?" (sfCourse filters)
+        , mkFilter "A.hash = ?" (sfAssignmentHash filters)
+        , mkFilter "S.hash = ?" (sfSubmissionHash filters)
+        , mkDocTypeFilter "A.hash" (sfDocType filters)
+        ]
 
     extraFields :: Text
     extraFields = case apiCase of
@@ -151,79 +148,6 @@ commonGetSubmissions apiCase filters = do
       `filterClauses` clausesF
 
 ----------------------------------------------------------------------------
--- Proofs
-----------------------------------------------------------------------------
-
--- | Given db-internal block index, fetch transactions it contains.
-commonGetBlockTxs
-    :: MonadStudentAPIQuery m
-    => Student
-    -> TxBlockIdx
-    -> m [PrivateTx]
-commonGetBlockTxs student blockIdx = do
-    query queryText (blockIdx, student)
-  where
-    queryText = [q|
-        select     Submissions.student_addr,
-                   Submissions.contents_hash,
-                   Assignments.hash,
-
-                   Submissions.signature,
-                   grade,
-                   time
-
-        from       Transactions
-
-        left join  Submissions
-               on  submission_hash = Submissions.hash
-
-        left join  Assignments
-               on  assignment_hash = Assignments.hash
-
-        where      Transactions.idx = ?
-              and  student_addr = ?
-    |]
-
-data GetProofsFilters = GetProofsFilters
-    { pfCourse :: Maybe Course
-    , pfSince  :: Maybe UTCTime
-    } deriving (Show, Generic)
-
-instance Default GetProofsFilters where
-    def = GetProofsFilters def def
-
--- | Get proofs of student activity grouped by blocks.
-commonGetProofs
-    :: (MonadStudentAPIQuery m, WithinSQLTransaction)
-    => Student
-    -> GetProofsFilters
-    -> m [BlkProofInfo]
-commonGetProofs student filters = do
-    -- It's questionable whether doing just one request would be optimal here
-    -- since fetching same merkel-tree for each transaction in block can take long.
-    blocks <- query queryText (pfCourse filters, pfCourse filters, pfSince filters, pfSince filters)
-    forM blocks $ \(idx, tree) -> do
-        txs <- commonGetBlockTxs student idx
-        return BlkProofInfo
-            { bpiMtreeSerialized = AsByteString tree
-            , bpiTxs = txs
-            }
-  where
-    queryText = [q|
-        select     Blocks.idx, mtree
-        from       Blocks
-        left join  Transactions
-                on Transactions.idx = Blocks.idx
-        left join  Submissions
-                on Transactions.submission_hash = Submissions.hash
-        left join  Assignments
-                on Submissions.assignment_hash = Assignments.hash
-        where      Transactions.hash is not null  -- nulls arise from join
-               and (? is null or Assignments.course_id = ?)
-               and (? is null or Blocks.time >= ?)
-    |]
-
-----------------------------------------------------------------------------
 -- Predicates
 ----------------------------------------------------------------------------
 
@@ -235,7 +159,7 @@ commonExistsSubmission
 commonExistsSubmission submissionH studentF = do
     checkExists queryText (oneParam submissionH <> paramF)
   where
-    (clauseF, paramF) = mkFilterOn "student_addr" studentF
+    (clauseF, paramF) = mkFilter "student_addr = ?" studentF
     queryText = [q|
        select   count(*)
        from     Submissions
@@ -258,10 +182,24 @@ commonDeleteSubmission submissionH studentF = do
     execute queryText (oneParam submissionH <> paramF)
         `onReferenceInvalidThrow` (SemanticError $ DeletingGradedSubmission submissionH)
   where
-    (clauseF, paramF) = mkFilterOn "student_addr" studentF
+    (clauseF, paramF) = mkFilter "student_addr = ?" studentF
     queryText = [q|
        delete
        from     Submissions
        where    hash = ?
     |]
       `filterClauses` one clauseF
+
+----------------------------------------------------------------------------
+-- Filters
+----------------------------------------------------------------------------
+
+-- | Create filter for 'DocumentType'.
+mkDocTypeFilter :: String -> Maybe DocumentType -> (FilterClause, SomeParams)
+mkDocTypeFilter fieldName = \case
+    Nothing ->
+        ("", mempty)
+    Just Offline ->
+        (FilterClause $ "and " <> fieldName <> " = ?", oneParam offlineHash)
+    Just Online  ->
+        (FilterClause $ "and " <> fieldName <> " <> ?", oneParam offlineHash)

@@ -202,7 +202,7 @@ type SubmissionSig = Signature (Id Submission)
 data SubmissionWitness = SubmissionWitness
     { _swKey :: !PublicKey
     , _swSig :: !SubmissionSig
-    } deriving (Show, Eq, Generic)
+    } deriving (Show, Eq, Ord, Generic)
 
 -- | Datatype for verifiable transaction (transaction with a witness)
 data SignedSubmission = SignedSubmission
@@ -210,7 +210,7 @@ data SignedSubmission = SignedSubmission
     -- ^ Student submission
     , _ssWitness    :: !SubmissionWitness
     -- ^ Submission witness
-    } deriving (Eq, Show, Generic)
+    } deriving (Eq, Ord, Show, Generic)
 
 instance HasHash Submission => HasId SignedSubmission where
     type Id SignedSubmission = Hash Submission
@@ -242,7 +242,7 @@ data PrivateTx = PrivateTx
     -- ^ Grade for this submission
     , _ptTime             :: !UTCTime
     -- ^ Timestamp for this transaction
-    } deriving (Show, Eq, Generic)
+    } deriving (Show, Eq, Ord, Generic)
 
 type PrivateTxId = Hash PrivateTx
 

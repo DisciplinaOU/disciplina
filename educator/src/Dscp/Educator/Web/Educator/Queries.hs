@@ -17,7 +17,6 @@ import Dscp.Crypto
 import Dscp.DB.SQLite
 import Dscp.Educator.Web.Educator.Types
 import Dscp.Educator.Web.Types
-import Dscp.Educator.Web.Util
 import Dscp.Util
 
 type MonadEducatorAPIQuery m =
@@ -28,7 +27,7 @@ type MonadEducatorAPIQuery m =
 
 educatorRemoveStudent :: MonadEducatorAPIQuery m => Student -> m ()
 educatorRemoveStudent student = do
-    -- TODO Proper implementation of this method may require
+    -- TODO [DSCP-176]: Proper implementation of this method may require
     -- fundemental rethinking of our database scheme and rewriting many code.
     -- Should be done soon though.
     _ <- throwM err501
@@ -47,7 +46,7 @@ educatorGetStudents
 educatorGetStudents courseF = do
     map (StudentInfo . fromOnly) <$> query queryText paramF
   where
-    (clauseF, paramF) = mkFilterOn "course_id" courseF
+    (clauseF, paramF) = mkFilter "course_id = ?" courseF
 
     queryText = [q|
         select    addr
@@ -62,13 +61,13 @@ educatorGetCourses :: DBM m => Maybe Student -> m [CourseEducatorInfo]
 educatorGetCourses studentF = do
     res :: [(Course, Text, Maybe Subject)] <- query queryText paramF
     return $
-        -- group "subject" fields
+        -- group "subject" fields for the same course
         [ CourseEducatorInfo{..}
         | course@((ciId, ciDesc, _) : _) <- groupBy ((==) `on` view _1) res
         , let ciSubjects = course ^.. traversed . _3 . _Just
         ]
   where
-    (clauseF, paramF) = mkFilterOn "student_addr" studentF
+    (clauseF, paramF) = mkFilter "student_addr = ?" studentF
 
     queryText = [q|
         select    Courses.id, Courses.desc, Subjects.id
@@ -121,12 +120,12 @@ educatorGetGrades
 educatorGetGrades studentF courseIdF isFinalF = do
     query queryText (mconcat paramsF)
   where
-    studentFilter = mkFilterOn "S.student_addr" studentF
-    courseFilter = mkFilterOn "course_id" courseIdF
-    assignTypeF = isFinalF ^. mapping (from assignmentTypeRaw)
-    assignTypeFilter = mkFilterOn "A.type" assignTypeF
-    (clausesF, paramsF) =
-        unzip [studentFilter, courseFilter, assignTypeFilter]
+    (clausesF, paramsF) = unzip
+        [ mkFilter "S.student_addr = ?" studentF
+        , mkFilter "course_id = ?" courseIdF
+        , let assignTypeF = isFinalF ^. mapping (from assignmentTypeRaw)
+          in mkFilter "A.type = ?" assignTypeF
+        ]
 
     queryText = [q|
         select    T.grade, T.time, T.submission_hash, T.idx

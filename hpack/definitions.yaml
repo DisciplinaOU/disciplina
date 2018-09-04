@@ -48,6 +48,7 @@ _definitions:
     - &ghc-options
         - -Wall
         - -fno-warn-orphans
+        - -Werror
 
   _utils:
     - &lib-common

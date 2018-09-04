@@ -2,13 +2,14 @@ module Test.Dscp.Educator.Web.Educator.Queries where
 
 import Control.Lens (to)
 import Data.Default (def)
-import Data.List (nub, nubBy)
+import Data.List (nubBy)
 import Dscp.DB.SQLite
 import Dscp.Util.Test
 import Test.QuickCheck (cover)
 import Test.QuickCheck.Monadic (pick, pre)
 
 import Dscp.Educator.Web.Educator
+import Dscp.Educator.Web.Logic
 import Dscp.Educator.Web.Queries
 import Dscp.Educator.Web.Types
 import Dscp.Util
@@ -166,7 +167,7 @@ spec_EducatorApiQueries = describe "Basic database operations" $ do
             let txs     = tiList $ ctePrivateTxs env
                 sigSubs = tiList $ cteSignedSubmissions env
 
-            pre (length sigSubs == length (nub sigSubs))
+            pre (length sigSubs == length (ordNub sigSubs))
 
             lift $ do
                 prepareForSubmissions env
@@ -192,7 +193,7 @@ spec_EducatorApiQueries = describe "Basic database operations" $ do
             docTypeF <- pick arbitrary
 
             let student = tiOne $ cteStudents env
-                sigSubs = nub . tiList $ cteSignedSubmissions env
+                sigSubs = ordNub . tiList $ cteSignedSubmissions env
                 courses = map _aCourseId . tiList $ cteAssignments env
 
             lift $ prepareForSubmissions env
@@ -210,3 +211,60 @@ spec_EducatorApiQueries = describe "Basic database operations" $ do
                   sigSubs `zip` cycle courses
 
             return $ sortOn siHash submissions === sortOn siHash submissions'
+
+
+  describe "Grades" $ do
+    describe "getGrades" $ pass  -- TODO [DSCP-176]
+
+    describe "postGrade" $ pass  -- TODO [DSCP-176]
+
+
+  describe "Proofs" $ do
+    describe "getProofs" $ do
+        it "No proofs initially" $ sqlitePropertyM $ do
+            env <- pick $ genCoreTestEnv simpleCoreTestParams
+            let student = tiOne $ cteStudents env
+            lift $ prepareAndCreateSubmissions env
+
+            proofs <- lift $ commonGetProofs student def
+
+            return $ proofs === []
+
+        it "Returns existing proof properly" $ sqlitePropertyM $ do
+            env <- pick $ genCoreTestEnv simpleCoreTestParams
+            let student = tiOne $ cteStudents env
+                ptx = tiOne $ ctePrivateTxs env
+
+            lift $ do
+                prepareAndCreateSubmissions env
+                void $ createTransaction ptx
+                createBlock Nothing
+
+            proofs <- lift $ commonGetProofs student def
+            let proof = expectOne "block proofs" proofs
+
+            return $ bpiTxs proof === [ptx]
+
+        it "Proofs are grouped properly" $ sqlitePropertyM $ do
+            env <- pick $ genCoreTestEnv simpleCoreTestParams
+            let student = tiOne $ cteStudents env
+                ptxs = tiList $ ctePrivateTxs env
+
+            pre (length ptxs >= 3)
+            let ptx1 : ptx2 : ptx3 : _ = ptxs
+
+            lift $ do
+                prepareAndCreateSubmissions env
+                void $ createTransaction ptx1
+                void $ createTransaction ptx2
+                createBlock Nothing
+                void $ createTransaction ptx3
+                createBlock Nothing
+
+            proofs <- lift $ commonGetProofs student def
+            let resTxs = map bpiTxs proofs
+
+            return $ map sort resTxs === [sort [ptx1, ptx2], [ptx3]]
+
+        -- Content of MerkleProof is tested in "Retrieval of proven
+        -- transactions" test.

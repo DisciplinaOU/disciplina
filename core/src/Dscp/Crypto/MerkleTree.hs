@@ -171,6 +171,8 @@ data MerkleProof a
         { pnSig :: !(MerkleSignature a) }
     deriving (Eq, Show, Functor, Foldable, Traversable, Generic)
 
+instance Serialise a => Serialise (MerkleProof a)
+
 getMerkleProofRoot :: MerkleProof a -> MerkleSignature a
 getMerkleProofRoot = pnSig
 

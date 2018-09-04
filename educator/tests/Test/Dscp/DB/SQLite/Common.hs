@@ -104,7 +104,7 @@ instance Buildable TestLoggedError where
 
 instance Log.MonadLogging TestSQLiteM where
   log lvl _ msg =
-      when (lvl == Log.Warning || lvl == Log.Error) $
+      when (lvl >= Log.Warning) $
           throwM $ TestLoggedError lvl msg
   logName = return $ error "Logger name requested in test"
 
