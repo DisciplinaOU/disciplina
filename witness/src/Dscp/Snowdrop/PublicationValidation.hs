@@ -43,7 +43,11 @@ preValidatePublication =
     PreValidator $ \_trans@ StateTx {..} -> do
 
         -- Retrieving our Publication payload from proof
-        (AccountId authorId, _, Publication {..}) <- authenticate @PublicationTxId txProof
+        Authenticated (AccountId authorId) account Publication {..} fee
+            <- authenticate @PublicationTxId txProof
+
+        unless (aBalance account >= fromIntegral (coinToInteger $ unFees fee)) $
+            throwLocalError CannotAffordFees
 
         -- Checking that prevBlockHash matches the one from storage.
         -- This can be written as:

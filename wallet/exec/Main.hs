@@ -11,6 +11,8 @@ import Ariadne.Knit.Backend
 import Ariadne.TaskManager.Backend
 import Ariadne.UI.Vty
 import Ariadne.UI.Vty.Face
+import Dscp.Config
+import Dscp.Core
 import Dscp.Wallet.Backend
 import Dscp.Wallet.CLI
 
@@ -26,9 +28,12 @@ type UiComponents = '[Knit.Core, Knit.Wallet, Knit.TaskManager, Knit.UI]
 main :: IO ()
 main = do
     params <- getWalletCLIParams
-    runComponentM "ariadne" (initializeEverything params) id
+    config <- buildConfig (wpConfigParams params) fillCoreConfig
+    withCoreConfig config $
+        runComponentM "ariadne" (initializeEverything params) id
 
-initializeEverything :: WalletCLIParams -> ComponentM (IO ())
+
+initializeEverything :: HasCoreConfig => WalletCLIParams -> ComponentM (IO ())
 initializeEverything WalletCLIParams{..} = do
     uiWalletState <- createWalletState
 

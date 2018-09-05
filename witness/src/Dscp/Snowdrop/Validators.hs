@@ -43,8 +43,8 @@ instance SD.HasReview Proofs PublicationTxProof where
     inj = PublicationTxWitness
 
 instance SD.HasPrism Proofs TxId where
-    proj (AddressTxWitness (SD.WithSignature { wsBody = (it, _, _) })) = Just it
-    proj  _                                                            = Nothing
+    proj (AddressTxWitness (SD.wsBody . ppSignedPart -> (it, _, _))) = Just it
+    proj  _                                                          = Nothing
 
 -- | We have to implement one part of the Prism ("contains"), bu we
 --   can't rebuild Proofs from TxId back.
@@ -52,16 +52,16 @@ instance SD.HasReview Proofs TxId where
     inj = error "impossible to implement"
 
 instance SD.HasPrism Proofs PublicationTxId where
-    proj (PublicationTxWitness (SD.WithSignature { wsBody = (it, _, _) })) = Just it
-    proj  _                                                                = Nothing
+    proj (PublicationTxWitness (SD.wsBody . ppSignedPart -> (it, _, _))) = Just it
+    proj  _                                                              = Nothing
 
 -- | Same as TxId.
 instance SD.HasReview Proofs PublicationTxId where
     inj = error "impossible to implement"
 
 instance SD.HasGetter Proofs PublicKey where
-    gett (AddressTxWitness     (SD.WithSignature { wsBody = (_, it, _) })) = it
-    gett (PublicationTxWitness (SD.WithSignature { wsBody = (_, it, _) })) = it
+    gett (AddressTxWitness     (SD.wsBody . ppSignedPart -> (_, it, _))) = it
+    gett (PublicationTxWitness (SD.wsBody . ppSignedPart -> (_, it, _))) = it
 
 instance SD.HasGetter SPayload [SStateTx] where
     gett = sPayStateTxs
@@ -71,7 +71,7 @@ _baseValidator ::
        SD.Validator Exceptions Ids Proofs Values (IOCtx chgAccum)
 _baseValidator =
     validateSimpleMoneyTransfer @(IOCtx chgAccum) <>
-    validatePublication @(IOCtx chgAccum)
+    validatePublication         @(IOCtx chgAccum)
 
 ----------------------------------------------------------------------------
 -- Block configuration

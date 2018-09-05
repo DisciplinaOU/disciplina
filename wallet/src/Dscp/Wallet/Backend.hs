@@ -6,15 +6,19 @@ module Dscp.Wallet.Backend
 import Control.Exception (throwIO)
 import Control.Monad.Component (ComponentM, buildComponent_)
 
-import Dscp.Core (GTx, Tx (..), TxInAcc (..), TxWitness (..), TxWitnessed (..), mkAddr, toTxId)
-import Dscp.Crypto (decrypt, emptyPassPhrase, encrypt, keyGen, sign, toPublic)
+import Dscp.Core
+import Dscp.Crypto
 import Dscp.Wallet.Face
 import Dscp.Wallet.KeyStorage
 import Dscp.Web
 import Dscp.Witness.Web.Client
 import Dscp.Witness.Web.Types
 
-createWalletFace :: BaseUrl -> (WalletEvent -> IO ()) -> ComponentM WalletFace
+createWalletFace ::
+       HasCoreConfig
+    => BaseUrl
+    -> (WalletEvent -> IO ())
+    -> ComponentM WalletFace
 createWalletFace serverAddress sendEvent = buildComponent_ "Wallet" $ do
     sendStateUpdateEvent sendEvent
     wc <- createWitnessClient serverAddress
@@ -60,8 +64,9 @@ restoreKey sendEvent mName eSecretKey mPassPhrase = do
 listKeys :: IO [Account]
 listKeys = getAccounts
 
-sendTx
-    :: WitnessClient
+sendTx ::
+       HasCoreConfig
+    => WitnessClient
     -> (WalletEvent -> IO ())
     -> Encrypted SecretKey
     -> Maybe PassPhrase
@@ -69,23 +74,26 @@ sendTx
     -> IO Tx
 sendTx wc sendEvent eSecretKey mPassPhrase (toList -> outs) = do
     secretKey <-
-        either throwIO return . decrypt (fromMaybe emptyPassPhrase mPassPhrase) $ eSecretKey
+        either throwIO return .
+        decrypt (fromMaybe emptyPassPhrase mPassPhrase) $ eSecretKey
     let publicKey = toPublic secretKey
         address = mkAddr publicKey
 
-    nonce <- aiCurrentNonce <$> wGetAccount wc address False
+    nonce <- fromInteger . aiCurrentNonce <$> wGetAccount wc address False
 
-    let inAcc   = TxInAcc { tiaNonce = nonce, tiaAddr   = address }
-        tx      = Tx      { txInAcc  = inAcc, txInValue = inValue, txOuts = outs }
-        inValue = Coin $ sum $ unCoin . txOutValue <$> outs
+    txWitnessed <- pure . fixFees feeCoefficients GMoneyTxWitnessed $ \fees ->
+        let inAcc   = TxInAcc { tiaNonce = nonce, tiaAddr = address }
+            inValue = Coin (sum $ map (unCoin . txOutValue) outs) `unsafeAddCoin` unFees fees
+            tx      = Tx { txInAcc = inAcc, txInValue = inValue, txOuts = outs }
 
-        signature   = sign secretKey (toTxId tx, publicKey, ())
-        witness     = TxWitness   { txwSig = signature, txwPk = publicKey }
-        txWitnessed = TxWitnessed { twTx   = tx, twWitness = witness }
+            signature   = sign secretKey (toTxId tx, publicKey, ())
+            witness     = TxWitness   { txwSig = signature, txwPk = publicKey }
+            txWitnessed = TxWitnessed { twTx   = tx, twWitness = witness }
+        in txWitnessed
 
     void $ wSubmitTx wc txWitnessed
     sendStateUpdateEvent sendEvent
-    return tx
+    return (twTx txWitnessed)
 
 getBalance :: WitnessClient -> Address -> IO (BlocksOrMempool Coin)
 getBalance wc address = aiBalances <$> wGetAccount wc address False

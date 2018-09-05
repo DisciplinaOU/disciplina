@@ -1,6 +1,9 @@
 demo: &demo
   core: &demo-core
     slotDuration: 10000 # 10 s
+    fee:
+      multiplier: 0.1
+      minimal: 10
     genesis: &demo-genesis
       genesisSeed: "GromakNaRechke"
       governance:
@@ -12,13 +15,13 @@ demo: &demo
         - specific:
           - # Faucet
             - LL4qKn62hrdLh1vkyiidEFLfCaAngaVmtu3ipGVSubhackXS4pXNbeDC
-            - 100
+            - 1000
           - # Test key #1, secret: ffRB5uhVEV24NXsYUuw1irt9HF5i5IRWJXHJzagXU8Y=
             - LL4qKoASaEwZGfvoQCPa2xGv3LKJQVCxaRw73p61Bj6tD8CSDcgkANf6
-            - 100
+            - 1000
           - # Test key #2, secret: fOhZOFr6SSnYv1/xfKPPMHdWLdQDboysJ4Q794Gezmw=
             - LL4qKqwvLDw4eKXTt5tpCZytoyaMVVbRmVRCo1HL8zwPaNWDxBnLpKoJ
-            - 100
+            - 1000
 
 singleton:
   <<: *demo

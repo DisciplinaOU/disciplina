@@ -2,12 +2,13 @@
 
 module Dscp.Core.Aeson () where
 
-import Data.Aeson (FromJSON (..), FromJSONKey (..), ToJSON (..), ToJSONKey, Value (..),
-                   withScientific, withText, withObject, (.:))
+import Data.Aeson (FromJSON (..), FromJSONKey (..), ToJSON (..), ToJSONKey, Value (..), withObject,
+                   withScientific, withText, (.:))
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveFromJSON, deriveJSON)
 
 import Dscp.Core.Config
+import Dscp.Core.Fees
 import Dscp.Core.Foundation
 import Dscp.Core.Genesis
 import Dscp.Core.Governance
@@ -124,6 +125,7 @@ deriveJSON defaultOptions ''Publication
 deriveJSON defaultOptions ''PublicationTxWitness
 deriveJSON defaultOptions ''PublicationTxWitnessed
 deriveJSON defaultOptions ''PublicationTx
+deriveJSON defaultOptions ''FeeCoefficients
 
 deriveFromJSON defaultOptions ''Committee
 deriveJSON defaultOptions ''GenesisDistributionElem

@@ -88,7 +88,7 @@ coinFromInteger i
 
 -- | Same as 'coinFromInteger', but errors if Left happens.
 unsafeMkCoin :: Integral i => i -> Coin
-unsafeMkCoin = Coin . fromIntegral -- also do checks
+unsafeMkCoin = either error identity . coinFromInteger . fromIntegral
 
 instance Buildable Coin where
     build (Coin c) = c ||+ " coin" +|| whenF (c /= 1) "s"
@@ -112,7 +112,7 @@ sumCoins = coerce $ (+) @Word64
 -- | Tx input account. Can be used for other tx types too.
 data TxInAcc = TxInAcc
     { tiaAddr  :: Address
-    , tiaNonce :: Integer
+    , tiaNonce :: Word32
     } deriving (Eq, Ord, Generic, Show)
 
 instance Buildable TxInAcc where
