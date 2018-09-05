@@ -74,9 +74,19 @@ tests:
       - tasty-discover
       - hspec-discover
     dependencies:
+      - containers
+      - data-default
+      - disciplina-core
+      - disciplina-witness
+      - fmt
       - hspec
+      - lens
+      - loot-base
+      - loot-config
+      - loot-log
       - memory
-      - tasty
+      - text-format
+      - QuickCheck
 
 executables:
   dscp-witness:

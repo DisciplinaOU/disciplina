@@ -32,6 +32,7 @@ instance Serialise AccountId
 instance Serialise SD.TipKey
 
 instance Serialise Ids
+instance (Serialise txid, Serialise payload) => Serialise (PersonalisedProof txid payload)
 instance Serialise Proofs
 instance (Serialise h, Serialise b) => Serialise (SD.Block h b)
 instance Serialise SPayload

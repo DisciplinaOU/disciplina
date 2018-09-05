@@ -5,6 +5,8 @@ module Dscp.Util
        , listToMaybeWarn
        , allUniqueOrd
        , reportTime
+       , Size (..)
+       , sizeSerialised
 
          -- * Exceptions processing
        , wrapRethrow
@@ -48,10 +50,11 @@ module Dscp.Util
        , module Snowdrop.Util
        ) where
 
-import Codec.Serialise (Serialise)
+import Codec.Serialise (Serialise, serialise)
 import Control.Lens (Getter, to)
 import Data.ByteArray (ByteArrayAccess)
 import Data.ByteArray.Encoding (Base (..), convertFromBase, convertToBase)
+import qualified Data.ByteString.Lazy as BSL
 import Data.Time.Clock.POSIX (getPOSIXTime)
 import Fmt ((+|), (|+))
 import Mon (recordTimer)
@@ -105,6 +108,16 @@ reportTime name mEndpoint m = case mEndpoint of
         -- mon accepts only Int as metric value and expects amount of milliseconds in recordTimer
         liftIO $ recordTimer endpoint name 1 [] (round $ diff * 1000)
         return a
+
+-- | Size of serialised item.
+-- First phantom type stands for a typeclass corresponding to serialisation
+-- method, while the second one is type of item being serialised.
+newtype Size a = Size { unSize :: Word64 }
+    deriving (Eq, Ord, Show)
+
+-- | Count size of serialised item.
+sizeSerialised :: Serialise a => a -> Size a
+sizeSerialised = Size . fromIntegral . BSL.length . serialise
 
 -----------------------------------------------------------
 -- Exceptions processing

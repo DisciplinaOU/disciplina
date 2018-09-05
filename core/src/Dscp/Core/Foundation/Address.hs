@@ -45,7 +45,7 @@ addrToBase58 = encodeBase58 addressAlphabet . serialise'
 addrFromBase58 :: ByteString -> Either Text Address
 addrFromBase58 =
     maybeToRight base58Err . decodeBase58 addressAlphabet >=>
-    first show . deserialiseOrFail'
+    first (\x -> "Failed to parse address: " <> show x) . deserialiseOrFail'
   where
     base58Err = "addrFromBase58: invalid base58 string"
 

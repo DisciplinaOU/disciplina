@@ -1,1 +1,5 @@
-{-# OPTIONS_GHC -F -pgmF tasty-discover -optF --tree-display #-}
+import Spec (spec)
+import Test.Hspec (hspec)
+
+main :: IO ()
+main = hspec spec

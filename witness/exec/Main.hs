@@ -17,8 +17,8 @@ main = do
 getWitnessParams :: IO (WitnessParams, WitnessConfigRec)
 getWitnessParams = do
     let parser = (,) <$> witnessParamsParser <*> configParamsParser
-    (params, configPath) <- execParser $
+    (params, configParams) <- execParser $
         info (helper <*> versionOption <*> parser) $
         fullDesc <> progDesc "Disciplina witness node."
-    config <- buildConfig configPath fillWitnessConfig
+    config <- buildConfig configParams fillWitnessConfig
     return (params, config)

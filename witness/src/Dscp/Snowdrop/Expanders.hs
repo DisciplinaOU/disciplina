@@ -16,8 +16,8 @@ import Snowdrop.Core (ChgAccum, ChgAccumCtx, ERoComp, Expander (..), SeqExpander
 import Snowdrop.Execution (RestrictCtx, expandUnionRawTxs)
 import Snowdrop.Util
 
-import Dscp.Core.Foundation
-import Dscp.Crypto (hash)
+import Dscp.Core
+import Dscp.Crypto as Dscp
 import Dscp.Snowdrop.Configuration hiding (PublicationTxWitness)
 import qualified Dscp.Snowdrop.Configuration as Conf (Proofs (..))
 import Dscp.Snowdrop.Storage.Types
@@ -32,11 +32,14 @@ expandBlock ::
        ( Default (ChgAccum ctx)
        , HasLens ctx RestrictCtx
        , HasLens ctx (ChgAccumCtx ctx)
+       , HasCoreConfig
        )
-    => Block
+    => Bool
+    -> Block
     -> ERoComp Exceptions Ids Values ctx SBlock
-expandBlock Block{..} = do
-    stateTxs <- expandGTxs (bbTxs bBody)
+expandBlock applyFees Block{..} = do
+    let issuer = hIssuer bHeader
+    stateTxs <- expandGTxs applyFees issuer (bbTxs bBody)
     pure $ SD.Block bHeader (SPayload stateTxs $ hash bBody)
 
 -- | Expand list of global txs.
@@ -44,91 +47,139 @@ expandGTxs ::
        ( Default (ChgAccum ctx)
        , HasLens ctx RestrictCtx
        , HasLens ctx (ChgAccumCtx ctx)
+       , HasCoreConfig
        )
-    => [GTxWitnessed]
+    => Bool
+    -> Dscp.PublicKey
+    -> [GTxWitnessed]
     -> ERoComp Exceptions Ids Values ctx [SStateTx]
-expandGTxs txs = expandUnionRawTxs getByGTx txs
+expandGTxs applyFees = expandUnionRawTxs . getByGTx applyFees
 
--- | Expand list of global txs.
+-- | Expand one global tx.
 expandGTx ::
        ( Default (ChgAccum ctx)
        , HasLens ctx RestrictCtx
        , HasLens ctx (ChgAccumCtx ctx)
+       , HasCoreConfig
        )
-    => GTxWitnessed
+    => Dscp.PublicKey
+    -> GTxWitnessed
     -> ERoComp Exceptions Ids Values ctx SStateTx
-expandGTx txs =
-    expandUnionRawTxs getByGTx [txs] >>= \case
+expandGTx pk tx =
+    expandUnionRawTxs (getByGTx True pk) [tx] >>= \case
         [expanded] -> return expanded
         _          -> error "expandGTx: did not expand 1 raw tx into 1 sd tx"
 
-getByGTx ::
-       GTxWitnessed
+getByGTx
+    :: HasCoreConfig
+    => Bool
+    -> Dscp.PublicKey
+    -> GTxWitnessed
     -> ( StateTxType
        , Proofs
-       , SeqExpanders Exceptions Ids Proofs Values ctx GTxWitnessed)
-getByGTx t = case t of
-    GMoneyTxWitnessed tx ->
-        let (a, b) = toProofBalanceTx tx
-        in  (a, b, seqExpandersGTx t)
+       , SeqExpanders Exceptions Ids Proofs Values ctx GTxWitnessed
+       )
+getByGTx applyFees pk t =
+    let fee  = calcFeeG (if applyFees then feeCoefficients else noFees) t
+        addr = mkAddr pk
+        (a, b) = case t of
+                   GMoneyTxWitnessed tx        -> toProofBalanceTx fee tx
+                   GPublicationTxWitnessed ptx -> toProofPublicationTx fee ptx
+    in (a, b, seqExpandersGTx addr t)
 
-    GPublicationTxWitnessed ptx ->
-        let (a, b) = toProofPublicationTx ptx
-        in  (a, b, seqExpandersGTx t)
+----------------------------------------------------------------------------
+-- Publication tx
+----------------------------------------------------------------------------
 
-toProofPublicationTx :: PublicationTxWitnessed -> (StateTxType, Proofs)
-toProofPublicationTx (PublicationTxWitnessed tx (PublicationTxWitness {..})) =
+toProofPublicationTx :: Fees -> PublicationTxWitnessed -> (StateTxType, Proofs)
+toProofPublicationTx fee (PublicationTxWitnessed tx (PublicationTxWitness {..})) =
     (txType, Conf.PublicationTxWitness $ WithSignature
         { wsSignature = toDscpSig pwSig
         , wsPublicKey = toDscpPK pwPk
-        , wsBody = (toPtxId tx, pwPk, privHeader)
-        })
+        , wsBody = (toPtxId tx, pwPk, ptHeader)
+        } `PersonalisedProof`
+            fee
+    )
   where
-    PublicationTx _ privHeader = tx
+    PublicationTx { ptHeader } = tx
     txType = StateTxType $ getId (Proxy @TxIds) PublicationTxTypeId
 
-seqExpandersPublicationTx :: SeqExpanders Exceptions Ids Proofs Values ctx PublicationTxWitnessed
-seqExpandersPublicationTx =
+
+seqExpandersPublicationTx ::
+       Address
+    -> SeqExpanders Exceptions Ids Proofs Values ctx PublicationTxWitnessed
+seqExpandersPublicationTx feesReceiverAddr =
     SeqExpanders $ one $ Expander
         (Set.fromList [publicationOfPrefix])
         (Set.fromList [accountPrefix, publicationHeadPrefix, publicationOfPrefix])
         $ \PublicationTxWitnessed { ptwTx } -> do
-            let PublicationTx{ ptHeader, ptAuthor } = ptwTx
+            let PublicationTx{ ptHeader, ptAuthor, ptFeesAmount } = ptwTx
             let phHash = hash ptHeader
             let prevHash = ptHeader ^. pbhPrevBlock
             let (prevHashM :: Maybe PrivateHeaderHash) =
                     prevHash <$ guard (prevHash /= genesisHeaderHash)
+
+            let feeAmount = fromIntegral $ coinToInteger ptFeesAmount
             maybePub <- queryOne (PublicationsOf ptAuthor)
+            mFeesReceiver <- queryOne (AccountId feesReceiverAddr)
+
+            let dIssuer =
+                    maybe (New Account { aBalance = feeAmount, aNonce = 0 })
+                          (\issuer -> Upd issuer { aBalance = aBalance issuer + feeAmount })
+                          mFeesReceiver
+
+            account@Account {..} <-
+                maybe (throwLocalError PublicationAuthorDoesNotExist) pure =<<
+                queryOne (AccountId ptAuthor)
+
+            let feesChanges
+                    | feeAmount == 0 = []
+                    | ptAuthor /= feesReceiverAddr =
+                          [ AccountId ptAuthor ==>
+                                Upd account
+                                    -- You can say that `PubOf ==> LastPub`
+                                    -- mechanism will prevent double-pub
+                                    -- but lets not depend on that impl detail.
+                                    { aNonce   = aNonce + 1
+                                    , aBalance = aBalance - feeAmount
+                                    }
+                          , AccountId feesReceiverAddr ==> dIssuer ]
+                    -- If publication author and fees receiver are the same
+                    -- address, we do not transfer any coins.
+                    | otherwise = []
 
             let change = if isJust maybePub then Upd else New
-
-            return $ mkDiffCS $ Map.fromList
-              [ PublicationsOf ptAuthor ==> change (LastPublication ptHeader)
-              , PublicationHead phHash  ==> New (PublicationNext prevHashM)
-              ]
+            pure $ mkDiffCS $ Map.fromList $
+                [ PublicationsOf  ptAuthor ==> change (LastPublication ptHeader)
+                , PublicationHead phHash   ==> New    (PublicationNext prevHashM)
+                ] ++ feesChanges
 
 ----------------------------------------------------------------------------
 -- Money tx
 ----------------------------------------------------------------------------
 
-seqExpandersGTx ::
-       GTxWitnessed -> SeqExpanders Exceptions Ids Proofs Values ctx GTxWitnessed
-seqExpandersGTx (GMoneyTxWitnessed _) =
-    contramap (\(GMoneyTxWitnessed tx) -> tx) seqExpandersBalanceTx
-seqExpandersGTx (GPublicationTxWitnessed _) =
-    contramap (\(GPublicationTxWitnessed ptx) -> ptx) seqExpandersPublicationTx
+seqExpandersGTx
+    :: Address
+    -> GTxWitnessed
+    -> SeqExpanders Exceptions Ids Proofs Values ctx GTxWitnessed
+seqExpandersGTx addr (GMoneyTxWitnessed _) =
+    flip contramap (seqExpandersBalanceTx addr) $ \(GMoneyTxWitnessed tx) -> tx
+seqExpandersGTx addr (GPublicationTxWitnessed _) =
+    flip contramap (seqExpandersPublicationTx addr) $ \(GPublicationTxWitnessed ptx) -> ptx
 
-toProofBalanceTx :: TxWitnessed -> (StateTxType, Proofs)
-toProofBalanceTx (TxWitnessed tx (TxWitness {..})) =
-    (txType, AddressTxWitness $ WithSignature {..})
+toProofBalanceTx :: Fees -> TxWitnessed -> (StateTxType, Proofs)
+toProofBalanceTx fee (TxWitnessed tx (TxWitness {..})) =
+    (txType, AddressTxWitness $ WithSignature {..} `PersonalisedProof` fee)
   where
     txType = StateTxType $ getId (Proxy @TxIds) AccountTxTypeId
     wsSignature = toDscpSig txwSig
     wsPublicKey = toDscpPK txwPk
     wsBody = (toTxId tx, txwPk, ())
 
-seqExpandersBalanceTx :: SeqExpanders Exceptions Ids Proofs Values ctx TxWitnessed
-seqExpandersBalanceTx =
+seqExpandersBalanceTx ::
+       Address
+    -> SeqExpanders Exceptions Ids Proofs Values ctx TxWitnessed
+seqExpandersBalanceTx feesReceiverAddr =
     SeqExpanders $ one $ Expander inP outP $ \TxWitnessed{..} -> do
         let outputs = txOuts twTx
         -- check for output duplicates
@@ -153,7 +204,7 @@ seqExpandersBalanceTx =
         let inpNewBal     = aBalance inpPrevAcc + inputBack - inputSent
         let newInpAccount = Account
                 { aBalance = inpNewBal
-                , aNonce   = tiaNonce (txInAcc twTx) + 1
+                , aNonce   = fromIntegral (tiaNonce $ txInAcc twTx) + 1
                 }
 
         let inp = AccountId inAddr ==> Upd newInpAccount
@@ -169,16 +220,49 @@ seqExpandersBalanceTx =
             pure (AccountId txOutAddr ==> ch)
 
         let txId = toGTxId $ GMoneyTx twTx
-
-        accList <- forM (inAddr : map txOutAddr outOther) $ \addr ->
-            queryOne (TxsOf addr) >>= return . \case
-                Nothing -> [TxsOf addr ==> New (LastTx txId)]
+        miscChanges <- forM (inAddr : map txOutAddr outOther) $ \txAddr ->
+            queryOne (TxsOf txAddr) >>= return . \case
+                Nothing -> [TxsOf txAddr ==> New (LastTx txId)]
                 Just (LastTx prevTxId) ->
-                    [ TxsOf  addr      ==> Upd (LastTx txId)
-                    , TxHead addr txId ==> New (TxNext prevTxId)
+                    [ TxsOf  txAddr      ==> Upd (LastTx txId)
+                    , TxHead txAddr txId ==> New (TxNext prevTxId)
                     ]
 
-        pure $ mkDiffCS $ Map.fromList $ inp : outs ++ concat accList
+        -- Money flow related changes (w/o fees)
+        let changesList = inp : outs ++ concat miscChanges
+
+        -- Checking for duplicates
+        let hasDuplicates l = length l /= length (ordNub l)
+        when (hasDuplicates $ map fst changesList) $
+            throwLocalError $
+            ExpanderInternalError "Changeset produced by tx has duplicates"
+
+        -- Adding fees
+        let feeAmount =
+                max 0 $ inputSent - sum (map (coinToInteger . txOutValue) outputs)
+        let feesReceiverAccountId = AccountId feesReceiverAddr
+        feesReceiverAccM <- queryOne feesReceiverAccountId
+        let addFee receiver = receiver { aBalance = aBalance receiver + feeAmount }
+        let onlyFees = Account { aBalance = feeAmount, aNonce = 0 }
+        let feesReceiverUpd = maybe (New onlyFees) (Upd . addFee) feesReceiverAccM
+
+        let changes :: Map Ids (ValueOp Values)
+            changes = Map.fromList changesList
+        let changesWithFees
+                | feeAmount == 0 = changes
+                | otherwise =
+                -- Current key we're interested in
+                let k = inj feesReceiverAccountId
+                    updated =
+                        Map.adjust (fmap (\(AccountOutVal x) -> AccountOutVal $ addFee x)) k changes
+                in case Map.lookup k changes of
+                    Nothing      -> Map.insert k (inj feesReceiverUpd) changes
+                    Just (New _) -> updated
+                    Just (Upd _) -> updated
+                    Just Rem     -> Map.insert k (New $ inj onlyFees) changes
+                    other        -> error $ "changesWithFese: not expected: " <> show other
+
+        pure $ mkDiffCS changesWithFees
   where
     -- Account prefixes are used during the computation to access current balance
     inP  = Set.fromList [accountPrefix, txOfPrefix]

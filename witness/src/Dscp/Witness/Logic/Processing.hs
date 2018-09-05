@@ -53,8 +53,8 @@ createBlock newSlot = do
     pure block
 
 -- | Apply verified block.
-applyBlockRaw :: (WitnessWorkMode ctx m, WithinWriteSDLock) => Bool -> Block -> m AvlProof
-applyBlockRaw toVerify block = do
+applyBlockRaw :: (WitnessWorkMode ctx m, WithinWriteSDLock) => Bool -> Bool -> Block -> m AvlProof
+applyBlockRaw applyFees toVerify block = do
     (sdActions :: SDVars) <- view (lensOf @SDVars)
     let sdOSParamsBuilder = nsSDParamsBuilder sdActions
     let blockDBM = nsBlockDBActions sdActions
@@ -65,7 +65,7 @@ applyBlockRaw toVerify block = do
                                                    (SD.dmaAccessActions blockDBM)
                                                    (SD.dmaAccessActions stateDBM)
             rwComp = do
-              sblock <- SD.liftERoComp $ expandBlock block
+              sblock <- SD.liftERoComp $ expandBlock applyFees block
               -- getCurrentTime requires MonadIO
               let osParams = SD.unOSParamsBuilder sdOSParamsBuilder $ UTCTime (toEnum 0) (toEnum 0)
               SD.applyBlockImpl toVerify osParams blkStateConfig (bBody block) sblock
@@ -90,7 +90,7 @@ applyBlockRaw toVerify block = do
     pure proof
 
 applyBlock :: (WitnessWorkMode ctx m, WithinWriteSDLock) => Block -> m AvlProof
-applyBlock = applyBlockRaw True
+applyBlock = applyBlockRaw True True
 
 applyGenesisBlock :: (WitnessWorkMode ctx m, WithinWriteSDLock) => m ()
-applyGenesisBlock = void $ applyBlockRaw False genesisBlock
+applyGenesisBlock = void $ applyBlockRaw False False genesisBlock

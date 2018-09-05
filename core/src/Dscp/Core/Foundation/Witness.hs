@@ -2,13 +2,12 @@
 module Dscp.Core.Foundation.Witness
     (
     -- * Common
-      Coin (..)
-    , unsafeAddCoin
-    , StakeholderId (..)
+      StakeholderId (..)
+    , Coin (..)
+    , unsafeMkCoin
     , coinToInteger
     , coinFromInteger
-    , unsafeMkCoin
-    , sumCoins
+    , unsafeAddCoin
     , SlotId (..)
 
     -- * Transaction
@@ -42,7 +41,6 @@ module Dscp.Core.Foundation.Witness
     ) where
 
 import Codec.Serialise (Serialise)
-import Data.Coerce (coerce)
 
 import Fmt (blockListF, build, indentF, listF, nameF, whenF, (+|), (+||), (|+), (||+))
 
@@ -87,13 +85,10 @@ coinFromInteger i
 
 -- | Same as 'coinFromInteger', but errors if Left happens.
 unsafeMkCoin :: Integral i => i -> Coin
-unsafeMkCoin = Coin . fromIntegral -- also do checks
+unsafeMkCoin = either error identity . coinFromInteger . fromIntegral
 
 instance Buildable Coin where
     build (Coin c) = c ||+ " coin" +|| whenF (c /= 1) "s"
-
-sumCoins :: Coin -> Coin -> Coin
-sumCoins = coerce $ (+) @Word64
 
 ----------------------------------------------------------------------------
 -- Transactions
@@ -111,7 +106,7 @@ sumCoins = coerce $ (+) @Word64
 -- | Tx input account. Can be used for other tx types too.
 data TxInAcc = TxInAcc
     { tiaAddr  :: Address
-    , tiaNonce :: Integer
+    , tiaNonce :: Word32
     } deriving (Eq, Ord, Generic, Show)
 
 instance Buildable TxInAcc where
@@ -172,13 +167,19 @@ instance Buildable TxWitnessed where
 
 -- | Transaction for private block publications.
 data PublicationTx = PublicationTx
-    { ptAuthor :: Address
-    , ptHeader :: PrivateBlockHeader
+    { ptAuthor     :: Address
+      -- ^ Publication author.
+    , ptFeesAmount :: Coin
+      -- ^ Fees author spends.
+    , ptHeader     :: PrivateBlockHeader
+      -- ^ Private block header to publish.
     } deriving (Eq, Ord, Generic, Show)
 
 instance Buildable PublicationTx where
-    build PublicationTx { ptAuthor, ptHeader } =
-        "PublicationTx { author: " +| ptAuthor |+ "; header:" +| ptHeader |+ " }"
+    build PublicationTx { ptAuthor, ptFeesAmount, ptHeader } =
+        "PublicationTx { author: " +| ptAuthor |+
+        "; fees: " +| ptFeesAmount |+
+        "; header:" +| ptHeader |+ " }"
 
 type PublicationTxId = Hash PublicationTx
 
