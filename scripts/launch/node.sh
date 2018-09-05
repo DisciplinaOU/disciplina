@@ -27,6 +27,10 @@ do
         node="faucet"
     elif [[ "$var" == "--no-clean" ]]; then
         no_clean=true
+    elif [[ "$var" == "--singleton" ]]; then
+        singleton=true
+    elif [[ "$var" == "--prof" ]]; then
+        profiling=true
     else
         echo "Unknown parameter \"$var\""
         exit 1
