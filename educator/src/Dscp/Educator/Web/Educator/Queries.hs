@@ -61,8 +61,8 @@ educatorGetCourses :: DBM m => Maybe Student -> m [CourseEducatorInfo]
 educatorGetCourses studentF = do
     res :: [(Course, Text, Maybe Subject)] <- query queryText paramF
     return $
-        -- group "subject" fields for the same course
-        [ CourseEducatorInfo{..}
+        -- group "subject" fields for the same courses
+        [ CourseEducatorInfo{ ciId, ciDesc, ciSubjects }
         | course@((ciId, ciDesc, _) : _) <- groupBy ((==) `on` view _1) res
         , let ciSubjects = course ^.. traversed . _3 . _Just
         ]

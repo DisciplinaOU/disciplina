@@ -106,7 +106,7 @@ educatorLiftSubmission ss siGrade =
     , siContentsHash = _sContentsHash s
     , siAssignmentHash = _sAssignmentHash s
     , siWitness = _ssWitness ss
-    , ..
+    , siGrade
     }
   where
     s = _ssSubmission ss

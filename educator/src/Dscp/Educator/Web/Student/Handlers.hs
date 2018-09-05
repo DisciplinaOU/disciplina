@@ -37,8 +37,8 @@ studentApiHandlers student =
 
     , sGetAssignments = \afCourse afDocType afIsFinal ->
         sqlTransaction $
-        commonGetAssignments StudentCase student
-            def{ afCourse, afDocType, afIsFinal }
+            commonGetAssignments StudentCase student
+                def{ afCourse, afDocType, afIsFinal }
 
     , sGetAssignment = \assignH ->
         sqlTransaction $ studentGetAssignment student assignH

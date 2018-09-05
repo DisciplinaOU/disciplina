@@ -71,8 +71,8 @@ educatorApiHandlers =
 
     , eGetStudentCourseAssignments = \student course afIsFinal ->
         sqlTransaction $
-        commonGetAssignments EducatorCase student
-            def{ afCourse = Just course, afIsFinal }
+          commonGetAssignments EducatorCase student
+              def{ afCourse = Just course, afIsFinal }
 
       -- * Submissions
 
