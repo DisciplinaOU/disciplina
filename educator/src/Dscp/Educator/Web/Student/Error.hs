@@ -3,7 +3,6 @@
 module Dscp.Educator.Web.Student.Error
        ( APIError (..)
        , _BadSubmissionSignature
-       , _DeletingGradedSubmission
        , _SomeDomainError
        , WrongSubmissionSignature (..)
        , _FakeSubmissionSignature
@@ -46,8 +45,6 @@ instance Exception WrongSubmissionSignature
 data APIError
     = BadSubmissionSignature WrongSubmissionSignature
       -- ^ Submission signature doesn't match the student nor has valid format.
-    | DeletingGradedSubmission
-      -- ^ Graded Submission is being deleted.
     | SomeDomainError DomainError
       -- ^ Entity is missing or getting duplicated.
     | InvalidFormat
@@ -81,7 +78,6 @@ instance ToJSON APIError where
         BadSubmissionSignature err -> case err of
             FakeSubmissionSignature{}    -> "FakeSubmissionSignature"
             SubmissionSignatureInvalid{} -> "SubmissionSignatureInvalid"
-        DeletingGradedSubmission{} ->       "DeletingGradedSubmission"
         InvalidFormat ->                    "InvalidFormat"
         SomeDomainError err -> domainErrorToShortJSON err
 
@@ -93,7 +89,6 @@ instance ToJSON APIError where
 toServantErrNoReason :: APIError -> ServantErr
 toServantErrNoReason = \case
     BadSubmissionSignature{}   -> err403
-    DeletingGradedSubmission{} -> err403
     InvalidFormat{}            -> err400
     SomeDomainError err -> domainToServantErrNoReason err
 

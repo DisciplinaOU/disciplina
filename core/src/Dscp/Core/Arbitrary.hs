@@ -20,6 +20,7 @@ module Dscp.Core.Arbitrary
     , tiList
     , tiInfUnique
     , genCoreTestEnv
+    , cteSubmissions
     , simpleCoreTestParams
     , wildCoreTestParams
 
@@ -38,10 +39,13 @@ module Dscp.Core.Arbitrary
 
 import qualified Data.Foldable
 import Data.List (nub)
+import qualified Data.Text.Buildable
 import Data.Time.Clock (UTCTime, getCurrentTime)
+import Fmt ((+||), (||+))
 import qualified GHC.Exts as Exts
 import GHC.IO.Unsafe (unsafePerformIO)
 import Test.QuickCheck (sized)
+import qualified Text.Show
 
 import Dscp.Core.Foundation
 import Dscp.Crypto
@@ -224,6 +228,20 @@ data CoreTestEnv = CoreTestEnv
     , cteSignedSubmissions :: TestItem SignedSubmission
     , ctePrivateTxs        :: TestItem PrivateTx
     }
+
+cteSubmissions :: CoreTestEnv -> TestItem Submission
+cteSubmissions = fmap _ssSubmission . cteSignedSubmissions
+
+instance Show CoreTestEnv where
+    show = toString . pretty
+
+instance Buildable CoreTestEnv where
+    build env@CoreTestEnv{..} =
+        "Students: "    +|| tiList cteStudents ||+ "\n\
+        \Courses: "     +|| tiList cteCourses ||+ "\n\
+        \Assignments: " +|| tiList cteAssignments ||+ "\n\
+        \Submissions: " +|| tiList (cteSubmissions env) ||+ "\n\
+        \Private txs: " +|| tiList ctePrivateTxs ||+ ""
 
 -- | Generate 'CoreTestEnv'.
 --

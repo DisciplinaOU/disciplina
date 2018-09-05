@@ -74,7 +74,7 @@ distrElemToMap (Just addrs) (GDEqual cTotal) =
             a :| as -> let n = length addrs
                            c = fromIntegral $ unCoin cTotal
                            each' = c `div` n
-                       in (a, unsafeMkCoin $ c - (n-1) * each') :
+                       in (a, unsafeMkCoin $ c - (n - 1) * each') :
                           map (, unsafeMkCoin each') as
     in if sum (map (unCoin . snd) mapping) /= unCoin cTotal
        then error "distrToMap: equal summing failed"

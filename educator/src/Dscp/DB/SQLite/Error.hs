@@ -7,6 +7,7 @@ module Dscp.DB.SQLite.Error
 
       -- * Common SQL errors
     , asAlreadyExistsError
+    , asReferenceInvalidError
     ) where
 
 import qualified Data.Text as T
@@ -70,5 +71,14 @@ asAlreadyExistsError :: SQLError -> Maybe Text
 asAlreadyExistsError err = do
     SQLError ErrorConstraint details _ <- pure err
     let pat = "UNIQUE constraint failed"
+    guard $ pat `T.isPrefixOf` details
+    return $ T.drop (length pat) details
+
+-- | Matches on errors which declare violation of FOREIGN KEY constraint,
+-- returns descrition of violated constraint.
+asReferenceInvalidError :: SQLError -> Maybe Text
+asReferenceInvalidError err = do
+    SQLError ErrorConstraint details _ <- pure err
+    let pat = "FOREIGN KEY constraint failed"
     guard $ pat `T.isPrefixOf` details
     return $ T.drop (length pat) details

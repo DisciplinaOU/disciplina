@@ -12,6 +12,7 @@ library:
     - autoexporter
     - bytestring
     - containers
+    - data-default
     - directory
     - direct-sqlite
     - disciplina-core
@@ -36,6 +37,7 @@ library:
     - servant-auth-server
     - servant-generic
     - servant-server
+    - singleton-bool
     - sqlite-simple
     - template-haskell
     - text
@@ -56,6 +58,9 @@ tests:
       - disciplina-core
       - disciplina-witness
       - disciplina-educator
+      - data-default
+      - fmt
+      - generic-arbitrary
       - hspec
       - lens
       - loot-log
@@ -63,6 +68,7 @@ tests:
       - sqlite-simple
       - tasty
       - tasty-hspec
+      - text-format
       - time
       - QuickCheck
       - unliftio

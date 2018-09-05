@@ -644,6 +644,10 @@ paths:
           description: Submission hash value is invalid
           schema:
             $ref: "#/definitions/ErrResponse"
+        403:
+          description: Submission has already been graded.
+          schema:
+            $ref: "#/definitions/ErrResponse"
         404:
           description: Submission with given hash not found
           schema:
@@ -956,11 +960,13 @@ definitions:
             * `CourseAlreadyExists` - Course with such id already exists.
             * `AssignmentAlreadyExists` - Exactly the same assignment already exists.
             * `StudentDoesNotAttendCourse` - Student does not attend the course.
-            * `StudentIsActive` - Can not delete a student because he is attending a course.
 
             * `StudentAlreadyAttendsCourse` - Student already attends given course.
             * `StudentAlreadyHasAssignment` - Student is already subscribed on given assignment.
             * `StudentHasNoAssignment` - Given student didn't have given assignment.
+
+            * `StudentIsActive` - Can not delete a student because he is attending a course.
+            * `DeletingGradedSubmission` - Attempt to delete an already graded submission.
 parameters:
   StudentAddr:
     in: path

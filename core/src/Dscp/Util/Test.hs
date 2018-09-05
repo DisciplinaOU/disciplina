@@ -30,10 +30,11 @@ import Data.Typeable (typeRep)
 import GHC.Show (Show (show))
 import Test.Hspec as T
 import Test.QuickCheck as T (Arbitrary (..), Fixed (..), Gen, Property, Testable (..), choose,
-                             elements, expectFailure, forAll, frequency, infiniteList, ioProperty,
-                             label, listOf, listOf1, oneof, property, sublistOf, suchThat,
-                             suchThatMap, vectorOf, (.&&.), (===), (==>))
+                             conjoin, cover, elements, expectFailure, forAll, frequency,
+                             infiniteList, ioProperty, label, listOf, listOf1, oneof, property,
+                             sublistOf, suchThat, suchThatMap, vectorOf, (.&&.), (===), (==>))
 import Test.QuickCheck (sized)
+import qualified Test.QuickCheck as Q
 import Test.QuickCheck.Gen (Gen (..))
 import Test.QuickCheck.Instances as T ()
 import Test.QuickCheck.Property as T (rejected)
@@ -139,12 +140,17 @@ throwsPrism
 throwsPrism excL action = do
     catchJust (^? excL) (action $> False) (\_ -> return True)
 
+expectOne :: Text -> [a] -> a
+expectOne _    [x] = x
+expectOne desc xs  =
+    error $ "expectOne: " <> pretty (length xs) <> " entities (" <> desc <> ")"
+
+counterexample :: Testable prop => Text -> prop -> Property
+counterexample desc prop = Q.counterexample (toString desc) prop
+
 ----------------------------------------------------------------------------
 -- Roundtrips
 ----------------------------------------------------------------------------
-
-
-
 
 serialiseRoundtrip
     :: forall a. (Arbitrary a, Serialise a, Eq a, Show a)

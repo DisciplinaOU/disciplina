@@ -5,6 +5,7 @@ module Test.Dscp.DB.SQLite.Queries where
 import Prelude
 
 import Control.Lens (mapped)
+import Data.Default (Default (..))
 
 import Dscp.Core.Arbitrary
 import qualified Dscp.Crypto.MerkleTree as MerkleTree
@@ -24,7 +25,7 @@ spec_Instances = do
 
             it "Course does exist after it is created" $
                 sqliteProperty $ \courseId -> do
-                    _       <- DB.createCourse courseId (Just "foo") []
+                    _       <- DB.createCourse (simpleCourse courseId)
                     isThere <- DB.existsCourse courseId
 
                     return isThere
@@ -46,7 +47,7 @@ spec_Instances = do
             it "Assignment is created and retrieved by hash" $
                 sqliteProperty $ \assignment -> do
 
-                    _              <- DB.createCourse    (assignment^.aCourseId) Nothing []
+                    _              <- DB.createCourse    (simpleCourse $ assignment^.aCourseId)
                     assignmentHash <- DB.createAssignment assignment
                     assignment'    <- DB.getAssignment    assignmentHash
 
@@ -74,7 +75,7 @@ spec_Instances = do
 
                     let course     = assignment   ^.aCourseId
 
-                    _ <- DB.createCourse           course Nothing []
+                    _ <- DB.createCourse           (simpleCourse course)
                     _ <- DB.createAssignment       assignment
 
                     throws @DomainError $ do
@@ -93,7 +94,7 @@ spec_Instances = do
                             course     = assignment^.aCourseId
                             student    = submission^.sStudentId
 
-                        _ <- DB.createCourse           course Nothing []
+                        _ <- DB.createCourse           (simpleCourse course)
                         _ <- DB.createStudent          student
                         _ <- DB.createAssignment       assignment
                         _ <- sqlTransaction $
@@ -114,7 +115,7 @@ spec_Instances = do
                         course        = assignment   ^.aCourseId
                         student       = submission   ^.sStudentId
 
-                    courseId  <- DB.createCourse           course Nothing []
+                    courseId  <- DB.createCourse           (simpleCourse course)
                     studentId <- DB.createStudent          student
                     _         <- DB.enrollStudentToCourse  studentId courseId
                     aHash     <- DB.createAssignment       assignment
@@ -143,7 +144,7 @@ spec_Instances = do
                     "Student should be enrolled to no courses initially"
 
                 for_ courses $ \course -> do
-                    courseId <- DB.createCourse course (Just "foo") []
+                    courseId <- DB.createCourse (simpleCourse course)
                     DB.enrollStudentToCourse studentId courseId
 
                 courseIds' <- DB.getStudentCourses student
@@ -162,8 +163,8 @@ spec_Instances = do
 
                     studentId <- DB.createStudent student
 
-                    courseId1 <- DB.createCourse course1 Nothing []
-                    courseId2 <- DB.createCourse course2 Nothing []
+                    courseId1 <- DB.createCourse $ simpleCourse course1
+                    courseId2 <- DB.createCourse $ simpleCourse course2
 
                     DB.enrollStudentToCourse studentId courseId1
                     DB.enrollStudentToCourse studentId courseId2
@@ -210,7 +211,7 @@ spec_Instances = do
                     course     = assignment   ^.aCourseId
                     student    = submission   ^.sStudentId
 
-                courseId  <- DB.createCourse           course Nothing []
+                courseId  <- DB.createCourse           (simpleCourse course)
                 studentId <- DB.createStudent          student
                 _         <- DB.enrollStudentToCourse  studentId courseId
                 aHash     <- DB.createAssignment       assignment
@@ -244,8 +245,8 @@ spec_Instances = do
                 then do
                     _studentId <- DB.createStudent          student
 
-                    courseId   <- DB.createCourse           course Nothing []
-                    courseId2  <- DB.createCourse           course2 Nothing []
+                    courseId   <- DB.createCourse           (simpleCourse course)
+                    courseId2  <- DB.createCourse           (simpleCourse course2)
 
                     _          <- DB.enrollStudentToCourse  student courseId
                     _          <- DB.enrollStudentToCourse  student courseId2
@@ -272,13 +273,13 @@ spec_Instances = do
                     return True
 
     describe "Retrieval of proven transactions" $ do
-        it "getProvenStudentTransactionsSince" $
+        it "getProvenStudentTransactions" $
             sqliteProperty $ \
                 ( delayedGen (genCoreTestEnv simpleCoreTestParams) -> env
                 ) -> do
                     let student      = tiOne $ cteStudents env
                         assignment   = tiOne $ cteAssignments env
-                        transactions = tiInfUnique $ ctePrivateTxs env
+                        transactions = take 3 $ tiInfUnique $ ctePrivateTxs env
 
                     studentId <- DB.createStudent student
 
@@ -290,7 +291,7 @@ spec_Instances = do
                         let sigSubmission = trans        ^.ptSignedSubmission
                             course        = assignment   ^.aCourseId
 
-                        cId <- DB.createCourse           course Nothing [] `orIfItFails` getId course
+                        cId <- DB.createCourse           (simpleCourse course) `orIfItFails` getId course
                         _   <- DB.enrollStudentToCourse  studentId cId     `orIfItFails` ()
                         aId <- DB.createAssignment       assignment        `orIfItFails` getId assignment
                         _   <- DB.setStudentAssignment   studentId aId     `orIfItFails` ()
@@ -302,15 +303,19 @@ spec_Instances = do
 
                     DB.createBlock Nothing
 
-                    transPacksSince <- DB.getProvenStudentTransactionsSince studentId pointSince
+                    transPacksSince <- DB.getProvenStudentTransactions studentId def{ pfSince = Just pointSince }
 
-                    let transSince = join . map (map snd . snd) $ transPacksSince
+                    let transSince = join $ map (map snd . snd) transPacksSince
 
                     let equal = (==) `on` sortWith getId
 
                     (transSince `equal` rest) `assertThat`
-                        "Incorrect set of transactions is returned"
+                        ("Incorrect set of transactions is returned: "
+                        <> show (length transSince) <> " vs "
+                        <> show (length rest)
+                        )
 
-                    return $ flip all transPacksSince $ \(proof, txSet) ->
-                        flip all txSet $ \(idx, tx) ->
+                    return $ conjoin $ transPacksSince <&> \(proof, txSet) ->
+                        conjoin $ txSet <&> \(idx, tx) ->
+                            counterexample ("Tx not present in tree: " <> show tx) $
                             MerkleTree.validateElementExistAt idx tx proof
