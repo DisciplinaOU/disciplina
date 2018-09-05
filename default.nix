@@ -49,8 +49,6 @@ let
   };
 in
   dscp-packages // {
-  disciplina-faucet-frontend = pkgs.callPackage ./faucet/frontend {};
-  disciplina-witness-frontend = pkgs.callPackage ./witness/frontend {};
   disciplina-wallet = haskell.lib.justStaticExecutables dscp-packages.disciplina-wallet;
   disciplina-bin = pkgs.runCommandNoCC "disciplina-bin-${dscp-packages.disciplina-core.version}" {} ''
     mkdir $out
