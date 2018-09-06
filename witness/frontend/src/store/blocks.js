@@ -13,17 +13,14 @@ const state = {
 }
 
 const actions = {
-  getAllBlocks ({commit}, from, count = state.perPage + 1) {
-    blockexplorer.getBlocks((Blocks) => {
-      const lastBlock = Blocks.pop()
+  getAllBlocks ({commit}, page = state.currentPage) {
+    blockexplorer.getBlocks((totalBlocks, Blocks) => {
       if (state.all.length === 0) {
         setAutoupdateList(this)
       }
-      commit('setFromBlockHashPrev', Blocks[0])
       commit('setBlocks', Blocks)
-      commit('calcTotal', Blocks[0])
-      commit('setFromBlockHash', lastBlock)
-    }, from, count)
+      commit('setTotal', totalBlocks)
+    }, (page - 1) * state.perPage, state.perPage)
   },
   getBlock ({commit}, hash) {
     blockexplorer.getBlock(Block => {
@@ -40,19 +37,8 @@ const mutations = {
     state.current = block
     state.loaded = true
   },
-  calcTotal (state, block) {
-    if (state.totalPages === 0) {
-      state.firstBlockIndex = block.header.difficulty
-      state.totalPages = Math.ceil(state.firstBlockIndex / state.perPage)
-    }
-  },
-  setFromBlockHash (state, block) {
-    state.fromBlockHash = block.headerHash
-  },
-  setFromBlockHashPrev (state, block) {
-    if (state.all.length && block.header.difficulty !== state.firstBlockIndex) {
-      state.fromBlockHashPrev = state.all[0].headerHash
-    }
+  setTotal (state, total) {
+    state.totalPages = Math.ceil(total / state.perPage)
   },
   setPage (state, page) {
     state.currentPage = page
@@ -74,12 +60,6 @@ const getters = {
   },
   perPage (state) {
     return state.perPage
-  },
-  fromBlockHash (state) {
-    return state.fromBlockHash
-  },
-  fromBlockHashPrev (state) {
-    return state.fromBlockHashPrev
   },
   currentPage (state) {
     return state.currentPage

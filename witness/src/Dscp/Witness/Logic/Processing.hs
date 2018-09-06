@@ -72,6 +72,10 @@ applyBlockRaw toVerify block = do
               -- TODO: move the changeset expanding below to Dscp.Snowdrop.Expanders.expandBlock
               void $ SD.modifyRwCompChgAccum $ SD.CAMChange $ SD.ChangeSet $
                   M.singleton
+                      (SD.inj . hDifficulty . bHeader $ block)
+                      (SD.New . BlockIdxVal $ headerHash block)
+              void $ SD.modifyRwCompChgAccum $ SD.CAMChange $ SD.ChangeSet $
+                  M.singleton
                       (SD.inj . NextBlockOf . hPrevHash . bHeader $ block)
                       (SD.New . NextBlockOfVal . NextBlock $ headerHash block)
               sequence_ . fmap addTx . enumerate . bbTxs . bBody $ block
