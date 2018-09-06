@@ -24,7 +24,7 @@ import Dscp.Witness.Web
 import Dscp.Witness.Workers
 
 -- | Listeners, workers and no interaction with user.
-withWitnessBackground :: WitnessWorkMode ctx m => m () -> m ()
+withWitnessBackground :: FullWitnessWorkMode ctx m => m () -> m ()
 withWitnessBackground cont = do
     -- this should be done only if resource is not initialised,
     -- and this call should be in SDActions allocation code, but
@@ -50,11 +50,11 @@ withWitnessBackground cont = do
             `finally` mapM terminate (workerAsyncs <> listenerAsyncs)
 
 -- | Entry point of witness node.
-witnessEntry :: WitnessWorkMode ctx m => m ()
+witnessEntry :: FullWitnessWorkMode ctx m => m ()
 witnessEntry =
-    withServer. withWitnessBackground $ do
-        witnessParams <- view (lensOf @WitnessParams)
-        whenJust (wpWitnessServerParams witnessParams) $ \serverParams -> do
+    withServer . withWitnessBackground $ do
+        witnessWebParams <- view (lensOf @(Maybe WitnessWebParams))
+        whenJust witnessWebParams $ \serverParams -> do
             logInfo "Forking witness API server"
             void . async $
                 serveWitnessAPIReal serverParams

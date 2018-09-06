@@ -35,7 +35,7 @@ import Test.QuickCheck as T (Arbitrary (..), Fixed (..), Gen, Property, Testable
                              infiniteList, ioProperty, label, listOf, listOf1, oneof, property,
                              sublistOf, suchThat, suchThatMap, vectorOf, (.&&.), (===), (==>))
 import Test.QuickCheck (shuffle, sized)
-import qualified Test.QuickCheck as Q (counterexample)
+import qualified Test.QuickCheck as Q
 import Test.QuickCheck.Arbitrary.Generic as T (genericArbitrary, genericShrink)
 import Test.QuickCheck.Gen (Gen (..))
 import Test.QuickCheck.Instances as T ()

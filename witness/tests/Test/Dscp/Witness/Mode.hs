@@ -24,7 +24,9 @@ import Dscp.Crypto
 import Dscp.Resource.Keys
 import Dscp.Rio
 import Dscp.Snowdrop
+import Dscp.Util
 import Dscp.Util.Test
+import Dscp.Web.Metrics
 import Dscp.Witness
 
 ----------------------------------------------------------------------------
@@ -37,6 +39,7 @@ data TestWitnessCtx = TestWitnessCtx
     , _twcSDLock     :: SDLock
     , _twcLogging    :: Logging IO
     , _twcKeys       :: KeyResources WitnessNode
+    , _twcRelayState :: RelayState
     }
 
 makeLenses ''TestWitnessCtx
@@ -50,6 +53,9 @@ GenHasLens(SDVars, twcSDVars)
 GenHasLens(SDLock, twcSDLock)
 GenHasLens(Logging IO, twcLogging)
 GenHasLens(KeyResources WitnessNode, twcKeys)
+GenHasLens(Maybe WitnessWebParams, seeOnly Nothing)
+GenHasLens(RelayState, twcRelayState)
+GenHasLens(MetricsEndpoint, seeOnly (MetricsEndpoint Nothing))
 
 type WitnessTestMode = RIO TestWitnessCtx
 
@@ -66,30 +72,27 @@ testGenesisAddresses = mkAddr . toPublic <$> testGenesisSecrets
 testGenesisAddressAmount :: Coin
 testGenesisAddressAmount = Coin 10000
 
-testCommitteeParams :: CommitteeParams
-testCommitteeParams = undefined
-
 -- | Witness test configuration.
 -- Only those parts are defined which are actually used in tests.
 testWitnessConfig :: WitnessConfigRec
 testWitnessConfig =
     finaliseDeferedUnsafe $ def &~ do
-        sub #core . sub #generated . option #genesisInfo ?= genInfo
+        sub #core . sub #generated . option #genesisInfo ?= formGenesisInfo genConfig
+        sub #core . option #genesis ?= genConfig
   where
-    genInfo =
-      GenesisInfo
-      { giAddressMap =
-          GenAddressMap $ M.fromList $
-          map (, testGenesisAddressAmount) testGenesisAddresses
-      , giGenesisBlock = error "Genesis block undefined"
-      }
+    genesisAddressMap =
+        GenAddressMap $ M.fromList $
+        map (, testGenesisAddressAmount) testGenesisAddresses
+    genConfig =
+        GenesisConfig
+        { gcGenesisSeed = "meme tests"
+        , gcGovernance = error "Committee is not provided"
+        , gcDistribution = GenesisDistribution . one $ GDSpecific genesisAddressMap
+        }
 
 ----------------------------------------------------------------------------
 -- Runner
 ----------------------------------------------------------------------------
-
-withTestNetwork :: m a -> m a
-withTestNetwork = undefined
 
 runWitnessTestMode :: WitnessTestMode a -> IO a
 runWitnessTestMode action =
@@ -97,12 +100,18 @@ runWitnessTestMode action =
         _twcMempoolVar <- newMempoolVar
         _twcSDVars <- runRIO _twcLogging initSDActions
         _twcSDLock <- newSDLock
-        _twcKeys <- genStore (Just testCommitteeParams)
+        _twcRelayState <- newRelayState
         let ctx = TestWitnessCtx{..}
         runRIO ctx $ do
-            applyGenesisBlock
+            markWithinWriteSDLockUnsafe applyGenesisBlock
             action
   where
+    _twcKeys =
+        let sk = detGen 22 arbitrary
+        in KeyResources
+           { _krSecretKey = sk
+           , _krPublicKey = toPublic sk
+           }
     _twcLogging = Logging
         { _log = \lvl _ txt ->
             when (lvl >= Warning) $

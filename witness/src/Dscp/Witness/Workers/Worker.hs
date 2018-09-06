@@ -20,8 +20,8 @@ import Dscp.Network.Wrapped
 import Dscp.Snowdrop.Mode
 import Dscp.Util
 import Dscp.Util.Concurrent.NotifyWait
+import Dscp.Web.Metrics
 import Dscp.Witness.Launcher.Mode
-import Dscp.Witness.Launcher.Params (WitnessParams (..))
 import Dscp.Witness.Logic
 import Dscp.Witness.Mempool
 import Dscp.Witness.Messages
@@ -29,7 +29,7 @@ import Dscp.Witness.Relay
 import Dscp.Witness.SDLock
 
 witnessWorkers
-    :: WitnessWorkMode ctx m
+    :: FullWitnessWorkMode ctx m
     => m [Worker m]
 witnessWorkers = do
     relayState <- view (lensOf @RelayState)
@@ -41,7 +41,7 @@ witnessWorkers = do
 ----------------------------------------------------------------------------
 
 -- | Worker listening to block updates.
-blockUpdateWorker :: forall ctx m. WitnessWorkMode ctx m => Worker m
+blockUpdateWorker :: forall ctx m. FullWitnessWorkMode ctx m => Worker m
 blockUpdateWorker =
     Worker "blockUpdateWorker" [msgType @TipMsg, msgType @BlocksMsg] [subType @PubBlock]
     (\btq -> (bootstrap btq >> action btq) `catchAny` handler)
@@ -94,10 +94,10 @@ blockUpdateWorker =
 
     applyNewBlock block =
         writingSDLock "apply new block" $ do
-            params <- view (lensOf @WitnessParams)
+            metricsEndpoint <- view (lensOf @MetricsEndpoint)
             logDebug $ "Block " +| hashF (headerHash block) |+
                       " is a direct continuation of our tip, applying"
-            proof <- reportTime "disciplina.timer.block_apply" (wpMetricsEndpoint params) $
+            proof <- reportTime "disciplina.timer.block_apply" metricsEndpoint $
                 applyBlock block
             logInfo $ "Applied received block: " +| block |+
                       " with proof " +|| proof ||+ ", propagating"
@@ -125,7 +125,7 @@ blockUpdateWorker =
 
 makeRelay
     :: forall ctx m
-    .  WitnessWorkMode ctx m
+    .  FullWitnessWorkMode ctx m
     => RelayState
     -> (Worker m, Worker m)
 makeRelay (RelayState input pipe failedTxs) =

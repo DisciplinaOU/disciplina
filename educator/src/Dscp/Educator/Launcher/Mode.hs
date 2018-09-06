@@ -32,6 +32,7 @@ import qualified Dscp.Launcher.Mode as Basic
 import Dscp.Resource.Keys (KeyResources)
 import Dscp.Rio (RIO)
 import Dscp.Snowdrop.Actions (SDVars)
+import Dscp.Web.Metrics (MetricsEndpoint)
 import qualified Dscp.Witness as W
 import Dscp.Witness.Mempool (MempoolVar)
 import Dscp.Witness.Relay
@@ -57,7 +58,7 @@ type EducatorWorkMode ctx m =
 -- | Set of typeclasses which define capabilities both of Educator and Witness.
 type CombinedWorkMode ctx m =
     ( EducatorWorkMode ctx m
-    , W.WitnessWorkMode ctx m
+    , W.FullWitnessWorkMode ctx m
     )
 
 ---------------------------------------------------------------------
@@ -90,8 +91,10 @@ instance HasLens SQLiteDB EducatorContext SQLiteDB where
 instance HasLens (KeyResources EducatorNode) EducatorContext (KeyResources EducatorNode) where
     lensOf = ecResources . lensOf @(KeyResources EducatorNode)
 
-instance HasLens W.WitnessParams EducatorContext W.WitnessParams where
-    lensOf = ecWitnessCtx . lensOf @W.WitnessParams
+instance HasLens (Maybe W.WitnessWebParams) EducatorContext (Maybe W.WitnessWebParams) where
+    lensOf = ecWitnessCtx . lensOf @(Maybe W.WitnessWebParams)
+instance HasLens MetricsEndpoint EducatorContext MetricsEndpoint where
+    lensOf = ecWitnessCtx . lensOf @MetricsEndpoint
 instance HasLens LoggingIO EducatorContext LoggingIO where
     lensOf = ecWitnessCtx . lensOf @LoggingIO
 instance HasLens RocksDB EducatorContext RocksDB where

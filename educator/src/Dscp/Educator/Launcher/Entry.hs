@@ -21,16 +21,16 @@ educatorEntry :: CombinedWorkMode ctx m => m ()
 educatorEntry =
     withServer . withWitnessBackground $ do
         educatorParams <- view (lensOf @EducatorParams)
-        witnessParams <- view (lensOf @WitnessParams)
+        witnessWebParams <- view (lensOf @(Maybe WitnessWebParams))
 
         let separateWitnessServer =
-                wpWitnessServerParams witnessParams /=
+                fmap wwpServerParams witnessWebParams /=
                 Just (ewpServerParams (epWebParams educatorParams))
-        whenJust (wpWitnessServerParams witnessParams) $ \serverParams ->
+        whenJust witnessWebParams $ \webParams ->
             when separateWitnessServer $ do
                 logInfo "Forking witness API server"
                 void . async $
-                    serveWitnessAPIReal serverParams
+                    serveWitnessAPIReal webParams
 
         logInfo "Forking student API"
         void . async $ serveEducatorAPIsReal
