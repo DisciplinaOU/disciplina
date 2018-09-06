@@ -3,6 +3,7 @@ module Dscp.Witness.Relay
     ( relayTx
     , newRelayState
     , RelayState (RelayState)
+    , RelayException (..)
     , rsInput
     , rsPipe
     , rsFailed

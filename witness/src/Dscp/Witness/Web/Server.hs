@@ -17,6 +17,7 @@ import UnliftIO (UnliftIO (..), askUnliftIO)
 import Dscp.Util.Servant (LoggingApi, ServantLogConfig (..))
 import Dscp.Web (ServerParams (..), buildServantLogConfig, serveWeb)
 import Dscp.Witness.Launcher.Mode (WitnessWorkMode)
+import Dscp.Witness.Relay (RelayException)
 import Dscp.Witness.Web.API (WitnessAPI, witnessAPI)
 import Dscp.Witness.Web.Error
 import Dscp.Witness.Web.Handlers (witnessServantHandlers)
@@ -34,8 +35,11 @@ convertWitnessHandler
     -> Handler a
 convertWitnessHandler (UnliftIO unliftIO) handler =
     liftIO (unliftIO handler)
-        `catch` (throwError . witnessToServantErr)
-        `catchAny` (throwError . witnessToServantErr . InternalError . show)
+        `catch` throwServant
+        `catch` (throwServant . ServiceUnavailable . show @Text @RelayException)
+        `catchAny` (throwServant . InternalError . show)
+  where
+    throwServant = throwError . witnessToServantErr
 
 serveWitnessAPIReal :: WitnessWorkMode ctx m => ServerParams -> m ()
 serveWitnessAPIReal ServerParams{..} = do
