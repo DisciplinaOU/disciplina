@@ -18,6 +18,7 @@ import Servant (ServantErr (..), err400, err404, err500, err503)
 
 import Dscp.Snowdrop
 import Dscp.Util.Servant
+import Dscp.Witness.Relay (RelayException)
 import Dscp.Witness.Web.Util
 
 data WitnessAPIError
@@ -43,6 +44,7 @@ instance Exception WitnessAPIError where
         asum
         [ cast e'
         , fmap TxError . (^? _AccountValidationError) =<< fromException e
+        , ServiceUnavailable . show @Text @RelayException <$> fromException e
         ]
 
 -- | Contains info about error in client-convenient form.
