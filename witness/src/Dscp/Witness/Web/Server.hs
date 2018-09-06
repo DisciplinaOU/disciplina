@@ -34,8 +34,10 @@ convertWitnessHandler
     -> Handler a
 convertWitnessHandler (UnliftIO unliftIO) handler =
     liftIO (unliftIO handler)
-        `catch` (throwError . witnessToServantErr)
-        `catchAny` (throwError . witnessToServantErr . InternalError . show)
+        `catch` throwServant
+        `catchAny` (throwServant . InternalError . show)
+  where
+    throwServant = throwError . witnessToServantErr
 
 serveWitnessAPIReal :: WitnessWorkMode ctx m => ServerParams -> m ()
 serveWitnessAPIReal ServerParams{..} = do

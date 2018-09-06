@@ -33,7 +33,10 @@ genTx wc async = do
     let toCount = length accounts `min` balance accFrom
     accsTo <- liftIO . generate . resize toCount . listOf1 $ elements $ delete accFrom accounts
 
-    void . liftIO $ sendTx wc async accFrom (map (, Coin 1) . ordNub $ accsTo)
+    liftIO $
+        void (sendTx wc async accFrom (map (, Coin 1) . ordNub $ accsTo))
+        `catch` \(e :: WitnessClientError) ->
+                    putStrLn $ "Tx sending error: " <> pretty e
 
     let upd =
             (\acc -> if acc == accFrom
