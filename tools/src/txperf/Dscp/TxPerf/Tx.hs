@@ -36,7 +36,7 @@ genTx wc async = do
     liftIO $
         void (sendTx wc async accFrom (map (, Coin 1) . ordNub $ accsTo))
         `catch` \(e :: WitnessClientError) ->
-                    putStrLn $ "Tx sending error: " ++ show e
+                    putStrLn $ "Tx sending error: " <> pretty e
 
     let upd =
             (\acc -> if acc == accFrom
