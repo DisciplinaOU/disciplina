@@ -16,7 +16,9 @@ To get a secret with money on it, look in [configuration](/configuration.yaml) f
 
 To make it possible to use test transactions in deployed cluster, several keys should be allocated into configuration provisionally. Add addresses to `<setting-name>.core.genesis.distribution.specific` list and save corresponding secrets. A pack of secrets can be generated via faucet or in `ghci`:
 ```
-stack ghci --ghci-options "-hide-package base" disciplina-core
+stack ghci disciplina-core
 > secrets <- withSeed "mykeys" $ replicateM 10 genSecretKey
-> let addresses = map (mkAddr . toPublic) secrets 
+> let addresses = map (mkAddr . toPublic) secrets
 ```
+
+See also: [running ghci in Disciplina](./build-with-ghci.md).
