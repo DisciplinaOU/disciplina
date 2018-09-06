@@ -55,19 +55,17 @@ paths:
     get:
       summary: Get list of blocks.
       description: >-
-        Return a batch of `count` most recent blocks.
-        `prevHash` of the oldest block in the batch can be passed as `from` parameter to get the next batch.
+        Return a batch of `count` most recent blocks, skipping `skip` blocks from the tip.
       operationId: getBlocks
       produces:
       - application/json
       parameters:
       - in: query
-        name: from
-        description: >-
-          Get a batch of blocks starting with the specified one.
-          If not specified, get the most recent blocks.
-        type: string
-        format: byte
+        name: skip
+        description: The amount of blocks to skip.
+        default: 0
+        type: integer
+        format: int64
       - in: query
         name: count
         description: The amount of blocks returned.
@@ -79,9 +77,15 @@ paths:
         200:
           description: Successful operation
           schema:
-            type: array
-            items:
-              $ref: "#/definitions/BlockInfo"
+            type: object
+            properties:
+              transactions:
+                type: array
+                items:
+                  $ref: "#/definitions/BlockInfo"
+              totalCount:
+                type: integer
+                format: int64
         400:
           description: Invalid input
           schema:
@@ -330,7 +334,7 @@ definitions:
             type: integer
             format: int32
             description: Balance derived from both chain and transactions which are not yet in blocks.
-      nextNonce:
+      currentNonce:
         type: integer
         format: int32
   TransactionInfo:
@@ -405,7 +409,7 @@ definitions:
       nonce:
         type: integer
         format: int32
-        description: Next account nonce, received in /accounts/{address} endpoint.
+        description: Current account nonce, received in /accounts/{address} endpoint.
       addr:
         $ref: "#/definitions/Address"
   TxOut:
@@ -488,7 +492,7 @@ definitions:
             * `AuthorDoesNotExist` - Source account has never received money.
             * `SignatureIsCorrupted` - Bad signature provided.
             * `NotASingletonSelfUpdate` - Cannot send money to yourself more than once in transaction.
-            * `NonceMustBeIncremented` - Bad nonce for source account is used. Should be exactly "nextNonce" returned by /accounts/{address} endpoint.
+            * `NonceMustBeIncremented` - Bad nonce for source account is used. Should be exactly "currentNonce" returned by /accounts/{address} endpoint.
             * `PaymentMustBePositive` - You can only decrease your funds by outcoming transaction.
             * `ReceiverMustIncreaseBalance` - You can only increase the funds of receiver by outcoming transaction.
             * `SumMustBeNonNegative` - Sum of payments plus fee must be less or equal to amount of money you spend.

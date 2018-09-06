@@ -32,7 +32,7 @@ extra-deps:
   commit: f9a0cd66f443d7b0e04a3c8ae8d475f8344b823b
 
 - git: https://github.com/serokell/blockchain-util.git
-  commit: 496f064199abaf810599acdab985a1db41f315b3 # master
+  commit: 0252789e6b3d562fd189cbc66e4bfa76d363138f # dscp/release-alpha
   subdirs:
     - snowdrop-core
     - snowdrop-util
@@ -43,7 +43,7 @@ extra-deps:
   commit: 2dd6b4ffdc4edb86b477273ee3c8416a1520f4e1
 
 - git: https://github.com/serokell/lootbox.git
-  commit: 885e41ce6f410597265823ca640267b69b1727e6
+  commit: 34e389808e34f1cfa56f456773682325bed56d17
   subdirs:
     - code/base
     - code/config

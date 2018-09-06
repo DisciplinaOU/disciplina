@@ -57,7 +57,7 @@ data AssignmentStudentInfo = AssignmentStudentInfo
     { aiHash           :: (Hash Assignment)
     , aiCourseId       :: Course
     , aiContentsHash   :: (Hash Raw)
-    , aiIsFinal        :: Bool
+    , aiIsFinal        :: IsFinal
     , aiDesc           :: Text
     , aiLastSubmission :: (Maybe SubmissionStudentInfo)
     } deriving (Show, Eq, Generic)
@@ -73,6 +73,14 @@ saDocumentType :: AssignmentStudentInfo -> DocumentType
 saDocumentType = documentType . aiContentsHash
 
 ---------------------------------------------------------------------------
+-- ResponseCase instances
+---------------------------------------------------------------------------
+
+type instance ResponseCase 'StudentTag Course     = CourseStudentInfo
+type instance ResponseCase 'StudentTag Assignment = AssignmentStudentInfo
+type instance ResponseCase 'StudentTag Submission = SubmissionStudentInfo
+
+---------------------------------------------------------------------------
 -- Simple conversions
 ---------------------------------------------------------------------------
 
@@ -83,7 +91,7 @@ studentLiftAssignment a lastSubmission =
     { aiHash = hash a
     , aiCourseId = _aCourseId a
     , aiContentsHash = _aContentsHash a
-    , aiIsFinal = _aType a ^. assignmentTypeRaw . _IsFinal
+    , aiIsFinal = _aType a ^. assignmentTypeRaw
     , aiDesc = _aDesc a
     , aiLastSubmission = lastSubmission
     }

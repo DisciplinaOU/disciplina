@@ -2,11 +2,14 @@
 
 module Dscp.Crypto.Arbitrary () where
 
+import Test.QuickCheck.Arbitrary.Generic (genericArbitrary, genericShrink)
+
 import Dscp.Util.Test
 
 import Dscp.Crypto.ByteArray
 import Dscp.Crypto.Encrypt
 import Dscp.Crypto.Hash
+import Dscp.Crypto.MerkleTree
 import Dscp.Crypto.Signing
 
 ----------------------------------------------------------------------------
@@ -39,3 +42,15 @@ instance Arbitrary PassPhrase where
 instance (Arbitrary ba, FromByteArray ba) =>
          Arbitrary (Encrypted ba) where
     arbitrary = encrypt <$> arbitrary <*> arbitrary
+
+----------------------------------------------------------------------------
+-- Merkle tree
+----------------------------------------------------------------------------
+
+instance Arbitrary a => Arbitrary (MerkleSignature a) where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
+
+instance Arbitrary a => Arbitrary (MerkleProof a) where
+    arbitrary = genericArbitrary
+    shrink = genericShrink

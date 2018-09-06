@@ -1,3 +1,5 @@
+{-# LANGUAGE ExistentialQuantification #-}
+
 -- | Utils for educator servers.
 
 module Dscp.Educator.Web.Util
@@ -5,9 +7,9 @@ module Dscp.Educator.Web.Util
      , domainToServantErrNoReason
      ) where
 
-import Servant (ServantErr, err400, err404, err409, err500)
+import Servant (ServantErr, err400, err403, err404, err409, err500)
 
-import Dscp.DB.SQLite (DomainError (..), DomainErrorItem (..))
+import Dscp.DB.SQLite (DatabaseSemanticError (..), DomainError (..), DomainErrorItem (..))
 
 -- | Mention only constructor name on JSON, used in errors representation.
 domainErrorToShortJSON :: DomainError -> Text
@@ -30,6 +32,9 @@ domainErrorToShortJSON = \case
         SubmissionDomain{}                    -> "SubmissionAlreadyExists"
         TransactionDomain{}                   -> "TransactionAlreadyExists"
         BlockWithIndexDomain{}                -> "BlockWithIndexAlreadyExists"
+    SemanticError err -> case err of
+        StudentIsActiveError{}     -> "StudentIsActive"
+        DeletingGradedSubmission{} -> "DeletingGradedSubmission"
 
 domainToServantErrNoReason :: DomainError -> ServantErr
 domainToServantErrNoReason = \case
@@ -43,3 +48,4 @@ domainToServantErrNoReason = \case
         TransactionDomain{}                   -> err404
         BlockWithIndexDomain{}                -> err500
     AlreadyPresentError _ -> err409
+    SemanticError{} -> err403

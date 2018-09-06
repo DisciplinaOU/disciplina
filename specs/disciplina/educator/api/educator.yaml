@@ -42,6 +42,8 @@ paths:
             type: array
             items:
               $ref: "#/definitions/Student"
+        401:
+          $ref: "#/responses/Unauthorized"
     post:
       tags:
       - students
@@ -65,6 +67,8 @@ paths:
           description: Invalid input
           schema:
             $ref: "#/definitions/ErrResponse"
+        401:
+          $ref: "#/responses/Unauthorized"
 
   /courses:
     get:
@@ -83,6 +87,8 @@ paths:
             type: array
             items:
               $ref: "#/definitions/Course"
+        401:
+          $ref: "#/responses/Unauthorized"
     post:
       tags:
       - courses
@@ -106,6 +112,8 @@ paths:
           description: Invalid input
           schema:
             $ref: "#/definitions/ErrResponse"
+        401:
+          $ref: "#/responses/Unauthorized"
 
   /students/{studentAddr}:
     delete:
@@ -135,6 +143,8 @@ paths:
           description: Student with given address not found
           schema:
             $ref: "#/definitions/ErrResponse"
+        401:
+          $ref: "#/responses/Unauthorized"
 
   /students/{studentAddr}/courses:
     get:
@@ -162,6 +172,8 @@ paths:
           description: Student with given address not found
           schema:
             $ref: "#/definitions/ErrResponse"
+        401:
+          $ref: "#/responses/Unauthorized"
 
     post:
       tags:
@@ -198,6 +210,8 @@ paths:
           description: Student is already enrolled on this course
           schema:
             $ref: "#/definitions/ErrResponse"
+        401:
+          $ref: "#/responses/Unauthorized"
 
   /students/{studentAddr}/courses/{courseId}/assignments:
     get:
@@ -231,6 +245,8 @@ paths:
           description: Given student does not attend given course
           schema:
             $ref: "#/definitions/ErrResponse"
+        401:
+          $ref: "#/responses/Unauthorized"
 
   /students/{studentAddr}/courses/{courseId}/submissions:
     get:
@@ -260,6 +276,8 @@ paths:
           description: Given student does not attend given course
           schema:
             $ref: "#/definitions/ErrResponse"
+        401:
+          $ref: "#/responses/Unauthorized"
 
   /students/{studentAddr}/courses/{courseId}/grades:
     get:
@@ -293,6 +311,8 @@ paths:
           description: Given student does not attend given course
           schema:
             $ref: "#/definitions/ErrResponse"
+        401:
+          $ref: "#/responses/Unauthorized"
 
   /students/{studentAddr}/courses/{courseId}/proofs:
     get:
@@ -319,6 +339,8 @@ paths:
           description: Given student does not attend given course
           schema:
             $ref: "#/definitions/ErrResponse"
+        401:
+          $ref: "#/responses/Unauthorized"
 
   /students/{studentAddr}/assignments:
     get:
@@ -346,6 +368,8 @@ paths:
           description: Student with a given address not found
           schema:
             $ref: "#/definitions/ErrResponse"
+        401:
+          $ref: "#/responses/Unauthorized"
     post:
       tags:
       - students
@@ -383,6 +407,8 @@ paths:
           description: Student is already subscribed on assignment
           schema:
             $ref: "#/definitions/ErrResponse"
+        401:
+          $ref: "#/responses/Unauthorized"
 
   /students/{studentAddr}/assignments/{assignmentHash}:
     delete:
@@ -405,6 +431,8 @@ paths:
           description: Given student didn't have given assignment
           schema:
             $ref: "#/definitions/ErrResponse"
+        401:
+          $ref: "#/responses/Unauthorized"
 
   /students/{studentAddr}/assignments/{assignmentHash}/submissions:
     get:
@@ -434,6 +462,8 @@ paths:
           description: Given student didn't have given assignment
           schema:
             $ref: "#/definitions/ErrResponse"
+        401:
+          $ref: "#/responses/Unauthorized"
 
   /students/{studentAddr}/assignments/{assignmentHash}/grades:
     get:
@@ -463,6 +493,8 @@ paths:
           description: Given student didn't have given assignment
           schema:
             $ref: "#/definitions/ErrResponse"
+        401:
+          $ref: "#/responses/Unauthorized"
 
   /students/{studentAddr}/submissions:
     get:
@@ -491,6 +523,8 @@ paths:
           description: Student with given address not found
           schema:
             $ref: "#/definitions/ErrResponse"
+        401:
+          $ref: "#/responses/Unauthorized"
 
   /students/{studentAddr}/grades:
     get:
@@ -518,6 +552,8 @@ paths:
           description: Student with given address not found
           schema:
             $ref: "#/definitions/ErrResponse"
+        401:
+          $ref: "#/responses/Unauthorized"
 
   /students/{studentAddr}/proofs:
     get:
@@ -543,6 +579,8 @@ paths:
           description: Student with given address not found
           schema:
             $ref: "#/definitions/ErrResponse"
+        401:
+          $ref: "#/responses/Unauthorized"
 
   /submissions:
     get:
@@ -560,6 +598,8 @@ paths:
             type: array
             items:
               $ref: "#/definitions/Submission"
+        401:
+          $ref: "#/responses/Unauthorized"
 
   /submissions/{submissionHash}:
     get:
@@ -585,6 +625,8 @@ paths:
           description: Submission with given hash not found
           schema:
             $ref: "#/definitions/ErrResponse"
+        401:
+          $ref: "#/responses/Unauthorized"
     delete:
       tags:
       - submissions
@@ -602,10 +644,16 @@ paths:
           description: Submission hash value is invalid
           schema:
             $ref: "#/definitions/ErrResponse"
+        403:
+          description: Submission has already been graded.
+          schema:
+            $ref: "#/definitions/ErrResponse"
         404:
           description: Submission with given hash not found
           schema:
             $ref: "#/definitions/ErrResponse"
+        401:
+          $ref: "#/responses/Unauthorized"
 
   /grades:
     get:
@@ -623,6 +671,8 @@ paths:
             type: array
             items:
               $ref: "#/definitions/Grade"
+        401:
+          $ref: "#/responses/Unauthorized"
     post:
       tags:
       - grades
@@ -649,6 +699,8 @@ paths:
           description: Request body is invalid
           schema:
             $ref: "#/definitions/ErrResponse"
+        401:
+          $ref: "#/responses/Unauthorized"
 
   /assignments:
     get:
@@ -669,6 +721,8 @@ paths:
             type: array
             items:
               $ref: "#/definitions/Assignment"
+        401:
+          $ref: "#/responses/Unauthorized"
     post:
       tags:
       - assignments
@@ -695,7 +749,39 @@ paths:
           description: Request body is invalid
           schema:
             $ref: "#/definitions/ErrResponse"
+        401:
+          $ref: "#/responses/Unauthorized"
 
+securityDefinitions:
+  EducatorAuth:
+    type: apiKey
+    name: Authorization
+    in: header
+    description: |
+      Authentication system requires a signed JWT in Authorization header in `Bearer <JWT>` format. Example header:
+      ```
+      Authorization: Bearer eyJhbGciOiJFZERTQSJ9.eyJkYXQiOnsiYWRQYXRoIjoiL2FwaS9lZHVjYXRvci92MS9zdHVkZW50cyIsImFkVGltZSI6IjIwOTktMDgtMTBUMTM6MjY6NTkuNDYxOTk4MTM2WiJ9fQ.gU032BGkGwllzPtBLxsvXNZttI6qmEh4M2DGfdiIV6k2L_SuPNR8-YHGphQ2_bytOSKl4Hf8LKPt9g0wNjJbAQ
+      ```
+      The JWT should be signed by the educator's private key and contain one claim "dat". The claim should have an object inside with two fields "adPath" and "adTime'. "adPath" should contain the path to the endpoint as it is going to be in the raw request and "adTime" should have the current time in ISO-8601 format. Example JWT object:
+      ```
+      {
+        "dat": {
+          "adTime": "2018-08-10T13:22:40.461998136Z",
+          "adPath": "/api/educator/v1/students"
+        }
+      }
+      ```
+      If the request's raw path doesn't match the one in "adPath" or "adTime" is more than 5 minutes behind the server current time the authentication process will fail.
+
+responses:
+  Unauthorized:
+    description: Unauthorized
+    headers:
+      WWW-Authenticate:
+        type: string
+
+security:
+  - EducatorAuth: []
 
 definitions:
   Hash:
@@ -874,11 +960,13 @@ definitions:
             * `CourseAlreadyExists` - Course with such id already exists.
             * `AssignmentAlreadyExists` - Exactly the same assignment already exists.
             * `StudentDoesNotAttendCourse` - Student does not attend the course.
-            * `StudentIsActive` - Can not delete a student because he is attending a course.
 
             * `StudentAlreadyAttendsCourse` - Student already attends given course.
             * `StudentAlreadyHasAssignment` - Student is already subscribed on given assignment.
             * `StudentHasNoAssignment` - Given student didn't have given assignment.
+
+            * `StudentIsActive` - Can not delete a student because he is attending a course.
+            * `DeletingGradedSubmission` - Attempt to delete an already graded submission.
 parameters:
   StudentAddr:
     in: path

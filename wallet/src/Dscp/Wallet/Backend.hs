@@ -68,11 +68,12 @@ sendTx
     -> NonEmpty TxOut
     -> IO Tx
 sendTx wc sendEvent eSecretKey mPassPhrase (toList -> outs) = do
-    secretKey <- either throwIO return . decrypt (fromMaybe emptyPassPhrase mPassPhrase) $ eSecretKey
+    secretKey <-
+        either throwIO return . decrypt (fromMaybe emptyPassPhrase mPassPhrase) $ eSecretKey
     let publicKey = toPublic secretKey
         address = mkAddr publicKey
 
-    nonce <- aiNextNonce <$> wGetAccount wc address False
+    nonce <- aiCurrentNonce <$> wGetAccount wc address False
 
     let inAcc   = TxInAcc { tiaNonce = nonce, tiaAddr   = address }
         tx      = Tx      { txInAcc  = inAcc, txInValue = inValue, txOuts = outs }

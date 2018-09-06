@@ -25,6 +25,7 @@ library:
     - servant-server
     - text-format
     - unliftio
+    - wai
     - wai-cors
 
 executables:

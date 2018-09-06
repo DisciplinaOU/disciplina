@@ -3,7 +3,9 @@
       <div class="pseudoTable__cell cell cell__hash hash">
           {{ transaction.txId }}
       </div>
-      <div class="pseudoTable__cell cell cell__time">{{ new Date(transaction.block.since/1000) | moment('DD/MM/YYYY HH:MM:SS') }}</div>
+      <div class="pseudoTable__cell cell cell__time">
+        <datetime :dt="transaction.block.since/1000"/>
+      </div>
       <div class="pseudoTable__cell cell cell__totalSent" v-if="isMoney(transaction)">
         <dscp-format :value="transaction.outValue"/>
       </div>
@@ -12,13 +14,14 @@
 
 <script>
 import DscpFormat from '@/components/DscpFormat'
+import Datetime from '@/components/Datetime'
 
 export default {
   name: 'TransactionItem',
   props: {
     transaction: Object
   },
-  components: { DscpFormat },
+  components: { DscpFormat, Datetime },
   methods: {
     isMoney: (transaction) => transaction.txType === 'money',
     isPublication: (transaction) => transaction.txType === 'publication',

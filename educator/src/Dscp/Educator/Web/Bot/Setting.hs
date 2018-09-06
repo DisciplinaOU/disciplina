@@ -18,7 +18,6 @@ module Dscp.Educator.Web.Bot.Setting
      ) where
 
 import Control.Exception.Safe (catchJust)
-import Control.Lens (traversed)
 import qualified Data.Map as M
 import Data.Reflection (Given (..), give)
 import qualified Data.Set as S
@@ -74,7 +73,7 @@ genBotCourseAssignments n _aCourseId =
 data BotSetting = BotSetting
     {
       -- | All courses info
-      bsCourses           :: [(Course, Text, [Id Subject])]
+      bsCourses           :: [CourseDetails]
       -- | We show a small set of courses at the beginning in order not to
       -- confuse user, and disclose all others later to prevent him getting
       -- bored.
@@ -97,6 +96,7 @@ mkBotSetting params =
   botGen = detGenG (ebpSeed params)
 
   bsCourses =
+    map (\(c, d, s) -> CourseDetails c d s)
     -- using 'courseEx' here helps to keep examples in swagger doc working
     [ (Course 0  , "Patakology", [])
     , (Course 1  , "Learning!", [])
@@ -133,12 +133,12 @@ mkBotSetting params =
     ]
 
   (bsBasicCourses, bsAdvancedCourses) =
-    splitAt 3 (bsCourses ^.. traversed . _1)
+    splitAt 3 (map cdCourseId bsCourses)
 
   bsCourseAssignments =
     M.fromList $
     botGen $
-    forM (zip courseSizes bsCourses) $ \(courseSize, (course, _, _)) -> do
+    forM (zip courseSizes bsCourses) $ \(courseSize, CourseDetails course _ _) -> do
         assignments <- genBotCourseAssignments courseSize course
         let assignmentsWithEx =
                 bool identity (assignmentEx :)
@@ -189,8 +189,7 @@ botPrepareInitialData :: (BotWorkMode m, HasBotSetting) => m ()
 botPrepareInitialData = do
     exists <- existsCourse (head . Exts.fromList $ bsBasicCourses botSetting)
     unless exists $ do
-        forM_ (bsCourses botSetting) $
-            \(c, t, s) -> createCourse c (Just t) s
+        forM_ (bsCourses botSetting) createCourse
         mapM_ createAssignment (bsAssignments botSetting)
 
 -- REMEMBER that all operations below should be no-throw

@@ -7,6 +7,7 @@ module Dscp.Witness.Logic.Traversals
     , loadBlocksDownWhile
 
     , getBlocksFromTo
+    , getBlocksFrom
     , getBlocksBefore
 
     , getTxs
@@ -135,6 +136,32 @@ getBlocksFromTo (headerHash -> olderH) (headerHash -> newerH) = runExceptT $ do
             error "getBlocksFromTo: unexpected oldest block"
 
         pure blocks
+
+-- | Retrieves the requested amount of blocks skipping `skip` blocks from tip.
+getBlocksFrom ::
+       HasWitnessConfig
+    => Word64
+    -> Int
+    -> SdM (Either Text (OldestFirst NonEmpty Block))
+getBlocksFrom skip depthDiff = runExceptT $ do
+    tipIdx <- unDifficulty . hDifficulty <$> lift getTipHeader
+
+    newerH <- ExceptT $ maybeToRight "Can't skip so many blocks" <$> SD.queryOne (Difficulty $ tipIdx - skip)
+
+    let loadCond _block depth = depth < depthDiff
+    blocks <- lift $ loadBlocksDownWhile newerH loadCond
+
+    let retrievedOldest = NE.head (unOldestFirst blocks)
+
+    -- sanity checks, remove them later
+    when (NE.length (unOldestFirst blocks) < depthDiff &&
+          retrievedOldest /= genesisBlock) $
+        error "getBlocksFrom: retrieved less than expected"
+
+    when (NE.length (unOldestFirst blocks) > depthDiff) $
+        error "getBlocksFrom: retrieved too many"
+
+    pure blocks
 
 -- | Retrieves the requested amount of blocks starting with the given block down.
 getBlocksBefore ::

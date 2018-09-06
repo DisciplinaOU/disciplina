@@ -5,16 +5,20 @@ module Dscp.Educator.Web.Student.Handlers
        , convertStudentApiHandler
        ) where
 
+import Data.Default (def)
 import Servant (Handler, throwError)
+import UnliftIO (UnliftIO (..))
 
 import Dscp.Core (Student)
+import Dscp.DB.SQLite
 import Dscp.DB.SQLite (sqlTransaction)
-import Dscp.Educator.Launcher
+import Dscp.Educator.Web.Logic
+import Dscp.Educator.Web.Queries
 import Dscp.Educator.Web.Student.API
 import Dscp.Educator.Web.Student.Error
 import Dscp.Educator.Web.Student.Logic
 import Dscp.Educator.Web.Student.Queries
-import Dscp.Rio
+import Dscp.Educator.Web.Types
 
 type StudentApiWorkMode m =
     ( MonadStudentAPIQuery m
@@ -31,14 +35,17 @@ studentApiHandlers student =
     , sGetCourse = \course ->
         studentGetCourse student course
 
-    , sGetAssignments = \courseIdF docTypeF isFinalF ->
-        sqlTransaction $ studentGetAssignments student courseIdF docTypeF isFinalF
+    , sGetAssignments = \afCourse afDocType afIsFinal ->
+        sqlTransaction $
+            commonGetAssignments StudentCase student
+                def{ afCourse, afDocType, afIsFinal }
 
     , sGetAssignment = \assignH ->
         sqlTransaction $ studentGetAssignment student assignH
 
-    , sGetSubmissions = \courseIdF assignHF docTypeF ->
-        sqlTransaction $ studentGetSubmissions student courseIdF assignHF docTypeF
+    , sGetSubmissions = \sfCourse sfAssignmentHash sfDocType ->
+        commonGetSubmissions StudentCase
+            def{ sfStudent = Just student, sfCourse, sfAssignmentHash, sfDocType }
 
     , sGetSubmission = \subH ->
         sqlTransaction $ studentGetSubmission student subH
@@ -47,17 +54,17 @@ studentApiHandlers student =
         studentMakeSubmissionVerified student newSub
 
     , sDeleteSubmission = \subH ->
-        sqlTransaction $ studentDeleteSubmission student subH
+        sqlTransaction $ commonDeleteSubmission subH (Just student)
 
-    , sGetProofs = \sinceF ->
-        sqlTransaction $ studentGetProofs student sinceF
+    , sGetProofs = \pfSince ->
+        sqlTransaction $ commonGetProofs student def{ pfSince }
     }
 
 convertStudentApiHandler
-    :: EducatorContext
-    -> EducatorRealMode a
+    :: UnliftIO m
+    -> m a
     -> Handler a
-convertStudentApiHandler ctx handler =
-    liftIO (runRIO ctx handler)
+convertStudentApiHandler (UnliftIO unliftIO) handler =
+    liftIO (unliftIO handler)
         `catch` (throwError . toServantErr)
         `catchAny` (throwError . unexpectedToServantErr)

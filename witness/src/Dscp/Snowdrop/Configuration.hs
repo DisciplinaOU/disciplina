@@ -20,6 +20,7 @@ module Dscp.Snowdrop.Configuration
     , txOfPrefix
     , txHeadPrefix
     , nextBlockPrefix
+    , blockIdxPrefix
     , blockPrefixes
     , Ids (..)
     , Values (..)
@@ -34,10 +35,13 @@ module Dscp.Snowdrop.Configuration
     , _AccountValidationError
 
     , TxIds (..)
+
+    , BlockPlusAVLComposition
     ) where
 
 
 import Control.Lens (makePrisms)
+import Data.Reflection (Reifies (..))
 import qualified Data.Set as S
 import qualified Data.Text.Buildable as B
 import Fmt (build, (+|))
@@ -136,6 +140,9 @@ txHeadPrefix = Prefix 8
 nextBlockPrefix :: Prefix
 nextBlockPrefix = Prefix 9
 
+blockIdxPrefix :: Prefix
+blockIdxPrefix = Prefix 10
+
 -- | Prefixes stored in block storage
 blockPrefixes :: Set Prefix
 blockPrefixes = S.fromList
@@ -147,6 +154,7 @@ blockPrefixes = S.fromList
     , txOfPrefix
     , txHeadPrefix
     , nextBlockPrefix
+    , blockIdxPrefix
     ]
 
 -- | Sum-type for all ids used within the application.
@@ -160,6 +168,7 @@ data Ids
     | PublicationOfIds   PublicationsOf
     | PublicationHeadIds PublicationHead
     | NextBlockOfIds     NextBlockOf
+    | BlockIdxIds        T.Difficulty
     deriving (Eq, Ord, Show, Generic)
 
 instance Buildable Ids where
@@ -173,6 +182,7 @@ instance Buildable Ids where
         PublicationOfIds   p            -> build p
         PublicationHeadIds ph           -> build ph
         NextBlockOfIds     hh           -> build hh
+        BlockIdxIds        d            -> build d
 
 instance IdSumPrefixed Ids where
     idSumPrefix (TipKeyIds          _) = tipPrefix
@@ -184,6 +194,7 @@ instance IdSumPrefixed Ids where
     idSumPrefix (PublicationOfIds   _) = publicationOfPrefix
     idSumPrefix (PublicationHeadIds _) = publicationHeadPrefix
     idSumPrefix (NextBlockOfIds     _) = nextBlockPrefix
+    idSumPrefix (BlockIdxIds        _) = blockIdxPrefix
 
 instance HasReview Ids (BlockRef (CurrentBlockRef HeaderHash)) where
     inj (BlockRef (CurrentBlockRef h)) = BlockRefIds (BlockRef h)
@@ -202,6 +213,7 @@ data Values
     | PublicationOfVal   LastPublication
     | PublicationHeadVal PublicationNext
     | NextBlockOfVal     NextBlock
+    | BlockIdxVal        HeaderHash
     deriving (Eq, Show, Generic)
 
 type instance SValue  TipKey               = TipValue HeaderHash
@@ -213,6 +225,7 @@ type instance SValue  TxHead               = TxNext
 type instance SValue  PublicationsOf       = LastPublication
 type instance SValue  PublicationHead      = PublicationNext
 type instance SValue  NextBlockOf          = NextBlock
+type instance SValue  T.Difficulty         = HeaderHash
 
 ----------------------------------------------------------------------------
 -- Proofs
@@ -312,6 +325,14 @@ instance Enum TxIds where
 
 instance IdStorage TxIds AccountTxTypeId
 instance IdStorage TxIds PublicationTxTypeId
+
+----------------------------------------------------------------------------
+-- Misc
+----------------------------------------------------------------------------
+
+data BlockPlusAVLComposition
+instance Reifies BlockPlusAVLComposition (Set Prefix) where
+    reflect _ = blockPrefixes
 
 ----------------------------------------------------------------------------
 -- HasReview and lenses

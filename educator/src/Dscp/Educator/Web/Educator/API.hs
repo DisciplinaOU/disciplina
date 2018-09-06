@@ -6,7 +6,9 @@
 module Dscp.Educator.Web.Educator.API
     ( EducatorApiEndpoints (..)
     , EducatorAPI
+    , ProtectedEducatorAPI
     , educatorAPI
+    , protectedEducatorAPI
     , EducatorApiHandlers
     ) where
 
@@ -15,6 +17,8 @@ import Servant.Generic
 
 import Dscp.Core
 import Dscp.Crypto
+import Dscp.Educator.Web.Auth
+import Dscp.Educator.Web.Educator.Auth
 import Dscp.Educator.Web.Educator.Error
 import Dscp.Educator.Web.Educator.Types
 import Dscp.Educator.Web.Types
@@ -22,10 +26,17 @@ import Dscp.Educator.Web.Types
 type EducatorAPI =
     "api" :> "educator" :> "v1" :> ToServant (EducatorApiEndpoints AsApi)
 
+type ProtectedEducatorAPI = Auth' EducatorAuth () :> EducatorAPI
+
 type EducatorApiHandlers m = EducatorApiEndpoints (AsServerT m)
 
 educatorAPI :: Proxy EducatorAPI
 educatorAPI = Proxy
+
+protectedEducatorAPI :: Proxy ProtectedEducatorAPI
+protectedEducatorAPI = Proxy
+
+-- TODO [DSCP-176]: add a way to fetch ALL assignments, even whose which are not assigned to any student
 
 data EducatorApiEndpoints route = EducatorApiEndpoints
     {
@@ -51,7 +62,7 @@ data EducatorApiEndpoints route = EducatorApiEndpoints
         :- "students"
         :> Summary "Get a list of all registered students' addresses"
         :> QueryParam "courseId" Course
-        :> Get '[DSON] [Student]
+        :> Get '[DSON] [StudentInfo]
 
       -- * Courses
 
@@ -72,7 +83,7 @@ data EducatorApiEndpoints route = EducatorApiEndpoints
         :> Summary "Enroll a student in a new course"
         :> Description "Given existing student and course, enroll the \
                         \student to the course."
-        :> ReqBody '[DSON] CourseEducatorInfo
+        :> ReqBody '[DSON] EnrollStudentToCourse
         :> Post '[DSON] ()
 
     , eGetStudentCourses :: route
@@ -98,7 +109,7 @@ data EducatorApiEndpoints route = EducatorApiEndpoints
         :> Summary "Get active student's assignments"
         :> Description "Given student address, gets a list of all pending \
                         \assignments student has."
-        :> Get '[DSON] [Assignment]
+        :> Get '[DSON] [AssignmentEducatorInfo]
 
     , eAssignToStudent :: route
         :- "students" :> Capture "studentAddr" Student
@@ -127,7 +138,7 @@ data EducatorApiEndpoints route = EducatorApiEndpoints
                         \all pending assignments student has as a part of a \
                         \course."
         :> QueryParam "isFinal" IsFinal
-        :> Get '[DSON] [Assignment]
+        :> Get '[DSON] [AssignmentEducatorInfo]
 
       -- * Submissions
 
@@ -135,7 +146,7 @@ data EducatorApiEndpoints route = EducatorApiEndpoints
         :- "submissions" :> Capture "submissionHash" (Hash Submission)
         :> Summary "Get info about a submission"
         :> Description "Gets a submission data by given submission hash."
-        :> Get '[DSON] [SubmissionEducatorInfo]
+        :> Get '[DSON] SubmissionEducatorInfo
 
     , eDeleteSubmission :: route
         :- "submissions" :> Capture "submissionHash" (Hash Submission)

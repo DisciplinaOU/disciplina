@@ -1,10 +1,10 @@
 import Vue from 'vue'
 
 export default {
-  getBlocks (cb, from, count) {
+  getBlocks (cb, skip, count) {
     Vue.axios
-      .get('/blocks', { params: {count, from} })
-      .then(response => cb(response.data))
+      .get('/blocks', { params: {skip, count} })
+      .then(response => cb(response.data.totalCount, response.data.blocks))
   },
   getBlock (cb, blockHash) {
     Vue.axios
