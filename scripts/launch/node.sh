@@ -27,6 +27,8 @@ do
         node="faucet"
     elif [[ "$var" == "--no-clean" ]]; then
         no_clean=true
+    elif [[ "$var" == "--prof" ]] || [[ "$var" == "--profile" ]]; then
+        profiling=true
     else
         echo "Unknown parameter \"$var\""
         exit 1
@@ -64,14 +66,16 @@ educator_params="
 witness_params="
 --appdir ./tmp/
 --config ./configuration.yaml
---config-key demo
+--config-key singleton
 --bind 127.0.0.1:4010:4011
 --db-path $tmp_files/witness.db
 --log-dir $tmp_files/logs
 --witness-listen $witness_web_addr
 --witness-keyfile $tmp_files/witness.key
 --witness-gen-key
+--comm-n 0
 --metrics-server 127.0.0.1:8125
+--log-config run/log-config.yaml
 "
 
 # parameters for faucet
@@ -81,12 +85,14 @@ faucet_params="
 --witness-backend $witness_web_addr
 --translated-amount 20
 --config ./configuration.yaml
---config-key demo
+--config-key singleton
 --faucet-keyfile $files/faucet.key
 --faucet-gen-key
 --log-dir $tmp_files/logs
+--log-config run/log-config.yaml
 "
 
+# bot parameters
 if [[ "$educator_bot" == true ]]; then
     educator_params="
 $educator_params
@@ -95,18 +101,21 @@ $educator_params
 "
 fi
 
-
+# profiling parameters
+if [[ "$profiling" == true ]]; then
+    common_params="+RTS -p -RTS"
+fi
 
 if [[ "$no_clean" != true ]]; then
     rm -rf $tmp_files
 fi
 
 if [[ "$node" == "educator" ]]; then
-    stack exec "dscp-educator" -- $witness_params $educator_params
+    stack exec "dscp-educator" -- $common_params $witness_params $educator_params
 elif [[ "$node" == "witness" ]]; then
-    stack exec "dscp-witness" -- $witness_params
+    stack exec "dscp-witness" -- $common_params $witness_params
 elif [[ "$node" == "faucet" ]]; then
-    stack exec "dscp-faucet" -- $faucet_params
+    stack exec "dscp-faucet" -- $common_params $faucet_params
 else
     echo "Unknown node type \"$node\""
     exit 1

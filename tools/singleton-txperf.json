@@ -1,0 +1,10 @@
+{
+  "witness": "localhost:8091",
+  "accKeys": [
+    "ffRB5uhVEV24NXsYUuw1irt9HF5i5IRWJXHJzagXU8Y=",
+    "fOhZOFr6SSnYv1/xfKPPMHdWLdQDboysJ4Q794Gezmw="
+  ],
+  "genAccs": 2,
+  "txCount": 100,
+  "txAsync": true
+}

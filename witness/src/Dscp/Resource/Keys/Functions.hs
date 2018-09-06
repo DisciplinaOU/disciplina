@@ -17,10 +17,10 @@ import qualified System.FilePath as FP
 import Dscp.Core
 import Dscp.Crypto (PassPhrase, decrypt, emptyPassPhrase, encrypt, keyGen, runSecureRandom,
                     toPublic)
+import Dscp.Resource.AppDir
 import Dscp.Resource.Keys.Error (KeyInitError (..), rewrapKeyIOErrors)
 import Dscp.Resource.Keys.Types (BaseKeyParams (..), CommitteeParams (..), KeyJson (..),
                                  KeyResources (..), KeyfileContent)
-import Dscp.Resource.AppDir
 import Dscp.System (ensureModeIs, mode600, setMode, whenPosix)
 import Dscp.Util (leftToThrow)
 import Dscp.Util.Aeson (CustomEncoding (..), Versioned (..))
@@ -56,14 +56,17 @@ storePath BaseKeyParams{..} appDir nodeNameP =
 
 -- | Generate store randomly.
 genStore ::
-       (HasWitnessConfig, MonadThrow m, MonadIO m)
+       (HasWitnessConfig, MonadThrow m, MonadIO m, MonadLogging m)
     => Maybe CommitteeParams
     -> m (KeyResources n)
 genStore comParamsM = do
     (_krSecretKey, _krPublicKey) <-
         case comParamsM of
-          Nothing -> runSecureRandom keyGen
+          Nothing -> do
+              logInfo "Generating random key"
+              runSecureRandom keyGen
           Just (CommitteeParamsOpen i) -> do
+              logInfo "Creating open committee key"
               sec <- case gcGovernance (giveL @WitnessConfig @GenesisConfig) of
                          GovCommittee (CommitteeOpen{..}) -> do
                              when (i >= commN) $
@@ -76,6 +79,7 @@ genStore comParamsM = do
               let sk = committeeDerive sec i
               pure (sk, toPublic sk)
           Just (CommitteeParamsClosed {..}) -> do
+              logInfo "Creating closed committee key"
               let addrs = case gcGovernance (giveL @WitnessConfig @GenesisConfig) of
                               GovCommittee (CommitteeClosed a) -> a
                               x -> throwM $ SecretConfMismatch $

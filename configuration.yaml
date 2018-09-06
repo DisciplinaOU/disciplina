@@ -19,6 +19,18 @@ demo: &demo
           - # Test key #2, secret: fOhZOFr6SSnYv1/xfKPPMHdWLdQDboysJ4Q794Gezmw=
             - LL4qKqwvLDw4eKXTt5tpCZytoyaMVVbRmVRCo1HL8zwPaNWDxBnLpKoJ
             - 100
+
+singleton:
+  <<: *demo
+  core:
+    <<: *demo-core
+    genesis:
+      <<: *demo-genesis
+      governance:
+        type: committeeOpen
+        secret: "opencommittee"
+        n: 2
+
 clusterCi:
    <<: *demo
    core:
