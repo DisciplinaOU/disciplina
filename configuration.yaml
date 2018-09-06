@@ -29,7 +29,7 @@ singleton:
       governance:
         type: committeeOpen
         secret: "opencommittee"
-        n: 1
+        n: 2
 
 clusterCi:
    <<: *demo

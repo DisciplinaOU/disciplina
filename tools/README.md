@@ -30,3 +30,5 @@ Contents of the config file must be in the following format:
 `genAccs` accounts will be generated, and then `txCount` random 1-coin transactions will be sent between the listed and generated accounts.
 
 `txAsync` defines, whether `/tx` or `/tx/async` endpoint is used.
+
+Configuration file suitable for `./scripts/launch/node w` is already present in this directory for convenience.
