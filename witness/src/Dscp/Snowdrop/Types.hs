@@ -79,7 +79,7 @@ instance Buildable AccountValidationException where
         PaymentMustBePositive -> "Spent amount of money must be positive"
         ReceiverOnlyGetsMoney -> "Improper changes of receiver account (its is \
                                  \only possible to add tokens)"
-        ReceiverMustIncreaseBalance -> "Receiver's balance decreased"
+        ReceiverMustIncreaseBalance -> "One of receivers' balance decreased or didn't change"
         SumMustBeNonNegative -> "Tx input value < tx sum of outputs"
         CannotAffordFees -> "Tx sender can not afford fees"
         BalanceCannotBecomeNegative -> "Balance can not become negative"

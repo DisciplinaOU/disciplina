@@ -40,6 +40,7 @@ module Dscp.Util
        , fromHex
 
          -- * Lenses
+       , _headNE
        , _tailNE
        , seeOnly
        , postfixLFields
@@ -220,6 +221,9 @@ fromHex    = fromBase Base16
 -----------------------------------------------------------
 -- Lens fun
 -----------------------------------------------------------
+
+_headNE :: Lens' (NonEmpty a) a
+_headNE f (x :| l) = ( :| l) <$> f x
 
 _tailNE :: Lens' (NonEmpty a) [a]
 _tailNE f (x :| l) = (x :| ) <$> f l

@@ -35,12 +35,13 @@ import Test.QuickCheck as T (Arbitrary (..), Fixed (..), Gen, Property, Testable
                              infiniteList, ioProperty, label, listOf, listOf1, oneof, property,
                              sublistOf, suchThat, suchThatMap, vectorOf, (.&&.), (===), (==>))
 import Test.QuickCheck (shuffle, sized)
-import qualified Test.QuickCheck as Q
+import qualified Test.QuickCheck as Q (counterexample)
 import Test.QuickCheck.Arbitrary.Generic as T (genericArbitrary, genericShrink)
 import Test.QuickCheck.Gen (Gen (..))
 import Test.QuickCheck.Instances as T ()
 import Test.QuickCheck.Monadic as T (PropertyM, monadic, pick, stop)
-import Test.QuickCheck.Property as T (rejected)
+import Test.QuickCheck.Property as T (failed, rejected, succeeded)
+import Test.QuickCheck.Property (reason)
 import Test.QuickCheck.Random (QCGen, mkQCGen)
 
 import Dscp.Crypto.Impl (PublicKey, SecretKey, keyGen, withIntSeed)
@@ -100,10 +101,13 @@ vectorUniqueOf n gen = loop [] n
 vectorUnique :: (Arbitrary a, Eq a, Show a) => Int -> Gen [a]
 vectorUnique n = vectorUniqueOf n arbitrary
 
-listUnique :: (Arbitrary a, Eq a, Show a) => Gen [a]
-listUnique = sized $ \n -> do
+listUniqueOf :: (Arbitrary a, Eq a, Show a) => Gen a -> Gen [a]
+listUniqueOf gen = sized $ \n -> do
     k <- choose (0, n)
-    vectorUniqueOf k arbitrary
+    vectorUniqueOf k gen
+
+listUnique :: (Arbitrary a, Eq a, Show a) => Gen [a]
+listUnique = listUniqueOf arbitrary
 
 takeSome :: [a] -> Gen (NonEmpty a)
 takeSome l = sized $ \n -> do
@@ -156,6 +160,13 @@ expectOne desc xs  =
 
 counterexample :: Testable prop => Text -> prop -> Property
 counterexample desc prop = Q.counterexample (toString desc) prop
+
+-- | Sad that we need this function, but QuickCheck does not report test input
+-- data if exception was thrown.
+noThrow :: MonadCatch m => m a -> m Property
+noThrow action = property <$> do
+    (action $> succeeded)
+        `catchAny` \e -> pure failed{ reason = "Exception thrown: " <> show e }
 
 ----------------------------------------------------------------------------
 -- Logging

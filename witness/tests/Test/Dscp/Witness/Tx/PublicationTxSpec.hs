@@ -21,7 +21,7 @@ genPublicationChain (Positive n) secret
     | otherwise = do
         let addr = mkAddr (toPublic secret)
         pheaders <- vectorOf n arbitrary
-        let siblings = map (take 2) $ reverse $ tail $
+        let siblings = map (take 2) $ map reverse $ tail $
                        Exts.fromList $ inits pheaders
         return $ Exts.fromList $ siblings <&> \curHeaders ->
             PublicationTx
@@ -30,71 +30,63 @@ genPublicationChain (Positive n) secret
             , ptBlock = curHeaders ^?! ix 0
             }
 
+author :: SecretKey
+author = detGen 21 $ elements testGenesisSecrets
+
 deriving instance Num a => Num (Positive a)
 
--- TODO: remove this once addTxToMempool throws error on validation fail (DSCP-209)
-ololo :: Monad m => m Bool -> m ()
-ololo action = action >>= bool (error "Lool") pass
-
-signSubmitPubChain
+submitPubChain
     :: (MempoolCtx ctx m, WithinWriteSDLock)
     => NonEmpty PublicationTxWitnessed -> m ()
-signSubmitPubChain txs =
-    forM_ txs $ \tx -> ololo $ addTxToMempool (GPublicationTxWitnessed tx)
+submitPubChain = mapM_ $ \tx -> addTxToMempool (GPublicationTxWitnessed tx)
 
 -- TODO: check publications are unique?
 
 spec :: Spec
 spec = describe "Publication tx expansion + validation" $ do
-    it "First correct tx is fine" $ witnessProperty_ $ do
-        secret    <- pick arbitrary
-        pub :| [] <- pick $ genPublicationChain 1 secret
-        let tw = signPubTx secret pub
-        lift $ signSubmitPubChain (one tw)
+    it "First correct tx is fine" $ witnessProperty $ do
+        pub :| [] <- pick $ genPublicationChain 1 author
+        let tw = signPubTx author pub
+        lift . noThrow $ submitPubChain (one tw)
 
-    it "Consequent txs are fine" $ witnessProperty_ $ do
-        secret   <- pick arbitrary
+    it "Consequent txs are fine" $ witnessProperty $ do
         chainLen <- pick arbitrary
-        pubs     <- pick $ genPublicationChain chainLen secret
-        let tws = map (signPubTx secret) pubs
-        lift $ signSubmitPubChain tws
+        pubs     <- pick $ genPublicationChain chainLen author
+        let tws = map (signPubTx author) pubs
+        lift . noThrow $ submitPubChain tws
 
     it "Tx with wrong previous hash isn't fine" $ witnessProperty $ do
-        secret   <- pick arbitrary
         chainLen <- pick $ Positive <$> choose (1, 4)
-        pubs     <- pick $ genPublicationChain chainLen secret
+        pubs     <- pick $ genPublicationChain chainLen author
         badPubs  <- pick $ shuffleNE pubs
         pre (pubs /= badPubs)
-        let badTws = map (signPubTx secret) badPubs
-        lift $ throwsSome $ signSubmitPubChain badTws
+        let badTws = map (signPubTx author) badPubs
+        lift $ throwsSome $ submitPubChain badTws
 
     it "Foreign author in the chain is not fine" $ witnessProperty $ do
-        secret      <- pick arbitrary
-        otherSecret <- pick (arbitrary `suchThat` (/= secret))
+        otherSecret <- pick (arbitrary `suchThat` (/= author))
         let otherAddr = mkAddr (toPublic otherSecret)
-        chainLen    <- pick arbitrary
-        pubs        <- pick $ genPublicationChain chainLen secret
+        chainLen    <- pick $ Positive <$> choose (2, 5)
+        pubs        <- pick $ genPublicationChain chainLen author
         let badPubs = pubs & _tailNE . _last . ptAuthorL .~ otherAddr
-        let badTws = map (signPubTx secret) badPubs
-        lift $ throwsSome $ signSubmitPubChain badTws
+        let badTws = map (signPubTx author) badPubs
+        lift $ throwsSome $ submitPubChain badTws
 
     it "Forking publications chain isn't fine" $ witnessProperty $ do
-        secret   <- pick arbitrary
-        chainLen <- pick $ Positive <$> choose (1, 4)
-        pubs     <- pick $ genPublicationChain chainLen secret
+        chainLen <- pick $ Positive <$> choose (2, 4)
+        pubs     <- pick $ genPublicationChain chainLen author
 
         forkPoint <- pick $ Positive <$> choose (1, getPositive chainLen)
         let forkedPub' = pubs ^?! ix (getPositive $ forkPoint - 1)
         forkedPub <- pick arbitrary <&> \ptBlock -> forkedPub'{ ptBlock }
         let badPubs = pubs <> one forkedPub
-        let badTws = map (signPubTx secret) badPubs
-        lift $ throwsSome $ signSubmitPubChain badTws
+        let badTws = map (signPubTx author) badPubs
+        lift $ throwsSome $ submitPubChain badTws
 
     it "Wrong signature is not fine" $ witnessProperty $ do
-        secret    <- pick arbitrary
-        pub :| [] <- pick $ genPublicationChain 1 secret
-        let saneTw = signPubTx secret pub
+        pub :| [] <- pick $ genPublicationChain 1 author
+        let saneTw = signPubTx author pub
         otherTw   <- pick arbitrary
         mixTw     <- pick $ arbitraryMixture saneTw otherTw
                             `suchThat` (/= saneTw)
-        lift $ throwsSome $ ololo $ addTxToMempool (GPublicationTxWitnessed mixTw)
+        lift $ throwsSome $ submitPubChain (one mixTw)
