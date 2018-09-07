@@ -15,7 +15,7 @@ module Dscp.Util.TimeLimit
 
 import Fmt ((+|), (+||), (|+), (||+))
 import Loot.Log (MonadLogging, logWarning)
-import Time (Microsecond, Second, Time, floorUnit, threadDelay, toUnit)
+import Time (KnownRat, Microsecond, Second, Time, floorUnit, threadDelay, toUnit)
 import UnliftIO (MonadUnliftIO)
 import UnliftIO.Async (withAsyncWithUnmask)
 
@@ -75,14 +75,14 @@ logWarningLongAction delta actionTag action =
 {- Helper functions to avoid dealing with data type -}
 
 -- | Specialization of 'logWarningLongAction' with 'WaitOnce'.
-logWarningWaitOnce :: CanLogInParallel m => Time Second -> Text -> m a -> m a
-logWarningWaitOnce = logWarningLongAction . WaitOnce
+logWarningWaitOnce :: (CanLogInParallel m, KnownRat u) => Time u -> Text -> m a -> m a
+logWarningWaitOnce = logWarningLongAction . WaitOnce . toUnit
 
 -- | Specialization of 'logWarningLongAction' with 'WaitLinear'.
-logWarningWaitLinear :: CanLogInParallel m => Time Second -> Text -> m a -> m a
-logWarningWaitLinear = logWarningLongAction . WaitLinear
+logWarningWaitLinear :: (CanLogInParallel m, KnownRat u) => Time u -> Text -> m a -> m a
+logWarningWaitLinear = logWarningLongAction . WaitLinear . toUnit
 
 -- | Specialization of 'logWarningLongAction' with 'WaitGeometric'
 -- with parameter @1.3@. Accepts 'Second'.
-logWarningWaitInf :: CanLogInParallel m => Time Second -> Text -> m a -> m a
+logWarningWaitInf :: (CanLogInParallel m, KnownRat u) => Time u -> Text -> m a -> m a
 logWarningWaitInf = logWarningLongAction . (`WaitGeometric` 1.7) . toUnit

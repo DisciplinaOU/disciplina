@@ -9,6 +9,7 @@ import Control.Concurrent (threadDelay)
 import Fmt ((+|), (|+))
 import Loot.Base.HasLens (lensOf)
 import Loot.Log (logInfo)
+import Time (sec)
 import UnliftIO.Async (async, cancel)
 
 import Dscp.Network (runListener, runWorker, withServer)
@@ -43,7 +44,7 @@ withWitnessBackground cont = do
         logInfo "Forking listeners"
         listenerAsyncs <- mapM (async . runListener identity) listeners
 
-        let terminate = logWarningWaitInf 1 "Worker/listener shutdown" . cancel
+        let terminate = logWarningWaitInf (sec 1) "Worker/listener shutdown" . cancel
 
         unmask cont
             `finally` mapM terminate (workerAsyncs <> listenerAsyncs)

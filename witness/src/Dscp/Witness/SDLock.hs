@@ -11,6 +11,7 @@ import qualified Control.Concurrent.ReadWriteLock as RawLock
 import Data.Reflection (Given, give)
 import Loot.Base.HasLens (HasLens (..), HasLens')
 import Loot.Log (MonadLogging)
+import Time (sec)
 import qualified UnliftIO
 
 import Dscp.Util.TimeLimit (logWarningWaitInf)
@@ -56,7 +57,7 @@ writingSDLock
     -> m a
 writingSDLock desc action = do
     lock <- view (lensOf @SDLock)
-    logWarningWaitInf 1 desc $
+    logWarningWaitInf (sec 1) desc $
         writingSDLockOf lock action
 
 readingSDLockOf
