@@ -11,6 +11,11 @@ let
     rev = "46a2aadf37981d6313621913cd2802debfb763fd";
   }) {};
 
+  buildMacOSApp = callPackage (fetchGit {
+    url = "https://github.com/serokell/nix-macos-app";
+    rev = "bac301ef897b55fac97c63cc0d1dbc3c492065e8";
+  }) {};
+
   getAttrs = attrs: set: lib.genAttrs attrs (name: set.${name});
   dscp-packages = buildStackApplication rec {
   packages = [
@@ -65,6 +70,12 @@ dscp-packages // rec {
     app-id = "io.disciplina.Wallet";
     command = "${disciplina-wallet-wrapped}/bin/disciplina-wallet";
     finish-args = [ "--share=network" ];
+  };
+
+  disciplina-wallet-macos-app = buildMacOSApp {
+    name = "Disciplina";
+    command = "${disciplina-wallet-wrapped}/bin/disciplina-wallet";
+    withOpen = true;
   };
 
   disciplina-bin = pkgs.runCommandNoCC "disciplina-bin-${dscp-packages.disciplina-core.version}" {} ''
