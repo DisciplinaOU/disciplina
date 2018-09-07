@@ -59,7 +59,7 @@ educator_params="
 --educator-keyfile $tmp_files/educator.key
 --educator-gen-key
 --sql-path $tmp_files/educator.db
---student-listen 127.0.0.1:8090
+--educator-listen 127.0.0.1:8090
 "
 
 # witness params (and educator's as well)
