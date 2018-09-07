@@ -48,8 +48,12 @@ let
     } // (lib.mapAttrs (lib.const overrideModule) (getAttrs packages previous));
   };
 in
-  dscp-packages // {
+
+dscp-packages // rec {
   disciplina-wallet = haskell.lib.justStaticExecutables dscp-packages.disciplina-wallet;
+  disciplina-wallet-wrapped = writeShellScriptBin "disciplina-wallet" ''
+    ${disciplina-wallet}/bin/dscp-wallet --witness https://witness.disciplina.io
+  '';
   disciplina-bin = pkgs.runCommandNoCC "disciplina-bin-${dscp-packages.disciplina-core.version}" {} ''
     mkdir $out
     ${pkgs.rsync}/bin/rsync -Labu --no-perms --exclude lib/ --exclude propagated-build-inputs --inplace \
