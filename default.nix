@@ -6,6 +6,11 @@ with import (fetchTarball "https://github.com/serokell/nixpkgs/archive/master.ta
 with haskell.lib;
 
 let
+  buildFlatpak = callPackage (fetchGit {
+    url = "https://github.com/serokell/nix-flatpak";
+    rev = "46a2aadf37981d6313621913cd2802debfb763fd";
+  }) {};
+
   getAttrs = attrs: set: lib.genAttrs attrs (name: set.${name});
   dscp-packages = buildStackApplication rec {
   packages = [
@@ -51,9 +56,17 @@ in
 
 dscp-packages // rec {
   disciplina-wallet = haskell.lib.justStaticExecutables dscp-packages.disciplina-wallet;
+
   disciplina-wallet-wrapped = writeShellScriptBin "disciplina-wallet" ''
     ${disciplina-wallet}/bin/dscp-wallet --witness https://witness.disciplina.io
   '';
+
+  disciplina-wallet-flatpak = buildFlatpak {
+    app-id = "io.disciplina.Wallet";
+    command = "${disciplina-wallet-wrapped}/bin/disciplina-wallet";
+    finish-args = [ "--share=network" ];
+  };
+
   disciplina-bin = pkgs.runCommandNoCC "disciplina-bin-${dscp-packages.disciplina-core.version}" {} ''
     mkdir $out
     ${pkgs.rsync}/bin/rsync -Labu --no-perms --exclude lib/ --exclude propagated-build-inputs --inplace \
