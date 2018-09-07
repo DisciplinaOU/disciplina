@@ -64,10 +64,10 @@ logWarningLongAction delta actionTag action =
                 waitLoop (acc + s)
         in waitLoop s
     waitAndWarn (WaitGeometric s q) =
-        let waitLoop acc t = do
+        let waitLoop !acc !t = do
                 threadDelay t
                 let newAcc  = acc + t
-                let newT    = t * realToFrac q
+                let newT    = realToFrac $ realToFrac t * q
                 printWarning (floorUnit @Second $ toUnit newAcc)
                 waitLoop newAcc newT
         in waitLoop 0 s
@@ -85,4 +85,4 @@ logWarningWaitLinear = logWarningLongAction . WaitLinear
 -- | Specialization of 'logWarningLongAction' with 'WaitGeometric'
 -- with parameter @1.3@. Accepts 'Second'.
 logWarningWaitInf :: CanLogInParallel m => Time Second -> Text -> m a -> m a
-logWarningWaitInf = logWarningLongAction . (`WaitGeometric` 1.3) . toUnit
+logWarningWaitInf = logWarningLongAction . (`WaitGeometric` 1.7) . toUnit
