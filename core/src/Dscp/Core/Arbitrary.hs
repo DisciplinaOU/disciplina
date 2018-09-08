@@ -18,7 +18,7 @@ module Dscp.Core.Arbitrary
     , oneTestItem
     , variousItems
     , tiList
-    , tiInfUnique
+    , tiOne
     , genCoreTestEnv
     , cteSubmissions
     , simpleCoreTestParams
@@ -38,13 +38,11 @@ module Dscp.Core.Arbitrary
     ) where
 
 import qualified Data.Foldable
-import Data.List (nub)
 import qualified Data.Text.Buildable
 import Data.Time.Clock (UTCTime, getCurrentTime)
 import Fmt ((+||), (||+))
 import qualified GHC.Exts as Exts
 import GHC.IO.Unsafe (unsafePerformIO)
-import Test.QuickCheck (sized)
 import qualified Text.Show
 
 import Dscp.Core.Foundation
@@ -115,12 +113,11 @@ instance Arbitrary PrivateTx where
 -- Test case input
 ---------------------------------------------------------------------
 
+-- | Used to specify how items of given type should be generated.
 data TestItemParam a
     = FixedItemSet (Gen (NonEmpty a))
     -- ^ Generate set of items of use them to construct more complex ones,
     -- maybe with repetitions.
-    | AllRandomItems
-    -- ^ Generate each new item from scratch.
 
 -- | Use one item everywhere.
 oneTestItem :: Gen a -> TestItemParam a
@@ -140,7 +137,7 @@ data CoreTestParams = CoreTestParams
       -- ^ Contents hash to use in submission generation.
     }
 
--- | Simpliest setting: one student, one course and so on.
+-- | Simpliest setting: one student, one assignment and so on.
 simpleCoreTestParams :: CoreTestParams
 simpleCoreTestParams =
     CoreTestParams
@@ -149,33 +146,37 @@ simpleCoreTestParams =
     , ctpSubmissionContentsHash = FixedItemSet arbitrary
     }
 
--- | Total randomness.
+-- | Everything varies.
 wildCoreTestParams :: CoreTestParams
 wildCoreTestParams =
     CoreTestParams
-    { ctpSecretKey = AllRandomItems
-    , ctpAssignment = AllRandomItems
-    , ctpSubmissionContentsHash = AllRandomItems
+    { ctpSecretKey = FixedItemSet arbitrary
+    , ctpAssignment = FixedItemSet arbitrary
+    , ctpSubmissionContentsHash = FixedItemSet arbitrary
     }
 
 -- | Contains various incarnations of an entity.
+-- It is supposed to provide various amount of data depending on used needs:
+-- one element, list of elements or even infinite list of elements.
 data TestItem a = TestItem
-    { tiOne    :: a
-      -- ^ Sometime you need only one
-    , tiListNE :: NonEmpty a
-      -- ^ Or a list of arbitrary length
-    , tiInf    :: [a]
-      -- ^ Or 3 items
+    { tiCycled :: [a]
+      -- ^ Cycled list of previously generated items.
+    , tiNum    :: Int
+      -- ^ Size of the list, if someone asks for a finite list.
     } deriving (Functor, Traversable)
 
--- | Usually more convenient.
+-- | Get a non-empty list of given items. See note to 'tiList'.
+tiListNE :: TestItem a -> NonEmpty a
+tiListNE TestItem{..} = Exts.fromList $ take tiNum tiCycled
+
+-- | Get a list of given items.
+-- List size will be arbitrarly generated. It *may* contain repeated entires.
 tiList :: TestItem a -> [a]
 tiList = toList . tiListNE
 
--- | Take several unique items.
--- Make sure 'AllRandomItems' is used as corresponding parameter-generator.
-tiInfUnique :: Eq a => TestItem a -> [a]
-tiInfUnique = nub . tiInf
+-- | Get a single item.
+tiOne :: TestItem a -> a
+tiOne = head . tiListNE
 
 instance Foldable TestItem where
     foldr f e ti = foldr f e (tiList ti)
@@ -183,37 +184,23 @@ instance Foldable TestItem where
 (<+>) :: TestItem (a -> b) -> TestItem a -> TestItem b
 t1 <+> t2 =
     TestItem
-    { tiOne    = tiOne t1 (tiOne t2)
-    , tiListNE = Exts.fromList $
-                 smartMerge (toList $ tiListNE t1) (toList $ tiListNE t2)
-    , tiInf = zipWith ($) (tiInf t1) (tiInf t2)
+    { tiCycled = zipWith ($) (tiCycled t1) (tiCycled t2)
+    , tiNum = max (tiNum t1) (tiNum t2)
     }
-  where
-    smartMerge l1 l2
-        | length l1 <= length l2 = zipWith ($) (cycle l1) l2
-        | otherwise = zipWith ($) l1 (cycle l2)
 infixl 4 <+>
 
 mkTestItem :: (Arbitrary a) => TestItemParam a -> Gen (TestItem a)
 mkTestItem (FixedItemSet genList) = do
     l <- genList
     return TestItem
-        { tiOne = head l
-        , tiListNE = l
-        , tiInf = Exts.fromList $ fold $ repeatLimited $ toList l
+        { tiCycled = Exts.fromList $ cycleLimited $ toList l
+        , tiNum = length l
         }
   where
-    -- to prevent 'tiInfUnique' call from hanging when not enough different
-    -- items
-    repeatLimited = replicate 100
-mkTestItem AllRandomItems = do
-    inf <- infiniteList
-    n <- sized $ \n -> choose (1, max 1 n)
-    return TestItem
-        { tiOne = head $ Exts.fromList inf
-        , tiListNE = Exts.fromList $ take n inf
-        , tiInf = inf
-        }
+    -- this helps to prevent hanging when one asks for a list of unique
+    -- items, but not enough different elements were generated
+    cycleLimited l = fold (replicate 1000 l)
+                  ++ error "Generated not enough test items"
 
 -- | Keeps consistent set of test case data.
 -- In wild there is no object containing all the data we may like to have
@@ -245,13 +232,9 @@ instance Buildable CoreTestEnv where
 
 -- | Generate 'CoreTestEnv'.
 --
--- @st@ and @at@ should be either 'NonEmpty' or 'Identity'.
--- In case of 'NonEmpty', different items will be used to constuct each of
--- product items, if enough of them (basic items) there generated.
---
 -- You can make some assumptions about connections between generated data.
--- For instance, when 'wildCoreTestParams' is used then i-th student would
--- corresponse to i-th assignment, submission and private transaction.
+-- For instance, @zip (cycle cteCourses) cteAssignments@ will produce pairs
+-- of assignments and corresponding courses.
 genCoreTestEnv :: CoreTestParams -> Gen CoreTestEnv
 genCoreTestEnv p = do
     sksItem <- mkTestItem $ ctpSecretKey p

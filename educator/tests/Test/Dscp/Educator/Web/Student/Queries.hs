@@ -240,8 +240,8 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                 let student = tiOne $ cteStudents env
                     sigSubs = nub . tiList $ cteSignedSubmissions env
                     gradedSigSubs = [(ss, g) | (ss, Just g) <- zip sigSubs mgrades]
-                prepareForSubmissions env
-                forM_ sigSubs $ \sigSub -> sqlTx $ submitAssignment sigSub
+
+                prepareAndCreateSubmissions env
                 forM_ gradedSigSubs $ \(sigSub, grade) ->
                     createTransaction PrivateTx
                     { _ptSignedSubmission = sigSub
@@ -562,8 +562,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
         it "Pretending to be another student is bad" $
             sqliteProperty $
               \( delayedGen
-                 (genCoreTestEnv simpleCoreTestParams
-                                 { ctpSecretKey = AllRandomItems }) -> env
+                 (genCoreTestEnv simpleCoreTestParams) -> env
                , badStudent
                ) -> do
                 let student = tiOne $ cteStudents env

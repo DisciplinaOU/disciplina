@@ -187,7 +187,7 @@ spec_EducatorApiQueries = describe "Basic database operations" $ do
 
         it "Filtering works" $ sqlitePropertyM $ do
             env <- pick $ genCoreTestEnv simpleCoreTestParams
-                                         { ctpAssignment = AllRandomItems }
+                                         { ctpAssignment = variousItems }
             courseIdF <- pick arbitrary
             assignHF <- pick arbitrary
             docTypeF <- pick arbitrary
