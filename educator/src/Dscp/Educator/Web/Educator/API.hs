@@ -40,7 +40,7 @@ protectedEducatorAPI = Proxy
 
 data EducatorApiEndpoints route = EducatorApiEndpoints
     {
-      -- * Students
+      -- Students
 
       eNewStudent :: route
         :- "students"
@@ -64,7 +64,7 @@ data EducatorApiEndpoints route = EducatorApiEndpoints
         :> QueryParam "courseId" Course
         :> Get '[DSON] [StudentInfo]
 
-      -- * Courses
+      -- Courses
 
     , eAddCourse :: route
         :- "courses"
@@ -94,7 +94,7 @@ data EducatorApiEndpoints route = EducatorApiEndpoints
                         \attending."
         :> Get '[DSON] [CourseEducatorInfo]
 
-      -- * Assignments
+      -- Assignments
 
     , eAddCourseAssignment :: route
         :- "assignments"
@@ -140,7 +140,7 @@ data EducatorApiEndpoints route = EducatorApiEndpoints
         :> QueryParam "isFinal" IsFinal
         :> Get '[DSON] [AssignmentEducatorInfo]
 
-      -- * Submissions
+      -- Submissions
 
     , eGetSubmission :: route
         :- "submissions" :> Capture "submissionHash" (Hash Submission)
@@ -187,7 +187,7 @@ data EducatorApiEndpoints route = EducatorApiEndpoints
                         \studying given course."
         :> Get '[DSON] [SubmissionEducatorInfo]
 
-      -- * Grades
+      -- Grades
 
     , ePostGrade :: route
         :- "grades"
@@ -220,7 +220,7 @@ data EducatorApiEndpoints route = EducatorApiEndpoints
         :> QueryParam "isFinal" IsFinal
         :> Get '[DSON] [GradeInfo]
 
-      -- * Proofs
+      -- Proofs
 
     , eGetStudentProofs :: route
         :- "students" :> Capture "studentAddr" Student

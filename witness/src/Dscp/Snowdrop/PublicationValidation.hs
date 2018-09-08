@@ -67,7 +67,7 @@ preValidatePublication =
 
         let changes = changeSet txBody
 
-        -- | Getting actual changes
+        -- Getting actual changes
         let hd  = proj =<< inj (PublicationHead pPrivateBlockHash) `Map.lookup` changes
         let box = proj =<< inj (PublicationsOf  authorId)          `Map.lookup` changes
 

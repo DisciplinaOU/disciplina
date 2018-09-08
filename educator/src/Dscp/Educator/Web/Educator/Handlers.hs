@@ -25,7 +25,7 @@ educatorApiHandlers
 educatorApiHandlers =
     EducatorApiEndpoints
     {
-      -- * Students
+      -- Students
 
       eNewStudent =
         void ... createStudent
@@ -36,7 +36,7 @@ educatorApiHandlers =
     , eGetStudents =
         educatorGetStudents
 
-      -- * Courses
+      -- Courses
 
     , eAddCourse = \(NewCourse cid desc subjects) ->
         void $ createCourse CourseDetails
@@ -54,7 +54,7 @@ educatorApiHandlers =
     , eGetStudentCourses = \student ->
         educatorGetCourses (Just student)
 
-      -- * Assignments
+      -- Assignments
 
     , eAddCourseAssignment = \_autoAssign na -> do
         void $ createAssignment (requestToAssignment na)
@@ -74,7 +74,7 @@ educatorApiHandlers =
           commonGetAssignments EducatorCase student
               def{ afCourse = Just course, afIsFinal }
 
-      -- * Submissions
+      -- Submissions
 
     , eGetSubmission =
         educatorGetSubmission
@@ -97,7 +97,7 @@ educatorApiHandlers =
         commonGetSubmissions EducatorCase
             def{ sfStudent = Just student, sfCourse = Just course }
 
-      -- * Grades
+      -- Grades
 
     , ePostGrade = \(NewGrade subH grade) ->
         educatorPostGrade subH grade
@@ -111,7 +111,7 @@ educatorApiHandlers =
     , eGetStudentCourseGrades = \student course isFinalF ->
         educatorGetGrades (Just student) (Just course) isFinalF
 
-      -- * Proofs
+      -- Proofs
 
     , eGetStudentProofs = \student ->
         sqlTransaction $ commonGetProofs student def
