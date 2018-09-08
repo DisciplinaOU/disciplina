@@ -17,7 +17,7 @@ import Prelude hiding (show)
 
 import Codec.Serialise (Serialise, deserialise, serialise)
 import Control.Exception.Safe (catchJust)
-import Control.Lens (Prism')
+import Control.Lens (LensLike')
 import Crypto.Random (ChaChaDRG, MonadPseudoRandom)
 import Data.Aeson (FromJSON, ToJSON, eitherDecode, encode)
 import qualified Data.Hashable as H
@@ -32,8 +32,9 @@ import qualified Loot.Log as Log
 import Test.Hspec as T
 import Test.QuickCheck as T (Arbitrary (..), Fixed (..), Gen, Property, Testable (..), choose,
                              conjoin, cover, elements, expectFailure, forAll, frequency,
-                             infiniteList, ioProperty, label, listOf, listOf1, oneof, property,
-                             sublistOf, suchThat, suchThatMap, vectorOf, (.&&.), (===), (==>))
+                             infiniteList, infiniteListOf, ioProperty, label, listOf, listOf1,
+                             oneof, property, sublistOf, suchThat, suchThatMap, vectorOf, (.&&.),
+                             (===), (==>))
 import Test.QuickCheck (shuffle, sized)
 import qualified Test.QuickCheck as Q (counterexample)
 import Test.QuickCheck.Arbitrary.Generic as T (genericArbitrary, genericShrink)
@@ -146,12 +147,23 @@ throws action = do
 throwsSome :: forall m . (MonadCatch m) => m () -> m Bool
 throwsSome = throws @SomeException
 
+-- | Sad that we need this function, but QuickCheck does not report test input
+-- data if exception was thrown.
+noThrow :: MonadCatch m => m () -> m Property
+noThrow action = property <$> do
+    (action $> succeeded)
+        `catchAny` \e -> pure failed{ reason = "Exception thrown: " <> show e }
+
+-- | Checks whether exception is thrown and matches given prism.
+-- Very specific lens is consumed to allow mappend of several lenses.
 throwsPrism
     :: forall e m a b.
       (MonadCatch m, Exception e)
-    => Prism' e a -> m b -> m Bool
-throwsPrism excL action = do
-    catchJust (^? excL) (action $> False) (\_ -> return True)
+    => LensLike' (Const (First a)) e a -> m b -> m Property
+throwsPrism excL action =
+    catchJust (^? excL) (action $> property False) (\_ -> pure (property True))
+        `catchAny`
+        \e -> pure $ property failed{ reason = "Exception thrown: " <> show e }
 
 expectOne :: Text -> [a] -> a
 expectOne _    [x] = x
@@ -160,13 +172,6 @@ expectOne desc xs  =
 
 counterexample :: Testable prop => Text -> prop -> Property
 counterexample desc prop = Q.counterexample (toString desc) prop
-
--- | Sad that we need this function, but QuickCheck does not report test input
--- data if exception was thrown.
-noThrow :: MonadCatch m => m a -> m Property
-noThrow action = property <$> do
-    (action $> succeeded)
-        `catchAny` \e -> pure failed{ reason = "Exception thrown: " <> show e }
 
 ----------------------------------------------------------------------------
 -- Logging

@@ -3,7 +3,6 @@
 
 module Test.Dscp.Witness.Mode
     ( WitnessTestMode
-    , witnessProperty_
     , witnessProperty
 
     , testGenesisSecrets
@@ -119,15 +118,10 @@ runWitnessTestMode action =
         , _logName = pure (error "No logging name in tests")
         }
 
-witnessProperty_
-    :: (WithinWriteSDLock => PropertyM WitnessTestMode ())
-    -> Property
-witnessProperty_ action =
-    monadic (ioProperty . runWitnessTestMode)
-            (markWithinWriteSDLockUnsafe action)
-
 witnessProperty
     :: Testable prop
     => (WithinWriteSDLock => PropertyM WitnessTestMode prop)
     -> Property
-witnessProperty action = witnessProperty_ $ action >>= stop
+witnessProperty action =
+    monadic (ioProperty . runWitnessTestMode)
+            (markWithinWriteSDLockUnsafe action >>= void . stop)

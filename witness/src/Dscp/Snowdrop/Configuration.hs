@@ -30,10 +30,12 @@ module Dscp.Snowdrop.Configuration
     , AddrTxProof
     , PublicationTxProof
     , Proofs (..)
-    , AccountExpanderException (..)
-    , PublicationExpanderException (..)
     , Exceptions (..)
     , _AccountValidationError
+    , _AccountExpanderError
+    , AccountExpanderException (..)
+    , _CantResolveSender
+    , PublicationExpanderException (..)
 
     , TxIds (..)
 
@@ -268,6 +270,8 @@ data AccountExpanderException
     = MTxDuplicateOutputs
     | CantResolveSender
     | ExpanderInternalError String
+
+makePrisms ''AccountExpanderException
 
 instance Show AccountExpanderException where
     show = toString . pretty

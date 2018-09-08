@@ -74,10 +74,10 @@ spec = describe "Publication tx expansion + validation" $ do
         chainLen <- pick $ Positive <$> choose (2, 4)
         pubs     <- pick $ genPublicationChain chainLen author
 
-        forkPoint <- pick $ Positive <$> choose (1, getPositive chainLen)
-        let forkedPub' = pubs ^?! ix (getPositive $ forkPoint - 1)
-        forkedPub <- pick arbitrary <&> \ptBlock -> forkedPub'{ ptBlock }
-        let badPubs = pubs <> one forkedPub
+        forkPub' <- pick $ elements (toList pubs)
+        forkPub <- pick arbitrary <&> \ptBlock -> forkPub'{ ptBlock }
+        pre (forkPub /= forkPub')
+        let badPubs = pubs <> one forkPub
         let badTws = map (signPubTx author) badPubs
         lift $ throwsSome $ submitPubChain badTws
 

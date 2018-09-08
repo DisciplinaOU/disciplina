@@ -2,14 +2,26 @@
 
 module Dscp.Snowdrop.Types
     ( PublicationTxTypeId(..)
-    , PublicationValidationException(..)
     , AccountTxTypeId(..)
-    , AccountValidationException(..)
     , AccountId(..)
     , Account(..)
     , Author(..)
+    , PublicationValidationException(..)
+    , _AuthorDoesNotExist
+    , _SignatureIsMissing
+    , _SignatureIsCorrupted
+    , _TransactionIsCorrupted
+    , _NotASingletonSelfUpdate
+    , _NonceMustBeIncremented
+    , _PaymentMustBePositive
+    , _ReceiverOnlyGetsMoney
+    , _ReceiverMustIncreaseBalance
+    , _SumMustBeNonNegative
+    , _BalanceCannotBecomeNegative
+    , AccountValidationException(..)
     ) where
 
+import Control.Lens (makePrisms)
 import Data.Default (Default (..))
 import Data.Text.Buildable (Buildable (..))
 import Fmt (build, (+|), (|+))
@@ -67,6 +79,8 @@ data AccountValidationException
     | CannotAffordFees             -- ^ Given account state cannot afford given fees.
     | BalanceCannotBecomeNegative
     deriving (Eq, Ord, Enum, Bounded)
+
+makePrisms ''AccountValidationException
 
 instance Buildable AccountValidationException where
     build = \case

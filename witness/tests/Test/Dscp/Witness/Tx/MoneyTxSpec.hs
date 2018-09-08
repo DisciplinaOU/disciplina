@@ -1,17 +1,16 @@
 module Test.Dscp.Witness.Tx.MoneyTxSpec where
 
 import Control.Lens (makeLenses, makeLensesWith, traversed)
-import Data.List (scanl1)
+import qualified Data.List as L
 import qualified Data.Text.Buildable
 import Fmt (listF, (+|), (|+))
 import qualified GHC.Exts as Exts
-import Test.QuickCheck (resize)
-import Test.QuickCheck.Modifiers (NonNegative (..))
 import Test.QuickCheck.Monadic (pre)
 import qualified Text.Show
 
 import Dscp.Core
 import Dscp.Crypto
+import Dscp.Snowdrop
 import Dscp.Util
 import Dscp.Util.Test
 import Dscp.Witness
@@ -54,17 +53,21 @@ instance Buildable TxData where
 instance Show TxData where
     show = toString . pretty
 
+genSafeOutAddr :: Gen Address
+genSafeOutAddr = arbitrary `suchThat` (`notElem` testGenesisAddresses)
+
+genSafeTxOuts :: Word64 -> Gen Word32 -> Gen [TxOut]
+genSafeTxOuts maxVal genN = do
+    n <- fromIntegral <$> genN
+    txOutAddrs <- vectorUniqueOf n genSafeOutAddr
+    txOutValues <- vectorOf n $ Coin <$> choose (1, maxVal)
+    return $ zipWith TxOut txOutAddrs txOutValues
+
 genNeatTxData :: Gen TxData
 genNeatTxData = do
     tdSecret <- elements testGenesisSecrets
-    tdOuts <- resize 10 $ genTxOuts `suchThatMap` nonEmpty
+    tdOuts <- genSafeTxOuts 100 (choose (1, 5)) `suchThatMap` nonEmpty
     return TxData{..}
-  where
-    genOutAddr = arbitrary `suchThat` (`notElem` testGenesisAddresses)
-    genTxOuts = do
-        txOutAddrs <- listUniqueOf genOutAddr
-        txOutValues <- resize 5 . listOf $ Coin <$> choose (1, 100)
-        return $ zipWith TxOut txOutAddrs txOutValues
 
 makeTx :: TxCreationSteps -> TxData -> TxWitnessed
 makeTx steps dat =
@@ -101,7 +104,8 @@ spec = describe "Money tx expansion + validation" $ do
             nonce <- pick $ arbitrary `suchThat` (/= 0)
             let steps = properSteps & tcsInAcc .~ \addr -> TxInAcc addr nonce
             let tx = makeTx steps txData
-            lift $ throwsSome $ applyTx tx
+            lift $ throwsPrism (_AccountValidationError . _NonceMustBeIncremented) $
+                applyTx tx
 
         it "Bad input address is not fine" $ witnessProperty $ do
             txData <- pick genNeatTxData
@@ -119,28 +123,34 @@ spec = describe "Money tx expansion + validation" $ do
             let txData = txData'{ tdSecret = secret }
 
             let tx = makeTx properSteps txData
-            lift $ throwsSome $ applyTx tx
+            lift $ throwsPrism ((_AccountValidationError . _AuthorDoesNotExist)
+                             <> (_AccountExpanderError   . _CantResolveSender)) $
+                applyTx tx
 
         it "Too high input is processed fine" $ witnessProperty $ do
-            txData <- pick genNeatTxData
-            belowMax <- pick $ getNonNegative <$> resize 100000 arbitrary
+            txData <- pick genNeatTxData <&> tdOutsL %~ one . head
+            belowMax <- pick $ choose (0, coinToInteger testGenesisAddressAmount `div` 2)
             let spent = leftToPanic . coinFromInteger $
-                        coinToInteger maxBound - belowMax
+                        coinToInteger testGenesisAddressAmount - belowMax
 
             let steps = properSteps
                     & tcsTx %~ \f inAcc _ outs -> f inAcc spent outs
             let tx = makeTx steps txData
-            lift $ throwsSome $ applyTx tx
+            lift . noThrow $ applyTx tx
 
         it "Can't spend more money than currently present" $ witnessProperty $ do
-            txOuts' <- pick infiniteList
-            let manyEnough = succ $ length $
-                             takeWhile (<= coinToInteger testGenesisAddressAmount) $
-                             scanl1 (+) (map (coinToInteger . txOutValue) txOuts')
-            let txOuts = Exts.fromList $ take manyEnough txOuts'
-            txData <- pick $ genNeatTxData <&> \td -> td{ tdOuts = txOuts }
+            txOuts' <- pick $ genSafeTxOuts (unCoin testGenesisAddressAmount `div` 2)
+                                            (pure 10)
+            let isEnough = (>= coinToInteger testGenesisAddressAmount)
+            let manyEnoughL = map fst . dropWhile (not . isEnough . snd) $
+                              zip (inits txOuts') $
+                              L.scanl (+) 0 (fmap (coinToInteger . txOutValue) txOuts')
+            pre (not $ null manyEnoughL)
+            let txOuts = L.head $ manyEnoughL
+            txData <- pick $ genNeatTxData <&> \td -> td{ tdOuts = Exts.fromList txOuts }
             let tx = makeTx properSteps txData
-            lift $ throwsSome $ applyTx tx
+            lift $ throwsPrism (_AccountValidationError . _BalanceCannotBecomeNegative) $
+                applyTx tx
 
     describe "Transaction output part" $ do
         it "Empty transaction output is not fine" $ witnessProperty $ do
@@ -154,7 +164,9 @@ spec = describe "Money tx expansion + validation" $ do
             txData <- pick genNeatTxData
                       <&> tdOutsL . _headNE . txOutValueL .~ minBound @Coin
             let tx = makeTx properSteps txData
-            lift $ throwsSome $ applyTx tx
+            lift $ throwsPrism (_AccountValidationError .
+                                (_ReceiverMustIncreaseBalance <> _PaymentMustBePositive)) $
+                applyTx tx
 
         it "Large outputs are fine" $ witnessProperty $ do
             -- large input value was already tested above, so we ignore
@@ -180,12 +192,14 @@ spec = describe "Money tx expansion + validation" $ do
             txData <- pick genNeatTxData
             let Coin outSum = leftToPanic $ sumCoins $ map txOutValue $
                               toList (tdOuts txData)
-            spent <- pick $ Coin <$> choose (0, outSum - 1)
+            pre (outSum > 1)
+            spent <- pick $ Coin <$> choose (1, outSum - 1)
 
             let steps = properSteps & tcsTx %~
                     \f inAcc _ outs -> f inAcc spent outs
                 tx = makeTx steps txData
-            lift $ throwsSome $ applyTx tx
+            lift $ throwsPrism (_AccountValidationError . _SumMustBeNonNegative) $
+                applyTx tx
 
     describe "State modifications are correct" $ do
         it "Several transactions and invalid nonce" $ witnessProperty $ do
@@ -195,7 +209,8 @@ spec = describe "Money tx expansion + validation" $ do
             -- going to skip transaction before the last one
             let initTxs = init . Exts.fromList $ init txs
             lift $ forM_ initTxs applyTx
-            lift $ throwsSome $ applyTx (last txs)
+            lift $ throwsPrism (_AccountValidationError . _NonceMustBeIncremented) $
+                applyTx (last txs)
 
         it "Several transactions exhausting account" $ witnessProperty $ do
             txData' <- pick genNeatTxData
@@ -204,4 +219,5 @@ spec = describe "Money tx expansion + validation" $ do
                              (coinToInteger testGenesisAddressAmount * 3) `div` 4
                 txData = txData'{ tdOuts = one $ TxOut destination spentPerTx }
                 txs = makeTxsChain 2 properSteps txData
-            lift $ throwsSome $ forM_ txs applyTx
+            lift $ throwsPrism (_AccountValidationError . _BalanceCannotBecomeNegative) $
+                mapM_ applyTx txs
