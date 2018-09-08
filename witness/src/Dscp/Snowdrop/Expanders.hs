@@ -119,6 +119,9 @@ seqExpandersPublicationTx feesReceiverAddr =
             let (prevHashM :: Maybe PrivateHeaderHash) =
                     prevHash <$ guard (prevHash /= genesisHeaderHash)
 
+            when (prevHash == phHash) $
+                throwLocalError PublicationLocalLoop
+
             let feeAmount = fromIntegral $ coinToInteger ptFeesAmount
             maybePub <- queryOne (PublicationsOf ptAuthor)
             mFeesReceiver <- queryOne (AccountId feesReceiverAddr)

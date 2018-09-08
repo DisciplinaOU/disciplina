@@ -36,7 +36,7 @@ module Dscp.Core.Foundation.Witness
     , PublicationTxWitnessed (..)
     , PublicationTx (..)
     , ptAuthorL
-    , ptFeesAmount
+    , ptFeesAmountL
     , ptHeaderL
     , PublicationTxId
     , toPtxId

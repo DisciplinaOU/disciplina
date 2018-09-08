@@ -20,7 +20,7 @@ genPublicationChain (Positive n) secret
     | n <= 0 = error "genPublicationChain: n <= 0"
     | otherwise = do
         let addr = mkAddr (toPublic secret)
-        pheaders <- vectorOf n arbitrary
+        pheaders <- vectorUnique n
         let siblings = map (take 2) $ map reverse $ tail $
                        Exts.fromList $ inits pheaders
         return $ Exts.fromList $ siblings <&> \curHeaders ->
@@ -39,8 +39,6 @@ submitPubChain
     :: (MempoolCtx ctx m, WithinWriteSDLock)
     => NonEmpty PublicationTxWitnessed -> m ()
 submitPubChain = mapM_ $ \tx -> addTxToMempool (GPublicationTxWitnessed tx)
-
--- TODO: check publications are unique?
 
 spec :: Spec
 spec = describe "Publication tx expansion + validation" $ do
@@ -83,10 +81,17 @@ spec = describe "Publication tx expansion + validation" $ do
         let badTws = map (signPubTx author) badPubs
         lift $ throwsSome $ submitPubChain badTws
 
+    it "Loops are not fine" $ witnessProperty $ do
+        chainLen <- pick $ Positive <$> choose (2, 5)
+        pubs     <- pick $ genPublicationChain chainLen author
+        loopPoint <- pick $ elements (init pubs)
+        let badPubs = pubs & _tailNE . _last . ptBlockL .~ ptBlock loopPoint
+        let badTws = map (signPubTx author) badPubs
+        lift $ throwsSome $ submitPubChain badTws
+
     it "Wrong signature is not fine" $ witnessProperty $ do
         pub :| [] <- pick $ genPublicationChain 1 author
         let saneTw = signPubTx author pub
         otherTw   <- pick arbitrary
-        mixTw     <- pick $ arbitraryMixture saneTw otherTw
-                            `suchThat` (/= saneTw)
+        mixTw     <- pick $ arbitraryUniqueMixture saneTw otherTw
         lift $ throwsSome $ submitPubChain (one mixTw)

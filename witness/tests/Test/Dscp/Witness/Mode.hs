@@ -97,7 +97,7 @@ testWitnessConfig =
 runWitnessTestMode :: WitnessTestMode a -> IO a
 runWitnessTestMode action =
     withWitnessConfig testWitnessConfig $ do
-        _twcMempoolVar <- newMempoolVar
+        _twcMempoolVar <- newMempoolVar (_krPublicKey _twcKeys)
         _twcSDVars <- runRIO _twcLogging initSDActions
         _twcSDLock <- newSDLock
         _twcRelayState <- newRelayState

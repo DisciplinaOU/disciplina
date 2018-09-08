@@ -85,7 +85,7 @@ makeTxsChain n steps dat
             in makeTx steps' dat
 
 
-applyTx :: WithinWriteSDLock => TxWitnessed -> WitnessTestMode ()
+applyTx :: (WithinWriteSDLock, HasWitnessConfig) => TxWitnessed -> WitnessTestMode ()
 applyTx tw = void $ addTxToMempool (GMoneyTxWitnessed tw)
 
 spec :: Spec
