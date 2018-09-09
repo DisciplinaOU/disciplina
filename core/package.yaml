@@ -49,6 +49,7 @@ library:
     - semver
     - snowdrop-util
     - stm
+    - template-haskell
     - text
     - text-format
     - time

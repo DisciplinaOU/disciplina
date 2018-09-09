@@ -18,22 +18,18 @@ module Dscp.Educator.Launcher.Mode
     ) where
 
 import Control.Lens (makeLenses)
-import Loot.Base.HasLens (HasLens (..), HasLens')
-import Loot.Log.Rio (LoggingIO)
-import Loot.Network.ZMQ as Z
+import Loot.Base.HasLens (HasLens')
 
-import Dscp.DB.Rocks.Real.Types (RocksDB)
 import Dscp.DB.SQLite (SQLiteDB)
 import Dscp.Educator.Config (HasEducatorConfig, withEducatorConfig)
 import Dscp.Educator.Launcher.Marker (EducatorNode)
 import Dscp.Educator.Launcher.Resource (EducatorResources)
 import qualified Dscp.Launcher.Mode as Basic
 import Dscp.Resource.Keys (KeyResources)
+import Dscp.Resource.Network
 import Dscp.Rio (RIO)
-import Dscp.Snowdrop.Actions (SDVars)
+import Dscp.Util.HasLens
 import qualified Dscp.Witness as W
-import Dscp.Witness.Mempool (MempoolVar)
-import Dscp.Witness.Relay
 
 ---------------------------------------------------------------------
 -- WorkMode class
@@ -62,8 +58,6 @@ type CombinedWorkMode ctx m =
 -- WorkMode implementation
 ---------------------------------------------------------------------
 
--- TODO add parameters
--- TODO Separate resources and non-resources.
 data EducatorContext = EducatorContext
     { _ecResources  :: !EducatorResources
       -- ^ Resources, allocated from params.
@@ -71,6 +65,7 @@ data EducatorContext = EducatorContext
     }
 
 makeLenses ''EducatorContext
+deriveHasLensDirect ''EducatorContext
 
 type EducatorRealMode = RIO EducatorContext
 
@@ -78,31 +73,10 @@ type EducatorRealMode = RIO EducatorContext
 -- HasLens
 ---------------------------------------------------------------------
 
-instance HasLens SQLiteDB EducatorContext SQLiteDB where
-    lensOf = ecResources . lensOf @SQLiteDB
-instance HasLens (KeyResources EducatorNode) EducatorContext (KeyResources EducatorNode) where
-    lensOf = ecResources . lensOf @(KeyResources EducatorNode)
-
-instance HasLens LoggingIO EducatorContext LoggingIO where
-    lensOf = ecWitnessCtx . lensOf @LoggingIO
-instance HasLens RocksDB EducatorContext RocksDB where
-    lensOf = ecWitnessCtx . lensOf @RocksDB
-instance HasLens Z.ZTGlobalEnv EducatorContext Z.ZTGlobalEnv where
-    lensOf = ecWitnessCtx . lensOf @Z.ZTGlobalEnv
-instance HasLens Z.ZTNetCliEnv EducatorContext Z.ZTNetCliEnv where
-    lensOf = ecWitnessCtx . lensOf @Z.ZTNetCliEnv
-instance HasLens Z.ZTNetServEnv EducatorContext Z.ZTNetServEnv where
-    lensOf = ecWitnessCtx . lensOf @Z.ZTNetServEnv
-instance HasLens (KeyResources W.WitnessNode) EducatorContext (KeyResources W.WitnessNode) where
-    lensOf = ecWitnessCtx . lensOf @(KeyResources W.WitnessNode)
-instance HasLens MempoolVar EducatorContext MempoolVar where
-    lensOf = ecWitnessCtx . lensOf @MempoolVar
-instance HasLens SDVars EducatorContext SDVars where
-    lensOf = ecWitnessCtx . lensOf @SDVars
-instance HasLens RelayState EducatorContext RelayState where
-    lensOf = ecWitnessCtx . lensOf @RelayState
-instance HasLens W.SDLock EducatorContext W.SDLock where
-    lensOf = ecWitnessCtx . lensOf @W.SDLock
+deriveHasLens 'ecResources ''EducatorContext ''EducatorResources
+deriveHasLens 'ecWitnessCtx ''EducatorContext ''W.WitnessResources
+deriveHasLens 'ecWitnessCtx ''EducatorContext ''W.WitnessVariables
+deriveHasLens 'ecWitnessCtx ''EducatorContext ''NetServResources
 
 ----------------------------------------------------------------------------
 -- Sanity check
