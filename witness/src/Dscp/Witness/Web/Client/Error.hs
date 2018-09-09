@@ -31,4 +31,4 @@ servantToWitnessError servantError =
     mWalletError = do
         FailureResponse Response{..} <- pure servantError
         errResponse <- decode @ErrResponse responseBody
-        return (erError errResponse)
+        return (erContent errResponse)

@@ -30,6 +30,7 @@ module Dscp.Snowdrop.Types
     ) where
 
 import Control.Lens (makePrisms)
+import Data.Data (Data)
 import Data.Default (Default (..))
 import Data.Text.Buildable (Buildable (..))
 import Fmt (build, (+|), (|+))
@@ -94,7 +95,7 @@ data AccountValidationException
                                    -- to the total amount received.
     | CannotAffordFees             -- ^ Given account state cannot afford given fees.
     | BalanceCannotBecomeNegative
-    deriving (Eq, Ord, Enum, Bounded)
+    deriving (Eq, Ord, Enum, Bounded, Data)
 
 makePrisms ''AccountValidationException
 
