@@ -304,21 +304,38 @@ instance Buildable PublicationExpanderException where
     build = \case
         PublicationLocalLoop -> "Previous block and current block are the same"
 
-data Exceptions
+data InternalExceptions
     = ExpanderRestrictionError   RestrictionInOutException
     | BlockStateError           (BlockStateException        Ids)
-    | BlockApplicationError     (BlockApplicationException  HeaderHash)
     | StateModificationError    (StateModificationException Ids)
-    | AccountValidationError     AccountValidationException
-    | PublicationValidationError PublicationValidationException
     | RedundantIdError           RedundantIdException
     | ValidatorExecError         ValidatorExecException
     | CSMappendError            (CSMappendException         Ids)
     | TxValidationError          TxValidationException
     | StatePError                StatePException
+
+instance Show InternalExceptions where
+    show = toString . pretty
+
+instance Buildable InternalExceptions where
+    build = \case
+        ExpanderRestrictionError err -> B.build err
+        BlockStateError err -> B.build err
+        StateModificationError err -> B.build err
+        StatePError err -> B.build err
+        RedundantIdError err -> B.build err
+        ValidatorExecError err -> B.build err
+        CSMappendError err -> B.build err
+        TxValidationError err -> B.build err
+
+data Exceptions
+    = BlockApplicationError     (BlockApplicationException  HeaderHash)
+    | AccountValidationError     AccountValidationException
+    | PublicationValidationError PublicationValidationException
     | AccountExpanderError       AccountExpanderException
     | PublicationExpanderError   PublicationExpanderException
     | LogicError                 LogicException
+    | SdInternalError            InternalExceptions
 
 makePrisms ''Exceptions
 
@@ -329,20 +346,13 @@ instance Show Exceptions where
 
 instance Buildable Exceptions where
     build = \case
-        ExpanderRestrictionError err -> B.build err
-        BlockStateError err -> B.build err
         BlockApplicationError err -> B.build err
-        StateModificationError err -> B.build err
         AccountValidationError err -> B.build err
         PublicationValidationError err -> B.build err
-        RedundantIdError err -> B.build err
-        ValidatorExecError err -> B.build err
-        CSMappendError err -> B.build err
-        TxValidationError err -> B.build err
-        StatePError err -> B.build err
         AccountExpanderError err -> B.build err
         PublicationExpanderError err -> B.build err
         LogicError err -> B.build err
+        SdInternalError err -> B.build err
 
 ----------------------------------------------------------------------------
 -- TxIds
@@ -386,4 +396,22 @@ deriveView withInjProj ''Values
 deriveIdView withInjProj ''Values
 
 deriveView withInjProj ''TxIds
+deriveView withInjProj ''InternalExceptions
 deriveView withInj ''Exceptions
+
+instance HasReview Exceptions RestrictionInOutException where
+    inj = SdInternalError . inj
+instance HasReview Exceptions (BlockStateException Ids) where
+    inj = SdInternalError . inj
+instance HasReview Exceptions (StateModificationException Ids) where
+    inj = SdInternalError . inj
+instance HasReview Exceptions RedundantIdException where
+    inj = SdInternalError . inj
+instance HasReview Exceptions ValidatorExecException where
+    inj = SdInternalError . inj
+instance HasReview Exceptions (CSMappendException Ids) where
+    inj = SdInternalError . inj
+instance HasReview Exceptions TxValidationException where
+    inj = SdInternalError . inj
+instance HasReview Exceptions StatePException where
+    inj = SdInternalError . inj
