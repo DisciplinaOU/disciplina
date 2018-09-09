@@ -12,6 +12,7 @@ module Dscp.Witness.Web.Logic
 import Codec.Serialise (serialise)
 import qualified Data.ByteString.Lazy as BS
 import Data.Default (def)
+import Fmt ((+|), (|+))
 
 import Dscp.Core
 import Dscp.Snowdrop
@@ -100,9 +101,9 @@ getBlocks mSkip mCount = do
     toBlockList blTotalCount blBlocks = pure BlockList{..}
 
 getBlockInfo :: WitnessWorkMode ctx m => HeaderHash -> m BlockInfo
-getBlockInfo =
-    runSdMRead . getBlockMaybe >=>
-    nothingToThrow BlockNotFound >=>
+getBlockInfo hh =
+    runSdMRead (getBlockMaybe hh) >>=
+    nothingToThrow (LogicError $ LEBlockAbsent $ "Block " +| hh |+ " not found") >>=
     toBlockInfo True
 
 getAccountInfo :: WitnessWorkMode ctx m => Address -> Bool -> m AccountInfo
@@ -120,8 +121,9 @@ getAccountInfo address includeTxs = do
 
 getTransactions :: WitnessWorkMode ctx m => Maybe Int -> Maybe GTxId -> m TxList
 getTransactions mCount mFrom = do
-    whenJust mFrom $
-        runSdMRead . getTxMaybe >=> void . nothingToThrow TransactionNotFound
+    whenJust mFrom $ \from ->
+        runSdMRead (getTxMaybe from) >>=
+        void . nothingToThrow (LogicError . LETxAbsent $ "Transaction not found " +| from |+ "")
     eTxs <- runSdMRead $ getTxs (count + 1) mFrom
     either (throwM . InternalError) (toTxList . reverse . toList) eTxs
   where
@@ -134,9 +136,9 @@ getTransactions mCount mFrom = do
             }
 
 getTransactionInfo :: WitnessWorkMode ctx m => GTxId -> m TxInfo
-getTransactionInfo =
-    runSdMRead . getTxMaybe >=>
-    nothingToThrow TransactionNotFound >=>
+getTransactionInfo txId =
+    runSdMRead (getTxMaybe txId) >>=
+    nothingToThrow (LogicError . LETxAbsent $ "Transaction not found " +| txId |+ "") >>=
     toTxInfo
 
 -- | As we can't distinguish between different hashes, we have to check whether an entity exists.

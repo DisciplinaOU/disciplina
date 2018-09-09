@@ -13,7 +13,7 @@ import Data.Aeson.TH (deriveJSON)
 import Data.Reflection (Reifies (..))
 import qualified Data.Text.Buildable as B
 import Data.Typeable (cast)
-import Servant (ServantErr (..), err400, err404, err500, err503)
+import Servant (ServantErr (..), err400, err500, err503)
 
 import Dscp.Snowdrop
 import Dscp.Util.Servant
@@ -42,9 +42,7 @@ fromSnowdropException = \case
 
 -- | All witness API exceptions.
 data WitnessAPIError
-    = BlockNotFound
-    | TransactionNotFound
-    | SdError SdExceptions
+    = SdError SdExceptions
     | InternalError Text
     | ServiceUnavailable Text
     | InvalidFormat
@@ -52,8 +50,6 @@ data WitnessAPIError
 
 instance Buildable WitnessAPIError where
     build = \case
-        BlockNotFound -> "Specified block does not exist."
-        TransactionNotFound -> "Specified transaction does not exist."
         SdError err -> B.build err
         InternalError msg -> "Internal error: " <> B.build msg
         ServiceUnavailable msg -> "Service unavailable: " <> B.build msg
@@ -106,8 +102,6 @@ instance HasErrorTag SdExceptions where
 
 instance HasErrorTag WitnessAPIError where
     errorTag = \case
-        BlockNotFound -> "BlockNotFound"
-        TransactionNotFound -> "TransactionNotFound"
         SdError err -> errorTag err
         InternalError{} -> "InternalError"
         ServiceUnavailable{} -> "ServiceUnavailable"
@@ -120,8 +114,6 @@ instance ToServantErrNoReason SdExceptions where
 
 instance ToServantErrNoReason WitnessAPIError where
     toServantErrNoReason = \case
-        BlockNotFound        -> err404
-        TransactionNotFound  -> err404
         SdError err          -> toServantErrNoReason err
         InternalError{}      -> err500
         ServiceUnavailable{} -> err503
