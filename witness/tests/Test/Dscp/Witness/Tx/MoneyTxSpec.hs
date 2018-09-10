@@ -19,7 +19,8 @@ import Test.Dscp.Witness.Mode
 -- | Describes tx construction in steps. This is something you want
 -- to vary in order to produce defective transactions.
 -- If you change one of early steps in transaction construction,
--- later ones will come up (e.g., changing 'tcsTx' will not break signature).
+-- later ones will come up (e.g., changing 'tcsTx' will not break signature
+-- on itself).
 data TxCreationSteps = TxCreationSteps
     { _tcsInAcc   :: Address -> TxInAcc
     , _tcsTx      :: TxInAcc -> Coin -> [TxOut] -> Tx
@@ -48,14 +49,17 @@ makeLensesWith postfixLFields ''TxData
 
 instance Buildable TxData where
     build TxData{..} =
-        "Secret of " +| mkAddr (toPublic tdSecret) |+ ", outs: " +| listF tdOuts |+ ""
+        "Secret of " +| mkAddr (toPublic tdSecret) |+
+        ", outs: " +| listF tdOuts |+ ""
 
 instance Show TxData where
     show = toString . pretty
 
+-- | Generate output `Address` which does not make transaction invalid.
 genSafeOutAddr :: Gen Address
 genSafeOutAddr = arbitrary `suchThat` (`notElem` testGenesisAddresses)
 
+-- | Generate output `TxOut` which does not make transaction invalid.
 genSafeTxOuts :: Word64 -> Gen Word32 -> Gen [TxOut]
 genSafeTxOuts maxVal genN = do
     n <- fromIntegral <$> genN
@@ -63,12 +67,14 @@ genSafeTxOuts maxVal genN = do
     txOutValues <- vectorOf n $ Coin <$> choose (1, maxVal)
     return $ zipWith TxOut txOutAddrs txOutValues
 
-genNeatTxData :: Gen TxData
-genNeatTxData = do
+-- | Generate `TxData` which does not make transaction invalid.
+genSafeTxData :: Gen TxData
+genSafeTxData = do
     tdSecret <- elements testGenesisSecrets
     tdOuts <- genSafeTxOuts 100 (choose (1, 5)) `suchThatMap` nonEmpty
     return TxData{..}
 
+-- | Given creation steps, build a transaction.
 makeTx :: TxCreationSteps -> TxData -> TxWitnessed
 makeTx steps dat =
     let sourcePk = toPublic (tdSecret dat)
@@ -79,6 +85,7 @@ makeTx steps dat =
         witness = _tcsWitness steps sgn sourcePk
     in TxWitnessed{ twTx = tx, twWitness = witness }
 
+-- | Given creation steps, build several similar transactions.
 makeTxsChain :: Int -> TxCreationSteps -> TxData -> NonEmpty TxWitnessed
 makeTxsChain n steps dat
     | n <= 0 = error "makeTxsChain: n <= 0"
@@ -87,20 +94,20 @@ makeTxsChain n steps dat
             let steps' = steps & tcsInAcc %~ \f addr -> (f addr){ tiaNonce = i }
             in makeTx steps' dat
 
-
-applyTx :: (WithinWriteSDLock, HasWitnessConfig) => TxWitnessed -> WitnessTestMode ()
+-- | Submit transaction to validation.
+applyTx :: WithinWriteSDLock => TxWitnessed -> WitnessTestMode ()
 applyTx tw = void $ addTxToMempool (GMoneyTxWitnessed tw)
 
 spec :: Spec
 spec = describe "Money tx expansion + validation" $ do
     it "Correct tx is fine" $ witnessProperty $ do
-        txData <- pick genNeatTxData
+        txData <- pick genSafeTxData
         let tx = makeTx properSteps txData
         lift . noThrow $ applyTx tx
 
     describe "Transaction input part" $ do
         it "Bad nonce is not fine" $ witnessProperty $ do
-            txData <- pick genNeatTxData
+            txData <- pick genSafeTxData
             nonce <- pick $ arbitrary `suchThat` (/= 0)
             let steps = properSteps & tcsInAcc .~ \addr -> TxInAcc addr nonce
             let tx = makeTx steps txData
@@ -108,7 +115,7 @@ spec = describe "Money tx expansion + validation" $ do
                 applyTx tx
 
         it "Bad input address is not fine" $ witnessProperty $ do
-            txData <- pick genNeatTxData
+            txData <- pick genSafeTxData
             sourceAddr <- pick (arbitrary @Address)
             pre (sourceAddr /= mkAddr (toPublic $ tdSecret txData))
 
@@ -118,7 +125,7 @@ spec = describe "Money tx expansion + validation" $ do
             lift $ throwsSome $ applyTx tx
 
         it "Having not enough money is not fine" $ witnessProperty $ do
-            txData' <- pick genNeatTxData
+            txData' <- pick genSafeTxData
             secret <- pick $ arbitrary `suchThat` (`notElem` testGenesisSecrets)
             let txData = txData'{ tdSecret = secret }
 
@@ -128,7 +135,7 @@ spec = describe "Money tx expansion + validation" $ do
                 applyTx tx
 
         it "Too high input is processed fine" $ witnessProperty $ do
-            txData <- pick genNeatTxData <&> tdOutsL %~ one . head
+            txData <- pick genSafeTxData <&> tdOutsL %~ one . head
             belowMax <- pick $ choose (0, coinToInteger testGenesisAddressAmount `div` 2)
             let spent = leftToPanic . coinFromInteger $
                         coinToInteger testGenesisAddressAmount - belowMax
@@ -147,21 +154,21 @@ spec = describe "Money tx expansion + validation" $ do
                               L.scanl (+) 0 (fmap (coinToInteger . txOutValue) txOuts')
             pre (not $ null manyEnoughL)
             let txOuts = L.head $ manyEnoughL
-            txData <- pick $ genNeatTxData <&> \td -> td{ tdOuts = Exts.fromList txOuts }
+            txData <- pick $ genSafeTxData <&> \td -> td{ tdOuts = Exts.fromList txOuts }
             let tx = makeTx properSteps txData
             lift $ throwsPrism (_AccountValidationError . _BalanceCannotBecomeNegative) $
                 applyTx tx
 
     describe "Transaction output part" $ do
         it "Empty transaction output is not fine" $ witnessProperty $ do
-            txData <- pick genNeatTxData
+            txData <- pick genSafeTxData
             let steps = properSteps
                     & tcsTx %~ \f inAcc inVal _ -> f inAcc inVal []
             let tx = makeTx steps txData
             lift $ throwsSome $ applyTx tx
 
         it "Non positive output amount is not fine" $ witnessProperty $ do
-            txData <- pick genNeatTxData
+            txData <- pick genSafeTxData
                       <&> tdOutsL . _headNE . txOutValueL .~ minBound @Coin
             let tx = makeTx properSteps txData
             lift $ throwsPrism (_AccountValidationError .
@@ -172,7 +179,7 @@ spec = describe "Money tx expansion + validation" $ do
             -- large input value was already tested above, so we ignore
             -- @inVal > sum outVals@ requirement here in order to prevent coin
             -- overflow
-            txData' <- pick genNeatTxData
+            txData' <- pick genSafeTxData
             let txData = txData' & tdOutsL . traversed . txOutValueL .~ maxBound @Coin
             let steps = properSteps
                     & tcsTx %~ \f inAcc _ outs -> f inAcc (maxBound @Coin) outs
@@ -181,7 +188,7 @@ spec = describe "Money tx expansion + validation" $ do
 
     describe "Transaction signature" $ do
         it "Changing tx parts without updating signature fails" $ witnessProperty $ do
-            txData <- pick genNeatTxData
+            txData <- pick genSafeTxData
             let saneTw = makeTx properSteps txData
             fakeTw <- pick arbitrary
             mixTw <- pick $ arbitraryUniqueMixture saneTw fakeTw
@@ -189,7 +196,7 @@ spec = describe "Money tx expansion + validation" $ do
 
     describe "Overall sanity" $ do
         it "Tx input < sum tx outs => failure" $ witnessProperty $ do
-            txData <- pick genNeatTxData
+            txData <- pick genSafeTxData
             let Coin outSum = leftToPanic $ sumCoins $ map txOutValue $
                               toList (tdOuts txData)
             pre (outSum > 1)
@@ -203,7 +210,7 @@ spec = describe "Money tx expansion + validation" $ do
 
     describe "State modifications are correct" $ do
         it "Several transactions and invalid nonce" $ witnessProperty $ do
-            txData <- pick genNeatTxData
+            txData <- pick genSafeTxData
             txNum <- pick $ choose (2, 10)
             let txs = makeTxsChain txNum properSteps txData
             -- going to skip transaction before the last one
@@ -213,7 +220,7 @@ spec = describe "Money tx expansion + validation" $ do
                 applyTx (last txs)
 
         it "Several transactions exhausting account" $ witnessProperty $ do
-            txData' <- pick genNeatTxData
+            txData' <- pick genSafeTxData
             destination <- pick arbitrary
             let spentPerTx = leftToPanic . coinFromInteger $
                              (coinToInteger testGenesisAddressAmount * 3) `div` 4
