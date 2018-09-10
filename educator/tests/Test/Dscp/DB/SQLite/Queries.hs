@@ -275,11 +275,13 @@ spec_Instances = do
     describe "Retrieval of proven transactions" $ do
         it "getProvenStudentTransactions" $
             sqliteProperty $ \
-                ( delayedGen (genCoreTestEnv simpleCoreTestParams) -> env
+                ( delayedGen (genCoreTestEnv simpleCoreTestParams
+                              `suchThat` ((>= 3) . tiNum . ctePrivateTxs)
+                             ) -> env
                 ) -> do
                     let student      = tiOne $ cteStudents env
                         assignment   = tiOne $ cteAssignments env
-                        transactions = take 3 $ tiInfUnique $ ctePrivateTxs env
+                        transactions = take 3 $ tiList $ ctePrivateTxs env
 
                     studentId <- DB.createStudent student
 
