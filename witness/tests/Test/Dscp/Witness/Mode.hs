@@ -8,6 +8,7 @@ module Test.Dscp.Witness.Mode
     , testGenesisSecrets
     , testGenesisAddresses
     , testGenesisAddressAmount
+    , testCommittee
     ) where
 
 import Control.Lens (makeLenses, (&~), (?=))
@@ -71,6 +72,13 @@ testGenesisAddresses = mkAddr . toPublic <$> testGenesisSecrets
 testGenesisAddressAmount :: Coin
 testGenesisAddressAmount = Coin 10000
 
+testCommittee :: Committee
+testCommittee =
+    CommitteeOpen
+    { commN = 2
+    , commSecret = detGen 12 (CommitteeSecret <$> arbitrary)
+    }
+
 -- | Witness test configuration.
 -- Only those parts are defined which are actually used in tests.
 testWitnessConfig :: WitnessConfigRec
@@ -85,7 +93,7 @@ testWitnessConfig =
     genConfig =
         GenesisConfig
         { gcGenesisSeed = "meme tests"
-        , gcGovernance = error "Committee is not provided"
+        , gcGovernance = GovCommittee testCommittee
         , gcDistribution = GenesisDistribution . one $ GDSpecific genesisAddressMap
         }
 
@@ -95,22 +103,17 @@ testWitnessConfig =
 
 runWitnessTestMode :: WitnessTestMode a -> IO a
 runWitnessTestMode action =
-    withWitnessConfig testWitnessConfig $ do
+    withWitnessConfig testWitnessConfig $ runRIO _twcLogging $ do
         _twcMempoolVar <- newMempoolVar (_krPublicKey _twcKeys)
-        _twcSDVars <- runRIO _twcLogging initSDActions
+        _twcSDVars <- initSDActions
         _twcSDLock <- newSDLock
         _twcRelayState <- newRelayState
+        _twcKeys <- genStore (Just $ CommitteeParamsOpen 0)
         let ctx = TestWitnessCtx{..}
         runRIO ctx $ do
             markWithinWriteSDLockUnsafe applyGenesisBlock
             action
   where
-    _twcKeys =
-        let sk = detGen 22 arbitrary
-        in KeyResources
-           { _krSecretKey = sk
-           , _krPublicKey = toPublic sk
-           }
     _twcLogging = Logging
         { _log = \lvl _ txt ->
             when (lvl >= Warning) $
@@ -120,8 +123,10 @@ runWitnessTestMode action =
 
 witnessProperty
     :: Testable prop
-    => (WithinWriteSDLock => PropertyM WitnessTestMode prop)
+    => ((HasWitnessConfig, WithinWriteSDLock) => PropertyM WitnessTestMode prop)
     -> Property
 witnessProperty action =
-    monadic (ioProperty . runWitnessTestMode)
-            (markWithinWriteSDLockUnsafe action >>= void . stop)
+    monadic (ioProperty . runWitnessTestMode) $ do
+        prop <- markWithinWriteSDLockUnsafe $
+                withWitnessConfig testWitnessConfig action
+        void $ stop prop

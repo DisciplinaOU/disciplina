@@ -120,6 +120,8 @@ instance Arbitrary PrivateBlockHeader where
 
 deriving instance Arbitrary Coin
 deriving instance Arbitrary Nonce
+deriving instance Arbitrary Difficulty
+deriving instance Arbitrary SlotId
 
 instance Arbitrary TxInAcc where
     arbitrary = genericArbitrary
@@ -145,11 +147,27 @@ instance Arbitrary PublicationTx where
     arbitrary = genericArbitrary
     shrink    = genericShrink
 
+instance Arbitrary GTxWitnessed where
+    arbitrary = genericArbitrary
+    shrink    = genericShrink
+
 instance Arbitrary PublicationTxWitness where
     arbitrary = genericArbitrary
     shrink    = genericShrink
 
 instance Arbitrary PublicationTxWitnessed where
+    arbitrary = genericArbitrary
+    shrink    = genericShrink
+
+instance Arbitrary Header where
+    arbitrary = genericArbitrary
+    shrink    = genericShrink
+
+instance Arbitrary BlockBody where
+    arbitrary = genericArbitrary
+    shrink    = genericShrink
+
+instance Arbitrary Block where
     arbitrary = genericArbitrary
     shrink    = genericShrink
 
@@ -164,6 +182,12 @@ instance ArbitraryMixture (AbstractHash ss a) where
 instance ArbitraryMixture Address where
     arbitraryMixture = primitiveArbitraryMixture
 instance ArbitraryMixture Nonce where
+    arbitraryMixture = primitiveArbitraryMixture
+instance ArbitraryMixture Difficulty where
+    arbitraryMixture = primitiveArbitraryMixture
+instance ArbitraryMixture SlotId where
+    arbitraryMixture = primitiveArbitraryMixture
+instance ArbitraryMixture GTxWitnessed where
     arbitraryMixture = primitiveArbitraryMixture
 instance ArbitraryMixture Coin where
     arbitraryMixture = primitiveArbitraryMixture
@@ -181,6 +205,10 @@ instance ArbitraryMixture PrivateBlockHeader
 instance ArbitraryMixture PublicationTx
 instance ArbitraryMixture PublicationTxWitness
 instance ArbitraryMixture PublicationTxWitnessed
+
+instance ArbitraryMixture Header
+instance ArbitraryMixture BlockBody
+instance ArbitraryMixture Block
 
 ---------------------------------------------------------------------
 -- Test case input

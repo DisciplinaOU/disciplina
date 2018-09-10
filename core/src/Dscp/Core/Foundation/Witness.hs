@@ -52,8 +52,16 @@ module Dscp.Core.Foundation.Witness
     , HeaderHash
     , BlockToSign (..)
     , Header (..)
+    , hIssuerL
+    , hDifficultyL
+    , hSlotIdL
+    , hPrevHashL
+    , hSignatureL
     , Block (..)
+    , bHeaderL
+    , bBodyL
     , BlockBody (..)
+    , bbTxsL
     , HasHeaderHash (..)
     ) where
 
@@ -305,7 +313,7 @@ data GTxInBlock = GTxInBlock
 
 -- | Slot id.
 newtype SlotId = SlotId Word64
-    deriving (Eq, Ord, Num, Show, Generic, Buildable)
+    deriving (Eq, Ord, Num, Enum, Show, Generic, Buildable)
 
 -- | Chain difficulty.
 newtype Difficulty = Difficulty { unDifficulty :: Word64 }
@@ -366,6 +374,10 @@ instance HasHash Header => Buildable Block where
 ----------------------------------------------------------------------------
 -- Lens and classes
 ----------------------------------------------------------------------------
+
+makeLensesWith postfixLFields ''Block
+makeLensesWith postfixLFields ''Header
+makeLensesWith postfixLFields ''BlockBody
 
 -- | Class for things that have headerHash.
 class HasHeaderHash d where
