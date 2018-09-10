@@ -9,10 +9,11 @@ import Prelude hiding (toStrict)
 import Codec.Serialise (Serialise)
 import Data.Aeson (FromJSON (..), ToJSON (..))
 import Data.ByteArray (ByteArrayAccess)
+import Data.ByteArray (convert)
 import Data.Reflection (Reifies (..))
 
 import Dscp.Crypto.ByteArray (FromByteArray)
-import Dscp.Crypto.Encrypt (Encrypted)
+import Dscp.Crypto.Encrypt (Encrypted, PassPhrase)
 import Dscp.Crypto.Hash (AbstractHash)
 import Dscp.Crypto.MerkleTree
 import Dscp.Crypto.Signing (AbstractPK, AbstractSig)
@@ -40,6 +41,11 @@ instance ByteArrayAccess (AbstractSig ss a) => ToJSON (AbstractSig ss a) where
     toJSON = toJSON . AsByteString @HexEncoded
 instance FromByteArray (AbstractSig ss a) => FromJSON (AbstractSig ss a) where
     parseJSON = fmap (getAsByteString @HexEncoded) . parseJSON
+
+instance ToJSON PassPhrase where
+    toJSON = toJSON . decodeUtf8 @Text @ByteString . convert
+instance FromJSON PassPhrase where
+    parseJSON = fmap (convert . encodeUtf8 @Text @ByteString) . parseJSON
 
 instance (IsEncoding enc) =>
          ToJSON (CustomEncoding enc $ MerkleSignature a) where

@@ -15,13 +15,16 @@ module Dscp.Resource.Network
     ) where
 
 import Control.Lens (makeLenses)
+import Data.Aeson (FromJSON (..), withText)
+import Data.Aeson.Options (defaultOptions)
+import Data.Aeson.TH (deriveFromJSON)
 import Data.Reflection (Given (given), give)
 import qualified Data.Set as Set
 import Loot.Base.HasLens (HasLens (..))
 import Loot.Log (Logging)
 import Loot.Network.ZMQ (PreZTNodeId, ZTGlobalEnv, ZTNetCliEnv, ZTNetServEnv, createNetCliEnv,
-                         createNetServEnv, mkZTNodeId, termNetCliEnv, termNetServEnv, ztGlobalEnv,
-                         ztGlobalEnvRelease)
+                         createNetServEnv, mkZTNodeId, parsePreZTNodeId, termNetCliEnv,
+                         termNetServEnv, ztGlobalEnv, ztGlobalEnvRelease)
 import qualified Text.Show
 
 import Dscp.Resource.Class (AllocResource (..), buildComponentR)
@@ -139,3 +142,14 @@ instance WithNetLogging => AllocResource NetServParams NetServResources where
             termNetCliEnv _nsClientEnv
             termNetServEnv _nsServerEnv
             ztGlobalEnvRelease _nsGlobalEnv
+
+---------------------------------------------------------------------------
+-- JSON instances for params
+---------------------------------------------------------------------------
+
+instance FromJSON PreZTNodeId where
+    parseJSON = withText "ZMQ node ID" $
+        either fail pure . parsePreZTNodeId . toString
+
+deriveFromJSON defaultOptions ''NetCliParams
+deriveFromJSON defaultOptions ''NetServParams

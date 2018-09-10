@@ -15,6 +15,9 @@ module Dscp.Witness.Launcher.Params
        ) where
 
 import Control.Lens (makeLensesWith)
+import Data.Aeson.Options (defaultOptions)
+import Data.Aeson.TH (deriveFromJSON)
+import Mon.Network (Endpoint)
 
 import Dscp.DB.Rocks.Real.Types (RocksDBParams)
 import Dscp.Resource.AppDir (AppDirParam)
@@ -57,3 +60,7 @@ data WitnessParams = WitnessParams
     } deriving (Show)
 
 makeLensesWith postfixLFields ''WitnessParams
+
+-- | JSON instances (for configuration specs)
+deriveFromJSON defaultOptions ''WitnessKeyParams
+deriveFromJSON defaultOptions ''WitnessParams

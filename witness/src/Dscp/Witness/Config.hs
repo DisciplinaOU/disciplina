@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeOperators #-}
+
 -- | All witness's configurations.
 
 module Dscp.Witness.Config
@@ -16,7 +18,9 @@ import Loot.Config (ConfigKind (Final, Partial), ConfigRec)
 import Dscp.Config
 import Dscp.Core.Config
 
-type WitnessConfig = CoreConfig
+type WitnessConfig = CoreConfig +++
+    '[
+     ]
 
 type WitnessConfigRecP = ConfigRec 'Partial WitnessConfig
 type WitnessConfigRec = ConfigRec 'Final WitnessConfig

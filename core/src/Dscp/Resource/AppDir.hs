@@ -7,11 +7,12 @@ module Dscp.Resource.AppDir
        , AppDir
        ) where
 
+import Data.Aeson (FromJSON (..), ToJSON (..))
 import Fmt ((+|), (|+))
 import System.Directory (XdgDirectory (XdgData), createDirectoryIfMissing, getXdgDirectory)
 
-import Dscp.System (appName)
 import Dscp.Resource.Class (AllocResource (..), buildComponentR)
+import Dscp.System (appName)
 
 -- | Which application directory to use.
 data AppDirParam
@@ -43,3 +44,18 @@ prepareAppDir param = do
 
 instance AllocResource AppDirParam AppDir where
     allocResource p = buildComponentR "AppDir" (prepareAppDir p) (\_ -> pass)
+
+-- | Isomorphism between @Maybe FilePath@ and 'AppDirParam'
+maybeToAppDirParam :: Maybe FilePath -> AppDirParam
+maybeToAppDirParam Nothing   = AppDirectoryOS
+maybeToAppDirParam (Just fp) = AppDirectorySpecific fp
+
+appDirParamToMaybe :: AppDirParam -> Maybe FilePath
+appDirParamToMaybe AppDirectoryOS            = Nothing
+appDirParamToMaybe (AppDirectorySpecific fp) = Just fp
+
+-- | JSON instances for 'AppDirParam'
+instance FromJSON AppDirParam where
+    parseJSON = fmap maybeToAppDirParam . parseJSON
+instance ToJSON AppDirParam where
+    toJSON = toJSON . appDirParamToMaybe
