@@ -2,8 +2,7 @@
 
 module Dscp.DB.SQLite.Error
     ( SQLConnectionOpenningError (..)
-    , SQLRequestError (..)
-    , rethrowSQLRequestError
+    , SQLRequestsNumberExceeded (..)
 
       -- * Common SQL errors
     , asAlreadyExistsError
@@ -12,17 +11,18 @@ module Dscp.DB.SQLite.Error
 
 import qualified Data.Text as T
 import qualified Data.Text.Buildable
-import Database.SQLite.Simple as SQLite
 import Database.SQLite.Simple (Error (..), SQLError (..))
-import Fmt ((+|), (+||), (|+), (||+))
+import Fmt ((+|), (|+))
 import qualified Text.Show
-
-import Dscp.Util (wrapRethrow)
 
 -- | All errors which may happen on DB openning.
 data SQLConnectionOpenningError
     = SQLInvalidPathError !FilePath
       -- ^ Used 'SQLiteReal' constructor with bad filepath
+    | SQLInvalidConnectionsNumber !Int
+      -- ^ Bad number of connections passed
+    | SQLInvalidMaxPendingNumber !Int
+      -- ^ Bad number of max pending threads
     | SQLConnectionOpenningError !Text
       -- ^ Exception in SQL backend, doc doesn't specify which one
 
@@ -33,33 +33,25 @@ instance Buildable SQLConnectionOpenningError where
     build = \case
         SQLInvalidPathError path ->
             "Given unusable path for sqlite database: "+|path|+""
+        SQLInvalidConnectionsNumber num ->
+            "Illegal number of connections: "+|num|+""
+        SQLInvalidMaxPendingNumber num ->
+            "Illegal number of maximum pending threads: "+|num|+""
         SQLConnectionOpenningError msg ->
             "Failed to open database connection: "+|msg|+""
 
 instance Exception SQLConnectionOpenningError
 
--- | All errors which may happen on any SQL query.
-data SQLRequestError
-    = SQLFormatError SQLite.FormatError
-      -- ^ Query string mismatched with given parameters
-    | SQLResultError SQLite.ResultError
-      -- ^ Deserialisation failure
+-- | Maximum allowed number of pending threads is exceeded.
+data SQLRequestsNumberExceeded = SQLRequestsNumberExceeded
 
-instance Show SQLRequestError where
+instance Show SQLRequestsNumberExceeded where
     show = toString . pretty
 
-instance Buildable SQLRequestError where
-    build = \case
-        SQLFormatError err -> "Invalid SQL request: "+||err||+""
-        SQLResultError err -> "Failed to deserialise result: "+||err||+""
+instance Buildable SQLRequestsNumberExceeded where
+    build _ = "Too many requests to SQLite database"
 
-instance Exception SQLRequestError
-
--- | Wrap possible appropriate exceptions into 'SQLRequestError'.
-rethrowSQLRequestError :: MonadCatch m => m a -> m a
-rethrowSQLRequestError =
-    wrapRethrow SQLFormatError .
-    wrapRethrow SQLResultError
+instance Exception SQLRequestsNumberExceeded
 
 ----------------------------------------------------------
 -- Common SQL errors
