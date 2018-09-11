@@ -6,10 +6,12 @@ description: Disciplina educator
 library:
   <<: *lib-common
 
+  build-tools:
+    - autoexporter
+
   dependencies:
     - aeson
     - aeson-options
-    - autoexporter
     - bytestring
     - containers
     - data-default
@@ -51,6 +53,9 @@ library:
 tests:
   disciplina-test:
     <<: *test-common
+
+    build-tools:
+      - tasty-discover
 
     dependencies:
       - containers

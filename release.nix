@@ -16,7 +16,7 @@ let
   writeShellScript = source: writeTextFile {
     name = "script";
     executable = true;
-    checkPhase = "${shellcheck} $out";
+    checkPhase = "${shellcheck}/bin/shellcheck $out";
     text = ''
       #!/bin/sh
       ${source}

@@ -6,10 +6,12 @@ description: Witness node package
 library:
   <<: *lib-common
 
+  build-tools:
+    - autoexporter
+
   dependencies:
     - aeson
     - aeson-options
-    - autoexporter
     - AVL
     - bytestring
     - containers
@@ -68,6 +70,8 @@ tests:
   disciplina-witness-test:
     <<: *test-common
 
+    build-tools:
+      - tasty-discover
     dependencies:
       - hspec
       - memory
@@ -77,6 +81,7 @@ executables:
   dscp-witness:
     <<: *exec-common
     source-dirs: exec
+
     dependencies:
       - data-default
       - disciplina-core
