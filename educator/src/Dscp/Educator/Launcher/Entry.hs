@@ -19,9 +19,7 @@ import Dscp.Witness.Web.Server
 
 educatorEntry :: CombinedWorkMode ctx m => m ()
 educatorEntry =
-    withServer $ do
-        passiveWitnessEntry
-
+    withServer . withWitnessBackground $ do
         educatorParams <- view (lensOf @EducatorParams)
         witnessParams <- view (lensOf @WitnessParams)
 
