@@ -7,8 +7,14 @@ let
   };
 
   buildStackProject = import stack4nix { inherit pkgs; };
+  disciplinaPackages = buildStackProject (lib.cleanSource ./.);
 in
 
-buildStackProject (lib.cleanSource ./.) // {
-  disciplina-config = runCommand "config.yaml" {} "cp ${./config.yaml} $out";
+disciplinaPackages // rec {
+  disciplina-config = runCommand "config.yaml" {} "mkdir -p $out/etc/disciplina && cp ${./config.yaml} $_";
+  disciplina-static = symlinkJoin {
+    name = "disciplina-static";
+    paths = [ disciplina-config ] ++ map haskell.lib.justStaticExecutables
+      (with disciplinaPackages; [ disciplina-faucet disciplina-witness disciplina-educator ]);
+  };
 }
