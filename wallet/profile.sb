@@ -6,7 +6,7 @@
   (literal "/dev/urandom")
   (subpath "/usr/lib")
   (subpath "/usr/share")
-  (subpath (param "root")))
+  (subpath (param "DYLD_ROOT_PATH")))
 
 (allow file*
   (subpath "/tmp")

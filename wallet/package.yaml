@@ -13,6 +13,10 @@ library:
     - NegativeLiterals
     - OverloadedLabels
     - TypeOperators
+
+  build-tools:
+    - autoexporter
+
   dependencies:
     - Earley
     - aeson

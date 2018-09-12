@@ -6,10 +6,12 @@ description: Disciplina blockchain core functionality
 library:
   <<: *lib-common
 
+  build-tools:
+    - autoexporter
+
   dependencies:
     - aeson
     - aeson-options
-    - autoexporter
     - bytestring
     - bytestring
     - base58-bytestring

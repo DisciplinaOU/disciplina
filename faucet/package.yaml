@@ -5,6 +5,10 @@ description: This package contains disciplina faucet backend
 
 library:
   <<: *lib-common
+
+  build-tools:
+    - autoexporter
+
   dependencies:
     - aeson
     - aeson-options
