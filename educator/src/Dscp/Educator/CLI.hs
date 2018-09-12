@@ -6,7 +6,7 @@ module Dscp.Educator.CLI
     ( educatorParamsParser
     ) where
 
-import Options.Applicative (Parser, help, long, metavar, option, strOption, switch, value)
+import Options.Applicative (Parser, auto, help, long, metavar, option, strOption, switch, value)
 
 import Dscp.CommonCLI (baseKeyParamsParser, serverParamsParser, timeReadM)
 import Dscp.DB.SQLite

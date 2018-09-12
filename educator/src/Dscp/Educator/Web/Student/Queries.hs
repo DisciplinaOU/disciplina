@@ -9,7 +9,6 @@ module Dscp.Educator.Web.Student.Queries
 
 import Data.Coerce (coerce)
 import Database.SQLite.Simple (Only (..), Query)
-import Loot.Log (MonadLogging)
 import Text.InterpolatedString.Perl6 (q)
 
 import Dscp.Core
@@ -21,15 +20,9 @@ import Dscp.Util (Id, assertJust, listToMaybeWarn)
 import Dscp.Educator.Web.Student.Types
 import Dscp.Educator.Web.Types
 
-type MonadStudentAPIQuery m =
-    ( MonadSQLiteDB m
-    , MonadLogging m
-    , MonadCatch m
-    )
-
 studentIsCourseFinished
-    :: MonadStudentAPIQuery m
-    => Id Student -> Course -> m Bool
+    :: MonadEducatorWebQuery m
+    => Id Student -> Course -> DBT r m Bool
 studentIsCourseFinished studentId courseId = do
     finalAssignmentsGrades <- query queryText (CourseFinal, courseId, studentId)
     return $ any isPositiveGrade finalAssignmentsGrades
@@ -48,21 +41,20 @@ studentIsCourseFinished studentId courseId = do
     |]
 
 studentGetCourse
-    :: MonadStudentAPIQuery m
-    => Id Student -> Course -> m CourseStudentInfo
-studentGetCourse studentId courseId =
-    transaction $ do
-        mcourse <-
-            query queryText (Only courseId)
-            >>= listToMaybeWarn "courses"
-        Only mdesc <-
-            pure mcourse `assertJust` AbsentError (CourseDomain courseId)
+    :: MonadEducatorWebQuery m
+    => Id Student -> Course -> DBT WithinTx m CourseStudentInfo
+studentGetCourse studentId courseId = do
+    mcourse <-
+        query queryText (Only courseId)
+        >>= listToMaybeWarn "courses"
+    Only mdesc <-
+        pure mcourse `assertJust` AbsentError (CourseDomain courseId)
 
-        ciIsEnrolled <- Base.isEnrolledTo studentId courseId
-        ciSubjects <- Base.getCourseSubjects courseId
-        ciIsFinished <- studentIsCourseFinished studentId courseId
-        let ciDesc = fromMaybe "" mdesc
-        return CourseStudentInfo{ ciId = courseId, .. }
+    ciIsEnrolled <- Base.isEnrolledTo studentId courseId
+    ciSubjects <- Base.getCourseSubjects courseId
+    ciIsFinished <- studentIsCourseFinished studentId courseId
+    let ciDesc = fromMaybe "" mdesc
+    return CourseStudentInfo{ ciId = courseId, .. }
   where
     queryText :: Query
     queryText = [q|
@@ -72,8 +64,8 @@ studentGetCourse studentId courseId =
     |]
 
 studentGetCourses
-    :: (MonadStudentAPIQuery m, WithinSQLTransaction)
-    => Id Student -> Maybe IsEnrolled -> m [CourseStudentInfo]
+    :: MonadEducatorWebQuery m
+    => Id Student -> Maybe IsEnrolled -> DBT WithinTx m [CourseStudentInfo]
 studentGetCourses studentId (coerce -> isEnrolledF) = do
     let (enrolledClause, enrolledParam) = case isEnrolledF of
             Just isEnrolled -> (mkEnrolledClause isEnrolled, oneParam studentId)
@@ -104,7 +96,9 @@ studentGetCourses studentId (coerce -> isEnrolledF) = do
         )
     |]
 
-studentGetGrade :: MonadStudentAPIQuery m => Hash Submission -> m (Maybe GradeInfo)
+studentGetGrade
+    :: MonadEducatorWebQuery m
+    => Hash Submission -> DBT WithinTx m (Maybe GradeInfo)
 studentGetGrade submissionH = do
     mgrade <-
         query queryText (Only submissionH)
@@ -121,8 +115,10 @@ studentGetGrade submissionH = do
     |]
 
 studentGetLastAssignmentSubmission
-    :: (MonadStudentAPIQuery m, WithinSQLTransaction)
-    => Student -> Hash Assignment -> m (Maybe SubmissionStudentInfo)
+    :: MonadEducatorWebQuery m
+    => Student
+    -> Hash Assignment
+    -> DBT WithinTx m (Maybe SubmissionStudentInfo)
 studentGetLastAssignmentSubmission student assignH = do
     msubmission <-
         query queryText (assignH, student)

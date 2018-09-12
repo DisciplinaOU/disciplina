@@ -9,6 +9,7 @@ module Test.Dscp.DB.SQLite.Transactions where
 import qualified Control.Concurrent.STM as STM
 import qualified Data.List as L
 import Database.SQLite.Simple (Only (..))
+import Loot.Base.HasLens (HasCtx)
 import System.Directory (removeFile)
 import Text.InterpolatedString.Perl6 (q)
 import UnliftIO (MonadUnliftIO)
@@ -18,11 +19,11 @@ import Dscp.DB.SQLite
 import Dscp.Rio
 import Dscp.Util.Test
 
-type MonadMoney m = (MonadIO m, MonadCatch m)
+type MonadMoney m = (MonadIO m, MonadCatch m, MonadUnliftIO m)
 
 type Money = Int
 
-prepareSchema :: (MonadIO m, MonadSQLiteDB m) => m ()
+prepareSchema :: (MonadIO m) => DBT r m ()
 prepareSchema =
     forM_ [createTableQuery, addAccountQuery] $
         \que -> execute que ()
@@ -36,28 +37,31 @@ prepareSchema =
         insert into Accounts values (0);
         |]
 
-getMoney :: (MonadIO m, MonadSQLiteDB m) => m Money
+getMoney :: MonadIO m => DBT r m Money
 getMoney = fromOnly . L.head <$> query queryText ()
   where
     queryText = [q|
         select amount from Accounts
     |]
 
-setMoney :: (MonadIO m, MonadSQLiteDB m) => Money -> m ()
+setMoney :: MonadIO m => Money -> DBT r m ()
 setMoney val = execute queryText (Only val)
   where
     queryText = [q|
         update Accounts set amount = ?
     |]
 
-addMoney :: (MonadUnliftIO m, MonadSQLiteDB m) => m ()
+addMoney :: (MonadUnliftIO m, HasCtx ctx m '[SQLiteDB]) => m ()
 addMoney =
-    sqlTransaction $ do
+    transact @WithinTx $ do
         money <- getMoney
         setMoney (money + 1)
 
 runSQLiteMode :: RIO SQLiteDB a -> IO a
-runSQLiteMode action =
+runSQLiteMode action = do
+    db' <- openSQLiteDB dbParams
+    runRIO db' $ invoke prepareSchema
+    closeSQLiteDB db'
     bracket (openSQLiteDB dbParams)
             (\db -> closeSQLiteDB db >> removeFile dbPath) $
             \db -> runRIO db action
@@ -66,13 +70,17 @@ runSQLiteMode action =
     -- because each connection would work with its own database in this case
     dbPath = "./sql-transaction-test.db"
     dbParams = SQLiteParams
-        { sdpLocation = SQLiteReal dbPath
+        { sdpMode = SQLiteReal SQLiteRealParams
+            { srpPath = dbPath
+            , srpConnNum = Just 5
+            , srpMaxPending = 1000
+            }
         }
 
 spec_SQLiteWrapper :: Spec
 spec_SQLiteWrapper = do
     it "SQLite wrapper thread-safety" . property . ioProperty . runSQLiteMode $ do
-        prepareSchema
+        invoke prepareSchema
         let iterations = 100
 
         started <- newTVarIO False
@@ -84,5 +92,5 @@ spec_SQLiteWrapper = do
         atomically $ writeTVar started True
         forM workers UIO.waitCatch >>= mapM_ (either throwM pure)
 
-        money <- getMoney
+        money <- invoke getMoney
         return $ money === iterations

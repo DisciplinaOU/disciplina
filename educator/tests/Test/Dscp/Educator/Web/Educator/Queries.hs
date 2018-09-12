@@ -21,9 +21,6 @@ applyFilterOn :: Eq f => (a -> f) -> (Maybe f) -> [a] -> [a]
 applyFilterOn field (Just match) = filter (\a -> field a == match)
 applyFilterOn _ _                = id
 
-sqlTx :: MonadSQLiteDB m => (WithinSQLTransaction => m a) -> m a
-sqlTx = sqlTransaction
-
 spec_EducatorApiQueries :: Spec
 spec_EducatorApiQueries = describe "Basic database operations" $ do
   describe "Students" $ do
@@ -97,7 +94,7 @@ spec_EducatorApiQueries = describe "Basic database operations" $ do
                 void $ createAssignment assignment
                 setStudentAssignment student (hash assignment)
 
-            res <- lift $ sqlTx $ commonGetAssignments EducatorCase student def
+            res <- lift $ commonGetAssignments EducatorCase student def
             return $ res === one AssignmentEducatorInfo
                 { aiHash = hash assignment
                 , aiCourseId = _aCourseId assignment
@@ -117,7 +114,7 @@ spec_EducatorApiQueries = describe "Basic database operations" $ do
             _ <- lift $ createStudent student
 
             lift . throwsPrism (_AbsentError . _SubmissionDomain) $
-                sqlTx $ educatorGetSubmission (getId submission)
+                educatorGetSubmission (getId submission)
 
         it "Returns existing submission properly" $ sqlitePropertyM $ do
             env <- pick $ genCoreTestEnv simpleCoreTestParams
@@ -127,7 +124,7 @@ spec_EducatorApiQueries = describe "Basic database operations" $ do
 
             lift $ prepareAndCreateSubmission env
 
-            res <- lift $ sqlTx $ educatorGetSubmission (getId submission)
+            res <- lift $ educatorGetSubmission (getId submission)
             return $ res === SubmissionEducatorInfo
                 { siHash = hash submission
                 , siContentsHash = _sContentsHash submission
@@ -171,7 +168,7 @@ spec_EducatorApiQueries = describe "Basic database operations" $ do
 
             lift $ do
                 prepareForSubmissions env
-                sqlTx $ mapM_ createSignedSubmission sigSubs
+                mapM_ createSignedSubmission sigSubs
                 mapM_ createTransaction txs
 
             submissions' <- lift educatorGetAllSubmissions
@@ -197,7 +194,7 @@ spec_EducatorApiQueries = describe "Basic database operations" $ do
                 courses = map _aCourseId . tiList $ cteAssignments env
 
             lift $ prepareForSubmissions env
-            lift $ sqlTx $ mapM_ createSignedSubmission sigSubs
+            lift $ mapM_ createSignedSubmission sigSubs
 
             submissions <- lift $ commonGetSubmissions EducatorCase
                 def{ sfStudent = Just student, sfCourse = courseIdF

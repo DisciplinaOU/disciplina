@@ -9,107 +9,69 @@ module Test.Dscp.DB.SQLite.Common
 
 import Prelude hiding (fold)
 
-import qualified Data.Text.Buildable
-import Database.SQLite.Simple (Connection, execute, fold, query, setTrace, withConnection,
-                               withTransaction)
-import Fmt ((+|), (+||), (|+), (||+))
+import Control.Lens (makeLenses)
+import Loot.Base.HasLens (HasLens (..))
 import qualified Loot.Log as Log
 import Test.Hspec
 import Test.QuickCheck (ioProperty)
 import Test.QuickCheck.Monadic (PropertyM, monadic, stop)
-import qualified Text.Show
-import UnliftIO (MonadUnliftIO)
 
 import Dscp.Core
 import Dscp.Crypto (hash)
-import qualified Dscp.DB.SQLite.Class as Adapter
-import Dscp.DB.SQLite.Schema (ensureSchemaIsSetUp)
+import Dscp.DB.SQLite
 import Dscp.Educator.Arbitrary ()
+import Dscp.Resource.SQLite
+import Dscp.Rio
 import Dscp.Util (idOf)
 import Dscp.Util.Test
 
 type Trololo m = (MonadThrow m, MonadCatch m)
 
--- import System.Directory (removeFile)
--- import System.IO.Error (IOError, isDoesNotExistError)
-newtype TestSQLiteM a = TestSQLiteM
-  { getTestSQLiteM :: ReaderT Connection IO a
-  } deriving ( Functor
-             , Applicative
-             , Monad
-             , MonadIO
-             , MonadThrow
-             , MonadCatch
-             , MonadFail
-             , MonadReader Connection
-             , MonadUnliftIO
-             )
+data TestSQLiteCtx = TestSQLiteCtx
+    { _tqcDb      :: SQLiteDB
+    , _tqcLogging :: Log.Logging IO
+    }
+makeLenses ''TestSQLiteCtx
+
+type TestSQLiteM = RIO TestSQLiteCtx
 
 runTestSQLiteM :: TestSQLiteM a -> IO a
 runTestSQLiteM action = do
-  let filename = ":memory:"
-    -- removeFile filename `catch` \(e :: IOError) -> do
-    --    if isDoesNotExistError e
-    --    then return ()
-    --    else throwM e
-  withConnection filename $ \conn -> do
-    ensureSchemaIsSetUp conn
-    getTestSQLiteM action `runReaderT` conn
+    bracket openDB closeSQLiteDB $ \_tqcDb -> do
+        let ctx = TestSQLiteCtx{..}
+            _tqcLogging = testLogging
+        runRIO ctx action
+  where
+    dbParams = SQLiteParams SQLiteInMemory
+    openDB = do
+        db <- openSQLiteDB dbParams
+        prepareEducatorSchema db
+        return db
 
-sqliteProperty ::
-     (Testable prop, Show a)
-  => Arbitrary a =>
-       (a -> TestSQLiteM prop) -> Property
-sqliteProperty action =
-  property $ \input -> ioProperty $ do runTestSQLiteM (action input)
+instance HasLens SQLiteDB TestSQLiteCtx SQLiteDB where
+    lensOf = tqcDb
+instance HasLens (Log.Logging IO) TestSQLiteCtx (Log.Logging IO) where
+    lensOf = tqcLogging
 
-sqlitePropertyM :: Testable prop => PropertyM TestSQLiteM prop -> Property
-sqlitePropertyM action =
+educatorProperty
+    :: (Testable prop, Show a, Arbitrary a)
+    => (a -> TestSQLiteM prop) -> Property
+educatorProperty action =
+    property $ \input -> ioProperty $ runTestSQLiteM (action input)
+
+educatorPropertyM :: Testable prop => PropertyM TestSQLiteM prop -> Property
+educatorPropertyM action =
     monadic (ioProperty . runTestSQLiteM) (void $ action >>= stop)
 
-instance Adapter.MonadSQLiteDB TestSQLiteM where
-  query theQuery args =
-    TestSQLiteM $ ReaderT $ \conn -> query conn theQuery args
-  execute theRequest args =
-    TestSQLiteM $ ReaderT $ \conn -> execute conn theRequest args
-  queryStreamed theQuery args seed op =
-    TestSQLiteM $
-    ReaderT $ \conn ->
-      fold conn theQuery args seed $ \a b ->
-        getTestSQLiteM (op a b) `runReaderT` conn
-  transaction (TestSQLiteM (ReaderT actor)) = do
-    TestSQLiteM $ ReaderT $ \conn -> conn `withTransaction` do actor conn
-  traced (TestSQLiteM (ReaderT actor)) = do
-    TestSQLiteM $
-      ReaderT $ \conn -> do
-        setTrace conn (Just putStrLn)
-        res <- actor conn
-        setTrace conn (Nothing)
-        return res
+sqliteProperty
+    :: (Testable prop, Show a, Arbitrary a)
+    => (a -> DBT r TestSQLiteM prop) -> Property
+sqliteProperty action =
+    educatorProperty (invokeUnsafe . action)
 
--- | When warning or error are logged, this exception is thrown.
-data TestLoggedError = TestLoggedError
-    { tleLvl :: Log.Level
-    , tleMsg :: Text
-    }
-
-instance Exception TestLoggedError
-
-instance Show TestLoggedError where
-    show = toString . pretty
-
-instance Buildable TestLoggedError where
-    build TestLoggedError{..} =
-        "Bad situation was logged with level " +|| tleLvl ||+ ": " +| tleMsg |+ ""
-
-instance Log.MonadLogging TestSQLiteM where
-  log lvl _ msg =
-      when (lvl >= Log.Warning) $
-          throwM $ TestLoggedError lvl msg
-  logName = return $ error "Logger name requested in test"
-
-instance Log.ModifyLogName TestSQLiteM where
-  modifyLogNameSel _ = identity
+sqlitePropertyM :: Testable prop => PropertyM (DBT r TestSQLiteM) prop -> Property
+sqlitePropertyM action =
+    monadic (ioProperty . runTestSQLiteM . invokeUnsafe) (void $ action >>= stop)
 
 orIfItFails :: MonadCatch m => m a -> a -> m a
 orIfItFails action instead = do

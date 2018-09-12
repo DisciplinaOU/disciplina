@@ -6,9 +6,11 @@
 
 module Dscp.Educator.Web.Types
        (
-         -- * Multi API types
+         MonadEducatorWebQuery
+       , MonadEducatorWeb
 
-         ApiTag (..)
+         -- * Multi API types
+       , ApiTag (..)
        , ApiCase (..)
        , ResponseCase
        , DistinctTag
@@ -34,6 +36,9 @@ import Data.Time.Clock (UTCTime)
 import Database.SQLite.Simple (FromRow (..), field)
 import Servant (FromHttpApiData (..))
 import Data.Singletons.Bool (SBoolI)
+import UnliftIO (MonadUnliftIO)
+import Loot.Log (MonadLogging)
+import Loot.Base.HasLens (HasCtx)
 
 import Dscp.DB.SQLite.Types
 import Dscp.Util.Type (type (==))
@@ -41,6 +46,23 @@ import Dscp.Core
 import Dscp.Crypto
 import Dscp.DB.SQLite.Instances ()
 import Dscp.Util.Aeson (CustomEncoding, HexEncoded)
+
+type MonadEducatorWebQuery m =
+    ( MonadIO m
+    , MonadCatch m
+    , MonadLogging m
+    )
+
+type MonadEducatorWeb ctx m =
+    ( MonadUnliftIO m
+    , MonadCatch m
+    , MonadLogging m
+    , HasCtx ctx m '[SQLiteDB]
+    )
+
+---------------------------------------------------------------------------
+-- API's distinction
+---------------------------------------------------------------------------
 
 -- | Tag indicating an API.
 data ApiTag = StudentTag | EducatorTag

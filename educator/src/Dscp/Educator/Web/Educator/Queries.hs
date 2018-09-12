@@ -8,7 +8,6 @@ import Control.Lens (from, mapping, traversed, _Just)
 import Data.List (groupBy)
 import Data.Time.Clock (getCurrentTime)
 import Database.SQLite.Simple (Only (..), Query)
-import Loot.Log (MonadLogging)
 import Servant (err501)
 import Text.InterpolatedString.Perl6 (q)
 
@@ -19,13 +18,9 @@ import Dscp.Educator.Web.Educator.Types
 import Dscp.Educator.Web.Types
 import Dscp.Util
 
-type MonadEducatorAPIQuery m =
-    ( MonadSQLiteDB m
-    , MonadCatch m
-    , MonadLogging m
-    )
-
-educatorRemoveStudent :: MonadEducatorAPIQuery m => Student -> m ()
+educatorRemoveStudent
+    :: MonadEducatorWebQuery m
+    => Student -> DBT r m ()
 educatorRemoveStudent student = do
     -- TODO [DSCP-176]: Proper implementation of this method may require
     -- fundemental rethinking of our database scheme and rewriting many code.
@@ -41,8 +36,8 @@ educatorRemoveStudent student = do
     |]
 
 educatorGetStudents
-    :: MonadEducatorAPIQuery m
-    => Maybe Course -> m [StudentInfo]
+    :: MonadEducatorWebQuery m
+    => Maybe Course -> DBT r m [StudentInfo]
 educatorGetStudents courseF = do
     map (StudentInfo . fromOnly) <$> query queryText paramF
   where
@@ -57,7 +52,9 @@ educatorGetStudents courseF = do
     |]
       `filterClauses` [clauseF]
 
-educatorGetCourses :: DBM m => Maybe Student -> m [CourseEducatorInfo]
+educatorGetCourses
+    :: DBM m
+    => Maybe Student -> DBT r m [CourseEducatorInfo]
 educatorGetCourses studentF = do
     res :: [(Course, Text, Maybe Subject)] <- query queryText paramF
     return $
@@ -81,10 +78,10 @@ educatorGetCourses studentF = do
       `filterClauses` [clauseF]
 
 educatorUnassignFromStudent
-    :: MonadEducatorAPIQuery m
+    :: MonadEducatorWebQuery m
     => Student
     -> Hash Assignment
-    -> m ()
+    -> DBT r m ()
 educatorUnassignFromStudent student assignH = do
     -- we are not deleting other info since educator may want it to be preserved
     -- in case if he wants to assign as assignment again
@@ -99,8 +96,8 @@ educatorUnassignFromStudent student assignH = do
     |]
 
 isGradedSubmission
-    :: MonadEducatorAPIQuery m
-    => Hash Submission -> m Bool
+    :: MonadEducatorWebQuery m
+    => Hash Submission -> DBT r m Bool
 isGradedSubmission submissionH = do
     checkExists queryText (Only submissionH)
   where
@@ -112,11 +109,11 @@ isGradedSubmission submissionH = do
     |]
 
 educatorGetGrades
-    :: MonadEducatorAPIQuery m
+    :: MonadEducatorWebQuery m
     => Maybe Student
     -> Maybe Course
     -> Maybe IsFinal
-    -> m [GradeInfo]
+    -> DBT r m [GradeInfo]
 educatorGetGrades studentF courseIdF isFinalF = do
     query queryText (mconcat paramsF)
   where
@@ -137,29 +134,28 @@ educatorGetGrades studentF courseIdF isFinalF = do
       `filterClauses` clausesF
 
 educatorPostGrade
-    :: MonadEducatorAPIQuery m
-    => Hash Submission -> Grade -> m ()
+    :: MonadEducatorWebQuery m
+    => Hash Submission -> Grade -> DBT r m ()
 educatorPostGrade subH grade = do
     time <- liftIO getCurrentTime
-    transaction $ do
-        sigSub <- getSignedSubmission subH
-            `assertJust` AbsentError (SubmissionDomain subH)
+    sigSub <- getSignedSubmission subH
+        `assertJust` AbsentError (SubmissionDomain subH)
 
-        let ptx = PrivateTx
-                { _ptSignedSubmission = sigSub
-                , _ptTime = time
-                , _ptGrade = grade
-                }
-            txId = getId ptx
+    let ptx = PrivateTx
+            { _ptSignedSubmission = sigSub
+            , _ptTime = time
+            , _ptGrade = grade
+            }
+        txId = getId ptx
 
-        execute queryText
-            ( txId
-            , subH
-            , grade
-            , time
-            , TxInMempool
-            )
-            `ifAlreadyExistsThrow` TransactionDomain txId
+    execute queryText
+        ( txId
+        , subH
+        , grade
+        , time
+        , TxInMempool
+        )
+        `ifAlreadyExistsThrow` TransactionDomain txId
   where
     queryText :: Query
     queryText = [q|

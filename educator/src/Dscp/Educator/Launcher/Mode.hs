@@ -23,14 +23,14 @@ import Loot.Log.Rio (LoggingIO)
 import Loot.Network.ZMQ as Z
 
 import Dscp.DB.Rocks.Real.Types (RocksDB)
-import Dscp.DB.SQLite (MonadSQLiteDB, SQLiteDB)
+import Dscp.DB.SQLite (SQLiteDB)
 import Dscp.Educator.Config (HasEducatorConfig, withEducatorConfig)
 import Dscp.Educator.Launcher.Marker (EducatorNode)
 import Dscp.Educator.Launcher.Params (EducatorParams)
 import Dscp.Educator.Launcher.Resource (EducatorResources)
 import qualified Dscp.Launcher.Mode as Basic
-import Dscp.Rio (RIO)
 import Dscp.Resource.Keys (KeyResources)
+import Dscp.Rio (RIO)
 import Dscp.Snowdrop.Actions (SDVars)
 import qualified Dscp.Witness as W
 import Dscp.Witness.Mempool (MempoolVar)
@@ -43,7 +43,6 @@ import Dscp.Witness.Relay
 -- | Set of typeclasses which define capabilities of bare Educator node.
 type EducatorWorkMode ctx m =
     ( Basic.BasicWorkMode m
-    , MonadSQLiteDB m
 
     , HasEducatorConfig
 

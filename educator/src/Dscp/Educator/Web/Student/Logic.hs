@@ -16,17 +16,16 @@ import Dscp.Crypto
 import Dscp.DB.SQLite
 import Dscp.Educator.Web.Queries
 import Dscp.Educator.Web.Student.Error (APIError (..))
-import Dscp.Educator.Web.Student.Queries
 import Dscp.Educator.Web.Student.Types
 import Dscp.Educator.Web.Student.Util (verifyStudentSubmission)
 import Dscp.Educator.Web.Types
 import Dscp.Util
 
 requestToSignedSubmission
-    :: MonadStudentAPIQuery m
+    :: MonadEducatorWeb ctx m
     => NewSubmission -> m SignedSubmission
 requestToSignedSubmission ns = do
-    assignment <- getAssignment (nsAssignmentHash ns)
+    assignment <- invoke $ getAssignment (nsAssignmentHash ns)
         `assertJust` AbsentError (AssignmentDomain $ nsAssignmentHash ns)
     let submission = Submission
             { _sStudentId = nsOwner ns
@@ -40,23 +39,23 @@ requestToSignedSubmission ns = do
 
 -- | Verifies given user can create make submission and makes it.
 studentMakeSubmissionVerified
-    :: MonadStudentAPIQuery m
+    :: MonadEducatorWeb ctx m
     => Student -> NewSubmission -> m SubmissionStudentInfo
 studentMakeSubmissionVerified student newSubmission = do
     signedSubmission <- requestToSignedSubmission newSubmission
     verifyStudentSubmission student signedSubmission
         & leftToThrow BadSubmissionSignature
-    sqlTransaction $ do
+    transact $ do
         submissionId <- submitAssignment signedSubmission
         studentGetSubmission student submissionId
 
 -- | Get exactly one assignment.
 studentGetAssignment
-    :: (MonadStudentAPIQuery m, WithinSQLTransaction)
+    :: MonadEducatorWebQuery m
     => Student
     -> Hash Assignment
-    -> m AssignmentStudentInfo
-studentGetAssignment student assignH = do
+    -> DBT WithinTx m AssignmentStudentInfo
+studentGetAssignment student assignH =
     commonGetAssignments StudentCase student def
         { afAssignmentHash = Just assignH }
         >>= listToMaybeWarn "assignment"
@@ -64,17 +63,17 @@ studentGetAssignment student assignH = do
 
 -- | Get all student assignments.
 studentGetAllAssignments
-    :: (MonadStudentAPIQuery m, WithinSQLTransaction)
+    :: MonadEducatorWebQuery m
     => Student
-    -> m [AssignmentStudentInfo]
-studentGetAllAssignments student = commonGetAssignments StudentCase student def
+    -> DBT WithinTx m [AssignmentStudentInfo]
+studentGetAllAssignments student =
+    commonGetAssignments StudentCase student def
 
--- | Get exactly one submission.
 studentGetSubmission
-    :: MonadStudentAPIQuery m
+    :: MonadEducatorWebQuery m
     => Student
     -> Hash Submission
-    -> m SubmissionStudentInfo
+    -> DBT r m SubmissionStudentInfo
 studentGetSubmission student submissionH = do
     commonGetSubmissions StudentCase def
         { sfStudent = Just student, sfSubmissionHash = Just submissionH }
@@ -83,8 +82,8 @@ studentGetSubmission student submissionH = do
 
 -- | Get all student submissions.
 studentGetAllSubmissions
-    :: MonadStudentAPIQuery m
+    :: MonadEducatorWebQuery m
     => Student
-    -> m [SubmissionStudentInfo]
+    -> DBT r m [SubmissionStudentInfo]
 studentGetAllSubmissions student =
     commonGetSubmissions StudentCase def{ sfStudent = Just student }

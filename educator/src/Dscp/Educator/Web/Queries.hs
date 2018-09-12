@@ -24,7 +24,7 @@ import Dscp.Util
 import Dscp.Util.Type (type (==))
 
 type MonadEducatorQuery m =
-    ( MonadSQLiteDB m
+    ( MonadIO m
     , MonadCatch m
     , MonadLogging m
     )
@@ -44,11 +44,11 @@ instance Default GetAssignmentsFilters where
     def = GetAssignmentsFilters def def def def
 
 commonGetAssignments
-    :: (MonadEducatorQuery m, DistinctTag apiTag, WithinSQLTransaction)
+    :: (MonadEducatorQuery m, DistinctTag apiTag)
     => ApiCase apiTag
     -> Student
     -> GetAssignmentsFilters
-    -> m [ResponseCase apiTag Assignment]
+    -> DBT WithinTx m [ResponseCase apiTag Assignment]
 commonGetAssignments apiCase student filters = do
     assignments <- query queryText (mconcat $ oneParam student : paramsF)
     forM assignments $
@@ -99,11 +99,11 @@ instance Default GetSubmissionsFilters where
     def = GetSubmissionsFilters def def def def def
 
 commonGetSubmissions
-    :: forall apiTag m.
+    :: forall apiTag m r.
        (MonadEducatorQuery m, DistinctTag apiTag)
     => ApiCase apiTag
     -> GetSubmissionsFilters
-    -> m [ResponseCase apiTag Submission]
+    -> DBT r m [ResponseCase apiTag Submission]
 commonGetSubmissions apiCase filters = do
     submissions <- query queryText (mconcat paramsF)
     return $ submissions <&>
@@ -152,10 +152,10 @@ commonGetSubmissions apiCase filters = do
 ----------------------------------------------------------------------------
 
 commonExistsSubmission
-    :: (MonadStudentAPIQuery m, WithinSQLTransaction)
+    :: (MonadEducatorWebQuery m)
     => Hash Submission
     -> Maybe Student
-    -> m Bool
+    -> DBT r m Bool
 commonExistsSubmission submissionH studentF = do
     checkExists queryText (oneParam submissionH <> paramF)
   where
@@ -172,15 +172,16 @@ commonExistsSubmission submissionH studentF = do
 ----------------------------------------------------------------------------
 
 commonDeleteSubmission
-    :: (MonadStudentAPIQuery m, WithinSQLTransaction)
+    :: (MonadEducatorWebQuery m)
     => Hash Submission
     -> Maybe Student
-    -> m ()
+    -> DBT WithinTx m ()
 commonDeleteSubmission submissionH studentF = do
     commonExistsSubmission submissionH studentF
         `assert` AbsentError (SubmissionDomain submissionH)
     execute queryText (oneParam submissionH <> paramF)
-        `onReferenceInvalidThrow` (SemanticError $ DeletingGradedSubmission submissionH)
+        `onReferenceInvalidThrow`
+        (SemanticError $ DeletingGradedSubmission submissionH)
   where
     (clauseF, paramF) = mkFilter "student_addr = ?" studentF
     queryText = [q|

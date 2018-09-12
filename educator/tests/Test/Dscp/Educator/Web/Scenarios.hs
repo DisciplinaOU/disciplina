@@ -18,8 +18,8 @@ import Dscp.DB.SQLite
 -- | Puts in db all needed to put 'SignedSubmission's
 -- later, tolerates repeated entities.
 prepareForAssignments
-    :: (MonadSQLiteDB m, MonadCatch m)
-    => CoreTestEnv -> m ()
+    :: (MonadIO m, MonadCatch m)
+    => CoreTestEnv -> DBT WithinTx m ()
 prepareForAssignments CoreTestEnv{..} = do
     let assignments = F.toList cteAssignments
         courses = map _aCourseId assignments
@@ -33,8 +33,8 @@ prepareForAssignments CoreTestEnv{..} = do
 -- | Puts in db all needed to put 'SignedSubmission's
 -- later, tolerates repeated entities.
 prepareForSubmissions
-    :: (MonadSQLiteDB m, MonadCatch m)
-    => CoreTestEnv -> m ()
+    :: (MonadIO m, MonadCatch m)
+    => CoreTestEnv -> DBT WithinTx m ()
 prepareForSubmissions env@CoreTestEnv{..} = do
     let assignments = F.toList cteAssignments
         owners = F.toList cteStudents
@@ -46,28 +46,27 @@ prepareForSubmissions env@CoreTestEnv{..} = do
 
 -- | Prepare all needed to put 'SignedSubmission's, and puts the first one.
 prepareAndCreateSubmission
-    :: (MonadSQLiteDB m, MonadCatch m)
-    => CoreTestEnv -> m ()
+    :: (MonadIO m, MonadCatch m)
+    => CoreTestEnv -> DBT WithinTx m ()
 prepareAndCreateSubmission env = do
     prepareForSubmissions env
     let sigSub = tiOne $ cteSignedSubmissions env
-    void $ sqlTransaction $ submitAssignment sigSub
+    void $ submitAssignment sigSub
 
 -- | Add all submissions from given test env to the database.
 prepareAndCreateSubmissions
-    :: (MonadSQLiteDB m, MonadCatch m)
-    => CoreTestEnv -> m ()
+    :: (MonadIO m, MonadCatch m)
+    => CoreTestEnv -> DBT WithinTx m ()
 prepareAndCreateSubmissions env@CoreTestEnv{..} = do
     prepareForSubmissions env
     let sigSubs = nub $ tiList cteSignedSubmissions
-    forM_ sigSubs $ \sigSub ->
-        sqlTransaction $ submitAssignment sigSub
+    forM_ sigSubs submitAssignment
 
 -- | Add all transactions from given test env to the database.
 -- Transactions will have no block assiged to them.
 prepareAndCreateTransactions
-    :: (MonadSQLiteDB m, MonadCatch m)
-    => CoreTestEnv -> m ()
+    :: (MonadIO m, MonadCatch m)
+    => CoreTestEnv -> DBT WithinTx m ()
 prepareAndCreateTransactions env@CoreTestEnv{..} = do
     prepareAndCreateSubmissions env
     let txs = nub $ tiList ctePrivateTxs

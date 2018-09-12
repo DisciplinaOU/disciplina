@@ -5,9 +5,9 @@ module Dscp.Resource.SQLite
     ( prepareEducatorSchema
     ) where
 
-import Dscp.DB.SQLite (ensureSchemaIsSetUp)
-import Dscp.DB.SQLite (SQLiteDB (..), SQLiteParams, closeSQLiteDB, openSQLiteDB)
+import Dscp.DB.SQLite
 import Dscp.Resource.Class (AllocResource (..), buildComponentR)
+import Dscp.Rio
 
 ----------------------------------------------------------------------------
 -- Instances

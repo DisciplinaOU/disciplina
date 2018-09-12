@@ -12,7 +12,7 @@ import Dscp.Educator.Web.Student
 
 
 initializeBot
-    :: forall m a. BotWorkMode m
+    :: BotWorkMode ctx m
     => EducatorBotParams -> (HasBotSetting => m a) -> m a
 initializeBot params m = withBotSetting (mkBotSetting params) $ do
     botPrepareInitialData
@@ -20,11 +20,11 @@ initializeBot params m = withBotSetting (mkBotSetting params) $ do
     m
 
 addBotHandlers
-    :: forall m. (BotWorkMode m, HasBotSetting)
+    :: forall m ctx. (BotWorkMode ctx m, HasBotSetting)
     => Student -> StudentApiHandlers m -> StudentApiHandlers m
 addBotHandlers student StudentApiEndpoints{..} = botEndpoints
   where
-    botEndpoints :: (BotWorkMode m, HasBotSetting) => StudentApiHandlers m
+    botEndpoints :: (BotWorkMode ctx m, HasBotSetting) => StudentApiHandlers m
     botEndpoints = StudentApiEndpoints
         { sGetCourses = \isEnrolledF -> do
             botProvideInitSetting student

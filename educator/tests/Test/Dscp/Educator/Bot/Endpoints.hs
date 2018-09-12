@@ -1,10 +1,11 @@
 module Test.Dscp.Educator.Bot.Endpoints where
 
-import Dscp.Crypto
 import Dscp.Core.Arbitrary
+import Dscp.Crypto
 import Dscp.Educator.Web.Bot
 import Dscp.Educator.Web.Student
 import Dscp.Util.Test
+import Test.QuickCheck.Monadic (pick)
 
 import Test.Dscp.DB.SQLite.Common
 
@@ -27,28 +28,27 @@ testMakeBotHandlers seed =
 spec_StudentApiWithBotQueries :: Spec
 spec_StudentApiWithBotQueries = describe "Basic properties" $ do
     it "Student gets assigned on courses on first request" $
-        sqliteProperty $ \seed -> do
+        educatorProperty $ \seed -> do
             StudentApiEndpoints{..} <- testMakeBotHandlers seed
             courses <- sGetCourses Nothing
             return (not $ null courses)
 
     it "Student gets some assignments on first request" $
-        sqliteProperty $ \seed -> do
+        educatorProperty $ \seed -> do
             StudentApiEndpoints{..} <- testMakeBotHandlers seed
             assignments <- sGetAssignments Nothing Nothing Nothing
             return (not $ null assignments)
 
     it "Submissions are graded automatically" $
-        sqliteProperty $ \
-          ( seed
-          , delayedGen
-            (genCoreTestEnv simpleCoreTestParams
-                            { ctpSecretKey = oneTestItem (pure studentSK)
-                            , ctpAssignment = oneTestItem (pure assignmentEx) })
-             -> env
-          ) -> do
+        educatorPropertyM $ do
+            seed <- pick arbitrary
+            env <- pick $ genCoreTestEnv simpleCoreTestParams
+                          { ctpSecretKey = oneTestItem (pure studentSK)
+                          , ctpAssignment = oneTestItem (pure assignmentEx) }
             let sigsub = tiOne $ cteSignedSubmissions env
-            StudentApiEndpoints{..} <- testMakeBotHandlers seed
-            void $ sMakeSubmission (signedSubmissionToRequest sigsub)
-            [submission] <- sGetSubmissions Nothing Nothing Nothing
+            submissions <- lift $ do
+                StudentApiEndpoints{..} <- testMakeBotHandlers seed
+                void $ sMakeSubmission (signedSubmissionToRequest sigsub)
+                sGetSubmissions Nothing Nothing Nothing
+            [submission] <- pure submissions
             return (isJust $ siGrade submission)
