@@ -3,12 +3,12 @@
 let
   buildFlatpak = callPackage (fetchGit {
     url = "https://github.com/serokell/nix-flatpak";
-    rev = "46a2aadf37981d6313621913cd2802debfb763fd";
+    rev = "3ceb79f92e80c84a4360badd721ff87a214a6932";
   }) {};
 
   buildMacOSApp = callPackage (fetchGit {
     url = "https://github.com/serokell/nix-macos-app";
-    rev = "bac301ef897b55fac97c63cc0d1dbc3c492065e8";
+    rev = "192f3c22b4270be84aef9176fdf52a41d0d85b32";
   }) {};
   
   project = import ./. { inherit pkgs; };
@@ -22,39 +22,37 @@ let
       ${source}
     '';
   };
+
   disciplina-wallet-macos-sandbox = writeShellScript ''
     sandbox-exec -D HOME="$HOME" -D DYLD_ROOT_PATH="$DYLD_ROOT_PATH" \
       -f ${./wallet/profile.sb} ${disciplina-wallet-wrapped}/bin/disciplina-wallet
   '';
+
   disciplina-wallet = haskell.lib.justStaticExecutables project.disciplina-wallet;
 
   disciplina-wallet-wrapped = writeShellScript ''
     ${disciplina-wallet}/bin/dscp-wallet --witness https://witness.disciplina.io
   '';
 
-disciplina-pkgs = rec {
-  inherit disciplina-wallet;
+  self = {
+    disciplina-wallet-flatpak = buildFlatpak {
+      app-id = "io.disciplina.Wallet";
+      command = disciplina-wallet-wrapped;
+      finish-args = [ "--share=network" ];
+    };
 
-  disciplina-wallet-flatpak = (buildFlatpak {
-    app-id = "io.disciplina.Wallet";
-    command = disciplina-wallet-wrapped;
-    finish-args = [ "--share=network" ];
-  }).overrideAttrs (old: {
-    meta.platforms = lib.platforms.linux;
-  });
-
-  disciplina-wallet-macos-app = (buildMacOSApp {
-    name = "Disciplina";
-    target = disciplina-wallet-macos-sandbox;
-    withOpen = true;
-  }).overrideAttrs (old: {
-    meta.platforms = lib.platforms.darwin;
-  });
-};
+    disciplina-wallet-macos-app = buildMacOSApp {
+      name = "Disciplina";
+      target = disciplina-wallet-macos-sandbox;
+      withOpen = true;
+    };
+  };
 in
-disciplina-pkgs // {
-  all-buildable = with lib; let
-      system = lib.systems.elaborate { inherit (pkgs) system; };
-      match = lib.meta.platformMatch system;
-    in filterAttrs (name: pkg: any match pkg.meta.platforms) disciplina-pkgs;
-}
+
+with lib;
+
+let
+  systemSet = systems.elaborate { inherit system; };
+in
+
+filterAttrs (_: drv: any (meta.platformMatch systemSet) drv.meta.platforms) self
