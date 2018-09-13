@@ -7,6 +7,7 @@ module Dscp.Util
        , Size (..)
        , sizeSerialised
        , countingTime
+       , execUnmasked
 
          -- * Exceptions processing
        , wrapRethrow
@@ -66,6 +67,8 @@ import Data.Time.Clock.POSIX (getPOSIXTime)
 import Fmt ((+|), (+||), (|+), (||+))
 import GHC.TypeLits (KnownSymbol)
 import Time (KnownRat, Time, UnitName, threadDelay)
+import UnliftIO (MonadUnliftIO)
+import qualified UnliftIO.Async as UIO
 
 import Loot.Log (MonadLogging, logError, logWarning)
 
@@ -112,14 +115,18 @@ countingTime m = do
     return (diff, a)
 
 -- | Size of serialised item.
--- First phantom type stands for a typeclass corresponding to serialisation
--- method, while the second one is type of item being serialised.
 newtype Size a = Size { unSize :: Word64 }
     deriving (Eq, Ord, Show)
 
 -- | Count size of serialised item.
 sizeSerialised :: Serialise a => a -> Size a
 sizeSerialised = Size . fromIntegral . BSL.length . serialise
+
+-- | Executes the action unmasked.
+-- Spawns a thread under hood.
+execUnmasked :: MonadUnliftIO m => m a -> m a
+execUnmasked action =
+    UIO.asyncWithUnmask (\doUnmask -> doUnmask action) >>= UIO.wait
 
 -----------------------------------------------------------
 -- Exceptions processing

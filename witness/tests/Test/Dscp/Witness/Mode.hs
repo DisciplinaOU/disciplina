@@ -126,7 +126,11 @@ witnessProperty
     => ((HasWitnessConfig, WithinWriteSDLock) => PropertyM WitnessTestMode prop)
     -> Property
 witnessProperty action =
-    monadic (ioProperty . runWitnessTestMode) $ do
+    -- Note on 'execUnmasked': for some reason, tests are run under 'mask'.
+    -- Snowdrop expects it to be not like that, for instance `mappend` on
+    -- snowdrop actions, which is used in validation, uses 'concurrently' under
+    -- hood, which may hang when is executed under 'mask'.
+    monadic (ioProperty . execUnmasked . runWitnessTestMode) $ do
         prop <- markWithinWriteSDLockUnsafe $
                 withWitnessConfig testWitnessConfig action
         void $ stop prop
