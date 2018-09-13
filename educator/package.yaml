@@ -60,17 +60,21 @@ tests:
     dependencies:
       - containers
       - cryptonite
+      - data-default
       - disciplina-core
       - disciplina-witness
       - disciplina-educator
-      - data-default
+      - directory
       - fmt
       - generic-arbitrary
       - hspec
+      - interpolatedstring-perl6
       - lens
+      - loot-base
       - loot-log
       - safe-exceptions >= 0.1.4
       - sqlite-simple
+      - stm
       - tasty
       - tasty-hspec
       - text-format
