@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedLabels #-}
+
 -- | Helpers for starting an Educator node
 
 module Dscp.Educator.Launcher.Runner
@@ -5,16 +7,17 @@ module Dscp.Educator.Launcher.Runner
     , launchEducatorRealMode
     ) where
 
+import Loot.Config (option, sub)
 import Loot.Log (MonadLogging)
 
 import Dscp.Educator.Config
 import Dscp.Educator.Launcher.Mode (EducatorContext (..), EducatorRealMode)
 import Dscp.Educator.Launcher.Params (EducatorParams (..))
 import Dscp.Educator.Launcher.Resource (EducatorResources (..))
-import Dscp.Rio (runRIO)
 import Dscp.Resource.Class (AllocResource (..), InitParams (..))
 import Dscp.Resource.Functions
-import Dscp.Witness.Launcher (formWitnessContext, wpLoggingParams)
+import Dscp.Rio (runRIO)
+import Dscp.Witness.Launcher (formWitnessContext)
 
 -- | Make up Educator context from dedicated pack of allocated resources.
 formEducatorContext
@@ -23,8 +26,7 @@ formEducatorContext
     -> EducatorResources
     -> m EducatorContext
 formEducatorContext _ecParams _ecResources = do
-    _ecWitnessCtx <- formWitnessContext (epWitnessParams _ecParams)
-                                        (_erWitnessResources _ecResources)
+    _ecWitnessCtx <- formWitnessContext (_erWitnessResources _ecResources)
     pure EducatorContext{..}
 
 -- | Given params, allocate resources, construct node context and run
@@ -43,4 +45,6 @@ launchEducatorRealMode config params@EducatorParams{..} action =
             runRIO ctx action
   where
     appDesc = "Educator (real mode)"
-    initParams = InitParams{ ipLoggingParams = wpLoggingParams epWitnessParams }
+    initParams = InitParams
+        { ipLoggingParams = config ^. sub #witness . option #logging
+        }

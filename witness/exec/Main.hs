@@ -11,14 +11,13 @@ import Dscp.Witness
 
 main :: IO ()
 main = do
-    (witnessParams, wConfig) <- getWitnessParams
-    launchWitnessRealMode wConfig witnessParams witnessEntry
+    wConfig <- getWitnessConfig
+    launchWitnessRealMode wConfig witnessEntry
 
-getWitnessParams :: IO (WitnessParams, WitnessConfigRec)
-getWitnessParams = do
-    let parser = (,) <$> witnessParamsParser <*> configParamsParser
-    (params, configParams) <- execParser $
-        info (helper <*> versionOption <*> parser) $
+getWitnessConfig :: IO WitnessConfigRec
+getWitnessConfig = do
+    configParams <- execParser $
+        info (helper <*> versionOption <*> configParamsParser) $
         fullDesc <> progDesc "Disciplina witness node."
     config <- buildConfig configParams fillWitnessConfig
-    return (params, config)
+    return config

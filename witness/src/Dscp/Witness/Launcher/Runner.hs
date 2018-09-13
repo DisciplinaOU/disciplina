@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedLabels #-}
+
 -- | Helpers for starting an Witness node
 
 module Dscp.Witness.Launcher.Runner
@@ -5,35 +7,33 @@ module Dscp.Witness.Launcher.Runner
     , launchWitnessRealMode
     ) where
 
+import Loot.Config (option, sub)
 import Loot.Log (MonadLogging)
 
 import Dscp.Resource.Class (AllocResource (..), InitParams (..))
 import Dscp.Resource.Functions
-import Dscp.Rio
+import Dscp.Resource.Keys (krPublicKey)
+import Dscp.Rio (runRIO)
 import Dscp.Snowdrop.Actions (initSDActions)
 import Dscp.Witness.Config
 import Dscp.Witness.Launcher.Mode (WitnessContext (..), WitnessRealMode)
-import Dscp.Witness.Launcher.Params (WitnessParams (..))
 import Dscp.Witness.Launcher.Resource (WitnessResources (..), wrKey)
 import Dscp.Witness.Mempool (newMempoolVar)
-import Dscp.Resource.Keys (krPublicKey)
 import qualified Dscp.Witness.Relay as Relay
 import qualified Dscp.Witness.SDLock as Lock
 
 -- | Make up Witness context from dedicated pack of allocated resources.
 formWitnessContext
     :: (MonadIO m, MonadCatch m, MonadLogging m, HasWitnessConfig)
-    => WitnessParams
-    -> WitnessResources
+    => WitnessResources
     -> m WitnessContext
-formWitnessContext _wcParams _wcResources = do
+formWitnessContext _wcResources = do
     _wcMempool    <- newMempoolVar $ _wcResources^.wrKey.krPublicKey
     _wcSDActions  <- initSDActions
     _wcRelayState <- Relay.newRelayState
     _wcSDLock     <- Lock.newSDLock
     pure $ WitnessContext
-        { _wcParams
-        , _wcResources
+        { _wcResources
         , _wcMempool
         , _wcSDActions
         , _wcRelayState
@@ -44,16 +44,17 @@ formWitnessContext _wcParams _wcResources = do
 -- `WitnessWorkMode` monad. Any synchronous exceptions are handled inside.
 launchWitnessRealMode
     :: WitnessConfigRec
-    -> WitnessParams
     -> (HasWitnessConfig => WitnessRealMode ())
     -> IO ()
-launchWitnessRealMode config params@WitnessParams{..} action =
+launchWitnessRealMode config action =
     exitSilentlyOnFailure $
     withWitnessConfig config $
-    runResourceAllocation appDesc initParams (allocResource params) $
+    runResourceAllocation appDesc initParams (allocResource ()) $
         \resources -> do
-            ctx <- formWitnessContext params resources
+            ctx <- formWitnessContext resources
             runRIO ctx action
   where
     appDesc = "Witness (real mode)"
-    initParams = InitParams{ ipLoggingParams = wpLoggingParams }
+    initParams = InitParams
+        { ipLoggingParams = config ^. sub #witness . option #logging
+        }

@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedLabels #-}
+
 -- | Resources used by Witness node
 
 module Dscp.Witness.Launcher.Resource
@@ -14,17 +16,19 @@ import Loot.Log.Rio (LoggingIO)
 
 import Control.Lens (makeLenses)
 import Loot.Base.HasLens (HasLens (..))
+import Loot.Config (option, sub)
 import Loot.Network.ZMQ (ZTGlobalEnv, ZTNetCliEnv, ZTNetServEnv)
 
+import Dscp.Config (giveL)
 import Dscp.DB.Rocks.Real (RocksDB)
+import Dscp.Resource.AppDir
 import Dscp.Resource.Class (AllocResource (..), buildComponentR)
 import Dscp.Resource.Keys (KeyResources (..), linkStore)
 import Dscp.Resource.Network (NetLogging (..), NetServResources, withNetLogging)
 import Dscp.Resource.Rocks ()
-import Dscp.Resource.AppDir
-import Dscp.Witness.Config (HasWitnessConfig)
+import Dscp.Witness.Config
 import Dscp.Witness.Launcher.Marker (WitnessNode)
-import Dscp.Witness.Launcher.Params (WitnessKeyParams (..), WitnessParams (..))
+import Dscp.Witness.Launcher.Params (WitnessKeyParams (..))
 
 -- | Datatype which contains resources required by witness node to start
 -- working.
@@ -50,21 +54,23 @@ instance HasLens ZTNetServEnv WitnessResources ZTNetServEnv where
     lensOf = wrNetwork . lensOf @ZTNetServEnv
 
 instance HasWitnessConfig =>
-         AllocResource (WitnessKeyParams, AppDir) (KeyResources WitnessNode) where
-    allocResource (WitnessKeyParams{..}, appDir) =
-        buildComponentR "witness keys"
-            (linkStore wkpBase wkpCommittee appDir)
-            (\_ -> pass)
+         AllocResource AppDir (KeyResources WitnessNode) where
+    allocResource appDir =
+        let WitnessKeyParams {..} = giveL @WitnessConfig
+        in buildComponentR "witness keys"
+           (linkStore wkpBase wkpCommittee appDir)
+           (\_ -> pass)
 
-instance HasWitnessConfig => AllocResource WitnessParams WitnessResources where
-    allocResource WitnessParams{..} = do
+instance HasWitnessConfig => AllocResource () WitnessResources where
+    allocResource _ = do
+        let cfg = witnessConfig ^. sub #witness
         _wrLogging <- view (lensOf @LoggingIO)
-        _wrDB <- allocResource wpDBParams
+        _wrDB <- allocResource $ cfg ^. option #db
         _wrNetwork <- do
             let modGivenName (GivenName x) = GivenName $ x <> "network"
                 modGivenName x             = x
             withNetLogging (NetLogging $ _wrLogging & logNameSelL %~ modGivenName)
-                           (allocResource wpNetworkParams)
-        _wrAppDir <- allocResource wpAppDirParam
-        _wrKey <- allocResource (wpKeyParams, _wrAppDir)
+                           (allocResource $ cfg ^. option #network)
+        _wrAppDir <- allocResource $ cfg ^. option #appDir
+        _wrKey <- allocResource _wrAppDir
         return WitnessResources {..}

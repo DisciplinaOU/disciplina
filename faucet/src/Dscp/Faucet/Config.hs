@@ -7,16 +7,15 @@ module Dscp.Faucet.Config
     , withFaucetConfig
     , fillFaucetConfig
 
-    , module Dscp.Core.Config
+    , module Dscp.Witness.Config
     ) where
 
 import Data.Reflection (Given)
 import Loot.Config (ConfigKind (Final, Partial), ConfigRec)
 
-import Dscp.Core.Config
+import Dscp.Witness.Config
 
-
-type FaucetConfig = CoreConfig
+type FaucetConfig = WitnessConfig
 
 type FaucetConfigRecP = ConfigRec 'Partial FaucetConfig
 type FaucetConfigRec = ConfigRec 'Final FaucetConfig
@@ -24,7 +23,7 @@ type FaucetConfigRec = ConfigRec 'Final FaucetConfig
 type HasFaucetConfig = Given FaucetConfigRec
 
 withFaucetConfig :: FaucetConfigRec -> (HasFaucetConfig => a) -> a
-withFaucetConfig = withCoreConfig
+withFaucetConfig = withWitnessConfig
 
 fillFaucetConfig :: FaucetConfigRecP -> IO FaucetConfigRecP
-fillFaucetConfig = fillCoreConfig
+fillFaucetConfig = fillWitnessConfig

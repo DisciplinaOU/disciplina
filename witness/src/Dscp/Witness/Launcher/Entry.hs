@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedLabels #-}
+
 -- | Witness entry point.
 
 module Dscp.Witness.Launcher.Entry
@@ -7,7 +9,7 @@ module Dscp.Witness.Launcher.Entry
 
 import Control.Concurrent (threadDelay)
 import Fmt ((+|), (|+))
-import Loot.Base.HasLens (lensOf)
+import Loot.Config (option, sub)
 import Loot.Log (logInfo)
 import Time (sec)
 import UnliftIO.Async (async, cancel)
@@ -16,7 +18,6 @@ import Dscp.Network (runListener, runWorker, withServer)
 import Dscp.Util.TimeLimit
 import Dscp.Witness.Config
 import Dscp.Witness.Launcher.Mode
-import Dscp.Witness.Launcher.Params
 import Dscp.Witness.Listeners
 import Dscp.Witness.Logic
 import Dscp.Witness.SDLock
@@ -52,9 +53,9 @@ withWitnessBackground cont = do
 -- | Entry point of witness node.
 witnessEntry :: FullWitnessWorkMode ctx m => m ()
 witnessEntry =
-    withServer . withWitnessBackground $ do
-        witnessWebParams <- view (lensOf @(Maybe WitnessWebParams))
-        whenJust witnessWebParams $ \serverParams -> do
+    withServer. withWitnessBackground $ do
+        let mServerParams = witnessConfig ^. sub #witness . option #api
+        whenJust mServerParams $ \serverParams -> do
             logInfo "Forking witness API server"
             void . async $
                 serveWitnessAPIReal serverParams

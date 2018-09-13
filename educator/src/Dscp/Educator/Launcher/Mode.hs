@@ -91,10 +91,6 @@ instance HasLens SQLiteDB EducatorContext SQLiteDB where
 instance HasLens (KeyResources EducatorNode) EducatorContext (KeyResources EducatorNode) where
     lensOf = ecResources . lensOf @(KeyResources EducatorNode)
 
-instance HasLens (Maybe W.WitnessWebParams) EducatorContext (Maybe W.WitnessWebParams) where
-    lensOf = ecWitnessCtx . lensOf @(Maybe W.WitnessWebParams)
-instance HasLens MetricsEndpoint EducatorContext MetricsEndpoint where
-    lensOf = ecWitnessCtx . lensOf @MetricsEndpoint
 instance HasLens LoggingIO EducatorContext LoggingIO where
     lensOf = ecWitnessCtx . lensOf @LoggingIO
 instance HasLens RocksDB EducatorContext RocksDB where

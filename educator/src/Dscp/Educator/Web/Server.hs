@@ -1,4 +1,5 @@
-{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE TypeOperators    #-}
 
 -- | Functions to serve Student HTTP API
 
@@ -9,6 +10,7 @@ module Dscp.Educator.Web.Server
 import Data.Proxy (Proxy (..))
 import Fmt ((+|), (|+))
 import Loot.Base.HasLens (lensOf)
+import Loot.Config (option, sub)
 import Loot.Log (logInfo)
 import Network.HTTP.Types.Header (hAuthorization, hContentType)
 import Network.Wai (Middleware)
@@ -31,6 +33,7 @@ import Dscp.Educator.Web.Student (GetStudentsAction (..), ProtectedStudentAPI,
 import Dscp.Resource.Keys (KeyResources, krPublicKey)
 import Dscp.Web (ServerParams (..), serveWeb)
 import Dscp.Web.Metrics (MetricsEndpoint, responseTimeMetric)
+import Dscp.Witness.Config
 import Dscp.Witness.Web
 
 type EducatorWebAPI =
@@ -104,7 +107,7 @@ serveEducatorAPIsReal withWitnessApi EducatorWebParams{..} = do
     let witnessApiServer = if withWitnessApi
           then mkWitnessAPIServer (convertWitnessHandler unliftIO)
           else throwAll err405{ errBody = "Witness API disabled at this port" }
-    metricsEndpoint <- view (lensOf @MetricsEndpoint)
+    let metricsEndpoint = witnessConfig ^. sub #witness . option #metricsEndpoint
     serveWeb spAddr $
       responseTimeMetric metricsEndpoint $
       educatorCors $

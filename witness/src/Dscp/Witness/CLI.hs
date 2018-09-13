@@ -8,8 +8,11 @@ module Dscp.Witness.CLI
     , netCliParamsParser
     , netServParamsParser
     , committeeParamsParser
-
-    , witnessParamsParser
+    , appDirParamParser
+    , logParamsParser
+    , serverParamsParser
+    , metricsServerParser
+    , witnessKeyParamsParser
     ) where
 
 import qualified Data.Set as Set
@@ -117,18 +120,3 @@ witnessKeyParamsParser = do
     wkpBase <- baseKeyParamsParser "witness"
     wkpCommittee <- optional committeeParamsParser
     pure $ WitnessKeyParams {..}
-
-----------------------------------------------------------------------------
--- Witness params parser
-----------------------------------------------------------------------------
-
-witnessParamsParser :: Parser WitnessParams
-witnessParamsParser = do
-    wpLoggingParams <- logParamsParser "witness"
-    wpDBParams <- rocksParamsParser
-    wpNetworkParams <- netServParamsParser
-    wpKeyParams <- witnessKeyParamsParser
-    wpWebParams <- optional $ WitnessWebParams <$> serverParamsParser "Witness"
-    wpAppDirParam <- appDirParamParser
-    wpMetricsEndpoint <- metricsServerParser
-    pure $ WitnessParams {..}

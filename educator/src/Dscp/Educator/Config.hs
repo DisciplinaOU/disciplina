@@ -15,8 +15,7 @@ import Loot.Config (ConfigKind (Final, Partial), ConfigRec)
 
 import Dscp.Witness.Config
 
-
-type EducatorConfig = CoreConfig
+type EducatorConfig = WitnessConfig
 
 type EducatorConfigRecP = ConfigRec 'Partial EducatorConfig
 type EducatorConfigRec = ConfigRec 'Final EducatorConfig
@@ -24,7 +23,7 @@ type EducatorConfigRec = ConfigRec 'Final EducatorConfig
 type HasEducatorConfig = Given EducatorConfigRec
 
 withEducatorConfig :: EducatorConfigRec -> (HasEducatorConfig => a) -> a
-withEducatorConfig = withCoreConfig
+withEducatorConfig = withWitnessConfig
 
 fillEducatorConfig :: EducatorConfigRecP -> IO EducatorConfigRecP
-fillEducatorConfig = fillCoreConfig
+fillEducatorConfig = fillWitnessConfig

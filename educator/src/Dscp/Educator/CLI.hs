@@ -13,7 +13,6 @@ import Dscp.DB.SQLite
 import Dscp.Educator.Launcher.Params (EducatorKeyParams (..), EducatorParams (..))
 import Dscp.Educator.Web.Bot.Params (EducatorBotParams (..), EducatorBotSwitch (..))
 import Dscp.Educator.Web.Params (EducatorWebParams (..))
-import Dscp.Witness.CLI (witnessParamsParser)
 
 sqliteParamsParser :: Parser SQLiteParams
 sqliteParamsParser = do
@@ -68,7 +67,6 @@ educatorKeyParamsParser =
 
 educatorParamsParser :: Parser EducatorParams
 educatorParamsParser = do
-    epWitnessParams <- witnessParamsParser
     epDBParams <- sqliteParamsParser
     epKeyParams <- educatorKeyParamsParser
     epWebParams <- educatorWebParamsParser

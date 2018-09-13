@@ -1,4 +1,5 @@
-{-# LANGUAGE OverloadedLists #-}
+{-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE OverloadedLists  #-}
 
 -- | Node workers
 
@@ -11,6 +12,7 @@ import qualified Data.HashMap.Strict as HashMap
 import qualified Data.List.NonEmpty as NE
 import Fmt (listF, listF', (+|), (+||), (|+), (||+))
 import Loot.Base.HasLens (lensOf)
+import Loot.Config (option, sub)
 import Loot.Log (logDebug, logError, logInfo, logWarning)
 import Time (ms, sec, threadDelay)
 
@@ -21,6 +23,7 @@ import Dscp.Snowdrop.Mode
 import Dscp.Util
 import Dscp.Util.Concurrent.NotifyWait
 import Dscp.Web.Metrics
+import Dscp.Witness.Config
 import Dscp.Witness.Launcher.Mode
 import Dscp.Witness.Logic
 import Dscp.Witness.Mempool
@@ -94,7 +97,7 @@ blockUpdateWorker =
 
     applyNewBlock block =
         writingSDLock "apply new block" $ do
-            metricsEndpoint <- view (lensOf @MetricsEndpoint)
+            let metricsEndpoint = witnessConfig ^. sub #witness . option #metricsEndpoint
             logDebug $ "Block " +| hashF (headerHash block) |+
                       " is a direct continuation of our tip, applying"
             proof <- reportTime "disciplina.timer.block_apply" metricsEndpoint $

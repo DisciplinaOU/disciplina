@@ -56,7 +56,7 @@ instance HasEducatorConfig =>
 
 instance HasEducatorConfig => AllocResource EducatorParams EducatorResources where
     allocResource EducatorParams{..} = do
-        _erWitnessResources <- allocResource epWitnessParams
+        _erWitnessResources <- allocResource ()
         _erDB <- allocResource epDBParams
         let appDir = Witness._wrAppDir _erWitnessResources
         _erKeys <- allocResource (epKeyParams, appDir)

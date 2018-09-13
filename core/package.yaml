@@ -53,6 +53,7 @@ library:
     - time
     - unix
     - unliftio
+    - vinyl
     - yaml
 
 tests:
