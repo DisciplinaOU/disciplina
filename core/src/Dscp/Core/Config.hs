@@ -23,7 +23,8 @@ module Dscp.Core.Config
     , genesisHeader
     , genesisHash
 
-    , feeCoefficients
+    , moneyFeeCoeffs
+    , publicationFeeCoeffs
 
     , giveL
     , giveLC
@@ -55,8 +56,10 @@ type CoreConfig =
    '[ "core" ::<
        '[ "genesis" ::: GenesisConfig
         , "slotDuration" ::: SlotDuration
-        , "fee" ::: FeeCoefficients
-
+        , "fee" ::<
+            [ "money" ::: FeeCoefficients
+            , "publication" ::: FeeCoefficients
+            ]
         , "generated" ::<
             '[ "genesisInfo" ::: GenesisInfo
              ]
@@ -106,5 +109,8 @@ genesisHeader = bHeader genesisBlock
 genesisHash :: HasCoreConfig => HeaderHash
 genesisHash = hash genesisHeader
 
-feeCoefficients :: HasCoreConfig => FeeCoefficients
-feeCoefficients = giveL @CoreConfig @FeeCoefficients
+moneyFeeCoeffs :: HasCoreConfig => FeeCoefficients
+moneyFeeCoeffs = giveLC @["core", "fee", "money"] @CoreConfig
+
+publicationFeeCoeffs :: HasCoreConfig => FeeCoefficients
+publicationFeeCoeffs = giveLC @["core", "fee", "publication"] @CoreConfig

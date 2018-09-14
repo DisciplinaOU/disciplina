@@ -82,15 +82,17 @@ getByGTx
        )
 getByGTx applyFees pk t =
     let size = sizeSerialised t
-        fee  = calculateFee (if applyFees then feeCoefficients else noFees) size
+        evalFee coefs = calculateFee (if applyFees then coefs else noFees) size
         addr = mkAddr pk
     in  case t of
             GMoneyTxWitnessed tx ->
-                let (a, b) = toProofBalanceTx fee tx
+                let fee  = evalFee moneyFeeCoeffs
+                    (a, b) = toProofBalanceTx fee tx
                 in  (a, b, seqExpandersGTx addr fee t)
 
             GPublicationTxWitnessed ptx ->
-                let (a, b) = toProofPublicationTx fee ptx
+                let fee  = evalFee publicationFeeCoeffs
+                    (a, b) = toProofPublicationTx fee ptx
                 in  (a, b, seqExpandersGTx addr fee t)
 
 toProofPublicationTx :: Fees -> PublicationTxWitnessed -> (StateTxType, Proofs)
