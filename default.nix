@@ -11,16 +11,17 @@ let
     reMatch = (re: builtins.match re relPath != null);
   in
     (lib.any reMatch whitelist) && !(lib.any reMatch blacklist);
+  composeFilters = a: b: name: type: (a name type) && (b name type);
 
   buildStackProject = import stack4nix { inherit pkgs; };
   disciplinaPackages = buildStackProject (builtins.path rec {
     path = ./.;
     name = "disciplina";
-    filter = filterWhiteBlack {
+    filter = composeFilters (filterWhiteBlack {
       inherit path;
       whitelist = [ "stack\.yaml" ".*/.*" ];
       blacklist = [ ".*node_modules.*" "docs.*" "run.*" "scripts.*" "secrets.*" "specs.*" ];
-    };
+    }) (lib.cleanSourceFilter);
   });
 in
 
