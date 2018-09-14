@@ -210,7 +210,7 @@ seqExpandersBalanceTx feesReceiverAddr fee =
         let inpNewBal     = aBalance inpPrevAcc + inputBack - inputSent
         let newInpAccount = Account
                 { aBalance = inpNewBal
-                , aNonce   = fromIntegral (tiaNonce $ txInAcc twTx) + 1
+                , aNonce   = tiaNonce (txInAcc twTx) + 1
                 }
 
         let inp = AccountId inAddr ==> Upd newInpAccount

@@ -111,6 +111,7 @@ instance Arbitrary PrivateTx where
     arbitrary = PrivateTx <$> arbitrary <*> arbitrary <*> arbitrary
 
 deriving instance Arbitrary Coin
+deriving instance Arbitrary Nonce
 
 instance Arbitrary TxInAcc where
     arbitrary = genericArbitrary

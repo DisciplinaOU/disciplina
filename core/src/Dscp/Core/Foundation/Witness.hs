@@ -12,6 +12,7 @@ module Dscp.Core.Foundation.Witness
     , SlotId (..)
 
     -- * Transaction
+    , Nonce (..)
     , TxInAcc (..)
     , TxOut (..)
     , Tx (..)
@@ -109,10 +110,17 @@ sumCoins = coerce $ (+) @Word64
 -- Money transactions
 ----------------------------------------------------------------------------
 
+-- | Count of transactions originated _from_ given account, modulo @2^32@.
+newtype Nonce = Nonce { unNonce :: Word32 }
+    deriving (Eq, Ord, Show, Num, Enum, Real, Integral, Bounded, Generic)
+
+instance Buildable Nonce where
+    build (Nonce n) = "#" +| n |+ ""
+
 -- | Tx input account. Can be used for other tx types too.
 data TxInAcc = TxInAcc
     { tiaAddr  :: Address
-    , tiaNonce :: Word32
+    , tiaNonce :: Nonce
     } deriving (Eq, Ord, Generic, Show)
 
 instance Buildable TxInAcc where
