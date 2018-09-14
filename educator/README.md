@@ -34,7 +34,7 @@ For the most actual information run
 
 ### Configuration
 
-See [configuration section](/docs/configuration.md) document.
+See [configuration section](/docs/config.md) document.
 
 ### Scripts
 <a name="scripts"></a>

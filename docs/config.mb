@@ -3,7 +3,7 @@
 This document describes structure of configuration file.
 
 Configuration is a `.yaml` file containing parameters common for all nodes.
-See an example in [configuration.yaml](/configuration.yaml) file.
+See an example in [config.yaml](/config.yaml) file.
 
 Top-level entries describe a single setting, be it local demo or production cluster.
 Yaml-key of such entry is refered as "configuration key". The configuration key used by the node is defined in command line parameters.

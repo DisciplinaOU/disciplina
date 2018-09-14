@@ -2,7 +2,7 @@
 
 faucet_params="
 --appdir ./tmp/
---config ./configuration.yaml
+--config ./config.yaml
 --config-key demo
 --faucet-listen 127.0.0.1:8095
 --witness-backend 127.0.0.1:4020
