@@ -167,12 +167,13 @@ validateSaneDeparture self before = case self of
         let paid = aBalance before - aBalance account
         -- Check that transaction increments author nonce.
 
-        () <- mconcat
-            [ validateIff NonceMustBeIncremented      $ aNonce account == aNonce before + 1
-            , validateIff PaymentMustBePositive       $ paid > 0
-            , validateIff BalanceCannotBecomeNegative $ aBalance account >= 0
-            ]
-        pass
+        unless (aNonce account == aNonce before + 1) $
+            throwLocalError NonceMustBeIncremented
+        unless (paid > 0) $
+            throwLocalError PaymentMustBePositive
+        unless (aBalance account >= 0) $
+            throwLocalError BalanceCannotBecomeNegative
+
     _ -> throwLocalError NotASingletonSelfUpdate
 
 validateSaneArrival
@@ -183,10 +184,10 @@ validateSaneArrival (accId, account) = do
     was <- queryOne accId
     let received = aBalance account - maybe 0 aBalance was
     -- Check that except for the balance the account is unchanged.
-    () <- mconcat
-        [ validateIff ReceiverOnlyGetsMoney       $ maybe account (\w -> w{ aBalance = aBalance account }) was == account
-        , validateIff ReceiverMustIncreaseBalance $ received > 0
-        ]
+    unless (maybe account (\w -> w{ aBalance = aBalance account }) was == account) $
+        throwLocalError ReceiverOnlyGetsMoney
+    unless (received > 0) $
+        throwLocalError ReceiverMustIncreaseBalance
     return received
 
 checkThatAccountIsUpdatedOnly
