@@ -41,14 +41,14 @@ data BlockInfo = BlockInfo
     }
 
 data BlockList = BlockList
-    { blBlocks :: [BlockInfo]
+    { blBlocks     :: [BlockInfo]
     , blTotalCount :: Word64
     }
 
 -- | All what user may wish to know about an account.
 data AccountInfo = AccountInfo
     { aiBalances         :: BlocksOrMempool Coin
-    , aiCurrentNonce     :: Integer
+    , aiCurrentNonce     :: Nonce
     , aiTransactionCount :: Integer
     , aiTransactions     :: Maybe [TxInfo]
     }

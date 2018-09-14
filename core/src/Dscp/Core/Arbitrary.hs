@@ -119,6 +119,7 @@ instance Arbitrary PrivateBlockHeader where
     shrink    = genericShrink
 
 deriving instance Arbitrary Coin
+deriving instance Arbitrary Nonce
 
 instance Arbitrary TxInAcc where
     arbitrary = genericArbitrary

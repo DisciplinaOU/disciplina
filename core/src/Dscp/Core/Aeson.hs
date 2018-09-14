@@ -77,6 +77,9 @@ instance FromJSON Governance where
 deriving instance ToJSON Coin
 deriving instance FromJSON Coin
 
+deriving instance ToJSON Nonce
+deriving instance FromJSON Nonce
+
 deriving instance ToJSON GTxId
 deriving instance FromJSON GTxId
 

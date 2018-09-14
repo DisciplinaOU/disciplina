@@ -79,7 +79,8 @@ sendTx wc sendEvent eSecretKey mPassPhrase (toList -> outs) = do
     let publicKey = toPublic secretKey
         address = mkAddr publicKey
 
-    nonce <- fromInteger . aiCurrentNonce <$> wGetAccount wc address False
+    nonce <- fromIntegral . unNonce . aiCurrentNonce <$>
+             wGetAccount wc address False
 
     txWitnessed <- pure . fixFees feeCoefficients $ \fees ->
         let inAcc   = TxInAcc { tiaNonce = nonce, tiaAddr = address }
