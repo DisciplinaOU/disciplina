@@ -244,7 +244,7 @@ type AddrTxProof =
     PersonalisedProof T.TxId ()
 
 type PublicationTxProof =
-    PersonalisedProof T.PublicationTxId T.Publication
+    PersonalisedProof T.PublicationTxId T.PrivateBlockHeader
 
 data Proofs
     = AddressTxWitness     AddrTxProof         -- ^ Money transaction witness

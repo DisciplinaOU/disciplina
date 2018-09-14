@@ -109,8 +109,6 @@ assignmentTypeRaw = iso forth back . from _IsFinal
 -- JSON instances
 ---------------------------------------------------------------------------
 
-deriveJSON defaultOptions ''PrivateTx
-
 deriveJSON defaultOptions ''IsFinal
 deriveJSON defaultOptions ''HasProof
 deriveJSON defaultOptions ''GradeInfo

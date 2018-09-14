@@ -24,7 +24,7 @@ import Dscp.Core.Foundation
 -- | Transaction position in blockchain
 data TxBlockRef = TxBlockRef
     { tbrBlockRef :: HeaderHash
-    , tbrTxIdx :: Int  -- ^ Index of tx in the block
+    , tbrTxIdx    :: Int  -- ^ Index of tx in the block
     }
     deriving (Eq, Ord, Show, Generic)
 
@@ -70,9 +70,9 @@ instance Buildable PublicationsOf where
         "PublicationsOf { " +| addr |+  " }"
 
 -- | Points to the `PublicationHead addr` in the database.
-data LastPublication
-    = LastPublication PrivateHeaderHash
-    deriving (Eq, Ord, Show, Generic)
+newtype LastPublication = LastPublication
+    { unLastPublication :: PrivateBlockHeader
+    } deriving (Eq, Ord, Show, Generic)
 
 -- | Once 'LastPublication' is known, you can walk the chain of
 -- | `PublicationHead bh ~> PublicationNext bh`,

@@ -80,6 +80,7 @@ module Dscp.Core.Foundation.Educator
 
 import Control.Lens (Getter, makeLenses, to)
 import Data.Time.Clock (UTCTime)
+import Fmt (build, mapF, (+|), (|+))
 
 import Dscp.Core.Foundation.Address (Address (..))
 import Dscp.Crypto
@@ -93,6 +94,9 @@ import Dscp.Util (HasId (..))
 newtype Subject = Subject
     { getSubjectId :: Word32
     } deriving (Eq, Ord, Show, Num)
+
+instance Buildable Subject where
+    build (Subject n) = build n
 
 instance HasId Subject
 
@@ -230,6 +234,9 @@ newtype ATGDelta = ATGDelta
     { getATGDelta :: Map (Id Subject) Bool
     } deriving (Show, Eq, Ord, Monoid, Generic)
 
+instance Buildable ATGDelta where
+    build (ATGDelta d) = "ATGDelta { " +| mapF d |+ " }"
+
 ----------------------------------------------------------------------------
 -- Transactions
 ----------------------------------------------------------------------------
@@ -290,9 +297,15 @@ data PrivateBlockHeader = PrivateBlockHeader
     -- over private transactions)
     , _pbhAtgDelta  :: !ATGDelta
     -- ^ Changes in courses taught by Educator
-    } deriving (Show, Eq, Generic)
+    } deriving (Show, Eq, Ord, Generic)
 
 makeLenses ''PrivateBlockHeader
+
+instance Buildable PrivateBlockHeader where
+    build PrivateBlockHeader {..} =
+        "PrivateBlockHeader { prev: " +| _pbhPrevBlock |+
+        "; body proof: " +| _pbhBodyProof |+
+        "; atg:" +| _pbhAtgDelta |+ " }"
 
 -- | Genesis hash, serves as previous block reference for the first block.
 -- TODO: move to 'Genesis' module when it is formed somehow. Also, should

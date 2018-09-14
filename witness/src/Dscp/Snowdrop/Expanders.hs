@@ -81,10 +81,10 @@ toProofPublicationTx (PublicationTxWitnessed tx (PublicationTxWitness {..})) =
     (txType, Conf.PublicationTxWitness $ WithSignature
         { wsSignature = toDscpSig pwSig
         , wsPublicKey = toDscpPK pwPk
-        , wsBody = (toPtxId tx, pwPk, Publication prev new)
+        , wsBody = (toPtxId tx, pwPk, privHeader)
         })
   where
-    PublicationTx _ new prev = tx
+    PublicationTx _ privHeader = tx
     txType = StateTxType $ getId (Proxy @TxIds) PublicationTxTypeId
 
 seqExpandersPublicationTx :: SeqExpanders Exceptions Ids Proofs Values ctx PublicationTxWitnessed
@@ -92,21 +92,20 @@ seqExpandersPublicationTx =
     SeqExpanders $ one $ Expander
         (Set.fromList [publicationOfPrefix])
         (Set.fromList [accountPrefix, publicationHeadPrefix, publicationOfPrefix])
-        $ \PublicationTxWitnessed
-            { ptwTx = PublicationTx
-                { ptAuthor
-                , ptPrevBlock
-                , ptBlock
-                }
-            } -> do
-                maybePub <- queryOne (PublicationsOf ptAuthor)
+        $ \PublicationTxWitnessed { ptwTx } -> do
+            let PublicationTx{ ptHeader, ptAuthor } = ptwTx
+            let phHash = hash ptHeader
+            let prevHash = ptHeader ^. pbhPrevBlock
+            let (prevHashM :: Maybe PrivateHeaderHash) =
+                    prevHash <$ guard (prevHash /= genesisHeaderHash)
+            maybePub <- queryOne (PublicationsOf ptAuthor)
 
-                let change = if isJust maybePub then Upd else New
+            let change = if isJust maybePub then Upd else New
 
-                return $ mkDiffCS $ Map.fromList
-                  [ PublicationsOf  ptAuthor ==> change (LastPublication ptBlock)
-                  , PublicationHead ptBlock  ==> New    (PublicationNext ptPrevBlock)
-                  ]
+            return $ mkDiffCS $ Map.fromList
+              [ PublicationsOf ptAuthor ==> change (LastPublication ptHeader)
+              , PublicationHead phHash  ==> New (PublicationNext prevHashM)
+              ]
 
 ----------------------------------------------------------------------------
 -- Money tx
