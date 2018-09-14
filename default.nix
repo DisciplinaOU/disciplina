@@ -26,7 +26,7 @@ let
 in
 
 disciplinaPackages // rec {
-  disciplina-config = runCommand "config.yaml" {} "mkdir -p $out/etc/disciplina && cp ${./config.yaml} $_";
+  disciplina-config = runCommand "config.yaml" {} "mkdir -p $out/etc/disciplina && cp ${./config.yaml} $_/config.yaml";
   disciplina-static = symlinkJoin {
     name = "disciplina-static";
     paths = [ disciplina-config ] ++ map haskell.lib.justStaticExecutables
