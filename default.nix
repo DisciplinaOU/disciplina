@@ -6,8 +6,22 @@ let
     rev = "26a46991270749ecc57d5842d391435b314dc26f";
   };
 
+  filterWhiteBlack = { path, whitelist, blacklist ? [] }: name: type: let
+    relPath = (lib.removePrefix (toString path + "/") name) + (if type == "directory" then "/" else "");
+    reMatch = (re: builtins.match re relPath != null);
+  in
+    (lib.any reMatch whitelist) && !(lib.any reMatch blacklist);
+
   buildStackProject = import stack4nix { inherit pkgs; };
-  disciplinaPackages = buildStackProject (lib.cleanSource ./.);
+  disciplinaPackages = buildStackProject (builtins.path rec {
+    path = ./.;
+    name = "disciplina";
+    filter = filterWhiteBlack {
+      inherit path;
+      whitelist = [ "stack\.yaml" ".*/.*" ];
+      blacklist = [ ".*node_modules.*" "docs.*" "run.*" "scripts.*" "secrets.*" "specs.*" ];
+    };
+  });
 in
 
 disciplinaPackages // rec {
