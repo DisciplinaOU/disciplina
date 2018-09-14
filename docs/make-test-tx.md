@@ -6,7 +6,7 @@ This document describes step by step how to make a test transaction for a contro
 
 1. [Launch a cluster](/witness/README.md#launch-witness-cluster).
 2. Take a secret key.
-To get a secret with money on it, look in [configuration](/configuration.yaml) file, find genesis destribution (if the demo script for cluster launch was used, then corresponding distribution is described in `demo.core.genesis.destribution` variable; see also [configuration file description](./configuration.md)). This variable should contain several test keys, copy one of secrets in comment.
+To get a secret with money on it, look in [configuration](/config.yaml) file, find genesis destribution (if the demo script for cluster launch was used, then corresponding distribution is described in `demo.core.genesis.destribution` variable; see also [configuration file description](./config.md)). This variable should contain several test keys, copy one of secrets in comment.
 
 3. Launch [wallet application](/wallet/README.md), specifying one of witness nodes as backend. Assuming wallet with UI is used, transaction can be made as following:
   * Create a wallet. After selecting `Add wallet` on the left pane, find `Restore wallet from secret key` section, insert your secret key (leaving password field empty) and press `Restore` button.

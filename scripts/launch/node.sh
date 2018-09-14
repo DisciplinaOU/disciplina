@@ -65,7 +65,7 @@ educator_params="
 # witness params (and educator's as well)
 witness_params="
 --appdir ./tmp/
---config ./configuration.yaml
+--config ./config.yaml
 --config-key singleton
 --bind 127.0.0.1:4010:4011
 --db-path $tmp_files/witness.db
@@ -84,7 +84,7 @@ faucet_params="
 --faucet-listen 127.0.0.1:8095
 --witness-backend $witness_web_addr
 --translated-amount 20
---config ./configuration.yaml
+--config ./config.yaml
 --config-key singleton
 --faucet-keyfile $files/faucet.key
 --faucet-gen-key

@@ -82,7 +82,7 @@ function witness_args {
     # witness params (and educator's as well)
     local witness_params="
     --appdir ./tmp/
-    --config ./configuration.yaml
+    --config ./config.yaml
     --config-key demo
     --bind $bind
     --witness-listen $bind_api
