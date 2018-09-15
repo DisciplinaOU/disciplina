@@ -71,6 +71,7 @@ tests:
     <<: *test-common
 
     build-tools:
+      - hspec-discover
       - tasty-discover
     dependencies:
       - hspec
