@@ -32,27 +32,36 @@ module Dscp.Crypto.MerkleTree
        , fillEmptyMerkleTree
        ) where
 
+import Codec.Serialise (Serialise (..))
+import Data.ByteArray (convert)
+import Data.ByteString.Builder (Builder, byteString, word32LE)
+import qualified Data.ByteString.Builder.Extra as Builder
+import qualified Data.ByteString.Lazy as LBS
+import qualified Data.Foldable as F (Foldable (..))
+import qualified Data.Map as Map ((!))
+import qualified Data.Set as Set
+import Data.Tree as Tree (Tree (Node), drawTree)
+import Fmt (build, (+|), (|+))
+import qualified Text.Show
+
 import Dscp.Crypto.Hash.Class (AbstractHash (..))
 import Dscp.Crypto.Impl (HasHash, Hash, hash, unsafeHash)
 import Dscp.Crypto.Serialise (Raw)
 
-import Codec.Serialise (Serialise (..))
-import Data.ByteArray (convert)
-import Data.ByteString.Builder (Builder, byteString, word32LE)
-import qualified Data.Map as Map ((!))
-import qualified Data.Set as Set
-import Data.Tree as Tree (Tree (Node), drawTree)
-
-import qualified Data.ByteString.Builder.Extra as Builder
-import qualified Data.ByteString.Lazy as LBS
-import qualified Data.Foldable as F (Foldable (..))
 
 -- | Data type for root of sized merkle tree.
 data MerkleSignature a = MerkleSignature
     { mrHash :: !(Hash Raw)  -- ^ returns root 'Hash' of Merkle Tree
     , mrSize :: !Word32      -- ^ size of root node,
                              --   size is defined as number of leafs in this subtree
-    } deriving (Show, Eq, Ord, Generic, Serialise, Functor, Foldable, Traversable, Typeable)
+    } deriving (Eq, Ord, Generic, Serialise, Functor, Foldable, Traversable, Typeable)
+
+instance Buildable (MerkleSignature a) where
+    build MerkleSignature{..} =
+        "MerkleSignature { hash: " +| mrHash |+ "; size: " +| mrSize |+ " }"
+
+instance Show (MerkleSignature a) where
+    show = toString . pretty
 
 data MerkleTree a
     = MerkleEmpty

@@ -64,7 +64,6 @@ instance Serialise TxOut
 instance Serialise Tx
 instance Serialise TxWitness
 instance Serialise TxWitnessed
-instance Serialise Publication
 instance Serialise PublicationTx
 instance Serialise PublicationTxWitness
 instance Serialise PublicationTxWitnessed

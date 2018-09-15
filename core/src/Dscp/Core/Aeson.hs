@@ -2,8 +2,8 @@
 
 module Dscp.Core.Aeson () where
 
-import Data.Aeson (FromJSON (..), FromJSONKey (..), ToJSON (..), ToJSONKey, Value (..),
-                   withScientific, withText, withObject, (.:))
+import Data.Aeson (FromJSON (..), FromJSONKey (..), ToJSON (..), ToJSONKey, Value (..), withObject,
+                   withScientific, withText, (.:))
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveFromJSON, deriveJSON)
 
@@ -11,7 +11,7 @@ import Dscp.Core.Config
 import Dscp.Core.Foundation
 import Dscp.Core.Genesis
 import Dscp.Core.Governance
-import Dscp.Crypto.Aeson ()
+import Dscp.Crypto
 import Dscp.Util (Base (Base16), leftToFail)
 import Dscp.Util.Aeson (parseJSONSerialise, toJSONSerialise)
 
@@ -94,6 +94,12 @@ deriving instance FromJSON SlotId
 deriving instance ToJSON Difficulty
 deriving instance FromJSON Difficulty
 
+instance FromJSONKey Subject
+instance ToJSONKey Subject
+
+deriving instance ToJSON ATGDelta
+deriving instance FromJSON ATGDelta
+
 instance FromJSONKey Address
 instance ToJSONKey Address
 
@@ -112,6 +118,9 @@ deriving instance FromJSON GenesisDistribution
 deriveJSON defaultOptions ''Assignment
 deriveJSON defaultOptions ''Submission
 deriveJSON defaultOptions ''SignedSubmission
+deriveJSON defaultOptions ''MerkleSignature
+deriveJSON defaultOptions ''PrivateTx
+deriveJSON defaultOptions ''PrivateBlockHeader
 deriveJSON defaultOptions ''Header
 deriveJSON defaultOptions ''TxInAcc
 deriveJSON defaultOptions ''TxOut
@@ -120,7 +129,6 @@ deriveJSON defaultOptions ''TxWitness
 deriveJSON defaultOptions ''TxWitnessed
 deriveJSON defaultOptions ''GTx
 deriveJSON defaultOptions ''GTxWitnessed
-deriveJSON defaultOptions ''Publication
 deriveJSON defaultOptions ''PublicationTxWitness
 deriveJSON defaultOptions ''PublicationTxWitnessed
 deriveJSON defaultOptions ''PublicationTx

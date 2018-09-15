@@ -19,7 +19,6 @@ module Dscp.Core.Foundation.Witness
     , toTxId
     , TxWitness (..)
     , TxWitnessed (..)
-    , Publication (..)
     , PublicationTxWitness (..)
     , PublicationTxWitnessed (..)
     , PublicationTx (..)
@@ -48,7 +47,7 @@ import Data.Coerce (coerce)
 import Fmt (blockListF, build, indentF, listF, nameF, whenF, (+|), (+||), (|+), (||+))
 
 import Dscp.Core.Foundation.Address
-import Dscp.Core.Foundation.Educator (PrivateHeaderHash)
+import Dscp.Core.Foundation.Educator
 import Dscp.Crypto
 
 ----------------------------------------------------------------------------
@@ -145,7 +144,7 @@ toTxId :: (Serialise Tx) => Tx -> TxId
 toTxId = hash
 
 -- | Transaction witness. We sign a pair of transaction hash and private
--- key. The second element is there to authenticate proposed changes
+-- key. The third element is there to authenticate proposed changes
 -- (@kirill.andreev). Public key hash should be equal to the input address.
 -- Also, public key should be the same which used to validate signature.
 data TxWitness = TxWitness
@@ -173,14 +172,13 @@ instance Buildable TxWitnessed where
 
 -- | Transaction for private block publications.
 data PublicationTx = PublicationTx
-    { ptAuthor    :: Address
-    , ptPrevBlock :: Maybe PrivateHeaderHash
-    , ptBlock     :: PrivateHeaderHash
+    { ptAuthor :: Address
+    , ptHeader :: PrivateBlockHeader
     } deriving (Eq, Ord, Generic, Show)
 
 instance Buildable PublicationTx where
-    build PublicationTx { ptAuthor, ptPrevBlock, ptBlock } =
-        "Tx { from: " +| ptAuthor |+ "; prev block: " +| ptPrevBlock |+ "; block:" +| ptBlock |+ " }"
+    build PublicationTx { ptAuthor, ptHeader } =
+        "PublicationTx { author: " +| ptAuthor |+ "; header:" +| ptHeader |+ " }"
 
 type PublicationTxId = Hash PublicationTx
 
@@ -188,15 +186,12 @@ type PublicationTxId = Hash PublicationTx
 toPtxId :: (Serialise PublicationTx) => PublicationTx -> PublicationTxId
 toPtxId = hash
 
--- | Incoming publication message; transaction payload.
-data Publication = Publication
-    { pPrivateBlockHash  :: PrivateHeaderHash
-    , pPreviousBlockHash :: Maybe PrivateHeaderHash
-    }
-    deriving (Eq, Ord, Show, Generic)
-
+-- I find this third element hack to be terrible tbh. @volhovm
+--
+-- | Publication witness. As with 'TxWitness', the third element is
+-- needed for a better compatibility with snowdrop.
 data PublicationTxWitness = PublicationTxWitness
-    { pwSig :: Signature (PublicationTxId, PublicKey, Publication)
+    { pwSig :: Signature (PublicationTxId, PublicKey, PrivateBlockHeader)
     , pwPk  :: PublicKey
     } deriving (Eq, Ord, Show, Generic)
 

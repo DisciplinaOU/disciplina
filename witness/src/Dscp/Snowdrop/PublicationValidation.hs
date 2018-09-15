@@ -12,6 +12,7 @@ import Snowdrop.Core (PreValidator (..), StateTx (..), StateTxType (..), Validat
 import Snowdrop.Util
 
 import Dscp.Core
+import Dscp.Crypto
 import qualified Dscp.Crypto as DC (PublicKey)
 import Dscp.Snowdrop.AccountValidation
 import Dscp.Snowdrop.Configuration
@@ -21,10 +22,10 @@ import Dscp.Snowdrop.Types
 
 validatePublication ::
        forall ctx.
-       ( HasPrism Proofs (PersonalisedProof PublicationTxId Publication)
+       ( HasPrism Proofs (PersonalisedProof PublicationTxId PrivateBlockHeader)
        , HasGetter DC.PublicKey Address
        , HasPrism Proofs PublicationTxId
-       , CanVerifyPayload PublicationTxId Publication
+       , CanVerifyPayload PublicationTxId PrivateBlockHeader
        )
     => Validator Exceptions Ids Proofs Values ctx
 validatePublication = mkValidator ty [preValidatePublication]
@@ -33,58 +34,46 @@ validatePublication = mkValidator ty [preValidatePublication]
 
 preValidatePublication ::
        forall ctx.
-       ( HasPrism Proofs (PersonalisedProof PublicationTxId Publication)
+       ( HasPrism Proofs (PersonalisedProof PublicationTxId PrivateBlockHeader)
        , HasGetter DC.PublicKey Address
        , HasPrism Proofs PublicationTxId
-       , CanVerifyPayload PublicationTxId Publication
+       , CanVerifyPayload PublicationTxId PrivateBlockHeader
        )
     => PreValidator Exceptions Ids Proofs Values ctx
 preValidatePublication =
     PreValidator $ \_trans@ StateTx {..} -> do
 
         -- Retrieving our Publication payload from proof
-        (AccountId authorId, _, Publication {..}) <- authenticate @PublicationTxId txProof
+        (AccountId authorId, _, privHeader) <- authenticate @PublicationTxId txProof
+        let prevHash = privHeader ^. pbhPrevBlock
+        let (prevHashM :: Maybe PrivateHeaderHash) =
+                prevHash <$ guard (prevHash /= genesisHeaderHash)
 
         -- Checking that prevBlockHash matches the one from storage.
-        -- This can be written as:
-        --
-        -- res <- queryOne ...
-        -- validateUnless (getLastPub <$> res == pPrevBlockHash) Pub...
-        --
-        -- ... but this shows the intent more clear.
-        lastPub <- queryOne (PublicationsOf authorId) >>= \it -> do
-            () <- case it of
-                Just (LastPublication theLast) -> do
-                    check (Just theLast == pPreviousBlockHash) $
-                        PublicationPrevBlockIsIncorrect
-
-
-                Nothing -> do
-                    check (Nothing == pPreviousBlockHash) $
-                        PublicationPrevBlockIsIncorrect
-
-            return it
+        lastPub <- queryOne (PublicationsOf authorId)
+        () <- check (fmap (hash . unLastPublication) lastPub == prevHashM)
+                    PublicationPrevBlockIsIncorrect
 
         let changes = changeSet txBody
 
         -- Getting actual changes
-        let hd  = proj =<< inj (PublicationHead pPrivateBlockHash) `Map.lookup` changes
+        let hd  = proj =<< inj (PublicationHead (hash privHeader)) `Map.lookup` changes
         let box = proj =<< inj (PublicationsOf  authorId)          `Map.lookup` changes
 
         () <- mconcat
             [ -- Check that we continue the chain correctly.
-              check (hd == Just (New (PublicationNext pPreviousBlockHash))) $
-                PublicationIsBroken
+              check (hd == Just (New (PublicationNext prevHashM)))
+                  PublicationIsBroken
 
             , -- Check that we move head pointer correctly.
               if | isNothing lastPub ->
                     -- The pointer is set in the first time here?
-                    check (box == Just (New (LastPublication pPrivateBlockHash))) $
+                    check (box == Just (New (LastPublication privHeader))) $
                         PublicationIsBroken
 
                  | otherwise ->
                     -- The pointer is moved to the correct destination here?
-                    check (box == Just (Upd (LastPublication pPrivateBlockHash))) $
+                    check (box == Just (Upd (LastPublication privHeader))) $
                         PublicationIsBroken
             ]
 
