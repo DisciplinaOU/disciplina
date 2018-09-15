@@ -72,6 +72,7 @@ tests:
 
     build-tools:
       - tasty-discover
+      - hspec-discover
     dependencies:
       - hspec
       - memory
