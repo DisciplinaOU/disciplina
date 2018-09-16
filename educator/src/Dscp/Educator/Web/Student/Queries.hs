@@ -22,7 +22,7 @@ import Dscp.Educator.Web.Types
 
 studentIsCourseFinished
     :: MonadEducatorWebQuery m
-    => Id Student -> Course -> DBT r m Bool
+    => Id Student -> Course -> DBT t w m Bool
 studentIsCourseFinished studentId courseId = do
     finalAssignmentsGrades <- query queryText (CourseFinal, courseId, studentId)
     return $ any isPositiveGrade finalAssignmentsGrades
@@ -42,7 +42,7 @@ studentIsCourseFinished studentId courseId = do
 
 studentGetCourse
     :: MonadEducatorWebQuery m
-    => Id Student -> Course -> DBT WithinTx m CourseStudentInfo
+    => Id Student -> Course -> DBT WithinTx w m CourseStudentInfo
 studentGetCourse studentId courseId = do
     mcourse <-
         query queryText (Only courseId)
@@ -65,7 +65,7 @@ studentGetCourse studentId courseId = do
 
 studentGetCourses
     :: MonadEducatorWebQuery m
-    => Id Student -> Maybe IsEnrolled -> DBT WithinTx m [CourseStudentInfo]
+    => Id Student -> Maybe IsEnrolled -> DBT WithinTx w m [CourseStudentInfo]
 studentGetCourses studentId (coerce -> isEnrolledF) = do
     let (enrolledClause, enrolledParam) = case isEnrolledF of
             Just isEnrolled -> (mkEnrolledClause isEnrolled, oneParam studentId)
@@ -98,7 +98,7 @@ studentGetCourses studentId (coerce -> isEnrolledF) = do
 
 studentGetGrade
     :: MonadEducatorWebQuery m
-    => Hash Submission -> DBT WithinTx m (Maybe GradeInfo)
+    => Hash Submission -> DBT WithinTx w m (Maybe GradeInfo)
 studentGetGrade submissionH = do
     mgrade <-
         query queryText (Only submissionH)
@@ -118,7 +118,7 @@ studentGetLastAssignmentSubmission
     :: MonadEducatorWebQuery m
     => Student
     -> Hash Assignment
-    -> DBT WithinTx m (Maybe SubmissionStudentInfo)
+    -> DBT WithinTx w m (Maybe SubmissionStudentInfo)
 studentGetLastAssignmentSubmission student assignH = do
     msubmission <-
         query queryText (assignH, student)

@@ -12,11 +12,14 @@ module Dscp.DB.SQLite.Functions
          -- * SQLite context
        , DBT
        , WithinTx
+       , Writing
        , query
        , execute
+       , modifyingQuery
        , traced
        , invoke
-       , transact
+       , transactR
+       , transactW
        , invokeUnsafe
        ) where
 
@@ -154,18 +157,21 @@ closeSQLiteDB sd =
 ------------------------------------------------------------
 
 -- | Single pack of DB operations.
--- Phantom type parameter @ r @ should be either type variable or 'WithinTx'
+-- Phantom type parameter @ t @ should be either a type variable or 'WithinTx'
 -- and means whether actions should happen within transaction.
-newtype DBT r m a = DBT
+-- Phantom type parameter @ w @ should be either a type variable or 'Writing'
+-- and means whether given actions should be performed in writing transaction,
+-- if performed within a transaction at all.
+newtype DBT t w m a = DBT
     { runDBT :: ReaderT Connection m a
     } deriving (Functor, Applicative, Monad, MonadIO, MonadThrow, MonadCatch)
 
-instance MonadUnliftIO m => MonadUnliftIO (DBT r m) where
+instance MonadUnliftIO m => MonadUnliftIO (DBT t w m) where
     askUnliftIO = do
         UnliftIO unlift <- DBT askUnliftIO
         return $ UnliftIO $ unlift . runDBT
 
-instance (Log.MonadLogging m, Monad m) => Log.MonadLogging (DBT r m) where
+instance (Log.MonadLogging m, Monad m) => Log.MonadLogging (DBT t w m) where
     log = DBT . lift ... Log.log
     logName = DBT $ lift Log.logName
 
@@ -173,10 +179,19 @@ instance (Log.MonadLogging m, Monad m) => Log.MonadLogging (DBT r m) where
 -- transaction.
 data WithinTx
 
+-- | States that given 'DBT' actions should be performed within write
+-- transaction. We cannot rely on sqlite itself detecting writing transactions,
+-- see https://stackoverflow.com/questions/30438595/sqlite3-ignores-sqlite3-busy-timeout
+-- for details.
+data Writing
+
 -- | Make an SQL query which returns some result.
+--
+-- Note: performing WRITING operations is PROHIBITED within this function,
+-- use 'modifyingQuery' for such purpose.
 query
     :: (MonadIO m, FromRow row, ToRow params)
-    => Query -> params -> DBT r m [row]
+    => Query -> params -> DBT t w m [row]
 query q params = do
     conn <- DBT ask
     liftIO $ Backend.query conn q params
@@ -184,15 +199,23 @@ query q params = do
 -- | Perform an SQL query which does not return any result.
 execute
     :: (MonadIO m, ToRow params)
-    => Query -> params -> DBT r m ()
+    => Query -> params -> DBT t Writing m ()
 execute q params = do
     conn <- DBT ask
     liftIO $ Backend.execute conn q params
 
+-- | Make an SQL query which does some changes and returns some result.
+modifyingQuery
+    :: (MonadIO m, FromRow row, ToRow params)
+    => Query -> params -> DBT t Writing m [row]
+modifyingQuery q params = do
+    conn <- DBT ask
+    liftIO $ Backend.query conn q params
+
 -- | Enables SQLite tracing locally. For debug purposes.
 --
 -- Note: if any trace handler was set globally, it will be lost after that.
-traced :: MonadUnliftIO m => DBT r m a -> DBT r m a
+traced :: MonadUnliftIO m => DBT t w m a -> DBT t w m a
 traced action = do
     conn <- DBT ask
     UIO.bracket_
@@ -204,7 +227,7 @@ traced action = do
 -- or not.
 invokeUnsafe
     :: (MonadUnliftIO m, HasCtx ctx m '[SQLiteDB])
-    => DBT r m a -> m a
+    => DBT t w m a -> m a
 invokeUnsafe (DBT action) =
     borrowConnection $ runReaderT action
 
@@ -214,24 +237,45 @@ data OutsideOfTransaction
 -- | Run 'DBT'.
 invoke
     :: (MonadUnliftIO m, HasCtx ctx m '[SQLiteDB])
-    => DBT OutsideOfTransaction m a -> m a
+    => DBT OutsideOfTransaction w m a -> m a
 invoke (DBT action) =
     borrowConnection $ runReaderT action
 
 -- | Run 'DBT' within a transaction.
--- This function is polymorphic over @r@ on purpose, this way it cannot be
--- applied to @forall r m a. DBT r m a@. If you encounter an error due to this,
--- you are probably doing something wrong (@martoon).
-transact
-    :: forall r m ctx a.
-       (MonadUnliftIO m, HasCtx ctx m '[SQLiteDB])
-    => RequiresTransaction r => DBT r m a -> m a
-transact (DBT action) = do
+transactUsing
+    :: (MonadUnliftIO m, HasCtx ctx m '[SQLiteDB])
+    => (forall x. Connection -> IO x -> IO x) -> DBT t w m a -> m a
+transactUsing withTransaction (DBT action) = do
     UnliftIO unlift <- askUnliftIO
     borrowConnection $ \conn ->
-        liftIO . Backend.withImmediateTransaction conn $
+        liftIO . withTransaction conn $
             unlift $ runReaderT action conn
+
+-- | Internal type, indicated that actions happen within reading-only
+-- transaction.
+data Reading
+
+-- | Run 'DBT' within a transaction.
+-- This function is polymorphic over @r@ on purpose, this way it cannot be
+-- applied to @forall r m a. DBT t m a@. If you encounter an error due to this,
+-- you are probably doing something wrong (@martoon).
+transactR
+    :: forall t m ctx a.
+       (MonadUnliftIO m, HasCtx ctx m '[SQLiteDB])
+    => RequiresTransaction t => DBT t Reading m a -> m a
+transactR = transactUsing Backend.withTransaction
+
+-- | Run 'DBT' within a writing transaction.
+transactW
+    :: forall t w m ctx a.
+       (MonadUnliftIO m, HasCtx ctx m '[SQLiteDB])
+    => (RequiresTransaction t, RequiresWriting w) => DBT t w m a -> m a
+transactW = transactUsing Backend.withImmediateTransaction
 
 -- | Helps to prevent using 'transact' when 'invoke' is enough.
 class RequiresTransaction r
 instance RequiresTransaction WithinTx
+
+-- | Helps to prevent using 'transactW' when 'transact' is enough.
+class RequiresWriting r
+instance RequiresWriting Writing

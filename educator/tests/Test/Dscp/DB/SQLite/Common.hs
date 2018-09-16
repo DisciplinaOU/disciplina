@@ -65,11 +65,11 @@ educatorPropertyM action =
 
 sqliteProperty
     :: (Testable prop, Show a, Arbitrary a)
-    => (a -> DBT r TestSQLiteM prop) -> Property
+    => (a -> DBT t w TestSQLiteM prop) -> Property
 sqliteProperty action =
     educatorProperty (invokeUnsafe . action)
 
-sqlitePropertyM :: Testable prop => PropertyM (DBT r TestSQLiteM) prop -> Property
+sqlitePropertyM :: Testable prop => PropertyM (DBT t w TestSQLiteM) prop -> Property
 sqlitePropertyM action =
     monadic (ioProperty . runTestSQLiteM . invokeUnsafe) (void $ action >>= stop)
 

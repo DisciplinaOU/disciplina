@@ -25,18 +25,18 @@ studentApiHandlers
 studentApiHandlers student =
     StudentApiEndpoints
     { sGetCourses = \isEnrolledF ->
-        transact $ studentGetCourses student isEnrolledF
+        transactR $ studentGetCourses student isEnrolledF
 
     , sGetCourse = \course ->
-        transact $ studentGetCourse student course
+        transactR $ studentGetCourse student course
 
     , sGetAssignments = \afCourse afDocType afIsFinal ->
-        transact $
+        transactR $
             commonGetAssignments StudentCase student
                 def{ afCourse, afDocType, afIsFinal }
 
     , sGetAssignment = \assignH ->
-        transact $ studentGetAssignment student assignH
+        transactR $ studentGetAssignment student assignH
 
     , sGetSubmissions = \sfCourse sfAssignmentHash sfDocType ->
         invoke $
@@ -50,10 +50,10 @@ studentApiHandlers student =
         studentMakeSubmissionVerified student newSub
 
     , sDeleteSubmission = \subH ->
-        transact $ commonDeleteSubmission subH (Just student)
+        transactW $ commonDeleteSubmission subH (Just student)
 
     , sGetProofs = \pfSince ->
-        transact $ commonGetProofs student def{ pfSince }
+        transactR $ commonGetProofs student def{ pfSince }
     }
 
 convertStudentApiHandler

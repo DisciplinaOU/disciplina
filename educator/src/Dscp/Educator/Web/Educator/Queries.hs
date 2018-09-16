@@ -20,7 +20,7 @@ import Dscp.Util
 
 educatorRemoveStudent
     :: MonadEducatorWebQuery m
-    => Student -> DBT r m ()
+    => Student -> DBT t Writing m ()
 educatorRemoveStudent student = do
     -- TODO [DSCP-176]: Proper implementation of this method may require
     -- fundemental rethinking of our database scheme and rewriting many code.
@@ -37,7 +37,7 @@ educatorRemoveStudent student = do
 
 educatorGetStudents
     :: MonadEducatorWebQuery m
-    => Maybe Course -> DBT r m [StudentInfo]
+    => Maybe Course -> DBT t w m [StudentInfo]
 educatorGetStudents courseF = do
     map (StudentInfo . fromOnly) <$> query queryText paramF
   where
@@ -54,7 +54,7 @@ educatorGetStudents courseF = do
 
 educatorGetCourses
     :: DBM m
-    => Maybe Student -> DBT r m [CourseEducatorInfo]
+    => Maybe Student -> DBT t w m [CourseEducatorInfo]
 educatorGetCourses studentF = do
     res :: [(Course, Text, Maybe Subject)] <- query queryText paramF
     return $
@@ -81,7 +81,7 @@ educatorUnassignFromStudent
     :: MonadEducatorWebQuery m
     => Student
     -> Hash Assignment
-    -> DBT r m ()
+    -> DBT t Writing m ()
 educatorUnassignFromStudent student assignH = do
     -- we are not deleting other info since educator may want it to be preserved
     -- in case if he wants to assign as assignment again
@@ -97,7 +97,7 @@ educatorUnassignFromStudent student assignH = do
 
 isGradedSubmission
     :: MonadEducatorWebQuery m
-    => Hash Submission -> DBT r m Bool
+    => Hash Submission -> DBT t w m Bool
 isGradedSubmission submissionH = do
     checkExists queryText (Only submissionH)
   where
@@ -113,7 +113,7 @@ educatorGetGrades
     => Maybe Student
     -> Maybe Course
     -> Maybe IsFinal
-    -> DBT r m [GradeInfo]
+    -> DBT t w m [GradeInfo]
 educatorGetGrades studentF courseIdF isFinalF = do
     query queryText (mconcat paramsF)
   where
@@ -135,7 +135,7 @@ educatorGetGrades studentF courseIdF isFinalF = do
 
 educatorPostGrade
     :: MonadEducatorWebQuery m
-    => Hash Submission -> Grade -> DBT r m ()
+    => Hash Submission -> Grade -> DBT t Writing m ()
 educatorPostGrade subH grade = do
     time <- liftIO getCurrentTime
     sigSub <- getSignedSubmission subH

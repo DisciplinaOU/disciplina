@@ -18,7 +18,7 @@ import Dscp.Util
 educatorGetSubmission
     :: MonadEducatorWebQuery m
     => Hash Submission
-    -> DBT r m SubmissionEducatorInfo
+    -> DBT t w m SubmissionEducatorInfo
 educatorGetSubmission submissionH = do
     commonGetSubmissions EducatorCase def{ sfSubmissionHash = Just submissionH }
         >>= listToMaybeWarn "submission"
@@ -26,5 +26,5 @@ educatorGetSubmission submissionH = do
 
 educatorGetAllSubmissions
     :: MonadEducatorWebQuery m
-    => DBT r m [SubmissionEducatorInfo]
+    => DBT t w m [SubmissionEducatorInfo]
 educatorGetAllSubmissions = commonGetSubmissions EducatorCase def

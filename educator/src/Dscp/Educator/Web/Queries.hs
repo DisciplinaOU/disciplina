@@ -48,7 +48,7 @@ commonGetAssignments
     => ApiCase apiTag
     -> Student
     -> GetAssignmentsFilters
-    -> DBT WithinTx m [ResponseCase apiTag Assignment]
+    -> DBT WithinTx w m [ResponseCase apiTag Assignment]
 commonGetAssignments apiCase student filters = do
     assignments <- query queryText (mconcat $ oneParam student : paramsF)
     forM assignments $
@@ -99,11 +99,11 @@ instance Default GetSubmissionsFilters where
     def = GetSubmissionsFilters def def def def def
 
 commonGetSubmissions
-    :: forall apiTag m r.
+    :: forall apiTag m t w.
        (MonadEducatorQuery m, DistinctTag apiTag)
     => ApiCase apiTag
     -> GetSubmissionsFilters
-    -> DBT r m [ResponseCase apiTag Submission]
+    -> DBT t w m [ResponseCase apiTag Submission]
 commonGetSubmissions apiCase filters = do
     submissions <- query queryText (mconcat paramsF)
     return $ submissions <&>
@@ -155,7 +155,7 @@ commonExistsSubmission
     :: (MonadEducatorWebQuery m)
     => Hash Submission
     -> Maybe Student
-    -> DBT r m Bool
+    -> DBT t w m Bool
 commonExistsSubmission submissionH studentF = do
     checkExists queryText (oneParam submissionH <> paramF)
   where
@@ -175,7 +175,7 @@ commonDeleteSubmission
     :: (MonadEducatorWebQuery m)
     => Hash Submission
     -> Maybe Student
-    -> DBT WithinTx m ()
+    -> DBT WithinTx Writing m ()
 commonDeleteSubmission submissionH studentF = do
     commonExistsSubmission submissionH studentF
         `assert` AbsentError (SubmissionDomain submissionH)

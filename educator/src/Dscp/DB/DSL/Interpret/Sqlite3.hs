@@ -13,7 +13,7 @@ import Dscp.DB.SQLite
 instance
     ( MonadIO n
     , MonadCatch n
-    , m ~ DBT r n
+    , m ~ DBT t w n
     )
     => MonadSearchTxObj m
   where
@@ -29,7 +29,7 @@ instance
 
 getPrivateTxsByFilter
     :: MonadIO m
-    => TxsFilterExpr -> DBT r m [PrivateTx]
+    => TxsFilterExpr -> DBT t w m [PrivateTx]
 getPrivateTxsByFilter filterExpr = do
     let
       tables = requiredTables filterExpr

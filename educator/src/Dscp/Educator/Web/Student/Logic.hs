@@ -45,7 +45,7 @@ studentMakeSubmissionVerified student newSubmission = do
     signedSubmission <- requestToSignedSubmission newSubmission
     verifyStudentSubmission student signedSubmission
         & leftToThrow BadSubmissionSignature
-    transact $ do
+    transactW $ do
         submissionId <- submitAssignment signedSubmission
         studentGetSubmission student submissionId
 
@@ -54,7 +54,7 @@ studentGetAssignment
     :: MonadEducatorWebQuery m
     => Student
     -> Hash Assignment
-    -> DBT WithinTx m AssignmentStudentInfo
+    -> DBT WithinTx w m AssignmentStudentInfo
 studentGetAssignment student assignH =
     commonGetAssignments StudentCase student def
         { afAssignmentHash = Just assignH }
@@ -65,7 +65,7 @@ studentGetAssignment student assignH =
 studentGetAllAssignments
     :: MonadEducatorWebQuery m
     => Student
-    -> DBT WithinTx m [AssignmentStudentInfo]
+    -> DBT WithinTx w m [AssignmentStudentInfo]
 studentGetAllAssignments student =
     commonGetAssignments StudentCase student def
 
@@ -73,7 +73,7 @@ studentGetSubmission
     :: MonadEducatorWebQuery m
     => Student
     -> Hash Submission
-    -> DBT r m SubmissionStudentInfo
+    -> DBT t w m SubmissionStudentInfo
 studentGetSubmission student submissionH = do
     commonGetSubmissions StudentCase def
         { sfStudent = Just student, sfSubmissionHash = Just submissionH }
@@ -84,6 +84,6 @@ studentGetSubmission student submissionH = do
 studentGetAllSubmissions
     :: MonadEducatorWebQuery m
     => Student
-    -> DBT r m [SubmissionStudentInfo]
+    -> DBT t w m [SubmissionStudentInfo]
 studentGetAllSubmissions student =
     commonGetSubmissions StudentCase def{ sfStudent = Just student }

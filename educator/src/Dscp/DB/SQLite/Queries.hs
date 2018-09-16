@@ -135,7 +135,7 @@ instance Exception DomainError
 
 -- | When query starts with @select(*)@, checks that non empty set of rows is
 -- returned.
-checkExists :: (ToRow a, MonadIO m) => Query -> a -> DBT r m Bool
+checkExists :: (ToRow a, MonadIO m) => Query -> a -> DBT t w m Bool
 checkExists theQuery args = ((/= [[0]]) :: [[Int]] -> Bool) <$> query theQuery args
 
 -- | Catch "unique" constraint violation and rethrow specific error.
@@ -158,7 +158,7 @@ onReferenceInvalidThrow action err =
 type DBM m = (MonadIO m, MonadCatch m)
 
 -- | How can a student get a list of courses?
-getStudentCourses :: MonadIO m => Id Student -> DBT r m [Id Course]
+getStudentCourses :: MonadIO m => Id Student -> DBT t w m [Id Course]
 getStudentCourses student =
     query getStudentCoursesQuery (Only student)
   where
@@ -171,7 +171,7 @@ getStudentCourses student =
     |]
 
 -- | How can a student enroll to a course?
-enrollStudentToCourse :: DBM m => Id Student -> Id Course -> DBT WithinTx m ()
+enrollStudentToCourse :: DBM m => Id Student -> Id Course -> DBT WithinTx Writing m ()
 enrollStudentToCourse student course = do
     existsCourse  course  `assertExists` CourseDomain  course
     existsStudent student `assertExists` StudentDomain student
@@ -189,7 +189,7 @@ enrollStudentToCourse student course = do
 -- | How can a student get a list of his current course assignments?
 getStudentAssignments
     :: MonadIO m
-    => Id Student -> Id Course -> DBT r m [Assignment]
+    => Id Student -> Id Course -> DBT t w m [Assignment]
 getStudentAssignments student course = do
     query getStudentAssignmentsQuery (student, course)
   where
@@ -207,13 +207,13 @@ getStudentAssignments student course = do
 -- | How can a student submit a submission for assignment?
 submitAssignment
     :: DBM m
-    => SignedSubmission -> DBT WithinTx m (Id SignedSubmission)
+    => SignedSubmission -> DBT WithinTx Writing m (Id SignedSubmission)
 submitAssignment = createSignedSubmission
 
 -- How can a student see his grades for course assignments?
 getGradesForCourseAssignments
     :: MonadIO m
-    => Id Student -> Id Course -> DBT r m [PrivateTx]
+    => Id Student -> Id Course -> DBT t w m [PrivateTx]
 getGradesForCourseAssignments student course = do
     query getGradesForCourseAssignmentsQuery (student, course)
   where
@@ -242,7 +242,7 @@ getGradesForCourseAssignments student course = do
     |]
 
 -- | How can a student receive transactions with Merkle proofs which contain info about his grades and assignments?
-getStudentTransactions :: MonadIO m => Id Student -> DBT r m [PrivateTx]
+getStudentTransactions :: MonadIO m => Id Student -> DBT t w m [PrivateTx]
 getStudentTransactions student = do
     query getStudentTransactionsQuery (Only student)
   where
@@ -278,11 +278,11 @@ instance Default GetProvenStudentTransactionsFilters where
 
 -- | Returns list of transaction blocks along with block-proof of a student since given moment.
 getProvenStudentTransactions
-    :: forall m.
+    :: forall m w.
        DBM m
     => Id Student
     -> GetProvenStudentTransactionsFilters
-    -> DBT WithinTx m [(MerkleProof PrivateTx, [(Word32, PrivateTx)])]
+    -> DBT WithinTx w m [(MerkleProof PrivateTx, [(Word32, PrivateTx)])]
 getProvenStudentTransactions studentId filters = do
     -- Contains `(tx, idx, blockId)` map.
     txsBlockList <- getTxsBlockMap
@@ -311,7 +311,7 @@ getProvenStudentTransactions studentId filters = do
         push a = Map.insertWith (flip (++)) (key a) [value a]
 
     -- Returns, effectively, `[(tx, idx, blockId)]`.
-    getTxsBlockMap :: DBT r m [TxInBlock]
+    getTxsBlockMap :: DBT t w m [TxInBlock]
     getTxsBlockMap = do
         query getTxsBlockMapQuery (oneParam studentId <> mconcat filteringParams)
       where
@@ -351,7 +351,7 @@ getProvenStudentTransactions studentId filters = do
           `filterClauses` filteringClauses
 
     -- Returns `PrivateBlock` in normalized format, with metadata.
-    getBlockData :: Word32 -> DBT r m BlockData
+    getBlockData :: Word32 -> DBT t w m BlockData
     getBlockData blockIdx = do
         (listToMaybe <$> query getBlockDataQuery (Only blockIdx))
             `assertJustPresent` BlockWithIndexDomain blockIdx
@@ -369,7 +369,7 @@ getProvenStudentTransactions studentId filters = do
             where   idx = ?
         |]
 
-getAllNonChainedTransactions :: MonadIO m => DBT r m [PrivateTx]
+getAllNonChainedTransactions :: MonadIO m => DBT t w m [PrivateTx]
 getAllNonChainedTransactions = do
     query getAllNonChainedTransactionsQuery ()
   where
@@ -395,7 +395,7 @@ getAllNonChainedTransactions = do
 
 getLastBlockIdAndIdx
     :: MonadIO m
-    => DBT r m (Hash PrivateBlockHeader, Word32)
+    => DBT t w m (Hash PrivateBlockHeader, Word32)
 getLastBlockIdAndIdx = do
     fromMaybe (genesisHeaderHash, 1) . listToMaybe <$> query [q|
         -- getLastBlockIdAndIdx
@@ -406,7 +406,7 @@ getLastBlockIdAndIdx = do
         limit     1
     |] ()
 
-createBlock :: DBM m => Maybe ATGDelta -> DBT WithinTx m ()
+createBlock :: DBM m => Maybe ATGDelta -> DBT WithinTx Writing m ()
 createBlock delta = do
     (prev, idx) <- getLastBlockIdAndIdx
     txs         <- getAllNonChainedTransactions
@@ -461,7 +461,7 @@ createBlock delta = do
 
 createSignedSubmission
     :: DBM m
-    => SignedSubmission -> DBT WithinTx m (Id SignedSubmission)
+    => SignedSubmission -> DBT WithinTx Writing m (Id SignedSubmission)
 createSignedSubmission sigSub = do
     let
         submission     = sigSub^.ssSubmission
@@ -498,7 +498,7 @@ createSignedSubmission sigSub = do
         values       (?, ?, ?, ?, ?, julianday(?))
     |]
 
-setStudentAssignment :: DBM m => Id Student -> Id Assignment -> DBT WithinTx m ()
+setStudentAssignment :: DBM m => Id Student -> Id Assignment -> DBT WithinTx Writing m ()
 setStudentAssignment studentId assignmentId = do
     _          <- existsStudent studentId    `assertExists`      StudentDomain    studentId
     assignment <- getAssignment assignmentId `assertJustPresent` AssignmentDomain assignmentId
@@ -518,7 +518,7 @@ setStudentAssignment studentId assignmentId = do
         values      (?, ?)
     |]
 
-isEnrolledTo :: MonadIO m => Id Student -> Id Course -> DBT r m Bool
+isEnrolledTo :: MonadIO m => Id Student -> Id Course -> DBT t w m Bool
 isEnrolledTo studentId courseId = do
     checkExists enrollmentQuery (studentId, courseId)
   where
@@ -532,7 +532,7 @@ isEnrolledTo studentId courseId = do
 
 isAssignedToStudent
     :: MonadIO m
-    => Id Student -> Id Assignment -> DBT r m Bool
+    => Id Student -> Id Assignment -> DBT t w m Bool
 isAssignedToStudent student assignment = do
     checkExists getStudentAssignmentQuery (student, assignment)
   where
@@ -554,7 +554,7 @@ data CourseDetails = CourseDetails
 simpleCourse :: Course -> CourseDetails
 simpleCourse i = CourseDetails i "" []
 
-createCourse :: DBM m => CourseDetails -> DBT WithinTx m (Id Course)
+createCourse :: DBM m => CourseDetails -> DBT WithinTx Writing m (Id Course)
 createCourse params = do
     let course = cdCourseId params
     execute createCourseRequest (course, cdDesc params)
@@ -575,7 +575,7 @@ createCourse params = do
         values       (?, ?, "")
     |]
 
-getCourseSubjects :: MonadIO m => Course -> DBT r m [Subject]
+getCourseSubjects :: MonadIO m => Course -> DBT t w m [Subject]
 getCourseSubjects course = do
     subjects :: [Only Subject] <- query getCourceSubjectsQuery (Only course)
     return (coerce subjects)
@@ -586,7 +586,7 @@ getCourseSubjects course = do
         where  course_id = ?
     |]
 
-existsCourse :: MonadIO m => Id Course -> DBT r m Bool
+existsCourse :: MonadIO m => Id Course -> DBT t w m Bool
 existsCourse course = do
     checkExists existsCourseQuery (Only course)
   where
@@ -597,7 +597,7 @@ existsCourse course = do
         where   id = ?
     |]
 
-existsStudent :: MonadIO m => Id Student -> DBT r m Bool
+existsStudent :: MonadIO m => Id Student -> DBT t w m Bool
 existsStudent student = do
     checkExists existsCourseQuery (Only student)
   where
@@ -607,7 +607,7 @@ existsStudent student = do
         where   addr = ?
     |]
 
-existsSubmission :: MonadIO m => Id Submission -> DBT r m Bool
+existsSubmission :: MonadIO m => Id Submission -> DBT t w m Bool
 existsSubmission submission = do
     checkExists existsSubmissionQuery (Only submission)
   where
@@ -617,7 +617,7 @@ existsSubmission submission = do
         where   hash = ?
     |]
 
-createStudent :: DBM m => Student -> DBT r m (Id Student)
+createStudent :: DBM m => Student -> DBT t Writing m (Id Student)
 createStudent student = do
     execute createStudentRequest (Only student)
         `ifAlreadyExistsThrow` StudentDomain student
@@ -628,7 +628,7 @@ createStudent student = do
         values       (?)
     |]
 
-createAssignment :: DBM m => Assignment -> DBT WithinTx m (Id Assignment)
+createAssignment :: DBM m => Assignment -> DBT WithinTx Writing m (Id Assignment)
 createAssignment assignment = do
     let courseId = assignment^.aCourseId
 
@@ -652,7 +652,7 @@ createAssignment assignment = do
 
 getAssignment
     :: MonadIO m
-    => Id Assignment -> DBT r m (Maybe Assignment)
+    => Id Assignment -> DBT t w m (Maybe Assignment)
 getAssignment assignmentId = do
     listToMaybe <$> query getAssignmentQuery (Only assignmentId)
   where
@@ -664,7 +664,7 @@ getAssignment assignmentId = do
 
 getSignedSubmission
     :: MonadIO m
-    => Id SignedSubmission -> DBT r m (Maybe SignedSubmission)
+    => Id SignedSubmission -> DBT t w m (Maybe SignedSubmission)
 getSignedSubmission submissionHash = do
     listToMaybe <$> query getSignedSubmissionQuery (Only submissionHash)
   where
@@ -685,7 +685,7 @@ getSignedSubmission submissionHash = do
 
 createTransaction
     :: (DBM m, ToField TxBlockIdx)
-    => PrivateTx -> DBT WithinTx m (Id PrivateTx)
+    => PrivateTx -> DBT WithinTx Writing m (Id PrivateTx)
 createTransaction trans = do
     let ptid    = trans^.idOf
         subHash = trans^.ptSignedSubmission.idOf
@@ -710,7 +710,7 @@ createTransaction trans = do
         values       (?, ?, ?, ?, ?)
     |]
 
-getTransaction :: DBM m => Id PrivateTx -> DBT r m (Maybe PrivateTx)
+getTransaction :: DBM m => Id PrivateTx -> DBT t w m (Maybe PrivateTx)
 getTransaction ptid = do
     listToMaybe <$> query getTransactionQuery (Only ptid)
   where

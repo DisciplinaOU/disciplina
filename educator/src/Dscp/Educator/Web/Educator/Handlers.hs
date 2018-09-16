@@ -39,7 +39,7 @@ educatorApiHandlers =
       -- Courses
 
     , eAddCourse = \(NewCourse cid desc subjects) ->
-        void . transact $ createCourse CourseDetails
+        void . transactW $ createCourse CourseDetails
             { cdCourseId = cid
             , cdDesc = desc ?: ""
             , cdSubjects = subjects ?: []
@@ -49,7 +49,7 @@ educatorApiHandlers =
         invoke $ educatorGetCourses Nothing
 
     , eEnrollStudentToCourse = \student (EnrollStudentToCourse course) ->
-        transact $ enrollStudentToCourse student course
+        transactW $ enrollStudentToCourse student course
 
     , eGetStudentCourses = \student ->
         invoke $ educatorGetCourses (Just student)
@@ -57,20 +57,20 @@ educatorApiHandlers =
       -- Assignments
 
     , eAddCourseAssignment = \_autoAssign na -> do
-        void . transact $ createAssignment (requestToAssignment na)
+        void . transactW $ createAssignment (requestToAssignment na)
         -- TODO [DSCP-176]: consider autoassign
 
     , eGetStudentAssignments = \student ->
-        transact $ commonGetAssignments EducatorCase student def
+        transactR $ commonGetAssignments EducatorCase student def
 
     , eAssignToStudent =
-        transact ... setStudentAssignment
+        transactW ... setStudentAssignment
 
     , eUnassignFromStudent =
         invoke ... educatorUnassignFromStudent
 
     , eGetStudentCourseAssignments = \student course afIsFinal ->
-        transact $
+        transactR $
           commonGetAssignments EducatorCase student
               def{ afCourse = Just course, afIsFinal }
 
@@ -80,7 +80,7 @@ educatorApiHandlers =
         invoke ... educatorGetSubmission
 
     , eDeleteSubmission = \submissionH ->
-        transact $ commonDeleteSubmission submissionH Nothing
+        transactW $ commonDeleteSubmission submissionH Nothing
 
     , eGetSubmissions =
         invoke $ commonGetSubmissions EducatorCase def
@@ -114,10 +114,10 @@ educatorApiHandlers =
       -- Proofs
 
     , eGetStudentProofs = \student ->
-        transact $ commonGetProofs student def
+        transactR $ commonGetProofs student def
 
     , eGetStudentCourseProofs = \student courseF ->
-        transact $ commonGetProofs student
+        transactR $ commonGetProofs student
             def{ pfCourse = Just courseF }
     }
 

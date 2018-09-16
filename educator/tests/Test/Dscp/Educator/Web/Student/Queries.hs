@@ -55,7 +55,7 @@ submission1 : _ = detGen 23423 $ do
         <&> \(_sStudentId, _sContentsHash, (hash -> _sAssignmentHash))
             -> Submission{..}
 
-createCourseSimple :: DBM m => Int -> DBT WithinTx m Course
+createCourseSimple :: DBM m => Int -> DBT WithinTx Writing m Course
 createCourseSimple i =
     createCourse
         CourseDetails
@@ -548,7 +548,7 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
                 let student = tiOne $ cteStudents env
                     sigSub = tiOne $ cteSignedSubmissions env
                     submissionReq = signedSubmissionToRequest sigSub
-                transact $ prepareForSubmissions env
+                transactW $ prepareForSubmissions env
                 void $ studentMakeSubmissionVerified student submissionReq
 
                 res <- invoke $ studentGetAllSubmissions student
@@ -568,7 +568,7 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
                 if student == badStudent
                 then return $ property rejected
                 else do
-                    transact $ prepareForSubmissions env
+                    transactW $ prepareForSubmissions env
                     fmap property $ throwsPrism (_BadSubmissionSignature . _FakeSubmissionSignature) $
                         studentMakeSubmissionVerified badStudent newSubmission
 
@@ -582,6 +582,6 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
                                         .~ unsafeHash @Text "pva was here"
                     newSubmission = signedSubmissionToRequest badSub
 
-                transact $ prepareForSubmissions env
+                transactW $ prepareForSubmissions env
                 fmap property $ throwsPrism (_BadSubmissionSignature . _SubmissionSignatureInvalid) $
                     studentMakeSubmissionVerified student newSubmission
