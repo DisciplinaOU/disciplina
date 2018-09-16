@@ -27,6 +27,7 @@ instance Serialise Fees
 data FeeCoefficients = FeeCoefficients
     { fcMinimal       :: Coin  -- ^ How much is the base fee?
     , fcMultiplier    :: Float -- ^ How much tokens taken per byte of tx?
+    , fcMinimalPub    :: Coin  -- ^ Base fee for publications
     , fcMultiplierPub :: Float -- ^ The multiplier for publications,
                                -- gets multipled by the number of txs
                                -- in the private block.
@@ -40,14 +41,14 @@ calcFeeTx FeeCoefficients{..} (Size size) =
 -- | Calculates tx fee based on the number of txs in the private block.
 calcFeePub :: FeeCoefficients -> Word32 -> Fees
 calcFeePub FeeCoefficients{..} txsN =
-    Fees $ Coin $ unCoin fcMinimal + round (fcMultiplierPub * fromIntegral txsN)
+    Fees $ Coin $ unCoin fcMinimalPub + round (fcMultiplierPub * fromIntegral txsN)
 
 -- | Calculates fees of 'GTxWitnessed'.
 calcFeeG :: FeeCoefficients -> GTxWitnessed -> Fees
 calcFeeG coeffs = \case
     tx@(GMoneyTxWitnessed _) ->
         calcFeeTx coeffs $ sizeSerialised tx
-    (GPublicationTxWitnessed (PublicationTxWitnessed { ptwTx })) ->
+    (GPublicationTxWitnessed PublicationTxWitnessed { ptwTx }) ->
         calcFeePub coeffs $ mrSize $ ptHeader ptwTx ^. pbhBodyProof
 
 -- | "No fee" setup.
@@ -55,6 +56,7 @@ noFees :: FeeCoefficients
 noFees = FeeCoefficients
     { fcMinimal       = Coin 0
     , fcMultiplier    = 0
+    , fcMinimalPub    = Coin 0
     , fcMultiplierPub = 0
     }
 

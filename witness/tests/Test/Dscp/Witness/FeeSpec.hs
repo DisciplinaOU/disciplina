@@ -10,7 +10,7 @@ import Dscp.Util.Test
 testFeeCoefficients :: FeeCoefficients
 testFeeCoefficients =
     FeeCoefficients
-        {fcMinimal = Coin 10, fcMultiplier = 0.1, fcMultiplierPub = 0.1}
+        {fcMinimal = Coin 10, fcMultiplier = 0.1, fcMinimalPub = Coin 10, fcMultiplierPub = 0.1}
 
 spec :: Spec
 spec = describe "Transaction fees" $ do

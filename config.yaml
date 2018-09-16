@@ -4,6 +4,7 @@ demo: &demo
     fee:
       minimal: 10
       multiplier: 0.1
+      minimalPub: 10
       multiplierPub: 0.1
     genesis: &demo-genesis
       genesisSeed: "GromakNaRechke"
