@@ -26,7 +26,7 @@ module Dscp.Snowdrop.Configuration
     , Values (..)
 
     , CanVerifyPayload
-    , PersonalisedProof
+    , PersonalisedProof (..)
     , AddrTxProof
     , PublicationTxProof
     , Proofs (..)
@@ -57,7 +57,7 @@ import Snowdrop.Util (HasReview (..), IdStorage, VerifySign, WithSignature (..),
                       deriveView, verifySignature, withInj, withInjProj)
 import qualified Snowdrop.Util as SD (PublicKey, Signature)
 
-import Dscp.Core.Foundation (HeaderHash)
+import Dscp.Core (Fees, HeaderHash)
 import qualified Dscp.Core.Foundation as T
 import Dscp.Crypto (HasAbstractSignature, Hash, PublicKey, SigScheme, Signature, hashF, verify)
 import Dscp.Snowdrop.Storage.Types
@@ -237,8 +237,16 @@ deriving instance (Show (SD.Signature sigScheme a), Show (SD.PublicKey sigScheme
 type CanVerifyPayload txid payload =
     VerifySign DscpSigScheme (txid, PublicKey, payload)
 
-type PersonalisedProof txid payload =
-    WithSignature DscpSigScheme (txid, PublicKey, payload)
+-- | Proof for transaction.
+--   Allows to check that tx was not corrupted and is properly signed.
+--   Also carries calculated fees.
+data PersonalisedProof txid payload = PersonalisedProof
+    { ppSignedPart :: WithSignature
+        DscpSigScheme
+        (txid, PublicKey, payload)
+    , ppFees :: Fees
+    }
+    deriving (Eq, Show, Generic)
 
 type AddrTxProof =
     PersonalisedProof T.TxId ()
@@ -256,8 +264,9 @@ data Proofs
 ----------------------------------------------------------------------------
 
 data ExpanderException =
-    MTxDuplicateOutputs
+      MTxDuplicateOutputs
     | CantResolveSender
+    | ExpanderInternalError String
 
 instance Show ExpanderException where
     show = toString . pretty
@@ -266,6 +275,8 @@ instance Buildable ExpanderException where
     build = \case
         MTxDuplicateOutputs -> "Duplicated transaction outputs"
         CantResolveSender -> "Source account is not registered in chain"
+        ExpanderInternalError s ->
+            fromString $ "Expander failed internally: " <> s
 
 data Exceptions
     = ExpanderRestrictionError   RestrictionInOutException

@@ -7,11 +7,7 @@
 module Dscp.Snowdrop.AccountValidation
        ( validateSimpleMoneyTransfer
 
-       -- , accountComputeFee
-       , validateSaneArrival
-       , validateSaneDeparture
-       , checkThatAccountIsUpdatedOnly
-
+       , Authenticated (..)
        , authenticate
        , requirePart
        , assertSigned
@@ -20,17 +16,17 @@ module Dscp.Snowdrop.AccountValidation
        ) where
 
 import Control.Monad.Error.Class (MonadError)
-import Data.List as List (partition)
-import Data.Map as Map (toList)
+import qualified Data.List as List
+import qualified Data.Map as Map
 import Snowdrop.Core (ERoComp, HasKeyValue, PreValidator (..), StatePException, StateTx (..),
                       StateTxType (..), TxValidationException (..), Validator, ValueOp (..),
                       changeSet, idSumPrefix, mkValidator, queryOne, validateIff)
 import Snowdrop.Util
 
-import Dscp.Core.Foundation (Address, TxId)
+import Dscp.Core
 import qualified Dscp.Crypto as DC (PublicKey)
-import Dscp.Snowdrop.Configuration (CanVerifyPayload, Exceptions, Ids, PersonalisedProof, Proofs,
-                                    TxIds, Values, accountPrefix)
+import Dscp.Snowdrop.Configuration (CanVerifyPayload, Exceptions, Ids, PersonalisedProof (..),
+                                    Proofs, TxIds, Values, accountPrefix)
 import Dscp.Snowdrop.Types
 
 assertSigned
@@ -51,29 +47,38 @@ infix 1 `check`
 check :: (Monoid a, HasException e e1) => Bool -> e1 -> ERoComp e id value ctx a
 check = flip validateIff
 
-validateSimpleMoneyTransfer
-    :: forall ctx
-    .  CanVerifyPayload TxId ()
-    => HasPrism Proofs (PersonalisedProof TxId ())
-    => HasPrism Proofs TxId
-    => HasGetter DC.PublicKey Address
+validateSimpleMoneyTransfer ::
+       forall ctx.
+       ( CanVerifyPayload TxId ()
+       , HasPrism Proofs (PersonalisedProof TxId ())
+       , HasPrism Proofs TxId
+       , HasGetter DC.PublicKey Address
+       )
     => Validator Exceptions Ids Proofs Values ctx
 validateSimpleMoneyTransfer = mkValidator ty
     [preValidateSimpleMoneyTransfer @ctx]
   where
     ty = StateTxType $ getId (Proxy @TxIds) AccountTxTypeId
 
-authenticate
-    :: forall txid ctx payload
-    .  Eq txid
-    => HasPrism Proofs (PersonalisedProof txid payload)
-    => HasPrism Proofs txid
-    => HasGetter DC.PublicKey Address
-    => CanVerifyPayload txid payload
+data Authenticated payload = Authenticated
+    { aAccountId :: AccountId
+    , aAccount   :: Account
+    , aPayload   :: payload
+    , aMinFees   :: Fees -- ^ The minimum fees tx sender must pay.
+    } deriving (Show)
+
+authenticate ::
+       forall txid ctx payload.
+       ( Eq txid
+       , HasPrism Proofs (PersonalisedProof txid payload)
+       , HasPrism Proofs txid
+       , HasGetter DC.PublicKey Address
+       , CanVerifyPayload txid payload
+       )
     => Proofs
-    -> ERoComp Exceptions Ids Values ctx (AccountId, Account, payload)
+    -> ERoComp Exceptions Ids Values ctx (Authenticated payload)
 authenticate proof = do
-    signedHash
+    PersonalisedProof signedHash fees
         :: PersonalisedProof txid payload
         <- requirePart proof SignatureIsMissing
 
@@ -86,18 +91,23 @@ authenticate proof = do
     before <- AccountId authorId           `assertExists` AuthorDoesNotExist
     ()     <- realHashfromExpander == hash `check`        TransactionIsCorrupted
 
-    return (AccountId authorId, before, payload)
+    return $ Authenticated
+        (AccountId authorId)
+        before
+        payload
+        fees
 
-preValidateSimpleMoneyTransfer
-    :: forall       ctx
-    .  CanVerifyPayload TxId ()
-    => HasPrism Proofs (PersonalisedProof TxId ())
-    => HasPrism Proofs TxId
-    => HasGetter DC.PublicKey Address
+preValidateSimpleMoneyTransfer ::
+       forall ctx.
+       ( CanVerifyPayload TxId ()
+       , HasPrism Proofs (PersonalisedProof TxId ())
+       , HasPrism Proofs TxId
+       , HasGetter DC.PublicKey Address
+       )
     => PreValidator Exceptions Ids Proofs Values ctx
 preValidateSimpleMoneyTransfer =
     PreValidator $ \_trans@StateTx {..} -> do
-        (author, before, ()) <- authenticate @TxId txProof
+        Authenticated author before () fees <- authenticate @TxId txProof
 
             -- Turn ChangeSet to kv-pairs.
         let updates        = Map.toList $ changeSet txBody
@@ -112,29 +122,30 @@ preValidateSimpleMoneyTransfer =
         -- Strip Update ctor from values.
         changes <- mapM checkThatAccountIsUpdatedOnly accountChanges
 
-        let (payer, recipients) = List.partition (is author) changes
+        let isAuthor :: (AccountId, Account) -> Bool
+            isAuthor (accId, _) = accId == author
+        let (payer, recipients) = List.partition isAuthor changes
 
-        (paid, deltas) <-
-            (,) <$> validateSaneDeparture payer before
-                <*> mapM validateSaneArrival recipients
+        allOutputs <- mapM validateSaneArrival recipients
 
-        validateIff SumMustBeNonNegative $
-            paid - sum deltas == 0
+        let balanceBefore = aBalance before
+        -- Total amount of coins sent (sum of real tx outputs + a fee output)
+        let receivedTotal = sum allOutputs
+        -- Previous value minus fees (the outputs that were specified in the tx itself)
+        let receivedNoFees = receivedTotal - coinToInteger (unFees fees)
 
+        unless (balanceBefore - receivedNoFees >= 0) $ throwLocalError SumMustBeNonNegative
+        unless (balanceBefore - receivedTotal >= 0) $ throwLocalError CannotAffordFees
+
+        validateSaneDeparture payer before
 
 -- | Require that whole projects into part or throw error.
 requirePart :: (HasReview e e1, MonadError e m, HasPrism s hash) => s -> e1 -> m hash
-requirePart whole message = do
-    case proj whole of
-      Just part -> do
-        return part
-
-      Nothing -> do
-        throwLocalError message
+requirePart whole message = maybe (throwLocalError message) pure $ proj whole
 
 -- | Require that id exists in a database or throw error.
-assertExists
-    :: ( HasExceptions e [e1, StatePException]
+assertExists ::
+       ( HasExceptions e '[ e1, StatePException]
        , Ord id
        , Ord id'
        , HasKeyValue id value id' a
@@ -142,59 +153,27 @@ assertExists
     => id'
     -> e1
     -> ERoComp e id value ctx a
-assertExists thing message = do
-    result <- queryOne thing
-    case result of
-      Nothing -> do
-        throwLocalError message
-
-      Just it -> do
-        return it
-
--- TODO: Fix and unmess when fee will be actually required.
--- accountComputeFee
---   :: forall ctx
---   .  StateTx Ids Proofs Values
---   -> ERoComp Exceptions Ids Values ctx Integer
--- accountComputeFee = \StateTx{..} -> do
---     let ty = StateTxType $ getId (Proxy @AccountTxTypeId) AccountTxTypeId
---     author
---         :: Author
---         <- requirePart txProof (ProofProjectionFailed ty)
---     before <- assertExists (auAuthorId author) AuthorDoesNotExist
---     let updates = Map.toList $ changeSet txBody
---     let accountChanges = updates <&> \pair@(k, _) -> (k, proj pair)
---     changes <- mapM checkThatAccountIsUpdatedOnly accountChanges
---     let (payer, recipients) = List.partition (is (auAuthorId author)) changes
---     (paid, deltas) <-
---         (,) <$> validateSaneDeparture payer before
---             <*> mapM validateSaneArrival recipients
---     let difference = paid - sum deltas
---     () <- validateIff SumMustBeNonNegative (difference >= 0)
---     return difference
+assertExists thing message =
+    maybe (throwLocalError message) pure =<< queryOne thing
 
 validateSaneDeparture
   :: forall ctx
   .  [(AccountId, Account)]
   -> Account
-  -> ERoComp Exceptions Ids Values ctx Integer
-validateSaneDeparture self before = do
-    case self of
-        -- Check that only one change is done for author.
-        [(_, account)] -> do
+  -> ERoComp Exceptions Ids Values ctx ()
+validateSaneDeparture self before = case self of
+    -- Check that only one change is done for author.
+    [(AccountId _, account)] -> do
+        let paid = aBalance before - aBalance account
+        -- Check that transaction increments author nonce.
 
-            let paid = aBalance before - aBalance account
-            -- Check that transaction increments author nonce.
-
-            () <- mconcat
-                [ validateIff NonceMustBeIncremented $ aNonce account == aNonce before + 1
-                , validateIff PaymentMustBePositive  $ paid > 0
-                , validateIff BalanceCannotBecomeNegative $ aBalance account >= 0
-                ]
-
-            return paid
-
-        _ -> throwLocalError NotASingletonSelfUpdate
+        () <- mconcat
+            [ validateIff NonceMustBeIncremented      $ aNonce account == aNonce before + 1
+            , validateIff PaymentMustBePositive       $ paid > 0
+            , validateIff BalanceCannotBecomeNegative $ aBalance account >= 0
+            ]
+        pass
+    _ -> throwLocalError NotASingletonSelfUpdate
 
 validateSaneArrival
   :: forall ctx
@@ -218,6 +197,3 @@ checkThatAccountIsUpdatedOnly = \case
     (_, Just (accId, Upd it)) -> return (accId, it)
     (_, Just (accId, New it)) -> return (accId, it)
     (k, _)                    -> throwLocalError $ UnexpectedPayload [idSumPrefix k]
-
-is :: AccountId -> (AccountId, Account) -> Bool
-is accountId (accId, _) = accountId == accId

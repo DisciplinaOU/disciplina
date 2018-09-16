@@ -8,6 +8,7 @@ import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveFromJSON, deriveJSON)
 
 import Dscp.Core.Config
+import Dscp.Core.Fees
 import Dscp.Core.Foundation
 import Dscp.Core.Genesis
 import Dscp.Core.Governance
@@ -76,6 +77,9 @@ instance FromJSON Governance where
 deriving instance ToJSON Coin
 deriving instance FromJSON Coin
 
+deriving instance ToJSON Nonce
+deriving instance FromJSON Nonce
+
 deriving instance ToJSON GTxId
 deriving instance FromJSON GTxId
 
@@ -132,6 +136,7 @@ deriveJSON defaultOptions ''GTxWitnessed
 deriveJSON defaultOptions ''PublicationTxWitness
 deriveJSON defaultOptions ''PublicationTxWitnessed
 deriveJSON defaultOptions ''PublicationTx
+deriveJSON defaultOptions ''FeeCoefficients
 
 deriveFromJSON defaultOptions ''Committee
 deriveJSON defaultOptions ''GenesisDistributionElem

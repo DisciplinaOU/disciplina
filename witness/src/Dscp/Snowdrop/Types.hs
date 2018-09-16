@@ -12,10 +12,10 @@ module Dscp.Snowdrop.Types
 
 import Data.Default (Default (..))
 import Data.Text.Buildable (Buildable (..))
-import Formatting (bprint, build, int, (%))
+import Fmt (build, (+|), (|+))
 import qualified Text.Show
 
-import Dscp.Core.Foundation (Address)
+import Dscp.Core.Foundation (Address, Nonce)
 
 -- | Transaction type for publication.
 data PublicationTxTypeId
@@ -27,6 +27,9 @@ data PublicationValidationException
     | PublicationPrevBlockIsIncorrect
     | StorageIsCorrupted
     | PublicationIsBroken
+    | PublicationAuthorDoesNotExist
+    | PublicationFeeIsTooLow -- ^
+    | PublicationCantAffordFee -- ^ Publication owner can not afford the fee
     deriving (Eq, Ord)
 
 instance Show PublicationValidationException where
@@ -38,6 +41,10 @@ instance Buildable PublicationValidationException where
         PublicationPrevBlockIsIncorrect -> "Publication previous block is incorrect"
         StorageIsCorrupted -> "Storage is inconsistent"
         PublicationIsBroken -> "Bad publication"
+        PublicationAuthorDoesNotExist -> "Publicaion author does not exist"
+        PublicationFeeIsTooLow -> "The fee specified in the publication tx is " <>
+                                  "lower than the minimal one."
+        PublicationCantAffordFee -> "Publication author can't afford the fee"
 
 data AccountTxTypeId = AccountTxTypeId deriving (Eq, Ord, Show, Generic)
 
@@ -57,8 +64,9 @@ data AccountValidationException
     | ReceiverMustIncreaseBalance  -- ^ Receiver cannot decrease in its 'aBalance'.
     | SumMustBeNonNegative         -- ^ Amount of money sent must be greater of equal
                                    -- to the total amount received.
+    | CannotAffordFees             -- ^ Given account state cannot afford given fees.
     | BalanceCannotBecomeNegative
-    deriving (Eq, Ord, Enum, Bounded, Show)
+    deriving (Eq, Ord, Enum, Bounded)
 
 instance Buildable AccountValidationException where
     build = \case
@@ -73,7 +81,11 @@ instance Buildable AccountValidationException where
                                  \only possible to add tokens)"
         ReceiverMustIncreaseBalance -> "Receiver's balance decreased"
         SumMustBeNonNegative -> "Tx input value < tx sum of outputs"
-        BalanceCannotBecomeNegative -> "Balance cannot become negative"
+        CannotAffordFees -> "Tx sender can not afford fees"
+        BalanceCannotBecomeNegative -> "Balance can not become negative"
+
+instance Show AccountValidationException where
+    show = toString . pretty
 
 -- | Wrapper for address.
 newtype AccountId = AccountId { unAccountId :: Address }
@@ -82,7 +94,7 @@ newtype AccountId = AccountId { unAccountId :: Address }
 -- | Slice of account that interest us while doing money transfers.
 data Account = Account
     { aBalance :: Integer  -- ^ Account balance.
-    , aNonce   :: Integer  -- ^ Count of transactions originated _from_ this account.
+    , aNonce   :: Nonce    -- ^ Account nonce.
     } deriving (Eq, Ord, Show, Generic)
 
 -- | How absense of account in db should look like outside.
@@ -90,7 +102,7 @@ instance Default Account where
     def = Account{ aBalance = 0, aNonce = 0 }
 
 instance Buildable Account where
-    build Account{..} = bprint ("account: bal "%int%", nonce "%int) aBalance aNonce
+    build Account{..} = "account: bal " +| aBalance |+ ", nonce " +| aNonce |+ ""
 
 -- | Aggegate of author 'Account' information from tx.
 data Author = Author
@@ -99,4 +111,4 @@ data Author = Author
     } deriving (Eq, Ord, Show, Generic)
 
 instance Buildable Author where
-    build Author{..} = bprint ("author "%Formatting.build%", nonce "%int) auAuthorId auNonce
+    build Author{..} = "author " +| auAuthorId |+ ", nonce " +| auNonce |+ ""

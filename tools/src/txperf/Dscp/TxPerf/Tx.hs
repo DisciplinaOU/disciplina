@@ -17,7 +17,7 @@ sendTx wc async from tos = do
     return tx
   where
     inAcc = TxInAcc { tiaNonce = currentNonce from, tiaAddr = addr from }
-    inValue = foldr sumCoins (Coin 0) $ snd <$> tos
+    inValue = foldr unsafeAddCoin (Coin 0) $ snd <$> tos
     outs = (\(acc, value) -> TxOut (addr acc) value) <$> tos
     tx = Tx{ txInAcc = inAcc, txInValue = inValue, txOuts = outs }
 

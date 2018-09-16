@@ -28,7 +28,7 @@ newtype GenAddressMap = GenAddressMap
 
 instance Semigroup GenAddressMap where
     GenAddressMap a <> GenAddressMap b =
-        GenAddressMap (M.unionWith sumCoins a b)
+        GenAddressMap (M.unionWith unsafeAddCoin a b)
 
 instance Monoid GenAddressMap where
     mempty = GenAddressMap mempty
@@ -85,9 +85,11 @@ distrToMap :: Maybe (NonEmpty Address) -> GenesisDistribution -> GenAddressMap
 distrToMap maddrs (GenesisDistribution distrs) =
     foldl1 mappend $ fmap (distrElemToMap maddrs) distrs
 
+-- | Genesis secret key.
 genesisSk :: SecretKey
 genesisSk = withIntSeed 12345 genSecretKey
 
+-- | Generate genesis info (addr map, block).
 formGenesisInfo :: GenesisConfig -> GenesisInfo
 formGenesisInfo GenesisConfig{..} =
     GenesisInfo { giAddressMap = genesisAddrMap
@@ -106,10 +108,9 @@ formGenesisInfo GenesisConfig{..} =
         sk = genesisSk
         pk = toPublic sk
 
-        createTxOut (a, c) = TxOut a c
-
         initTx =
-            let fromAddr = mkAddr pk
+            let createTxOut (a, c) = TxOut a c
+                fromAddr = mkAddr pk
                 txOutputs = map createTxOut (Map.toList $ unGenAddressMap genesisAddrMap)
                 twTx = Tx { txInAcc = TxInAcc fromAddr 0
                           , txInValue = totalCoinsAddrMap genesisAddrMap
