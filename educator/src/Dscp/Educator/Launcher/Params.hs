@@ -5,6 +5,9 @@ module Dscp.Educator.Launcher.Params
        , EducatorParams(..)
        ) where
 
+import Data.Aeson.Options (defaultOptions)
+import Data.Aeson.TH (deriveFromJSON)
+
 import Dscp.DB.SQLite (SQLiteParams)
 import Dscp.Educator.Web.Params (EducatorWebParams)
 import Dscp.Resource.Keys (BaseKeyParams)
@@ -23,3 +26,6 @@ data EducatorParams = EducatorParams
     , epWebParams :: EducatorWebParams
     -- ^ Parameters for HTTP APIs
     }
+
+deriveFromJSON defaultOptions ''EducatorKeyParams
+deriveFromJSON defaultOptions ''EducatorParams
