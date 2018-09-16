@@ -48,7 +48,7 @@ commonGetAssignments
     => ApiCase apiTag
     -> Student
     -> GetAssignmentsFilters
-    -> DBT WithinTx w m [ResponseCase apiTag Assignment]
+    -> DBT 'WithinTx w m [ResponseCase apiTag Assignment]
 commonGetAssignments apiCase student filters = do
     assignments <- query queryText (mconcat $ oneParam student : paramsF)
     forM assignments $
@@ -175,7 +175,7 @@ commonDeleteSubmission
     :: (MonadEducatorWebQuery m)
     => Hash Submission
     -> Maybe Student
-    -> DBT WithinTx Writing m ()
+    -> DBT 'WithinTx 'Writing m ()
 commonDeleteSubmission submissionH studentF = do
     commonExistsSubmission submissionH studentF
         `assert` AbsentError (SubmissionDomain submissionH)

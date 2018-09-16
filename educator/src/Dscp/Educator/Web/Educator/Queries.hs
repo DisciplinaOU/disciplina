@@ -20,7 +20,7 @@ import Dscp.Util
 
 educatorRemoveStudent
     :: MonadEducatorWebQuery m
-    => Student -> DBT t Writing m ()
+    => Student -> DBT t 'Writing m ()
 educatorRemoveStudent student = do
     -- TODO [DSCP-176]: Proper implementation of this method may require
     -- fundemental rethinking of our database scheme and rewriting many code.
@@ -81,7 +81,7 @@ educatorUnassignFromStudent
     :: MonadEducatorWebQuery m
     => Student
     -> Hash Assignment
-    -> DBT t Writing m ()
+    -> DBT t 'Writing m ()
 educatorUnassignFromStudent student assignH = do
     -- we are not deleting other info since educator may want it to be preserved
     -- in case if he wants to assign as assignment again
@@ -135,7 +135,7 @@ educatorGetGrades studentF courseIdF isFinalF = do
 
 educatorPostGrade
     :: MonadEducatorWebQuery m
-    => Hash Submission -> Grade -> DBT t Writing m ()
+    => Hash Submission -> Grade -> DBT t 'Writing m ()
 educatorPostGrade subH grade = do
     time <- liftIO getCurrentTime
     sigSub <- getSignedSubmission subH

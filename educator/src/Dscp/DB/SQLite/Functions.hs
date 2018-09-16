@@ -11,8 +11,8 @@ module Dscp.DB.SQLite.Functions
 
          -- * SQLite context
        , DBT
-       , WithinTx
-       , Writing
+       , TransactionalContext (WithinTx)
+       , OperationType (Writing)
        , query
        , execute
        , modifyingQuery
@@ -162,7 +162,7 @@ closeSQLiteDB sd =
 -- Phantom type parameter @ w @ should be either a type variable or 'Writing'
 -- and means whether given actions should be performed in writing transaction,
 -- if performed within a transaction at all.
-newtype DBT t w m a = DBT
+newtype DBT (t :: TransactionalContext) (w :: OperationType) m a = DBT
     { runDBT :: ReaderT Connection m a
     } deriving (Functor, Applicative, Monad, MonadIO, MonadThrow, MonadCatch)
 
@@ -175,15 +175,17 @@ instance (Log.MonadLogging m, Monad m) => Log.MonadLogging (DBT t w m) where
     log = DBT . lift ... Log.log
     logName = DBT $ lift Log.logName
 
--- | Use this in 'DBT' to mark that actions should be performed within
+-- | Declares whether given 'DBT' actions should be performed within
 -- transaction.
-data WithinTx
+data TransactionalContext = WithinTx | OutsideOfTransaction
 
--- | States that given 'DBT' actions should be performed within write
--- transaction. We cannot rely on sqlite itself detecting writing transactions,
+-- | Declares whether given 'DBT' actions, if performed within transaction,
+-- should be performed within /write/ transaction.
+-- We cannot rely on sqlite itself detecting writing transactions, otherwise
+-- "ErrorBusy: database is locked" errors are possible,
 -- see https://stackoverflow.com/questions/30438595/sqlite3-ignores-sqlite3-busy-timeout
 -- for details.
-data Writing
+data OperationType = Writing | Reading
 
 -- | Make an SQL query which returns some result.
 --
@@ -199,7 +201,7 @@ query q params = do
 -- | Perform an SQL query which does not return any result.
 execute
     :: (MonadIO m, ToRow params)
-    => Query -> params -> DBT t Writing m ()
+    => Query -> params -> DBT t 'Writing m ()
 execute q params = do
     conn <- DBT ask
     liftIO $ Backend.execute conn q params
@@ -207,7 +209,7 @@ execute q params = do
 -- | Make an SQL query which does some changes and returns some result.
 modifyingQuery
     :: (MonadIO m, FromRow row, ToRow params)
-    => Query -> params -> DBT t Writing m [row]
+    => Query -> params -> DBT t 'Writing m [row]
 modifyingQuery q params = do
     conn <- DBT ask
     liftIO $ Backend.query conn q params
@@ -231,13 +233,10 @@ invokeUnsafe
 invokeUnsafe (DBT action) =
     borrowConnection $ runReaderT action
 
--- | Internal type, indicates that actions happen not in 'transact'.
-data OutsideOfTransaction
-
 -- | Run 'DBT'.
 invoke
     :: (MonadUnliftIO m, HasCtx ctx m '[SQLiteDB])
-    => DBT OutsideOfTransaction w m a -> m a
+    => DBT 'OutsideOfTransaction w m a -> m a
 invoke (DBT action) =
     borrowConnection $ runReaderT action
 
@@ -251,10 +250,6 @@ transactUsing withTransaction (DBT action) = do
         liftIO . withTransaction conn $
             unlift $ runReaderT action conn
 
--- | Internal type, indicated that actions happen within reading-only
--- transaction.
-data Reading
-
 -- | Run 'DBT' within a transaction.
 -- This function is polymorphic over @r@ on purpose, this way it cannot be
 -- applied to @forall r m a. DBT t m a@. If you encounter an error due to this,
@@ -262,7 +257,7 @@ data Reading
 transactR
     :: forall t m ctx a.
        (MonadUnliftIO m, HasCtx ctx m '[SQLiteDB])
-    => RequiresTransaction t => DBT t Reading m a -> m a
+    => RequiresTransaction t => DBT t 'Reading m a -> m a
 transactR = transactUsing Backend.withTransaction
 
 -- | Run 'DBT' within a writing transaction.
@@ -273,9 +268,9 @@ transactW
 transactW = transactUsing Backend.withImmediateTransaction
 
 -- | Helps to prevent using 'transact' when 'invoke' is enough.
-class RequiresTransaction r
-instance RequiresTransaction WithinTx
+class RequiresTransaction (t :: TransactionalContext)
+instance RequiresTransaction 'WithinTx
 
 -- | Helps to prevent using 'transactW' when 'transact' is enough.
-class RequiresWriting r
-instance RequiresWriting Writing
+class RequiresWriting (w :: OperationType)
+instance RequiresWriting 'Writing

@@ -55,7 +55,7 @@ submission1 : _ = detGen 23423 $ do
         <&> \(_sStudentId, _sContentsHash, (hash -> _sAssignmentHash))
             -> Submission{..}
 
-createCourseSimple :: DBM m => Int -> DBT WithinTx Writing m Course
+createCourseSimple :: DBM m => Int -> DBT 'WithinTx 'Writing m Course
 createCourseSimple i =
     createCourse
         CourseDetails

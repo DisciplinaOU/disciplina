@@ -13,7 +13,7 @@ commonGetProofs
     :: MonadEducatorWebQuery m
     => Student
     -> GetProvenStudentTransactionsFilters
-    -> DBT WithinTx w m [BlkProofInfo]
+    -> DBT 'WithinTx w m [BlkProofInfo]
 commonGetProofs student filters = do
     rawProofs <- getProvenStudentTransactions student filters
     return

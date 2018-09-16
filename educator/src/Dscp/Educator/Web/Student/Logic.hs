@@ -54,7 +54,7 @@ studentGetAssignment
     :: MonadEducatorWebQuery m
     => Student
     -> Hash Assignment
-    -> DBT WithinTx w m AssignmentStudentInfo
+    -> DBT 'WithinTx w m AssignmentStudentInfo
 studentGetAssignment student assignH =
     commonGetAssignments StudentCase student def
         { afAssignmentHash = Just assignH }
@@ -65,7 +65,7 @@ studentGetAssignment student assignH =
 studentGetAllAssignments
     :: MonadEducatorWebQuery m
     => Student
-    -> DBT WithinTx w m [AssignmentStudentInfo]
+    -> DBT 'WithinTx w m [AssignmentStudentInfo]
 studentGetAllAssignments student =
     commonGetAssignments StudentCase student def
 

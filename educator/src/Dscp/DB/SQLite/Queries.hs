@@ -171,7 +171,7 @@ getStudentCourses student =
     |]
 
 -- | How can a student enroll to a course?
-enrollStudentToCourse :: DBM m => Id Student -> Id Course -> DBT WithinTx Writing m ()
+enrollStudentToCourse :: DBM m => Id Student -> Id Course -> DBT 'WithinTx 'Writing m ()
 enrollStudentToCourse student course = do
     existsCourse  course  `assertExists` CourseDomain  course
     existsStudent student `assertExists` StudentDomain student
@@ -207,7 +207,7 @@ getStudentAssignments student course = do
 -- | How can a student submit a submission for assignment?
 submitAssignment
     :: DBM m
-    => SignedSubmission -> DBT WithinTx Writing m (Id SignedSubmission)
+    => SignedSubmission -> DBT 'WithinTx 'Writing m (Id SignedSubmission)
 submitAssignment = createSignedSubmission
 
 -- How can a student see his grades for course assignments?
@@ -282,7 +282,7 @@ getProvenStudentTransactions
        DBM m
     => Id Student
     -> GetProvenStudentTransactionsFilters
-    -> DBT WithinTx w m [(MerkleProof PrivateTx, [(Word32, PrivateTx)])]
+    -> DBT 'WithinTx w m [(MerkleProof PrivateTx, [(Word32, PrivateTx)])]
 getProvenStudentTransactions studentId filters = do
     -- Contains `(tx, idx, blockId)` map.
     txsBlockList <- getTxsBlockMap
@@ -406,7 +406,7 @@ getLastBlockIdAndIdx = do
         limit     1
     |] ()
 
-createBlock :: DBM m => Maybe ATGDelta -> DBT WithinTx Writing m ()
+createBlock :: DBM m => Maybe ATGDelta -> DBT 'WithinTx 'Writing m ()
 createBlock delta = do
     (prev, idx) <- getLastBlockIdAndIdx
     txs         <- getAllNonChainedTransactions
@@ -461,7 +461,7 @@ createBlock delta = do
 
 createSignedSubmission
     :: DBM m
-    => SignedSubmission -> DBT WithinTx Writing m (Id SignedSubmission)
+    => SignedSubmission -> DBT 'WithinTx 'Writing m (Id SignedSubmission)
 createSignedSubmission sigSub = do
     let
         submission     = sigSub^.ssSubmission
@@ -498,7 +498,7 @@ createSignedSubmission sigSub = do
         values       (?, ?, ?, ?, ?, julianday(?))
     |]
 
-setStudentAssignment :: DBM m => Id Student -> Id Assignment -> DBT WithinTx Writing m ()
+setStudentAssignment :: DBM m => Id Student -> Id Assignment -> DBT 'WithinTx 'Writing m ()
 setStudentAssignment studentId assignmentId = do
     _          <- existsStudent studentId    `assertExists`      StudentDomain    studentId
     assignment <- getAssignment assignmentId `assertJustPresent` AssignmentDomain assignmentId
@@ -554,7 +554,7 @@ data CourseDetails = CourseDetails
 simpleCourse :: Course -> CourseDetails
 simpleCourse i = CourseDetails i "" []
 
-createCourse :: DBM m => CourseDetails -> DBT WithinTx Writing m (Id Course)
+createCourse :: DBM m => CourseDetails -> DBT 'WithinTx 'Writing m (Id Course)
 createCourse params = do
     let course = cdCourseId params
     execute createCourseRequest (course, cdDesc params)
@@ -617,7 +617,7 @@ existsSubmission submission = do
         where   hash = ?
     |]
 
-createStudent :: DBM m => Student -> DBT t Writing m (Id Student)
+createStudent :: DBM m => Student -> DBT t 'Writing m (Id Student)
 createStudent student = do
     execute createStudentRequest (Only student)
         `ifAlreadyExistsThrow` StudentDomain student
@@ -628,7 +628,7 @@ createStudent student = do
         values       (?)
     |]
 
-createAssignment :: DBM m => Assignment -> DBT WithinTx Writing m (Id Assignment)
+createAssignment :: DBM m => Assignment -> DBT 'WithinTx 'Writing m (Id Assignment)
 createAssignment assignment = do
     let courseId = assignment^.aCourseId
 
@@ -685,7 +685,7 @@ getSignedSubmission submissionHash = do
 
 createTransaction
     :: (DBM m, ToField TxBlockIdx)
-    => PrivateTx -> DBT WithinTx Writing m (Id PrivateTx)
+    => PrivateTx -> DBT 'WithinTx 'Writing m (Id PrivateTx)
 createTransaction trans = do
     let ptid    = trans^.idOf
         subHash = trans^.ptSignedSubmission.idOf
