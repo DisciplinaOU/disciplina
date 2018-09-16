@@ -19,5 +19,4 @@ getWitnessConfig = do
     configParams <- execParser $
         info (helper <*> versionOption <*> configParamsParser) $
         fullDesc <> progDesc "Disciplina witness node."
-    config <- buildConfig configParams fillWitnessConfig
-    return config
+    buildConfig configParams fillWitnessConfig

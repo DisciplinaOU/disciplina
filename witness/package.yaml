@@ -62,7 +62,6 @@ library:
     - transformers
     - unliftio
     - unordered-containers
-    - vinyl
     - wai-cors
     - warp
     - wai

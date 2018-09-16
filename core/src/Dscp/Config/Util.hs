@@ -10,11 +10,15 @@
 module Dscp.Config.Util
     (
       type (+++)
+    , type (<:)
+    , rcast
+    , rreplace
 
     , ConfigParams (..)
     , configParamsParser
     , ConfigBuildError (..)
     , buildConfig
+    , fillExpandedConfig
 
     , HasGiven
     , giveL
@@ -22,6 +26,7 @@ module Dscp.Config.Util
     , giveLC
     ) where
 
+import Data.Vinyl.Lens (rcast, rreplace, type (<:))
 import Data.Reflection (reifySymbol)
 import GHC.TypeLits (Symbol, symbolVal, KnownSymbol)
 import Data.Reflection (Given (..))
@@ -104,6 +109,15 @@ buildConfig ConfigParams{..} filler =
             leftToThrow ConfigIncomplete $
             finalise fileConfigFilled
         pure config
+
+-- | Utility function for filling up a config reusing existing function
+-- for a subconfig.
+fillExpandedConfig ::
+       forall xs ys . (xs <: ys)
+    => (ConfigRec 'Partial xs -> IO (ConfigRec 'Partial xs))
+    -> ConfigRec 'Partial ys
+    -> IO (ConfigRec 'Partial ys)
+fillExpandedConfig filler cfg = flip rreplace cfg <$> filler (rcast cfg)
 
 -- | CLI parser for config parameters.
 configParamsParser :: Opt.Parser ConfigParams

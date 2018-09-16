@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedLabels #-}
+
 -- | Resources used by Educator node
 
 module Dscp.Educator.Launcher.Resource
@@ -7,14 +9,16 @@ module Dscp.Educator.Launcher.Resource
 
 import Control.Lens (makeLenses)
 import Loot.Base.HasLens (HasLens (..))
+import Loot.Config (option, sub)
 import Loot.Log.Rio (LoggingIO)
 import Loot.Network.ZMQ (ZTGlobalEnv, ZTNetCliEnv, ZTNetServEnv)
 
+import Dscp.Config
 import Dscp.DB.Rocks.Real.Types (RocksDB)
 import Dscp.DB.SQLite (SQLiteDB)
-import Dscp.Educator.Config (HasEducatorConfig)
+import Dscp.Educator.Config
 import Dscp.Educator.Launcher.Marker (EducatorNode)
-import Dscp.Educator.Launcher.Params (EducatorKeyParams (..), EducatorParams (..))
+import Dscp.Educator.Launcher.Params (EducatorKeyParams (..))
 import Dscp.Resource.AppDir
 import Dscp.Resource.Class (AllocResource (..), buildComponentR)
 import Dscp.Resource.Keys (KeyResources (..), linkStore)
@@ -47,17 +51,19 @@ instance HasLens ZTNetCliEnv EducatorResources ZTNetCliEnv where
 instance HasLens ZTNetServEnv EducatorResources ZTNetServEnv where
     lensOf = erWitnessResources . lensOf @ZTNetServEnv
 
-instance HasEducatorConfig =>
+instance HasWitnessConfig =>
          AllocResource (EducatorKeyParams, AppDir) (KeyResources EducatorNode) where
     allocResource (EducatorKeyParams baseParams, appDir) =
         buildComponentR "educator keys"
             (linkStore baseParams Nothing appDir)
             (\_ -> pass)
 
-instance HasEducatorConfig => AllocResource EducatorParams EducatorResources where
-    allocResource EducatorParams{..} = do
-        _erWitnessResources <- allocResource ()
-        _erDB <- allocResource epDBParams
+instance HasEducatorConfig => AllocResource () EducatorResources where
+    allocResource _ = do
+        let cfg = educatorConfig ^. sub #educator
+            witnessCfg = rcast educatorConfig
+        _erWitnessResources <- withWitnessConfig witnessCfg $ allocResource ()
+        _erDB <- allocResource $ cfg ^. option #db
         let appDir = Witness._wrAppDir _erWitnessResources
-        _erKeys <- allocResource (epKeyParams, appDir)
+        _erKeys <- withWitnessConfig witnessCfg $ allocResource (cfg ^. option #keys, appDir)
         return EducatorResources {..}

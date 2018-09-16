@@ -5,19 +5,19 @@ module Main where
 import Options.Applicative (execParser, fullDesc, helper, info, progDesc)
 
 import Dscp.CommonCLI (versionOption)
-import Dscp.Config (buildConfig, configParamsParser)
+import Dscp.Config (buildConfig, configParamsParser, rcast)
 import Dscp.Educator
 
 main :: IO ()
 main = do
-    (educatorParams, educatorConfig) <- getEducatorParams
-    launchEducatorRealMode educatorConfig educatorParams educatorEntry
+    eConfig <- getEducatorConfig
+    let wConfig = rcast eConfig
+    launchEducatorRealMode eConfig $
+        withWitnessConfig wConfig educatorEntry
 
-getEducatorParams :: IO (EducatorParams, EducatorConfigRec)
-getEducatorParams = do
-    let parser = (,) <$> educatorParamsParser <*> configParamsParser
-    (params, configPath) <- execParser $
-        info (helper <*> versionOption <*> parser) $
+getEducatorConfig :: IO EducatorConfigRec
+getEducatorConfig = do
+    configParams <- execParser $
+        info (helper <*> versionOption <*> configParamsParser) $
         fullDesc <> progDesc "Disciplina educator node."
-    config <- buildConfig configPath fillEducatorConfig
-    return (params, config)
+    buildConfig configParams fillEducatorConfig

@@ -14,7 +14,6 @@ module Dscp.Witness.Config
     ) where
 
 import Data.Reflection (Given (..), give)
-import Data.Vinyl.Lens (rcast, rreplace)
 import Loot.Config ((:::), (::<), ConfigKind (Final, Partial), ConfigRec)
 import Mon.Network (Endpoint)
 
@@ -60,4 +59,5 @@ withWitnessConfig :: WitnessConfigRec -> (HasWitnessConfig => a) -> a
 withWitnessConfig = give
 
 fillWitnessConfig :: WitnessConfigRecP -> IO WitnessConfigRecP
-fillWitnessConfig wc = flip rreplace wc <$> fillCoreConfig (rcast wc)
+fillWitnessConfig = fillExpandedConfig fillCoreConfig
+

@@ -3,14 +3,17 @@
 -- | CLI for educator.
 
 module Dscp.Educator.CLI
-    ( educatorParamsParser
+    ( sqliteParamsParser
+    , educatorBotParamsParser
+    , educatorWebParamsParser
+    , educatorKeyParamsParser
     ) where
 
 import Options.Applicative (Parser, auto, help, long, metavar, option, strOption, switch, value)
 
 import Dscp.CommonCLI (baseKeyParamsParser, serverParamsParser, timeReadM)
 import Dscp.DB.SQLite
-import Dscp.Educator.Launcher.Params (EducatorKeyParams (..), EducatorParams (..))
+import Dscp.Educator.Launcher.Params (EducatorKeyParams (..))
 import Dscp.Educator.Web.Bot.Params (EducatorBotParams (..), EducatorBotSwitch (..))
 import Dscp.Educator.Web.Params (EducatorWebParams (..))
 
@@ -64,10 +67,3 @@ educatorWebParamsParser = do
 educatorKeyParamsParser :: Parser EducatorKeyParams
 educatorKeyParamsParser =
     EducatorKeyParams <$> baseKeyParamsParser "educator"
-
-educatorParamsParser :: Parser EducatorParams
-educatorParamsParser = do
-    epDBParams <- sqliteParamsParser
-    epKeyParams <- educatorKeyParamsParser
-    epWebParams <- educatorWebParamsParser
-    return EducatorParams{..}
