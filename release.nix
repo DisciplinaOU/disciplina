@@ -1,16 +1,6 @@
-{ pkgs ? import ./nixpkgs.nix }: with pkgs;
+{ pkgs ? import ./closure.nix }: with pkgs;
 
 let
-  buildFlatpak = callPackage (fetchGit {
-    url = "https://github.com/serokell/nix-flatpak";
-    rev = "3ceb79f92e80c84a4360badd721ff87a214a6932";
-  }) {};
-
-  buildMacOSApp = callPackage (fetchGit {
-    url = "https://github.com/serokell/nix-macos-app";
-    rev = "192f3c22b4270be84aef9176fdf52a41d0d85b32";
-  }) {};
-  
   project = import ./. { inherit pkgs; };
 
   writeShellScript = source: writeTextFile {
@@ -18,7 +8,7 @@ let
     executable = true;
     checkPhase = "${shellcheck}/bin/shellcheck $out";
     text = ''
-      #!/bin/sh
+      #!/bin/sh -e
       ${source}
     '';
   };
