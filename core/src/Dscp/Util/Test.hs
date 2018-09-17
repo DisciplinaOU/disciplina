@@ -21,7 +21,6 @@ import Control.Lens (LensLike')
 import Crypto.Random (ChaChaDRG, MonadPseudoRandom)
 import Data.Aeson (FromJSON, ToJSON, eitherDecode, encode)
 import qualified Data.Hashable as H
-import Data.List (zipWith3)
 import qualified Data.Text.Buildable
 import Data.Typeable (typeRep)
 import Fmt ((+|), (+||), (|+), (||+))

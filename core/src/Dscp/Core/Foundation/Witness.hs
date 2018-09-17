@@ -32,6 +32,7 @@ module Dscp.Core.Foundation.Witness
     , TxWitnessed (..)
     , twTxL
     , twWitnessL
+    , signPubTx
     , PublicationTxWitness (..)
     , PublicationTxWitnessed (..)
     , PublicationTx (..)
@@ -261,6 +262,22 @@ data PublicationTxWitnessed = PublicationTxWitnessed
 instance Buildable PublicationTxWitnessed where
     build PublicationTxWitnessed {..} =
         "PublicationTxWitnessed { " +| ptwTx |+ ", " +| ptwWitness |+  " }"
+
+signPubTx
+    :: (Serialise PublicationTx, Serialise PrivateBlockHeader)
+    => SecretKey -> PublicationTx -> PublicationTxWitnessed
+signPubTx sk tx =
+    PublicationTxWitnessed
+    { ptwTx = tx
+    , ptwWitness = witness
+    }
+  where
+    pk = toPublic sk
+    witness =
+        PublicationTxWitness
+        { pwSig = sign sk (toPtxId tx, pk, ptHeader tx)
+        , pwPk = pk
+        }
 
 ----------------------------------------------------------------------------
 -- Transactions (united)

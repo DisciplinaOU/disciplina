@@ -1,4 +1,4 @@
-module Test.Dscp.Witness.BlockSpec where
+module Test.Dscp.Witness.Block.BlockSpec where
 
 import Control.Lens (ix, to)
 import qualified Data.List as L
@@ -120,8 +120,8 @@ spec = describe "Block validation + application" $ do
             futureSlot = L.head $ filter (not . ownedSlot) [99999..]
         oddSlot <- pick $ elements [lastSlot, futureSlot]
         let badBlocks = blocks & ix (n - 2) %~
-                           \block -> block & bHeaderL . hSlotIdL .~ oddSlot
-                                           & resignBlock issuer
+                          \block -> block & bHeaderL . hSlotIdL .~ oddSlot
+                                          & resignBlock issuer
         lift $ do
             mapM_ submitBlock (init badBlocks)
             throwsSome $ submitBlock (last badBlocks)

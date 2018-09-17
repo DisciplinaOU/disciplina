@@ -3,7 +3,7 @@
 
 module Test.Dscp.Witness.Tx.PublicationTxSpec where
 
-import Control.Lens (ix, (^?!), _last)
+import Control.Lens (_last)
 import qualified GHC.Exts as Exts
 import Test.QuickCheck.Modifiers (Positive (..))
 import Test.QuickCheck.Monadic (pre)
@@ -20,15 +20,20 @@ genPublicationChain (Positive n) secret
     | n <= 0 = error "genPublicationChain: n <= 0"
     | otherwise = do
         let addr = mkAddr (toPublic secret)
-        pheaders <- vectorUnique n
-        let siblings = map (take 2) $ map reverse $ tail $
-                       Exts.fromList $ inits pheaders
-        return $ Exts.fromList $ siblings <&> \curHeaders ->
-            PublicationTx
-            { ptAuthor = addr
-            , ptPrevBlock = curHeaders ^? ix 1
-            , ptBlock = curHeaders ^?! ix 0
-            }
+        proofs <- vectorUnique n
+        return . Exts.fromList . fix $ \pubTxs ->
+            zip proofs (genesisHeaderHash : map (hash . ptHeader) pubTxs) <&>
+              \(proof, prevHeaderHash) ->
+                let ptHeader = PrivateBlockHeader
+                        { _pbhPrevBlock = prevHeaderHash
+                        , _pbhBodyProof = proof
+                        , _pbhAtgDelta = mempty
+                        }
+                in PublicationTx
+                { ptAuthor = addr
+                , ptFeesAmount = Coin 9999
+                , ptHeader
+                }
 
 author :: SecretKey
 author = detGen 21 $ elements testGenesisSecrets
@@ -75,7 +80,7 @@ spec = describe "Publication tx expansion + validation" $ do
         pubs     <- pick $ genPublicationChain chainLen author
 
         forkPub' <- pick $ elements (toList pubs)
-        forkPub <- pick arbitrary <&> \ptBlock -> forkPub'{ ptBlock }
+        forkPub <- pick arbitrary <&> \ptHeader -> forkPub'{ ptHeader }
         pre (forkPub /= forkPub')
         let badPubs = pubs <> one forkPub
         let badTws = map (signPubTx author) badPubs
@@ -85,7 +90,7 @@ spec = describe "Publication tx expansion + validation" $ do
         chainLen <- pick $ Positive <$> choose (2, 5)
         pubs     <- pick $ genPublicationChain chainLen author
         loopPoint <- pick $ elements (init pubs)
-        let badPubs = pubs & _tailNE . _last . ptBlockL .~ ptBlock loopPoint
+        let badPubs = pubs & _tailNE . _last . ptHeaderL .~ ptHeader loopPoint
         let badTws = map (signPubTx author) badPubs
         lift $ throwsSome $ submitPubChain badTws
 

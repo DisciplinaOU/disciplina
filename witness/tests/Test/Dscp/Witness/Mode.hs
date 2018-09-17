@@ -104,11 +104,11 @@ testWitnessConfig =
 runWitnessTestMode :: WitnessTestMode a -> IO a
 runWitnessTestMode action =
     withWitnessConfig testWitnessConfig $ runRIO _twcLogging $ do
-        _twcMempoolVar <- newMempoolVar (_krPublicKey _twcKeys)
         _twcSDVars <- initSDActions
         _twcSDLock <- newSDLock
         _twcRelayState <- newRelayState
         _twcKeys <- genStore (Just $ CommitteeParamsOpen 0)
+        _twcMempoolVar <- newMempoolVar (_krPublicKey _twcKeys)
         let ctx = TestWitnessCtx{..}
         runRIO ctx $ do
             markWithinWriteSDLockUnsafe applyGenesisBlock
