@@ -86,6 +86,7 @@ testWitnessConfig =
     finaliseDeferedUnsafe $ def &~ do
         sub #core . sub #generated . option #genesisInfo ?= formGenesisInfo genConfig
         sub #core . option #genesis ?= genConfig
+        sub #core . option #fee ?= feeCoefs
   where
     genesisAddressMap =
         GenAddressMap $ M.fromList $
@@ -95,6 +96,13 @@ testWitnessConfig =
         { gcGenesisSeed = "meme tests"
         , gcGovernance = GovCommittee testCommittee
         , gcDistribution = GenesisDistribution . one $ GDSpecific genesisAddressMap
+        }
+    feeCoefs =
+        FeeCoefficients
+        { fcMinimal       = Coin 10
+        , fcMultiplier    = 0.1
+        , fcMinimalPub    = Coin 10
+        , fcMultiplierPub = 0.0001
         }
 
 ----------------------------------------------------------------------------

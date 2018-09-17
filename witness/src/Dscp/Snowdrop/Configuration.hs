@@ -34,6 +34,7 @@ module Dscp.Snowdrop.Configuration
     , _AccountValidationError
     , _AccountExpanderError
     , AccountExpanderException (..)
+    , _MTxNoOutputs
     , _CantResolveSender
     , PublicationExpanderException (..)
 
@@ -267,7 +268,8 @@ data Proofs
 ----------------------------------------------------------------------------
 
 data AccountExpanderException
-    = MTxDuplicateOutputs
+    = MTxNoOutputs
+    | MTxDuplicateOutputs
     | CantResolveSender
     | ExpanderInternalError String
 
@@ -278,6 +280,7 @@ instance Show AccountExpanderException where
 
 instance Buildable AccountExpanderException where
     build = \case
+        MTxNoOutputs -> "Transaction has no outputs"
         MTxDuplicateOutputs -> "Duplicated transaction outputs"
         CantResolveSender -> "Source account is not registered in chain"
         ExpanderInternalError s ->

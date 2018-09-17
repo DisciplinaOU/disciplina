@@ -134,10 +134,11 @@ preValidateSimpleMoneyTransfer =
         -- Previous value minus fees (the outputs that were specified in the tx itself)
         let receivedNoFees = receivedTotal - coinToInteger (unFees fees)
 
-        unless (balanceBefore - receivedNoFees >= 0) $ throwLocalError SumMustBeNonNegative
-        unless (balanceBefore - receivedTotal >= 0) $ throwLocalError CannotAffordFees
+        paid <- validateSaneDeparture payer before
 
-        validateSaneDeparture payer before
+        unless (paid >= receivedTotal) $ throwLocalError SumMustBeNonNegative
+        unless (balanceBefore - receivedNoFees >= 0) $ throwLocalError BalanceCannotBecomeNegative
+        unless (balanceBefore - receivedTotal >= 0) $ throwLocalError CannotAffordFees
 
 -- | Require that whole projects into part or throw error.
 requirePart :: (HasReview e e1, MonadError e m, HasPrism s hash) => s -> e1 -> m hash
@@ -160,7 +161,7 @@ validateSaneDeparture
   :: forall ctx
   .  [(AccountId, Account)]
   -> Account
-  -> ERoComp Exceptions Ids Values ctx ()
+  -> ERoComp Exceptions Ids Values ctx Integer
 validateSaneDeparture self before = case self of
     -- Check that only one change is done for author.
     [(AccountId _, account)] -> do
@@ -173,6 +174,8 @@ validateSaneDeparture self before = case self of
             throwLocalError PaymentMustBePositive
         unless (aBalance account >= 0) $
             throwLocalError BalanceCannotBecomeNegative
+
+        return paid
 
     _ -> throwLocalError NotASingletonSelfUpdate
 

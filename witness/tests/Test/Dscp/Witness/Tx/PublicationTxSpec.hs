@@ -15,23 +15,28 @@ import Dscp.Util.Test
 import Dscp.Witness
 import Test.Dscp.Witness.Mode
 
-genPublicationChain :: Positive Int -> SecretKey -> Gen (NonEmpty PublicationTx)
+genSmallMerkleSignature :: Gen (MerkleSignature a)
+genSmallMerkleSignature = MerkleSignature <$> arbitrary <*> choose (0, 100)
+
+genPublicationChain
+    :: HasWitnessConfig
+    => Positive Int -> SecretKey -> Gen (NonEmpty PublicationTx)
 genPublicationChain (Positive n) secret
     | n <= 0 = error "genPublicationChain: n <= 0"
     | otherwise = do
         let addr = mkAddr (toPublic secret)
-        proofs <- vectorUnique n
+        sigs <- vectorUniqueOf n genSmallMerkleSignature
         return . Exts.fromList . fix $ \pubTxs ->
-            zip proofs (genesisHeaderHash : map (hash . ptHeader) pubTxs) <&>
-              \(proof, prevHeaderHash) ->
+            zip sigs (genesisHeaderHash : map (hash . ptHeader) pubTxs) <&>
+              \(sig, prevHeaderHash) ->
                 let ptHeader = PrivateBlockHeader
                         { _pbhPrevBlock = prevHeaderHash
-                        , _pbhBodyProof = proof
+                        , _pbhBodyProof = sig
                         , _pbhAtgDelta = mempty
                         }
                 in PublicationTx
                 { ptAuthor = addr
-                , ptFeesAmount = Coin 9999
+                , ptFeesAmount = unFees $ calcFeePub feeCoefficients (mrSize sig)
                 , ptHeader
                 }
 
@@ -40,23 +45,25 @@ author = detGen 21 $ elements testGenesisSecrets
 
 deriving instance Num a => Num (Positive a)
 
-submitPubChain
+submitPub
     :: (MempoolCtx ctx m, WithinWriteSDLock)
-    => NonEmpty PublicationTxWitnessed -> m ()
-submitPubChain = mapM_ $ \tx -> addTxToMempool (GPublicationTxWitnessed tx)
+    => PublicationTxWitnessed -> m ()
+submitPub tx = do
+    new <- addTxToMempool (GPublicationTxWitnessed tx)
+    unless new $ error "Duplicated transaction in test scenario"
 
 spec :: Spec
 spec = describe "Publication tx expansion + validation" $ do
     it "First correct tx is fine" $ witnessProperty $ do
         pub :| [] <- pick $ genPublicationChain 1 author
         let tw = signPubTx author pub
-        lift . noThrow $ submitPubChain (one tw)
+        lift . noThrow $ submitPub tw
 
     it "Consequent txs are fine" $ witnessProperty $ do
         chainLen <- pick arbitrary
         pubs     <- pick $ genPublicationChain chainLen author
         let tws = map (signPubTx author) pubs
-        lift . noThrow $ submitPubChain tws
+        lift . noThrow $ mapM_ submitPub tws
 
     it "Tx with wrong previous hash isn't fine" $ witnessProperty $ do
         chainLen <- pick $ Positive <$> choose (1, 4)
@@ -64,7 +71,7 @@ spec = describe "Publication tx expansion + validation" $ do
         badPubs  <- pick $ shuffleNE pubs
         pre (pubs /= badPubs)
         let badTws = map (signPubTx author) badPubs
-        lift $ throwsSome $ submitPubChain badTws
+        lift $ throwsSome $ mapM_ submitPub badTws
 
     it "Foreign author in the chain is not fine" $ witnessProperty $ do
         otherSecret <- pick (arbitrary `suchThat` (/= author))
@@ -73,7 +80,9 @@ spec = describe "Publication tx expansion + validation" $ do
         pubs        <- pick $ genPublicationChain chainLen author
         let badPubs = pubs & _tailNE . _last . ptAuthorL .~ otherAddr
         let badTws = map (signPubTx author) badPubs
-        lift $ throwsSome $ submitPubChain badTws
+        lift $ do
+            mapM_ submitPub (init badTws)
+            throwsSome $ submitPub (last badTws)
 
     it "Forking publications chain isn't fine" $ witnessProperty $ do
         chainLen <- pick $ Positive <$> choose (2, 4)
@@ -84,7 +93,9 @@ spec = describe "Publication tx expansion + validation" $ do
         pre (forkPub /= forkPub')
         let badPubs = pubs <> one forkPub
         let badTws = map (signPubTx author) badPubs
-        lift $ throwsSome $ submitPubChain badTws
+        lift $ do
+            mapM_ submitPub (init badTws)
+            throwsSome $ submitPub (last badTws)
 
     it "Loops are not fine" $ witnessProperty $ do
         chainLen <- pick $ Positive <$> choose (2, 5)
@@ -92,11 +103,16 @@ spec = describe "Publication tx expansion + validation" $ do
         loopPoint <- pick $ elements (init pubs)
         let badPubs = pubs & _tailNE . _last . ptHeaderL .~ ptHeader loopPoint
         let badTws = map (signPubTx author) badPubs
-        lift $ throwsSome $ submitPubChain badTws
+        lift $ do
+            mapM_ submitPub (init badTws)
+            -- 'addTxToMempool' kicks duplicated transactions, so we have to
+            -- dump them into block
+            void . applyBlock =<< createBlock 0
+            throwsSome $ submitPub (last badTws)
 
     it "Wrong signature is not fine" $ witnessProperty $ do
         pub :| [] <- pick $ genPublicationChain 1 author
         let saneTw = signPubTx author pub
         otherTw   <- pick arbitrary
         mixTw     <- pick $ arbitraryUniqueMixture saneTw otherTw
-        lift $ throwsSome $ submitPubChain (one mixTw)
+        lift $ throwsSome $ submitPub mixTw

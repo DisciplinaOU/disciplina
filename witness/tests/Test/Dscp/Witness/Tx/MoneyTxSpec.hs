@@ -75,18 +75,21 @@ genSafeTxData = do
     return TxData{..}
 
 -- | Given creation steps, build a transaction.
-makeTx :: TxCreationSteps -> TxData -> TxWitnessed
-makeTx steps dat =
+makeTx :: HasWitnessConfig => TxCreationSteps -> TxData -> TxWitnessed
+makeTx steps dat = fixFees feeCoefficients $ \fee ->
     let sourcePk = toPublic (tdSecret dat)
         inAcc = _tcsInAcc steps (mkAddr sourcePk)
-        spent = leftToPanic $ sumCoins $ map txOutValue $ toList (tdOuts dat)
+        spent = leftToPanic $ sumCoins $
+                unFees fee : (map txOutValue $ toList (tdOuts dat))
         tx = _tcsTx steps inAcc spent (toList $ tdOuts dat)
         sgn = sign (tdSecret dat) (toTxId tx, sourcePk, ())
         witness = _tcsWitness steps sgn sourcePk
     in TxWitnessed{ twTx = tx, twWitness = witness }
 
 -- | Given creation steps, build several similar transactions.
-makeTxsChain :: Int -> TxCreationSteps -> TxData -> NonEmpty TxWitnessed
+makeTxsChain
+    :: HasWitnessConfig
+    => Int -> TxCreationSteps -> TxData -> NonEmpty TxWitnessed
 makeTxsChain n steps dat
     | n <= 0 = error "makeTxsChain: n <= 0"
     | otherwise =
@@ -165,7 +168,8 @@ spec = describe "Money tx expansion + validation" $ do
             let steps = properSteps
                     & tcsTx %~ \f inAcc inVal _ -> f inAcc inVal []
             let tx = makeTx steps txData
-            lift $ throwsSome $ applyTx tx
+            lift $ throwsPrism (_AccountExpanderError . _MTxNoOutputs) $
+                applyTx tx
 
         it "Non positive output amount is not fine" $ witnessProperty $ do
             txData <- pick genSafeTxData
