@@ -21,7 +21,8 @@ let
   disciplina-wallet = haskell.lib.justStaticExecutables project.disciplina-wallet;
 
   disciplina-wallet-wrapped = writeShellScript ''
-    ${disciplina-wallet}/bin/dscp-wallet --witness https://witness.disciplina.io
+    ${disciplina-wallet}/bin/dscp-wallet --witness https://witness.disciplina.io \
+      --config ${./config.yaml} --config-key alpha
   '';
 
   self = {
