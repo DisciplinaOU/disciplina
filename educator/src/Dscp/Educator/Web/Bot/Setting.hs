@@ -24,6 +24,7 @@ import qualified Data.Set as S
 import Data.Time.Clock (getCurrentTime)
 import Fmt ((+|), (+||), (|+), (||+))
 import qualified GHC.Exts as Exts
+import Loot.Base.HasLens (HasCtx)
 import Loot.Log (ModifyLogName, MonadLogging, logError, logInfo, modifyLogName)
 import Time.Units (Microsecond, Time, threadDelay)
 import UnliftIO (MonadUnliftIO)
@@ -163,18 +164,19 @@ botSetting = given
 -- Operations
 ---------------------------------------------------------------------
 
-type BotWorkMode m =
-    ( MonadSQLiteDB m
+type BotWorkMode ctx m =
+    ( MonadIO m
     , MonadCatch m
     , MonadUnliftIO m
     , MonadLogging m
     , ModifyLogName m
+    , HasCtx ctx m '[SQLiteDB]
     )
 
 botLog :: ModifyLogName m => m a -> m a
 botLog = modifyLogName (<> "bot")
 
-delayed :: (BotWorkMode m, HasBotSetting) => m () -> m ()
+delayed :: (BotWorkMode ctx m, HasBotSetting) => m () -> m ()
 delayed action
     | delay == 0 = action
     | otherwise =
@@ -185,8 +187,8 @@ delayed action
     delay = bsOperationsDelay botSetting
     logException e = botLog . logError $ "Delayed action failed: " +|| e ||+ ""
 
-botPrepareInitialData :: (BotWorkMode m, HasBotSetting) => m ()
-botPrepareInitialData = do
+botPrepareInitialData :: (BotWorkMode ctx m, HasBotSetting) => m ()
+botPrepareInitialData = transactW $ do
     exists <- existsCourse (head . Exts.fromList $ bsBasicCourses botSetting)
     unless exists $ do
         forM_ (bsCourses botSetting) createCourse
@@ -203,20 +205,21 @@ maybePresent action = catchJust (^? _AlreadyPresentError) (void action) (\_ -> p
 -- | Assign student on assignments which became available for student
 -- since dependant assignments are completed.
 botNoteCompletedAssignments
-    :: (BotWorkMode m, HasBotSetting)
+    :: (BotWorkMode ctx m, HasBotSetting)
     => Student -> Course -> Set (Hash Assignment) -> m ()
 botNoteCompletedAssignments student course completedAssigns =
     whenJust (M.lookup course (bsCourseAssignments botSetting)) $
       \courseAssigns ->
         forM_ courseAssigns $ \(WithDependencies assign deps) ->
             when (deps `S.isSubsetOf` completedAssigns) $
+                transactW $
                 maybePresent $
                 setStudentAssignment student (getId assign)
 
 -- | Helper to invoke 'botNoteCompletedAssignments', accepts
 -- student, made submission and overall list of student assignments.
 botProvideUnlockedAssignments
-    :: (BotWorkMode m, HasBotSetting)
+    :: (BotWorkMode ctx m, HasBotSetting)
     => Student -> SubmissionStudentInfo -> [AssignmentStudentInfo] -> m ()
 botProvideUnlockedAssignments student submission studentAssignments = do
     let assignment =
@@ -232,30 +235,30 @@ botProvideUnlockedAssignments student submission studentAssignments = do
 
 -- | Enroll student to given courses and give initial assignments.
 botProvideCourses
-    :: (BotWorkMode m, HasBotSetting)
+    :: (BotWorkMode ctx m, HasBotSetting)
     => Student -> [Course] -> m ()
 botProvideCourses student courses = do
     forM_ courses $ \course -> do
-        enrollStudentToCourse student course
+        transactW $ enrollStudentToCourse student course
         botNoteCompletedAssignments student course mempty
 
 -- | Remember student and add minimal set of courses.
-botProvideInitSetting :: (BotWorkMode m, HasBotSetting) => Student -> m ()
+botProvideInitSetting :: (BotWorkMode ctx m, HasBotSetting) => Student -> m ()
 botProvideInitSetting student = do
     maybePresent $ do
-        void $ createStudent student
+        void . invoke $ createStudent student
         botProvideCourses student (bsBasicCourses botSetting)
         botLog . logInfo $ "Registered student " +| student |+ ""
 
 -- | Only for the chosen ones.
-botProvideAdvancedSetting :: (BotWorkMode m, HasBotSetting) => Student -> m ()
+botProvideAdvancedSetting :: (BotWorkMode ctx m, HasBotSetting) => Student -> m ()
 botProvideAdvancedSetting student = do
     maybePresent $ do
         botProvideCourses student (bsAdvancedCourses botSetting)
         botLog . logInfo $ "Student " +| student |+ " has discovered all courses"
 
 -- | Add a grade immediatelly after student submission.
-botGradeSubmission :: BotWorkMode m => SignedSubmission -> m ()
+botGradeSubmission :: BotWorkMode ctx m => SignedSubmission -> m ()
 botGradeSubmission ssub = do
     let sub = _ssSubmission ssub
         contentsH = _sContentsHash sub
@@ -266,4 +269,4 @@ botGradeSubmission ssub = do
             , _ptGrade = grade
             , _ptTime = time
             }
-    maybePresent $ createTransaction ptx
+    maybePresent . transactW $ createTransaction ptx

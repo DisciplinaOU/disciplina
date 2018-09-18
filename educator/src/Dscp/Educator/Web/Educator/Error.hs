@@ -17,8 +17,8 @@ import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveToJSON)
 import Data.Reflection (Reifies (..))
 import Data.Typeable (cast)
-import Dscp.DB.SQLite (DomainError)
-import Servant (ServantErr (..), err400, err500)
+import Dscp.DB.SQLite (DomainError, SQLRequestsNumberExceeded)
+import Servant (ServantErr (..), err400, err500, err503)
 
 import Dscp.Educator.Web.Util
 import Dscp.Util.Servant
@@ -29,6 +29,8 @@ data APIError
       -- ^ Something not found or already exists.
     | InvalidFormat
       -- ^ Failed to decode something.
+    | ServiceUnavailable !Text
+      -- ^ Service is overloaded with requests.
     deriving (Show, Eq, Generic)
 
 makePrisms ''APIError
@@ -38,6 +40,7 @@ instance Exception APIError where
         asum
         [ cast e'
         , SomeDomainError <$> fromException e
+        , ServiceUnavailable . pretty @SQLRequestsNumberExceeded <$> fromException e
         ]
 
 -- | Contains info about error in client-convenient form.
@@ -55,6 +58,7 @@ instance ToJSON APIError where
     toJSON = String . \case
         InvalidFormat        -> "InvalidFormat"
         SomeDomainError err  -> domainErrorToShortJSON err
+        ServiceUnavailable{} -> "ServiceUnavailable"
 
 ---------------------------------------------------------------------------
 -- Functions
@@ -64,6 +68,7 @@ instance ToJSON APIError where
 toServantErrNoReason :: APIError -> ServantErr
 toServantErrNoReason = \case
     InvalidFormat        -> err400
+    ServiceUnavailable{} -> err503
     SomeDomainError err  -> domainToServantErrNoReason err
 
 -- | Make up error which will be returned to client.

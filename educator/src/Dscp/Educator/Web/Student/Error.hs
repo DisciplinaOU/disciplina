@@ -22,9 +22,9 @@ import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON, deriveToJSON)
 import Data.Reflection (Reifies (..))
 import Data.Typeable (cast)
-import Servant (ServantErr (..), err400, err403, err500)
+import Servant (ServantErr (..), err400, err403, err500, err503)
 
-import Dscp.DB.SQLite.Queries (DomainError (..))
+import Dscp.DB.SQLite (DomainError (..), SQLRequestsNumberExceeded)
 import Dscp.Educator.BlockValidation (SubmissionValidationFailure)
 import Dscp.Educator.Web.Util
 import Dscp.Util.Servant
@@ -49,6 +49,8 @@ data APIError
       -- ^ Entity is missing or getting duplicated.
     | InvalidFormat
       -- ^ Decoding failed.
+    | ServiceUnavailable !Text
+      -- ^ Service is overloaded with requests.
     deriving (Show, Eq, Generic, Typeable)
 
 makePrisms ''APIError
@@ -59,6 +61,7 @@ instance Exception APIError where
         [ cast e'
         , BadSubmissionSignature <$> fromException e
         , SomeDomainError        <$> fromException e
+        , ServiceUnavailable . pretty @SQLRequestsNumberExceeded <$> fromException e
         ]
 
 -- | Contains info about error in client-convenient form.
@@ -78,7 +81,8 @@ instance ToJSON APIError where
         BadSubmissionSignature err -> case err of
             FakeSubmissionSignature{}    -> "FakeSubmissionSignature"
             SubmissionSignatureInvalid{} -> "SubmissionSignatureInvalid"
-        InvalidFormat ->                    "InvalidFormat"
+        InvalidFormat ->        "InvalidFormat"
+        ServiceUnavailable{} -> "ServiceUnavailable"
         SomeDomainError err -> domainErrorToShortJSON err
 
 ---------------------------------------------------------------------------
@@ -88,8 +92,9 @@ instance ToJSON APIError where
 -- | Get HTTP error code of error.
 toServantErrNoReason :: APIError -> ServantErr
 toServantErrNoReason = \case
-    BadSubmissionSignature{}   -> err403
-    InvalidFormat{}            -> err400
+    BadSubmissionSignature{} -> err403
+    InvalidFormat{}          -> err400
+    ServiceUnavailable{}     -> err503
     SomeDomainError err -> domainToServantErrNoReason err
 
 -- | Make up error which will be returned to client.

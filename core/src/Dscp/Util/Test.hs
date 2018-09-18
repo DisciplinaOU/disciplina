@@ -26,8 +26,11 @@ import Control.Lens (Prism')
 import Crypto.Random (ChaChaDRG, MonadPseudoRandom)
 import Data.Aeson (FromJSON, ToJSON, eitherDecode, encode)
 import qualified Data.Hashable as H
+import qualified Data.Text.Buildable
 import Data.Typeable (typeRep)
+import Fmt ((+|), (+||), (|+), (||+))
 import GHC.Show (Show (show))
+import qualified Loot.Log as Log
 import Test.Hspec as T
 import Test.QuickCheck as T (Arbitrary (..), Fixed (..), Gen, Property, Testable (..), choose,
                              conjoin, cover, elements, expectFailure, forAll, frequency,
@@ -147,6 +150,37 @@ expectOne desc xs  =
 
 counterexample :: Testable prop => Text -> prop -> Property
 counterexample desc prop = Q.counterexample (toString desc) prop
+
+----------------------------------------------------------------------------
+-- Logging
+----------------------------------------------------------------------------
+
+-- | When warning or error are logged, this exception is thrown.
+data TestLoggedError = TestLoggedError
+    { tleLvl :: Log.Level
+    , tleMsg :: Text
+    }
+
+instance Exception TestLoggedError
+
+instance Show TestLoggedError where
+    show = toString . pretty
+
+instance Buildable TestLoggedError where
+    build TestLoggedError{..} =
+        "Bad situation was logged with level " +|| tleLvl ||+ ": " +| tleMsg |+ ""
+
+-- | Logging suitable for all tests.
+-- We ensure that no warnings are printed, becase generally seeing warnings in
+-- production is a bad sign.
+testLogging :: Log.Logging IO
+testLogging =
+    Log.Logging
+    { Log._log = \lvl _ msg ->
+        when (lvl >= Log.Warning) $
+            throwM $ TestLoggedError lvl msg
+    , Log._logName = return $ error "Loger name requested in test"
+    }
 
 ----------------------------------------------------------------------------
 -- Roundtrips

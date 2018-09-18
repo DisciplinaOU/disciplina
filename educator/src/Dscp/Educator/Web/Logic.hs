@@ -5,16 +5,15 @@ module Dscp.Educator.Web.Logic
     ) where
 
 import Dscp.Core
-import Dscp.DB.SQLite.Queries
-import Dscp.Educator.Web.Queries
+import Dscp.DB.SQLite
 import Dscp.Educator.Web.Types
 import Dscp.Util.Aeson
 
 commonGetProofs
-    :: MonadEducatorQuery m
+    :: MonadEducatorWebQuery m
     => Student
     -> GetProvenStudentTransactionsFilters
-    -> m [BlkProofInfo]
+    -> DBT 'WithinTx w m [BlkProofInfo]
 commonGetProofs student filters = do
     rawProofs <- getProvenStudentTransactions student filters
     return

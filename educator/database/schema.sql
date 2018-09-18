@@ -9,9 +9,6 @@
 --  non integer or integer desc PK is present, some of tables are created
 --  WITHOUT ROWID.
 
--- This pragma should be actually executed for each db connection.
-pragma foreign_keys = ON;
-
 begin transaction;
 
 -- Creating 'Courses' table.

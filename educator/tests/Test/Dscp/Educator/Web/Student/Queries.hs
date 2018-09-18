@@ -1,7 +1,7 @@
 module Test.Dscp.Educator.Web.Student.Queries where
 
 import Control.Concurrent (threadDelay)
-import Control.Lens (traversed)
+import Control.Lens (each, forOf, traversed)
 import Data.Default (def)
 import Data.List (nub, (!!))
 import Data.Time.Clock (UTCTime (..))
@@ -17,7 +17,7 @@ import Dscp.Educator.Web.Types
 import Dscp.Util
 import Dscp.Util.Test
 
-import Test.Dscp.DB.SQLite.Common (sqliteProperty, sqlitePropertyM)
+import Test.Dscp.DB.SQLite.Common
 import Test.Dscp.Educator.Web.Instances ()
 import Test.Dscp.Educator.Web.Scenarios
 
@@ -55,7 +55,7 @@ submission1 : _ = detGen 23423 $ do
         <&> \(_sStudentId, _sContentsHash, (hash -> _sAssignmentHash))
             -> Submission{..}
 
-createCourseSimple :: DBM m => Int -> m Course
+createCourseSimple :: DBM m => Int -> DBT 'WithinTx 'Writing m Course
 createCourseSimple i =
     createCourse
         CourseDetails
@@ -67,9 +67,6 @@ createCourseSimple i =
 applyFilterOn :: Eq f => (a -> f) -> (Maybe f) -> [a] -> [a]
 applyFilterOn field (Just match) = filter (\a -> field a == match)
 applyFilterOn _ _                = id
-
-sqlTx :: MonadSQLiteDB m => (WithinSQLTransaction => m a) -> m a
-sqlTx = sqlTransaction
 
 someTime :: UTCTime
 someTime = UTCTime (toEnum 0) 0
@@ -89,7 +86,7 @@ assignmentItemsForSameCourse = FixedItemSet $ do
 
 -}
 spec_StudentApiQueries :: Spec
-spec_StudentApiQueries = describe "Basic database operations" $ do
+spec_StudentApiQueries = describe "Educator endpoint" $ do
   describe "Courses" $ do
     describe "getCourse" $ do
         it "Student is not enrolled initially" $
@@ -146,7 +143,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                     sigSubs = nub . tiList $ cteSignedSubmissions env
                     gradedSigSubs = [(ss, g) | (ss, Just g) <- zip sigSubs mgrades]
                 prepareForSubmissions env
-                forM_ sigSubs $ \sigSub -> sqlTx $ submitAssignment sigSub
+                forM_ sigSubs $ \sigSub -> submitAssignment sigSub
                 forM_ gradedSigSubs $ \(sigSub, grade) ->
                     createTransaction PrivateTx
                     { _ptSignedSubmission = sigSub
@@ -159,7 +156,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                     fmap catMaybes . forM sigSubs $ \sigSub -> do
                         mgrade <- studentGetGrade . hash $ _ssSubmission sigSub
                         let assignHash = _sAssignmentHash $ _ssSubmission sigSub
-                        assignInfo <- sqlTx $ studentGetAssignment student assignHash
+                        assignInfo <- studentGetAssignment student assignHash
                         return $ guard (unIsFinal $ aiIsFinal assignInfo) *> mgrade
                 return $ res === any (isPositiveGrade . giGrade) actualGrades
 
@@ -169,7 +166,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                 _ <- createStudent student1
                 _ <- createCourseSimple 1
 
-                courses <- sqlTx $ studentGetCourses student1 Nothing
+                courses <- studentGetCourses student1 Nothing
                 return . not $ any ciIsEnrolled courses
 
         it "Student gets enrolled when he asks to" $
@@ -178,7 +175,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                 _ <- createCourseSimple 1
                 enrollStudentToCourse student1 courseId1
 
-                courses <- sqlTx $ studentGetCourses student1 Nothing
+                courses <- studentGetCourses student1 Nothing
                 let Just course1 = find (\c -> ciId c == courseId1) courses
                 return (ciIsEnrolled course1)
 
@@ -189,7 +186,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
               , delayedGen listUnique -> subjects
               ) -> do
                 _ <- createCourse $ CourseDetails courseId desc subjects
-                courses <- sqlTx $ studentGetCourses student1 Nothing
+                courses <- studentGetCourses student1 Nothing
                 return $ courses === one CourseStudentInfo
                     { ciId = courseId
                     , ciDesc = desc
@@ -209,7 +206,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                 mapM_ (enrollStudentToCourse student2)
                       [courseId1, courseId2]
 
-                courses <- sqlTx $ studentGetCourses student1 Nothing
+                courses <- studentGetCourses student1 Nothing
                                <&> sortOn ciDesc
                 return (map ciIsEnrolled courses === [True, False])
 
@@ -220,9 +217,8 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                 _ <- createCourseSimple 2
                 enrollStudentToCourse student1 courseId2
 
-                [notEnrolled, enrolled] <-
-                    forM [False, True] $ \isEnrolled ->
-                        sqlTx $
+                (notEnrolled, enrolled) <-
+                    forOf each (False, True) $ \isEnrolled ->
                         studentGetCourses student1 (Just $ IsEnrolled isEnrolled)
 
                 return $
@@ -249,12 +245,13 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                     , _ptTime = someTime
                     }
 
-                [courseInfo] <- sqlTx $ studentGetCourses student Nothing
+                courseInfo <- expectOne "courses" <$>
+                              studentGetCourses student Nothing
                 actualGrades <-
                     fmap catMaybes . forM sigSubs $ \sigSub -> do
                         mgrade <- studentGetGrade . hash $ _ssSubmission sigSub
                         let assignHash = _sAssignmentHash $ _ssSubmission sigSub
-                        assignInfo <- sqlTx $ studentGetAssignment student assignHash
+                        assignInfo <- studentGetAssignment student assignHash
                         return $ guard (unIsFinal $ aiIsFinal assignInfo) *> mgrade
                 return $
                     ciIsFinished courseInfo
@@ -267,7 +264,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
             sqliteProperty $ \() ->
                 throwsPrism (_AbsentError . _AssignmentDomain) $ do
                     _ <- createStudent student1
-                    sqlTx $ studentGetAssignment student1 (hash assignment1)
+                    studentGetAssignment student1 (hash assignment1)
 
         it "Fails when student is not assigned to submission" $
             -- Student is required to just take his recent submission,
@@ -278,7 +275,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                 _ <- createCourse $ simpleCourse course
                 _ <- createAssignment assignment
                 throwsPrism (_AbsentError . _AssignmentDomain) $
-                    sqlTx $ studentGetAssignment student1 (hash assignment1)
+                    studentGetAssignment student1 (hash assignment1)
 
         it "Returns existing assignment properly" $
             sqliteProperty $ \assignment -> do
@@ -290,7 +287,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                 _ <- enrollStudentToCourse student1 course
                 _ <- setStudentAssignment student1 assignmentH
 
-                assignment' <- sqlTx $ studentGetAssignment student1 assignmentH
+                assignment' <- studentGetAssignment student1 assignmentH
                 return $ assignment' === AssignmentStudentInfo
                     { aiHash = assignmentH
                     , aiCourseId = _aCourseId assignment
@@ -311,7 +308,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                 _ <- enrollStudentToCourse student1 course
                 _ <- setStudentAssignment student1 (hash assignment)
                 throwsPrism (_AbsentError . _AssignmentDomain) $
-                    sqlTx $ studentGetAssignment student1 (getId needlessAssignment)
+                    studentGetAssignment student1 (getId needlessAssignment)
 
     describe "getAssignments" $ do
         it "Student has no last submission initially" $
@@ -322,7 +319,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                 _ <- createAssignment assignment1
                 _ <- enrollStudentToCourse student1 course
                 _ <- setStudentAssignment student1 (hash assignment1)
-                assignments <- sqlTx $ studentGetAllAssignments student1
+                assignments <- studentGetAllAssignments student1
                 return $ all (isNothing . aiLastSubmission) assignments
 
         it "Returns existing assignment properly and only related to student" $
@@ -338,7 +335,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                 _ <- createAssignment needlessAssignment
                 _ <- setStudentAssignment student1 assignmentH
 
-                res <- sqlTx $ studentGetAllAssignments student1
+                res <- studentGetAllAssignments student1
                 return $ res === one AssignmentStudentInfo
                     { aiHash = hash assignment
                     , aiCourseId = _aCourseId assignment
@@ -366,8 +363,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                     let assignH = hash assignment
                     void $ setStudentAssignment student1 assignH
 
-                assignments <- sqlTx $
-                    commonGetAssignments StudentCase student1
+                assignments <- commonGetAssignments StudentCase student1
                         def{ afCourse = courseF, afDocType = docTypeF, afIsFinal = isFinalF }
 
                 let assignments' =
@@ -389,14 +385,14 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
 
                 prepareForSubmissions env
                 forM_ (nub $ toList sigSubs) $ \sigSub -> do
-                    void $ sqlTx $ createSignedSubmission sigSub
+                    void $ createSignedSubmission sigSub
                     liftIO $ threadDelay 10000  -- sqlite keeps time in ms precision
 
                 let lastSigSubmission = last $ Exts.fromList sigSubs
                 let lastSubmission = _ssSubmission lastSigSubmission
                 let assignmentId = _sAssignmentHash lastSubmission
                 assignment' <-
-                    sqlTx $ studentGetAssignment student assignmentId
+                    studentGetAssignment student assignmentId
                 let _lastSubmission' = aiLastSubmission assignment'
                 -- @martoon: I dunno how to make it work ((
                 return True
@@ -412,7 +408,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
 
                 lift $ prepareAndCreateSubmissions env
 
-                assignments <- lift $ sqlTx $ studentGetAllAssignments student
+                assignments <- lift $ studentGetAllAssignments student
                 let lastSubs = map aiLastSubmission assignments
                     expectedSubmissions =
                         map hash $
@@ -450,10 +446,10 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                     _ <- createAssignment assignment
                     _ <- enrollStudentToCourse owner course
                     _ <- setStudentAssignment owner (hash assignment)
-                    _ <- sqlTx $ submitAssignment sigSub
+                    _ <- submitAssignment sigSub
                     return ()
                 lift . fmap property $ throwsPrism (_AbsentError . _SubmissionDomain) $
-                    sqlTx $ studentGetSubmission user (getId submission)
+                    studentGetSubmission user (getId submission)
 
     describe "getSubmissions" $ do
         it "Returns existing submission properly and only related to student" $
@@ -481,7 +477,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
             sqliteProperty $ \submission -> do
                 _ <- createStudent student1
                 throwsPrism (_AbsentError . _SubmissionDomain) $
-                    sqlTx $ commonDeleteSubmission (hash submission) (Just student1)
+                    commonDeleteSubmission (hash submission) (Just student1)
 
         it "Delete works" $
             sqliteProperty $
@@ -495,7 +491,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
 
                   let submissionToDel = _ssSubmission subToDel
                   let submissionToDelH = hash submissionToDel
-                  sqlTx $ commonDeleteSubmission submissionToDelH (Just student)
+                  commonDeleteSubmission submissionToDelH (Just student)
                   subAfter <- studentGetAllSubmissions student
                   let expected =
                           filter (\s -> siHash s /= submissionToDelH) subBefore
@@ -514,7 +510,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                      PrivateTx sigSub gA someTime
 
                 throwsPrism (_SemanticError . _DeletingGradedSubmission) $ do
-                     sqlTx $ commonDeleteSubmission (hash sub) (Just student)
+                     commonDeleteSubmission (hash sub) (Just student)
 
         it "Can not delete other student's submission" $
             sqliteProperty $
@@ -531,7 +527,7 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                     prepareAndCreateSubmission env
 
                     fmap property . throwsPrism (_AbsentError . _SubmissionDomain) $
-                        sqlTx $ commonDeleteSubmission (hash sub) (Just otherStudent)
+                        commonDeleteSubmission (hash sub) (Just otherStudent)
 
     describe "makeSubmission" $ do
         it "Making same submission twice throws" $
@@ -541,26 +537,26 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                 let sigSub = tiOne $ cteSignedSubmissions env
 
                 prepareForSubmissions env
-                void $ sqlTx $ submitAssignment sigSub
+                void $ submitAssignment sigSub
                 throwsPrism (_AlreadyPresentError . _SubmissionDomain) $
-                    sqlTx $ void $ submitAssignment sigSub
+                    void $ submitAssignment sigSub
 
         it "Making submission works" $
-            sqliteProperty $
+            educatorProperty $
               \( delayedGen (genCoreTestEnv simpleCoreTestParams) -> env
                ) -> do
                 let student = tiOne $ cteStudents env
                     sigSub = tiOne $ cteSignedSubmissions env
                     submissionReq = signedSubmissionToRequest sigSub
-                prepareForSubmissions env
+                transactW $ prepareForSubmissions env
                 void $ studentMakeSubmissionVerified student submissionReq
 
-                res <- studentGetAllSubmissions student
+                res <- invoke $ studentGetAllSubmissions student
                 let submission = _ssSubmission sigSub
                 return $ res === [studentLiftSubmission submission Nothing]
 
         it "Pretending to be another student is bad" $
-            sqliteProperty $
+            educatorProperty $
               \( delayedGen
                  (genCoreTestEnv simpleCoreTestParams) -> env
                , badStudent
@@ -572,12 +568,12 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                 if student == badStudent
                 then return $ property rejected
                 else do
-                    prepareForSubmissions env
+                    transactW $ prepareForSubmissions env
                     fmap property $ throwsPrism (_BadSubmissionSignature . _FakeSubmissionSignature) $
                         studentMakeSubmissionVerified badStudent newSubmission
 
         it "Fake signature does not work" $
-            sqliteProperty $
+            educatorProperty $
               \( delayedGen (genCoreTestEnv simpleCoreTestParams) -> env
                ) -> do
                 let student = tiOne $ cteStudents env
@@ -586,6 +582,6 @@ spec_StudentApiQueries = describe "Basic database operations" $ do
                                         .~ unsafeHash @Text "pva was here"
                     newSubmission = signedSubmissionToRequest badSub
 
-                prepareForSubmissions env
+                transactW $ prepareForSubmissions env
                 fmap property $ throwsPrism (_BadSubmissionSignature . _SubmissionSignatureInvalid) $
                     studentMakeSubmissionVerified student newSubmission

@@ -1,6 +1,7 @@
 module Dscp.DB.SQLite.Types
        ( -- * SQLite bindings
-         SQLiteDBLocation (..)
+         SQLiteRealParams (..)
+       , SQLiteDBMode (..)
        , SQLiteDB (..)
        , SQLiteParams (..)
 
@@ -9,6 +10,7 @@ module Dscp.DB.SQLite.Types
        , intTxBlockIdx
        ) where
 
+import Control.Concurrent.Chan (Chan)
 import Control.Lens (Prism', prism)
 import Database.SQLite.Simple (Connection)
 
@@ -16,16 +18,37 @@ import Database.SQLite.Simple (Connection)
 -- SQLite bindings
 ----------------------------------------------------------
 
--- | Where database lies.
-data SQLiteDBLocation
-    = SQLiteReal !FilePath  -- ^ In given file
-    | SQLiteInMemory        -- ^ In memory
-
-data SQLiteParams = SQLiteParams
-    { sdpLocation :: SQLiteDBLocation
+data SQLiteRealParams = SQLiteRealParams
+    { srpPath       :: !FilePath
+      -- ^ Path to the file with database.
+    , srpConnNum    :: !(Maybe Int)
+      -- ^ Connections pool size.
+    , srpMaxPending :: !Int
+      -- ^ Maximal number of requests waiting for a free connection.
     }
 
-newtype SQLiteDB = SQLiteDB { sdConn :: Connection }
+-- | Database mode.
+data SQLiteDBMode
+    = SQLiteReal !SQLiteRealParams
+      -- ^ In given file using given number of connections
+    | SQLiteInMemory
+      -- ^ In memory
+
+data SQLiteParams = SQLiteParams
+    { sdpMode :: SQLiteDBMode
+    }
+
+data SQLiteDB = SQLiteDB
+    { sdConnPool   :: Chan Connection
+      -- ^ Connections to given database. Each connection is used no more than
+      -- one thread at once - requirement of SQLite.
+    , sdConnNum    :: Int
+      -- ^ Number of connections in pool
+    , sdPendingNum :: TVar Int
+      -- ^ Number of threads waiting for free connection.
+    , sdMaxPending :: Int
+      -- ^ Allowed number of pending threads.
+    }
 
 ----------------------------------------------------------
 -- Educator schema

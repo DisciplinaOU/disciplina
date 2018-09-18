@@ -11,7 +11,6 @@ import UnliftIO (UnliftIO (..))
 
 import Dscp.Core (Student)
 import Dscp.DB.SQLite
-import Dscp.DB.SQLite (sqlTransaction)
 import Dscp.Educator.Web.Logic
 import Dscp.Educator.Web.Queries
 import Dscp.Educator.Web.Student.API
@@ -20,44 +19,41 @@ import Dscp.Educator.Web.Student.Logic
 import Dscp.Educator.Web.Student.Queries
 import Dscp.Educator.Web.Types
 
-type StudentApiWorkMode m =
-    ( MonadStudentAPIQuery m
-    )
-
 studentApiHandlers
-    :: forall m. StudentApiWorkMode m
+    :: forall m ctx. MonadEducatorWeb ctx m
     => Student -> StudentApiHandlers m
 studentApiHandlers student =
     StudentApiEndpoints
     { sGetCourses = \isEnrolledF ->
-        sqlTransaction $ studentGetCourses student isEnrolledF
+        transactR $ studentGetCourses student isEnrolledF
 
     , sGetCourse = \course ->
-        studentGetCourse student course
+        transactR $ studentGetCourse student course
 
     , sGetAssignments = \afCourse afDocType afIsFinal ->
-        sqlTransaction $
+        transactR $
             commonGetAssignments StudentCase student
                 def{ afCourse, afDocType, afIsFinal }
 
     , sGetAssignment = \assignH ->
-        sqlTransaction $ studentGetAssignment student assignH
+        transactR $ studentGetAssignment student assignH
 
     , sGetSubmissions = \sfCourse sfAssignmentHash sfDocType ->
+        invoke $
         commonGetSubmissions StudentCase
             def{ sfStudent = Just student, sfCourse, sfAssignmentHash, sfDocType }
 
     , sGetSubmission = \subH ->
-        sqlTransaction $ studentGetSubmission student subH
+        invoke $ studentGetSubmission student subH
 
     , sMakeSubmission = \newSub ->
         studentMakeSubmissionVerified student newSub
 
     , sDeleteSubmission = \subH ->
-        sqlTransaction $ commonDeleteSubmission subH (Just student)
+        transactW $ commonDeleteSubmission subH (Just student)
 
     , sGetProofs = \pfSince ->
-        sqlTransaction $ commonGetProofs student def{ pfSince }
+        transactR $ commonGetProofs student def{ pfSince }
     }
 
 convertStudentApiHandler

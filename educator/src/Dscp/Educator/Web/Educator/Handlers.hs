@@ -20,7 +20,7 @@ import Dscp.Educator.Web.Queries
 import Dscp.Educator.Web.Types
 
 educatorApiHandlers
-    :: forall m. EducatorApiWorkMode m
+    :: forall m ctx. MonadEducatorWeb ctx m
     => EducatorApiHandlers m
 educatorApiHandlers =
     EducatorApiEndpoints
@@ -28,96 +28,96 @@ educatorApiHandlers =
       -- Students
 
       eNewStudent =
-        void ... createStudent
+        void . invoke ... createStudent
 
     , eRemoveStudent =
-        educatorRemoveStudent
+        invoke ... educatorRemoveStudent
 
     , eGetStudents =
-        educatorGetStudents
+        invoke ... educatorGetStudents
 
       -- Courses
 
     , eAddCourse = \(NewCourse cid desc subjects) ->
-        void $ createCourse CourseDetails
+        void . transactW $ createCourse CourseDetails
             { cdCourseId = cid
             , cdDesc = desc ?: ""
             , cdSubjects = subjects ?: []
             }
 
     , eGetCourses =
-        educatorGetCourses Nothing
+        invoke $ educatorGetCourses Nothing
 
     , eEnrollStudentToCourse = \student (EnrollStudentToCourse course) ->
-        enrollStudentToCourse student course
+        transactW $ enrollStudentToCourse student course
 
     , eGetStudentCourses = \student ->
-        educatorGetCourses (Just student)
+        invoke $ educatorGetCourses (Just student)
 
       -- Assignments
 
     , eAddCourseAssignment = \_autoAssign na -> do
-        void $ createAssignment (requestToAssignment na)
+        void . transactW $ createAssignment (requestToAssignment na)
         -- TODO [DSCP-176]: consider autoassign
 
     , eGetStudentAssignments = \student ->
-        sqlTransaction $ commonGetAssignments EducatorCase student def
+        transactR $ commonGetAssignments EducatorCase student def
 
     , eAssignToStudent =
-        setStudentAssignment
+        transactW ... setStudentAssignment
 
     , eUnassignFromStudent =
-        educatorUnassignFromStudent
+        invoke ... educatorUnassignFromStudent
 
     , eGetStudentCourseAssignments = \student course afIsFinal ->
-        sqlTransaction $
+        transactR $
           commonGetAssignments EducatorCase student
               def{ afCourse = Just course, afIsFinal }
 
       -- Submissions
 
     , eGetSubmission =
-        educatorGetSubmission
+        invoke ... educatorGetSubmission
 
     , eDeleteSubmission = \submissionH ->
-        sqlTransaction $ commonDeleteSubmission submissionH Nothing
+        transactW $ commonDeleteSubmission submissionH Nothing
 
     , eGetSubmissions =
-        commonGetSubmissions EducatorCase def
+        invoke $ commonGetSubmissions EducatorCase def
 
     , eGetStudentSubmissions = \student ->
-        commonGetSubmissions EducatorCase
+        invoke $ commonGetSubmissions EducatorCase
             def{ sfStudent = Just student }
 
     , eGetStudentAssignmentSubmissions = \student assignH ->
-        commonGetSubmissions EducatorCase
+        invoke $ commonGetSubmissions EducatorCase
             def{ sfStudent = Just student, sfAssignmentHash = Just assignH }
 
     , eGetStudentCourseSubmissions = \student course ->
-        commonGetSubmissions EducatorCase
+        invoke $ commonGetSubmissions EducatorCase
             def{ sfStudent = Just student, sfCourse = Just course }
 
       -- Grades
 
     , ePostGrade = \(NewGrade subH grade) ->
-        educatorPostGrade subH grade
+        invoke $ educatorPostGrade subH grade
 
     , eGetGrades =
-        educatorGetGrades Nothing Nothing Nothing
+        invoke $ educatorGetGrades Nothing Nothing Nothing
 
     , eGetStudentGrades = \student ->
-        educatorGetGrades (Just student) Nothing Nothing
+        invoke $ educatorGetGrades (Just student) Nothing Nothing
 
     , eGetStudentCourseGrades = \student course isFinalF ->
-        educatorGetGrades (Just student) (Just course) isFinalF
+        invoke $ educatorGetGrades (Just student) (Just course) isFinalF
 
       -- Proofs
 
     , eGetStudentProofs = \student ->
-        sqlTransaction $ commonGetProofs student def
+        transactR $ commonGetProofs student def
 
     , eGetStudentCourseProofs = \student courseF ->
-        sqlTransaction $ commonGetProofs student
+        transactR $ commonGetProofs student
             def{ pfCourse = Just courseF }
     }
 

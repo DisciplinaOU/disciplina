@@ -30,6 +30,9 @@ extra-deps:
 - git: https://github.com/serokell/auth-data-structures.git
   commit: f9a0cd66f443d7b0e04a3c8ae8d475f8344b823b
 
+- git: https://github.com/serokell/direct-sqlite.git
+  commit: 333a2b2cf113e115ea2ec450dc706d3f47ee54e4
+
 - git: https://github.com/serokell/blockchain-util.git
   commit: 0252789e6b3d562fd189cbc66e4bfa76d363138f # dscp/release-alpha
   subdirs:
