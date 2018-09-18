@@ -12,7 +12,7 @@ module Dscp.Snowdrop.Types
 
 import Data.Default (Default (..))
 import Data.Text.Buildable (Buildable (..))
-import Fmt (build, (+|), (|+))
+import Formatting (bprint, build, int, (%))
 import qualified Text.Show
 
 import Dscp.Core.Foundation (Address)
@@ -27,9 +27,6 @@ data PublicationValidationException
     | PublicationPrevBlockIsIncorrect
     | StorageIsCorrupted
     | PublicationIsBroken
-    | PublicationAuthorDoesNotExist
-    | PublicationFeeIsTooLow -- ^
-    | PublicationCantAffordFee -- ^ Publication owner can not afford the fee
     deriving (Eq, Ord)
 
 instance Show PublicationValidationException where
@@ -41,10 +38,6 @@ instance Buildable PublicationValidationException where
         PublicationPrevBlockIsIncorrect -> "Publication previous block is incorrect"
         StorageIsCorrupted -> "Storage is inconsistent"
         PublicationIsBroken -> "Bad publication"
-        PublicationAuthorDoesNotExist -> "Publicaion author does not exist"
-        PublicationFeeIsTooLow -> "The fee specified in the publication tx is " <>
-                                  "lower than the minimal one."
-        PublicationCantAffordFee -> "Publication author can't afford the fee"
 
 data AccountTxTypeId = AccountTxTypeId deriving (Eq, Ord, Show, Generic)
 
@@ -64,9 +57,8 @@ data AccountValidationException
     | ReceiverMustIncreaseBalance  -- ^ Receiver cannot decrease in its 'aBalance'.
     | SumMustBeNonNegative         -- ^ Amount of money sent must be greater of equal
                                    -- to the total amount received.
-    | CannotAffordFees             -- ^ Given account state cannot afford given fees.
     | BalanceCannotBecomeNegative
-    deriving (Eq, Ord, Enum, Bounded)
+    deriving (Eq, Ord, Enum, Bounded, Show)
 
 instance Buildable AccountValidationException where
     build = \case
@@ -81,11 +73,7 @@ instance Buildable AccountValidationException where
                                  \only possible to add tokens)"
         ReceiverMustIncreaseBalance -> "Receiver's balance decreased"
         SumMustBeNonNegative -> "Tx input value < tx sum of outputs"
-        CannotAffordFees -> "Tx sender can not afford fees"
-        BalanceCannotBecomeNegative -> "Balance can not become negative"
-
-instance Show AccountValidationException where
-    show = toString . pretty
+        BalanceCannotBecomeNegative -> "Balance cannot become negative"
 
 -- | Wrapper for address.
 newtype AccountId = AccountId { unAccountId :: Address }
@@ -102,7 +90,7 @@ instance Default Account where
     def = Account{ aBalance = 0, aNonce = 0 }
 
 instance Buildable Account where
-    build Account{..} = "account: bal " +| aBalance |+ ", nonce " +| aNonce |+ ""
+    build Account{..} = bprint ("account: bal "%int%", nonce "%int) aBalance aNonce
 
 -- | Aggegate of author 'Account' information from tx.
 data Author = Author
@@ -111,4 +99,4 @@ data Author = Author
     } deriving (Eq, Ord, Show, Generic)
 
 instance Buildable Author where
-    build Author{..} = "author " +| auAuthorId |+ ", nonce " +| auNonce |+ ""
+    build Author{..} = bprint ("author "%Formatting.build%", nonce "%int) auAuthorId auNonce

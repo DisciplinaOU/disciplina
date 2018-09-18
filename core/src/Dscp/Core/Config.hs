@@ -23,8 +23,6 @@ module Dscp.Core.Config
     , genesisHeader
     , genesisHash
 
-    , feeCoefficients
-
     , giveL
     , giveLC
     ) where
@@ -34,7 +32,6 @@ import Data.Reflection (Given (..), give)
 import Loot.Config ((:::), (::<), ConfigKind (Final, Partial), ConfigRec, option, sub)
 
 import Dscp.Config (giveL, giveLC)
-import Dscp.Core.Fees
 import Dscp.Core.Foundation
 import Dscp.Core.Genesis
 import Dscp.Crypto (hash)
@@ -55,7 +52,6 @@ type CoreConfig =
    '[ "core" ::<
        '[ "genesis" ::: GenesisConfig
         , "slotDuration" ::: SlotDuration
-        , "fee" ::: FeeCoefficients
 
         , "generated" ::<
             '[ "genesisInfo" ::: GenesisInfo
@@ -105,6 +101,3 @@ genesisHeader = bHeader genesisBlock
 
 genesisHash :: HasCoreConfig => HeaderHash
 genesisHash = hash genesisHeader
-
-feeCoefficients :: HasCoreConfig => FeeCoefficients
-feeCoefficients = giveL @CoreConfig @FeeCoefficients

@@ -43,7 +43,6 @@ import Data.Time.Clock (UTCTime, getCurrentTime)
 import Fmt ((+||), (||+))
 import qualified GHC.Exts as Exts
 import GHC.IO.Unsafe (unsafePerformIO)
-import Test.QuickCheck.Arbitrary.Generic (genericArbitrary, genericShrink)
 import qualified Text.Show
 
 import Dscp.Core.Foundation
@@ -109,52 +108,6 @@ genCommonDocumentType = frequency [(5, pure Offline), (1, pure Online)]
 
 instance Arbitrary PrivateTx where
     arbitrary = PrivateTx <$> arbitrary <*> arbitrary <*> arbitrary
-
-instance Arbitrary ATGDelta where
-    arbitrary = genericArbitrary
-    shrink    = genericShrink
-
-instance Arbitrary PrivateBlockHeader where
-    arbitrary = genericArbitrary
-    shrink    = genericShrink
-
-deriving instance Arbitrary Coin
-
-instance Arbitrary TxInAcc where
-    arbitrary = genericArbitrary
-    shrink    = genericShrink
-
-instance Arbitrary TxOut where
-    arbitrary = genericArbitrary
-    shrink    = genericShrink
-
-instance Arbitrary Tx where
-    arbitrary = genericArbitrary
-    shrink    = genericShrink
-
-instance Arbitrary TxWitness where
-    arbitrary = genericArbitrary
-    shrink    = genericShrink
-
-instance Arbitrary TxWitnessed where
-    arbitrary = genericArbitrary
-    shrink    = genericShrink
-
-instance Arbitrary PublicationTx where
-    arbitrary = genericArbitrary
-    shrink    = genericShrink
-
-instance Arbitrary GTxWitnessed where
-    arbitrary = genericArbitrary
-    shrink    = genericShrink
-
-instance Arbitrary PublicationTxWitness where
-    arbitrary = genericArbitrary
-    shrink    = genericShrink
-
-instance Arbitrary PublicationTxWitnessed where
-    arbitrary = genericArbitrary
-    shrink    = genericShrink
 
 ---------------------------------------------------------------------
 -- Test case input

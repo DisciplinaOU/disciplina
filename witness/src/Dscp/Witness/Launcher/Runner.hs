@@ -12,9 +12,8 @@ import Dscp.Snowdrop.Actions (initSDActions)
 import Dscp.Witness.Config
 import Dscp.Witness.Launcher.Mode (WitnessContext (..), WitnessRealMode)
 import Dscp.Witness.Launcher.Params (WitnessParams (..))
-import Dscp.Witness.Launcher.Resource (WitnessResources (..), wrKey)
+import Dscp.Witness.Launcher.Resource (WitnessResources (..))
 import Dscp.Witness.Mempool (newMempoolVar)
-import Dscp.Resource.Keys (krPublicKey)
 import qualified Dscp.Witness.Relay as Relay
 import qualified Dscp.Witness.SDLock as Lock
 
@@ -25,7 +24,7 @@ formWitnessContext ::
     -> WitnessResources
     -> IO WitnessContext
 formWitnessContext _wcParams _wcResources = do
-    _wcMempool    <- newMempoolVar $ _wcResources^.wrKey.krPublicKey
+    _wcMempool    <- newMempoolVar
     _wcSDActions  <- initSDActions
     _wcRelayState <- Relay.newRelayState
     _wcSDLock     <- Lock.newSDLock

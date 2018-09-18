@@ -129,7 +129,7 @@ instance ToJSON TxInfo where
                 [ "txId" .= toTxId tx
                 , "txType" .= ("money" :: Text)
                 , "money" .= tx
-                , "outValue" .= (foldr unsafeAddCoin (Coin 0) . map txOutValue . txOuts $ tx)
+                , "outValue" .= (foldr sumCoins (Coin 0) . map txOutValue . txOuts $ tx)
                 ]
             GPublicationTx pTx ->
                 [ "txId" .= toPtxId pTx

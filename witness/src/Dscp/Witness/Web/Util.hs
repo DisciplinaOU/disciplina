@@ -34,4 +34,3 @@ snowdropToServantErrNoReason = \case
     ReceiverMustIncreaseBalance -> err400
     SumMustBeNonNegative        -> err400
     BalanceCannotBecomeNegative -> err403
-    CannotAffordFees            -> err403

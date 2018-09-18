@@ -53,7 +53,7 @@ toBlockInfo includeTxs block = do
         , biSince = getSlotSince . hSlotId . bHeader $ block
         , biSize = BS.length . serialise $ block
         , biTransactionCount = length txs
-        , biTotalOutput = foldr unsafeAddCoin (Coin 0) $ txTotalOutput . unGTxWitnessed <$> txs
+        , biTotalOutput = foldr sumCoins (Coin 0) $ txTotalOutput . unGTxWitnessed <$> txs
         , biTotalFees = Coin 0  -- TODO
         , biTransactions =
             if includeTxs
@@ -63,7 +63,7 @@ toBlockInfo includeTxs block = do
   where
     hh = headerHash block
     txs = bbTxs . bBody $ block
-    txTotalOutput (GMoneyTx tx)      = foldr unsafeAddCoin (Coin 0) $ txOutValue <$> txOuts tx
+    txTotalOutput (GMoneyTx tx)      = foldr sumCoins (Coin 0) $ txOutValue <$> txOuts tx
     txTotalOutput (GPublicationTx _) = Coin 0
 
 toAccountInfo :: WitnessWorkMode ctx m => BlocksOrMempool Account -> Maybe [GTxInBlock] -> m AccountInfo

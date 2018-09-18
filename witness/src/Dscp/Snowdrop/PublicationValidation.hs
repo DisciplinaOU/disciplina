@@ -6,8 +6,7 @@ module Dscp.Snowdrop.PublicationValidation
        ( validatePublication
        ) where
 
-import qualified Data.List as List
-import qualified Data.Map as Map
+import Data.Map as Map (lookup)
 import Snowdrop.Core (PreValidator (..), StateTx (..), StateTxType (..), Validator, ValueOp (..),
                       changeSet, mkValidator, queryOne)
 import Snowdrop.Util
@@ -44,31 +43,8 @@ preValidatePublication ::
 preValidatePublication =
     PreValidator $ \_trans@ StateTx {..} -> do
 
-        let (changes :: Map Ids (ValueOp Values)) = changeSet txBody
-
         -- Retrieving our Publication payload from proof
-        Authenticated {..} <- authenticate @PublicationTxId txProof
-        let privHeader = aPayload
-
-        let authorId = unAccountId aAccountId
-
-        let (authorAccM :: Maybe (AccountId, Account)) =
-              let isAuthor (AccountInIds accId, _) = accId == aAccountId
-                  isAuthor _                       = False
-              in List.find isAuthor (Map.toList changes) <&> \case
-                     (AccountInIds accId, Upd (AccountOutVal it)) -> (accId, it)
-                     _ -> error "preValidatePub: author acc is not Upd"
-        -- The amount of money spent from author's account
-        let feesChosen = case snd <$> authorAccM of
-                Nothing     -> 0
-                Just newAcc -> aBalance aAccount - aBalance newAcc
-
-        when (feesChosen < fromIntegral (coinToInteger $ unFees aMinFees)) $
-            throwLocalError PublicationFeeIsTooLow
-
-        when (aBalance aAccount < feesChosen) $
-            throwLocalError PublicationCantAffordFee
-
+        (AccountId authorId, _, privHeader) <- authenticate @PublicationTxId txProof
         let prevHash = privHeader ^. pbhPrevBlock
         let (prevHashM :: Maybe PrivateHeaderHash) =
                 prevHash <$ guard (prevHash /= genesisHeaderHash)
@@ -77,6 +53,8 @@ preValidatePublication =
         lastPub <- queryOne (PublicationsOf authorId)
         () <- check (fmap (hash . unLastPublication) lastPub == prevHashM)
                     PublicationPrevBlockIsIncorrect
+
+        let changes = changeSet txBody
 
         -- Getting actual changes
         let hd  = proj =<< inj (PublicationHead (hash privHeader)) `Map.lookup` changes

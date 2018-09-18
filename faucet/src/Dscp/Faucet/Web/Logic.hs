@@ -65,7 +65,7 @@ faucetTransferMoneyTo dest = do
         when (balance < transfer) $
             throwM SourceAccountExhausted
 
-        let nonce = fromIntegral $ aiCurrentNonce sourceState
+        let nonce = aiCurrentNonce sourceState
             inAcc = TxInAcc{ tiaNonce = nonce, tiaAddr = source }
             outs  = one (TxOut dest transfer)
             tx    = Tx{ txInAcc = inAcc, txInValue = transfer, txOuts = outs }

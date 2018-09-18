@@ -21,8 +21,6 @@ import qualified Snowdrop.Execution as Pool
 import qualified Snowdrop.Execution as AVLP
 import qualified Snowdrop.Util as SD
 
-import Dscp.Crypto
-import Dscp.Core.Config
 import Dscp.Core.Foundation (GTxWitnessed)
 import Dscp.Core.Foundation.Witness
 import qualified Dscp.Snowdrop as SD
@@ -38,13 +36,12 @@ type MempoolCtx ctx m =
     , HasLens' ctx MempoolVar
     , HasLens' ctx SD.SDVars
     , HasLens' ctx SD.LoggingIO
-    , HasCoreConfig
     )
 
-newMempoolVar :: (HasCoreConfig, MonadIO m) => PublicKey -> m MempoolVar
-newMempoolVar pk = do
-    pool     <- Pool.createMempool
-    let conf = Pool.defaultMempoolConfig (SD.expandGTx pk) SD.validator
+newMempoolVar :: MonadIO m => m MempoolVar
+newMempoolVar = do
+    pool <- Pool.createMempool
+    let conf = Pool.defaultMempoolConfig SD.expandGTx SD.validator
     return (Mempool pool conf)
 
 -- | Adds transaction to mempool. Make sure it's not there yet.
