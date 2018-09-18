@@ -15,7 +15,7 @@ import Data.Text.Buildable (Buildable (..))
 import Fmt (build, (+|), (|+))
 import qualified Text.Show
 
-import Dscp.Core.Foundation (Address, Nonce)
+import Dscp.Core.Foundation (Address)
 
 -- | Transaction type for publication.
 data PublicationTxTypeId
@@ -94,7 +94,7 @@ newtype AccountId = AccountId { unAccountId :: Address }
 -- | Slice of account that interest us while doing money transfers.
 data Account = Account
     { aBalance :: Integer  -- ^ Account balance.
-    , aNonce   :: Nonce    -- ^ Account nonce.
+    , aNonce   :: Integer  -- ^ Count of transactions originated _from_ this account.
     } deriving (Eq, Ord, Show, Generic)
 
 -- | How absense of account in db should look like outside.

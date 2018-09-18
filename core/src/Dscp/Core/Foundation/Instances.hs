@@ -58,11 +58,6 @@ instance Serialise DocumentType
 -- Witness
 ----------------------------------------------------------------------------
 
--- | TODO: CBOR uncompromisingly seralises numbers in variable-length manner,
--- but we actually don't want fees to increase over time as corresponding
--- account is used.
-instance Serialise Nonce
-
 instance Serialise Coin
 instance Serialise TxInAcc
 instance Serialise TxOut

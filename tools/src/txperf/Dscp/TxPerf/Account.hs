@@ -10,7 +10,7 @@ data Account = Account
     { sk           :: SecretKey
     , pk           :: PublicKey
     , addr         :: Address
-    , currentNonce :: Nonce
+    , currentNonce :: Integer
     , balance      :: Int
     }
     deriving (Ord, Show)

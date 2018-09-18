@@ -72,7 +72,7 @@ toAccountInfo account txs = do
     pure AccountInfo
         { aiBalances = Coin . fromIntegral . aBalance <$> account
         , aiCurrentNonce = nonce
-        , aiTransactionCount = fromIntegral nonce
+        , aiTransactionCount = nonce
         , aiTransactions = transactions
         }
   where
