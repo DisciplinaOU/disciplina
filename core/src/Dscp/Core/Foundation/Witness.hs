@@ -4,6 +4,7 @@ module Dscp.Core.Foundation.Witness
     -- * Common
       StakeholderId (..)
     , Coin (..)
+    , _Coin
     , unsafeMkCoin
     , coinToInteger
     , coinFromInteger
@@ -67,7 +68,7 @@ module Dscp.Core.Foundation.Witness
     ) where
 
 import Codec.Serialise (Serialise)
-import Control.Lens (makeLensesWith)
+import Control.Lens (makeLensesWith, makePrisms)
 
 import Fmt (blockListF, build, indentF, listF, nameF, whenF, (+|), (+||), (|+), (||+))
 
@@ -90,6 +91,8 @@ newtype StakeholderId = StakeholderId
 -- | Coin amount.
 newtype Coin = Coin { unCoin :: Word64 }
     deriving (Eq, Ord, Show, Generic, Hashable, Bounded)
+
+makePrisms ''Coin
 
 -- | Add coins.
 unsafeAddCoin :: Coin -> Coin -> Coin

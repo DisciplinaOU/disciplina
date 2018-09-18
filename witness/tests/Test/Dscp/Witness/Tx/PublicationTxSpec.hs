@@ -3,7 +3,7 @@
 
 module Test.Dscp.Witness.Tx.PublicationTxSpec where
 
-import Control.Lens (_last)
+import Control.Lens (forOf, _last)
 import qualified GHC.Exts as Exts
 import Test.QuickCheck.Modifiers (Positive (..))
 import Test.QuickCheck.Monadic (pre)
@@ -109,6 +109,14 @@ spec = describe "Publication tx expansion + validation" $ do
             -- dump them into block
             void . applyBlock =<< createBlock 0
             throwsSome $ submitPub (last badTws)
+
+    it "Small fees are not fine" $ witnessProperty $ do
+        pub :| [] <- pick $ genPublicationChain 1 author
+        badPub <- pick $
+            forOf (ptFeesAmountL . _Coin) pub $ \fee ->
+            choose (0, fee - 1)
+        let badTw = signPubTx author badPub
+        lift . throwsSome $ submitPub badTw
 
     it "Wrong signature is not fine" $ witnessProperty $ do
         pub :| [] <- pick $ genPublicationChain 1 author
