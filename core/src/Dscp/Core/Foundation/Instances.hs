@@ -3,6 +3,8 @@
 module Dscp.Core.Foundation.Instances where
 
 import Codec.Serialise (Serialise (..))
+import Codec.Serialise.Decoding (decodeListLen, decodeWord)
+import Codec.Serialise.Encoding (encodeListLen, encodeWord)
 
 import Dscp.Core.Foundation.Educator
 import Dscp.Core.Foundation.Witness
@@ -49,10 +51,25 @@ deriving instance Serialise ATG
 
 instance Serialise Assignment
 instance Serialise AssignmentType
-instance Serialise Submission
 instance Serialise SubmissionWitness
 instance Serialise SignedSubmission
 instance Serialise DocumentType
+
+instance Serialise Submission where
+    encode (Submission s c a) = mconcat
+        [ encodeListLen 4
+        , encodeWord 0
+        , encode s
+        , encode c
+        , encode a
+        ]
+
+    decode = do
+        len <- decodeListLen
+        tag <- decodeWord
+        case (len, tag) of
+            (4, 0) -> Submission <$> decode <*> decode <*> decode
+            _      -> fail "Invalid Submission encoding"
 
 ----------------------------------------------------------------------------
 -- Witness
