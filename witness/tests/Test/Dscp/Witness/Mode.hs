@@ -16,7 +16,7 @@ import Data.Default (def)
 import qualified Data.Map as M
 import Fmt ((+|), (+||), (|+), (||+))
 import Loot.Base.HasLens (HasLens (..))
-import Loot.Config.Record (finaliseDeferedUnsafe, option, sub)
+import Loot.Config.Record (finaliseDeferredUnsafe, option, sub)
 import Loot.Log (Level (Warning), Logging (..))
 
 import Dscp.Core
@@ -83,7 +83,7 @@ testCommittee =
 -- Only those parts are defined which are actually used in tests.
 testWitnessConfig :: WitnessConfigRec
 testWitnessConfig =
-    finaliseDeferedUnsafe $ def &~ do
+    finaliseDeferredUnsafe $ def &~ do
         sub #core . sub #generated . option #genesisInfo ?= formGenesisInfo genConfig
         sub #core . option #genesis ?= genConfig
         sub #core . option #fee ?= feeCoefs

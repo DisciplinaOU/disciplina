@@ -280,6 +280,7 @@ instance GArbitraryMixture G.U1 where
 instance GArbitraryMixture inner => GArbitraryMixture (G.M1 ty meta inner) where
     gArbitraryMixture (G.M1 a) (G.M1 b) = G.M1 <$> gArbitraryMixture a b
 
-instance Each '[GArbitraryMixture] [l, r] => GArbitraryMixture (l G.:*: r) where
+instance (GArbitraryMixture l, GArbitraryMixture r) =>
+         GArbitraryMixture (l G.:*: r) where
     gArbitraryMixture (l1 G.:*: l2) (r1 G.:*: r2) =
         (G.:*:) <$> gArbitraryMixture l1 r1 <*> gArbitraryMixture l2 r2

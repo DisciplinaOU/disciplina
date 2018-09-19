@@ -44,7 +44,8 @@ makeBlocksChain n issuer
             }
   where
     issuerAddr = mkAddr $ toPublic issuer
-    issuingSlots = filter (committeeOwnsSlot testCommittee issuerAddr) [1..999]
+    issuingSlots = filter (committeeOwnsSlot testCommittee issuerAddr)
+                   ([1..99999] ++ error "No slot is owned by given witness")
 
 resignBlock :: SecretKey -> Block -> Block
 resignBlock issuer block@Block{..} =
