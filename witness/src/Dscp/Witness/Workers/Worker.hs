@@ -6,13 +6,13 @@ module Dscp.Witness.Workers.Worker
     ( witnessWorkers
     ) where
 
-import Control.Concurrent (threadDelay)
 import qualified Control.Concurrent.STM as STM
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.List.NonEmpty as NE
 import Fmt (listF, listF', (+|), (+||), (|+), (||+))
 import Loot.Base.HasLens (lensOf)
 import Loot.Log (logDebug, logError, logInfo, logWarning)
+import Time (ms, sec, threadDelay)
 
 import Dscp.Core
 import Dscp.Crypto
@@ -54,7 +54,7 @@ blockUpdateWorker =
         -- Small delay is needed b/c otherwise simultaneous launch of
         -- several nodes can lead to situation when request is sent to
         -- uninitalised listener of other node.
-        liftIO $ threadDelay 200000
+        liftIO $ threadDelay (ms 200)
         logDebug "Bootstrapped, asking for a tip"
         cliSend btq Nothing GetTipMsg
 
@@ -74,7 +74,7 @@ blockUpdateWorker =
                 logDebug $ "Processing blocks"
                 applyManyBlocks blocks
 
-        forever $ do
+        foreverAlive "Block update worker" (sec 5) $ do
             logDebug "blockUpdateWorker: receiving"
             cliRecv btq (-1) [ ccallback processPubBlock
                              , ccallback processTipMsg
@@ -135,17 +135,17 @@ makeRelay (RelayState input pipe failedTxs) =
         "txRetranslationInitialiser"
         []
         [] $ \_btq ->
-            dieGracefully "tx retranslation initializer" $ forever $ do
+            foreverAlive "Tx retranslation initializer" (sec 1) $ do
                 (tx, inMempoolNotifier) <- atomically $ STM.readTBQueue input
                 checkThenRepublish tx
                     `finallyNotify` inMempoolNotifier
-                    `catchAny` \e -> logInfo $ "Transaction failed: " +| e |+ ""
+                    `catchAny` \e -> logDebug $ "Transaction failed: " +| e |+ ""
 
     republisher = Worker
         "txRetranslationRepeater"
         []
         [subType @PubTx] $ \btq -> do
-            dieGracefully "tx retranslation repeater" $ forever $ do
+            foreverAlive "Tx retranslation repeater" (sec 1) $ forever $ do
                 (_, PubTx tx) <- cliRecvUpdate btq (-1)
                 checkThenRepublish tx
                     `catchAny` \e -> logWarning $

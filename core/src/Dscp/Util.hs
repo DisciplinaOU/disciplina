@@ -45,6 +45,7 @@ module Dscp.Util
 
          -- * Catch errors and report to logs
        , dieGracefully
+       , foreverAlive
 
          -- * Re-exports
        , module Snowdrop.Util
@@ -56,10 +57,12 @@ import Data.ByteArray (ByteArrayAccess)
 import Data.ByteArray.Encoding (Base (..), convertFromBase, convertToBase)
 import qualified Data.ByteString.Lazy as BSL
 import Data.Time.Clock.POSIX (getPOSIXTime)
-import Fmt ((+|), (|+))
+import Fmt ((+|), (+||), (|+), (||+))
+import GHC.TypeLits (KnownSymbol)
 import Mon (recordTimer)
 import Mon.Network (Endpoint)
 import Mon.Types (Name)
+import Time (KnownRat, Time, UnitName, threadDelay)
 
 import Loot.Log (MonadLogging, logError, logWarning)
 
@@ -240,3 +243,17 @@ dieGracefully :: (MonadLogging m, MonadCatch m) => Text -> m () -> m ()
 dieGracefully desc action =
     action `catchAny` \e -> do
         logError $ fromString $ "Exception in " <> toString desc <> ": " <> show e
+
+foreverAlive
+    :: (MonadIO m, MonadCatch m, MonadLogging m,
+        KnownRat unit, KnownSymbol(UnitName unit))
+    => Text -> Time unit -> m () -> m a
+foreverAlive name recovery action =
+    forever action `catchAny` \e -> do
+        printNecrolog e
+        threadDelay recovery
+        foreverAlive name recovery action
+  where
+    printNecrolog e =
+        logError $ name |+ " died (" +|| e ||+ "); \
+                   \ressurecting in " +|| recovery ||+ ""
