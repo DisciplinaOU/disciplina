@@ -13,6 +13,26 @@ import Dscp.Util.Test
 import Dscp.Witness
 import Test.Dscp.Witness.Mode
 
+-- | Find who should sign block at given slot.
+findSlotOwner :: SlotId -> SecretKey
+findSlotOwner slot =
+    fromMaybe (error "Failed to find slot owner") $
+    find (\sk -> committeeOwnsSlot testCommittee (mkAddr $ toPublic sk) slot)
+        testCommitteeSecrets
+
+-- | Update block signature to catch up change of content.
+resignBlockAs :: SecretKey -> Block -> Block
+resignBlockAs issuer block@Block{..} =
+    let Header{..} = bHeader
+        toSign = BlockToSign hDifficulty hSlotId hPrevHash (hash bBody)
+        sig = sign issuer toSign
+    in  block & bHeaderL . hSignatureL .~ sig
+
+-- | Update block signature to catch up change of content.
+resignBlock :: Block -> Block
+resignBlock block =
+    resignBlockAs (findSlotOwner $ hSlotId $ bHeader block) block
+
 -- | Submit block to validation.
 submitBlock
     :: (HasWitnessConfig, WithinWriteSDLock)
@@ -22,15 +42,17 @@ submitBlock = void . applyBlock
 -- | Make sound list of blocks.
 -- Given secret key is assumed to correspond to educator - author of blocks -
 -- and witness who publishes this block.
-makeBlocksChain :: HasWitnessConfig => Int -> SecretKey -> NonEmpty Block
-makeBlocksChain n issuer
-    | n <= 0 = error "makeBlocksChain: n <= o"
+makeBlocksChain :: HasWitnessConfig => Int -> NonEmpty Block
+makeBlocksChain n
+    | n <= 0 = error "makeBlocksChain: n <= 0"
     | otherwise =
         Exts.fromList $
         fix $ \blocks ->
-        zip3 [1..n] (genesisBlock : blocks) issuingSlots
-        <&> \(i, prevBlock, hSlotId) ->
-            let hDifficulty = fromIntegral i
+        zip [1..n] (genesisBlock : blocks)
+        <&> \(i, prevBlock) ->
+            let hSlotId = fromIntegral i
+                hDifficulty = fromIntegral i
+                issuer = findSlotOwner hSlotId
                 hPrevHash = hash (bHeader prevBlock)
                 bBody = BlockBody []
                 toSign = BlockToSign hDifficulty hSlotId hPrevHash (hash bBody)
@@ -42,17 +64,6 @@ makeBlocksChain n issuer
               , hDifficulty, hSlotId, hPrevHash, hSignature
               }
             }
-  where
-    issuerAddr = mkAddr $ toPublic issuer
-    issuingSlots = filter (committeeOwnsSlot testCommittee issuerAddr)
-                   ([1..99999] ++ error "No slot is owned by given witness")
-
-resignBlock :: SecretKey -> Block -> Block
-resignBlock issuer block@Block{..} =
-    let Header{..} = bHeader
-        toSign = BlockToSign hDifficulty hSlotId hPrevHash (hash bBody)
-        sig = sign issuer toSign
-    in  block & bHeaderL . hSignatureL .~ sig
 
 -- | Given correct chain, and spoiling function, modifies one of blocks
 -- in a chain and checks that its application fails.
@@ -73,53 +84,39 @@ spec :: Spec
 spec = describe "Block validation + application" $ do
   describe "Block header" $ do
     it "Good block is fine" $ witnessProperty $ do
-        issuer <- lift $ getSecretKey @WitnessNode
-        let blocks = makeBlocksChain 1 issuer
+        let blocks = makeBlocksChain 1
         lift . noThrow $ mapM_ submitBlock blocks
 
     it "Several good blocks are is fine" $ witnessProperty $ do
-        issuer <- lift $ getSecretKey @WitnessNode
         n <- pick $ getPositive <$> arbitrary
-        let blocks = makeBlocksChain n issuer
+        let blocks = makeBlocksChain n
         lift . noThrow $ mapM_ submitBlock blocks
 
-    it "Several authors can have their chains" $ witnessProperty $ do
-        for_ [0..1] $ \i -> do
-            keyRes <- lift $ genStore (Just $ CommitteeParamsOpen i)
-            let issuer = _krSecretKey keyRes
-            n <- pick $ getPositive <$> arbitrary
-            let blocks = makeBlocksChain n issuer
-            lift . noThrow $ mapM_ submitBlock blocks
-
     it "Wrong previous block hash is not fine" $ witnessProperty $ do
-        issuer <- lift $ getSecretKey @WitnessNode
         n <- pick $ getPositive <$> arbitrary
-        let blocks = makeBlocksChain n issuer
+        let blocks = makeBlocksChain n
         let spoilBlock block = do
                 badPrevHash <- arbitrary
                 return $ block & bHeaderL . hPrevHashL .~ badPrevHash
+                               & resignBlock
         submitSpoiledChain blocks spoilBlock
 
-    it "Applying block at wrong slot is not fine" $ witnessProperty $ do
-        issuer <- lift $ getSecretKey @WitnessNode
-        let issuerAddr = mkAddr $ toPublic issuer
-            block :| [] = makeBlocksChain 1 issuer
-            ownedSlot = committeeOwnsSlot testCommittee issuerAddr
-            badSlot = L.head $ filter (not . ownedSlot) [1..]
-            badBlock = block & bHeaderL . hSlotIdL .~ badSlot
-                             & resignBlock issuer
+    it "Applying block not by committee member is not fine" $ witnessProperty $ do
+        issuer <- pick arbitrary
+        let block :| [] = makeBlocksChain 1
+            badBlock = block & resignBlockAs issuer
+        pre (badBlock /= block)
         lift . throwsSome $ submitBlock badBlock
 
     it "Wrong difficulty is fatal" $ witnessProperty $ do
         _ <- stop $ pendingWith "To be resolved in [DSCP-261]"
 
-        issuer <- lift $ getSecretKey @WitnessNode
         n <- pick $ getPositive <$> arbitrary
-        let blocks = makeBlocksChain n issuer
+        let blocks = makeBlocksChain n
         let spoilBlock block = do
                 badDiff <- arbitrary
                 return $ block & bHeaderL . hDifficultyL .~ badDiff
-                               & resignBlock issuer
+                               & resignBlock
         submitSpoiledChain blocks spoilBlock
 
     it "Block slot only increases over time" $ witnessProperty $ do
@@ -129,29 +126,27 @@ spec = describe "Block validation + application" $ do
         n <- pick $ (+1) . getPositive <$> arbitrary
         -- going to modify block before the last one with too high slotId
         let issuerAddr = mkAddr $ toPublic issuer
-            blocks = makeBlocksChain n issuer
+            blocks = makeBlocksChain n
             ownedSlot = committeeOwnsSlot testCommittee issuerAddr
             lastSlot = blocks ^. to last . bHeaderL . hSlotIdL
             futureSlot = L.head $ filter ownedSlot [99999..]
         oddSlot <- pick $ elements [lastSlot, futureSlot]
         let badBlocks = blocks & ix (n - 2) %~
                           \block -> block & bHeaderL . hSlotIdL .~ oddSlot
-                                          & resignBlock issuer
+                                          & resignBlock
         lift $ do
             mapM_ submitBlock (init badBlocks)
             throwsSome $ submitBlock (last badBlocks)
 
     it "Wrong signature is not fine" $ witnessProperty $ do
-        issuer <- lift $ getSecretKey @WitnessNode
-        let block1 :| [] = makeBlocksChain 1 issuer
+        let block1 :| [] = makeBlocksChain 1
         block2 <- pick arbitrary
         mixBlock <- pick $ arbitraryUniqueMixture block1 block2
         lift . throwsSome $ submitBlock mixBlock
 
   describe "Block content" $ do
     it "Content is verified" $ witnessProperty $ do
-        issuer <- lift $ getSecretKey @WitnessNode
-        let block :| [] = makeBlocksChain 1 issuer
+        let block :| [] = makeBlocksChain 1
         tx <- pick arbitrary
         let badTx = tx & twTxL . txInAccL . tiaNonceL .~ 999
         let badBlock = block & bBodyL . bbTxsL .~ one (GMoneyTxWitnessed badTx)

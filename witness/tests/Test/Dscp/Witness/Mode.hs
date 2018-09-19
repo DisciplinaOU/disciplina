@@ -9,6 +9,8 @@ module Test.Dscp.Witness.Mode
     , testGenesisAddresses
     , testGenesisAddressAmount
     , testCommittee
+    , testCommitteeSecrets
+    , testCommitteeAddrs
     ) where
 
 import Control.Lens (makeLenses, (&~), (?=))
@@ -78,6 +80,12 @@ testCommittee =
     { commN = 2
     , commSecret = detGen 12 (CommitteeSecret <$> arbitrary)
     }
+
+testCommitteeSecrets :: [SecretKey]
+testCommitteeSecrets = openCommitteeSecrets testCommittee
+
+testCommitteeAddrs :: [Address]
+testCommitteeAddrs = map (mkAddr . toPublic) testCommitteeSecrets
 
 -- | Witness test configuration.
 -- Only those parts are defined which are actually used in tests.
