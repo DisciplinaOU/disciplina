@@ -33,6 +33,8 @@ module Dscp.Snowdrop.Configuration
     , Exceptions (..)
     , _AccountValidationError
     , _AccountExpanderError
+    , _PublicationValidationError
+    , _PublicationExpanderError
     , AccountExpanderException (..)
     , _MTxNoOutputs
     , _CantResolveSender

@@ -25,18 +25,20 @@ data TxCreationSteps = TxCreationSteps
     { _tcsInAcc   :: Address -> TxInAcc
     , _tcsTx      :: TxInAcc -> Coin -> [TxOut] -> Tx
     , _tcsWitness :: Signature (TxId, PublicKey, ()) -> PublicKey -> TxWitness
+    , _tcsFixFees :: (Fees -> TxWitnessed) -> TxWitnessed
     }
 
 makeLenses ''TxCreationSteps
 
 -- | Correct way of creating the first transaction.
-properSteps :: TxCreationSteps
+properSteps :: HasWitnessConfig => TxCreationSteps
 properSteps = TxCreationSteps
     { _tcsInAcc = \tiaAddr ->
         TxInAcc{ tiaNonce = 0, tiaAddr }
     , _tcsTx = \txInAcc txInValue txOuts' ->
         Tx{ txInAcc, txInValue, txOuts = txOuts' }
     , _tcsWitness = TxWitness
+    , _tcsFixFees = fixFees feeCoefficients
     }
 
 -- | Exact values for transaction.
@@ -127,7 +129,7 @@ spec = describe "Money tx expansion + validation" $ do
             let tx = makeTx steps txData
             lift $ throwsSome $ applyTx tx
 
-        it "Having not enough money is not fine" $ witnessProperty $ do
+        it "Having no money is not fine" $ witnessProperty $ do
             txData' <- pick genSafeTxData
             secret <- pick $ arbitrary `suchThat` (`notElem` testGenesisSecrets)
             let txData = txData'{ tdSecret = secret }
@@ -136,17 +138,6 @@ spec = describe "Money tx expansion + validation" $ do
             lift $ throwsPrism ((_AccountValidationError . _AuthorDoesNotExist)
                              <> (_AccountExpanderError   . _CantResolveSender)) $
                 applyTx tx
-
-        it "Too high input is processed fine" $ witnessProperty $ do
-            txData <- pick genSafeTxData <&> tdOutsL %~ one . head
-            belowMax <- pick $ choose (0, coinToInteger testGenesisAddressAmount `div` 2)
-            let spent = leftToPanic . coinFromInteger $
-                        coinToInteger testGenesisAddressAmount - belowMax
-
-            let steps = properSteps
-                    & tcsTx %~ \f inAcc _ outs -> f inAcc spent outs
-            let tx = makeTx steps txData
-            lift . noThrow $ applyTx tx
 
         it "Can't spend more money than currently present" $ witnessProperty $ do
             txOuts' <- pick $ genSafeTxOuts (unCoin testGenesisAddressAmount `div` 2)
@@ -161,6 +152,17 @@ spec = describe "Money tx expansion + validation" $ do
             let tx = makeTx properSteps txData
             lift $ throwsPrism (_AccountValidationError . _BalanceCannotBecomeNegative) $
                 applyTx tx
+
+        it "Too high input is processed fine" $ witnessProperty $ do
+            txData <- pick genSafeTxData <&> tdOutsL %~ one . head
+            belowMax <- pick $ choose (0, coinToInteger testGenesisAddressAmount `div` 2)
+            let spent = leftToPanic . coinFromInteger $
+                        coinToInteger testGenesisAddressAmount - belowMax
+
+            let steps = properSteps
+                    & tcsTx %~ \f inAcc _ outs -> f inAcc spent outs
+            let tx = makeTx steps txData
+            lift . noThrow $ applyTx tx
 
     describe "Transaction output part" $ do
         it "Empty transaction output is not fine" $ witnessProperty $ do
@@ -210,6 +212,22 @@ spec = describe "Money tx expansion + validation" $ do
                     \f inAcc _ outs -> f inAcc spent outs
                 tx = makeTx steps txData
             lift $ throwsPrism (_AccountValidationError . _SumMustBeNonNegative) $
+                applyTx tx
+
+        it "Tx input < sum tx outs + fee => failure" $ witnessProperty $ do
+            _ <- stop $ pendingWith "To be fixed in [DSCP-269]"
+
+            txData <- pick genSafeTxData
+            let Coin outSum = leftToPanic $ sumCoins $ map txOutValue $
+                              toList (tdOuts txData)
+            seed <- pick arbitrary
+
+            let steps = properSteps & tcsTx %~
+                    \f inAcc (Coin inVal) outs ->
+                      let inVal' = detGen seed $ choose (outSum, inVal - 1)
+                      in f inAcc (Coin inVal') outs
+                tx = makeTx steps txData
+            lift $ throwsPrism (_AccountValidationError . _CannotAffordFees) $
                 applyTx tx
 
     describe "State modifications are correct" $ do

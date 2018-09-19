@@ -10,6 +10,7 @@ import Test.QuickCheck.Monadic (pre)
 
 import Dscp.Core
 import Dscp.Crypto
+import Dscp.Snowdrop
 import Dscp.Util
 import Dscp.Util.Test
 import Dscp.Witness
@@ -83,6 +84,16 @@ spec = describe "Publication tx expansion + validation" $ do
         lift $ do
             mapM_ submitPub (init badTws)
             throwsSome $ submitPub (last badTws)
+
+    it "Not enough fees is not fine" $ witnessProperty $ do
+        pub :| [] <- pick $ genPublicationChain 1 author
+        badPub <- forOf ptFeesAmountL pub $ \(Coin fee) -> do
+            when (fee == 0) $ error "Fees were not expected to be absent"
+            subtracted <- pick $ choose (1, fee)
+            return $ Coin (fee - subtracted)
+        let tw = signPubTx author badPub
+        lift . throwsPrism (_PublicationValidationError . _PublicationFeeIsTooLow) $
+            submitPub tw
 
     it "Forking publications chain isn't fine" $ witnessProperty $ do
         chainLen <- pick $ Positive <$> choose (2, 4)

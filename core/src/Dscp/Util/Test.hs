@@ -13,8 +13,6 @@ module Dscp.Util.Test
        , module T
        ) where
 
-import Prelude hiding (show)
-
 import Codec.Serialise (Serialise, deserialise, serialise)
 import Control.Exception.Safe (catchJust)
 import Control.Lens (LensLike')
@@ -26,16 +24,15 @@ import Data.Typeable (typeRep)
 import Fmt ((+|), (+||), (|+), (||+))
 import qualified GHC.Exts as Exts
 import qualified GHC.Generics as G
-import GHC.Show (Show (show))
 import qualified Loot.Log as Log
+import System.Random (Random)
 import Test.Hspec as T
-import Test.QuickCheck as T (Arbitrary (..), Fixed (..), Gen, Property, Testable (..), choose,
-                             conjoin, cover, elements, expectFailure, forAll, frequency,
-                             infiniteList, infiniteListOf, ioProperty, label, listOf, listOf1,
-                             oneof, property, sublistOf, suchThat, suchThatMap, vectorOf, (.&&.),
-                             (===), (==>))
+import Test.QuickCheck as T (Arbitrary (..), Fixed (..), Gen, Property, Testable (..), conjoin,
+                             cover, elements, expectFailure, forAll, frequency, infiniteList,
+                             infiniteListOf, ioProperty, label, listOf, listOf1, oneof, property,
+                             sublistOf, suchThat, suchThatMap, vectorOf, (.&&.), (===), (==>))
 import Test.QuickCheck (shuffle, sized)
-import qualified Test.QuickCheck as Q (counterexample)
+import qualified Test.QuickCheck as Q
 import Test.QuickCheck.Arbitrary.Generic as T (genericArbitrary, genericShrink)
 import Test.QuickCheck.Gen (Gen (..))
 import Test.QuickCheck.Instances as T ()
@@ -43,6 +40,7 @@ import Test.QuickCheck.Monadic as T (PropertyM, monadic, pick, stop)
 import Test.QuickCheck.Property as T (failed, rejected, succeeded)
 import Test.QuickCheck.Property (reason)
 import Test.QuickCheck.Random (QCGen, mkQCGen)
+import qualified Text.Show
 
 import Dscp.Crypto.Impl (PublicKey, SecretKey, keyGen, withIntSeed)
 
@@ -83,6 +81,11 @@ detGen seed gen = unGen gen (mkQCGen seed) 100
 -- | Generalized 'detGen'.
 detGenG :: Hashable seed => seed -> Gen a -> a
 detGenG seed = detGen (H.hash seed)
+
+choose :: (Ord a, Show a, Random a) => (a, a) -> Gen a
+choose range@(l, r)
+    | l > r = error $ "choose: invalid range " <> show range
+    | otherwise = Q.choose (l, r)
 
 noneof :: (Arbitrary a, Eq a, Show a) => [a] -> Gen a -> Gen a
 noneof set' gen = do

@@ -39,6 +39,7 @@ library:
     - prettyprinter
     - QuickCheck
     - quickcheck-instances
+    - random
     - reflection
     - safe-exceptions >= 0.1.4
     - serialise

@@ -7,6 +7,14 @@ module Dscp.Snowdrop.Types
     , Account(..)
     , Author(..)
     , PublicationValidationException(..)
+    , _PublicationSignatureIsIncorrect
+    , _PublicationPrevBlockIsIncorrect
+    , _StorageIsCorrupted
+    , _PublicationIsBroken
+    , _PublicationAuthorDoesNotExist
+    , _PublicationFeeIsTooLow
+    , _PublicationCantAffordFee
+    , AccountValidationException(..)
     , _AuthorDoesNotExist
     , _SignatureIsMissing
     , _SignatureIsCorrupted
@@ -18,7 +26,7 @@ module Dscp.Snowdrop.Types
     , _ReceiverMustIncreaseBalance
     , _SumMustBeNonNegative
     , _BalanceCannotBecomeNegative
-    , AccountValidationException(..)
+    , _CannotAffordFees
     ) where
 
 import Control.Lens (makePrisms)
@@ -43,6 +51,8 @@ data PublicationValidationException
     | PublicationFeeIsTooLow -- ^
     | PublicationCantAffordFee -- ^ Publication owner can not afford the fee
     deriving (Eq, Ord)
+
+makePrisms ''PublicationValidationException
 
 instance Show PublicationValidationException where
     show = toString . pretty
