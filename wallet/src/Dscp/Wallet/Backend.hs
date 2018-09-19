@@ -28,6 +28,7 @@ createWalletFace serverAddress sendEvent = buildComponent_ "Wallet" $ do
         , walletRestoreKey = restoreKey sendEvent
         , walletListKeys = listKeys
         , walletSendTx = sendTx wc sendEvent
+        , walletTxFee = unFees . estimateFees feeConfig . toList
         , walletGetBalance = getBalance wc
         , walletGetTxHistory = getTxHistory wc
         }

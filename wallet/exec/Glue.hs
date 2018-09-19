@@ -138,6 +138,15 @@ knitFaceToUI walletStateRef UiFace{..} WalletFace{..} KnitFace{..} =
             argOutputs ++
             optString "pass" usaPassphrase
           )
+      UiFee UiFeeArgs{..} -> do
+        argOutputs <- forM ufaOutputs $ \UiSendOutput{..} -> do
+          argAddress <- addrFromText usoAddress
+          argCoin <- readEither usoAmount
+          Right $ Knit.ArgKw "out" . Knit.ExprProcCall $ Knit.ProcCall "tx-out"
+            [ Knit.ArgPos . Knit.ExprLit . Knit.toLit . Knit.LitAddress $ argAddress
+            , Knit.ArgPos . Knit.ExprLit . Knit.toLit . Knit.LitNumber $ argCoin
+            ]
+        Right $ Knit.ExprProcCall (Knit.ProcCall "tx-fee" argOutputs)
       UiKill commandId ->
         Right $ Knit.ExprProcCall
           (Knit.ProcCall Knit.killCommandName
@@ -187,6 +196,11 @@ knitFaceToUI walletStateRef UiFace{..} WalletFace{..} KnitFace{..} =
         Just . UiSendCommandResult . either UiSendCommandFailure UiSendCommandSuccess $
           fromResult result >>= fromValue >>= \case
             Knit.ValueString h -> Right h
+            _ -> Left "Unrecognized return value"
+      UiFee{} ->
+        Just . UiFeeCommandResult . either UiFeeCommandFailure UiFeeCommandSuccess $
+          fromResult result >>= fromValue >>= \case
+            Knit.ValueCoin fee -> Right $ pretty fee
             _ -> Left "Unrecognized return value"
       UiNewWallet{} ->
         Just . UiNewWalletCommandResult . either UiNewWalletCommandFailure UiNewWalletCommandSuccess $

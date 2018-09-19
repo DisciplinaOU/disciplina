@@ -15,6 +15,7 @@ module Dscp.Core.Fees
        , noFees
        , noFeesConfig
        , fixFees
+       , estimateFees
        ) where
 
 import Codec.Serialise (Serialise (..))
@@ -102,3 +103,20 @@ fixLinearFees coeffs buildTx = go (Fees $ fcMinimal coeffs)
 fixFees :: FeePolicy Tx -> (Fees -> TxWitnessed) -> TxWitnessed
 fixFees feePolicy = case feePolicy of
     LinearFeePolicy coeffs -> fixLinearFees coeffs
+
+-- | Estimate fees for given outputs.
+-- Only works for fixed nonce, key and signature sizes.
+estimateFees :: FeeConfig -> [TxOut] -> Fees
+estimateFees feeConfig outs = calcFeeG feeConfig gTx
+  where
+    publicKey = leftToPanic $ fromByteArray ("patakbardaq_skovoroda_pvaforever" :: ByteString)
+    signature = leftToPanic $ fromByteArray ("patakbardaq_skovoroda_pvaforever_and_thirty_two_more_bytes_mkay?" :: ByteString)
+    address = mkAddr publicKey
+
+    gTx = GMoneyTxWitnessed . fixFees (fcMoney feeConfig) $ \fees ->
+        let inAcc = TxInAcc { tiaNonce = 0, tiaAddr = address }
+            inValue = Coin (sum $ map (unCoin . txOutValue) outs) `unsafeAddCoin` unFees fees
+            tx = Tx { txInAcc = inAcc, txInValue = inValue, txOuts = outs }
+            txWitness = TxWitness { txwSig = signature, txwPk = publicKey }
+            txWitnessed = TxWitnessed { twTx   = tx, twWitness = txWitness }
+        in txWitnessed

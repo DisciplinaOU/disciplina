@@ -24,6 +24,7 @@ data WalletFace = WalletFace
     , walletRestoreKey   :: Maybe Text -> Encrypted SecretKey -> Maybe PassPhrase -> IO ()
     , walletListKeys     :: IO [Account]
     , walletSendTx       :: Encrypted SecretKey -> Maybe PassPhrase -> NonEmpty TxOut -> IO Tx
+    , walletTxFee        :: NonEmpty TxOut -> Coin
     , walletGetBalance   :: Address -> IO (BlocksOrMempool Coin)
     , walletGetTxHistory :: Address -> IO [GTx]
     }

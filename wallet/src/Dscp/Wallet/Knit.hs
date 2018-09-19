@@ -174,6 +174,17 @@ instance AllConstrained (Elem components) '[Wallet, Core] => ComponentCommandPro
         , cpHelp = "Send a transaction."
         }
     , CommandProc
+        { cpName = "tx-fee"
+        , cpArgumentPrepare = map
+            $ typeDirectedKwAnn "out" tyTxOut
+        , cpArgumentConsumer = do
+            outs <- getArgSome tyTxOut "out"
+            pure (outs)
+        , cpRepr = \(outs) -> CommandAction $ \WalletFace{..} -> do
+            return . toValue . ValueCoin $ walletTxFee outs
+        , cpHelp = "Estimate transaction fee."
+        }
+    , CommandProc
         { cpName = "get-balance"
         , cpArgumentPrepare = identity
         , cpArgumentConsumer = do
