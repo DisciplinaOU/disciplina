@@ -6,19 +6,18 @@ module Dscp.Witness.Listeners.Listener
     ( witnessListeners
     ) where
 
-import Control.Concurrent (threadDelay)
 import qualified Control.Concurrent.STM as STM
-
-import Fmt ((+|), (+||), (|+), (||+))
+import Fmt ((+|), (|+))
+import Time (sec)
 
 import Loot.Base.HasLens (HasLens (..))
-import Loot.Log (logDebug, logError, logInfo)
+import Loot.Log (logDebug, logInfo)
 
 import Dscp.Core
 import Dscp.Network.Wrapped
 import Dscp.Resource.Keys (ourPublicKey)
 import Dscp.Snowdrop
-import Dscp.Util (dieGracefully)
+import Dscp.Util
 import Dscp.Witness.Config
 import Dscp.Witness.Launcher.Marker
 import Dscp.Witness.Launcher.Mode
@@ -45,13 +44,8 @@ witnessListeners = do
 blockIssuingListener :: forall ctx m. WitnessWorkMode ctx m => Listener m
 blockIssuingListener =
     Listener "blockIssuingListener" [] $ \btq ->
-        forever (action btq `catchAny` handler)
+        foreverAlive "BlockIssuingListener" (sec 2) (action btq)
   where
-    handler e = do
-        logError $
-            "BlockIssuingListener has failed with an error: " +|| e ||+
-            ". Recovering (in 2sec)."
-        liftIO $ threadDelay $ 2000000
     action :: ListenerEnv NetTag -> m ()
     action btq = do
         let GovCommittee committee = gcGovernance $ giveL @WitnessConfig @GenesisConfig
@@ -107,6 +101,6 @@ txPublisher :: WitnessWorkMode ctx m => RelayState -> Listener m
 txPublisher (RelayState _ pipe _) = Listener
     "txRetranslationPublisher"
     [] $ \btq -> do
-        dieGracefully "tx retranslation publisher" $ forever $ atomically $ do
+        foreverAlive "Tx publisher" (sec 1) $ atomically $ do
             tx <- STM.readTBQueue pipe
             servPub btq (PubTx tx)
