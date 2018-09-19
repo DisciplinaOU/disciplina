@@ -80,7 +80,7 @@ getByGTx
        , SeqExpanders Exceptions Ids Proofs Values ctx GTxWitnessed
        )
 getByGTx applyFees pk t =
-    let fee  = calcFeeG (if applyFees then feeCoefficients else noFees) t
+    let fee  = calcFeeG (if applyFees then feeConfig else noFeesConfig) t
         addr = mkAddr pk
         (a, b) = case t of
                    GMoneyTxWitnessed tx        -> toProofBalanceTx fee tx

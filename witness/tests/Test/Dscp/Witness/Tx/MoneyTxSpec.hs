@@ -38,7 +38,7 @@ properSteps = TxCreationSteps
     , _tcsTx = \txInAcc txInValue txOuts' ->
         Tx{ txInAcc, txInValue, txOuts = txOuts' }
     , _tcsWitness = TxWitness
-    , _tcsFixFees = fixFees feeCoefficients
+    , _tcsFixFees = fixFees (fcMoney feeConfig)
     }
 
 -- | Exact values for transaction.
@@ -78,7 +78,7 @@ genSafeTxData = do
 
 -- | Given creation steps, build a transaction.
 makeTx :: HasWitnessConfig => TxCreationSteps -> TxData -> TxWitnessed
-makeTx steps dat = fixFees feeCoefficients $ \fee ->
+makeTx steps dat = _tcsFixFees steps $ \fee ->
     let sourcePk = toPublic (tdSecret dat)
         inAcc = _tcsInAcc steps (mkAddr sourcePk)
         spent = leftToPanic $ sumCoins $

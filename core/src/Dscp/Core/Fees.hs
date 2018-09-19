@@ -1,3 +1,4 @@
+{-# LANGUAGE GADTs      #-}
 {-# LANGUAGE StrictData #-}
 
 -- | Trnsaction fees processing and calculation.
@@ -5,10 +6,14 @@ module Dscp.Core.Fees
        ( Fees (..)
        , _Fees
        , FeeCoefficients (..)
-       , calcFeeTx
+       , FeePolicy (..)
+       , FeeConfig (..)
+       , calcLinearFees
+       , calcFee
        , calcFeePub
        , calcFeeG
        , noFees
+       , noFeesConfig
        , fixFees
        ) where
 
@@ -27,55 +32,73 @@ makePrisms ''Fees
 
 instance Serialise Fees
 
--- | Setup for fee calculation.
+-- | Setup for fee calculation by linear rule.
 data FeeCoefficients = FeeCoefficients
-    { fcMinimal       :: Coin  -- ^ How much is the base fee?
-    , fcMultiplier    :: Float -- ^ How much tokens taken per byte of tx?
-    , fcMinimalPub    :: Coin  -- ^ Base fee for publications
-    , fcMultiplierPub :: Float -- ^ The multiplier for publications,
-                               -- gets multipled by the number of txs
-                               -- in the private block.
+    { fcMinimal    :: Coin  -- ^ How much is the base fee?
+    , fcMultiplier :: Float -- ^ How much tokens taken per item?
     } deriving (Eq, Show)
 
+-- | General setup for fee calculation
+data FeePolicy tx where
+    LinearFeePolicy :: FeeCoefficients -> FeePolicy tx
+    UnknownFeePolicy :: FeePolicy Void
+
+-- | All fee policies.
+data FeeConfig = FeeConfig
+    { fcMoney       :: FeePolicy Tx
+    , fcPublication :: FeePolicy PublicationTx
+    }
+
 -- | Calculate fees from tx size.
-calcFeeTx :: FeeCoefficients -> Size GTxWitnessed -> Fees
-calcFeeTx FeeCoefficients{..} (Size size) =
+calcLinearFees :: Integral i => FeeCoefficients -> i -> Fees
+calcLinearFees FeeCoefficients{..} size =
     Fees $ Coin $ unCoin fcMinimal + round (fcMultiplier * fromIntegral size)
 
--- | Calculates tx fee based on the number of txs in the private block.
-calcFeePub :: FeeCoefficients -> Word32 -> Fees
-calcFeePub FeeCoefficients{..} txsN =
-    Fees $ Coin $ unCoin fcMinimalPub + round (fcMultiplierPub * fromIntegral txsN)
+-- | Calculates fees of money transaction.
+calcFee :: FeePolicy Tx -> TxWitnessed -> Fees
+calcFee policy tx = case policy of
+    LinearFeePolicy coeffs ->
+        calcLinearFees coeffs $ unSize $ sizeSerialised (GMoneyTxWitnessed tx)
+
+-- | Calculates fees of publication transaction.
+calcFeePub :: FeePolicy PublicationTx -> PrivateBlockHeader -> Fees
+calcFeePub policy header = case policy of
+    LinearFeePolicy coeffs ->
+        calcLinearFees coeffs $ mrSize $ header ^. pbhBodyProof
 
 -- | Calculates fees of 'GTxWitnessed'.
-calcFeeG :: FeeCoefficients -> GTxWitnessed -> Fees
-calcFeeG coeffs = \case
-    tx@(GMoneyTxWitnessed _) ->
-        calcFeeTx coeffs $ sizeSerialised tx
+calcFeeG :: FeeConfig -> GTxWitnessed -> Fees
+calcFeeG FeeConfig{..} = \case
+    (GMoneyTxWitnessed tw) ->
+        calcFee fcMoney tw
     (GPublicationTxWitnessed PublicationTxWitnessed { ptwTx }) ->
-        calcFeePub coeffs $ mrSize $ ptHeader ptwTx ^. pbhBodyProof
+        calcFeePub fcPublication (ptHeader ptwTx)
 
 -- | "No fee" setup.
-noFees :: FeeCoefficients
-noFees = FeeCoefficients
+noFees :: FeePolicy tx
+noFees = LinearFeePolicy FeeCoefficients
     { fcMinimal       = Coin 0
     , fcMultiplier    = 0
-    , fcMinimalPub    = Coin 0
-    , fcMultiplierPub = 0
     }
+
+noFeesConfig :: FeeConfig
+noFeesConfig = FeeConfig noFees noFees
 
 -- | Pick fees which would fit for given transaction. Fits only the
 -- case when transaction size grows monotonically with fees.
---
--- [DSCP-252]: this function would work only for linear fees policy,
--- for other policies another algorithm would be required.
-fixFees :: FeeCoefficients -> (Fees -> TxWitnessed) -> TxWitnessed
-fixFees coeffs buildTx = go (Fees $ fcMinimal coeffs)
+fixLinearFees :: FeeCoefficients -> (Fees -> TxWitnessed) -> TxWitnessed
+fixLinearFees coeffs buildTx = go (Fees $ fcMinimal coeffs)
   where
     go fees =
         let tx = buildTx fees
-            fees' = calcFeeTx coeffs $ sizeSerialised (GMoneyTxWitnessed tx)
+            Size size = sizeSerialised (GMoneyTxWitnessed tx)
+            fees' = calcLinearFees coeffs size
         in case fees `compare` fees' of
             EQ -> tx
             LT -> go fees'
-            GT -> error "fixFees: fees unexpectedly decreased"
+            GT -> error "fixLinearFees: fees unexpectedly decreased"
+
+-- | Pick fees which would fit for given transaction.
+fixFees :: FeePolicy Tx -> (Fees -> TxWitnessed) -> TxWitnessed
+fixFees feePolicy = case feePolicy of
+    LinearFeePolicy coeffs -> fixLinearFees coeffs
