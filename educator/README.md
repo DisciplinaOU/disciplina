@@ -45,3 +45,8 @@ See [configuration section](/docs/config.md) document.
   ```bash
   > ./scripts/launch/node.sh educator
   ```
+  To launch educator with bot to automatically react on student's actions:
+
+  ```bash
+  > ./scripts/launch/node.sh educator bot
+  ```
