@@ -9,17 +9,24 @@
 
 module Dscp.Config.Util
     (
+      -- * Re-exports from `vinyl`
       type (++)
     , type (<:)
     , rcast
     , rreplace
 
+      -- * Re-exports from 'Loot.Config'
+    , sub
+    , option
+
+      -- * Config parsing and building
     , ConfigParams (..)
     , configParamsParser
     , ConfigBuildError (..)
     , buildConfig
     , fillExpandedConfig
 
+      -- * Helper lenses/classes
     , HasGiven
     , giveL
     , HasGivenC
@@ -35,7 +42,7 @@ import qualified Data.Text.Buildable
 import Data.Yaml (ParseException, decodeFileEither, FromJSON(..), withObject, (.:?))
 import Fmt (blockListF)
 import Loot.Base.HasLens (HasLens', lensOf)
-import Loot.Config (ConfigKind (Final, Partial), ConfigRec, HasLensC, finalise, lensOfC)
+import Loot.Config (ConfigKind (Final, Partial), ConfigRec, HasLensC, finalise, lensOfC, sub, option)
 import qualified Options.Applicative as Opt
 import qualified Text.Show
 
