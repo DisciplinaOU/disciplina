@@ -38,9 +38,8 @@ launchEducatorRealMode
     -> IO ()
 launchEducatorRealMode config action =
     exitSilentlyOnFailure $
-    withEducatorConfig config $
-    runResourceAllocation appDesc initParams (allocResource ()) $
-        \resources -> do
+    runResourceAllocation appDesc initParams (allocResource config) $
+        \resources -> withEducatorConfig config $ do
             ctx <- formEducatorContext resources
             runRIO ctx action
   where

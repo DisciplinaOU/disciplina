@@ -51,19 +51,23 @@ instance HasLens ZTNetCliEnv EducatorResources ZTNetCliEnv where
 instance HasLens ZTNetServEnv EducatorResources ZTNetServEnv where
     lensOf = erWitnessResources . lensOf @ZTNetServEnv
 
-instance HasWitnessConfig =>
-         AllocResource (EducatorKeyParams, AppDir) (KeyResources EducatorNode) where
-    allocResource (EducatorKeyParams baseParams, appDir) =
+instance AllocResource (KeyResources EducatorNode) where
+    type Deps (KeyResources EducatorNode) =
+        (WitnessConfigRec, EducatorKeyParams, AppDir)
+
+    allocResource (witnessCfg, EducatorKeyParams baseParams, appDir) =
         buildComponentR "educator keys"
-            (linkStore baseParams Nothing appDir)
+            (withWitnessConfig witnessCfg $ linkStore baseParams Nothing appDir)
             (\_ -> pass)
 
-instance HasEducatorConfig => AllocResource () EducatorResources where
-    allocResource _ = do
-        let cfg = educatorConfig ^. sub #educator
-            witnessCfg = rcast educatorConfig
-        _erWitnessResources <- withWitnessConfig witnessCfg $ allocResource ()
+instance AllocResource EducatorResources where
+    type Deps EducatorResources = EducatorConfigRec
+    allocResource educatorCfg = do
+        let cfg = educatorCfg ^. sub #educator
+            witnessCfg = rcast educatorCfg
+        _erWitnessResources <- withWitnessConfig witnessCfg $
+                               allocResource witnessCfg
         _erDB <- allocResource $ cfg ^. option #db
         let appDir = Witness._wrAppDir _erWitnessResources
-        _erKeys <- withWitnessConfig witnessCfg $ allocResource (cfg ^. option #keys, appDir)
+        _erKeys <- allocResource (witnessCfg, cfg ^. option #keys, appDir)
         return EducatorResources {..}

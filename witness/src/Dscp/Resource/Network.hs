@@ -82,7 +82,8 @@ makeLenses ''NetCliResources
 instance HasLens ZTGlobalEnv NetCliResources ZTGlobalEnv where lensOf = ncGlobalEnv
 instance HasLens ZTNetCliEnv NetCliResources ZTNetCliEnv where lensOf = ncClientEnv
 
-instance WithNetLogging => AllocResource NetCliParams NetCliResources where
+instance WithNetLogging => AllocResource NetCliResources where
+    type Deps NetCliResources = NetCliParams
     allocResource NetCliParams {..} =
         buildComponentR "netcli" allocate release
       where
@@ -125,7 +126,8 @@ instance HasLens ZTGlobalEnv NetServResources ZTGlobalEnv where lensOf = nsGloba
 instance HasLens ZTNetCliEnv NetServResources ZTNetCliEnv where lensOf = nsClientEnv
 instance HasLens ZTNetServEnv NetServResources ZTNetServEnv where lensOf = nsServerEnv
 
-instance WithNetLogging => AllocResource NetServParams NetServResources where
+instance WithNetLogging => AllocResource NetServResources where
+    type Deps NetServResources = NetServParams
     allocResource NetServParams {..} =
         buildComponentR "netcli" allocate release
       where

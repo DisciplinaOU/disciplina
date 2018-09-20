@@ -53,7 +53,8 @@ createWitnessClient netAddr = do
 -- Instances
 ----------------------------------------------------------------------------
 
-instance AllocResource BaseUrl WitnessClient where
+instance AllocResource WitnessClient where
+    type Deps WitnessClient = BaseUrl
     allocResource params =
         buildComponentR "witness client"
             (createWitnessClient params)

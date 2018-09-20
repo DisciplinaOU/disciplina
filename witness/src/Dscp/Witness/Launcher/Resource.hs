@@ -19,7 +19,6 @@ import Loot.Base.HasLens (HasLens (..))
 import Loot.Config (option, sub)
 import Loot.Network.ZMQ (ZTGlobalEnv, ZTNetCliEnv, ZTNetServEnv)
 
-import Dscp.Config (giveL)
 import Dscp.DB.Rocks.Real (RocksDB)
 import Dscp.Resource.AppDir
 import Dscp.Resource.Class (AllocResource (..), buildComponentR)
@@ -53,17 +52,18 @@ instance HasLens ZTNetCliEnv WitnessResources ZTNetCliEnv where
 instance HasLens ZTNetServEnv WitnessResources ZTNetServEnv where
     lensOf = wrNetwork . lensOf @ZTNetServEnv
 
-instance HasWitnessConfig =>
-         AllocResource AppDir (KeyResources WitnessNode) where
-    allocResource appDir =
-        let WitnessKeyParams {..} = giveL @WitnessConfig
+instance AllocResource (KeyResources WitnessNode) where
+    type Deps (KeyResources WitnessNode) = (WitnessConfigRec, AppDir)
+    allocResource (witnessCfg, appDir) =
+        let WitnessKeyParams {..} = witnessCfg ^. sub #witness . option #keys
         in buildComponentR "witness keys"
-           (linkStore wkpBase wkpCommittee appDir)
+           (withWitnessConfig witnessCfg $ linkStore wkpBase wkpCommittee appDir)
            (\_ -> pass)
 
-instance HasWitnessConfig => AllocResource () WitnessResources where
-    allocResource _ = do
-        let cfg = witnessConfig ^. sub #witness
+instance AllocResource WitnessResources where
+    type Deps WitnessResources = WitnessConfigRec
+    allocResource witnessCfg = do
+        let cfg = witnessCfg ^. sub #witness
         _wrLogging <- view (lensOf @LoggingIO)
         _wrDB <- allocResource $ cfg ^. option #db
         _wrNetwork <- do
@@ -72,5 +72,5 @@ instance HasWitnessConfig => AllocResource () WitnessResources where
             withNetLogging (NetLogging $ _wrLogging & logNameSelL %~ modGivenName)
                            (allocResource $ cfg ^. option #network)
         _wrAppDir <- allocResource $ cfg ^. option #appDir
-        _wrKey <- allocResource _wrAppDir
+        _wrKey <- allocResource (witnessCfg, _wrAppDir)
         return WitnessResources {..}

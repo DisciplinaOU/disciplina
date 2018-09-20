@@ -48,9 +48,8 @@ launchWitnessRealMode
     -> IO ()
 launchWitnessRealMode config action =
     exitSilentlyOnFailure $
-    withWitnessConfig config $
-    runResourceAllocation appDesc initParams (allocResource ()) $
-        \resources -> do
+    runResourceAllocation appDesc initParams (allocResource config) $
+        \resources -> withWitnessConfig config $ do
             ctx <- formWitnessContext resources
             runRIO ctx action
   where

@@ -42,7 +42,8 @@ prepareAppDir param = do
     liftIO $ createDirectoryIfMissing True appDir
     return appDir
 
-instance AllocResource AppDirParam AppDir where
+instance AllocResource AppDir where
+    type Deps AppDir = AppDirParam
     allocResource p = buildComponentR "AppDir" (prepareAppDir p) (\_ -> pass)
 
 -- | Isomorphism between @Maybe FilePath@ and 'AppDirParam'
