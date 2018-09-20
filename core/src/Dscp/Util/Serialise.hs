@@ -35,12 +35,14 @@ deserialiseOrFail' = deserialiseOrFail . LBS.fromStrict
 
 encodeCrcProtected :: Serialise a => a -> E.Encoding
 encodeCrcProtected a =
-    E.encodeBytes body <> E.encodeWord32 (crc32 body)
+    E.encodeListLen 2 <> E.encodeBytes body <> E.encodeWord32 (crc32 body)
   where
     body = serialise' a
 
 decodeCrcProtected :: Serialise a => D.Decoder s a
 decodeCrcProtected = do
+    len <- D.decodeListLen
+    unless (len == 2) $ fail "CRC protected: unexpected list length"
     bs <- D.decodeBytes
     expectedCrc <- D.decodeWord32
     let actualCrc = crc32 bs
