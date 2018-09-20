@@ -1,6 +1,6 @@
 { pkgs ? import ./closure.nix }: with pkgs;
 
-let 
+let
   filterWhiteBlack = { path, whitelist, blacklist ? [] }: name: type:
     let
       relPath = (lib.removePrefix (toString path + "/") name) + (if type == "directory" then "/" else "");

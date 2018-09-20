@@ -3,7 +3,7 @@ with import <nixpkgs> {}; {
     name = "thesis-text-env";
     buildInputs = [
       (texlive.combine {
-        inherit (texlive) 
+        inherit (texlive)
           scheme-small
           biber
           bbm
