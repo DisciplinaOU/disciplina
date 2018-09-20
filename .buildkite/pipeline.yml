@@ -14,7 +14,7 @@ steps:
   - command: nix-build
     agents:
       system: x86_64-linux
-    label: nix-build
+    label: build
     timeout: 120
 
   - command:
@@ -24,10 +24,9 @@ steps:
       system: x86_64-linux
     label: build-flatpak
 
-  - command:
-    - nix-build specs -o specs-result
-    - buildkite-agent artifact upload specs-result/*.pdf
+  - command: nix-build specs -o specs-result
     agents:
       system: x86_64-linux
+    artifact_paths:
+    - specs-result/*.pdf
     label: build-specs
-    timeout: 120
