@@ -16,9 +16,9 @@ import Loot.Log.Rio (LoggingIO)
 
 import Control.Lens (makeLenses)
 import Loot.Base.HasLens (HasLens (..))
-import Loot.Config (option, sub)
 import Loot.Network.ZMQ (ZTGlobalEnv, ZTNetCliEnv, ZTNetServEnv)
 
+import Dscp.Config
 import Dscp.DB.Rocks.Real (RocksDB)
 import Dscp.Resource.AppDir
 import Dscp.Resource.Class (AllocResource (..), buildComponentR)
@@ -57,7 +57,8 @@ instance AllocResource (KeyResources WitnessNode) where
     allocResource (witnessCfg, appDir) =
         let WitnessKeyParams {..} = witnessCfg ^. sub #witness . option #keys
         in buildComponentR "witness keys"
-           (withWitnessConfig witnessCfg $ linkStore wkpBase wkpCommittee appDir)
+           (withCoreConfig (rcast witnessCfg) $
+               linkStore wkpBase wkpCommittee appDir)
            (\_ -> pass)
 
 instance AllocResource WitnessResources where
