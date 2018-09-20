@@ -1,20 +1,28 @@
 { pkgs ? import ./closure.nix }: with pkgs;
 
-stdenv.mkDerivation {
+stdenv.mkDerivation rec {
   name = "disciplina";
 
   nativeBuildInputs = [
+    binutils
+    git
+    haskell.compiler.ghc822
     haskellPackages.tw
     hlint
+    nix
+    pkgconfig
+    stack
   ];
 
   buildInputs = [
-    binutils
-    git
     gmp
     openssl
     rocksdb
     zeromq
     zlib
   ];
+
+  shellHook = ''
+    export LD_LIBRARY_PATH=${lib.makeLibraryPath buildInputs}:$LD_LIBRARY_PATH
+  '';
 }
