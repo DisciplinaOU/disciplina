@@ -7,9 +7,14 @@ module Dscp.Educator.Web.Auth
        , AuthData (..)
        , checkAuthData
        , WithCommonAuthData (..)
+       , makeAuthHeader
        ) where
 
-import Data.Aeson (FromJSON)
+import Crypto.JOSE.JWK ()
+import Crypto.JWT (JWTError, KeyMaterial (OKPKeyMaterial), KeyOp (Sign),
+                   OKPKeyParameters (Ed25519Key), addClaim, bestJWSAlg, emptyClaimsSet,
+                   encodeCompact, fromKeyMaterial, jwkKeyOps, newJWSHeader, signClaims)
+import Data.Aeson (FromJSON, Value (String), object, (.=))
 import Data.Time.Clock (UTCTime, diffUTCTime, getCurrentTime)
 import Network.Wai (rawPathInfo)
 import Servant ((:>), HasServer, ServantErr (..), ServerT, err401, hoistServerWithContext, route)
@@ -17,6 +22,9 @@ import Servant.Auth.Server (AuthCheck (..), AuthResult (..), FromJWT)
 import Servant.Auth.Server.Internal.Class (AreAuths (..), runAuths)
 import Servant.Server.Internal.RoutingApplication (DelayedIO, addAuthCheck, delayedFailFatal,
                                                    withRequest)
+
+import Dscp.Crypto
+import Dscp.Util
 
 ---------------------------------------------------------------------------
 -- Data types
@@ -74,3 +82,30 @@ checkAuthData (WithCommonAuthData AuthData {..} r) = do
     curTime <- liftIO $ getCurrentTime
     guard (diffUTCTime curTime adTime <= 300)
     return r
+
+---------------------------------------------------------------------------
+-- Testing
+---------------------------------------------------------------------------
+
+-- | Make header suitable for authentication.
+-- You can pass this to @curl@ as @-H "Authorization: Bearer <produced text>"@.
+-- Second arguments stands for endpoint name, example:
+-- @/api/educator/v1/students@.
+makeAuthHeader :: SecretKey -> Text -> IO Text
+makeAuthHeader secretKey endpoint = do
+    eSignedJWT <- runExceptT $ do
+        alg <- bestJWSAlg jwkSk
+        signClaims jwkSk (newJWSHeader ((), alg)) claims
+    return $
+        decodeUtf8 . encodeCompact $
+        leftToPanic $ first (show @Text @JWTError) eSignedJWT
+  where
+    (AbstractSK sk, AbstractPK pk) = (secretKey, toPublic secretKey)
+    jwkSk = fromKeyMaterial (OKPKeyMaterial $ Ed25519Key pk $ Just sk)
+          & jwkKeyOps .~ Just [Sign]
+
+    claims = emptyClaimsSet & addClaim "dat" claim
+    claim = object
+        [ "adTime" .= String "2025-08-10T13:15:40.461998136Z"
+        , "adPath" .= endpoint
+        ]
