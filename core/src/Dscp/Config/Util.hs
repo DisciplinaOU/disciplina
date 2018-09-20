@@ -9,7 +9,7 @@
 
 module Dscp.Config.Util
     (
-      type (+++)
+      type (++)
     , type (<:)
     , rcast
     , rreplace
@@ -27,6 +27,7 @@ module Dscp.Config.Util
     ) where
 
 import Data.Vinyl.Lens (rcast, rreplace, type (<:))
+import Data.Vinyl.TypeLevel (type (++))
 import Data.Reflection (reifySymbol)
 import GHC.TypeLits (Symbol, symbolVal, KnownSymbol)
 import Data.Reflection (Given (..))
@@ -39,17 +40,6 @@ import qualified Options.Applicative as Opt
 import qualified Text.Show
 
 import Dscp.Util (leftToThrow)
-
-
-----------------------------------------------------------------------------
--- Appending configs (as lists)
-----------------------------------------------------------------------------
-
--- Because there is no publicly availble type family for list concatenation.
-type family (+++) (as :: [k]) (bs :: [k]) :: [k] where
-    (+++) a '[] = a
-    (+++) '[] b = b
-    (+++) (a ': as) bs = a ': (as +++ bs)
 
 ----------------------------------------------------------------------------
 -- Building config

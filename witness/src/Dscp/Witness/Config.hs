@@ -26,7 +26,7 @@ import Dscp.Resource.Network (NetServParams)
 import Dscp.Web (ServerParams)
 import Dscp.Witness.Launcher.Params (WitnessKeyParams)
 
-type WitnessConfig = CoreConfig +++
+type WitnessConfig = CoreConfig ++
     '[ "witness" ::<
        '[ "logging" ::: LoggingParams
         , "db" ::: RocksDBParams

@@ -22,7 +22,7 @@ import Dscp.Educator.Launcher.Params (EducatorKeyParams)
 import Dscp.Educator.Web.Params (EducatorWebParams)
 import Dscp.Witness.Config
 
-type EducatorConfig = WitnessConfig +++
+type EducatorConfig = WitnessConfig ++
     '[ "educator" ::<
        '[ "db" ::: SQLiteParams
         , "keys" ::: EducatorKeyParams
