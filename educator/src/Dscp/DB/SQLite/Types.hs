@@ -54,10 +54,12 @@ data SQLiteDB = SQLiteDB
       -- ^ Allowed number of pending threads.
     }
 
--- | Isomorphism between @Maybe FilePath@ and 'SQLiteDBMode'
-maybeToSQLiteDBLoc :: Maybe FilePath -> SQLiteDBMode
-maybeToSQLiteDBLoc Nothing     = SQLiteInMemory
-maybeToSQLiteDBLoc (Just path) = SQLiteReal path
+deriveFromJSON defaultOptions ''SQLiteRealParams
+
+-- | Isomorphism between @Maybe SQLiteRealParams@ and 'SQLiteDBMode'
+maybeToSQLiteDBLoc :: Maybe SQLiteRealParams -> SQLiteDBMode
+maybeToSQLiteDBLoc Nothing       = SQLiteInMemory
+maybeToSQLiteDBLoc (Just params) = SQLiteReal params
 
 instance FromJSON SQLiteDBMode where
     parseJSON = fmap maybeToSQLiteDBLoc . parseJSON
