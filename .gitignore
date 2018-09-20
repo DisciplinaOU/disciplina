@@ -26,21 +26,14 @@ educator-db
 witness-db
 stylish-haskell.yaml
 test.db
-*~
-*#
 
-### FRONTEND ###
-.DS_Store
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+result*
 
-# Editor directories and files
-.idea*
-.vscode
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-/result*
+# TeX
+*.bbl
+*.bcf
+*.blg
+*.log
+*.out
+*.pdf
+*.run.xml

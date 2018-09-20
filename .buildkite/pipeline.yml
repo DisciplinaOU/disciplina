@@ -22,4 +22,12 @@ steps:
     - buildkite-agent artifact upload $(realpath release)
     agents:
       system: x86_64-linux
-    label: flatpak
+    label: build-flatpak
+
+  - command:
+    - nix-build specs -o specs-result
+    - buildkite-agent artifact upload specs-result/*.pdf
+    agents:
+      system: x86_64-linux
+    label: build-specs
+    timeout: 120
