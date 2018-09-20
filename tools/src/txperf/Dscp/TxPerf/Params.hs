@@ -4,8 +4,9 @@ import Data.Aeson (FromJSON (..), eitherDecode, withText)
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveFromJSON)
 import qualified Data.ByteString.Lazy as LBS
-import Options.Applicative (execParser, fullDesc, help, helper, info, long, metavar, progDesc, strOption)
-import Servant.Client (BaseUrl, parseBaseUrl)
+import Options.Applicative (execParser, fullDesc, help, helper, info, long, metavar, progDesc,
+                            strOption)
+import Servant.Client (BaseUrl)
 
 import Dscp.CommonCLI
 import Dscp.Crypto
@@ -18,10 +19,6 @@ data Params = Params
     , paramTxCount :: Int
     , paramTxAsync :: Bool
     }
-
-instance FromJSON BaseUrl where
-    parseJSON = withText "url" $
-        maybe (fail "Invalid URL") return . parseBaseUrl . toString
 
 instance FromJSON SecretKey where
     parseJSON = withText "secret key" $

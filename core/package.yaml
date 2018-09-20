@@ -45,6 +45,7 @@ library:
     - serialise
     - serokell-util
     - servant
+    - servant-client-core
     - semver
     - snowdrop-util
     - stm

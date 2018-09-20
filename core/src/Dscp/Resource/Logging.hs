@@ -1,4 +1,7 @@
+{-# LANGUAGE TypeOperators #-}
+
 -- | Logging resource.
+
 module Dscp.Resource.Logging
     ( LoggingParams(..)
     , allocLogging

@@ -1,4 +1,5 @@
-{-# LANGUAGE StrictData #-}
+{-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE StrictData       #-}
 
 module Dscp.Faucet.Launcher.Resource
     ( FaucetResources (..)
@@ -12,10 +13,9 @@ import Control.Lens (makeLenses)
 import Loot.Base.HasLens (lensOf)
 import Loot.Log (Logging)
 
-import Dscp.Config (rcast)
+import Dscp.Config
 import Dscp.Faucet.Config
 import Dscp.Faucet.Launcher.Marker
-import Dscp.Faucet.Launcher.Params
 import Dscp.Resource.AppDir
 import Dscp.Resource.Class
 import Dscp.Resource.Keys
@@ -31,19 +31,20 @@ data FaucetResources = FaucetResources
 makeLenses ''FaucetResources
 
 instance AllocResource (KeyResources FaucetApp) where
-    type Deps (KeyResources FaucetApp) =
-        (WitnessConfigRec, BaseKeyParams, AppDir)
-
-    allocResource (witnessCfg, baseParams, appDir) =
-        buildComponentR "faucet keys"
-            (withWitnessConfig witnessCfg $ linkStore baseParams Nothing appDir)
-            (\_ -> pass)
+    type Deps (KeyResources FaucetApp) = (FaucetConfigRec, AppDir)
+    allocResource (faucetCfg, appDir) =
+        let baseParams = faucetCfg ^. sub #faucet . option #keys
+        in buildComponentR "faucet keys"
+           (withCoreConfig (rcast faucetCfg) $
+               linkStore baseParams Nothing appDir)
+           (\_ -> pass)
 
 instance AllocResource FaucetResources where
-    type Deps FaucetResources = (FaucetConfigRec, FaucetParams)
-    allocResource (faucetCfg, FaucetParams{..}) = do
+    type Deps FaucetResources = FaucetConfigRec
+    allocResource faucetCfg = do
+        let cfg = faucetCfg ^. sub #faucet
         _frLogging <- view (lensOf @(Logging IO))
-        _frAppDir <- allocResource _fpAppDirParam
-        _frKeys <- allocResource (rcast faucetCfg, _fpKeyParams, _frAppDir)
-        _frWitnessClient <- allocResource _fpWitnessAddress
+        _frAppDir <- allocResource $ cfg ^. option #appDir
+        _frKeys <- allocResource (faucetCfg, _frAppDir)
+        _frWitnessClient <- allocResource $ cfg ^. option #witnessBackend
         return FaucetResources{..}

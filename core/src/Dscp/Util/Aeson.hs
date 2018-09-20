@@ -24,6 +24,7 @@ import qualified Data.ByteString.Lazy as LBS
 import Data.Reflection (Reifies (..))
 import qualified Data.SemVer as SemVer
 import Fmt ((+||), (||+))
+import Servant.Client.Core (BaseUrl, parseBaseUrl, showBaseUrl)
 import Time (KnownRatName, Time, unitsF, unitsP)
 
 import qualified Dscp.Crypto.ByteArray as BA
@@ -117,3 +118,12 @@ instance KnownRatName unit => ToJSON (Time unit) where
 instance KnownRatName unit => FromJSON (Time unit) where
     parseJSON = withText "time duration" $
         nothingToFail ("Invalid time format" :: String) . unitsP . toString
+
+-- TODO: `servant-client-core` dependency in `disciplina-core` is only because
+-- of these instances. They are here because they are used simultaneously in
+-- `faucet` and `txperf`. Need to move elsewhere
+instance FromJSON BaseUrl where
+    parseJSON = withText "url" $
+        nothingToFail ("Invalid URL" :: String) . parseBaseUrl . toString
+instance ToJSON BaseUrl where
+    toJSON = String . toText . showBaseUrl

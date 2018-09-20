@@ -1,4 +1,5 @@
-{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE TypeOperators    #-}
 
 -- | Functions to serve faucet HTTP API
 
@@ -15,6 +16,8 @@ import Network.Wai.Middleware.Cors (CorsResourcePolicy (..), cors, simpleCorsRes
 import Servant ((:>), Handler, Server, hoistServer, serve)
 import Servant.Generic (toServant)
 
+import Dscp.Config
+import Dscp.Faucet.Config
 import Dscp.Faucet.Launcher (FaucetRealMode, FaucetWorkMode)
 import Dscp.Faucet.Web.API (FaucetAPI, faucetAPI)
 import Dscp.Faucet.Web.Handlers (convertFaucetApiHandler, faucetApiHandlers)
@@ -40,8 +43,9 @@ faucetCors = cors $ const $ Just $
     , corsRequestHeaders = [hContentType]
     }
 
-serveFaucetAPIReal :: ServerParams -> FaucetRealMode ()
-serveFaucetAPIReal ServerParams{..} = do
+serveFaucetAPIReal :: HasFaucetConfig => FaucetRealMode ()
+serveFaucetAPIReal = do
+    let ServerParams {..} = faucetConfig ^. sub #faucet . option #api
     logInfo $ "Serving faucet API on "+|spAddr|+""
     ctx <- ask
     lc <- buildServantLogConfig (<> "web")

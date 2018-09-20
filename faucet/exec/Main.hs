@@ -12,24 +12,23 @@ import Dscp.Config (buildConfig, configParamsParser)
 import Dscp.Core
 import Dscp.Faucet
 import Dscp.Resource.Keys
+import Dscp.Util.Aeson ()
 
 main :: IO ()
 main = do
-    (faucetParams, faucetConfig) <- getFaucetParams
-    launchFaucetRealMode faucetConfig faucetParams $ do
+    fConfig <- getFaucetConfig
+    launchFaucetRealMode fConfig $ do
         printSourceInfo
-        serveFaucetAPIReal (_fpWebParams faucetParams)
+        serveFaucetAPIReal
   where
     printSourceInfo = do
         pk <- view $ lensOf @(KeyResources FaucetApp) . krPublicKey
         let addr = mkAddr pk
         logInfo $ "Faucet source address: " +| addr |+ ""
 
-getFaucetParams :: IO (FaucetParams, FaucetConfigRec)
-getFaucetParams = do
-    let parser = (,) <$> faucetParamsParser <*> configParamsParser
-    (params, configPath) <- execParser $
-        info (helper <*> versionOption <*> parser) $
+getFaucetConfig :: IO FaucetConfigRec
+getFaucetConfig = do
+    configParams <- execParser $
+        info (helper <*> versionOption <*> configParamsParser) $
         fullDesc <> progDesc "Disciplina faucet node."
-    config <- buildConfig configPath fillFaucetConfig
-    return (params, config)
+    buildConfig configParams fillFaucetConfig
