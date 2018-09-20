@@ -1,32 +1,31 @@
 steps:
+  - command: scripts/lint-haskell.sh
+    agents:
+      system: x86_64-linux
+    artifact_paths:
+    - hlint.html
+    label: lint-haskell
+
   - command: scripts/lint-trailing-whitespace.sh
     agents:
       system: x86_64-linux
     label: lint-trailing-whitespace
 
-  - command: scripts/lint-haskell.sh
-    agents:
-      system: x86_64-linux
-    label: lint-haskell
-    artifact_paths:
-    - hlint.html
-
   - command: nix-build
     agents:
       system: x86_64-linux
     label: build
-    timeout: 120
 
-  - command:
-    - nix-build release.nix -A disciplina-wallet-flatpak -o release
-    - buildkite-agent artifact upload $(realpath release)
-    agents:
-      system: x86_64-linux
-    label: build-flatpak
-
-  - command: nix-build specs -o specs-result
+  - command: nix-build release.nix -A disciplina-wallet-flatpak -o disciplina-wallet.flatpak
     agents:
       system: x86_64-linux
     artifact_paths:
-    - specs-result/*.pdf
+    - disciplina-wallet.flatpak
+    label: build-flatpak
+
+  - command: nix-build specs -o specs/result
+    agents:
+      system: x86_64-linux
+    artifact_paths:
+    - specs/result/*.pdf
     label: build-specs

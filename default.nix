@@ -16,8 +16,18 @@ let
     name = "disciplina";
     filter = composeFilters (filterWhiteBlack {
       inherit path;
-      whitelist = [ "stack\.yaml" ".*/.*" ];
-      blacklist = [ ".*node_modules.*" "docs.*" "run.*" "scripts.*" "secrets.*" "specs.*" ];
+      whitelist = [
+        "stack\\.yaml"
+        ".*"
+      ];
+      blacklist = [
+        "\\.buildkite/.*"
+        "docs/.*"
+        "run/.*"
+        "scripts/.*"
+        "secrets/.*"
+        "specs/.*"
+      ];
     }) lib.cleanSourceFilter;
   };
 
