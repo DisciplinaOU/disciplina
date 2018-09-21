@@ -16,6 +16,11 @@ steps:
       system: x86_64-linux
     label: build
 
+  - command: nix-build --no-out-link | nix-shell --run 'cachix push disciplina'
+    agents:
+      system: x86_64-darwin
+    label: build-darwin
+
   - command: nix-build release.nix -A disciplina-haddock -o haddock
     agents:
       system: x86_64-linux
