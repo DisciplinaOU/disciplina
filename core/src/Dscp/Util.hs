@@ -4,9 +4,10 @@ module Dscp.Util
        ( anyMapM
        , listToMaybeWarn
        , allUniqueOrd
-       , reportTime
        , Size (..)
        , sizeSerialised
+       , countingTime
+       , execUnmasked
 
          -- * Exceptions processing
        , wrapRethrow
@@ -39,6 +40,12 @@ module Dscp.Util
        , toHex
        , fromHex
 
+         -- * Lenses
+       , _headNE
+       , _tailNE
+       , seeOnly
+       , postfixLFields
+
          -- * Ids for databases
        , HasId (..)
        , idOf
@@ -52,17 +59,16 @@ module Dscp.Util
        ) where
 
 import Codec.Serialise (Serialise, serialise)
-import Control.Lens (Getter, to)
+import Control.Lens (Getter, LensRules, lens, lensField, lensRules, mappingNamer, to)
 import Data.ByteArray (ByteArrayAccess)
 import Data.ByteArray.Encoding (Base (..), convertFromBase, convertToBase)
 import qualified Data.ByteString.Lazy as BSL
 import Data.Time.Clock.POSIX (getPOSIXTime)
 import Fmt ((+|), (+||), (|+), (||+))
 import GHC.TypeLits (KnownSymbol)
-import Mon (recordTimer)
-import Mon.Network (Endpoint)
-import Mon.Types (Name)
 import Time (KnownRat, Time, UnitName, threadDelay)
+import UnliftIO (MonadUnliftIO)
+import qualified UnliftIO.Async as UIO
 
 import Loot.Log (MonadLogging, logError, logWarning)
 
@@ -99,28 +105,28 @@ listToMaybeWarn msg = \case
 allUniqueOrd :: Ord a => [a] -> Bool
 allUniqueOrd = all (null . drop 1) . group . sort
 
-reportTime :: MonadIO m => Name -> Maybe Endpoint -> m a -> m a
-reportTime name mEndpoint m = case mEndpoint of
-    Nothing -> m
-    Just (endpoint) -> do
-        t <- liftIO $ getPOSIXTime
-        a <- m
-        t' <- liftIO $ getPOSIXTime
-        let diff :: Double
-            diff = fromRational . toRational $ t' - t
-        -- mon accepts only Int as metric value and expects amount of milliseconds in recordTimer
-        liftIO $ recordTimer endpoint name 1 [] (round $ diff * 1000)
-        return a
+countingTime :: MonadIO m => m a -> m (Double, a)
+countingTime m = do
+    t <- liftIO $ getPOSIXTime
+    a <- m
+    t' <- liftIO $ getPOSIXTime
+    let diff :: Double
+        diff = fromRational . toRational $ t' - t
+    return (diff, a)
 
 -- | Size of serialised item.
--- First phantom type stands for a typeclass corresponding to serialisation
--- method, while the second one is type of item being serialised.
 newtype Size a = Size { unSize :: Word64 }
     deriving (Eq, Ord, Show)
 
 -- | Count size of serialised item.
 sizeSerialised :: Serialise a => a -> Size a
 sizeSerialised = Size . fromIntegral . BSL.length . serialise
+
+-- | Executes the action unmasked.
+-- Spawns a thread under hood.
+execUnmasked :: MonadUnliftIO m => m a -> m a
+execUnmasked action =
+    UIO.asyncWithUnmask (\doUnmask -> doUnmask action) >>= UIO.wait
 
 -----------------------------------------------------------
 -- Exceptions processing
@@ -218,6 +224,26 @@ toHex    = toBase Base16
 fromBase64, fromHex :: FromByteArray ba => Text -> Either String ba
 fromBase64 = fromBase Base64
 fromHex    = fromBase Base16
+
+-----------------------------------------------------------
+-- Lens fun
+-----------------------------------------------------------
+
+_headNE :: Lens' (NonEmpty a) a
+_headNE f (x :| l) = ( :| l) <$> f x
+
+_tailNE :: Lens' (NonEmpty a) [a]
+_tailNE f (x :| l) = (x :| ) <$> f l
+
+-- | Lens that always returns given value as getter, and does nothing as setter.
+-- NOTE: this function violates lens rules, and it's only useful till the moment
+-- we switch to `HasGetters` for our monadic constraints.
+seeOnly :: b -> Lens' a b
+seeOnly b = lens (const b) const
+
+-- | For datatype with "myNyan" field it will create "myNyanL" lens.
+postfixLFields :: LensRules
+postfixLFields = lensRules & lensField .~ mappingNamer (\s -> [s++"L"])
 
 -----------------------------------------------------------
 -- Helper to establish notion of SQLite/db ID

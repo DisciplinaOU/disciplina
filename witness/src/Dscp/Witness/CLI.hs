@@ -14,7 +14,6 @@ module Dscp.Witness.CLI
 
 import qualified Data.Set as Set
 import Loot.Network.ZMQ.Common (PreZTNodeId (..), parsePreZTNodeId)
-import Mon.Network (Endpoint)
 import Options.Applicative (Parser, auto, eitherReader, help, long, metavar, option, strOption,
                             value)
 
@@ -24,6 +23,7 @@ import Dscp.Core.Governance (CommitteeSecret (..))
 import Dscp.DB.Rocks.Real.Types (RocksDBParams (..))
 import Dscp.Resource.Keys
 import Dscp.Resource.Network (NetCliParams (..), NetServParams (..))
+import Dscp.Web.Metrics (MetricsEndpoint (..))
 import Dscp.Web.Types (naHost, naPort)
 import Dscp.Witness.Launcher.Params
 
@@ -80,9 +80,13 @@ netServParamsParser =
 -- Metrics server
 ----------------------------------------------------------------------------
 
-metricsServerParser :: Parser Endpoint
-metricsServerParser = liftA2 (,) naHost (fromIntegral . naPort) <$>
-  networkAddressParser "metrics-server" "Server to report the metrics to."
+metricsServerParser :: Parser MetricsEndpoint
+metricsServerParser = do
+    mNetAddr <- optional $
+        networkAddressParser "metrics-server" "Server to report the metrics to."
+    return $ MetricsEndpoint $ toEndpoint <$> mNetAddr
+  where
+    toEndpoint = liftA2 (,) naHost (fromIntegral . naPort)
 
 ---------------------------------------------------------------------------
 -- Utils
@@ -124,7 +128,7 @@ witnessParamsParser = do
     wpDBParams <- rocksParamsParser
     wpNetworkParams <- netServParamsParser
     wpKeyParams <- witnessKeyParamsParser
-    wpWitnessServerParams <- optional $ serverParamsParser "Witness"
+    wpWebParams <- optional $ WitnessWebParams <$> serverParamsParser "Witness"
     wpAppDirParam <- appDirParamParser
-    wpMetricsEndpoint <- optional $ metricsServerParser
+    wpMetricsEndpoint <- metricsServerParser
     pure $ WitnessParams {..}

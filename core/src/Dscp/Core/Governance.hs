@@ -5,6 +5,7 @@ module Dscp.Core.Governance
     , mkClosedCommittee
     , committeeDerive
     , committeeAddrs
+    , openCommitteeSecrets
     , committeeOwnsSlot
     ) where
 
@@ -51,19 +52,24 @@ mkClosedCommittee :: CommitteeSecret -> Integer -> Committee
 mkClosedCommittee sec n = CommitteeClosed addresses
   where
     addresses = map (mkAddr . toPublic) sks
-    sks = map (committeeDerive sec) [0..n-1]
+    sks = map (committeeDerive sec) [0 .. n - 1]
 
 -- | Derive a secret key from committee secret and participant index.
 committeeDerive :: CommitteeSecret -> Integer -> SecretKey
-committeeDerive (CommitteeSecret s) ix =
-    withSeed (convert $ hash $ BS.pack (show ix) `BS.append` s) genSecretKey
+committeeDerive (CommitteeSecret s) idx =
+    withSeed (convert $ hash $ BS.pack (show idx) `BS.append` s) genSecretKey
 
 -- | Get committee addresses.
 committeeAddrs :: Committee -> [Address]
 committeeAddrs (CommitteeClosed addrs) = addrs
 committeeAddrs (CommitteeOpen s n)     = commParticipants $ mkClosedCommittee s n
 
--- | Determine if committee member is allowed to issue block in the
+-- | Get open committee secrets.
+openCommitteeSecrets :: Committee -> [SecretKey]
+openCommitteeSecrets (CommitteeOpen sec n) = map (committeeDerive sec) [0 .. n - 1]
+openCommitteeSecrets _                     = error "openCommitteeSecrets: committee is not open"
+
+-- | Determine committee member which is allowed to issue block in the
 -- current slot.
 committeeOwnsSlot :: Committee -> Address -> SlotId -> Bool
 committeeOwnsSlot com addr (SlotId slotId) =

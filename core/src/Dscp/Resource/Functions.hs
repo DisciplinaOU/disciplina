@@ -12,9 +12,9 @@ import qualified Data.Text.Prettyprint.Doc as Doc (pretty)
 import Fmt ((+||), (||+))
 import Loot.Log (logError)
 
-import Dscp.Rio (runRIO)
 import Dscp.Resource.Class (InitContext (..), InitParams (..))
 import Dscp.Resource.Logging (allocLogging)
+import Dscp.Rio
 
 -- | Catches and prints possible synchronous exceptions thrown
 -- in 'runComponentM'. This includes both resource allocation errors and
@@ -46,12 +46,13 @@ runResourceAllocation
     :: Text
     -> InitParams
     -> ReaderT InitContext ComponentM a
-    -> (a -> IO b)
+    -> (a -> RIO InitContext b)
     -> IO (Either ComponentError b)
 runResourceAllocation desc params component main = do
     eres <- try $ runComponentM initDesc (allocInitResources params) $
       \initCtx -> do
-         eres <- try $ runComponentR desc initCtx component main
+         eres <- try $ runComponentR desc initCtx component $ \resources ->
+                 runRIO initCtx (main resources)
          whenLeft eres $ \(err :: ComponentError) -> do
              runRIO initCtx $ logError (""+||Doc.pretty err||+"")
          either throwM pure eres

@@ -3,6 +3,7 @@
 -- | Trnsaction fees processing and calculation.
 module Dscp.Core.Fees
        ( Fees (..)
+       , _Fees
        , FeeCoefficients (..)
        , calcFeeTx
        , calcFeePub
@@ -12,6 +13,7 @@ module Dscp.Core.Fees
        ) where
 
 import Codec.Serialise (Serialise (..))
+import Control.Lens (makePrisms)
 
 import Dscp.Core.Foundation
 import Dscp.Crypto
@@ -20,6 +22,8 @@ import Dscp.Util
 -- | Amount of transaction fees.
 newtype Fees = Fees { unFees :: Coin }
     deriving (Eq, Ord, Show, Generic, Hashable, Bounded)
+
+makePrisms ''Fees
 
 instance Serialise Fees
 

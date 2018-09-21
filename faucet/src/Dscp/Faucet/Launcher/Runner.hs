@@ -15,7 +15,9 @@ import Dscp.Resource.Class (AllocResource (..), InitParams (..))
 import Dscp.Resource.Functions
 
 -- | Make up Faucet context from dedicated pack of allocated resources.
-formFaucetContext :: FaucetParams -> FaucetResources -> IO FaucetContext
+formFaucetContext
+    :: MonadIO m
+    => FaucetParams -> FaucetResources -> m FaucetContext
 formFaucetContext _fcParams _fcResources = do
     _fcVariables <- mkFaucetVariables
     pure $ FaucetContext {..}

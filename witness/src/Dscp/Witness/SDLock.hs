@@ -5,6 +5,7 @@ module Dscp.Witness.SDLock
     , readingSDLock, readingSDLockOf
     , writingSDLock, writingSDLockOf
     , newSDLock
+    , markWithinReadSDLockUnsafe, markWithinWriteSDLockUnsafe
     ) where
 
 import qualified Control.Concurrent.ReadWriteLock as RawLock
@@ -33,6 +34,13 @@ type WithinWriteSDLock = (Given WriteSDLockTag, WithinReadSDLock)
 
 newSDLock :: MonadIO m => m SDLock
 newSDLock = liftIO $ SDLock <$> RawLock.new
+
+markWithinReadSDLockUnsafe :: (WithinReadSDLock => a) -> a
+markWithinReadSDLockUnsafe = give ReadSDLockTag
+
+markWithinWriteSDLockUnsafe :: (WithinWriteSDLock => a) -> a
+markWithinWriteSDLockUnsafe a =
+    give WriteSDLockTag $ markWithinReadSDLockUnsafe a
 
 readingSDLock
     ::  ( UnliftIO.MonadUnliftIO m
@@ -68,7 +76,7 @@ readingSDLockOf
 readingSDLockOf (SDLock lock) action =
     UnliftIO.withRunInIO $ \unliftIO ->
         RawLock.withRead lock $ do
-            unliftIO (give ReadSDLockTag action)
+            unliftIO (markWithinReadSDLockUnsafe action)
 
 writingSDLockOf
     :: UnliftIO.MonadUnliftIO m
@@ -78,4 +86,4 @@ writingSDLockOf
 writingSDLockOf (SDLock lock) action = do
     UnliftIO.withRunInIO $ \unliftIO ->
         RawLock.withWrite lock $ do
-            unliftIO (give ReadSDLockTag $ give WriteSDLockTag action)
+            unliftIO (markWithinWriteSDLockUnsafe action)

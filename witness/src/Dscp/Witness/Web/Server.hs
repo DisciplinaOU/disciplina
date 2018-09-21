@@ -17,6 +17,7 @@ import UnliftIO (UnliftIO (..), askUnliftIO)
 import Dscp.Util.Servant (LoggingApi, ServantLogConfig (..))
 import Dscp.Web (ServerParams (..), buildServantLogConfig, serveWeb)
 import Dscp.Witness.Launcher.Mode (WitnessWorkMode)
+import Dscp.Witness.Launcher.Params (WitnessWebParams (..))
 import Dscp.Witness.Web.API (WitnessAPI, witnessAPI)
 import Dscp.Witness.Web.Error
 import Dscp.Witness.Web.Handlers (witnessServantHandlers)
@@ -39,8 +40,8 @@ convertWitnessHandler (UnliftIO unliftIO) handler =
   where
     throwServant = throwError . witnessToServantErr
 
-serveWitnessAPIReal :: WitnessWorkMode ctx m => ServerParams -> m ()
-serveWitnessAPIReal ServerParams{..} = do
+serveWitnessAPIReal :: WitnessWorkMode ctx m => WitnessWebParams -> m ()
+serveWitnessAPIReal (WitnessWebParams ServerParams{..}) = do
     logInfo $ "Serving wallet API on "+|spAddr|+""
     unliftIO <- askUnliftIO
     lc <- buildServantLogConfig (<> "web")

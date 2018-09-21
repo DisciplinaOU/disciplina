@@ -5,6 +5,8 @@ module Dscp.Resource.Keys.Types
     , KeyResources (..)
     , krSecretKey
     , krPublicKey
+    , getSecretKey
+    , getPublicKey
 
     , KeyJson (..)
     , KeyfileContent
@@ -61,6 +63,18 @@ data KeyResources who = KeyResources
     }
 
 makeLenses ''KeyResources
+
+getSecretKey
+    :: forall node ctx m.
+       (MonadReader ctx m, HasLens' ctx (KeyResources node))
+    => m SecretKey
+getSecretKey = view $ lensOf @(KeyResources node) . krSecretKey
+
+getPublicKey
+    :: forall node ctx m.
+       (MonadReader ctx m, HasLens' ctx (KeyResources node))
+    => m PublicKey
+getPublicKey = view $ lensOf @(KeyResources node) . krPublicKey
 
 ---------------------------------------------------------------------
 -- Instances

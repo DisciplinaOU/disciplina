@@ -134,10 +134,11 @@ preValidateSimpleMoneyTransfer =
         -- Previous value minus fees (the outputs that were specified in the tx itself)
         let receivedNoFees = receivedTotal - coinToInteger (unFees fees)
 
-        unless (balanceBefore - receivedNoFees >= 0) $ throwLocalError SumMustBeNonNegative
-        unless (balanceBefore - receivedTotal >= 0) $ throwLocalError CannotAffordFees
+        paid <- validateSaneDeparture payer before
 
-        validateSaneDeparture payer before
+        unless (paid >= receivedTotal) $ throwLocalError SumMustBeNonNegative
+        unless (balanceBefore - receivedNoFees >= 0) $ throwLocalError BalanceCannotBecomeNegative
+        unless (balanceBefore - receivedTotal >= 0) $ throwLocalError CannotAffordFees
 
 -- | Require that whole projects into part or throw error.
 requirePart :: (HasReview e e1, MonadError e m, HasPrism s hash) => s -> e1 -> m hash
@@ -160,19 +161,22 @@ validateSaneDeparture
   :: forall ctx
   .  [(AccountId, Account)]
   -> Account
-  -> ERoComp Exceptions Ids Values ctx ()
+  -> ERoComp Exceptions Ids Values ctx Integer
 validateSaneDeparture self before = case self of
     -- Check that only one change is done for author.
     [(AccountId _, account)] -> do
         let paid = aBalance before - aBalance account
         -- Check that transaction increments author nonce.
 
-        () <- mconcat
-            [ validateIff NonceMustBeIncremented      $ aNonce account == aNonce before + 1
-            , validateIff PaymentMustBePositive       $ paid > 0
-            , validateIff BalanceCannotBecomeNegative $ aBalance account >= 0
-            ]
-        pass
+        unless (aNonce account == aNonce before + 1) $
+            throwLocalError NonceMustBeIncremented
+        unless (paid > 0) $
+            throwLocalError PaymentMustBePositive
+        unless (aBalance account >= 0) $
+            throwLocalError BalanceCannotBecomeNegative
+
+        return paid
+
     _ -> throwLocalError NotASingletonSelfUpdate
 
 validateSaneArrival
@@ -183,10 +187,10 @@ validateSaneArrival (accId, account) = do
     was <- queryOne accId
     let received = aBalance account - maybe 0 aBalance was
     -- Check that except for the balance the account is unchanged.
-    () <- mconcat
-        [ validateIff ReceiverOnlyGetsMoney       $ maybe account (\w -> w{ aBalance = aBalance account }) was == account
-        , validateIff ReceiverMustIncreaseBalance $ received > 0
-        ]
+    unless (maybe account (\w -> w{ aBalance = aBalance account }) was == account) $
+        throwLocalError ReceiverOnlyGetsMoney
+    unless (received > 0) $
+        throwLocalError ReceiverMustIncreaseBalance
     return received
 
 checkThatAccountIsUpdatedOnly

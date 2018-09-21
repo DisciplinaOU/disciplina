@@ -4,24 +4,42 @@ module Dscp.Core.Foundation.Witness
     -- * Common
       StakeholderId (..)
     , Coin (..)
+    , _Coin
     , unsafeMkCoin
     , coinToInteger
     , coinFromInteger
     , unsafeAddCoin
+    , addCoins
+    , sumCoins
     , SlotId (..)
 
     -- * Transaction
     , Nonce (..)
     , TxInAcc (..)
+    , tiaAddrL
+    , tiaNonceL
     , TxOut (..)
+    , txOutAddrL
+    , txOutValueL
     , Tx (..)
+    , txInAccL
+    , txInValueL
+    , txOutsL
     , TxId
     , toTxId
     , TxWitness (..)
+    , txwSigL
+    , txwPkL
     , TxWitnessed (..)
+    , twTxL
+    , twWitnessL
+    , signPubTx
     , PublicationTxWitness (..)
     , PublicationTxWitnessed (..)
     , PublicationTx (..)
+    , ptAuthorL
+    , ptFeesAmountL
+    , ptHeaderL
     , PublicationTxId
     , toPtxId
     , GTx (..)
@@ -36,18 +54,28 @@ module Dscp.Core.Foundation.Witness
     , HeaderHash
     , BlockToSign (..)
     , Header (..)
+    , hIssuerL
+    , hDifficultyL
+    , hSlotIdL
+    , hPrevHashL
+    , hSignatureL
     , Block (..)
+    , bHeaderL
+    , bBodyL
     , BlockBody (..)
+    , bbTxsL
     , HasHeaderHash (..)
     ) where
 
 import Codec.Serialise (Serialise)
+import Control.Lens (makeLensesWith, makePrisms)
 
 import Fmt (blockListF, build, indentF, listF, nameF, whenF, (+|), (+||), (|+), (||+))
 
 import Dscp.Core.Foundation.Address
 import Dscp.Core.Foundation.Educator
 import Dscp.Crypto
+import Dscp.Util
 
 ----------------------------------------------------------------------------
 -- General
@@ -63,6 +91,8 @@ newtype StakeholderId = StakeholderId
 -- | Coin amount.
 newtype Coin = Coin { unCoin :: Word64 }
     deriving (Eq, Ord, Show, Generic, Hashable, Bounded)
+
+makePrisms ''Coin
 
 -- | Add coins.
 unsafeAddCoin :: Coin -> Coin -> Coin
@@ -91,6 +121,12 @@ unsafeMkCoin = either error identity . coinFromInteger . fromIntegral
 instance Buildable Coin where
     build (Coin c) = c ||+ " coin" +|| whenF (c /= 1) "s"
 
+addCoins :: Coin -> Coin -> Either Text Coin
+addCoins a b = sumCoins [a, b]
+
+sumCoins :: [Coin] -> Either Text Coin
+sumCoins = coinFromInteger . sum . map coinToInteger
+
 ----------------------------------------------------------------------------
 -- Transactions
 ----------------------------------------------------------------------------
@@ -117,6 +153,8 @@ data TxInAcc = TxInAcc
     , tiaNonce :: Nonce
     } deriving (Eq, Ord, Generic, Show)
 
+makeLensesWith postfixLFields ''TxInAcc
+
 instance Buildable TxInAcc where
     build TxInAcc{..} = "TxInnAcc {" +| tiaAddr |+ " nonce " +|| tiaNonce ||+ "}"
 
@@ -125,6 +163,8 @@ data TxOut = TxOut
     { txOutAddr  :: Address
     , txOutValue :: Coin
     } deriving (Eq, Ord, Generic, Show)
+
+makeLensesWith postfixLFields ''TxOut
 
 instance Buildable TxOut where
     build TxOut{..} = "<" +| txOutAddr |+ ", " +| txOutValue |+ ">"
@@ -135,6 +175,8 @@ data Tx = Tx
     , txInValue :: Coin
     , txOuts    :: [TxOut]
     } deriving (Eq, Ord, Generic, Show)
+
+makeLensesWith postfixLFields ''Tx
 
 instance Buildable Tx where
     build Tx{..} =
@@ -155,6 +197,8 @@ data TxWitness = TxWitness
     , txwPk  :: PublicKey
     } deriving (Eq, Ord, Show, Generic)
 
+makeLensesWith postfixLFields ''TxWitness
+
 instance Buildable TxWitness where
     build TxWitness {..} =
         "TxWitness { " +| txwSig |+ ", pk: " +| txwPk |+ " }"
@@ -164,6 +208,8 @@ data TxWitnessed = TxWitnessed
     { twTx      :: Tx
     , twWitness :: TxWitness
     } deriving (Eq, Ord, Show, Generic)
+
+makeLensesWith postfixLFields ''TxWitnessed
 
 instance Buildable TxWitnessed where
     build TxWitnessed {..} =
@@ -182,6 +228,8 @@ data PublicationTx = PublicationTx
     , ptHeader     :: PrivateBlockHeader
       -- ^ Private block header to publish.
     } deriving (Eq, Ord, Generic, Show)
+
+makeLensesWith postfixLFields ''PublicationTx
 
 instance Buildable PublicationTx where
     build PublicationTx { ptAuthor, ptFeesAmount, ptHeader } =
@@ -217,6 +265,22 @@ data PublicationTxWitnessed = PublicationTxWitnessed
 instance Buildable PublicationTxWitnessed where
     build PublicationTxWitnessed {..} =
         "PublicationTxWitnessed { " +| ptwTx |+ ", " +| ptwWitness |+  " }"
+
+signPubTx
+    :: (Serialise PublicationTx, Serialise PrivateBlockHeader)
+    => SecretKey -> PublicationTx -> PublicationTxWitnessed
+signPubTx sk tx =
+    PublicationTxWitnessed
+    { ptwTx = tx
+    , ptwWitness = witness
+    }
+  where
+    pk = toPublic sk
+    witness =
+        PublicationTxWitness
+        { pwSig = sign sk (toPtxId tx, pk, ptHeader tx)
+        , pwPk = pk
+        }
 
 ----------------------------------------------------------------------------
 -- Transactions (united)
@@ -269,7 +333,7 @@ data GTxInBlock = GTxInBlock
 
 -- | Slot id.
 newtype SlotId = SlotId Word64
-    deriving (Eq, Ord, Num, Show, Generic, Buildable)
+    deriving (Eq, Ord, Num, Enum, Show, Generic, Buildable)
 
 -- | Chain difficulty.
 newtype Difficulty = Difficulty { unDifficulty :: Word64 }
@@ -330,6 +394,10 @@ instance HasHash Header => Buildable Block where
 ----------------------------------------------------------------------------
 -- Lens and classes
 ----------------------------------------------------------------------------
+
+makeLensesWith postfixLFields ''Block
+makeLensesWith postfixLFields ''Header
+makeLensesWith postfixLFields ''BlockBody
 
 -- | Class for things that have headerHash.
 class HasHeaderHash d where

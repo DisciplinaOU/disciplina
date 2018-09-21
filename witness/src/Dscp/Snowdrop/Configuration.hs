@@ -30,9 +30,15 @@ module Dscp.Snowdrop.Configuration
     , AddrTxProof
     , PublicationTxProof
     , Proofs (..)
-    , ExpanderException (..)
     , Exceptions (..)
     , _AccountValidationError
+    , _AccountExpanderError
+    , _PublicationValidationError
+    , _PublicationExpanderError
+    , AccountExpanderException (..)
+    , _MTxNoOutputs
+    , _CantResolveSender
+    , PublicationExpanderException (..)
 
     , TxIds (..)
 
@@ -263,20 +269,34 @@ data Proofs
 -- Exceptions
 ----------------------------------------------------------------------------
 
-data ExpanderException =
-      MTxDuplicateOutputs
+data AccountExpanderException
+    = MTxNoOutputs
+    | MTxDuplicateOutputs
     | CantResolveSender
     | ExpanderInternalError String
 
-instance Show ExpanderException where
+makePrisms ''AccountExpanderException
+
+instance Show AccountExpanderException where
     show = toString . pretty
 
-instance Buildable ExpanderException where
+instance Buildable AccountExpanderException where
     build = \case
+        MTxNoOutputs -> "Transaction has no outputs"
         MTxDuplicateOutputs -> "Duplicated transaction outputs"
         CantResolveSender -> "Source account is not registered in chain"
         ExpanderInternalError s ->
             fromString $ "Expander failed internally: " <> s
+
+data PublicationExpanderException
+    = PublicationLocalLoop
+
+instance Show PublicationExpanderException where
+    show = toString . pretty
+
+instance Buildable PublicationExpanderException where
+    build = \case
+        PublicationLocalLoop -> "Previous block and current block are the same"
 
 data Exceptions
     = ExpanderRestrictionError   RestrictionInOutException
@@ -290,7 +310,8 @@ data Exceptions
     | CSMappendError            (CSMappendException         Ids)
     | TxValidationError          TxValidationException
     | StatePError                StatePException
-    | ExpanderError              ExpanderException
+    | AccountExpanderError       AccountExpanderException
+    | PublicationExpanderError   PublicationExpanderException
     | LogicError                 LogicException
 
 makePrisms ''Exceptions
@@ -313,7 +334,8 @@ instance Buildable Exceptions where
         CSMappendError err -> B.build err
         TxValidationError err -> B.build err
         StatePError err -> B.build err
-        ExpanderError err -> B.build err
+        AccountExpanderError err -> B.build err
+        PublicationExpanderError err -> B.build err
         LogicError err -> B.build err
 
 ----------------------------------------------------------------------------

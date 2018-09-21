@@ -9,6 +9,7 @@ module Dscp.Witness.Launcher.Mode
 
       -- * Constraints
     , WitnessWorkMode
+    , FullWitnessWorkMode
 
       -- * Implementations
     , WitnessContext (..)
@@ -29,16 +30,16 @@ import Loot.Network.Class (NetworkingCli, NetworkingServ)
 import Loot.Network.ZMQ as Z
 import qualified Snowdrop.Block as SD
 
-import Dscp.DB.Rocks.Class (MonadDB)
 import Dscp.DB.Rocks.Real.Types (RocksDB)
 import qualified Dscp.Launcher.Mode as Basic
-import Dscp.Rio (RIO)
 import Dscp.Network ()
 import Dscp.Resource.Keys (KeyResources)
+import Dscp.Rio (RIO)
 import Dscp.Snowdrop.Actions (SDVars)
+import Dscp.Web.Metrics
 import Dscp.Witness.Config (HasWitnessConfig, withWitnessConfig)
 import Dscp.Witness.Launcher.Marker (WitnessNode)
-import Dscp.Witness.Launcher.Params (WitnessParams)
+import Dscp.Witness.Launcher.Params
 import Dscp.Witness.Launcher.Resource (WitnessResources, wrDB, wrKey, wrLogging, wrNetwork)
 import Dscp.Witness.Mempool.Type (MempoolVar)
 import Dscp.Witness.Relay (RelayState)
@@ -48,28 +49,41 @@ import Dscp.Witness.SDLock (SDLock)
 -- WorkMode class
 ---------------------------------------------------------------------
 
--- | Set of typeclasses which define capabilities of Witness node.
+-- | Set of typeclasses which define capabilities of Witness node suitable for
+-- most part of logic.
+-- This excludes networking because emulating networking for tests is unpleasant
+-- and actally only listeners/workers require it.
 type WitnessWorkMode ctx m =
     ( Basic.BasicWorkMode m
-    , MonadDB m
-    , NetworkingCli ZmqTcp m
-    , NetworkingServ ZmqTcp m
+    -- , MonadDB m  -- this will be replaced in PR which actually puts us on RocksDB
 
     , HasWitnessConfig
 
     , MonadReader ctx m
 
-    , HasLens' ctx WitnessParams
+    , HasLens' ctx (Maybe WitnessWebParams)
+    , HasLens' ctx MetricsEndpoint
     , HasLens' ctx LoggingIO
-    , HasLens' ctx RocksDB
-    , HasLens' ctx Z.ZTGlobalEnv
-    , HasLens' ctx Z.ZTNetCliEnv
-    , HasLens' ctx Z.ZTNetServEnv
     , HasLens' ctx MempoolVar
     , HasLens' ctx SDVars
     , HasLens' ctx (KeyResources WitnessNode)
     , HasLens' ctx RelayState
     , HasLens' ctx SDLock
+    )
+
+type NetworkMode ctx m =
+    ( NetworkingCli ZmqTcp m
+    , NetworkingServ ZmqTcp m
+
+    , HasLens' ctx Z.ZTGlobalEnv
+    , HasLens' ctx Z.ZTNetCliEnv
+    , HasLens' ctx Z.ZTNetServEnv
+    )
+
+-- | Full set of typeclasses which define capabilities of Witness node.
+type FullWitnessWorkMode ctx m =
+    ( WitnessWorkMode ctx m
+    , NetworkMode ctx m
     )
 
 ---------------------------------------------------------------------
@@ -95,8 +109,10 @@ type WitnessRealMode = RIO WitnessContext
 -- HasLens
 ---------------------------------------------------------------------
 
-instance HasLens WitnessParams WitnessContext WitnessParams where
-    lensOf = wcParams
+instance HasLens (Maybe WitnessWebParams) WitnessContext (Maybe WitnessWebParams) where
+    lensOf = wcParams . wpWebParamsL
+instance HasLens MetricsEndpoint WitnessContext MetricsEndpoint where
+    lensOf = wcParams . wpMetricsEndpointL
 instance HasLens LoggingIO WitnessContext LoggingIO where
     lensOf = wcResources . wrLogging
 instance HasLens RocksDB WitnessContext RocksDB where
@@ -127,5 +143,5 @@ instance HasLens SDLock WitnessContext SDLock where
 _sanity :: WitnessRealMode ()
 _sanity = withWitnessConfig (error "") _sanityCallee
   where
-    _sanityCallee :: WitnessWorkMode ctx m => m ()
+    _sanityCallee :: FullWitnessWorkMode ctx m => m ()
     _sanityCallee = pass

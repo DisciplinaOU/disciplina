@@ -2,14 +2,34 @@
 
 module Dscp.Snowdrop.Types
     ( PublicationTxTypeId(..)
-    , PublicationValidationException(..)
     , AccountTxTypeId(..)
-    , AccountValidationException(..)
     , AccountId(..)
     , Account(..)
     , Author(..)
+    , PublicationValidationException(..)
+    , _PublicationSignatureIsIncorrect
+    , _PublicationPrevBlockIsIncorrect
+    , _StorageIsCorrupted
+    , _PublicationIsBroken
+    , _PublicationAuthorDoesNotExist
+    , _PublicationFeeIsTooLow
+    , _PublicationCantAffordFee
+    , AccountValidationException(..)
+    , _AuthorDoesNotExist
+    , _SignatureIsMissing
+    , _SignatureIsCorrupted
+    , _TransactionIsCorrupted
+    , _NotASingletonSelfUpdate
+    , _NonceMustBeIncremented
+    , _PaymentMustBePositive
+    , _ReceiverOnlyGetsMoney
+    , _ReceiverMustIncreaseBalance
+    , _SumMustBeNonNegative
+    , _BalanceCannotBecomeNegative
+    , _CannotAffordFees
     ) where
 
+import Control.Lens (makePrisms)
 import Data.Default (Default (..))
 import Data.Text.Buildable (Buildable (..))
 import Fmt (build, (+|), (|+))
@@ -31,6 +51,8 @@ data PublicationValidationException
     | PublicationFeeIsTooLow -- ^
     | PublicationCantAffordFee -- ^ Publication owner can not afford the fee
     deriving (Eq, Ord)
+
+makePrisms ''PublicationValidationException
 
 instance Show PublicationValidationException where
     show = toString . pretty
@@ -68,6 +90,8 @@ data AccountValidationException
     | BalanceCannotBecomeNegative
     deriving (Eq, Ord, Enum, Bounded)
 
+makePrisms ''AccountValidationException
+
 instance Buildable AccountValidationException where
     build = \case
         AuthorDoesNotExist -> "Source account has never received any money"
@@ -79,7 +103,7 @@ instance Buildable AccountValidationException where
         PaymentMustBePositive -> "Spent amount of money must be positive"
         ReceiverOnlyGetsMoney -> "Improper changes of receiver account (its is \
                                  \only possible to add tokens)"
-        ReceiverMustIncreaseBalance -> "Receiver's balance decreased"
+        ReceiverMustIncreaseBalance -> "One of receivers' balance decreased or didn't change"
         SumMustBeNonNegative -> "Tx input value < tx sum of outputs"
         CannotAffordFees -> "Tx sender can not afford fees"
         BalanceCannotBecomeNegative -> "Balance can not become negative"

@@ -1,6 +1,7 @@
 
 module Dscp.Witness.Mempool.Logic
     ( MempoolVar
+    , MempoolCtx
     , newMempoolVar
     , addTxToMempool
     , takeTxsMempool
@@ -21,10 +22,10 @@ import qualified Snowdrop.Execution as Pool
 import qualified Snowdrop.Execution as AVLP
 import qualified Snowdrop.Util as SD
 
-import Dscp.Crypto
 import Dscp.Core.Config
 import Dscp.Core.Foundation (GTxWitnessed)
 import Dscp.Core.Foundation.Witness
+import Dscp.Crypto
 import qualified Dscp.Snowdrop as SD
 import Dscp.Snowdrop.Actions (sdActionsComposition)
 import Dscp.Snowdrop.Configuration (Exceptions, Ids, Values)
@@ -47,7 +48,7 @@ newMempoolVar pk = do
     let conf = Pool.defaultMempoolConfig (SD.expandGTx pk) SD.validator
     return (Mempool pool conf)
 
--- | Adds transaction to mempool. Make sure it's not there yet.
+-- | Adds transaction to mempool. Makes sure it's not there yet.
 addTxToMempool
     :: forall ctx m
     .  (MempoolCtx ctx m, WithinWriteSDLock)

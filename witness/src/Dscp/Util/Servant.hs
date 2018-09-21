@@ -16,7 +16,6 @@ module Dscp.Util.Servant
     , ForResponseLog (..)
     , buildListForResponse
     , buildForResponse
-    , responseTimeMetric
 
     , SimpleJSON
     ) where
@@ -37,8 +36,6 @@ import Fmt (blockListF, (+|), (|+))
 import GHC.IO.Unsafe (unsafePerformIO)
 import GHC.TypeLits (KnownSymbol, symbolVal)
 import Loot.Log (Level (Info))
-import Mon.Network (Endpoint)
-import Network.Wai (Middleware)
 import Serokell.Util ()
 import Serokell.Util.ANSI (Color (..), colorizeDull)
 import Servant.API ((:<|>) (..), (:>), Capture, Description, JSON, NoContent, QueryFlag, QueryParam,
@@ -46,8 +43,6 @@ import Servant.API ((:<|>) (..), (:>), Capture, Description, JSON, NoContent, Qu
 import Servant.API.ContentTypes (Accept (..), MimeRender (..), MimeUnrender (..))
 import Servant.Server (Handler (..), HasServer (..), ServantErr (..), Server)
 import qualified Servant.Server.Internal as SI
-
-import Dscp.Util (reportTime)
 
 -------------------------------------------------------------------------
 -- Utility functions
@@ -448,11 +443,3 @@ instance (FromJSON a, Reifies err String) => MimeUnrender (SimpleJSON err) a whe
     mimeUnrender _ =
         let errMsg = reflect (Proxy @err)
         in first (\_ -> errMsg) . eitherDecode
-
--------------------------------------------------------------------------
--- Response time metrics
--------------------------------------------------------------------------
-
-responseTimeMetric :: Maybe Endpoint -> Middleware
-responseTimeMetric endpoint app = \request f ->
-    reportTime "disciplina.timer.http_request" endpoint  (app request f)

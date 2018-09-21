@@ -119,6 +119,9 @@ seqExpandersPublicationTx feesReceiverAddr =
             let (prevHashM :: Maybe PrivateHeaderHash) =
                     prevHash <$ guard (prevHash /= genesisHeaderHash)
 
+            when (prevHash == phHash) $
+                throwLocalError PublicationLocalLoop
+
             let feeAmount = fromIntegral $ coinToInteger ptFeesAmount
             maybePub <- queryOne (PublicationsOf ptAuthor)
             mFeesReceiver <- queryOne (AccountId feesReceiverAddr)
@@ -185,7 +188,10 @@ seqExpandersBalanceTx feesReceiverAddr =
         -- check for output duplicates
         let uniqOutAddrs = ordNub $ map txOutAddr outputs
 
-        when (length outputs > 1 && length uniqOutAddrs /= length outputs) $
+        when (null outputs) $
+            throwLocalError MTxNoOutputs
+
+        when (length uniqOutAddrs /= length outputs) $
             throwLocalError MTxDuplicateOutputs
 
         -- Account we transfer money from
@@ -260,7 +266,7 @@ seqExpandersBalanceTx feesReceiverAddr =
                     Just (New _) -> updated
                     Just (Upd _) -> updated
                     Just Rem     -> Map.insert k (New $ inj onlyFees) changes
-                    other        -> error $ "changesWithFese: not expected: " <> show other
+                    other        -> error $ "changesWithFees: not expected: " <> show other
 
         pure $ mkDiffCS changesWithFees
   where

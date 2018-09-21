@@ -10,6 +10,7 @@ module Dscp.Snowdrop.Actions
 import Control.Monad.Free (Free (..))
 import qualified Data.Map as M
 import qualified Data.Tree.AVL as AVL
+import Loot.Log (MonadLogging)
 import Loot.Log.Rio (LoggingIO)
 import Snowdrop.Execution (DbModifyActions (..), SumChangeSet, avlClientDbActions)
 import Snowdrop.Util (RIO, gett)
@@ -43,10 +44,10 @@ data SDActionsM m = SDActionsM
 
 initSDActions ::
        forall m n.
-       (MonadIO m, MonadCatch m, MonadIO n, MonadCatch n, HasWitnessConfig)
+       (Each [MonadIO, MonadCatch, MonadLogging] [m, n], HasWitnessConfig)
     => m (SDActionsM n)
 initSDActions = do
-    avlInitState <- liftIO $ initAVLPureStorage @Ids @Values initAccounts
+    avlInitState <- initAVLPureStorage @Ids @Values initAccounts
     (serverStDba, serverLookupHash) <- avlServerDbActions @Ids @Values @n avlInitState
     serverBlkDba <- liftIO $ blockDbActions
     let startTime = UTCTime (toEnum 0) (toEnum 0)
