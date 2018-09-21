@@ -8,7 +8,6 @@ import Dscp.CommonCLI (versionOption)
 import Dscp.Config
 import Dscp.Witness
 
-
 main :: IO ()
 main = do
     wConfig <- getWitnessConfig
@@ -16,7 +15,9 @@ main = do
 
 getWitnessConfig :: IO WitnessConfigRec
 getWitnessConfig = do
-    configParams <- execParser $
-        info (helper <*> versionOption <*> configParamsParser) $
+    let parser = (,) <$> configParamsParser <*> witnessConfigParser
+    (configParams, cliConfig) <- execParser $
+        info (helper <*> versionOption <*> parser) $
         fullDesc <> progDesc "Disciplina witness node."
-    buildConfig configParams fillWitnessConfig
+    buildConfig configParams $
+        fmap (<> cliConfig) . fillWitnessConfig

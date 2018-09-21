@@ -1,5 +1,6 @@
-{-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE QuasiQuotes   #-}
+{-# LANGUAGE ApplicativeDo    #-}
+{-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE QuasiQuotes      #-}
 
 -- | CLI parameters of witness.
 
@@ -8,14 +9,11 @@ module Dscp.Witness.CLI
     , netCliParamsParser
     , netServParamsParser
     , committeeParamsParser
-    , appDirParamParser
-    , logParamsParser
-    , serverParamsParser
-    , metricsServerParser
-    , witnessKeyParamsParser
+    , witnessConfigParser
     ) where
 
 import qualified Data.Set as Set
+import Loot.Config (OptParser, (.::), (.:<), (.<>))
 import Loot.Network.ZMQ.Common (PreZTNodeId (..), parsePreZTNodeId)
 import Options.Applicative (Parser, auto, eitherReader, help, long, metavar, option, strOption,
                             value)
@@ -28,6 +26,7 @@ import Dscp.Resource.Keys
 import Dscp.Resource.Network (NetCliParams (..), NetServParams (..))
 import Dscp.Web.Metrics (MetricsEndpoint (..))
 import Dscp.Web.Types (naHost, naPort)
+import Dscp.Witness.Config
 import Dscp.Witness.Launcher.Params
 
 ----------------------------------------------------------------------------
@@ -120,3 +119,17 @@ witnessKeyParamsParser = do
     wkpBase <- baseKeyParamsParser "witness"
     wkpCommittee <- optional committeeParamsParser
     pure $ WitnessKeyParams {..}
+
+---------------------------------------------------------------------------
+-- Partial CLI parser for config
+---------------------------------------------------------------------------
+
+witnessConfigParser :: OptParser WitnessConfig
+witnessConfigParser = #witness .:<
+    (#logging .:: logParamsParser "witness" .<>
+     #db .:: rocksParamsParser .<>
+     #network .:: netServParamsParser .<>
+     #keys .:: witnessKeyParamsParser .<>
+     #api .:: optional (serverParamsParser "Witness") .<>
+     #appDir .:: appDirParamParser .<>
+     #metricsEndpoint .:: metricsServerParser)
