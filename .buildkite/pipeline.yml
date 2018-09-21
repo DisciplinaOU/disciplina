@@ -11,7 +11,7 @@ steps:
       system: x86_64-linux
     label: lint-trailing-whitespace
 
-  - command: nix-build
+  - command: nix-build --no-out-link | cachix push disciplina
     agents:
       system: x86_64-linux
     label: build
