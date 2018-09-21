@@ -5,6 +5,7 @@ stdenv.mkDerivation rec {
 
   nativeBuildInputs = [
     binutils
+    cachix
     git
     haskell.compiler.ghc822
     haskellPackages.tw
