@@ -16,6 +16,13 @@ steps:
       system: x86_64-linux
     label: build
 
+  - command: nix-build release.nix -A disciplina-haddock -o haddock
+    agents:
+      system: x86_64-linux
+    artifact_paths:
+    - haddock/*
+    label: build-haddock
+
   - command: nix-build release.nix -A disciplina-wallet-flatpak -o disciplina-wallet.flatpak
     agents:
       system: x86_64-linux

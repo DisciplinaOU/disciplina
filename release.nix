@@ -15,6 +15,20 @@ let
 in
 
 rec {
+  disciplina-haddock = with lib;
+    let
+      drvs = filterAttrs (const (hasAttr "doc")) project;
+      docs = mapAttrs (const (getOutput "doc")) drvs;
+      globs = map (doc: "${doc}/share/doc/*") (attrValues docs);
+    in
+    runCommand "disciplina-haddock" {} ''
+      mkdir $out
+
+      for drv in ${concatStringsSep " " globs}; do
+        ln -s $drv/html $out/$(basename $drv)
+      done
+    '';
+
   disciplina-wallet-macos-sandbox = writeShellScript ''
     sandbox-exec -D HOME="$HOME" -D DYLD_ROOT_PATH="$DYLD_ROOT_PATH" \
       -f ${./wallet/profile.sb} ${disciplina-wallet-wrapped}/bin/disciplina-wallet
