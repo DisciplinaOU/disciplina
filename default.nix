@@ -27,6 +27,7 @@ let
         "scripts/.*"
         "secrets/.*"
         "specs/.*"
+        ".*\\.nix"
       ];
     }) lib.cleanSourceFilter;
   };
