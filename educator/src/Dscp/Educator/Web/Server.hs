@@ -32,7 +32,7 @@ import Dscp.Educator.Web.Student (GetStudentsAction (..), ProtectedStudentAPI,
                                   convertStudentApiHandler, studentAPI, studentApiHandlers)
 import Dscp.Resource.Keys (KeyResources, krPublicKey)
 import Dscp.Web (ServerParams (..), serveWeb)
-import Dscp.Web.Metrics (MetricsEndpoint, responseTimeMetric)
+import Dscp.Web.Metrics (responseTimeMetric)
 import Dscp.Witness.Config
 import Dscp.Witness.Web
 

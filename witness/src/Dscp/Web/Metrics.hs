@@ -2,6 +2,8 @@ module Dscp.Web.Metrics
     ( MetricsEndpoint (..)
     , responseTimeMetric
     , reportTime
+    , addrToEndpoint
+    , endpointToAddr
     ) where
 
 import Mon (recordTimer)
@@ -10,6 +12,7 @@ import Mon.Types (Name)
 import Network.Wai (Middleware)
 
 import Dscp.Util (countingTime)
+import Dscp.Web.Types (NetworkAddress (..))
 
 newtype MetricsEndpoint = MetricsEndpoint { unMetricsEndpoint :: Maybe Endpoint }
     deriving (Show)
@@ -26,3 +29,9 @@ reportTime name (MetricsEndpoint mEndpoint) m = case mEndpoint of
 responseTimeMetric :: MetricsEndpoint -> Middleware
 responseTimeMetric endpoint app = \request f ->
     reportTime "disciplina.timer.http_request" endpoint (app request f)
+
+addrToEndpoint :: NetworkAddress -> Endpoint
+addrToEndpoint (NetworkAddress host port) = (host, fromIntegral port)
+
+endpointToAddr :: Endpoint -> NetworkAddress
+endpointToAddr (host, port) = NetworkAddress host (fromIntegral port)

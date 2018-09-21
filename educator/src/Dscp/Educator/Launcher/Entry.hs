@@ -31,7 +31,7 @@ educatorEntry =
             when separateWitnessServer $ do
                 logInfo "Forking witness API server"
                 void . async $
-                    serveWitnessAPIReal webParams
+                    serveWitnessAPIReal serverParams
 
         logInfo "Forking student API"
         void . async $ serveEducatorAPIsReal

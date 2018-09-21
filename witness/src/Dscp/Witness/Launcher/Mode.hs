@@ -36,7 +36,6 @@ import Dscp.Network ()
 import Dscp.Resource.Keys (KeyResources)
 import Dscp.Rio (RIO)
 import Dscp.Snowdrop.Actions (SDVars)
-import Dscp.Web.Metrics
 import Dscp.Witness.Config (HasWitnessConfig, withWitnessConfig)
 import Dscp.Witness.Launcher.Marker (WitnessNode)
 import Dscp.Witness.Launcher.Resource (WitnessResources, wrDB, wrKey, wrLogging, wrNetwork)

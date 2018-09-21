@@ -15,7 +15,6 @@ module Dscp.Witness.Config
 
 import Data.Reflection (Given (..), give)
 import Loot.Config ((:::), (::<), ConfigKind (Final, Partial), ConfigRec)
-import Mon.Network (Endpoint)
 
 import Dscp.Config
 import Dscp.Core.Config
@@ -23,7 +22,7 @@ import Dscp.DB.Rocks.Real.Types (RocksDBParams)
 import Dscp.Resource.AppDir (AppDirParam)
 import Dscp.Resource.Logging (LoggingParams)
 import Dscp.Resource.Network (NetServParams)
-import Dscp.Web (ServerParams)
+import Dscp.Web (MetricsEndpoint, ServerParams)
 import Dscp.Witness.Launcher.Params (WitnessKeyParams)
 
 type WitnessConfig = CoreConfig ++
@@ -34,7 +33,7 @@ type WitnessConfig = CoreConfig ++
         , "keys" ::: WitnessKeyParams
         , "api" ::: Maybe ServerParams
         , "appDir" ::: AppDirParam
-        , "metricsEndpoint" ::: Maybe Endpoint
+        , "metricsEndpoint" ::: MetricsEndpoint
         ]
      ]
 

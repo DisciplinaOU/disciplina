@@ -31,7 +31,6 @@ import qualified Dscp.Launcher.Mode as Basic
 import Dscp.Resource.Keys (KeyResources)
 import Dscp.Rio (RIO)
 import Dscp.Snowdrop.Actions (SDVars)
-import Dscp.Web.Metrics (MetricsEndpoint)
 import qualified Dscp.Witness as W
 import Dscp.Witness.Mempool (MempoolVar)
 import Dscp.Witness.Relay

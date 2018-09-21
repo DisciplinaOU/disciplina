@@ -4,7 +4,6 @@ module Dscp.Witness.Launcher.Params
        ( WitnessKeyParams (..)
        ) where
 
-import Control.Lens (makeLensesWith)
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveFromJSON)
 
