@@ -111,11 +111,23 @@ if [[ "$no_clean" != true ]]; then
 fi
 
 if [[ "$node" == "educator" ]]; then
-    stack exec "dscp-educator" -- $common_params $witness_params $educator_params
+    if [ -z "$(which dscp-educator)" ]; then
+        stack exec "dscp-educator" -- $common_params $witness_params $educator_params
+    else
+        dscp-educator $common_params $witness_params $educator_params
+    fi
 elif [[ "$node" == "witness" ]]; then
-    stack exec "dscp-witness" -- $common_params $witness_params
+    if [ -z "$(which dscp-witness)" ]; then
+        stack exec "dscp-witness" -- $common_params $witness_params
+    else
+        dscp-witness $common_params $witness_params
+    fi
 elif [[ "$node" == "faucet" ]]; then
-    stack exec "dscp-faucet" -- $common_params $faucet_params
+    if [ -z "$(which dscp-faucet)" ]; then
+        stack exec "dscp-faucet" -- $common_params $faucet_params
+    else
+        dscp-faucet $common_params $faucet_params
+    fi
 else
     echo "Unknown node type \"$node\""
     exit 1
