@@ -1,21 +1,22 @@
-{-# LANGUAGE ApplicativeDo #-}
+{-# LANGUAGE ApplicativeDo    #-}
+{-# LANGUAGE OverloadedLabels #-}
 
 -- | CLI for educator.
 
 module Dscp.Educator.CLI
-    ( sqliteParamsParser
-    , educatorBotParamsParser
-    , educatorWebParamsParser
-    , educatorKeyParamsParser
+    ( educatorConfigParser
     ) where
 
+import Loot.Config (OptParser, upcast, (.::), (.:<), (.<>))
 import Options.Applicative (Parser, auto, help, long, metavar, option, strOption, switch, value)
 
 import Dscp.CommonCLI (baseKeyParamsParser, serverParamsParser, timeReadM)
 import Dscp.DB.SQLite
+import Dscp.Educator.Config
 import Dscp.Educator.Launcher.Params (EducatorKeyParams (..))
 import Dscp.Educator.Web.Bot.Params (EducatorBotParams (..), EducatorBotSwitch (..))
 import Dscp.Educator.Web.Params (EducatorWebParams (..))
+import Dscp.Witness.CLI (witnessConfigParser)
 
 sqliteParamsParser :: Parser SQLiteParams
 sqliteParamsParser = do
@@ -67,3 +68,11 @@ educatorWebParamsParser = do
 educatorKeyParamsParser :: Parser EducatorKeyParams
 educatorKeyParamsParser =
     EducatorKeyParams <$> baseKeyParamsParser "educator"
+
+educatorConfigParser :: OptParser EducatorConfig
+educatorConfigParser =
+    fmap upcast witnessConfigParser .<>
+    #educator .:<
+        (#db .:: sqliteParamsParser .<>
+         #keys .:: educatorKeyParamsParser .<>
+         #api .:: educatorWebParamsParser)

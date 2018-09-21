@@ -17,7 +17,9 @@ main = do
 
 getEducatorConfig :: IO EducatorConfigRec
 getEducatorConfig = do
-    configParams <- execParser $
-        info (helper <*> versionOption <*> configParamsParser) $
+    let parser = (,) <$> configParamsParser <*> educatorConfigParser
+    (configParams, cliConfig) <- execParser $
+        info (helper <*> versionOption <*> parser) $
         fullDesc <> progDesc "Disciplina educator node."
-    buildConfig configParams fillEducatorConfig
+    buildConfig configParams $
+        fmap (<> cliConfig) . fillEducatorConfig
