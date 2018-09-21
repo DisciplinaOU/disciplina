@@ -28,7 +28,9 @@ main = do
 
 getFaucetConfig :: IO FaucetConfigRec
 getFaucetConfig = do
-    configParams <- execParser $
-        info (helper <*> versionOption <*> configParamsParser) $
+    let parser = (,) <$> configParamsParser <*> faucetConfigParser
+    (configParams, cliConfig) <- execParser $
+        info (helper <*> versionOption <*> parser) $
         fullDesc <> progDesc "Disciplina faucet node."
-    buildConfig configParams fillFaucetConfig
+    buildConfig configParams $
+        fmap (<> cliConfig) . fillFaucetConfig
