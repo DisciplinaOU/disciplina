@@ -15,6 +15,8 @@ let
 in
 
 rec {
+  disciplina-config = runCommand "config.yaml" {} "mkdir -p $out/etc/disciplina && cp ${./config.yaml} $_/config.yaml";
+
   disciplina-haddock = with lib;
     let
       drvs = filterAttrs (const (hasAttr "doc")) project;
@@ -28,6 +30,12 @@ rec {
         ln -s $drv/html $out/$(basename $drv)
       done
     '';
+
+  disciplina-static = symlinkJoin {
+    name = "disciplina-static";
+    paths = [ disciplina-config ] ++ map haskell.lib.justStaticExecutables
+      (with project; [ disciplina-faucet disciplina-witness disciplina-educator ]);
+  };
 
   disciplina-wallet-macos-sandbox = writeShellScript ''
     sandbox-exec -D HOME="$HOME" -D DYLD_ROOT_PATH="$DYLD_ROOT_PATH" \

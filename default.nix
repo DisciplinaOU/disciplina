@@ -1,4 +1,4 @@
-{ pkgs ? import ./closure.nix }: with pkgs;
+{ pkgs ? import ./closure.nix, shell ? false }: with pkgs;
 
 let
   filterWhiteBlack = { path, whitelist, blacklist ? [] }: name: type:
@@ -31,15 +31,6 @@ let
       ];
     }) lib.cleanSourceFilter;
   };
-
-  disciplinaPackages = stackToNix { inherit root; };
 in
 
-disciplinaPackages // rec {
-  disciplina-config = runCommand "config.yaml" {} "mkdir -p $out/etc/disciplina && cp ${./config.yaml} $_/config.yaml";
-  disciplina-static = symlinkJoin {
-    name = "disciplina-static";
-    paths = [ disciplina-config ] ++ map haskell.lib.justStaticExecutables
-      (with disciplinaPackages; [ disciplina-faucet disciplina-witness disciplina-educator ]);
-  };
-}
+stackToNix { inherit root shell; }
