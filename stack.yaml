@@ -8,9 +8,6 @@ packages:
 - 'wallet'
 - 'faucet'
 
-nix:
-  shell-file: shell.nix
-
 extra-deps:
 - aeson-options-0.0.0
 - base58-bytestring-0.1.0
