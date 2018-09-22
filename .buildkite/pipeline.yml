@@ -28,14 +28,15 @@ steps:
     - haddock/*
     label: build-haddock
 
-  - command: nix-build release.nix -A disciplina-wallet-flatpak -o disciplina-wallet.flatpak
+  # TODO: move cachix to nix-build wrapper, push build-time dependencies
+  - command: nix-build release.nix -A disciplina-wallet-flatpak -o disciplina-wallet.flatpak | nix-shell --run 'cachix push disciplina'
     agents:
       system: x86_64-linux
     artifact_paths:
     - disciplina-wallet.flatpak
     label: build-flatpak
 
-  - command: nix-build specs -o specs/result
+  - command: nix-build specs -o specs/result | nix-shell --run 'cachix push disciplina'
     agents:
       system: x86_64-linux
     artifact_paths:
