@@ -1,15 +1,15 @@
 steps:
-  - command: scripts/lint-haskell.sh
+  - command: nix-build release.nix -A disciplina-hlint -o hlint.html
     agents:
       system: x86_64-linux
     artifact_paths:
     - hlint.html
-    label: lint-haskell
+    label: hlint
 
-  - command: scripts/lint-trailing-whitespace.sh
+  - command: nix-build release.nix -A disciplina-trailing-whitespace --no-out-link
     agents:
       system: x86_64-linux
-    label: lint-trailing-whitespace
+    label: trailing-whitespace
 
   - command: nix-build --no-out-link
     agents:
@@ -26,18 +26,18 @@ steps:
       system: x86_64-linux
     artifact_paths:
     - haddock/*
-    label: build-haddock
+    label: haddock
 
   - command: nix-build release.nix -A disciplina-wallet-flatpak -o disciplina-wallet.flatpak
     agents:
       system: x86_64-linux
     artifact_paths:
     - disciplina-wallet.flatpak
-    label: build-flatpak
+    label: flatpak
 
   - command: nix-build specs -o specs/result
     agents:
       system: x86_64-linux
     artifact_paths:
     - specs/result/*.pdf
-    label: build-specs
+    label: specs

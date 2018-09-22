@@ -18,19 +18,19 @@
    In the very beginning a *Student* is not _identified_ by *Educator*. A *Student*
    can be _identified_ by *Educator* only through *Educator*'s own actions (i. e.
    through Educator API).
-  
+
    It is assumed that a Student does something _off-chain_ in order to identify
    themselves (e. g. registers on Educator's website and provides their
    Disciplina address in a form).
-  
+
    No API methods are available to *Student* until they are _known_ to
    *Educator*.
-  
-** Enroll in a course 
+
+** Enroll in a course
    As soon as *Student* is _known_ to *Educator*, the *Student* is able to
    _enroll_ in a course. There are two possible ways of enrolling a student
    into a course:
-   
+
    1) *Default courses*. As soon as *Student* becomes _known_ to *Educator*, the
       *Educator* automatically _enrolls_ *Student* to a particular set of
       courses. It is assumed that this set of courses is defined outside of
@@ -43,7 +43,7 @@
       courses_, and selectively _enroll_ to these courses (using Student API).
       Later a student should still be able to see both a list of courses they're
       enrolled in and a list of courses still available for enrollment.
-      
+
    These two ways can be _combined_: there can be a set of obligatory default
    courses together with additional facultative courses.
 
@@ -52,7 +52,7 @@
   _submissions_. Submissions later receive _grades_ from the *Educator*. _Grades_
   are put into private chain _transactions_, which are periodically (once in
   _block issue period_) combined into private _blocks_.
-  
+
   Once a _grade_ has been added into a _block_, there exists a cryptographic
   _proof_ for this grade, which can be fetched by a _Student_.
 
@@ -69,13 +69,13 @@
      course goes by. In the beginning of the course, there might be no course
      assignments assigned to a *Student*. A *Student* should poll Student API to
      check for updates regarding course assignments.
-     
+
   These two modes can be _combined_: there can be a set of default course
   assignments, and students can also receive additional ones during
   the course.
 ** Submissions
    There are two modes of operations of submitting _submissions_ to assignments:
-   
+
    1) *Offline submissions*. If a course is meant to be offline (e. g. it's a
       classic university course with course assignments done on paper) and there
       are no actual digital _content_ of submissions, then submissions in
@@ -87,7 +87,7 @@
    2) *Online submissions*. If a course is meant to be online (e. g. it's a
       MOOC) and every submission is digital, then submissions in Disciplina
       should refer to actual contents of submissions via _contents hash_.
-      These _online_ submissions are submitted as the *Student* completes them. 
+      These _online_ submissions are submitted as the *Student* completes them.
 
    These two modes can be _combined_: a course can have both _online_ and
    _offline_ assignments, and submissions for these assignments are sent,

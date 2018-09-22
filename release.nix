@@ -2,6 +2,12 @@
 
 let
   project = import ./. { inherit pkgs; };
+  source = gitIgnore ./. [ "*.png" ];
+
+  runCheck = source: runCommand "check" {} ''
+    ${source}
+    touch $out
+  '';
 
   writeShellScript = source: writeTextFile {
     name = "script";
@@ -15,7 +21,9 @@ let
 in
 
 rec {
-  disciplina-config = runCommand "config.yaml" {} "mkdir -p $out/etc/disciplina && cp ${./config.yaml} $_/config.yaml";
+  disciplina-config = runCommand "disciplina-config" {} ''
+    mkdir -p $out/etc/disciplina && cp ${source}/config.yaml $_
+  '';
 
   disciplina-haddock = with lib;
     let
@@ -31,11 +39,21 @@ rec {
       done
     '';
 
+  disciplina-hlint = runCommand "hlint.html" {} ''
+    ${hlint}/bin/hlint ${source} --no-exit-code --report=$out -j
+  '';
+
   disciplina-static = symlinkJoin {
     name = "disciplina-static";
     paths = [ disciplina-config ] ++ map haskell.lib.justStaticExecutables
       (with project; [ disciplina-faucet disciplina-witness disciplina-educator ]);
   };
+
+  disciplina-trailing-whitespace = runCheck ''
+    for f in $(find ${source} -type f); do
+      ${haskellPackages.tw}/bin/tw $f
+    done
+  '';
 
   disciplina-wallet-macos-sandbox = writeShellScript ''
     sandbox-exec -D HOME="$HOME" -D DYLD_ROOT_PATH="$DYLD_ROOT_PATH" \
