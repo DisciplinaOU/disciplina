@@ -82,3 +82,32 @@ executables:
       - knit
       - ntype
       - text
+
+  dscp-wallet-qt:
+    <<: *exec-common
+    source-dirs: exec-qt
+    default-extensions:
+      - DataKinds
+    dependencies:
+      - ansi-wl-pprint
+      - ariadne-core
+      - ariadne-qt-lib
+      - async
+      - componentm
+      - containers
+      - double-conversion
+      - disciplina-core
+      - disciplina-wallet
+      - knit
+      - lens
+      - ntype
+      - random
+      - serokell-util
+      - text
+      - vector
+    ghc-options:
+      - -threaded
+      - -rtsopts
+      - -with-rtsopts=-N
+      - -O2
+      - -dynamic

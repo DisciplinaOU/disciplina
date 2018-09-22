@@ -54,19 +54,36 @@ extra-deps:
     - code/prelude
 
 - git: https://github.com/serokell/ariadne.git
-  commit: ab1af6d30de2147c340b401a738a00ec4c41dd49
+  commit: 873ca3841b416a7cf92f3381e1e498fe587a9980
   subdirs:
     - ariadne/core
     - knit
     - ui/cli-lib
     - ui/vty-lib
+    - ui/qt-lib
 
 # for ariadne
+
 - loc-0.1.3.2
 - brick-0.38
 - named-0.1.0.0
 - ntype-0.1.0.0
 - vty-5.22
+
+# for ariadne-qt
+- git: https://github.com/serokell/qtah
+  # srk-july branch until merged upstream
+  commit: 823e9d884996b4873a3c841d8662fc66d2c95168
+  subdirs:
+  - qtah-generator
+  - qtah-cpp
+  - qtah
+
+- hoppy-runtime-0.5.0
+- hoppy-generator-0.5.0
+- hoppy-std-0.5.0
+- html-entities-1.1.4.1 # https://github.com/nikita-volkov/html-entities/issues/8
+- unix-compat-0.5.1 # https://github.com/jystic/unix-compat/pull/40
 
 # Forced by lootbox #
 - base-noprelude-4.10.1.0
