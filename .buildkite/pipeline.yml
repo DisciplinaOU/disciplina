@@ -21,11 +21,11 @@ steps:
       system: x86_64-darwin
     label: build-darwin
 
-  - command: nix-build release.nix -A disciplina-haddock -o haddock
+  - command: nix-build release.nix -A disciplina-haddock -o haddock.tar.gz
     agents:
       system: x86_64-linux
     artifact_paths:
-    - haddock/*
+    - haddock.tar.gz
     label: haddock
 
   - command: nix-build release.nix -A disciplina-wallet-flatpak -o disciplina-wallet.flatpak

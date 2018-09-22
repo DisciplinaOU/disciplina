@@ -27,16 +27,15 @@ rec {
 
   disciplina-haddock = with lib;
     let
-      drvs = filterAttrs (const (hasAttr "doc")) project;
-      docs = mapAttrs (const (getOutput "doc")) drvs;
-      globs = map (doc: "${doc}/share/doc/*") (attrValues docs);
+      docs = remove isNull (map (drv: drv.doc or null) (attrValues project));
+      globs = map (doc: "${doc}/share/doc/*") docs;
     in
-    runCommand "disciplina-haddock" {} ''
-      mkdir $out
-
+    runCommand "disciplina-haddock.tar.gz" {} ''
       for drv in ${concatStringsSep " " globs}; do
-        ln -s $drv/html $out/$(basename $drv)
+        ln -s $drv/html $(basename $drv)
       done
+
+      tar czfh $out *
     '';
 
   disciplina-hlint = runCommand "hlint.html" {} ''

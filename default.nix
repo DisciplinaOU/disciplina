@@ -3,14 +3,14 @@
 stackToNix {
   # TODO: properly fix this in stack-to-nix
   root = gitIgnore ./. [
-    "*.md"
     "*.nix"
-    "*.tex"
-    ".buildkite"
-    "config.yaml"
-    "scripts"
-    "secrets"
-    "specs"
+    "/ChangeLog.md"
+    "/README.md"
+    "/.buildkite"
+    "/config.yaml"
+    "/scripts"
+    "/secrets"
+    "/specs"
   ];
   inherit shell;
 }
