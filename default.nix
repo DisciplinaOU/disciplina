@@ -11,7 +11,7 @@ let
   composeFilters = a: b: name: type: (a name type) && (b name type);
 
   # TODO: fix this in stack-to-nix instead
-  src = builtins.path rec {
+  root = builtins.path rec {
     path = ./.;
     name = "disciplina";
     filter = composeFilters (filterWhiteBlack {
@@ -32,7 +32,7 @@ let
     }) lib.cleanSourceFilter;
   };
 
-  disciplinaPackages = stackToNix { inherit src; };
+  disciplinaPackages = stackToNix { inherit root; };
 in
 
 disciplinaPackages // rec {
