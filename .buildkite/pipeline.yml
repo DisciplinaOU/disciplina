@@ -11,12 +11,12 @@ steps:
       system: x86_64-linux
     label: lint-trailing-whitespace
 
-  - command: nix-build --no-out-link | nix-shell --run 'cachix push disciplina'
+  - command: nix-build --no-out-link
     agents:
       system: x86_64-linux
     label: build
 
-  - command: nix-build --no-out-link | nix-shell --run 'cachix push disciplina'
+  - command: nix-build --no-out-link
     agents:
       system: x86_64-darwin
     label: build-darwin
@@ -28,15 +28,14 @@ steps:
     - haddock/*
     label: build-haddock
 
-  # TODO: move cachix to nix-build wrapper, push build-time dependencies
-  - command: nix-build release.nix -A disciplina-wallet-flatpak -o disciplina-wallet.flatpak | nix-shell --run 'cachix push disciplina'
+  - command: nix-build release.nix -A disciplina-wallet-flatpak -o disciplina-wallet.flatpak
     agents:
       system: x86_64-linux
     artifact_paths:
     - disciplina-wallet.flatpak
     label: build-flatpak
 
-  - command: nix-build specs -o specs/result | nix-shell --run 'cachix push disciplina'
+  - command: nix-build specs -o specs/result
     agents:
       system: x86_64-linux
     artifact_paths:
