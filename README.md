@@ -28,8 +28,13 @@ nix-env -f https://github.com/serokell/nixpkgs/archive/master.tar.gz -iA nix
 Set up Disciplina binary cache so that you don't have to build dependencies:
 
 ```sh
-nix-shell -p cachix --run 'sudo cachix use disciplina'
+sudo $(nix-build closure.nix -A cachix --no-out-link)/bin/cachix use disciplina
 ```
+
+If you are on NixOS, make sure to add `https://cache.nixos.org` to `nix.binaryCaches`,
+otherwise main Nix binary cache stops working. See [cachix/cachix#128][].
+
+[cachix/cachix#128]: https://github.com/cachix/cachix/pull/128
 
 For production builds, run `nix-build`.
 
