@@ -1,33 +1,29 @@
-dist
-dist-*
-cabal-dev
-*.o
-*.hi
-*.chi
-*.chs.h
-*.dyn_o
-*.dyn_hi
-*.cabal
-.hpc
-.hsenv
-.cabal-sandbox/
-cabal.sandbox.config
-*.prof
-*.aux
-*.hp
-*.eventlog
-.stack-work/
-cabal.project.local
-.HTF/
-.dir-locals.el
-tmp/
 run/tmp/
 educator-db
 witness-db
-stylish-haskell.yaml
-test.db
 
+# cabal new-build
+.ghc.environment*
+cabal.project
+dist-newstyle
+
+# GHC
+*.chi
+*.chs.h
+*.dyn_hi
+*.dyn_o
+*.o
+*.hi
+
+# hpack
+*.cabal
+
+# Nix
 result*
+stack-to-nix.yaml
+
+# Stack
+.stack-work
 
 # TeX
 *.bbl
