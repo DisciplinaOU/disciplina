@@ -21,7 +21,7 @@ let
 in
 
 rec {
-  disciplina-config = runCommand "config.yaml" {} "cp ${./config.yaml} $out";
+  disciplina-config = runCommand "disciplina-config.yaml" {} "cp ${./config.yaml} $out";
 
   disciplina-haddock = with lib;
     let
