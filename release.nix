@@ -21,9 +21,7 @@ let
 in
 
 rec {
-  disciplina-config = runCommand "disciplina-config" {} ''
-    mkdir -p $out/etc/disciplina && cp ${source}/config.yaml $_
-  '';
+  disciplina-config = runCommand "config.yaml" {} "cp ${./config.yaml} $out";
 
   disciplina-haddock = with lib;
     let
@@ -44,8 +42,11 @@ rec {
 
   disciplina-static = symlinkJoin {
     name = "disciplina-static";
-    paths = [ disciplina-config ] ++ map haskell.lib.justStaticExecutables
-      (with project; [ disciplina-faucet disciplina-witness disciplina-educator ]);
+    paths = with project; map haskell.lib.justStaticExecutables [
+      disciplina-educator
+      disciplina-faucet
+      disciplina-witness
+    ];
   };
 
   disciplina-trailing-whitespace = runCheck ''
