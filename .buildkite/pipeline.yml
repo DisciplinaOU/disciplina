@@ -35,6 +35,16 @@ steps:
     - haddock.tar.gz
     label: haddock
 
+  - command: nix-build shell.nix --no-out-link
+    agents:
+      system: x86_64-linux
+    label: shell
+
+  - command: nix-build shell.nix --no-out-link
+    agents:
+      system: x86_64-darwin
+    label: shell-darwin
+
   - command: nix-build specs -o specs/result
     agents:
       system: x86_64-linux
