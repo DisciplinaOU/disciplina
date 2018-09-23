@@ -1,0 +1,117 @@
+sample:
+  # Core protocol parameters, which should be equal across
+  # all the nodes in the network.
+  core:
+    # Slot duration in milliseconds. A block is issued once
+    # in a slot
+    slotDuration: 10000
+    
+    # Transaction fee parameters.
+    fee:
+      # Minimal fee for money transactions
+      minimal: 10
+      # How many DSCP tokens one byte of money transaction costs.
+      # Total fee is (minimal + size_in_bytes * multiplier)
+      multiplier: 0.1
+
+      # Minimal fee for private header publication.
+      minimalPub: 10
+      # How many DSCP tokens one transaction in a private block costs.
+      # Total fee is (minimalPub + private_tx_num * multiplierPub)
+      multiplierPub: 0.1
+
+    # Parameters of genesis block
+    # See more info in [./docs/config.md](documentation)
+    genesis:
+      genesisSeed: "GromakNaRechke"
+      governance:
+        type: committeeOpen
+        secret: "opencommittee"
+        n: 4
+      distribution:
+        - equal: 1000
+        - specific:
+          - # Faucet
+            - LL4qKn62hrdLh1vkyiidEFLfCaAngaVmtu3ipGVSubhackXS4pXNbeDC
+            - 1000
+          - # Test key #1, secret: ffRB5uhVEV24NXsYUuw1irt9HF5i5IRWJXHJzagXU8Y=
+            - LL4qKoASaEwZGfvoQCPa2xGv3LKJQVCxaRw73p61Bj6tD8CSDcgkANf6
+            - 1000
+          - # Test key #2, secret: fOhZOFr6SSnYv1/xfKPPMHdWLdQDboysJ4Q794Gezmw=
+            - LL4qKqwvLDw4eKXTt5tpCZytoyaMVVbRmVRCo1HL8zwPaNWDxBnLpKoJ
+            - 1000
+
+  # Witness node configuration
+  witness:
+    # Logging config for witness node
+    logging:
+      # Default logger name (displayed in logs in the beginnings of lines)
+      defaultName: "witness"
+      # Whether or not to enable debug logs
+      debug: false
+      # Directory where to put logs (optional)
+      directory: "/var/log/dscp-witness"
+      # Path to logger YAML config (optional)
+      configPath: "./run/log-config.yaml"
+
+    # RocksDB parameters
+    db:
+      # Path to the database folder
+      path: "/var/db/dscp-witness"
+
+    # ZeroMQ interface parameters
+    network:
+      # Network peers (nodes with which we connect)
+      peers:
+        - 127.0.0.1:8010:8011
+        - 127.0.0.1:8020:8021
+        - 127.0.0.1:8030:8031
+      # Our own address, which is also our unique identifier in the network
+      ourAddress: 127.0.0.1:8000:8001
+      # If this option is set, then this address listens for ZMQ connections
+      # instead, whereas `ourAddress` is still used as an unique identifier of node.
+      # Useful when node is behind NAT.
+      internalAddress: 192.168.0.3:8000:8001
+
+    # Witness keyfile
+    keys:
+      # Base key parameters (e. g. path to keyfile)
+      base:
+        # Path to keyfile. If not defined, <APP_DIR>/witness.key is used.
+        path: "witness.key"
+        # If 'true', generate new keyfile on given path, and fail if the
+        # keyfile already exists
+        genNew: false
+        # Keyfile passphrase (optional). If not given, key is encrypted with an
+        # empty passphrase.
+        passphrase: "qwerty123"
+        
+      # Committee params. Used together with committee governance params
+      # in order to generate committee keys from seed. Optional.
+      committee:
+        # Type of committee.
+        # - `committeeOpen` - open committee, generation seed for committee
+        #    secret keys is known to everybody (given in `core` section of config)
+        # - `committeeClosed` - closed committee, only public keys of committee
+        #    members are publicly known.
+        type: "committeeClosed"
+        # Index of this node among committee participants.
+        n: 2
+        # Used only when `type` is `committeeClosed`. Secret seed from which
+        # committee secret keys are derived.
+        secret: "UcA3FaXf="
+
+    # Witness (block explorer) HTTP API parameters.
+    # Optional. If not provided, Witness API is not served.
+    api:
+      # Address to serve HTTP API from
+      addr: 127.0.0.1:3015
+
+    # Application directory for witness.
+    # Optional. If not provided, default application data directory
+    # for current OS will be used (e. g. `~/.local/share/disciplina`)
+    appDir: "/home/user/.disciplina"
+
+    # Metrics UDP endpoint.
+    # Optional. If not provided, metrics collection is disabled.
+    metricsEndpoint: 52.29.70.40:1030
