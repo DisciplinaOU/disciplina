@@ -155,3 +155,36 @@ sample:
         # Delay between action trigger and action (e. g. time
         # between receiving student's submission and posting a grade)
         operationsDelay: "3s"
+
+  # Faucet config
+  faucet:
+    # Logging config for faucet. See option `witness.logging`.
+    logging:
+      defaultName: "faucet"
+      debug: false
+      directory: "/var/log/dscp-faucet"
+      configPath: "./run/log-config.yaml"
+
+    # Faucet config params. See option `witness.keys.base`
+    keys:
+      path: "faucet.key"
+      genNew: false
+      passphrase: "qwerty123"
+
+    # Paramerers of Faucet HTTP API
+    api:
+      # Address to serve Faucet API
+      addr: 127.0.0.1:5015
+
+    # Backend Witness address
+    witnessBackend: witness.disciplina.io:8001
+    
+    # Amount of money to be transferred with a single transaction
+    transferredAmount: 20
+
+    # If set to `true`, Faucet will not send actual transactions to
+    # witness backend
+    dryRun: false
+
+    # Application directory for faucet. See option `witness.appDir`
+    appDir: "/home/user/.disciplina"
