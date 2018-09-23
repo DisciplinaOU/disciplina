@@ -1,16 +1,17 @@
-{-# LANGUAGE ApplicativeDo #-}
+{-# LANGUAGE OverloadedLabels #-}
 
 module Dscp.Faucet.CLI
-    ( faucetParamsParser
+    ( faucetConfigParser
     ) where
 
+import Loot.Config (OptParser, (.::), (.:<), (.<>))
 import Options.Applicative (Parser, help, long, metavar, option, switch)
 
 import Dscp.CommonCLI
-import Dscp.Faucet.Launcher.Params
+import Dscp.Faucet.Config
 
-translatedAmountParser :: Parser TranslatedAmount
-translatedAmountParser = option (TranslatedAmount <$> coinReadM) $
+transferredAmountParser :: Parser TransferredAmount
+transferredAmountParser = option (TransferredAmount <$> coinReadM) $
     long "translated-amount" <>
     metavar "COINS" <>
     help "How much money to send on each request to faucet"
@@ -20,15 +21,14 @@ dryRunParser = fmap DryRun . switch $
     long "dry-run" <>
     help "Do not communicate with witness backend"
 
-faucetParamsParser :: Parser FaucetParams
-faucetParamsParser = do
-    _fpLoggingParams <- logParamsParser "faucet"
-    _fpKeyParams <- baseKeyParamsParser "faucet"
-    _fpWebParams <- serverParamsParser "faucet"
-    _fpWitnessAddress <- clientAddressParser "witness-backend" witnessBackendHelp
-    _fpTranslatedAmount <- translatedAmountParser
-    _fpDryRun <- dryRunParser
-    _fpAppDirParam <- appDirParamParser
-    return FaucetParams{..}
+faucetConfigParser :: OptParser FaucetConfig
+faucetConfigParser = #faucet .:<
+    (#logging .:: logParamsParser "faucet" .<>
+     #keys .:: baseKeyParamsParser "faucet" .<>
+     #api .:: serverParamsParser "faucet" .<>
+     #witnessBackend .:: clientAddressParser "witness-backend" wbHelp .<>
+     #transferredAmount .:: transferredAmountParser .<>
+     #dryRun .:: dryRunParser .<>
+     #appDir .:: appDirParamParser)
   where
-    witnessBackendHelp = "Address of witness node to accept faucet transactions"
+    wbHelp = "Address of witness node to accept faucet transactions"

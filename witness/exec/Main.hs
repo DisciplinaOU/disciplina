@@ -8,17 +8,16 @@ import Dscp.CommonCLI (versionOption)
 import Dscp.Config
 import Dscp.Witness
 
-
 main :: IO ()
 main = do
-    (witnessParams, wConfig) <- getWitnessParams
-    launchWitnessRealMode wConfig witnessParams witnessEntry
+    wConfig <- getWitnessConfig
+    launchWitnessRealMode wConfig witnessEntry
 
-getWitnessParams :: IO (WitnessParams, WitnessConfigRec)
-getWitnessParams = do
-    let parser = (,) <$> witnessParamsParser <*> configParamsParser
-    (params, configParams) <- execParser $
+getWitnessConfig :: IO WitnessConfigRec
+getWitnessConfig = do
+    let parser = (,) <$> configParamsParser <*> witnessConfigParser
+    (configParams, cliConfig) <- execParser $
         info (helper <*> versionOption <*> parser) $
         fullDesc <> progDesc "Disciplina witness node."
-    config <- buildConfig configParams fillWitnessConfig
-    return (params, config)
+    buildConfig configParams $
+        fmap (<> cliConfig) . fillWitnessConfig

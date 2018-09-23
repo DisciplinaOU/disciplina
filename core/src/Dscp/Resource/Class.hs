@@ -17,8 +17,8 @@ import Control.Monad.Component (ComponentM, buildComponent)
 import Loot.Base.HasLens (HasLens (..))
 import Loot.Log.Rio (LoggingIO)
 
-import Dscp.Rio (RIO, runRIO)
 import Dscp.Resource.Logging (LoggingParams)
+import Dscp.Rio (RIO, runRIO)
 
 -- | Contains parameters required for most of resources allocation.
 data InitParams = InitParams
@@ -36,10 +36,13 @@ instance HasLens LoggingIO InitContext LoggingIO where
     lensOf = icLogging
 
 -- | Resources safe allocation.
-class AllocResource param resource | resource -> param where
+class AllocResource resource where
+    -- | Data required for resource allocation.
+    type Deps resource :: *
+
     -- | Construct a resource using given parameters. Automatic cleanup.
     -- Use 'buildComponentR' to construct function of this type.
-    allocResource :: param -> ReaderT InitContext ComponentM resource
+    allocResource :: Deps resource -> ReaderT InitContext ComponentM resource
 
 -- | 'buildComponent' for 'ReaderT'.
 buildComponentR

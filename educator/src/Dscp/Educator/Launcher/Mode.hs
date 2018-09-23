@@ -26,13 +26,11 @@ import Dscp.DB.Rocks.Real.Types (RocksDB)
 import Dscp.DB.SQLite (SQLiteDB)
 import Dscp.Educator.Config (HasEducatorConfig, withEducatorConfig)
 import Dscp.Educator.Launcher.Marker (EducatorNode)
-import Dscp.Educator.Launcher.Params (EducatorParams)
 import Dscp.Educator.Launcher.Resource (EducatorResources)
 import qualified Dscp.Launcher.Mode as Basic
 import Dscp.Resource.Keys (KeyResources)
 import Dscp.Rio (RIO)
 import Dscp.Snowdrop.Actions (SDVars)
-import Dscp.Web.Metrics (MetricsEndpoint)
 import qualified Dscp.Witness as W
 import Dscp.Witness.Mempool (MempoolVar)
 import Dscp.Witness.Relay
@@ -49,7 +47,6 @@ type EducatorWorkMode ctx m =
 
     , MonadReader ctx m
 
-    , HasLens' ctx EducatorParams
     , HasLens' ctx SQLiteDB
     , HasLens' ctx (KeyResources EducatorNode)
     , MonadThrow m
@@ -68,10 +65,7 @@ type CombinedWorkMode ctx m =
 -- TODO add parameters
 -- TODO Separate resources and non-resources.
 data EducatorContext = EducatorContext
-    {
-      _ecParams     :: !EducatorParams
-      -- ^ Parameters witness was started with.
-    , _ecResources  :: !EducatorResources
+    { _ecResources  :: !EducatorResources
       -- ^ Resources, allocated from params.
     , _ecWitnessCtx :: !W.WitnessContext
     }
@@ -84,17 +78,11 @@ type EducatorRealMode = RIO EducatorContext
 -- HasLens
 ---------------------------------------------------------------------
 
-instance HasLens EducatorParams EducatorContext EducatorParams where
-    lensOf = ecParams
 instance HasLens SQLiteDB EducatorContext SQLiteDB where
     lensOf = ecResources . lensOf @SQLiteDB
 instance HasLens (KeyResources EducatorNode) EducatorContext (KeyResources EducatorNode) where
     lensOf = ecResources . lensOf @(KeyResources EducatorNode)
 
-instance HasLens (Maybe W.WitnessWebParams) EducatorContext (Maybe W.WitnessWebParams) where
-    lensOf = ecWitnessCtx . lensOf @(Maybe W.WitnessWebParams)
-instance HasLens MetricsEndpoint EducatorContext MetricsEndpoint where
-    lensOf = ecWitnessCtx . lensOf @MetricsEndpoint
 instance HasLens LoggingIO EducatorContext LoggingIO where
     lensOf = ecWitnessCtx . lensOf @LoggingIO
 instance HasLens RocksDB EducatorContext RocksDB where
@@ -121,7 +109,7 @@ instance HasLens W.SDLock EducatorContext W.SDLock where
 ----------------------------------------------------------------------------
 
 _sanity :: EducatorRealMode ()
-_sanity = withEducatorConfig (error "") _sanityCallee
+_sanity = withEducatorConfig (error "") $ W.withWitnessConfig (error "") _sanityCallee
   where
     _sanityCallee :: CombinedWorkMode ctx m => m ()
     _sanityCallee = pass

@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedLabels #-}
+
 -- | Resources used by Educator node
 
 module Dscp.Educator.Launcher.Resource
@@ -7,14 +9,16 @@ module Dscp.Educator.Launcher.Resource
 
 import Control.Lens (makeLenses)
 import Loot.Base.HasLens (HasLens (..))
+import Loot.Config (option, sub)
 import Loot.Log.Rio (LoggingIO)
 import Loot.Network.ZMQ (ZTGlobalEnv, ZTNetCliEnv, ZTNetServEnv)
 
+import Dscp.Config
 import Dscp.DB.Rocks.Real.Types (RocksDB)
 import Dscp.DB.SQLite (SQLiteDB)
-import Dscp.Educator.Config (HasEducatorConfig)
+import Dscp.Educator.Config
 import Dscp.Educator.Launcher.Marker (EducatorNode)
-import Dscp.Educator.Launcher.Params (EducatorKeyParams (..), EducatorParams (..))
+import Dscp.Educator.Launcher.Params (EducatorKeyParams (..))
 import Dscp.Resource.AppDir
 import Dscp.Resource.Class (AllocResource (..), buildComponentR)
 import Dscp.Resource.Keys (KeyResources (..), linkStore)
@@ -47,17 +51,24 @@ instance HasLens ZTNetCliEnv EducatorResources ZTNetCliEnv where
 instance HasLens ZTNetServEnv EducatorResources ZTNetServEnv where
     lensOf = erWitnessResources . lensOf @ZTNetServEnv
 
-instance HasEducatorConfig =>
-         AllocResource (EducatorKeyParams, AppDir) (KeyResources EducatorNode) where
-    allocResource (EducatorKeyParams baseParams, appDir) =
-        buildComponentR "educator keys"
-            (linkStore baseParams Nothing appDir)
-            (\_ -> pass)
+instance AllocResource (KeyResources EducatorNode) where
+    type Deps (KeyResources EducatorNode) = (EducatorConfigRec, AppDir)
+    allocResource (educatorCfg, appDir) =
+        let EducatorKeyParams baseParams =
+                educatorCfg ^. sub #educator . option #keys
+        in buildComponentR "educator keys"
+           (withCoreConfig (rcast educatorCfg) $
+               linkStore baseParams Nothing appDir)
+           (\_ -> pass)
 
-instance HasEducatorConfig => AllocResource EducatorParams EducatorResources where
-    allocResource EducatorParams{..} = do
-        _erWitnessResources <- allocResource epWitnessParams
-        _erDB <- allocResource epDBParams
+instance AllocResource EducatorResources where
+    type Deps EducatorResources = EducatorConfigRec
+    allocResource educatorCfg = do
+        let cfg = educatorCfg ^. sub #educator
+            witnessCfg = rcast educatorCfg
+        _erWitnessResources <- withWitnessConfig witnessCfg $
+                               allocResource witnessCfg
+        _erDB <- allocResource $ cfg ^. option #db
         let appDir = Witness._wrAppDir _erWitnessResources
-        _erKeys <- allocResource (epKeyParams, appDir)
+        _erKeys <- allocResource (educatorCfg, appDir)
         return EducatorResources {..}

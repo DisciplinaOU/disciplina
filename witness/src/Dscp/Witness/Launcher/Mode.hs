@@ -36,10 +36,8 @@ import Dscp.Network ()
 import Dscp.Resource.Keys (KeyResources)
 import Dscp.Rio (RIO)
 import Dscp.Snowdrop.Actions (SDVars)
-import Dscp.Web.Metrics
 import Dscp.Witness.Config (HasWitnessConfig, withWitnessConfig)
 import Dscp.Witness.Launcher.Marker (WitnessNode)
-import Dscp.Witness.Launcher.Params
 import Dscp.Witness.Launcher.Resource (WitnessResources, wrDB, wrKey, wrLogging, wrNetwork)
 import Dscp.Witness.Mempool.Type (MempoolVar)
 import Dscp.Witness.Relay (RelayState)
@@ -61,8 +59,6 @@ type WitnessWorkMode ctx m =
 
     , MonadReader ctx m
 
-    , HasLens' ctx (Maybe WitnessWebParams)
-    , HasLens' ctx MetricsEndpoint
     , HasLens' ctx LoggingIO
     , HasLens' ctx MempoolVar
     , HasLens' ctx SDVars
@@ -92,14 +88,12 @@ type FullWitnessWorkMode ctx m =
 
 -- | Context is resources plus some runtime variables.
 data WitnessContext = WitnessContext
-    { _wcParams     :: !WitnessParams     -- ^ Parameters witness was started with.
-    , _wcResources  :: !WitnessResources  -- ^ Resources, allocated from params.
+    { _wcResources  :: !WitnessResources  -- ^ Resources, allocated from params.
     , _wcMempool    :: !MempoolVar
     , _wcSDActions  :: !SDVars
     , _wcRelayState :: !RelayState
     , _wcSDLock     :: !SDLock
     }
-
 
 makeLenses ''WitnessContext
 
@@ -109,10 +103,6 @@ type WitnessRealMode = RIO WitnessContext
 -- HasLens
 ---------------------------------------------------------------------
 
-instance HasLens (Maybe WitnessWebParams) WitnessContext (Maybe WitnessWebParams) where
-    lensOf = wcParams . wpWebParamsL
-instance HasLens MetricsEndpoint WitnessContext MetricsEndpoint where
-    lensOf = wcParams . wpMetricsEndpointL
 instance HasLens LoggingIO WitnessContext LoggingIO where
     lensOf = wcResources . wrLogging
 instance HasLens RocksDB WitnessContext RocksDB where

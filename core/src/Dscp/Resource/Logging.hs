@@ -1,11 +1,16 @@
+{-# LANGUAGE TypeOperators #-}
+
 -- | Logging resource.
+
 module Dscp.Resource.Logging
     ( LoggingParams(..)
     , allocLogging
     ) where
 
 import Control.Monad.Component (ComponentM, buildComponent)
-import Data.Aeson (encode)
+import Data.Aeson (FromJSON (..), encode)
+import Data.Aeson.Options (defaultOptions)
+import Data.Aeson.TH (deriveFromJSON)
 import Fmt ((+|), (|+))
 import Loot.Log (Name, NameSelector (GivenName), logInfo, modifyLogName)
 import Loot.Log.Rio (LoggingIO)
@@ -65,3 +70,12 @@ allocLogging params = buildComponent "logging" pre fin
             let configText = decodeUtf8 (encode finalConfig) :: Text
             logInfo $ "Logging config: "+|configText|+""
     fin _ = removeAllHandlers
+
+---------------------------------------------------------------------------
+-- JSON instances
+---------------------------------------------------------------------------
+
+instance FromJSON Name where
+    parseJSON = fmap fromString . parseJSON
+
+deriveFromJSON defaultOptions ''LoggingParams

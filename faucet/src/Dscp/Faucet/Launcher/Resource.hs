@@ -1,4 +1,5 @@
-{-# LANGUAGE StrictData #-}
+{-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE StrictData       #-}
 
 module Dscp.Faucet.Launcher.Resource
     ( FaucetResources (..)
@@ -12,12 +13,12 @@ import Control.Lens (makeLenses)
 import Loot.Base.HasLens (lensOf)
 import Loot.Log (Logging)
 
+import Dscp.Config
 import Dscp.Faucet.Config
 import Dscp.Faucet.Launcher.Marker
-import Dscp.Faucet.Launcher.Params
+import Dscp.Resource.AppDir
 import Dscp.Resource.Class
 import Dscp.Resource.Keys
-import Dscp.Resource.AppDir
 import Dscp.Witness.Web.Client
 
 data FaucetResources = FaucetResources
@@ -29,18 +30,21 @@ data FaucetResources = FaucetResources
 
 makeLenses ''FaucetResources
 
-instance HasFaucetConfig =>
-         AllocResource (BaseKeyParams, AppDir) (KeyResources FaucetApp) where
-    allocResource (baseParams, appDir) =
-        buildComponentR "faucet keys"
-            (linkStore baseParams Nothing appDir)
-            (\_ -> pass)
+instance AllocResource (KeyResources FaucetApp) where
+    type Deps (KeyResources FaucetApp) = (FaucetConfigRec, AppDir)
+    allocResource (faucetCfg, appDir) =
+        let baseParams = faucetCfg ^. sub #faucet . option #keys
+        in buildComponentR "faucet keys"
+           (withCoreConfig (rcast faucetCfg) $
+               linkStore baseParams Nothing appDir)
+           (\_ -> pass)
 
-instance HasFaucetConfig =>
-         AllocResource FaucetParams FaucetResources where
-    allocResource FaucetParams{..} = do
+instance AllocResource FaucetResources where
+    type Deps FaucetResources = FaucetConfigRec
+    allocResource faucetCfg = do
+        let cfg = faucetCfg ^. sub #faucet
         _frLogging <- view (lensOf @(Logging IO))
-        _frAppDir <- allocResource _fpAppDirParam
-        _frKeys <- allocResource (_fpKeyParams, _frAppDir)
-        _frWitnessClient <- allocResource _fpWitnessAddress
+        _frAppDir <- allocResource $ cfg ^. option #appDir
+        _frKeys <- allocResource (faucetCfg, _frAppDir)
+        _frWitnessClient <- allocResource $ cfg ^. option #witnessBackend
         return FaucetResources{..}

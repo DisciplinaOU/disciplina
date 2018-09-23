@@ -7,6 +7,8 @@ module Dscp.DB.Rocks.Real.Types
        ) where
 
 import Control.Lens (makeLenses)
+import Data.Aeson.Options (defaultOptions)
+import Data.Aeson.TH (deriveFromJSON)
 import qualified Database.RocksDB as Rocks
 import Loot.Base.HasLens (HasLens')
 
@@ -37,3 +39,4 @@ data RocksDB = RocksDB
     }
 
 makeLenses ''RocksDB
+deriveFromJSON defaultOptions ''RocksDBParams

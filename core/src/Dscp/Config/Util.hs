@@ -9,19 +9,32 @@
 
 module Dscp.Config.Util
     (
-      type (+++)
+      -- * Re-exports from `vinyl`
+      type (++)
+    , type (<:)
+    , rcast
+    , rreplace
 
+      -- * Re-exports from 'Loot.Config'
+    , sub
+    , option
+
+      -- * Config parsing and building
     , ConfigParams (..)
     , configParamsParser
     , ConfigBuildError (..)
     , buildConfig
+    , fillExpandedConfig
 
+      -- * Helper lenses/classes
     , HasGiven
     , giveL
     , HasGivenC
     , giveLC
     ) where
 
+import Data.Vinyl.Lens (rcast, rreplace, type (<:))
+import Data.Vinyl.TypeLevel (type (++))
 import Data.Reflection (reifySymbol)
 import GHC.TypeLits (Symbol, symbolVal, KnownSymbol)
 import Data.Reflection (Given (..))
@@ -29,22 +42,11 @@ import qualified Data.Text.Buildable
 import Data.Yaml (ParseException, decodeFileEither, FromJSON(..), withObject, (.:?))
 import Fmt (blockListF)
 import Loot.Base.HasLens (HasLens', lensOf)
-import Loot.Config (ConfigKind (Final, Partial), ConfigRec, HasLensC, finalise, lensOfC)
+import Loot.Config (ConfigKind (Final, Partial), ConfigRec, HasLensC, finalise, lensOfC, sub, option)
 import qualified Options.Applicative as Opt
 import qualified Text.Show
 
 import Dscp.Util (leftToThrow)
-
-
-----------------------------------------------------------------------------
--- Appending configs (as lists)
-----------------------------------------------------------------------------
-
--- Because there is no publicly availble type family for list concatenation.
-type family (+++) (as :: [k]) (bs :: [k]) :: [k] where
-    (+++) a '[] = a
-    (+++) '[] b = b
-    (+++) (a ': as) bs = a ': (as +++ bs)
 
 ----------------------------------------------------------------------------
 -- Building config
@@ -104,6 +106,15 @@ buildConfig ConfigParams{..} filler =
             leftToThrow ConfigIncomplete $
             finalise fileConfigFilled
         pure config
+
+-- | Utility function for filling up a config reusing existing function
+-- for a subconfig.
+fillExpandedConfig ::
+       forall xs ys . (xs <: ys)
+    => (ConfigRec 'Partial xs -> IO (ConfigRec 'Partial xs))
+    -> ConfigRec 'Partial ys
+    -> IO (ConfigRec 'Partial ys)
+fillExpandedConfig filler cfg = flip rreplace cfg <$> filler (rcast cfg)
 
 -- | CLI parser for config parameters.
 configParamsParser :: Opt.Parser ConfigParams

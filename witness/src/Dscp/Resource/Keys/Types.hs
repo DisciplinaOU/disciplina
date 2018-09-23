@@ -17,8 +17,11 @@ module Dscp.Resource.Keys.Types
 
 import Control.Lens (makeLenses)
 import Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.:), (.=))
+import Data.Aeson.Options (defaultOptions)
+import Data.Aeson.TH (deriveJSON)
 import Loot.Base.HasLens (HasLens', lensOf)
 
+import Dscp.Core.Aeson ()
 import Dscp.Core.Governance (CommitteeSecret (..))
 import Dscp.Crypto (Encrypted, PassPhrase, PublicKey, SecretKey)
 import Dscp.Util.Aeson (Base64Encoded, CustomEncoding (..), Versioned)
@@ -97,6 +100,22 @@ instance FromJSON KeyJson where
     parseJSON = withObject "secret storage" $ \o -> do
         kjEncSecretKey <- o .: "secret"
         return KeyJson{..}
+
+-- | Instances for config params related to keys.
+instance FromJSON CommitteeParams where
+  parseJSON = withObject "committee seed params" $ \o -> do
+    (committeeParamsType :: Text) <- o .: "type"
+    case committeeParamsType of
+        "committeeOpen" -> do
+            cpParticipantN <- o .: "n"
+            return $ CommitteeParamsOpen {..}
+        "committeeClosed" -> do
+            cpParticipantN <- o .: "n"
+            cpSecret <- o .: "secret"
+            return $ CommitteeParamsClosed {..}
+        _ -> fail "Governance type is invalid"
+
+deriveJSON defaultOptions ''BaseKeyParams
 
 ---------------------------------------------------------------------
 -- HasLens

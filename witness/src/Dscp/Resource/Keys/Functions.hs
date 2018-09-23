@@ -25,7 +25,6 @@ import Dscp.Resource.Keys.Types (BaseKeyParams (..), CommitteeParams (..), KeyJs
 import Dscp.System (ensureModeIs, mode600, setMode, whenPosix)
 import Dscp.Util (leftToThrow)
 import Dscp.Util.Aeson (CustomEncoding (..), Versioned (..))
-import Dscp.Witness.Config
 
 ---------------------------------------------------------------------
 -- Conversions
@@ -48,7 +47,7 @@ fromSecretJson pp KeyJson{..} = do
 
 -- | Where keyfile would lie.
 storePath
-    :: (HasWitnessConfig, Buildable (Proxy node))
+    :: Buildable (Proxy node)
     => BaseKeyParams -> AppDir -> Proxy node -> FilePath
 storePath BaseKeyParams{..} appDir nodeNameP =
     fromMaybe defPath bkpPath
@@ -58,7 +57,7 @@ storePath BaseKeyParams{..} appDir nodeNameP =
 -- | Generate key resources with respect to given committe parameters if
 -- specified, otherwise randomly.
 genStore ::
-       (HasWitnessConfig, MonadThrow m, MonadIO m, MonadLogging m)
+       (HasCoreConfig, MonadThrow m, MonadIO m, MonadLogging m)
     => Maybe CommitteeParams
     -> m (KeyResources n)
 genStore comParamsM = do
@@ -69,7 +68,7 @@ genStore comParamsM = do
               runSecureRandom keyGen
           Just (CommitteeParamsOpen i) -> do
               logInfo "Creating open committee key"
-              sec <- case gcGovernance (giveL @WitnessConfig @GenesisConfig) of
+              sec <- case gcGovernance (giveL @CoreConfig @GenesisConfig) of
                          GovCommittee (CommitteeOpen{..}) -> do
                              when (i >= commN) $
                                  throwM $ SecretConfMismatch $
@@ -82,7 +81,7 @@ genStore comParamsM = do
               pure (sk, toPublic sk)
           Just (CommitteeParamsClosed {..}) -> do
               logInfo "Creating closed committee key"
-              let addrs = case gcGovernance (giveL @WitnessConfig @GenesisConfig) of
+              let addrs = case gcGovernance (giveL @CoreConfig @GenesisConfig) of
                               GovCommittee (CommitteeClosed a) -> a
                               x -> throwM $ SecretConfMismatch $
                                             "Params were passed for closed committee, but " <>
@@ -119,7 +118,7 @@ writeStoreDumb path pp store =
 
 -- | Write given secret to store, setting appropriate access mode.
 writeStore
-    :: (MonadIO m, MonadCatch m, HasWitnessConfig)
+    :: (MonadIO m, MonadCatch m)
     => FilePath -> PassPhrase -> KeyResources n -> m ()
 writeStore path pp store = liftIO . rewrapKeyIOErrors $ do
     D.createDirectoryIfMissing True (FP.takeDirectory path)
@@ -136,7 +135,7 @@ createStore ::
        , MonadCatch m
        , MonadLogging m
        , Buildable (Proxy n)
-       , HasWitnessConfig
+       , HasCoreConfig
        )
     => FilePath
     -> Maybe CommitteeParams
@@ -156,7 +155,7 @@ createStore path comParamsM pp = do
 linkStore
     :: forall m n.
        (MonadIO m, MonadCatch m, MonadLogging m,
-        HasWitnessConfig, Buildable (Proxy n))
+        HasCoreConfig, Buildable (Proxy n))
     => BaseKeyParams -> Maybe CommitteeParams -> AppDir -> m (KeyResources n)
 linkStore params@BaseKeyParams{..} commParamsM appDir = do
     let path = storePath params appDir (Proxy :: Proxy n)

@@ -9,11 +9,12 @@ import Loot.Base.HasLens (HasCtx, lensOf)
 import Serokell.Util (modifyTVarS)
 import UnliftIO.MVar (withMVar)
 
+import Dscp.Config
 import Dscp.Core
 import Dscp.Crypto
+import Dscp.Faucet.Config
 import Dscp.Faucet.Launcher.Marker
 import Dscp.Faucet.Launcher.Mode
-import Dscp.Faucet.Launcher.Params
 import Dscp.Faucet.Variables
 import Dscp.Faucet.Web.Error
 import Dscp.Faucet.Web.Types
@@ -45,8 +46,8 @@ faucetTransferMoneyTo dest = do
 
     wc <- views (lensOf @WitnessClient) (hoistWitnessClient liftIO)
     lock <- view (lensOf @TxSendLock)
-    DryRun dryRun <- view (lensOf @DryRun)
-    TranslatedAmount transfer <- view (lensOf @TranslatedAmount)
+    let DryRun dryRun = giveL @FaucetConfig @DryRun
+        TransferredAmount transfer = giveL @FaucetConfig @TransferredAmount
 
     -- sad truth: we have to submit transactions sequentially in order to use
     -- sound nonces

@@ -18,12 +18,12 @@ import qualified Dscp.Launcher.Mode as Basic
 import Loot.Base.HasLens (HasCtx, HasLens (..))
 import Loot.Log (Logging)
 
+import Dscp.Faucet.Config
 import Dscp.Faucet.Launcher.Marker
-import Dscp.Faucet.Launcher.Params
 import Dscp.Faucet.Launcher.Resource
 import Dscp.Faucet.Variables
-import Dscp.Rio (RIO)
 import Dscp.Resource.Keys
+import Dscp.Rio (RIO)
 import Dscp.Witness.Web.Client
 
 ---------------------------------------------------------------------
@@ -33,13 +33,12 @@ import Dscp.Witness.Web.Client
 -- | Set of typeclasses which define capabilities of bare Faucet node.
 type FaucetWorkMode ctx m =
     ( Basic.BasicWorkMode m
+    , HasFaucetConfig
     , HasCtx ctx m
         [ GiftedAddresses
         , TxSendLock
         , WitnessClient
         , KeyResources FaucetApp
-        , TranslatedAmount
-        , DryRun
         ]
     )
 
@@ -48,10 +47,7 @@ type FaucetWorkMode ctx m =
 ---------------------------------------------------------------------
 
 data FaucetContext = FaucetContext
-    {
-      _fcParams    :: !FaucetParams
-      -- ^ Parameters faucet was started with.
-    , _fcResources :: !FaucetResources
+    { _fcResources :: !FaucetResources
       -- ^ Resources used by faucet.
     , _fcVariables :: !FaucetVariables
       -- ^ Variables used by faucet.
@@ -69,8 +65,6 @@ type FaucetRealMode = RIO FaucetContext
     instance HasLens (SUBRES) FaucetContext (SUBRES) where \
         lensOf = IMPL
 
-GenHasLens(TranslatedAmount      , fcParams . fpTranslatedAmount)
-GenHasLens(DryRun                , fcParams . fpDryRun)
 GenHasLens(Logging IO            , fcResources . frLogging)
 GenHasLens(KeyResources FaucetApp, fcResources . frKeys)
 GenHasLens(WitnessClient         , fcResources . frWitnessClient)
@@ -82,7 +76,7 @@ GenHasLens(TxSendLock            , fcVariables . fvTxSendLock)
 ----------------------------------------------------------------------------
 
 _sanity :: FaucetRealMode ()
-_sanity = _sanityCallee
+_sanity = withFaucetConfig (error "") _sanityCallee
   where
     _sanityCallee :: FaucetWorkMode ctx m => m ()
     _sanityCallee = pass

@@ -15,13 +15,16 @@ module Dscp.Resource.Network
     ) where
 
 import Control.Lens (makeLenses)
+import Data.Aeson (FromJSON (..), withText)
+import Data.Aeson.Options (defaultOptions)
+import Data.Aeson.TH (deriveFromJSON)
 import Data.Reflection (Given (given), give)
 import qualified Data.Set as Set
 import Loot.Base.HasLens (HasLens (..))
 import Loot.Log (Logging)
 import Loot.Network.ZMQ (PreZTNodeId, ZTGlobalEnv, ZTNetCliEnv, ZTNetServEnv, createNetCliEnv,
-                         createNetServEnv, mkZTNodeId, termNetCliEnv, termNetServEnv, ztGlobalEnv,
-                         ztGlobalEnvRelease)
+                         createNetServEnv, mkZTNodeId, parsePreZTNodeId, termNetCliEnv,
+                         termNetServEnv, ztGlobalEnv, ztGlobalEnvRelease)
 import qualified Text.Show
 
 import Dscp.Resource.Class (AllocResource (..), buildComponentR)
@@ -79,7 +82,8 @@ makeLenses ''NetCliResources
 instance HasLens ZTGlobalEnv NetCliResources ZTGlobalEnv where lensOf = ncGlobalEnv
 instance HasLens ZTNetCliEnv NetCliResources ZTNetCliEnv where lensOf = ncClientEnv
 
-instance WithNetLogging => AllocResource NetCliParams NetCliResources where
+instance WithNetLogging => AllocResource NetCliResources where
+    type Deps NetCliResources = NetCliParams
     allocResource NetCliParams {..} =
         buildComponentR "netcli" allocate release
       where
@@ -122,7 +126,8 @@ instance HasLens ZTGlobalEnv NetServResources ZTGlobalEnv where lensOf = nsGloba
 instance HasLens ZTNetCliEnv NetServResources ZTNetCliEnv where lensOf = nsClientEnv
 instance HasLens ZTNetServEnv NetServResources ZTNetServEnv where lensOf = nsServerEnv
 
-instance WithNetLogging => AllocResource NetServParams NetServResources where
+instance WithNetLogging => AllocResource NetServResources where
+    type Deps NetServResources = NetServParams
     allocResource NetServParams {..} =
         buildComponentR "netcli" allocate release
       where
@@ -139,3 +144,14 @@ instance WithNetLogging => AllocResource NetServParams NetServResources where
             termNetCliEnv _nsClientEnv
             termNetServEnv _nsServerEnv
             ztGlobalEnvRelease _nsGlobalEnv
+
+---------------------------------------------------------------------------
+-- JSON instances for params
+---------------------------------------------------------------------------
+
+instance FromJSON PreZTNodeId where
+    parseJSON = withText "ZMQ node ID" $
+        either fail pure . parsePreZTNodeId . toString
+
+deriveFromJSON defaultOptions ''NetCliParams
+deriveFromJSON defaultOptions ''NetServParams

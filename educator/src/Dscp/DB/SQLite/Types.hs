@@ -11,6 +11,10 @@ module Dscp.DB.SQLite.Types
        ) where
 
 import Control.Concurrent.Chan (Chan)
+import Data.Aeson (FromJSON (..))
+import Data.Aeson.Options (defaultOptions)
+import Data.Aeson.TH (deriveFromJSON)
+
 import Control.Lens (Prism', prism)
 import Database.SQLite.Simple (Connection)
 
@@ -49,6 +53,18 @@ data SQLiteDB = SQLiteDB
     , sdMaxPending :: Int
       -- ^ Allowed number of pending threads.
     }
+
+deriveFromJSON defaultOptions ''SQLiteRealParams
+
+-- | Isomorphism between @Maybe SQLiteRealParams@ and 'SQLiteDBMode'
+maybeToSQLiteDBLoc :: Maybe SQLiteRealParams -> SQLiteDBMode
+maybeToSQLiteDBLoc Nothing       = SQLiteInMemory
+maybeToSQLiteDBLoc (Just params) = SQLiteReal params
+
+instance FromJSON SQLiteDBMode where
+    parseJSON = fmap maybeToSQLiteDBLoc . parseJSON
+
+deriveFromJSON defaultOptions ''SQLiteParams
 
 ----------------------------------------------------------
 -- Educator schema

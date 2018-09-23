@@ -24,9 +24,11 @@ import qualified Data.ByteString.Lazy as LBS
 import Data.Reflection (Reifies (..))
 import qualified Data.SemVer as SemVer
 import Fmt ((+||), (||+))
+import Servant.Client.Core (BaseUrl, parseBaseUrl, showBaseUrl)
+import Time (KnownRatName, Time, unitsF, unitsP)
 
 import qualified Dscp.Crypto.ByteArray as BA
-import Dscp.Util (Base (..), fromBase, leftToFail, toBase)
+import Dscp.Util (Base (..), fromBase, leftToFail, nothingToFail, toBase)
 import Dscp.Util.Test
 
 -- | Often one wants to convert bytestring to JSON, but such convertion
@@ -110,3 +112,18 @@ instance ToJSON SemVer.Version where
     toJSON = String . SemVer.toText
 instance FromJSON SemVer.Version where
     parseJSON = withText "version" $ leftToFail . SemVer.fromText
+
+instance KnownRatName unit => ToJSON (Time unit) where
+    toJSON = String . toText . unitsF
+instance KnownRatName unit => FromJSON (Time unit) where
+    parseJSON = withText "time duration" $
+        nothingToFail ("Invalid time format" :: String) . unitsP . toString
+
+-- TODO: `servant-client-core` dependency in `disciplina-core` is only because
+-- of these instances. They are here because they are used simultaneously in
+-- `faucet` and `txperf`. Need to move elsewhere
+instance FromJSON BaseUrl where
+    parseJSON = withText "url" $
+        nothingToFail ("Invalid URL" :: String) . parseBaseUrl . toString
+instance ToJSON BaseUrl where
+    toJSON = String . toText . showBaseUrl

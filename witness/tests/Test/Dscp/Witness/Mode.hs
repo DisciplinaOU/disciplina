@@ -55,7 +55,6 @@ GenHasLens(SDVars, twcSDVars)
 GenHasLens(SDLock, twcSDLock)
 GenHasLens(Logging IO, twcLogging)
 GenHasLens(KeyResources WitnessNode, twcKeys)
-GenHasLens(Maybe WitnessWebParams, seeOnly Nothing)
 GenHasLens(RelayState, twcRelayState)
 GenHasLens(MetricsEndpoint, seeOnly (MetricsEndpoint Nothing))
 

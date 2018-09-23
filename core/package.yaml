@@ -45,6 +45,7 @@ library:
     - serialise
     - serokell-util
     - servant
+    - servant-client-core
     - semver
     - snowdrop-util
     - stm
@@ -53,6 +54,7 @@ library:
     - time
     - unix
     - unliftio
+    - vinyl
     - yaml
 
 tests:

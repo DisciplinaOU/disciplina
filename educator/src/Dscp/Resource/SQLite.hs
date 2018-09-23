@@ -18,7 +18,8 @@ prepareEducatorSchema db = do
     forEachConnection db applySchemaSettings
     runRIO db $ borrowConnection ensureSchemaIsSetUp
 
-instance AllocResource SQLiteParams SQLiteDB where
+instance AllocResource SQLiteDB where
+    type Deps SQLiteDB = SQLiteParams
     allocResource p = buildComponentR "SQLite DB" (openSQLiteDB' p) closeSQLiteDB
       where
         openSQLiteDB' p' = do
