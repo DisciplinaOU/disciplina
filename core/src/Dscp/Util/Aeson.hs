@@ -117,13 +117,13 @@ instance KnownRatName unit => ToJSON (Time unit) where
     toJSON = String . toText . unitsF
 instance KnownRatName unit => FromJSON (Time unit) where
     parseJSON = withText "time duration" $
-        nothingToFail ("Invalid time format" :: String) . unitsP . toString
+        nothingToFail "Invalid time format" . unitsP . toString
 
 -- TODO: `servant-client-core` dependency in `disciplina-core` is only because
 -- of these instances. They are here because they are used simultaneously in
 -- `faucet` and `txperf`. Need to move elsewhere
 instance FromJSON BaseUrl where
     parseJSON = withText "url" $
-        nothingToFail ("Invalid URL" :: String) . parseBaseUrl . toString
+        nothingToFail "Invalid URL" . parseBaseUrl . toString
 instance ToJSON BaseUrl where
     toJSON = String . toText . showBaseUrl
