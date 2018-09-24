@@ -37,7 +37,7 @@ genPublicationChain (Positive n) secret
                         }
                 in PublicationTx
                 { ptAuthor = addr
-                , ptFeesAmount = unFees $ calcFeePub feeCoefficients (mrSize sig)
+                , ptFeesAmount = unFees $ calcFeePub (fcPublication feeConfig) ptHeader
                 , ptHeader
                 }
 

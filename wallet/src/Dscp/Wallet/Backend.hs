@@ -82,7 +82,7 @@ sendTx wc sendEvent eSecretKey mPassPhrase (toList -> outs) = do
     nonce <- fromIntegral . unNonce . aiCurrentNonce <$>
              wGetAccount wc address False
 
-    txWitnessed <- pure . fixFees feeCoefficients $ \fees ->
+    txWitnessed <- pure . fixFees (fcMoney feeConfig) $ \fees ->
         let inAcc   = TxInAcc { tiaNonce = nonce, tiaAddr = address }
             inValue = Coin (sum $ map (unCoin . txOutValue) outs) `unsafeAddCoin` unFees fees
             tx      = Tx { txInAcc = inAcc, txInValue = inValue, txOuts = outs }

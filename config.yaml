@@ -2,10 +2,16 @@ demo: &demo
   core: &demo-core
     slotDuration: 10000 # 10 s
     fee:
-      minimal: 10
-      multiplier: 0.1
-      minimalPub: 10
-      multiplierPub: 0.1
+      money:
+        type: linear
+        coeffs:
+          minimal: 10
+          multiplier: 0.1
+      publication:
+        type: linear
+        coeffs:
+          minimal: 10
+          multiplier: 1
     genesis: &demo-genesis
       genesisSeed: "GromakNaRechke"
       governance:

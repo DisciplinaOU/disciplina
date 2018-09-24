@@ -6,6 +6,7 @@ import Data.Aeson (FromJSON (..), FromJSONKey (..), ToJSON (..), ToJSONKey, Valu
                    withScientific, withText, (.:))
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveFromJSON, deriveJSON)
+import Data.Typeable (gcast)
 
 import Dscp.Core.Config
 import Dscp.Core.Fees
@@ -13,7 +14,7 @@ import Dscp.Core.Foundation
 import Dscp.Core.Genesis
 import Dscp.Core.Governance
 import Dscp.Crypto
-import Dscp.Util (Base (Base16), leftToFail)
+import Dscp.Util (Base (Base16), leftToFail, nothingToFail)
 import Dscp.Util.Aeson (parseJSONSerialise, toJSONSerialise)
 
 ---------------------------------------------------------------------------
@@ -137,6 +138,7 @@ deriveJSON defaultOptions ''PublicationTxWitness
 deriveJSON defaultOptions ''PublicationTxWitnessed
 deriveJSON defaultOptions ''PublicationTx
 deriveJSON defaultOptions ''FeeCoefficients
+deriveFromJSON defaultOptions ''FeeConfig
 
 deriveFromJSON defaultOptions ''Committee
 deriveJSON defaultOptions ''GenesisDistributionElem
@@ -144,3 +146,16 @@ deriveFromJSON defaultOptions ''GenesisConfig
 
 instance FromJSON GenesisInfo where
     parseJSON = error "FromJSON GenesisInfo should never be called"
+
+instance Typeable tx => FromJSON (FeePolicy tx) where
+    parseJSON = asum . sequence
+        [ withObject "linear fee policy" $ \o -> do
+            "linear" :: Text <- o .: "type"
+            coeffs           <- o .: "coeffs"
+            return $ LinearFeePolicy coeffs
+        , withObject "unknown fee policy" $ \o -> do
+            "unknown" :: Text <- o .: "type"
+            nothingToFail unallowedPolicy $ gcast UnknownFeePolicy
+        ]
+      where
+        unallowedPolicy = "This fees policy is not applicable"

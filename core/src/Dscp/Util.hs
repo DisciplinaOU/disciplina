@@ -166,7 +166,7 @@ assertJust action message = whenNothingM action $ throwM message
 nothingToThrow :: (MonadThrow m, Exception e) => e -> Maybe a -> m a
 nothingToThrow e = maybe (throwM e) pure
 
-nothingToFail :: (MonadFail m, ToString t) => t -> Maybe a -> m a
+nothingToFail :: MonadFail m => Text -> Maybe a -> m a
 nothingToFail e = maybe (fail $ toString e) pure
 
 nothingToPanic :: Text -> Maybe a -> a

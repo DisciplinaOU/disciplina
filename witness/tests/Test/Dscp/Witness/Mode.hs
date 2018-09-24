@@ -105,11 +105,17 @@ testWitnessConfig =
         , gcDistribution = GenesisDistribution . one $ GDSpecific genesisAddressMap
         }
     feeCoefs =
-        FeeCoefficients
-        { fcMinimal       = Coin 10
-        , fcMultiplier    = 0.1
-        , fcMinimalPub    = Coin 10
-        , fcMultiplierPub = 0.0001
+        FeeConfig
+        { fcMoney = LinearFeePolicy
+            FeeCoefficients
+            { fcMinimal       = Coin 10
+            , fcMultiplier    = 0.1
+            }
+        , fcPublication = LinearFeePolicy
+            FeeCoefficients
+            { fcMinimal       = Coin 10
+            , fcMultiplier    = 0.1
+            }
         }
 
 ----------------------------------------------------------------------------
