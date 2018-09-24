@@ -58,8 +58,9 @@ knitFaceToUI
   -> UiLangFace
 knitFaceToUI walletStateRef UiFace{..} WalletFace{..} KnitFace{..} =
   UiLangFace
-    { langPutCommand = putCommand commandHandle
-    , langPutUiCommand = putUiCommand
+    { langPutCommand = putCommand False Nothing
+    , langPutUiCommand = putUiCommand False
+    , langPutUISilentCommand = putUiCommand True
     , langParse = Knit.parse
     , langPpExpr = Knit.ppExpr
     , langPpParseError = Knit.ppParseError
@@ -67,17 +68,11 @@ knitFaceToUI walletStateRef UiFace{..} WalletFace{..} KnitFace{..} =
     , langGetHelp = getKnitHelp (Proxy @components)
     }
   where
-    putCommand handle expr = do
+    putCommand silent mOp expr = do
       cid <- newUnique
-      fmap (commandIdToUI cid) . putKnitCommand (handle cid) $ expr
-    commandHandle commandId = KnitCommandHandle
-      { putCommandResult = \mtid result ->
-          whenJust (knitCommandResultToUI (commandIdToUI commandId mtid) result) putUiEvent
-      , putCommandOutput = \tid doc ->
-          putUiEvent $ knitCommandOutputToUI (commandIdToUI commandId (Just tid)) doc
-      }
+      fmap (commandIdToUI cid) . putKnitCommand (commandHandle silent mOp cid) $ expr
 
-    putUiCommand op = do
+    putUiCommand silent op = do
       walletState <- readIORef walletStateRef
       case op of
         UiSelect ws
@@ -98,12 +93,19 @@ knitFaceToUI walletStateRef UiFace{..} WalletFace{..} KnitFace{..} =
               return $ Right cid
         _ -> case opToExpr walletState op of
           Left err   -> return $ Left err
-          Right expr -> fmap Right $ putCommand (uiCommandHandle op) expr
-    uiCommandHandle op commandId = KnitCommandHandle
-      { putCommandResult = \mtid result ->
-          whenJust (resultToUI result op) $ putUiEvent . UiCommandResult (commandIdToUI commandId mtid)
-      , putCommandOutput = \_ _ ->
-          return ()
+          Right expr -> do
+            comId <- putCommand silent (Just op) expr
+            unless silent $
+              putUiEvent . UiCommandEvent comId . UiCommandWidget $ Knit.ppExpr expr
+            return $ Right comId
+
+    commandHandle silent mOp commandId = KnitCommandHandle
+      { putCommandResult = \mtid result -> do
+          unless silent $
+            whenJust (knitCommandResultToUI (commandIdToUI commandId mtid) result) putUiEvent
+          whenJust (resultToUI result =<< mOp) $ putUiEvent . UiCommandResult (commandIdToUI commandId mtid)
+      , putCommandOutput = \tid doc -> unless silent $
+          putUiEvent $ knitCommandOutputToUI (commandIdToUI commandId (Just tid)) doc
       }
 
     optString key value = if null value then [] else [Knit.ArgKw key . Knit.ExprLit . Knit.toLit . Knit.LitString $ value]
@@ -136,6 +138,15 @@ knitFaceToUI walletStateRef UiFace{..} WalletFace{..} KnitFace{..} =
             argOutputs ++
             optString "pass" usaPassphrase
           )
+      UiFee UiFeeArgs{..} -> do
+        argOutputs <- forM ufaOutputs $ \UiSendOutput{..} -> do
+          argAddress <- addrFromText usoAddress
+          argCoin <- readEither usoAmount
+          Right $ Knit.ArgKw "out" . Knit.ExprProcCall $ Knit.ProcCall "tx-out"
+            [ Knit.ArgPos . Knit.ExprLit . Knit.toLit . Knit.LitAddress $ argAddress
+            , Knit.ArgPos . Knit.ExprLit . Knit.toLit . Knit.LitNumber $ argCoin
+            ]
+        Right $ Knit.ExprProcCall (Knit.ProcCall "tx-fee" argOutputs)
       UiKill commandId ->
         Right $ Knit.ExprProcCall
           (Knit.ProcCall Knit.killCommandName
@@ -185,6 +196,11 @@ knitFaceToUI walletStateRef UiFace{..} WalletFace{..} KnitFace{..} =
         Just . UiSendCommandResult . either UiSendCommandFailure UiSendCommandSuccess $
           fromResult result >>= fromValue >>= \case
             Knit.ValueString h -> Right h
+            _ -> Left "Unrecognized return value"
+      UiFee{} ->
+        Just . UiFeeCommandResult . either UiFeeCommandFailure UiFeeCommandSuccess $
+          fromResult result >>= fromValue >>= \case
+            Knit.ValueCoin fee -> Right $ pretty fee
             _ -> Left "Unrecognized return value"
       UiNewWallet{} ->
         Just . UiNewWalletCommandResult . either UiNewWalletCommandFailure UiNewWalletCommandSuccess $
