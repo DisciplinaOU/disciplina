@@ -6,19 +6,27 @@ sample:
     # in a slot
     slotDuration: 10000
     
-    # Transaction fee parameters.
+    # Transaction fee parameters
     fee:
-      # Minimal fee for money transactions
-      minimal: 10
-      # How many DSCP tokens one byte of money transaction costs.
-      # Total fee is (minimal + size_in_bytes * multiplier)
-      multiplier: 0.1
-
-      # Minimal fee for private header publication.
-      minimalPub: 10
-      # How many DSCP tokens one transaction in a private block costs.
-      # Total fee is (minimalPub + private_tx_num * multiplierPub)
-      multiplierPub: 0.1
+      # Fee parameters for money transactions
+      money:
+        # How the fees are calculated?
+        # `linear` - fee = minimal + S * multiplier, where S
+        # is size of transaction in bytes (for money transactions)
+        type: linear
+        coeffs:
+          minimal: 10
+          multiplier: 0.1
+      # Fee parameters for private header publications
+      publication:
+        type: linear
+        # How the fees are calculated?
+        # `linear` - fee = minimal + N * multiplier, where N
+        # is number of private transactions in corresponding block
+        # (for private header publications)
+        coeffs:
+          minimal: 10
+          multiplier: 1
 
     # Parameters of genesis block
     # See more info in [./docs/config.md](documentation)
