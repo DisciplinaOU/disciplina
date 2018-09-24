@@ -33,3 +33,6 @@ stack-to-nix.yaml
 *.out
 *.pdf
 *.run.xml
+
+# Emacs
+.dir-locals.el
