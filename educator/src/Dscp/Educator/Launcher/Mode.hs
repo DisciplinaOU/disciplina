@@ -48,7 +48,7 @@ type EducatorWorkMode ctx m =
     , MonadReader ctx m
 
     , HasLens' ctx SQLiteDB
-    , HasLens' ctx (KeyResources EducatorNode)
+    , HasLens' ctx [KeyResources EducatorNode]
     , MonadThrow m
     )
 
@@ -80,8 +80,8 @@ type EducatorRealMode = RIO EducatorContext
 
 instance HasLens SQLiteDB EducatorContext SQLiteDB where
     lensOf = ecResources . lensOf @SQLiteDB
-instance HasLens (KeyResources EducatorNode) EducatorContext (KeyResources EducatorNode) where
-    lensOf = ecResources . lensOf @(KeyResources EducatorNode)
+instance HasLens [KeyResources EducatorNode] EducatorContext [KeyResources EducatorNode] where
+    lensOf = ecResources . lensOf @[KeyResources EducatorNode]
 
 instance HasLens LoggingIO EducatorContext LoggingIO where
     lensOf = ecWitnessCtx . lensOf @LoggingIO

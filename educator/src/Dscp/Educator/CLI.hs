@@ -10,7 +10,7 @@ module Dscp.Educator.CLI
 import Loot.Config (OptParser, upcast, (.::), (.:<), (.<>))
 import Options.Applicative (Parser, auto, help, long, metavar, option, strOption, switch, value)
 
-import Dscp.CommonCLI (baseKeyParamsParser, serverParamsParser, timeReadM)
+import Dscp.CommonCLI (serverParamsParser, timeReadM)
 import Dscp.DB.SQLite
 import Dscp.Educator.Config
 import Dscp.Educator.Launcher.Params (EducatorKeyParams (..))
@@ -67,7 +67,11 @@ educatorWebParamsParser = do
 
 educatorKeyParamsParser :: Parser EducatorKeyParams
 educatorKeyParamsParser =
-    EducatorKeyParams <$> baseKeyParamsParser "educator"
+    fmap EducatorKeyParams . optional . strOption $
+        long "educator-key-directory" <>
+        metavar "PATH" <>
+        help "Path to the educator secret keys directory. If not specified, \
+            \ <homeDir>/educator.key is used." -- probably should be changed
 
 educatorConfigParser :: OptParser EducatorConfig
 educatorConfigParser =

@@ -10,6 +10,7 @@ import Servant (Handler, throwError)
 import UnliftIO (UnliftIO (..))
 
 import Dscp.DB.SQLite
+import Dscp.Educator.Launcher.Mode (EducatorNode)
 import Dscp.Educator.Web.Educator.API
 import Dscp.Educator.Web.Educator.Error
 import Dscp.Educator.Web.Educator.Logic
@@ -18,11 +19,12 @@ import Dscp.Educator.Web.Educator.Types
 import Dscp.Educator.Web.Logic
 import Dscp.Educator.Web.Queries
 import Dscp.Educator.Web.Types
+import Dscp.Resource.Keys (KeyResources)
 
 educatorApiHandlers
     :: forall m ctx. MonadEducatorWeb ctx m
-    => EducatorApiHandlers m
-educatorApiHandlers =
+    => (KeyResources EducatorNode) -> EducatorApiHandlers m
+educatorApiHandlers _ = -- TODO: this will be used after implementing proper database for different keys
     EducatorApiEndpoints
     {
       -- Students
