@@ -15,6 +15,7 @@ library:
     - bytestring
     - bytestring
     - base58-bytestring
+    - cborg
     - containers
     - componentm
     - cryptonite
@@ -26,6 +27,7 @@ library:
     - fmt
     - generic-arbitrary
     - hashable
+    - HList
     - hspec
     - log-warper
     - loot-base

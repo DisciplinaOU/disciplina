@@ -29,6 +29,7 @@ _definitions:
         - MultiWayIf
         - NamedFieldPuns
         - OverloadedStrings
+        - PatternSynonyms
         - RankNTypes
         - RecordWildCards
         - ScopedTypeVariables
@@ -40,6 +41,7 @@ _definitions:
         - UndecidableInstances
         - ViewPatterns
         - TypeApplications
+        - TypeOperators
 
     - &dependencies
         - base-noprelude >= 4.9 && < 5

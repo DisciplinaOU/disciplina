@@ -23,6 +23,7 @@ extra-deps:
 - safe-exceptions-0.1.7.0
 - servant-auth-0.3.2.0
 - servant-auth-server-0.4.0.0
+- HList-0.5.0.0
 
 - git: https://github.com/serokell/auth-data-structures.git
   commit: f9a0cd66f443d7b0e04a3c8ae8d475f8344b823b
