@@ -31,10 +31,17 @@ Set up Disciplina binary cache so that you don't have to build dependencies:
 sudo $(nix-build closure.nix -A cachix --no-out-link)/bin/cachix use disciplina
 ```
 
+If you are on a single-user Nix install (`nix-shell -p nix-info --run nix-info`
+should say `multi-user?: no`), omit `sudo` in the command above.
+
 If you are on NixOS, make sure to add `https://cache.nixos.org` to `nix.binaryCaches`,
 otherwise main Nix binary cache stops working. See [cachix/cachix#128][].
 
 [cachix/cachix#128]: https://github.com/cachix/cachix/pull/128
+
+If you test Disciplina or develop software that integrates with it, run
+`nix-env -if .`. This will install Disciplina packages into your user profile.
+Then you can use `scripts/launch/node.sh` to start the nodes.
 
 For production builds, run `nix-build`.
 
