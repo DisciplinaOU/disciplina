@@ -39,6 +39,10 @@ otherwise main Nix binary cache stops working. See [cachix/cachix#128][].
 
 [cachix/cachix#128]: https://github.com/cachix/cachix/pull/128
 
+If you test Disciplina or develop software that integrates with it, run
+`nix-env -if .`. This will install Disciplina packages into your user profile.
+Then you can use `scripts/launch/node.sh` to start the nodes.
+
 For production builds, run `nix-build`.
 
 For incremental builds, run `nix-shell`. Then, use either `stack build` or
