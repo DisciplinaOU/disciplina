@@ -163,6 +163,16 @@ sample:
         # Delay between action trigger and action (e. g. time
         # between receiving student's submission and posting a grade)
         operationsDelay: "3s"
+      # Whether authentication in Student API should be optional
+      studentAPINoAuth:
+        # If enabled, primary JWT-based authentication becomes optional
+        enabled: true
+        # Address of student pretending to be author of requests to server.
+        data: 3BAyX5pUsPCFfK45adsJpj7X6waKEB1kxdvMn1Tj2VYsrJuHApTviPEpK3
+      # Whether authentication in Educator API should be optional
+      educatorAPINoAuth:
+        enabled: true
+        data: []
 
   # Faucet config
   faucet:

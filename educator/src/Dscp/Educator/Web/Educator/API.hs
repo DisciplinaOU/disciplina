@@ -26,7 +26,8 @@ import Dscp.Educator.Web.Types
 type EducatorAPI =
     "api" :> "educator" :> "v1" :> ToServant (EducatorApiEndpoints AsApi)
 
-type ProtectedEducatorAPI = Auth' EducatorAuth () :> EducatorAPI
+type ProtectedEducatorAPI =
+    Auth' [EducatorAuth, NoAuth "educator"] () :> EducatorAPI
 
 type EducatorApiHandlers m = EducatorApiEndpoints (AsServerT m)
 

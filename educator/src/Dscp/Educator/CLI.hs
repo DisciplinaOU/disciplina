@@ -8,12 +8,14 @@ module Dscp.Educator.CLI
     ) where
 
 import Loot.Config (OptParser, upcast, (.::), (.:<), (.<>))
-import Options.Applicative (Parser, auto, help, long, metavar, option, strOption, switch, value)
+import Options.Applicative (Parser, auto, flag', help, long, metavar, option, strOption, switch,
+                            value)
 
-import Dscp.CommonCLI (baseKeyParamsParser, serverParamsParser, timeReadM)
+import Dscp.CommonCLI
 import Dscp.DB.SQLite
 import Dscp.Educator.Config
 import Dscp.Educator.Launcher.Params (EducatorKeyParams (..))
+import Dscp.Educator.Web.Auth
 import Dscp.Educator.Web.Bot.Params (EducatorBotParams (..), EducatorBotSwitch (..))
 import Dscp.Educator.Web.Params (EducatorWebParams (..))
 import Dscp.Witness.CLI (witnessConfigParser)
@@ -59,10 +61,25 @@ educatorBotParamsParser = do
         then EducatorBotOn EducatorBotParams{..}
         else EducatorBotOff
 
+noAuthContextParser :: Parser (NoAuthData s) -> Parser (NoAuthContext s)
+noAuthContextParser dataParser = do
+    maybe NoAuthOffContext NoAuthOnContext <$> optional dataParser
+
 educatorWebParamsParser :: Parser EducatorWebParams
 educatorWebParamsParser = do
     ewpServerParams <- serverParamsParser "Educator"
     ewpBotParams <- educatorBotParamsParser
+    ewpEducatorAPINoAuth <- noAuthContextParser . flag' () $
+        long "educator-api-no-auth" <>
+        help "Make authentication into Educator API optional."
+    ewpStudentAPINoAuth <- noAuthContextParser . option addressReadM $
+        long "student-api-no-auth" <>
+        metavar "ADDRESS" <>
+        help "Make authentication into Student API optional. \
+             \Requires id of student which is pretended as request author. \
+             \You can still provide authentication header to specify request \
+             \author, if invalid data is passed authentication will \
+             \automatically roll back to no-auth scheme."
     return EducatorWebParams{..}
 
 educatorKeyParamsParser :: Parser EducatorKeyParams

@@ -9,6 +9,7 @@ module Dscp.CommonCLI
        , baseKeyParamsParser
        , timeReadM
        , coinReadM
+       , addressReadM
        , networkAddressParser
        , clientAddressParser
        , serverParamsParser
@@ -25,12 +26,13 @@ import Text.InterpolatedString.Perl6 (qc)
 import Time.Rational (KnownRat)
 import Time.Units (Microsecond, Millisecond, Minute, Second, Time, toUnit)
 
+import Dscp.Core.Foundation.Address
 import Dscp.Core.Foundation.Witness
 import Dscp.Crypto (mkPassPhrase)
 import Dscp.Resource.AppDir
 import Dscp.Resource.Keys (BaseKeyParams (..))
 import Dscp.Resource.Logging (LoggingParams (..))
-import Dscp.Util (leftToFail)
+import Dscp.Util
 import Dscp.Web (NetworkAddress (..), ServerParams (..), parseNetAddr)
 import Paths_disciplina_witness (version)
 
@@ -102,6 +104,10 @@ timeReadM = asum
 -- | Parses plain number to coin.
 coinReadM :: ReadM Coin
 coinReadM = leftToFail . coinFromInteger =<< auto @Integer
+
+-- | Parses address.
+addressReadM :: ReadM Address
+addressReadM = leftToPanic . addrFromText <$> str
 
 ----------------------------------------------------------------------------
 -- Utils

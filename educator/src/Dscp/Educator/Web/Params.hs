@@ -5,12 +5,17 @@ module Dscp.Educator.Web.Params
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveFromJSON)
 
+import Dscp.Educator.Web.Auth
 import Dscp.Educator.Web.Bot.Params
+import Dscp.Educator.Web.Educator.Auth ()
+import Dscp.Educator.Web.Student.Auth ()
 import Dscp.Web
 
 data EducatorWebParams = EducatorWebParams
-    { ewpServerParams :: ServerParams
-    , ewpBotParams    :: EducatorBotSwitch
+    { ewpServerParams      :: ServerParams
+    , ewpBotParams         :: EducatorBotSwitch
+    , ewpEducatorAPINoAuth :: NoAuthContext "educator"
+    , ewpStudentAPINoAuth  :: NoAuthContext "student"
     }
 
 deriveFromJSON defaultOptions ''EducatorWebParams

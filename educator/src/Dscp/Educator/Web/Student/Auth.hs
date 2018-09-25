@@ -14,7 +14,7 @@ import Servant.Auth.Server.Internal.Class (AuthArgs (..), IsAuth (..))
 
 import Dscp.Core (Student, mkAddr)
 import Dscp.Crypto (AbstractPK (..), PublicKey)
-import Dscp.Educator.Web.Auth (WithCommonAuthData (..))
+import Dscp.Educator.Web.Auth (NoAuthData, checkAuthData)
 
 ---------------------------------------------------------------------------
 -- Data types
@@ -26,7 +26,7 @@ data StudentAuth
 -- | Action to get students' public keys
 newtype GetStudentsAction = GetStudentsAction (IO [PublicKey])
 
-instance IsAuth StudentAuth (WithCommonAuthData Student) where
+instance IsAuth StudentAuth Student where
     type AuthArgs StudentAuth = '[GetStudentsAction]
     runAuth _ _ = studentAuthCheck
 
@@ -35,11 +35,18 @@ instance IsAuth StudentAuth (WithCommonAuthData Student) where
 ---------------------------------------------------------------------------
 
 -- | This function returns AuthCheck that checks the signature of the JWT.
-studentAuthCheck :: GetStudentsAction -> AuthCheck (WithCommonAuthData Student)
+studentAuthCheck :: GetStudentsAction -> AuthCheck Student
 studentAuthCheck (GetStudentsAction getStudents) = do
     students <- liftIO $ getStudents
     let pubKeyToJwk (AbstractPK pub) =
           fromKeyMaterial (OKPKeyMaterial $ Ed25519Key pub Nothing) & jwkKeyOps .~ Just [Verify]
         tryAuth pub = fmap (pub,) . jwtAuthCheck . defaultJWTSettings . pubKeyToJwk $ pub
     (publicKey, authData) <- asum . map tryAuth $ students
-    return $ WithCommonAuthData authData (mkAddr publicKey)
+    checkAuthData authData
+    return $ mkAddr publicKey
+
+---------------------------------------------------------------------------
+-- NoAuth
+---------------------------------------------------------------------------
+
+type instance NoAuthData "student" = Student

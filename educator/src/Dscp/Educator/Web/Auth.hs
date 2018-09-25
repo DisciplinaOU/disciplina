@@ -1,12 +1,15 @@
-{-# LANGUAGE DataKinds     #-}
-{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE TypeInType #-}
 
 -- | Necessary types and implementation for web server authenthication
 module Dscp.Educator.Web.Auth
        ( Auth'
        , AuthData (..)
        , checkAuthData
-       , WithCommonAuthData (..)
+
+       , NoAuth
+       , NoAuthData
+       , NoAuthContext (..)
+
        , makeAuthHeader
        ) where
 
@@ -14,12 +17,14 @@ import Crypto.JOSE.JWK ()
 import Crypto.JWT (JWTError, KeyMaterial (OKPKeyMaterial), KeyOp (Sign),
                    OKPKeyParameters (Ed25519Key), addClaim, bestJWSAlg, emptyClaimsSet,
                    encodeCompact, fromKeyMaterial, jwkKeyOps, newJWSHeader, signClaims)
-import Data.Aeson (FromJSON, Value (String), object, (.=))
+import Data.Aeson (FromJSON (..), Value (..), object, withObject, (.:), (.=))
+import Data.Kind (type (*))
 import Data.Time.Clock (UTCTime, diffUTCTime, getCurrentTime)
+import GHC.TypeLits (Symbol)
 import Network.Wai (rawPathInfo)
 import Servant ((:>), HasServer, ServantErr (..), ServerT, err401, hoistServerWithContext, route)
 import Servant.Auth.Server (AuthCheck (..), AuthResult (..), FromJWT)
-import Servant.Auth.Server.Internal.Class (AreAuths (..), runAuths)
+import Servant.Auth.Server.Internal.Class (AreAuths (..), IsAuth (..), runAuths)
 import Servant.Server.Internal.RoutingApplication (DelayedIO, addAuthCheck, delayedFailFatal,
                                                    withRequest)
 
@@ -31,7 +36,7 @@ import Dscp.Util
 ---------------------------------------------------------------------------
 
 -- | Custom authetication API type.
-data Auth' auth res
+data Auth' (auths :: [*]) res
 
 -- | A type that reperesents the data that the client has sent to authenthicate
 data AuthData = AuthData
@@ -40,17 +45,14 @@ data AuthData = AuthData
     }
     deriving Generic
 
--- | A data type that contains common authenthication data ('AuthData')
-data WithCommonAuthData a = WithCommonAuthData AuthData a
-
 ---------------------------------------------------------------------------
 -- Instances
 ---------------------------------------------------------------------------
 
 instance ( HasServer api ctxs
-         , AreAuths '[auth] ctxs (WithCommonAuthData res)
-         ) => HasServer (Auth' auth res :> api) ctxs where
-    type ServerT (Auth' auth res :> api) m = res -> ServerT api m
+         , AreAuths auths ctxs res
+         ) => HasServer (Auth' auths res :> api) ctxs where
+    type ServerT (Auth' auths res :> api) m = res -> ServerT api m
 
     hoistServerWithContext _ pc nt s = hoistServerWithContext (Proxy :: Proxy api) pc nt . s
 
@@ -60,8 +62,8 @@ instance ( HasServer api ctxs
         authMsg = "Set Authorization header with a proper JWT"
         authCheck :: DelayedIO res
         authCheck = withRequest $ \req -> do
-            let authChecks = runAuths (Proxy :: Proxy '[auth]) context
-            authRes <- liftIO $ runAuthCheck (authChecks >>= checkAuthData) req
+            let authChecks = runAuths (Proxy :: Proxy auths) context
+            authRes <- liftIO $ runAuthCheck authChecks req
             case authRes of
                 (Authenticated (r :: res)) -> return r
                 _ -> delayedFailFatal $ err401 { errHeaders = [("WWW-Authenticate", authMsg)] }
@@ -73,15 +75,45 @@ instance FromJWT AuthData
 -- Helpers
 ---------------------------------------------------------------------------
 
-checkAuthData :: WithCommonAuthData r -> AuthCheck r
-checkAuthData (WithCommonAuthData AuthData {..} r) = do
+checkAuthData :: AuthData -> AuthCheck ()
+checkAuthData AuthData {..} = do
     request <- ask
     -- request path verification
     guard (adPath == decodeUtf8 (rawPathInfo request))
     -- time verification
     curTime <- liftIO $ getCurrentTime
     guard (diffUTCTime curTime adTime <= 300)
-    return r
+
+---------------------------------------------------------------------------
+-- Disabling auth
+---------------------------------------------------------------------------
+
+-- | Do not require authentication.
+-- Type parameter @ s @ identifies 'NoAuth' so that there is 1-to-1 relation
+-- between 'NoAuth' and its 'NoAuthContext'.
+data NoAuth (s :: Symbol)
+
+-- You will possibly need to provide some data which is usually provided
+-- by normal authentication.
+type family NoAuthData (s :: Symbol) :: *
+
+-- | 'NoAuth' settings.
+data NoAuthContext s
+    = NoAuthOnContext (NoAuthData s)
+    | NoAuthOffContext
+
+instance (d ~ NoAuthData s) => IsAuth (NoAuth s) d where
+    type AuthArgs (NoAuth s) = '[NoAuthContext s]
+    runAuth _ _ = \case
+        NoAuthOnContext dat -> pure dat
+        NoAuthOffContext -> mzero
+
+instance FromJSON (NoAuthData s) => FromJSON (NoAuthContext s) where
+    parseJSON = withObject "no-auth context" $ \o -> do
+        enabled <- o .: "enabled"
+        if enabled
+            then NoAuthOnContext <$> (o .: "data")
+            else pure NoAuthOffContext
 
 ---------------------------------------------------------------------------
 -- Testing
