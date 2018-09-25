@@ -7,6 +7,7 @@ module Dscp.CommonCLI
        ( logParamsParser
        , versionOption
        , baseKeyParamsParser
+       , passphraseReadM
        , timeReadM
        , coinReadM
        , addressReadM
@@ -28,6 +29,7 @@ import Time.Units (Microsecond, Millisecond, Minute, Second, Time, toUnit)
 
 import Dscp.Core.Foundation.Address
 import Dscp.Core.Foundation.Witness
+import Dscp.Crypto (PassPhrase)
 import Dscp.Crypto (mkPassPhrase)
 import Dscp.Resource.AppDir
 import Dscp.Resource.Keys (BaseKeyParams (..))
@@ -80,7 +82,6 @@ baseKeyParamsParser who = do
          long [qc|{who}-keyfile-pass|] <>
          metavar "PASSWORD" <>
          help "Password of secret key."
-    passphraseReadM = leftToFail . first pretty . mkPassPhrase =<< str
 
 appDirParamParser :: Parser AppDirParam
 appDirParamParser = AppDirectorySpecific <$>
@@ -108,6 +109,10 @@ coinReadM = leftToFail . coinFromInteger =<< auto @Integer
 -- | Parses address.
 addressReadM :: ReadM Address
 addressReadM = leftToPanic . addrFromText <$> str
+
+-- | Parses passphrase.
+passphraseReadM :: ReadM PassPhrase
+passphraseReadM = leftToFail . first pretty . mkPassPhrase =<< str
 
 ----------------------------------------------------------------------------
 -- Utils

@@ -5,6 +5,7 @@
 module Dscp.Resource.Logging
     ( LoggingParams(..)
     , allocLogging
+    , noLogging
     ) where
 
 import Control.Monad.Component (ComponentM, buildComponent)
@@ -12,7 +13,8 @@ import Data.Aeson (FromJSON (..), encode)
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveFromJSON)
 import Fmt ((+|), (|+))
-import Loot.Log (Name, NameSelector (GivenName), logInfo, modifyLogName)
+import Loot.Log (Logging (..), Name, NameSelector (CallstackName, GivenName), logInfo,
+                 modifyLogName)
 import Loot.Log.Rio (LoggingIO)
 import Loot.Log.Warper (LoggerConfig, prepareLogWarper)
 import System.Wlog (debugPlus, lcTree, ltSeverity, maybeLogsDirB, parseLoggerConfig, productionB,
@@ -79,3 +81,13 @@ instance FromJSON Name where
     parseJSON = fmap fromString . parseJSON
 
 deriveFromJSON defaultOptions ''LoggingParams
+
+---------------------------------------------------------------------------
+-- Misc
+---------------------------------------------------------------------------
+
+noLogging :: Monad m => Logging m
+noLogging = Logging
+    { _log = \_ _ _ -> pass
+    , _logName = pure CallstackName
+    }

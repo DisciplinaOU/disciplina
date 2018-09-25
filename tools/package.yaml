@@ -25,3 +25,19 @@ executables:
       - reflection
       - serokell-util
       - servant-client
+  dscp-keygen:
+    <<: *exec-common
+    source-dirs: src/keygen
+    dependencies:
+      - aeson
+      - aeson-pretty
+      - bytestring
+      - disciplina-core
+      - disciplina-witness
+      - disciplina-educator
+      - lens
+      - named
+      - memory
+      - optparse-applicative
+      - serialise
+      - text
