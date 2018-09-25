@@ -6,7 +6,7 @@ Disciplina Style Guide
 > This style guide's aims are code beauty, readability and understandability.
 
 You can find our other formatting utilites and guidelines which expand the code style:
-* [.stylish-haskell.yaml](.stylish-haskell.yaml)
+* [.stylish-haskell.yaml](/.stylish-haskell.yaml)
 * [Universum](https://github.com/serokell/universum)
 * [Custom _HLint_ rules](https://github.com/input-output-hk/cardano-sl/blob/master/HLint.hs)
 
@@ -27,8 +27,8 @@ That's why *100* is a reasonable compromize.
 
 ### Indentation
 
-Tabs are illegal.  Use spaces for indenting.  Indent your code blocks
-with *4 spaces*.  Indent the `where` keyword with two spaces to set it
+Tabs are illegal. Use spaces for indenting. Indent your code blocks
+with *4 spaces*. Indent the `where` keyword with two spaces to set it
 apart from the rest of the code and indent the definitions in a
 `where` clause with 2 spaces.  Some examples:
 
