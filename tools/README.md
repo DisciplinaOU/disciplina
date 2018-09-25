@@ -127,3 +127,8 @@ echo '9JsCkzFH/W7SbgvgokeJTsckJs/uoAPWWwC40Y6UfFo=' | dscp-keygen --secret --com
 ```base
 echo '9JsCkzFH/W7SbgvgokeJTsckJs/uoAPWWwC40Y6UfFo=' | dscp-keygen --secret --command "educator-auth:/api/student/v1/courses"
 ```
+You can later append token with
+* `-H "Authorization: Bearer <token>"` for `curl`
+* `Authorization:Bearer\ <token>` to [`http`](https://httpie.org/).
+
+For **testing purposes** you will most probably want to always run `dscp-keygen --seed` and vary command only.
