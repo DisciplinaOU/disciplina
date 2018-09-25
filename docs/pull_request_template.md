@@ -42,5 +42,6 @@ If I changed the procedure of building a project and/or running any executable o
 - [ ] as well as subproject READMEs for all related executables
 
 Also,
+- [ ] my commit history is clean, descriptive and do not contain merge or revert commits or commits like "WIP".
 - [ ] my code complies with the [style guide](docs/code-style.md)
 - [ ] my documentation is checked with a spell checker (like [Grammarly](https://app.grammarly.com))
