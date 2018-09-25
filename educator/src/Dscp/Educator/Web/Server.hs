@@ -24,7 +24,7 @@ import UnliftIO (askUnliftIO)
 import Dscp.Crypto (PublicKey, keyGen, withIntSeed)
 import Dscp.Educator.Launcher.Mode (CombinedWorkMode, EducatorNode, EducatorWorkMode)
 import Dscp.Educator.Web.Bot (EducatorBotSwitch (..), addBotHandlers, initializeBot)
-import Dscp.Educator.Web.Educator (EducatorPublicKey (..), ProtectedEducatorAPI,
+import Dscp.Educator.Web.Educator (EducatorPublicKeys (..), ProtectedEducatorAPI,
                                    convertEducatorApiHandler, educatorApiHandlers,
                                    protectedEducatorAPI)
 import Dscp.Educator.Web.Params (EducatorWebParams (..))
@@ -35,6 +35,12 @@ import Dscp.Web (ServerParams (..), serveWeb)
 import Dscp.Web.Metrics (responseTimeMetric)
 import Dscp.Witness.Config
 import Dscp.Witness.Web
+
+import Data.Reflection
+
+import Loot.Config (option, sub)
+
+import Dscp.Educator.Config
 
 type EducatorWebAPI =
     ProtectedEducatorAPI
@@ -50,9 +56,9 @@ mkEducatorApiServer
 mkEducatorApiServer nat =
     hoistServerWithContext
         protectedEducatorAPI
-        (Proxy :: Proxy '[EducatorPublicKey])
+        (Proxy :: Proxy '[EducatorPublicKeys])
         nat
-        (\() -> toServant educatorApiHandlers)
+        (\key -> toServant (educatorApiHandlers key))
 
 mkStudentApiServer
     :: forall ctx m. EducatorWorkMode ctx m
@@ -95,10 +101,16 @@ educatorCors = cors $ const $ Just $
 serveEducatorAPIsReal :: CombinedWorkMode ctx m => Bool -> EducatorWebParams -> m ()
 serveEducatorAPIsReal withWitnessApi EducatorWebParams{..} = do
     let ServerParams{..} = ewpServerParams
-    educatorKeyResources <- view (lensOf @(KeyResources EducatorNode))
+    educatorKeyResources <- view (lensOf @[KeyResources EducatorNode])
     getStudents <- liftIO $ createGetStudentsAction
-    let educatorPublicKey = EducatorPublicKey $ educatorKeyResources ^. krPublicKey
+    let educatorPublicKey = EducatorPublicKeys educatorKeyResources
     let srvCtx = educatorPublicKey :. getStudents :. EmptyContext
+
+    let
+      educatorCfg = given :: EducatorConfigRec
+      test = educatorCfg ^. sub #educator . option #keys
+
+    liftIO $ print (length educatorKeyResources)
 
     logInfo $ "Serving Student API on "+|spAddr|+""
     unliftIO <- askUnliftIO

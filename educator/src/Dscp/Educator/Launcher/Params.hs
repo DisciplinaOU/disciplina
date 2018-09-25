@@ -8,5 +8,5 @@ import Dscp.Resource.Keys (BaseKeyParams)
 
 -- | Educator key parameters.
 newtype EducatorKeyParams = EducatorKeyParams
-    { unEducatorKeyParams :: BaseKeyParams
+    { unEducatorKeyParams :: Maybe FilePath
     } deriving (Show, FromJSON)

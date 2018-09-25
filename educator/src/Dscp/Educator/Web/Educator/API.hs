@@ -17,16 +17,18 @@ import Servant.Generic
 
 import Dscp.Core
 import Dscp.Crypto
+import Dscp.Educator.Launcher.Mode (EducatorNode)
 import Dscp.Educator.Web.Auth
 import Dscp.Educator.Web.Educator.Auth
 import Dscp.Educator.Web.Educator.Error
 import Dscp.Educator.Web.Educator.Types
 import Dscp.Educator.Web.Types
+import Dscp.Resource.Keys (KeyResources)
 
 type EducatorAPI =
     "api" :> "educator" :> "v1" :> ToServant (EducatorApiEndpoints AsApi)
 
-type ProtectedEducatorAPI = Auth' EducatorAuth () :> EducatorAPI
+type ProtectedEducatorAPI = Auth' EducatorAuth (KeyResources EducatorNode) :> EducatorAPI
 
 type EducatorApiHandlers m = EducatorApiEndpoints (AsServerT m)
 
