@@ -39,7 +39,8 @@ data StudentApiEndpoints route = StudentApiEndpoints
 type StudentAPI =
     "api" :> "student" :> "v1" :> ToServant (StudentApiEndpoints AsApi)
 
-type ProtectedStudentAPI = Auth' StudentAuth Core.Student :> StudentAPI
+type ProtectedStudentAPI =
+    Auth' [StudentAuth, NoAuth "student"] Core.Student :> StudentAPI
 
 type StudentApiHandlers m = StudentApiEndpoints (AsServerT m)
 

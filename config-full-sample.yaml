@@ -5,7 +5,7 @@ sample:
     # Slot duration in milliseconds. A block is issued once
     # in a slot
     slotDuration: 10000
-    
+
     # Transaction fee parameters
     fee:
       # Fee parameters for money transactions
@@ -40,13 +40,13 @@ sample:
         - equal: 1000
         - specific:
           - # Faucet
-            - LL4qKn62hrdLh1vkyiidEFLfCaAngaVmtu3ipGVSubhackXS4pXNbeDC
+            - 3BAyX5pNrN2UzxPZhrFAocCti3nVRUZRk7CZtudT2iLhGH6T1eq5FzqEuk
             - 1000
           - # Test key #1, secret: ffRB5uhVEV24NXsYUuw1irt9HF5i5IRWJXHJzagXU8Y=
-            - LL4qKoASaEwZGfvoQCPa2xGv3LKJQVCxaRw73p61Bj6tD8CSDcgkANf6
+            - 3BAyX5pPvmtsKAyDhtfeUZ1beJdFZzHLTHt6nHrzdGcpfagpgeysRNPyMe
             - 1000
           - # Test key #2, secret: fOhZOFr6SSnYv1/xfKPPMHdWLdQDboysJ4Q794Gezmw=
-            - LL4qKqwvLDw4eKXTt5tpCZytoyaMVVbRmVRCo1HL8zwPaNWDxBnLpKoJ
+            - 3BAyX5pSiFerJgLsJZ9XyoBDMHPtq3NLqm5AGPcBpba6W644zSiSWy3vVr
             - 1000
 
   # Witness node configuration
@@ -93,7 +93,7 @@ sample:
         # Keyfile passphrase (optional). If not given, key is encrypted with an
         # empty passphrase.
         passphrase: "qwerty123"
-        
+
       # Committee params. Used together with committee governance params
       # in order to generate committee keys from seed. Optional.
       committee:
@@ -163,6 +163,16 @@ sample:
         # Delay between action trigger and action (e. g. time
         # between receiving student's submission and posting a grade)
         operationsDelay: "3s"
+      # Whether authentication in Student API should be optional
+      studentAPINoAuth:
+        # If enabled, primary JWT-based authentication becomes optional
+        enabled: true
+        # Address of student pretending to be author of requests to server.
+        data: 3BAyX5pUsPCFfK45adsJpj7X6waKEB1kxdvMn1Tj2VYsrJuHApTviPEpK3
+      # Whether authentication in Educator API should be optional
+      educatorAPINoAuth:
+        enabled: true
+        data: []
 
   # Faucet config
   faucet:
@@ -186,7 +196,7 @@ sample:
 
     # Backend Witness address
     witnessBackend: witness.disciplina.io:8001
-    
+
     # Amount of money to be transferred with a single transaction
     transferredAmount: 20
 

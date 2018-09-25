@@ -23,6 +23,7 @@ import UnliftIO (askUnliftIO)
 
 import Dscp.Crypto (PublicKey, keyGen, withIntSeed)
 import Dscp.Educator.Launcher.Mode (CombinedWorkMode, EducatorNode, EducatorWorkMode)
+import Dscp.Educator.Web.Auth
 import Dscp.Educator.Web.Bot (EducatorBotSwitch (..), addBotHandlers, initializeBot)
 import Dscp.Educator.Web.Educator (EducatorPublicKey (..), ProtectedEducatorAPI,
                                    convertEducatorApiHandler, educatorApiHandlers,
@@ -50,7 +51,7 @@ mkEducatorApiServer
 mkEducatorApiServer nat =
     hoistServerWithContext
         protectedEducatorAPI
-        (Proxy :: Proxy '[EducatorPublicKey])
+        (Proxy :: Proxy '[EducatorPublicKey, NoAuthContext "educator"])
         nat
         (\() -> toServant educatorApiHandlers)
 
@@ -98,7 +99,9 @@ serveEducatorAPIsReal withWitnessApi EducatorWebParams{..} = do
     educatorKeyResources <- view (lensOf @(KeyResources EducatorNode))
     getStudents <- liftIO $ createGetStudentsAction
     let educatorPublicKey = EducatorPublicKey $ educatorKeyResources ^. krPublicKey
-    let srvCtx = educatorPublicKey :. getStudents :. EmptyContext
+    let srvCtx = educatorPublicKey :. ewpEducatorAPINoAuth :.
+                 getStudents :. ewpStudentAPINoAuth :.
+                 EmptyContext
 
     logInfo $ "Serving Student API on "+|spAddr|+""
     unliftIO <- askUnliftIO

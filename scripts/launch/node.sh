@@ -60,6 +60,8 @@ educator_params="
 --educator-gen-key
 --sql-path $tmp_files/educator.db
 --educator-listen 127.0.0.1:8090
+--educator-api-no-auth
+--student-api-no-auth 3BAyX5pUsPCFfK45adsJpj7X6waKEB1kxdvMn1Tj2VYsrJuHApTviPEpK3
 "
 
 # witness params (and educator's as well)
