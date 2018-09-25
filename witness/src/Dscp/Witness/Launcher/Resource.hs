@@ -16,7 +16,6 @@ import Loot.Log.Rio (LoggingIO)
 
 import Control.Lens (makeLenses)
 import Loot.Base.HasLens (HasLens (..))
-import Loot.Network.ZMQ (ZTGlobalEnv, ZTNetCliEnv, ZTNetServEnv)
 
 import Dscp.Config
 import Dscp.DB.Rocks.Real (RocksDB)
@@ -25,6 +24,7 @@ import Dscp.Resource.Class (AllocResource (..), buildComponentR)
 import Dscp.Resource.Keys (KeyResources (..), linkStore)
 import Dscp.Resource.Network (NetLogging (..), NetServResources, withNetLogging)
 import Dscp.Resource.Rocks ()
+import Dscp.Util.HasLens
 import Dscp.Witness.Config
 import Dscp.Witness.Launcher.Marker (WitnessNode)
 import Dscp.Witness.Launcher.Params (WitnessKeyParams (..))
@@ -41,16 +41,8 @@ data WitnessResources = WitnessResources
 
 makeLenses ''WitnessResources
 
-instance HasLens LoggingIO WitnessResources LoggingIO where
-    lensOf = wrLogging
-instance HasLens RocksDB WitnessResources RocksDB where
-    lensOf = wrDB
-instance HasLens ZTGlobalEnv WitnessResources ZTGlobalEnv where
-    lensOf = wrNetwork . lensOf @ZTGlobalEnv
-instance HasLens ZTNetCliEnv WitnessResources ZTNetCliEnv where
-    lensOf = wrNetwork . lensOf @ZTNetCliEnv
-instance HasLens ZTNetServEnv WitnessResources ZTNetServEnv where
-    lensOf = wrNetwork . lensOf @ZTNetServEnv
+deriveHasLensDirect ''WitnessResources
+deriveHasLens 'wrNetwork ''WitnessResources ''NetServResources
 
 instance AllocResource (KeyResources WitnessNode) where
     type Deps (KeyResources WitnessNode) = (WitnessConfigRec, AppDir)

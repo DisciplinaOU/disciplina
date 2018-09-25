@@ -7,7 +7,7 @@ module Dscp.Witness.Launcher.Params
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveFromJSON)
 
-import Dscp.Resource.Keys.Types (BaseKeyParams, CommitteeParams)
+import Dscp.Resource.Keys (BaseKeyParams, CommitteeParams)
 
 -- | Witness key parameters.
 data WitnessKeyParams = WitnessKeyParams

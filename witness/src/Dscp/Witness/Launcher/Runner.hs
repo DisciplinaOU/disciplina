@@ -16,7 +16,7 @@ import Dscp.Resource.Keys (krPublicKey)
 import Dscp.Rio (runRIO)
 import Dscp.Snowdrop.Actions (initSDActions)
 import Dscp.Witness.Config
-import Dscp.Witness.Launcher.Mode (WitnessContext (..), WitnessRealMode)
+import Dscp.Witness.Launcher.Mode
 import Dscp.Witness.Launcher.Resource (WitnessResources (..), wrKey)
 import Dscp.Witness.Mempool (newMempoolVar)
 import qualified Dscp.Witness.Relay as Relay
