@@ -3,7 +3,7 @@
 
 -- | Necessary types and implementation for Student authenthication
 module Dscp.Educator.Web.Student.Auth
-       ( GetStudentsAction (..)
+       ( StudentCheckAction (..)
        , StudentAuth
        ) where
 
@@ -22,10 +22,10 @@ import Dscp.Educator.Web.Auth
 data StudentAuth
 
 -- | Action to get students' public keys
-newtype GetStudentsAction = GetStudentsAction (IO [PublicKey])
+newtype StudentCheckAction = StudentCheckAction (PublicKey -> IO Bool)
 
 instance IsAuth StudentAuth Student where
-    type AuthArgs StudentAuth = '[GetStudentsAction]
+    type AuthArgs StudentAuth = '[StudentCheckAction]
     runAuth _ _ = studentAuthCheck
 
 ---------------------------------------------------------------------------
@@ -33,11 +33,11 @@ instance IsAuth StudentAuth Student where
 ---------------------------------------------------------------------------
 
 -- | This function returns AuthCheck that checks the signature of the JWT.
-studentAuthCheck :: GetStudentsAction -> AuthCheck Student
-studentAuthCheck (GetStudentsAction getStudents) = do
+studentAuthCheck :: StudentCheckAction -> AuthCheck Student
+studentAuthCheck (StudentCheckAction checkStudent) = do
     pk <- checkAuthBasic
-    students <- liftIO getStudents
-    asum $ map (\pk' -> guard (pk `constTimeEq` pk')) students
+    good <- liftIO $ checkStudent pk
+    guard good
     return $ mkAddr pk
 
 ---------------------------------------------------------------------------
