@@ -49,3 +49,7 @@ For production builds, run `nix-build`.
 For incremental builds, run `nix-shell`. Then, use either `stack build` or
 `cabal new-build all` as you normally would. This will only build local packages,
 all dependencies are managed by Nix.
+
+If you prefer to let Stack handle Haskell dependencies instead of Nix, or if 
+the above doesn't work for you for whatever reason, leave `nix-shell` and build
+with `stack build --nix`. In that case, Nix will only provide native deps.
