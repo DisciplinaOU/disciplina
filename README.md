@@ -53,3 +53,9 @@ all dependencies are managed by Nix.
 If you prefer to let Stack handle Haskell dependencies instead of Nix, or if 
 the above doesn't work for you for whatever reason, leave `nix-shell` and build
 with `stack build --nix`. In that case, Nix will only provide native deps.
+
+## Issue tracker
+
+We use [YouTrack](https://issues.serokell.io/issues/DSCP) as our issue
+tracker. You can login using your GitHub account to leave a comment or
+create a new issue.
