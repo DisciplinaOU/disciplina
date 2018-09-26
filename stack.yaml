@@ -97,5 +97,4 @@ extra-deps:
 apply-ghc-options: everything
 
 nix:
-  enable: true
   shell-file: shell-native.nix
