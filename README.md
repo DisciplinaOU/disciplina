@@ -33,7 +33,7 @@ otherwise main Nix binary cache stops working. See [cachix/cachix#128][].
 Next, install Nix with [NixOS/nix#2409][] patch:
 
 ```sh
-nix-env -f https://github.com/serokell/nixpkgs/archive/master.tar.gz -iA nix
+nix-env -f closure.nix -iA nix
 ```
 
 [Nix]: https://nixos.org/nix/
