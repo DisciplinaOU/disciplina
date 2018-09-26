@@ -1,3 +1,4 @@
+{-# LANGUAGE PackageImports       #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
 -- | Actual implementations of abstract crypto primitives used in Dscp.
@@ -31,8 +32,8 @@ module Dscp.Crypto.Impl
 
 import Crypto.Error (CryptoFailable (..))
 import Crypto.Hash.Algorithms (Blake2b_256)
-import Crypto.Random (ChaChaDRG, MonadPseudoRandom, drgNewSeed, seedFromBinary, seedFromInteger,
-                      withDRG)
+import "cryptonite" Crypto.Random (ChaChaDRG, MonadPseudoRandom, drgNewSeed, seedFromBinary,
+                                   seedFromInteger, withDRG)
 import qualified Data.ByteString as BS
 import Fmt (build, (+|), (|+))
 

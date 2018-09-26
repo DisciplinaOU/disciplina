@@ -7,14 +7,12 @@ module Dscp.Educator.Web.Student.Auth
        , StudentAuth
        ) where
 
-import Crypto.JOSE.JWK (KeyMaterial (..), KeyOp (..), OKPKeyParameters (..), jwkKeyOps)
-import Crypto.JWT (fromKeyMaterial)
-import Servant.Auth.Server (AuthCheck (..), defaultJWTSettings, jwtAuthCheck)
+import Servant.Auth.Server (AuthCheck (..))
 import Servant.Auth.Server.Internal.Class (AuthArgs (..), IsAuth (..))
 
-import Dscp.Core (Student, mkAddr)
-import Dscp.Crypto (AbstractPK (..), PublicKey)
-import Dscp.Educator.Web.Auth (NoAuthData, checkAuthData)
+import Dscp.Core
+import Dscp.Crypto
+import Dscp.Educator.Web.Auth
 
 ---------------------------------------------------------------------------
 -- Data types
@@ -37,13 +35,10 @@ instance IsAuth StudentAuth Student where
 -- | This function returns AuthCheck that checks the signature of the JWT.
 studentAuthCheck :: GetStudentsAction -> AuthCheck Student
 studentAuthCheck (GetStudentsAction getStudents) = do
-    students <- liftIO $ getStudents
-    let pubKeyToJwk (AbstractPK pub) =
-          fromKeyMaterial (OKPKeyMaterial $ Ed25519Key pub Nothing) & jwkKeyOps .~ Just [Verify]
-        tryAuth pub = fmap (pub,) . jwtAuthCheck . defaultJWTSettings . pubKeyToJwk $ pub
-    (publicKey, authData) <- asum . map tryAuth $ students
-    checkAuthData authData
-    return $ mkAddr publicKey
+    pk <- checkAuthBasic
+    students <- liftIO getStudents
+    asum $ map (\pk' -> guard (pk `constTimeEq` pk')) students
+    return $ mkAddr pk
 
 ---------------------------------------------------------------------------
 -- NoAuth

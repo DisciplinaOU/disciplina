@@ -17,6 +17,7 @@ library:
     - base58-bytestring
     - containers
     - componentm
+    - crypto-api
     - cryptonite
     - cryptonite-openssl
     - data-default

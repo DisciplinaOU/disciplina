@@ -16,7 +16,7 @@ import Crypto.JOSE (CompactJWS, Error, FromCompact (..), HasJwk (jwk), HeaderPar
                     JWSHeader, KeyMaterial (..), OKPKeyParameters (..), ToCompact (..), asPublicKey,
                     bestJWSAlg, fromKeyMaterial, header, jwkMaterial, newJWSHeader, param, signJWS,
                     signatures, verifyJWS')
-import Crypto.Random (MonadRandom (..))
+import Crypto.Random.Types (MonadRandom (..))
 
 import Dscp.Crypto.Impl
 import Dscp.Crypto.Signing.Class
