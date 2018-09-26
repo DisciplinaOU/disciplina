@@ -20,6 +20,18 @@ steps:
     agents:
       system: x86_64-darwin
     label: build-darwin
+    
+  - command: nix-build shell.nix --no-out-link
+    agents:
+      system: x86_64-linux
+    label: shell
+
+  - command: nix-build shell.nix --no-out-link
+    agents:
+      system: x86_64-darwin
+    label: shell-darwin
+
+  - wait
 
   - command: nix-build release.nix -A disciplina-wallet-flatpak -o disciplina-wallet.flatpak
     agents:
@@ -34,16 +46,6 @@ steps:
     artifact_paths:
     - haddock.tar.gz
     label: haddock
-
-  - command: nix-build shell.nix --no-out-link
-    agents:
-      system: x86_64-linux
-    label: shell
-
-  - command: nix-build shell.nix --no-out-link
-    agents:
-      system: x86_64-darwin
-    label: shell-darwin
 
   - command: nix-build specs -o specs/result
     agents:
