@@ -1,4 +1,4 @@
-{ pkgs ? import ./closure.nix }: with pkgs;
+{ pkgs ? import ./pkgs.nix }: with pkgs;
 
 stdenv.mkDerivation rec {
   name = "disciplina";
