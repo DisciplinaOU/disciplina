@@ -19,7 +19,7 @@ import Crypto.JWT (JWTError, KeyMaterial (OKPKeyMaterial), KeyOp (Sign),
                    encodeCompact, fromKeyMaterial, jwkKeyOps, newJWSHeader, signClaims)
 import Data.Aeson (FromJSON (..), Value (..), object, withObject, (.:), (.=))
 import Data.Kind (type (*))
-import Data.Time.Clock (UTCTime, diffUTCTime, getCurrentTime)
+import Data.Time.Clock (NominalDiffTime, UTCTime, diffUTCTime, getCurrentTime)
 import GHC.IO.Unsafe (unsafePerformIO)
 import GHC.TypeLits (Symbol)
 import Network.Wai (rawPathInfo)
@@ -76,6 +76,12 @@ instance FromJWT AuthData
 -- Helpers
 ---------------------------------------------------------------------------
 
+-- | Authentication header timeout in seconds.
+-- TODO: 1) make it configurable via config file
+--       2) isn't 5 minutes too long?
+authTimeout :: NominalDiffTime
+authTimeout = 300
+
 checkAuthData :: AuthData -> AuthCheck ()
 checkAuthData AuthData {..} = do
     request <- ask
@@ -83,7 +89,7 @@ checkAuthData AuthData {..} = do
     guard (adPath == decodeUtf8 (rawPathInfo request))
     -- time verification
     curTime <- liftIO $ getCurrentTime
-    guard (diffUTCTime curTime adTime <= 300)
+    guard (diffUTCTime curTime adTime <= authTimeout)
 
 ---------------------------------------------------------------------------
 -- Disabling auth

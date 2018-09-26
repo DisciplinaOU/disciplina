@@ -27,6 +27,7 @@ library:
     - generic-arbitrary
     - hashable
     - hspec
+    - jose
     - log-warper
     - loot-base
     - loot-config
@@ -68,6 +69,7 @@ tests:
       - containers
       - disciplina-core
       - hspec
+      - jose
       - tasty
       - tasty-discover
       - tasty-hspec
