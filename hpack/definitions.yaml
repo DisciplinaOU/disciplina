@@ -29,6 +29,7 @@ _definitions:
         - MultiWayIf
         - NamedFieldPuns
         - OverloadedStrings
+        - PatternSynonyms
         - RankNTypes
         - RecordWildCards
         - ScopedTypeVariables

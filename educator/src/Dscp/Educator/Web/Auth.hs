@@ -10,7 +10,7 @@ module Dscp.Educator.Web.Auth
        , NoAuthData
        , NoAuthContext (..)
 
-       , makeAuthHeader
+       , makeAuthToken
        ) where
 
 import Crypto.JOSE.JWK ()
@@ -20,6 +20,7 @@ import Crypto.JWT (JWTError, KeyMaterial (OKPKeyMaterial), KeyOp (Sign),
 import Data.Aeson (FromJSON (..), Value (..), object, withObject, (.:), (.=))
 import Data.Kind (type (*))
 import Data.Time.Clock (UTCTime, diffUTCTime, getCurrentTime)
+import GHC.IO.Unsafe (unsafePerformIO)
 import GHC.TypeLits (Symbol)
 import Network.Wai (rawPathInfo)
 import Servant ((:>), HasServer, ServantErr (..), ServerT, err401, hoistServerWithContext, route)
@@ -123,8 +124,8 @@ instance FromJSON (NoAuthData s) => FromJSON (NoAuthContext s) where
 -- You can pass this to @curl@ as @-H "Authorization: Bearer <produced text>"@.
 -- Second arguments stands for endpoint name, example:
 -- @/api/educator/v1/students@.
-makeAuthHeader :: SecretKey -> Text -> IO Text
-makeAuthHeader secretKey endpoint = do
+makeAuthToken :: SecretKey -> Text -> Text
+makeAuthToken secretKey endpoint = unsafePerformIO $ do
     eSignedJWT <- runExceptT $ do
         alg <- bestJWSAlg jwkSk
         signClaims jwkSk (newJWSHeader ((), alg)) claims

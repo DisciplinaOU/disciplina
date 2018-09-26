@@ -29,6 +29,7 @@ module Dscp.Util
        , leftToPanic
        , leftToFailWith
        , leftToPanicWith
+       , eitherToMaybe
        , mappendLefts
 
          -- * Formatting
@@ -182,7 +183,9 @@ leftToThrow
 leftToThrow wrapErr = either (throwM . wrapErr) pure
 
 leftToFail
-    :: (MonadFail m, ToString s) => Either s a -> m a
+    :: forall s m a.
+       (MonadFail m, ToString s)
+    => Either s a -> m a
 leftToFail = either (fail . toString) pure
 
 leftToPanic
@@ -198,6 +201,9 @@ leftToPanicWith
     :: ToText s => Text -> Either s a -> a
 leftToPanicWith prefix =
     either error identity . first (prefixed (prefix <> ": ") . toText)
+
+eitherToMaybe :: Either e a -> Maybe a
+eitherToMaybe = either (\_ -> Nothing) Just
 
 mappendLefts :: Monoid m => Either m () -> Either m () -> Either m ()
 mappendLefts (Left a) (Left b) = Left (mappend a b)

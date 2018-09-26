@@ -3,8 +3,13 @@
 -- the predefined test genesis instead of providing a key explicitly.
 
 module Dscp.Resource.Keys.Functions
-    ( genStore
+    ( toKeyfileContent
+    , fromKeyfileContent
+    , mkStore
+    , genStore
+    , readStore
     , linkStore
+    , toSecretJson
     ) where
 
 import Data.Aeson (eitherDecode', encode)
@@ -16,8 +21,7 @@ import System.FilePath ((</>))
 import qualified System.FilePath as FP
 
 import Dscp.Core
-import Dscp.Crypto (PassPhrase, decrypt, emptyPassPhrase, encrypt, keyGen, runSecureRandom,
-                    toPublic)
+import Dscp.Crypto
 import Dscp.Resource.AppDir
 import Dscp.Resource.Keys.Error (KeyInitError (..), rewrapKeyIOErrors)
 import Dscp.Resource.Keys.Types (BaseKeyParams (..), CommitteeParams (..), KeyJson (..),
@@ -30,16 +34,23 @@ import Dscp.Util.Aeson (CustomEncoding (..), Versioned (..))
 -- Conversions
 ---------------------------------------------------------------------
 
-toSecretJson :: PassPhrase -> KeyResources n -> KeyJson
-toSecretJson pp KeyResources{..} =
-    let kjEncSecretKey = CustomEncoding $ encrypt pp _krSecretKey
+toSecretJson :: PassPhrase -> SecretKey -> KeyJson
+toSecretJson pp secret =
+    let kjEncSecretKey = CustomEncoding $ encrypt pp secret
     in KeyJson{..}
 
-fromSecretJson :: MonadThrow m => PassPhrase -> KeyJson -> m (KeyResources n)
+fromSecretJson :: MonadThrow m => PassPhrase -> KeyJson -> m SecretKey
 fromSecretJson pp KeyJson{..} = do
-    sk <- decrypt pp (unCustomEncoding kjEncSecretKey)
+    decrypt pp (unCustomEncoding kjEncSecretKey)
         & leftToThrow SecretWrongPassPhraseError
-    return $ KeyResources sk (toPublic sk)
+
+toKeyfileContent :: PassPhrase -> SecretKey -> KeyfileContent
+toKeyfileContent pp sk = Versioned $ toSecretJson pp sk
+
+fromKeyfileContent
+    :: MonadThrow m
+    => PassPhrase -> KeyfileContent -> m SecretKey
+fromKeyfileContent pp (Versioned content) = fromSecretJson pp content
 
 ---------------------------------------------------------------------
 -- Storage operations
@@ -53,6 +64,10 @@ storePath BaseKeyParams{..} appDir nodeNameP =
     fromMaybe defPath bkpPath
   where
     defPath = appDir </> (nodeNameP |+ ".key")
+
+-- | Make store from secret key.
+mkStore :: SecretKey -> KeyResources n
+mkStore sk = KeyResources sk (toPublic sk)
 
 -- | Generate key resources with respect to given committe parameters if
 -- specified, otherwise randomly.
@@ -106,7 +121,7 @@ readStore path pp = do
         liftIO $ LBS.readFile path
     Versioned mid <- eitherDecode' @KeyfileContent content
         & leftToThrow (SecretParseError . toText)
-    fromSecretJson pp mid
+    mkStore <$> fromSecretJson pp mid
 
 -- | Write given secret to store.
 writeStoreDumb
@@ -114,7 +129,7 @@ writeStoreDumb
 writeStoreDumb path pp store =
     LBS.writeFile path $
     encode @KeyfileContent $
-    Versioned $ toSecretJson pp store
+    Versioned $ toSecretJson pp (_krSecretKey store)
 
 -- | Write given secret to store, setting appropriate access mode.
 writeStore
