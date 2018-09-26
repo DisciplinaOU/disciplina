@@ -11,7 +11,7 @@ module Dscp.Crypto.JWS
        , verifyJWitness
        ) where
 
-import Control.Lens (_Just)
+import Control.Lens (AsEmpty, Cons, _Just)
 import Crypto.JOSE (CompactJWS, Error, FromCompact (..), HasJwk (jwk), HeaderParam (..), JWK,
                     JWSHeader, KeyMaterial (..), OKPKeyParameters (..), ToCompact (..), asPublicKey,
                     bestJWSAlg, fromKeyMaterial, header, jwkMaterial, newJWSHeader, param, signJWS,
@@ -86,7 +86,9 @@ instance FromCompact JWitness where
 -- error only if secret key is missing from 'JWK'. As long as we create
 -- 'JWK' from 'SecretKey', guaranteeing that such error will not be thrown,
 -- this function is really not partial.
-signJWitness :: SecretKey -> ByteString -> JWitness
+signJWitness
+    :: Cons s s Word8 Word8
+    => SecretKey -> s -> JWitness
 signJWitness sk payload =
     JWitness . errToPanic . runFakeRandom . runExceptT $
     signJWS payload $ pure (hdr, key)
@@ -96,7 +98,9 @@ signJWitness sk payload =
 
 -- | Given a JWS with public key included, verify that JWS
 -- against included public key and return public key and payload.
-verifyJWitness :: JWitness -> Either Text (PublicKey, ByteString)
+verifyJWitness
+    :: (Cons s s Word8 Word8, AsEmpty s)
+    => JWitness -> Either Text (PublicKey, s)
 verifyJWitness witness = do
     key <- getJWitnessKey witness
     pk <- jwkToPublic key
@@ -111,11 +115,11 @@ verifyJWitness witness = do
 -- for given JWK exists, and panics otherwise. For Ed25519
 -- this always works (see source for 'Crypto.JOSE.JWK.bestJWSAlg')
 --
--- It also only works only for asymmetric keys, for which
+-- It also works only for asymmetric keys, for which
 -- a public key actually exists (obviously).
 --
 -- This function also creates only protected headers, because
--- we use only them.
+-- we don't care about unprotected ones.
 jwsHeaderWithKey :: JWK -> JWSHeader ()
 jwsHeaderWithKey key =
     newJWSHeader ((), alg) &
