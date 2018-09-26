@@ -23,7 +23,8 @@ sudo $(nix-build closure.nix -A cachix --no-out-link)/bin/cachix use disciplina
 ```
 
 If you are on a single-user Nix install (`nix-shell -p nix-info --run nix-info`
-should say `multi-user?: no`), omit `sudo` in the command above.
+should say `multi-user?: no`), omit `sudo` in the command above. You will see
+`No permission` errors, that's fine.
 
 If you are on NixOS, make sure to add `https://cache.nixos.org` to `nix.binaryCaches`,
 otherwise main Nix binary cache stops working. See [cachix/cachix#128][].
