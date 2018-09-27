@@ -33,6 +33,7 @@ module Dscp.Config.Util
     , giveLC
     ) where
 
+import Control.Applicative.Combinators.NonEmpty as NonEmpty (some)
 import Data.Vinyl.Lens (rcast, rreplace, type (<:))
 import Data.Vinyl.TypeLevel (type (++))
 import Data.Reflection (reifySymbol)
@@ -70,13 +71,14 @@ instance Exception ConfigBuildError
 
 -- | Configuration parameters.
 data ConfigParams = ConfigParams
-    { cpPath :: FilePath
-      -- ^ Pass to the configuration file.
+    { cpPaths :: NonEmpty FilePath
+      -- ^ Paths to the configuration files.
     , cpConfigKey :: String
       -- ^ Configuration key.
     } deriving (Show)
 
 newtype ConfigWithKey (s :: Symbol) o = ConfigWithKey o
+    deriving (Semigroup)
 
 instance (KnownSymbol s, FromJSON o) => FromJSON (ConfigWithKey s o) where
     parseJSON =
@@ -87,8 +89,9 @@ instance (KnownSymbol s, FromJSON o) => FromJSON (ConfigWithKey s o) where
              config <- maybe failNothing pure configM
              ConfigWithKey <$> parseJSON config
 
--- | Reads config file and fills missing values with ones in given default
--- config.
+-- | Reads config files and fills missing values with ones in given default
+-- config. If multiple config files are provided, they are override-merged.
+-- Merging only works for vinyl records in config though.
 -- Function has complex constraint you don't need to bother with, it will be
 -- satisfied if you make up config type properly.
 -- TODO: consider CLI params as well
@@ -100,7 +103,7 @@ buildConfig ::
 buildConfig ConfigParams{..} filler =
     reifySymbol cpConfigKey $ \(_ :: Proxy s) -> liftIO $ do
         ((ConfigWithKey fileConfig) :: ConfigWithKey s (ConfigRec 'Partial o)) <-
-            decodeFileEither cpPath >>= leftToThrow ConfigReadError
+            map sconcat . forM cpPaths $ decodeFileEither >=> leftToThrow ConfigReadError
         fileConfigFilled <- filler fileConfig
         config <-
             leftToThrow ConfigIncomplete $
@@ -119,7 +122,7 @@ fillExpandedConfig filler cfg = flip rreplace cfg <$> filler (rcast cfg)
 -- | CLI parser for config parameters.
 configParamsParser :: Opt.Parser ConfigParams
 configParamsParser = do
-    cpPath <- confPathParser
+    cpPaths <- NonEmpty.some confPathParser
     cpConfigKey <- confKeyParser
     pure ConfigParams {..}
   where
@@ -127,7 +130,9 @@ configParamsParser = do
         Opt.short 'c' <>
         Opt.long "config" <>
         Opt.metavar "FILEPATH" <>
-        Opt.help "Path to configuration file."
+        Opt.help "Path to configuration file. Multiple -c options can \
+                 \be provided, in which case configuration is merged. \
+                 \The order matters, the latter one overrides the former."
     confKeyParser = Opt.strOption $
         Opt.long "config-key" <>
         Opt.metavar "STRING" <>

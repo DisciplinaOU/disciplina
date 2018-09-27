@@ -36,6 +36,7 @@ library:
     - mon
     - o-clock
     - optparse-applicative
+    - parser-combinators
     - prettyprinter
     - QuickCheck
     - quickcheck-instances
