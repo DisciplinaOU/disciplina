@@ -54,7 +54,7 @@ steps:
     - specs/result/*.pdf
     label: specs
 
-  - command: nix-build release.nix -A disciplina-static --no-out-link
+  - command: nix-build release.nix -A disciplina --no-out-link
     agents:
       system: x86_64-linux
     label: static

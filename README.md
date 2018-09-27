@@ -41,8 +41,8 @@ nix-env -f closure.nix -iA nix
 [NixOS/nix#2409]: https://github.com/NixOS/nix/pull/2409
 
 If you test Disciplina or develop software that integrates with it, run
-`nix-env -if .`. This will install Disciplina packages into your user profile.
-Then you can use `scripts/launch/node.sh` to start the nodes.
+`nix-env -f release.nix -iA disciplina`. This will install Disciplina packages
+into your user profile. Then you can use `scripts/launch/node.sh` to start nodes.
 
 For production builds, run `nix-build`.
 

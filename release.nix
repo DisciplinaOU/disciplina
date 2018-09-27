@@ -21,6 +21,15 @@ let
 in
 
 rec {
+  disciplina = symlinkJoin {
+    name = "disciplina";
+    paths = with project; map haskell.lib.justStaticExecutables [
+      disciplina-educator
+      disciplina-faucet
+      disciplina-witness
+    ];
+  };
+
   disciplina-config = runCommand "disciplina-config.yaml" {} "cp ${./config.yaml} $out";
 
   disciplina-haddock = with lib;
@@ -39,15 +48,6 @@ rec {
   disciplina-hlint = runCommand "hlint.html" {} ''
     ${hlint}/bin/hlint ${source} --no-exit-code --report=$out -j
   '';
-
-  disciplina-static = symlinkJoin {
-    name = "disciplina-static";
-    paths = with project; map haskell.lib.justStaticExecutables [
-      disciplina-educator
-      disciplina-faucet
-      disciplina-witness
-    ];
-  };
 
   disciplina-trailing-whitespace = runCheck ''
     for f in $(find ${source} -type f); do
