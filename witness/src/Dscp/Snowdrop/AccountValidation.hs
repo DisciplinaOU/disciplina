@@ -131,7 +131,8 @@ preValidateSimpleMoneyTransfer =
         let balanceBefore = aBalance before
         -- Total amount of coins sent (sum of real tx outputs + a fee output)
         let receivedTotal = sum allOutputs
-        -- Previous value minus fees (the outputs that were specified in the tx itself)
+        -- Previous value minus fees (the outputs that were specified in the
+        -- tx itself + innacuracy in fee calcuation comparing to minimal fees)
         let receivedNoFees = receivedTotal - coinToInteger (unFees fees)
 
         paid <- validateSaneDeparture payer before

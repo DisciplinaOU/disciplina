@@ -211,23 +211,21 @@ spec = describe "Money tx expansion + validation" $ do
             let steps = properSteps & tcsTx %~
                     \f inAcc _ outs -> f inAcc spent outs
                 tx = makeTx steps txData
-            lift $ throwsPrism (_AccountValidationError . _SumMustBeNonNegative) $
+            lift $ throwsPrism (_AccountExpanderError . _InsufficientFees) $
                 applyTx tx
 
         it "Tx input < sum tx outs + fee => failure" $ witnessProperty $ do
-            _ <- stop $ pendingWith "To be fixed in [DSCP-269]"
-
             txData <- pick genSafeTxData
             let Coin outSum = leftToPanic $ sumCoins $ map txOutValue $
                               toList (tdOuts txData)
-            seed <- pick arbitrary
+            Coin minFee <- case fcMoney feeConfig of
+                LinearFeePolicy FeeCoefficients{..} -> pure fcMinimal
+            inVal <- pick $ choose (outSum, outSum + minFee - 1)
 
             let steps = properSteps & tcsTx %~
-                    \f inAcc (Coin inVal) outs ->
-                      let inVal' = detGen seed $ choose (outSum, inVal - 1)
-                      in f inAcc (Coin inVal') outs
+                    \f inAcc _ outs -> f inAcc (Coin inVal) outs
                 tx = makeTx steps txData
-            lift $ throwsPrism (_AccountValidationError . _CannotAffordFees) $
+            lift $ throwsPrism (_AccountExpanderError . _InsufficientFees) $
                 applyTx tx
 
     describe "State modifications are correct" $ do
