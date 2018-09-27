@@ -65,7 +65,7 @@ instance ( HasServer api ctxs
     route _ context subserver = route (Proxy :: Proxy api) context (addAuthCheck subserver authCheck)
       where
         authMsg :: ByteString
-        authMsg = "Set Authorization header with a proper JWT"
+        authMsg = "Set Authorization header with a proper JWS signature"
         authCheck :: DelayedIO res
         authCheck = withRequest $ \req -> do
             let authChecks = runAuths (Proxy :: Proxy auths) context
@@ -81,12 +81,9 @@ instance ( HasServer api ctxs
 -- | If request has header "Authorization: Bearer <token>", get the
 -- "<token>" part.
 authBearerToken :: Request -> Maybe ByteString
-authBearerToken request = do
-    hdr <- L.lookup "Authorization" $ requestHeaders request
-    let bearer = "Bearer "
-        (bearer', rest) = BS.splitAt (BS.length bearer) hdr
-    guard (bearer == bearer')
-    pure rest
+authBearerToken =
+    L.lookup "Authorization" . requestHeaders >=>
+    BS.stripPrefix "Bearer "
 
 checkJWitness :: AuthCheck (PublicKey, ByteString)
 checkJWitness = do
