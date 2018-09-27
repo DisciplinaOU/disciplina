@@ -41,3 +41,4 @@ executables:
       - optparse-applicative
       - serialise
       - text
+      - word8

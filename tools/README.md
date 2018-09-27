@@ -94,7 +94,7 @@ cat /dev/urandom | head -c 32 | dscp-keygen --seed --command secret
 * Generate key file with password:
 
 ```bash
-echo 1000 | dscp-keygen --seed --command secret > secret.key
+echo 1000 | dscp-keygen --seed --command keyfile:password > secret.key
 chmod 660 secret.key
 ```
 
