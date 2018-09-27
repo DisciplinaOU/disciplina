@@ -1,7 +1,7 @@
 {-# LANGUAGE DeriveFunctor #-}
 
 module Dscp.Crypto.JWS
-       ( JWitness
+       ( JWitness (..)
        , secretToJwk
        , publicToJwk
        , jwkToSecret
