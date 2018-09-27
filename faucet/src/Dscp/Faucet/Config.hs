@@ -35,22 +35,29 @@ newtype TransferredAmount = TransferredAmount { getTranferredAmount :: Coin }
 newtype DryRun = DryRun Bool
     deriving (FromJSON, ToJSON)
 
+-- | Define config parameters for the Faucet
+--    [@logging@] Logging params.
+--
+--    [@keys@] Corresponds to source of transactions made by faucet.
+--
+--    [@api@] Parameters of faucet API server.
+--
+--    [@witnessBackend@] Address of transactions processing backend.
+--
+--    [@transferredAmount@] How much money to send on request.
+--
+--    [@dryRun@] Do not actually communicate with witness backend.
+--
+--    [@appDir@] Application directory for witness.
 type FaucetConfig = CoreConfig ++
     '[ "faucet" ::<
        '[ "logging" ::: LoggingParams
-          -- ^ Logging params.
         , "keys" ::: BaseKeyParams
-          -- ^ Corresponds to source of transactions made by faucet.
         , "api" ::: ServerParams
-          -- ^ Parameters of faucet API server.
         , "witnessBackend" ::: BaseUrl
-          -- ^ Address of transactions processing backend.
         , "transferredAmount" ::: TransferredAmount
-          -- ^ How much money to send on request.
         , "dryRun" ::: DryRun
-          -- ^ Do not actually communicate with witness backend.
         , "appDir" ::: AppDirParam
-          -- ^ Application directory for witness
         ]
      ]
 
