@@ -15,12 +15,13 @@ import Dscp.Util.Serialise
 
 -- | All ways to convert given text to raw data we want be able to use when
 -- parsing CLI options.
-bytestringDecoders :: [Text -> Either String ByteString]
-bytestringDecoders = [fromBase64, fromHex, pure . encodeUtf8]
+bytestringDecoders :: FromByteArray a => [ByteString -> Either String a]
+bytestringDecoders = [fromByteArray, fromBase64 . decodeUtf8, fromHex . decodeUtf8]
 
-parseBytes :: ByteString -> Maybe ByteString
-parseBytes =
-    asum . map eitherToMaybe . sequence bytestringDecoders . decodeUtf8
+-- | Tries to interpret given bytestring as raw data or hex/base64.
+parseBytesWith :: Show a => Show b => FromByteArray a => (a -> Maybe b) -> ByteString -> Maybe b
+parseBytesWith interpret =
+    asum . map ((interpret =<<) . eitherToMaybe) . sequence bytestringDecoders
 
 data SecretDataType
     = PlainSecret (Maybe PassPhrase)
@@ -31,12 +32,10 @@ parseInputWithSecret :: SecretDataType -> ByteString -> Maybe SecretKey
 parseInputWithSecret = \case
     PlainSecret mpass -> \input -> asum
         [ do
-            bs <- parseBytes input
-            leftToFail @Text . first show $ deserialiseOrFail' bs
+            parseBytesWith pure $ input
         , do
             let pp = mpass ?: emptyPassPhrase
-            bs <- parseBytes input
-            encSecret <- leftToFail @Text . first show $ deserialiseOrFail' bs
+            encSecret <- parseBytesWith (eitherToMaybe . deserialiseOrFail') input
             leftToFail @Text . first show $ decrypt pp encSecret
         ]
     KeyfileSecret mpass -> \input -> do

@@ -1,5 +1,6 @@
 import qualified Data.ByteString as BS
 
+import Data.Word8 (isSpace)
 import Options.Applicative (execParser, fullDesc, helper, info, progDesc)
 
 import Dscp.CommonCLI
@@ -12,7 +13,8 @@ main :: IO ()
 main = do
     KeygenConfig inputType command <- getKeygenConfig
 
-    input <- BS.getContents
+    rawInput <- BS.getContents
+    let (input, _) = BS.spanEnd isSpace rawInput
     let !secret = parseInputWithSecret inputType input
                ?: error "Cannot parse input"
 
