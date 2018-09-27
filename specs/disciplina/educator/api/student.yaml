@@ -243,20 +243,29 @@ securityDefinitions:
     name: Authorization
     in: header
     description: |
-      Authentication system requires a signed JWT in Authorization header in `Bearer <JWT>` format. Example header:
+      Authentication system requires a JWS in Authorization header in `Bearer <JWS>` format. Example header:
       ```
-      Authorization: Bearer eyJhbGciOiJFZERTQSJ9.eyJkYXQiOnsiYWRQYXRoIjoiL2FwaS9lZHVjYXRvci92MS9zdHVkZW50cyIsImFkVGltZSI6IjIwOTktMDgtMTBUMTM6MjY6NTkuNDYxOTk4MTM2WiJ9fQ.gU032BGkGwllzPtBLxsvXNZttI6qmEh4M2DGfdiIV6k2L_SuPNR8-YHGphQ2_bytOSKl4Hf8LKPt9g0wNjJbAQ
+      Authorization: Bearer eyJhbGciOiJFZERTQSIsImp3ayI6eyJjcnYiOiJFZDI1NTE5IiwieCI6InFlU3ZrUzZnaW9CcjRlX2I2em8zTWlPT1NYQW90VjkwdDVLajNsMjh5cm8iLCJrdHkiOiJPS1AifX0.eyJwYXRoIjoiL2FwaS9zdHVkZW50L3YxL2NvdXJzZXMiLCJ0aW1lIjoiMjAyNS0wMS0wMVQwMDowMDowMFoifQ.JYO_dINCZWhzHuER7377ETxf-Vg1Sw9eImc5cVxrFKFP9PlIXS9fGlzvrKsSpe8FbkAsYkU_cjBoBiaVx6KiDA
       ```
-      The JWT should be signed by the student's private key and contain one claim "dat". The claim should have an object inside with two fields "adPath" and "adTime'. "adPath" should contain the path to the endpoint as it is going to be in the raw request and "adTime" should have the current time in ISO-8601 format. Example JWT object:
+
+      JWS header MUST contain "jwk" parameter ([RFC7515, section 4.1.3](https://tools.ietf.org/html/rfc7515#section-4.1.3)) with a
+      public JWK corresponding to the signature. JWK MUST have key type "OKP" and curve type "Ed25519", public key parameter "x"
+      should be encoded via base64Url (accordingly to [RFC8037](https://tools.ietf.org/html/rfc8037)). Example JWK:
+      ```
+      { "kty": "OKP", "crv": "Ed25519", "x": "2qbm2mPrVVW_yFsHUMzNt3hLdalGLTN8ucI4e-Cn6fI" }
+      ```
+      This JWK represents a Disciplina public key of a Student querying the API. The whole JWS should be created via the Student's secret key.
+      JWS payload MUST be a JSON object with fields "path" and "time". Field "path" should contain the endpoint URL path and "time"
+      should contain the time the request has been made in [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601) format. Example JWS
+      payload:
       ```
       {
-        "dat": {
-          "adTime": "2018-08-10T13:22:40.461998136Z",
-          "adPath": "/api/student/v1/courses"
-        }
+        "time": "2025-01-01T00:00:00.000000000Z",
+        "path": "/api/student/v1/courses"
       }
       ```
-      If the request's raw path doesn't match the one in "adPath" or "adTime" is more than 5 minutes behind the server current time the authentication process will fail.
+      If the request's raw path doesn't match the one in "path" or "time" is more than 5 minutes behind the server current time,
+      the authentication process will fail.
 
 responses:
   Unauthorized:
