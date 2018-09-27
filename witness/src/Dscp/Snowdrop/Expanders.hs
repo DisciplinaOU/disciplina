@@ -85,7 +85,7 @@ getByGTx applyFees pk t =
         (a, b) = case t of
                    GMoneyTxWitnessed tx        -> toProofBalanceTx fee tx
                    GPublicationTxWitnessed ptx -> toProofPublicationTx fee ptx
-    in (a, b, seqExpandersGTx addr t)
+    in (a, b, seqExpandersGTx addr fee t)
 
 ----------------------------------------------------------------------------
 -- Publication tx
@@ -163,11 +163,12 @@ seqExpandersPublicationTx feesReceiverAddr =
 
 seqExpandersGTx
     :: Address
+    -> Fees
     -> GTxWitnessed
     -> SeqExpanders Exceptions Ids Proofs Values ctx GTxWitnessed
-seqExpandersGTx addr (GMoneyTxWitnessed _) =
-    flip contramap (seqExpandersBalanceTx addr) $ \(GMoneyTxWitnessed tx) -> tx
-seqExpandersGTx addr (GPublicationTxWitnessed _) =
+seqExpandersGTx addr fee (GMoneyTxWitnessed _) =
+    flip contramap (seqExpandersBalanceTx addr fee) $ \(GMoneyTxWitnessed tx) -> tx
+seqExpandersGTx addr _ (GPublicationTxWitnessed _) =
     flip contramap (seqExpandersPublicationTx addr) $ \(GPublicationTxWitnessed ptx) -> ptx
 
 toProofBalanceTx :: Fees -> TxWitnessed -> (StateTxType, Proofs)
@@ -179,11 +180,11 @@ toProofBalanceTx fee (TxWitnessed tx (TxWitness {..})) =
     wsPublicKey = toDscpPK txwPk
     wsBody = (toTxId tx, txwPk, ())
 
-seqExpandersBalanceTx ::
-       Address
-    -> SeqExpanders Exceptions Ids Proofs Values ctx TxWitnessed
-seqExpandersBalanceTx feesReceiverAddr =
-    SeqExpanders $ one $ Expander inP outP $ \TxWitnessed{..} -> do
+seqExpandersBalanceTx :: Address
+                      -> Fees
+                      -> SeqExpanders Exceptions Ids Proofs Values ctx TxWitnessed
+seqExpandersBalanceTx feesReceiverAddr (Fees minimalFees) =
+    SeqExpanders $ one $ Expander inP outP $ \txw@TxWitnessed{..} -> do
         let outputs = txOuts twTx
         -- check for output duplicates
         let uniqOutAddrs = ordNub $ map txOutAddr outputs
@@ -251,6 +252,9 @@ seqExpandersBalanceTx feesReceiverAddr =
         let addFee receiver = receiver { aBalance = aBalance receiver + feeAmount }
         let onlyFees = Account { aBalance = feeAmount, aNonce = 0 }
         let feesReceiverUpd = maybe (New onlyFees) (Upd . addFee) feesReceiverAccM
+
+        unless (feeAmount >= coinToInteger minimalFees) $
+            throwLocalError InsufficientFees
 
         let changes :: Map Ids (ValueOp Values)
             changes = Map.fromList changesList

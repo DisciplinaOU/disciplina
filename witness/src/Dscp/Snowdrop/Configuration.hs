@@ -38,6 +38,7 @@ module Dscp.Snowdrop.Configuration
     , AccountExpanderException (..)
     , _MTxNoOutputs
     , _CantResolveSender
+    , _InsufficientFees
     , PublicationExpanderException (..)
 
     , TxIds (..)
@@ -269,10 +270,14 @@ data Proofs
 -- Exceptions
 ----------------------------------------------------------------------------
 
+-- TODO [DSCP-256]: Since expansion and validatoin are always couples,
+-- merge 'AccountExpanderException' and 'AccountValidationException'
+-- TODO [DSCP-256]: Add fieldsPublicationExpanderError
 data AccountExpanderException
     = MTxNoOutputs
     | MTxDuplicateOutputs
     | CantResolveSender
+    | InsufficientFees
     | ExpanderInternalError String
 
 makePrisms ''AccountExpanderException
@@ -285,6 +290,7 @@ instance Buildable AccountExpanderException where
         MTxNoOutputs -> "Transaction has no outputs"
         MTxDuplicateOutputs -> "Duplicated transaction outputs"
         CantResolveSender -> "Source account is not registered in chain"
+        InsufficientFees -> "Amount of money left for fees in transaction is not enough"
         ExpanderInternalError s ->
             fromString $ "Expander failed internally: " <> s
 
