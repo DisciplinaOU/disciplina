@@ -190,7 +190,7 @@ paths:
         description: Course to enroll
         required: true
         schema:
-          $ref: "#/definitions/CourseId"
+          $ref: "#/definitions/EnrollStudentToCourse"
       responses:
         201:
           description: successful operation
@@ -387,7 +387,7 @@ paths:
         description: Assignment to assign
         required: true
         schema:
-          $ref: "#/definitions/Hash"
+          $ref: "#/definitions/AssignToStudent"
       responses:
         201:
           description: successful operation
@@ -826,6 +826,12 @@ definitions:
         type: array
         items:
           $ref: "#/definitions/Subject"
+  EnrollStudentToCourse:
+    required:
+    - course
+    properties:
+      course:
+        $ref: "#/definitions/CourseId"
   Assignment:
     type: object
     required:
@@ -861,6 +867,13 @@ definitions:
         type: boolean
       desc:
         type: string
+  AssignToStudent:
+    type: object
+    required:
+    - assignmentHash
+    properties:
+      assignmentHash:
+        $ref: "#/definitions/Hash"
   Submission:
     type: object
     required:

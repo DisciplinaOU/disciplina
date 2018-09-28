@@ -5,10 +5,12 @@
 module Dscp.Educator.Web.Educator.Types
     (
       -- * Requests
-      NewCourse (..)
+      NewStudent (..)
+    , NewCourse (..)
     , NewGrade (..)
     , NewAssignment (..)
     , EnrollStudentToCourse (..)
+    , AssignToStudent (..)
 
       -- * Responses
     , CourseEducatorInfo (..)
@@ -29,6 +31,10 @@ import Data.Aeson.TH (deriveJSON)
 import Dscp.Core
 import Dscp.Crypto
 import Dscp.Educator.Web.Types
+
+data NewStudent = NewStudent
+    { nsAddr :: Student
+    } deriving (Show, Eq, Generic)
 
 data NewCourse = NewCourse
     { ncId       :: Course
@@ -51,6 +57,10 @@ data NewAssignment = NewAssignment
 data EnrollStudentToCourse = EnrollStudentToCourse
     { escCourseId :: Course
     } deriving (Show, Eq, Generic)
+
+data AssignToStudent = AssignToStudent
+    { atsAssignmentHash :: Hash Assignment
+    }
 
 data CourseEducatorInfo = CourseEducatorInfo
     { ciId       :: Course
@@ -124,10 +134,12 @@ requestToAssignment NewAssignment{..} =
 -- JSON instances
 ---------------------------------------------------------------------------
 
+deriveJSON defaultOptions ''NewStudent
 deriveJSON defaultOptions ''NewCourse
 deriveJSON defaultOptions ''NewGrade
 deriveJSON defaultOptions ''NewAssignment
 deriveJSON defaultOptions ''EnrollStudentToCourse
+deriveJSON defaultOptions ''AssignToStudent
 deriveJSON defaultOptions ''CourseEducatorInfo
 deriveJSON defaultOptions ''AssignmentEducatorInfo
 deriveJSON defaultOptions ''SubmissionEducatorInfo

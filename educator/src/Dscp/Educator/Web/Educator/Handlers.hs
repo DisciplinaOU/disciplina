@@ -27,8 +27,8 @@ educatorApiHandlers =
     {
       -- Students
 
-      eNewStudent =
-        void . invoke ... createStudent
+      eNewStudent = \(NewStudent student) ->
+        void . invoke $ createStudent student
 
     , eRemoveStudent =
         invoke ... educatorRemoveStudent
@@ -63,8 +63,8 @@ educatorApiHandlers =
     , eGetStudentAssignments = \student ->
         transactR $ commonGetAssignments EducatorCase student def
 
-    , eAssignToStudent =
-        transactW ... setStudentAssignment
+    , eAssignToStudent = \student (AssignToStudent assignmentHash) ->
+        transactW $ setStudentAssignment student assignmentHash
 
     , eUnassignFromStudent =
         invoke ... educatorUnassignFromStudent
