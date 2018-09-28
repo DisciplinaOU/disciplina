@@ -30,6 +30,11 @@ spec_Instances = do
 
                     return isThere
 
+            it "Can create unique courses relying on autoincrement" $
+                sqliteProperty $ \n -> do
+                    ids <- replicateM n $ DB.createCourse nullCourse
+                    return $ allUniqueOrd ids
+
         describe "Students" $ do
             it "Student does not exist before she is created" $
                 sqliteProperty $ \student -> do

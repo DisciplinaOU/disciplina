@@ -37,9 +37,9 @@ data NewStudent = NewStudent
     } deriving (Show, Eq, Generic)
 
 data NewCourse = NewCourse
-    { ncId       :: Course
-    , ncDesc     :: Maybe Text
-    , ncSubjects :: Maybe [Subject]
+    { ncId       :: Maybe Course
+    , ncDesc     :: Text
+    , ncSubjects :: [Subject]
     } deriving (Show, Eq, Generic)
 
 data NewGrade = NewGrade

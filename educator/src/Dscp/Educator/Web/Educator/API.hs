@@ -71,7 +71,8 @@ data EducatorApiEndpoints route = EducatorApiEndpoints
         :- "courses"
         :> Summary "Add a new course to a database"
         :> ReqBody '[DSON] NewCourse
-        :> PostCreated '[DSON] ()
+        :> PostCreated '[DSON] Course
+    -- TODO: return proper JSON-object here
 
     , eGetCourses :: route
         :- "courses"
