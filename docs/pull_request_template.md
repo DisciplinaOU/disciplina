@@ -8,18 +8,18 @@ https://issues.serokell.io/DSCP-
 
 ### Introduced changes
 
-<!-- 
+<!--
 Check all that apply. At least one _should_ be checked, otherwise
 describe that weird type of change in the description, maybe it will
 make sense to add it to the list.
 -->
 
 - [ ] New feature
-- [ ] Bugfix 
+- [ ] Bugfix
 - [ ] Refactoring
 - [ ] New tests (on functionality not fixed/introduced in this PR)
 - [ ] New docs (on functionality not fixed/introduced in this PR)
-- [ ] Infrastructure changes 
+- [ ] Infrastructure changes
 
 ### Checklist
 
