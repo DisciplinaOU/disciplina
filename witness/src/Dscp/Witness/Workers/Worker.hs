@@ -15,6 +15,7 @@ import Loot.Base.HasLens (lensOf)
 import Loot.Config (option, sub)
 import Loot.Log (logDebug, logInfo, logWarning)
 import Time (ms, sec, threadDelay)
+import UnliftIO.Exception (withException)
 
 import Dscp.Core
 import Dscp.Crypto
@@ -164,7 +165,7 @@ makeRelay (RelayState input pipe failedTxs) =
 
         writingSDLock "add to mempool" $
             addTxToMempool @ctx tx
-                `onAnException` \e -> addFailedTx (tx, e)
+                `withException` \e -> addFailedTx (tx, e)
 
         atomically $ STM.writeTBQueue pipe tx
 

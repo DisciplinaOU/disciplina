@@ -36,7 +36,7 @@ fromSnowdropException = \case
     AccountError e -> pure $ SdAccountError e
     LogicError e -> pure $ SdLogicError e
     PublicationError{} -> mzero
-    BlockApplicationError{} -> mzero
+    BlockError{} -> mzero
     SdInternalError{} -> mzero
 
 -- | All witness API exceptions.

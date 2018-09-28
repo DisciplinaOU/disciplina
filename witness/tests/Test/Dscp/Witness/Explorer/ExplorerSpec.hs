@@ -3,13 +3,11 @@ module Test.Dscp.Witness.Explorer.ExplorerSpec where
 import Data.Default (def)
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
-import Loot.Base.HasLens (lensOf)
 import Test.QuickCheck (arbitraryBoundedEnum, shuffle)
 import Test.QuickCheck.Monadic (pre)
 
 import Dscp.Core
 import Dscp.Crypto
-import Dscp.Resource.Keys
 import Dscp.Snowdrop.Configuration
 import Dscp.Snowdrop.Mode
 import Dscp.Snowdrop.Types
@@ -72,19 +70,6 @@ createAndSubmitPubGen genSecret = do
     sk <- pick $ mkSecretKeyData <$> genSecret
     sig <- pick arbitrary
     lift $ createAndSubmitPub sk sig
-
--- | Dump all mempool transactions into a new block.
-dumpBlock
-    :: (TestWitnessWorkMode ctx m, WithinWriteSDLock)
-    => m HeaderHash
-dumpBlock = do
-    slotId <- rewindToNextSlot
-    let issuerKey = KeyResources . mkSecretKeyData $ testFindSlotOwner slotId
-
-    local (lensOf @(KeyResources WitnessNode) .~ issuerKey) $ do
-        block <- createBlock runSdM slotId
-        void $ applyBlock block
-        return (headerHash block)
 
 -- | Run 'getTransactions' with pagination page by page until all transactions
 -- are fetched.

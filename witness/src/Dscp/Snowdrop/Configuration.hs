@@ -36,6 +36,7 @@ module Dscp.Snowdrop.Configuration
     , Exceptions (..)
     , _AccountError
     , _PublicationError
+    , _BlockError
     , _LogicError
 
     , TxIds (..)
@@ -66,7 +67,8 @@ import qualified Dscp.Core.Foundation as T
 import Dscp.Crypto (HasAbstractSignature, Hash, PublicKey, SigScheme, Signature, hashF, verify)
 import Dscp.Snowdrop.Storage.Types
 import Dscp.Snowdrop.Types (Account, AccountException, AccountId (..), AccountTxTypeId (..),
-                            PublicationException, PublicationTxTypeId (..))
+                            BlockException (..), BlockMetaTxTypeId (..), PublicationException,
+                            PublicationTxTypeId (..))
 import Dscp.Witness.Logic.Exceptions (LogicException)
 
 ----------------------------------------------------------------------------
@@ -285,8 +287,9 @@ type PublicationTxProof =
     PersonalisedProof T.PublicationTxId T.PrivateBlockHeader
 
 data Proofs
-    = AddressTxWitness     AddrTxProof         -- ^ Money transaction witness
-    | PublicationTxWitness PublicationTxProof  -- ^ Publication transaction witness
+    = AddressTxWitnessProof     AddrTxProof         -- ^ Money transaction witness
+    | PublicationTxWitnessProof PublicationTxProof  -- ^ Publication transaction witness
+    | BlockMetaTxWitnessProof                       -- ^ Block meta transaction witness
     deriving (Eq, Show, Generic)
 
 ----------------------------------------------------------------------------
@@ -318,11 +321,11 @@ instance Buildable InternalExceptions where
         TxValidationError err -> B.build err
 
 data Exceptions
-    = BlockApplicationError (BlockApplicationException  HeaderHash)
-    | AccountError          AccountException
-    | PublicationError      PublicationException
-    | LogicError            LogicException
-    | SdInternalError       InternalExceptions
+    = BlockError       BlockException
+    | AccountError     AccountException
+    | PublicationError PublicationException
+    | LogicError       LogicException
+    | SdInternalError  InternalExceptions
 
 makePrisms ''Exceptions
 
@@ -333,7 +336,7 @@ instance Show Exceptions where
 
 instance Buildable Exceptions where
     build = \case
-        BlockApplicationError err -> B.build err
+        BlockError err -> B.build err
         AccountError err -> B.build err
         PublicationError err -> B.build err
         LogicError err -> B.build err
@@ -346,19 +349,23 @@ instance Buildable Exceptions where
 data TxIds
     = MoneyTxIds       AccountTxTypeId
     | PublicationTxIds PublicationTxTypeId
+    | BlockMetaTxIds   BlockMetaTxTypeId
     deriving (Eq,Show)
 
 instance Enum TxIds where
     toEnum = \case
         0 -> MoneyTxIds       AccountTxTypeId
         1 -> PublicationTxIds PublicationTxTypeId
+        2 -> BlockMetaTxIds   BlockMetaTxTypeId
         _ -> error "instance Enum TxIds"
 
     fromEnum (MoneyTxIds       AccountTxTypeId)     = 0
     fromEnum (PublicationTxIds PublicationTxTypeId) = 1
+    fromEnum (BlockMetaTxIds   BlockMetaTxTypeId)   = 2
 
 instance IdStorage TxIds AccountTxTypeId
 instance IdStorage TxIds PublicationTxTypeId
+instance IdStorage TxIds BlockMetaTxTypeId
 
 ----------------------------------------------------------------------------
 -- Misc
@@ -400,3 +407,5 @@ instance HasReview Exceptions TxValidationException where
     inj = SdInternalError . inj
 instance HasReview Exceptions StatePException where
     inj = SdInternalError . inj
+instance HasReview Exceptions (BlockApplicationException HeaderHash) where
+    inj = BlockError . inj
