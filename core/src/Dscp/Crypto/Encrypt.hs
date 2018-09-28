@@ -41,7 +41,7 @@ import Crypto.Cipher.Types (AEAD, AEADMode (AEAD_GCM), AuthTag (..),
 import Crypto.Error (onCryptoFailure)
 import Crypto.Hash.Algorithms (SHA512 (..))
 import qualified Crypto.KDF.PBKDF2 as PBKDF2
-import Crypto.Random (MonadRandom, getRandomBytes)
+import Crypto.Random.Types (MonadRandom, getRandomBytes)
 import Data.ByteArray (ByteArray, ByteArrayAccess, ScrubbedBytes)
 import qualified Data.ByteArray as BA
 import qualified Data.ByteString.Lazy as BSL

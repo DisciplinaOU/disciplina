@@ -1,10 +1,12 @@
 {-# LANGUAGE TypeInType #-}
 
 -- | Necessary types and implementation for web server authenthication
+-- TODO: move all authentication stuff not directly related to Educator
+-- to a separate module.
 module Dscp.Educator.Web.Auth
        ( Auth'
        , AuthData (..)
-       , checkAuthData
+       , checkAuthBasic
 
        , NoAuth
        , NoAuthData
@@ -13,24 +15,25 @@ module Dscp.Educator.Web.Auth
        , makeAuthToken
        ) where
 
-import Crypto.JOSE.JWK ()
-import Crypto.JWT (JWTError, KeyMaterial (OKPKeyMaterial), KeyOp (Sign),
-                   OKPKeyParameters (Ed25519Key), addClaim, bestJWSAlg, emptyClaimsSet,
-                   encodeCompact, fromKeyMaterial, jwkKeyOps, newJWSHeader, signClaims)
-import Data.Aeson (FromJSON (..), Value (..), object, withObject, (.:), (.=))
+import Crypto.JOSE (Error, decodeCompact, encodeCompact)
+import Data.Aeson (FromJSON (..), decodeStrict, encode, withObject, (.:))
+import Data.Aeson.Options (defaultOptions)
+import Data.Aeson.TH (deriveJSON)
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as LBS
 import Data.Kind (type (*))
-import Data.Time.Clock (UTCTime, diffUTCTime, getCurrentTime)
-import GHC.IO.Unsafe (unsafePerformIO)
+import qualified Data.List as L (lookup)
+import Data.Time.Clock (NominalDiffTime, UTCTime, diffUTCTime, getCurrentTime)
+import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import GHC.TypeLits (Symbol)
-import Network.Wai (rawPathInfo)
+import Network.Wai (Request, rawPathInfo, requestHeaders)
 import Servant ((:>), HasServer, ServantErr (..), ServerT, err401, hoistServerWithContext, route)
-import Servant.Auth.Server (AuthCheck (..), AuthResult (..), FromJWT)
+import Servant.Auth.Server (AuthCheck (..), AuthResult (..))
 import Servant.Auth.Server.Internal.Class (AreAuths (..), IsAuth (..), runAuths)
 import Servant.Server.Internal.RoutingApplication (DelayedIO, addAuthCheck, delayedFailFatal,
                                                    withRequest)
 
 import Dscp.Crypto
-import Dscp.Util
 
 ---------------------------------------------------------------------------
 -- Data types
@@ -41,10 +44,12 @@ data Auth' (auths :: [*]) res
 
 -- | A type that reperesents the data that the client has sent to authenthicate
 data AuthData = AuthData
-    { adPath :: Text
-    , adTime :: UTCTime
+    { adPath :: !Text
+    , adTime :: !UTCTime
     }
     deriving Generic
+
+deriveJSON defaultOptions ''AuthData
 
 ---------------------------------------------------------------------------
 -- Instances
@@ -60,7 +65,7 @@ instance ( HasServer api ctxs
     route _ context subserver = route (Proxy :: Proxy api) context (addAuthCheck subserver authCheck)
       where
         authMsg :: ByteString
-        authMsg = "Set Authorization header with a proper JWT"
+        authMsg = "Set Authorization header with a proper JWS signature"
         authCheck :: DelayedIO res
         authCheck = withRequest $ \req -> do
             let authChecks = runAuths (Proxy :: Proxy auths) context
@@ -69,12 +74,31 @@ instance ( HasServer api ctxs
                 (Authenticated (r :: res)) -> return r
                 _ -> delayedFailFatal $ err401 { errHeaders = [("WWW-Authenticate", authMsg)] }
 
-instance FromJSON AuthData
-instance FromJWT AuthData
-
 ---------------------------------------------------------------------------
 -- Helpers
 ---------------------------------------------------------------------------
+
+-- | If request has header "Authorization: Bearer <token>", get the
+-- "<token>" part.
+authBearerToken :: Request -> Maybe ByteString
+authBearerToken =
+    L.lookup "Authorization" . requestHeaders >=>
+    BS.stripPrefix "Bearer "
+
+checkJWitness :: AuthCheck (PublicKey, ByteString)
+checkJWitness = do
+    request <- ask
+    token <- maybe mempty pure $ authBearerToken request
+    either (const mempty) pure $ do
+        jWitness <- first (show @Text @Error) $
+            decodeCompact $ LBS.fromStrict token
+        verifyJWitness jWitness
+
+-- | Authentication header timeout in seconds.
+-- TODO: 1) make it configurable via config file
+--       2) isn't 5 minutes too long?
+authTimeout :: NominalDiffTime
+authTimeout = 300
 
 checkAuthData :: AuthData -> AuthCheck ()
 checkAuthData AuthData {..} = do
@@ -83,7 +107,14 @@ checkAuthData AuthData {..} = do
     guard (adPath == decodeUtf8 (rawPathInfo request))
     -- time verification
     curTime <- liftIO $ getCurrentTime
-    guard (diffUTCTime curTime adTime <= 300)
+    guard (diffUTCTime curTime adTime <= authTimeout)
+
+checkAuthBasic :: AuthCheck PublicKey
+checkAuthBasic = do
+    (pk, payload) <- checkJWitness
+    authData <- maybe mempty pure $ decodeStrict payload
+    checkAuthData authData
+    pure pk
 
 ---------------------------------------------------------------------------
 -- Disabling auth
@@ -125,20 +156,8 @@ instance FromJSON (NoAuthData s) => FromJSON (NoAuthContext s) where
 -- Second arguments stands for endpoint name, example:
 -- @/api/educator/v1/students@.
 makeAuthToken :: SecretKey -> Text -> Text
-makeAuthToken secretKey endpoint = unsafePerformIO $ do
-    eSignedJWT <- runExceptT $ do
-        alg <- bestJWSAlg jwkSk
-        signClaims jwkSk (newJWSHeader ((), alg)) claims
-    return $
-        decodeUtf8 . encodeCompact $
-        leftToPanic $ first (show @Text @JWTError) eSignedJWT
+makeAuthToken secretKey endpoint =
+    decodeUtf8 . encodeCompact . signJWitness secretKey $ encode authData
   where
-    (AbstractSK sk, AbstractPK pk) = (secretKey, toPublic secretKey)
-    jwkSk = fromKeyMaterial (OKPKeyMaterial $ Ed25519Key pk $ Just sk)
-          & jwkKeyOps .~ Just [Sign]
-
-    claims = emptyClaimsSet & addClaim "dat" claim
-    claim = object
-        [ "adTime" .= String "2025-08-10T13:15:40.461998136Z"
-        , "adPath" .= endpoint
-        ]
+    farFuture = posixSecondsToUTCTime 1735689600 -- 1 Jan 2025
+    authData = AuthData { adPath = endpoint, adTime = farFuture }

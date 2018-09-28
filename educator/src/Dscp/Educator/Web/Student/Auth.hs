@@ -3,18 +3,16 @@
 
 -- | Necessary types and implementation for Student authenthication
 module Dscp.Educator.Web.Student.Auth
-       ( GetStudentsAction (..)
+       ( StudentCheckAction (..)
        , StudentAuth
        ) where
 
-import Crypto.JOSE.JWK (KeyMaterial (..), KeyOp (..), OKPKeyParameters (..), jwkKeyOps)
-import Crypto.JWT (fromKeyMaterial)
-import Servant.Auth.Server (AuthCheck (..), defaultJWTSettings, jwtAuthCheck)
+import Servant.Auth.Server (AuthCheck (..))
 import Servant.Auth.Server.Internal.Class (AuthArgs (..), IsAuth (..))
 
-import Dscp.Core (Student, mkAddr)
-import Dscp.Crypto (AbstractPK (..), PublicKey)
-import Dscp.Educator.Web.Auth (NoAuthData, checkAuthData)
+import Dscp.Core
+import Dscp.Crypto
+import Dscp.Educator.Web.Auth
 
 ---------------------------------------------------------------------------
 -- Data types
@@ -24,10 +22,10 @@ import Dscp.Educator.Web.Auth (NoAuthData, checkAuthData)
 data StudentAuth
 
 -- | Action to get students' public keys
-newtype GetStudentsAction = GetStudentsAction (IO [PublicKey])
+newtype StudentCheckAction = StudentCheckAction (PublicKey -> IO Bool)
 
 instance IsAuth StudentAuth Student where
-    type AuthArgs StudentAuth = '[GetStudentsAction]
+    type AuthArgs StudentAuth = '[StudentCheckAction]
     runAuth _ _ = studentAuthCheck
 
 ---------------------------------------------------------------------------
@@ -35,15 +33,12 @@ instance IsAuth StudentAuth Student where
 ---------------------------------------------------------------------------
 
 -- | This function returns AuthCheck that checks the signature of the JWT.
-studentAuthCheck :: GetStudentsAction -> AuthCheck Student
-studentAuthCheck (GetStudentsAction getStudents) = do
-    students <- liftIO $ getStudents
-    let pubKeyToJwk (AbstractPK pub) =
-          fromKeyMaterial (OKPKeyMaterial $ Ed25519Key pub Nothing) & jwkKeyOps .~ Just [Verify]
-        tryAuth pub = fmap (pub,) . jwtAuthCheck . defaultJWTSettings . pubKeyToJwk $ pub
-    (publicKey, authData) <- asum . map tryAuth $ students
-    checkAuthData authData
-    return $ mkAddr publicKey
+studentAuthCheck :: StudentCheckAction -> AuthCheck Student
+studentAuthCheck (StudentCheckAction checkStudent) = do
+    pk <- checkAuthBasic
+    good <- liftIO $ checkStudent pk
+    guard good
+    return $ mkAddr pk
 
 ---------------------------------------------------------------------------
 -- NoAuth

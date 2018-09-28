@@ -12,7 +12,7 @@ module Dscp.Crypto.Random
 import Crypto.Number.Basic (numBytes)
 import Crypto.Number.Serialize (os2ip)
 import Crypto.OpenSSL.Random (randBytes)
-import Crypto.Random (MonadRandom, getRandomBytes)
+import Crypto.Random.Types (MonadRandom, getRandomBytes)
 import qualified Data.ByteArray as ByteArray (convert)
 
 -- | Generate a cryptographically random 'ByteString' of specific length.

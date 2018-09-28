@@ -21,7 +21,8 @@ import Servant.Auth.Server.Internal.ThrowAll (throwAll)
 import Servant.Generic (toServant)
 import UnliftIO (askUnliftIO)
 
-import Dscp.Crypto (PublicKey, keyGen, withIntSeed)
+import Dscp.Core (mkAddr)
+import Dscp.DB.SQLite (SQLiteDB, existsStudent, invoke)
 import Dscp.Educator.Launcher.Mode (CombinedWorkMode, EducatorNode, EducatorWorkMode)
 import Dscp.Educator.Web.Auth
 import Dscp.Educator.Web.Bot (EducatorBotSwitch (..), addBotHandlers, initializeBot)
@@ -29,7 +30,7 @@ import Dscp.Educator.Web.Educator (EducatorPublicKey (..), ProtectedEducatorAPI,
                                    convertEducatorApiHandler, educatorApiHandlers,
                                    protectedEducatorAPI)
 import Dscp.Educator.Web.Params (EducatorWebParams (..))
-import Dscp.Educator.Web.Student (GetStudentsAction (..), ProtectedStudentAPI,
+import Dscp.Educator.Web.Student (ProtectedStudentAPI, StudentCheckAction (..),
                                   convertStudentApiHandler, studentAPI, studentApiHandlers)
 import Dscp.Resource.Keys (KeyResources, krPublicKey)
 import Dscp.Web (ServerParams (..), serveWeb)
@@ -68,19 +69,24 @@ mkStudentApiServer nat botSwitch = do
   where
     getServer handlers = hoistServerWithContext
         studentAPI
-        (Proxy :: Proxy '[GetStudentsAction])
+        (Proxy :: Proxy '[StudentCheckAction])
         nat
         (toServant handlers)
 
--- This is a temporary function that provides a dummy GetStudentAction
-createGetStudentsAction :: IO GetStudentsAction
-createGetStudentsAction = do
-    (tvr :: TVar [PublicKey]) <- atomically $ newTVar []
-    let addKeyWithSeed n =
-            let pk = snd $ withIntSeed n keyGen
-            in atomically $ modifyTVar' tvr (pk:)
-    traverse_ addKeyWithSeed [1000..1100]
-    return . GetStudentsAction $ atomically . readTVar $ tvr
+-- | Create an action which checks whether or not the
+-- student is a valid API user.
+-- If bot is enabled, all students are allowed to use API.
+createStudentCheckAction
+    :: forall ctx m. EducatorWorkMode ctx m
+    => EducatorBotSwitch
+    -> m StudentCheckAction
+createStudentCheckAction (EducatorBotOn _) =
+    return . StudentCheckAction . const $ pure True
+createStudentCheckAction EducatorBotOff = do
+    db <- view (lensOf @SQLiteDB)
+    return . StudentCheckAction $ \pk ->
+        let addr = mkAddr pk
+        in runReaderT (invoke $ existsStudent addr) db
 
 -- | CORS is enabled to ease development for frontend team.
 educatorCors :: Middleware
@@ -97,10 +103,10 @@ serveEducatorAPIsReal :: CombinedWorkMode ctx m => Bool -> EducatorWebParams -> 
 serveEducatorAPIsReal withWitnessApi EducatorWebParams{..} = do
     let ServerParams{..} = ewpServerParams
     educatorKeyResources <- view (lensOf @(KeyResources EducatorNode))
-    getStudents <- liftIO $ createGetStudentsAction
+    studentCheckAction <- createStudentCheckAction ewpBotParams
     let educatorPublicKey = EducatorPublicKey $ educatorKeyResources ^. krPublicKey
     let srvCtx = educatorPublicKey :. ewpEducatorAPINoAuth :.
-                 getStudents :. ewpStudentAPINoAuth :.
+                 studentCheckAction :. ewpStudentAPINoAuth :.
                  EmptyContext
 
     logInfo $ "Serving Student API on "+|spAddr|+""

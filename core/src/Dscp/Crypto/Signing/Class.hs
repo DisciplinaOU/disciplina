@@ -13,7 +13,7 @@ module Dscp.Crypto.Signing.Class
        , MonadRandom
        ) where
 
-import Crypto.Random (MonadRandom)
+import Crypto.Random.Types (MonadRandom)
 import Data.ByteArray (ByteArray, ByteArrayAccess)
 import Fmt (build, (+|))
 import qualified Text.Show

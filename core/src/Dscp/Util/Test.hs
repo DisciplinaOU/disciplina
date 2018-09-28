@@ -1,4 +1,5 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE PackageImports             #-}
 {-# LANGUAGE PartialTypeSignatures      #-}
 {-# LANGUAGE RankNTypes                 #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
@@ -16,7 +17,7 @@ module Dscp.Util.Test
 import Codec.Serialise (Serialise, deserialise, serialise)
 import Control.Exception.Safe (catchJust)
 import Control.Lens (LensLike')
-import Crypto.Random (ChaChaDRG, MonadPseudoRandom)
+import "cryptonite" Crypto.Random (ChaChaDRG, MonadPseudoRandom)
 import Data.Aeson (FromJSON, ToJSON, eitherDecode, encode)
 import qualified Data.Hashable as H
 import qualified Data.Text.Buildable
