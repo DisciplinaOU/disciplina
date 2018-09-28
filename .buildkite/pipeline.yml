@@ -20,7 +20,7 @@ steps:
     agents:
       system: x86_64-darwin
     label: build-darwin
-    
+
   - command: nix-build shell.nix --no-out-link
     agents:
       system: x86_64-linux

@@ -92,7 +92,7 @@ context (function name, types, other variables, etc.).
 
 For readability reasons, don't capitalize all letters when using an
 abbreviation.  For example, write `HttpServer` instead of
-`HTTPServer`.  Exception: two or three letter abbreviations, e.g. `IO`, `STM`, or established 
+`HTTPServer`.  Exception: two or three letter abbreviations, e.g. `IO`, `STM`, or established
 names like `SQLite`.
 
 **Records name conventions**
