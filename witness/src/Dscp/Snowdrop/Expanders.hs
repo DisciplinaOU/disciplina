@@ -184,7 +184,7 @@ seqExpandersBalanceTx :: Address
                       -> Fees
                       -> SeqExpanders Exceptions Ids Proofs Values ctx TxWitnessed
 seqExpandersBalanceTx feesReceiverAddr (Fees minimalFees) =
-    SeqExpanders $ one $ Expander inP outP $ \txw@TxWitnessed{..} -> do
+    SeqExpanders $ one $ Expander inP outP $ \TxWitnessed{..} -> do
         let outputs = txOuts twTx
         -- check for output duplicates
         let uniqOutAddrs = ordNub $ map txOutAddr outputs
