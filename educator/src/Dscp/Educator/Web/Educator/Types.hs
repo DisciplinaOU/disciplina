@@ -27,10 +27,12 @@ module Dscp.Educator.Web.Educator.Types
 import Control.Lens (from)
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
+import Fmt (build, (+|), (|+), listF)
 
 import Dscp.Core
 import Dscp.Crypto
 import Dscp.Educator.Web.Types
+import Dscp.Util.Servant (ForResponseLog (..))
 
 data NewStudent = NewStudent
     { nsAddr :: Student
@@ -129,6 +131,71 @@ requestToAssignment NewAssignment{..} =
     , _aType = naIsFinal ^. from assignmentTypeRaw
     , _aDesc = naDesc
     }
+
+---------------------------------------------------------------------------
+-- Buildable instances
+---------------------------------------------------------------------------
+
+instance Buildable (NewCourse) where
+    build (NewCourse{..}) =
+      "{ course id = " +| ncId |+
+      ", description = " +| ncDesc |+
+      ", subjects = " +| fmap listF ncSubjects |+
+      " }"
+
+instance Buildable (NewGrade) where
+    build (NewGrade{..}) =
+      "{ submission hash = " +| ngSubmissionHash |+
+      ", grade = " +| ngGrade |+
+      " }"
+
+instance Buildable (NewAssignment) where
+    build (NewAssignment{..}) =
+      "{ course id = " +| naCourseId |+
+      ", is final = " +| naIsFinal |+
+      ", description = " +| naDesc |+
+      " }"
+
+instance Buildable (EnrollStudentToCourse) where
+    build (EnrollStudentToCourse{..}) =
+      "{ course id = " +| escCourseId |+
+      " }"
+
+instance Buildable (CourseEducatorInfo) where
+    build (CourseEducatorInfo{..}) =
+      "{ course id = " +| ciId |+
+      ", description = " +| ciDesc |+
+      ", subjects = " +| listF ciSubjects |+
+      " }"
+
+instance Buildable (AssignmentEducatorInfo) where
+    build (AssignmentEducatorInfo{..}) =
+      "{ hash = " +| aiHash |+
+      ", course id = " +| aiCourseId |+
+      ", description = " +| aiDesc |+
+      " }"
+
+instance Buildable (SubmissionEducatorInfo) where
+    build (SubmissionEducatorInfo{..}) =
+      "{ hash = " +| siHash |+
+      ", content hash = " +| siContentsHash |+
+      ", assignment hash = " +| siAssignmentHash |+
+      " }"
+
+instance Buildable (ForResponseLog CourseEducatorInfo) where
+    build (ForResponseLog CourseEducatorInfo{..}) =
+      "{ course id = " +| ciId |+
+      " }"
+
+instance Buildable (ForResponseLog AssignmentEducatorInfo) where
+    build (ForResponseLog AssignmentEducatorInfo{..}) =
+      "{ hash = " +| aiHash |+
+      " }"
+
+instance Buildable (ForResponseLog SubmissionEducatorInfo) where
+    build (ForResponseLog SubmissionEducatorInfo{..})=
+      "{ hash = " +| siHash |+
+      " }"
 
 ---------------------------------------------------------------------------
 -- JSON instances

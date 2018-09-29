@@ -39,6 +39,7 @@ import Data.Singletons.Bool (SBoolI)
 import UnliftIO (MonadUnliftIO)
 import Loot.Log (MonadLogging)
 import Loot.Base.HasLens (HasCtx)
+import Fmt (build, (+|), (|+), (+||), (||+))
 
 import Dscp.DB.SQLite.Types
 import Dscp.Util.Type (type (==))
@@ -46,6 +47,7 @@ import Dscp.Core
 import Dscp.Crypto
 import Dscp.DB.SQLite.Instances ()
 import Dscp.Util.Aeson (CustomEncoding, HexEncoded)
+import Dscp.Util.Servant (ForResponseLog (..), buildForResponse)
 
 type MonadEducatorWebQuery m =
     ( MonadIO m
@@ -112,6 +114,50 @@ data BlkProofInfo = BlkProofInfo
     { bpiMtreeSerialized :: (CustomEncoding HexEncoded (MerkleProof PrivateTx))
     , bpiTxs             :: [PrivateTx]
     } deriving (Show, Eq, Generic)
+
+---------------------------------------------------------------------------
+-- Buildable instances
+---------------------------------------------------------------------------
+
+instance Buildable (IsFinal) where
+    build (IsFinal{..}) =
+      "{ is final = " +| unIsFinal |+
+      " }"
+
+instance Buildable (StudentInfo) where
+    build (StudentInfo{..}) =
+      "{ address = " +| siAddr |+
+      " }"
+
+instance Buildable (GradeInfo) where
+    build (GradeInfo{..}) =
+      "{ submission hash = " +| giSubmissionHash |+
+      ", grade = " +| giGrade |+
+      ", timestamp = " +| giTimestamp |+
+      ", has proof = " +| giHasProof |+
+      " }"
+
+instance Buildable (BlkProofInfo) where
+    build (BlkProofInfo{..}) =
+      "{ tree root hash = " +||
+          fmap getMerkleProofRoot bpiMtreeSerialized ||+
+      ", transactons num = " +| length bpiTxs |+
+      "} "
+
+instance Buildable (ForResponseLog StudentInfo) where
+    build = buildForResponse
+
+instance Buildable (ForResponseLog GradeInfo) where
+    build (ForResponseLog GradeInfo{..}) =
+      "{ submission hash = " +| giSubmissionHash |+
+      ", grade = " +| giGrade |+
+      " }"
+
+instance Buildable (ForResponseLog BlkProofInfo) where
+    build (ForResponseLog BlkProofInfo{..}) =
+      "{ tree root hash = " +||
+          fmap getMerkleProofRoot bpiMtreeSerialized ||+
+      "} "
 
 ---------------------------------------------------------------------------
 -- Simple conversions
