@@ -16,6 +16,8 @@ module Dscp.Util.Servant
     , ForResponseLog (..)
     , buildListForResponse
     , buildForResponse
+    , ApiHasArgClass (..)
+    , ApiCanLogArg (..)
 
     , SimpleJSON
     ) where
@@ -426,6 +428,9 @@ instance Buildable (ForResponseLog ()) where
 
 instance Buildable (ForResponseLog Integer) where
     build = buildForResponse
+
+instance Buildable x => Buildable (ForResponseLog [x]) where
+    build = blockListF . (take 8) . unForResponseLog
 
 -------------------------------------------------------------------------
 -- Deserialisation errors
