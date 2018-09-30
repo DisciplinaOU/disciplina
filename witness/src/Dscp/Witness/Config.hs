@@ -23,7 +23,7 @@ import Dscp.Resource.AppDir (AppDirParam)
 import Dscp.Resource.Logging (LoggingParams)
 import Dscp.Resource.Network (NetServParams)
 import Dscp.Web (MetricsEndpoint, ServerParams)
-import Dscp.Witness.Launcher.Params (WitnessKeyParams)
+import Dscp.Witness.Keys (WitnessKeyParams)
 
 type WitnessConfig = CoreConfig ++
     '[ "witness" ::<

@@ -11,6 +11,7 @@ module Dscp.Witness.Launcher.Resource
        , wrAppDir
        ) where
 
+import Loot.Log (MonadLogging)
 import Loot.Log.Internal (NameSelector (GivenName), logNameSelL)
 import Loot.Log.Rio (LoggingIO)
 
@@ -21,13 +22,13 @@ import Dscp.Config
 import Dscp.DB.Rocks.Real (RocksDB)
 import Dscp.Resource.AppDir
 import Dscp.Resource.Class (AllocResource (..), buildComponentR)
-import Dscp.Resource.Keys (KeyResources (..), linkStore)
+import Dscp.Resource.Keys (KeyResources (..), genStore, linkStore)
 import Dscp.Resource.Network (NetLogging (..), NetServResources, withNetLogging)
 import Dscp.Resource.Rocks ()
 import Dscp.Util.HasLens
 import Dscp.Witness.Config
+import Dscp.Witness.Keys
 import Dscp.Witness.Launcher.Marker (WitnessNode)
-import Dscp.Witness.Launcher.Params (WitnessKeyParams (..))
 
 -- | Datatype which contains resources required by witness node to start
 -- working.
@@ -44,14 +45,24 @@ makeLenses ''WitnessResources
 deriveHasLensDirect ''WitnessResources
 deriveHasLens 'wrNetwork ''WitnessResources ''NetServResources
 
+-- | If 'Basic' key params are used, open or create a keyfile.
+-- Otherwise, just generate a key using committee params.
+getWitnessKeyResources
+    :: (HasCoreConfig, MonadCatch m, MonadIO m, MonadLogging m)
+    => WitnessKeyParams
+    -> AppDir
+    -> m (KeyResources WitnessNode)
+getWitnessKeyResources (Basic bkp) appDir = linkStore bkp appDir
+getWitnessKeyResources (Committee cp) _   = genStore (Just cp)
+
 instance AllocResource (KeyResources WitnessNode) where
     type Deps (KeyResources WitnessNode) = (WitnessConfigRec, AppDir)
     allocResource (witnessCfg, appDir) =
-        let WitnessKeyParams {..} = witnessCfg ^. sub #witness . option #keys
+        let keyParams = witnessCfg ^. sub #witness . option #keys
         in buildComponentR "witness keys"
            (withCoreConfig (rcast witnessCfg) $
-               linkStore wkpBase wkpCommittee appDir)
-           (\_ -> pass)
+               getWitnessKeyResources keyParams appDir)
+           (const pass)
 
 instance AllocResource WitnessResources where
     type Deps WitnessResources = WitnessConfigRec
