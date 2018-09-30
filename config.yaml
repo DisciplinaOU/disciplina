@@ -72,10 +72,13 @@ alpha:
       governance:
         type: committeeClosed
         participants:
-          - 3BAyX5pPvmtsKAyDhtfeUZ1beJdFZzHLTHt6nHrzdGcpfagpgeysRNPyMe  # TO BE REPLACED
+          - 3BAyX5pV5b1oAzyas5pcPdicQDUrAipz1fY5CnQLS2Xnzo5wcSBDBCCMxN
+          - 3BAyX5pSN9HyzCr4K4ggmoUt95TuRmGzAZYm5JhVyPgtMjYRk3D7uW1bQ2
+          - 3BAyX5pPp5upFgiCT8TSCNv6E31QniwguFVchoDTDEnUg36PKkfVm6ZVWf
+          - 3BAyX5pNqALCrjBnZDSR25QyNGcfpvpoKetEJsuMCHWqr3zQpZ1LEEP3ye
       distribution:
         - equal: 4
         - specific:
           - # faucet
-            - 3BAyX5pPvmtsKAyDhtfeUZ1beJdFZzHLTHt6nHrzdGcpfagpgeysRNPyMe  # TO BE REPLACED
+            - 3BAyX5pMm4mhu7vVRF7skUXLaBoCwneW5C56YPCAtgMT2eJ7H8YBd3vMVU
             - 20000000
