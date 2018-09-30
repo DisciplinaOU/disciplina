@@ -1,4 +1,4 @@
-{ pkgs ? import ../closure.nix }: with pkgs;
+{ pkgs ? import ../pkgs.nix }: with pkgs;
 
 let
   latex = texlive.combine {

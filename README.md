@@ -19,7 +19,7 @@ that you have installed the following native dependencies:
 Set up Disciplina binary cache so that you don't have to build dependencies:
 
 ```sh
-sudo $(nix-build closure.nix -A cachix --no-out-link)/bin/cachix use disciplina
+sudo $(nix-build pkgs.nix -A cachix --no-out-link)/bin/cachix use disciplina
 ```
 
 If you are on a single-user Nix install (`nix-shell -p nix-info --run nix-info`
@@ -34,7 +34,7 @@ otherwise main Nix binary cache stops working. See [cachix/cachix#128][].
 Next, install Nix with [NixOS/nix#2409][] patch:
 
 ```sh
-nix-env -f closure.nix -iA nix
+nix-env -f pkgs.nix -iA nix
 ```
 
 [Nix]: https://nixos.org/nix/

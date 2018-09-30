@@ -1,4 +1,4 @@
-{ pkgs ? import ./closure.nix, shell ? false }: with pkgs;
+{ pkgs ? import ./pkgs.nix, shell ? false }: with pkgs;
 
 stackToNix {
   # TODO: properly fix this in stack-to-nix
