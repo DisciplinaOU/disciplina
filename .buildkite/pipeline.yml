@@ -47,6 +47,13 @@ steps:
     - haddock.tar.gz
     label: haddock
 
+  - command: nix-build release.nix -A disciplina-wallet-macos-zip -o disciplina-wallet-macos.zip
+    agents:
+      system: x86_64-darwin
+    artifact_paths:
+    - disciplina-wallet-macos.zip
+    label: macos-zip
+
   - command: nix-build specs -o specs/result
     agents:
       system: x86_64-linux
