@@ -2,7 +2,7 @@
 
 let
   project = import ./. { inherit pkgs; };
-  source = gitIgnore ./. [ "*.png" ];
+  source = gitIgnore ./. [ "*.icns" "*.png" ];
 
   runCheck = source: runCommand "check" {} ''
     ${source}
