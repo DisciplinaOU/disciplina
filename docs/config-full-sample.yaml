@@ -83,31 +83,36 @@ sample:
 
     # Witness keyfile
     keys:
-      # Base key parameters (e. g. path to keyfile)
-      base:
-        # Path to keyfile. If not defined, <APP_DIR>/witness.key is used.
-        path: "witness.key"
-        # If 'true', generate new keyfile on given path, and fail if the
-        # keyfile already exists
-        genNew: false
-        # Keyfile passphrase (optional). If not given, key is encrypted with an
-        # empty passphrase.
-        passphrase: "qwerty123"
+      # Type of key parameters:
+      # - `basic`: used when providing a keyfile and related parameters
+      # - `committee`: used when generating secret key from a committee secret
+      type: "committee"
 
-      # Committee params. Used together with committee governance params
-      # in order to generate committee keys from seed. Optional.
-      committee:
-        # Type of committee.
-        # - `committeeOpen` - open committee, generation seed for committee
-        #    secret keys is known to everybody (given in `core` section of config)
-        # - `committeeClosed` - closed committee, only public keys of committee
-        #    members are publicly known.
-        type: "committeeClosed"
-        # Index of this node among committee participants.
-        n: 2
-        # Used only when `type` is `committeeClosed`. Secret seed from which
-        # committee secret keys are derived.
-        secret: "UcA3FaXf="
+      # Parameters for type `basic`.
+
+      ## Path to keyfile. If not defined, <APP_DIR>/witness.key is used.
+      # path: "witness.key"
+      ## If 'true', generate new keyfile on given path, and fail if the
+      ## keyfile already exists
+      # genNew: false
+      ## Keyfile passphrase (optional). If not given, key is encrypted with an
+      ## empty passphrase.
+      #passphrase: "qwerty123"
+
+      # Parameters for type `committee`. Used together with committee governance params
+      # in order to generate committee keys from seed.
+
+      # Type of committee.
+      # - `open` - open committee, generation seed for committee
+      #    secret keys is known to everybody (given in `core` section of config)
+      # - `closed` - closed committee, only public keys of committee
+      #    members are publicly known.
+      committeeType: "closed"
+      # Index of this node among committee participants.
+      n: 2
+      # Used only when `type` is `committeeClosed`. Secret seed from which
+      # committee secret keys are derived.
+      secret: "UcA3FaXf="
 
     # Witness (block explorer) HTTP API parameters.
     # Optional. If not provided, Witness API is not served.

@@ -104,12 +104,12 @@ instance FromJSON KeyJson where
 -- | Instances for config params related to keys.
 instance FromJSON CommitteeParams where
   parseJSON = withObject "committee seed params" $ \o -> do
-    (committeeParamsType :: Text) <- o .: "type"
+    (committeeParamsType :: Text) <- o .: "committeeType"
     case committeeParamsType of
-        "committeeOpen" -> do
+        "open" -> do
             cpParticipantN <- o .: "n"
             return $ CommitteeParamsOpen {..}
-        "committeeClosed" -> do
+        "closed" -> do
             cpParticipantN <- o .: "n"
             cpSecret <- o .: "secret"
             return $ CommitteeParamsClosed {..}
