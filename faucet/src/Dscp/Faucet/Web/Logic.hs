@@ -66,19 +66,24 @@ faucetTransferMoneyTo dest = do
         when (balance < transfer) $
             throwM SourceAccountExhausted
 
-        let nonce = fromIntegral $ aiCurrentNonce sourceState
-            inAcc = TxInAcc{ tiaNonce = nonce, tiaAddr = source }
-            outs  = one (TxOut dest transfer)
-            tx    = Tx{ txInAcc = inAcc, txInValue = transfer, txOuts = outs }
-            txId  = toTxId tx
+        txWitnessed <- pure . fixFees (fcMoney $ giveL @FaucetConfig @FeeConfig) $ \fees ->
+            let nonce = fromIntegral $ aiCurrentNonce sourceState
+                inAcc = TxInAcc{ tiaNonce = nonce, tiaAddr = source }
+                outs  = one (TxOut dest transfer)
+                inVal = transfer `unsafeAddCoin` unFees fees
+                tx    = Tx{ txInAcc = inAcc, txInValue = inVal, txOuts = outs }
+                txId  = toTxId tx
 
-            sgn = sign sk (txId, pk, ())
-            witness = TxWitness{ txwSig = sgn, txwPk = pk }
-            txWitnessed = TxWitnessed{ twTx = tx, twWitness = witness }
+                sgn = sign sk (txId, pk, ())
+                witness = TxWitness{ txwSig = sgn, txwPk = pk }
+                txWitnessed = TxWitnessed{ twTx = tx, twWitness = witness }
+            in txWitnessed
 
         unless dryRun $
             void $ wSubmitTx wc txWitnessed
 
+        let tx = twTx txWitnessed
+            txId = toTxId tx
         return TransferMoneyResponse
             { tmrTxId = AsByteString txId
             , tmrAmount = transfer
