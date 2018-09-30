@@ -153,12 +153,11 @@ createStore ::
        , HasCoreConfig
        )
     => FilePath
-    -> Maybe CommitteeParams
     -> PassPhrase
     -> m (KeyResources n)
-createStore path comParamsM pp = do
+createStore path pp = do
      logInfo $ "Creating new "+|nodeNameP|+" secret key under "+||path||+""
-     store <- genStore comParamsM
+     store <- genStore Nothing
      writeStore path pp store
      return store
   where
@@ -171,11 +170,11 @@ linkStore
     :: forall m n.
        (MonadIO m, MonadCatch m, MonadLogging m,
         HasCoreConfig, Buildable (Proxy n))
-    => BaseKeyParams -> Maybe CommitteeParams -> AppDir -> m (KeyResources n)
-linkStore params@BaseKeyParams{..} commParamsM appDir = do
+    => BaseKeyParams -> AppDir -> m (KeyResources n)
+linkStore params@BaseKeyParams{..} appDir = do
     let path = storePath params appDir (Proxy :: Proxy n)
         pp = fromMaybe emptyPassPhrase bkpPassphrase
     keyExists <- liftIO . rewrapKeyIOErrors $ D.doesFileExist path
     if bkpGenNew && not keyExists
-        then createStore path commParamsM pp
+        then createStore path pp
         else readStore path pp

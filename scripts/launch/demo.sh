@@ -90,8 +90,6 @@ function witness_args {
     --log-dir $witness_dir/logs
     --log-config $files/log-config.yaml
     --comm-n $index
-    --witness-keyfile $witness_dir/witness.key
-    --witness-gen-key
     --metrics-server 127.0.0.1:8125
     $peers
     "

@@ -5,7 +5,7 @@ module KeygenOptions
        , keygenConfigParser
        ) where
 
-import Options.Applicative (Parser, ReadM, flag', help, long, metavar, option, str)
+import Options.Applicative (Parser, ReadM, auto, flag', help, long, metavar, option, str)
 
 import Dscp.CommonCLI
 import Dscp.Util
@@ -19,25 +19,26 @@ keygenCommandReadM = leftToFail . parseKeygenCommand =<< str
 -- | Parser for all possble ways to give secret key.
 secretDataTypeParser :: Parser SecretDataType
 secretDataTypeParser = asum
-    [ do
-        _ <- flag' () $
-            long "secret" <>
-            help "Consume secret key (maybe encrypted)"
-        pp <- passphraseParser
-        return $ PlainSecret pp
+    [ flag' ()
+        (long "secret" <>
+         help "Consume secret key (maybe encrypted)")
+      *> (PlainSecret <$> passphraseParser)
 
-    , do
-        _ <- flag' () $
-            long "keyfile" <>
-            help "Consume key file content"
-        pp <- passphraseParser
-        return $ KeyfileSecret pp
+    , flag' ()
+        (long "keyfile" <>
+         help "Consume key file content")
+      *> (KeyfileSecret <$> passphraseParser)
 
-    , do
-        _ <- flag' () $
-            long "seed" <>
-            help "Use given seed to generate base secret."
-        return SecretFromSeed
+    , CommSecret <$> option auto
+        (long "comm-sec" <>
+         metavar "N" <>
+         help "Use given committee secret and derive secret key of N-th \
+              \committee member from it.")
+
+    , flag' ()
+        (long "seed" <>
+         help "Use given seed to generate base secret.")
+      $> SecretFromSeed
     ]
   where
     passphraseParser = optional . option passphraseReadM $

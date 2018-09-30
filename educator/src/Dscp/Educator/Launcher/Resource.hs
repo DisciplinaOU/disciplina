@@ -45,8 +45,8 @@ instance AllocResource (KeyResources EducatorNode) where
                 educatorCfg ^. sub #educator . option #keys
         in buildComponentR "educator keys"
            (withCoreConfig (rcast educatorCfg) $
-               linkStore baseParams Nothing appDir)
-           (\_ -> pass)
+               linkStore baseParams appDir)
+           (const pass)
 
 instance AllocResource EducatorResources where
     type Deps EducatorResources = EducatorConfigRec

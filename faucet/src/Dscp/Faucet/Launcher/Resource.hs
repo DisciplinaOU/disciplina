@@ -36,8 +36,8 @@ instance AllocResource (KeyResources FaucetApp) where
         let baseParams = faucetCfg ^. sub #faucet . option #keys
         in buildComponentR "faucet keys"
            (withCoreConfig (rcast faucetCfg) $
-               linkStore baseParams Nothing appDir)
-           (\_ -> pass)
+               linkStore baseParams appDir)
+           (const pass)
 
 instance AllocResource FaucetResources where
     type Deps FaucetResources = FaucetConfigRec

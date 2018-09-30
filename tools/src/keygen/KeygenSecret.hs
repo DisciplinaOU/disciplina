@@ -8,6 +8,7 @@ module KeygenSecret
 import Data.Aeson (decode)
 import qualified Data.ByteString.Lazy as LBS
 
+import Dscp.Core.Governance
 import Dscp.Crypto
 import Dscp.Resource.Keys
 import Dscp.Util
@@ -26,6 +27,7 @@ parseBytesWith interpret =
 data SecretDataType
     = PlainSecret (Maybe PassPhrase)
     | KeyfileSecret (Maybe PassPhrase)
+    | CommSecret Integer
     | SecretFromSeed
 
 parseInputWithSecret :: SecretDataType -> ByteString -> Maybe SecretKey
@@ -42,6 +44,8 @@ parseInputWithSecret = \case
         let pp = mpass ?: emptyPassPhrase
         content <- decode $ LBS.fromStrict input
         fromKeyfileContent pp content
+    CommSecret n -> \input ->
+        pure $ committeeDerive (CommitteeSecret input) n
     SecretFromSeed -> \input -> asum
         [ do
             -- we need this clause as soon as many code uses
