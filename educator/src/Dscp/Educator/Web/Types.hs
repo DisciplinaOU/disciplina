@@ -47,7 +47,8 @@ import Dscp.Core
 import Dscp.Crypto
 import Dscp.DB.SQLite.Instances ()
 import Dscp.Util.Aeson (CustomEncoding, HexEncoded)
-import Dscp.Util.Servant (ForResponseLog (..), buildForResponse)
+import Dscp.Util.Servant (ForResponseLog (..), buildForResponse,
+                          buildShortResponseList, buildLongResponseList)
 
 type MonadEducatorWebQuery m =
     ( MonadIO m
@@ -158,6 +159,18 @@ instance Buildable (ForResponseLog BlkProofInfo) where
       "{ tree root hash = " +||
           fmap getMerkleProofRoot bpiMtreeSerialized ||+
       "} "
+
+instance Buildable (ForResponseLog Course) where
+    build = buildForResponse
+
+instance Buildable (ForResponseLog [GradeInfo]) where
+    build = buildShortResponseList
+
+instance Buildable (ForResponseLog [StudentInfo]) where
+    build = buildLongResponseList
+
+instance Buildable (ForResponseLog [BlkProofInfo]) where
+    build = buildLongResponseList
 
 ---------------------------------------------------------------------------
 -- Simple conversions

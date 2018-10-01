@@ -32,7 +32,7 @@ import Fmt (build, (+|), (|+), listF)
 import Dscp.Core
 import Dscp.Crypto
 import Dscp.Educator.Web.Types
-import Dscp.Util.Servant (ForResponseLog (..))
+import Dscp.Util.Servant (ForResponseLog (..), buildShortResponseList, buildLongResponseList)
 
 data NewStudent = NewStudent
     { nsAddr :: Student
@@ -136,11 +136,16 @@ requestToAssignment NewAssignment{..} =
 -- Buildable instances
 ---------------------------------------------------------------------------
 
+instance Buildable (NewStudent) where
+    build (NewStudent{..}) =
+      "{ address = " +| nsAddr |+
+      " }"
+
 instance Buildable (NewCourse) where
     build (NewCourse{..}) =
       "{ course id = " +| ncId |+
       ", description = " +| ncDesc |+
-      ", subjects = " +| fmap listF ncSubjects |+
+      ", subjects = " +| listF ncSubjects |+
       " }"
 
 instance Buildable (NewGrade) where
@@ -159,6 +164,11 @@ instance Buildable (NewAssignment) where
 instance Buildable (EnrollStudentToCourse) where
     build (EnrollStudentToCourse{..}) =
       "{ course id = " +| escCourseId |+
+      " }"
+
+instance Buildable AssignToStudent where
+    build (AssignToStudent{..}) =
+      "{ hash = " +| atsAssignmentHash |+
       " }"
 
 instance Buildable (CourseEducatorInfo) where
@@ -196,6 +206,15 @@ instance Buildable (ForResponseLog SubmissionEducatorInfo) where
     build (ForResponseLog SubmissionEducatorInfo{..})=
       "{ hash = " +| siHash |+
       " }"
+
+instance Buildable (ForResponseLog [CourseEducatorInfo]) where
+    build = buildLongResponseList
+
+instance Buildable (ForResponseLog [AssignmentEducatorInfo]) where
+    build = buildShortResponseList
+
+instance Buildable (ForResponseLog [SubmissionEducatorInfo]) where
+    build = buildShortResponseList
 
 ---------------------------------------------------------------------------
 -- JSON instances

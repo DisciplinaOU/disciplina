@@ -32,7 +32,7 @@ import Dscp.Core
 import Dscp.Crypto
 import Dscp.Educator.Web.Types
 import Dscp.Util
-import Dscp.Util.Servant (ForResponseLog (..))
+import Dscp.Util.Servant (ForResponseLog (..), buildShortResponseList)
 
 -- | Whether student is enrolled into a course.
 newtype IsEnrolled = IsEnrolled { unIsEnrolled :: Bool }
@@ -168,6 +168,15 @@ instance Buildable (ForResponseLog SubmissionStudentInfo) where
     build (ForResponseLog SubmissionStudentInfo{..}) =
       "{ hash = " +| siHash |+
       " }"
+
+instance Buildable (ForResponseLog [CourseStudentInfo]) where
+    build = buildShortResponseList
+
+instance Buildable (ForResponseLog [AssignmentStudentInfo]) where
+    build = buildShortResponseList
+
+instance Buildable (ForResponseLog [SubmissionStudentInfo]) where
+    build = buildShortResponseList
 
 ---------------------------------------------------------------------------
 -- JSON instances
