@@ -18,7 +18,6 @@ import Dscp.DB.SQLite.BlockData (BlockData (..), TxInBlock (..), TxWithIdx (..))
 import Dscp.DB.SQLite.Types (TxBlockIdx, intTxBlockIdx)
 import Dscp.Util (leftToPanic)
 
-
 instance FromField (Hash a)            where fromField f = Codec.deserialise <$> fromField f
 instance FromField (Signature a)       where fromField f = Codec.deserialise <$> fromField f
 instance FromField (MerkleSignature a) where fromField f = Codec.deserialise <$> fromField f

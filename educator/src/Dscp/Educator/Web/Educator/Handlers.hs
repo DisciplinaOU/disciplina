@@ -27,8 +27,8 @@ educatorApiHandlers =
     {
       -- Students
 
-      eNewStudent =
-        void . invoke ... createStudent
+      eNewStudent = \(NewStudent student) ->
+        void . invoke $ createStudent student
 
     , eRemoveStudent =
         invoke ... educatorRemoveStudent
@@ -38,11 +38,11 @@ educatorApiHandlers =
 
       -- Courses
 
-    , eAddCourse = \(NewCourse cid desc subjects) ->
-        void . transactW $ createCourse CourseDetails
-            { cdCourseId = cid
-            , cdDesc = desc ?: ""
-            , cdSubjects = subjects ?: []
+    , eAddCourse = \(NewCourse mcid desc subjects) ->
+        transactW $ createCourse CourseDetails
+            { cdCourseId = mcid
+            , cdDesc = desc
+            , cdSubjects = subjects
             }
 
     , eGetCourses =
@@ -63,8 +63,8 @@ educatorApiHandlers =
     , eGetStudentAssignments = \student ->
         transactR $ commonGetAssignments EducatorCase student def
 
-    , eAssignToStudent =
-        transactW ... setStudentAssignment
+    , eAssignToStudent = \student (AssignToStudent assignmentHash) ->
+        transactW $ setStudentAssignment student assignmentHash
 
     , eUnassignFromStudent =
         invoke ... educatorUnassignFromStudent

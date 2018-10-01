@@ -59,7 +59,7 @@ createCourseSimple :: DBM m => Int -> DBT 'WithinTx 'Writing m Course
 createCourseSimple i =
     createCourse
         CourseDetails
-        { cdCourseId = allCourses !! (i - 1)
+        { cdCourseId = Just $ allCourses !! (i - 1)
         , cdDesc = "course " <> pretty i
         , cdSubjects = []
         }
@@ -107,18 +107,22 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
                 return (ciIsEnrolled course)
 
         it "'Course' datatype is filled correctly" $
-            sqliteProperty $ \
-              ( courseDetails
-              ) -> do
-                _ <- createCourse courseDetails
-                course <- studentGetCourse student1 (cdCourseId courseDetails)
-                return $ course === CourseStudentInfo
-                    { ciId = cdCourseId courseDetails
-                    , ciDesc = cdDesc courseDetails
-                    , ciSubjects = cdSubjects courseDetails
-                    , ciIsEnrolled = False
-                    , ciIsFinished = False
-                    }
+            sqlitePropertyM $ do
+                courseDetails <- pick arbitrary
+                pre $ isJust (cdCourseId courseDetails)
+                let courseId = cdCourseId courseDetails
+                            ?: error "Course should be defined"
+
+                lift $ do
+                    _ <- createCourse courseDetails
+                    course <- studentGetCourse student1 courseId
+                    return $ course === CourseStudentInfo
+                        { ciId = courseId
+                        , ciDesc = cdDesc courseDetails
+                        , ciSubjects = cdSubjects courseDetails
+                        , ciIsEnrolled = False
+                        , ciIsFinished = False
+                        }
 
         it "Student has vision proper for him" $
             sqliteProperty $ \() -> do
@@ -185,7 +189,7 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
               , desc
               , delayedGen listUnique -> subjects
               ) -> do
-                _ <- createCourse $ CourseDetails courseId desc subjects
+                _ <- createCourse $ CourseDetails (Just courseId) desc subjects
                 courses <- studentGetCourses student1 Nothing
                 return $ courses === one CourseStudentInfo
                     { ciId = courseId

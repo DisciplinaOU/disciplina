@@ -59,7 +59,7 @@ spec_EducatorApiQueries = describe "Basic database operations" $ do
                                   (courseId, desc, subjs)
             let coursesBone' = courses' <&>
                               \(CourseEducatorInfo courseId desc subjs) ->
-                                  (courseId, desc, subjs)
+                                  (Just courseId, desc, subjs)
             return $
                 cover (length coursesDetails > 1) 50 "enough courses" $
                 sort coursesBone === sort coursesBone'

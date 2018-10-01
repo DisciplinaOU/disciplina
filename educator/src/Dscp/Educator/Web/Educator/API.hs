@@ -46,7 +46,7 @@ data EducatorApiEndpoints route = EducatorApiEndpoints
       eNewStudent :: route
         :- "students"
         :> Summary "Add a new student address to a database"
-        :> ReqBody '[DSON] Student
+        :> ReqBody '[DSON] NewStudent
         :> PostCreated '[DSON] ()
 
     , eRemoveStudent :: route
@@ -71,7 +71,8 @@ data EducatorApiEndpoints route = EducatorApiEndpoints
         :- "courses"
         :> Summary "Add a new course to a database"
         :> ReqBody '[DSON] NewCourse
-        :> PostCreated '[DSON] ()
+        :> PostCreated '[DSON] Course
+    -- TODO: return proper JSON-object here
 
     , eGetCourses :: route
         :- "courses"
@@ -85,7 +86,7 @@ data EducatorApiEndpoints route = EducatorApiEndpoints
         :> Description "Given existing student and course, enroll the \
                         \student to the course."
         :> ReqBody '[DSON] EnrollStudentToCourse
-        :> Post '[DSON] ()
+        :> PostCreated '[DSON] ()
 
     , eGetStudentCourses :: route
         :- "students" :> Capture "studentAddr" Student
@@ -118,7 +119,7 @@ data EducatorApiEndpoints route = EducatorApiEndpoints
         :> Summary "Assign an assignment to a student"
         :> Description "Assigns a new assignment to a student in scope of \
                         \given course."
-        :> ReqBody '[DSON] (Hash Assignment)
+        :> ReqBody '[DSON] AssignToStudent
         :> PostCreated '[DSON] ()
 
     , eUnassignFromStudent :: route
