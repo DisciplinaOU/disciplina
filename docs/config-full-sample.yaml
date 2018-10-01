@@ -179,6 +179,10 @@ sample:
         enabled: true
         data: []
 
+    # Private blocks publishing params
+    publishing:
+      period: 30s
+
   # Faucet config
   faucet:
     # Logging config for faucet. See option `witness.logging`.

@@ -17,7 +17,7 @@ import Dscp.Core
 import Dscp.Network.Wrapped
 import Dscp.Resource.Keys (ourPublicKey)
 import Dscp.Snowdrop
-import Dscp.Util
+import Dscp.Util.Timing
 import Dscp.Witness.Config
 import Dscp.Witness.Launcher.Marker
 import Dscp.Witness.Launcher.Mode

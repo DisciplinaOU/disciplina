@@ -26,8 +26,7 @@ import Servant.Client (BaseUrl (..), parseBaseUrl)
 import Text.InterpolatedString.Perl6 (qc)
 import Time (KnownRatName, Time, unitsP)
 
-import Dscp.Core.Foundation.Address
-import Dscp.Core.Foundation.Witness
+import Dscp.Core.Foundation
 import Dscp.Crypto (PassPhrase)
 import Dscp.Crypto (mkPassPhrase)
 import Dscp.Resource.AppDir

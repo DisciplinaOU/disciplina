@@ -39,16 +39,17 @@ withWitnessBackground cont = do
     listeners <- witnessListeners
 
     mask $ \unmask -> do
-        logInfo "Forking workers"
+        logInfo "Forking witness workers"
         workerAsyncs <- mapM (async . runWorker identity) workers
 
-        logInfo "Forking listeners"
+        logInfo "Forking witness listeners"
         listenerAsyncs <- mapM (async . runListener identity) listeners
-
-        let terminate = logWarningWaitInf (sec 1) "Worker/listener shutdown" . cancel
 
         unmask cont
             `finally` mapM terminate (workerAsyncs <> listenerAsyncs)
+  where
+    terminate =
+        logWarningWaitInf (sec 1) "Witness worker/listener shutdown" . cancel
 
 -- | Entry point of witness node.
 witnessEntry :: FullWitnessWorkMode ctx m => m ()

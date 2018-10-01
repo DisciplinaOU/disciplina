@@ -6,6 +6,7 @@ import Codec.Serialise (Serialise (..))
 import Codec.Serialise.Decoding (decodeListLen, decodeWord)
 import Codec.Serialise.Encoding (encodeListLen, encodeWord)
 
+import Dscp.Core.Foundation.Coin
 import Dscp.Core.Foundation.Educator
 import Dscp.Core.Foundation.Witness
 import Dscp.Crypto (Hash, hash)

@@ -10,6 +10,7 @@ module Dscp.Educator.CLI
 import Loot.Config (OptParser, upcast, (.::), (.:<), (.<>))
 import Options.Applicative (Parser, auto, flag', help, long, metavar, option, strOption, switch,
                             value)
+import Time (Second, Time)
 
 import Dscp.CommonCLI
 import Dscp.DB.SQLite
@@ -88,10 +89,23 @@ educatorKeyParamsParser :: Parser EducatorKeyParams
 educatorKeyParamsParser =
     EducatorKeyParams <$> baseKeyParamsParser "educator"
 
+publishingPeriodParser :: Parser (Time Second)
+publishingPeriodParser = option timeReadM $
+    long "publication-period" <>
+    metavar "TIME" <>
+    help "How often grades should be dumped to private blocks and submitted to \
+         \public chain. Block creation may be skipped if there are no relevant \
+         \changes, in this case node will wait for a whole cycle before trying \
+         \to create a block next time."
+
 educatorConfigParser :: OptParser EducatorConfig
 educatorConfigParser =
     fmap upcast witnessConfigParser .<>
     #educator .:<
         (#db .:: sqliteParamsParser .<>
          #keys .:: educatorKeyParamsParser .<>
-         #api .:: educatorWebParamsParser)
+         #api .:: educatorWebParamsParser .<>
+         #publishing .:<
+             (#period .:: publishingPeriodParser
+             )
+        )

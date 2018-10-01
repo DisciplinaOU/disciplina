@@ -53,7 +53,7 @@ module Dscp.DB.SQLite.Queries
        , simpleCourse
        , enrollStudentToCourse
        , submitAssignment
-       , createBlock
+       , createPrivateBlock
        , createSignedSubmission
        , setStudentAssignment
        , createCourse
@@ -407,10 +407,12 @@ getLastBlockIdAndIdx = do
         limit     1
     |] ()
 
-createBlock :: DBM m => Maybe ATGDelta -> DBT 'WithinTx 'Writing m ()
-createBlock delta = do
-    (prev, idx) <- getLastBlockIdAndIdx
-    txs         <- getAllNonChainedTransactions
+createPrivateBlock
+    :: DBM m
+    => Maybe ATGDelta -> MaybeT (DBT 'WithinTx 'Writing m) PrivateBlockHeader
+createPrivateBlock delta = do
+    (prev, idx) <- lift getLastBlockIdAndIdx
+    txs         <- lift getAllNonChainedTransactions
 
     let tree = MerkleTree.fromList txs
         root = getMerkleRoot tree
@@ -422,9 +424,15 @@ createBlock delta = do
 
         hdr = PrivateBlockHeader prev root trueDelta
 
+    let isNullBlock = and
+            [ isEmptyATGDelta trueDelta
+            , null txs
+            ]
+    guard (not isNullBlock)
+
     time <- liftIO getCurrentTime
 
-    _ <- execute createBlockRequest
+    _ <- lift $ execute createBlockRequest
         ( bid
         , hash hdr
         , time
@@ -435,14 +443,14 @@ createBlock delta = do
         )
         `ifAlreadyExistsThrow` BlockWithIndexDomain bid
 
-    for_ txs' $ \(txIdx, txId) -> do
+    for_ txs' $ \(txIdx, txId) -> lift $ do
         execute setTxIndexRequest    (txIdx :: Word32, txId)
         execute assignToBlockRequest (bid, txId)
 
-    return ()
+    return hdr
   where
     createBlockRequest = [q|
-        -- createBlock
+        -- createPrivateBlock
         insert into Blocks
         values      (?, ?, ?, ?, ?, ?, ?)
     |]

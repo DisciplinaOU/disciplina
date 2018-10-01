@@ -62,6 +62,7 @@ educator_params="
 --educator-listen 127.0.0.1:8090
 --educator-api-no-auth
 --student-api-no-auth 3BAyX5pUsPCFfK45adsJpj7X6waKEB1kxdvMn1Tj2VYsrJuHApTviPEpK3
+--publication-period 15s
 "
 
 # witness params (and educator's as well)
