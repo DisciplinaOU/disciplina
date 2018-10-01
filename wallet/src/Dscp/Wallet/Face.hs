@@ -39,4 +39,5 @@ data Account = Account
 
 data WalletEvent
     = WalletStateUpdateEvent [Account]
+    | WalletLogEvent Text
     deriving (Eq, Show)
