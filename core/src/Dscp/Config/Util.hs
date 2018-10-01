@@ -1,5 +1,6 @@
-{-# LANGUAGE DataKinds             #-}
 {-# LANGUAGE ApplicativeDo         #-}
+{-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE GADTs                 #-}
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE PolyKinds             #-}
 {-# LANGUAGE TypeOperators         #-}
@@ -34,16 +35,20 @@ module Dscp.Config.Util
     ) where
 
 import Control.Applicative.Combinators.NonEmpty as NonEmpty (some)
-import Data.Vinyl.Lens (rcast, rreplace, type (<:))
-import Data.Vinyl.TypeLevel (type (++))
+import Data.Aeson (Result (..), Value (Object), fromJSON)
+import qualified Data.HashMap.Strict as HM
 import Data.Reflection (reifySymbol)
-import GHC.TypeLits (Symbol, symbolVal, KnownSymbol)
 import Data.Reflection (Given (..))
 import qualified Data.Text.Buildable
-import Data.Yaml (ParseException, decodeFileEither, FromJSON(..), withObject, (.:?))
+import Data.Vinyl.Lens (type (<:), rcast, rreplace)
+import Data.Vinyl.TypeLevel (type (++))
+import Data.Yaml (FromJSON (..), ParseException (AesonException), decodeFileEither, withObject,
+                  (.:?))
 import Fmt (blockListF)
+import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
 import Loot.Base.HasLens (HasLens', lensOf)
-import Loot.Config (ConfigKind (Final, Partial), ConfigRec, HasLensC, finalise, lensOfC, sub, option)
+import Loot.Config (ConfigKind (Final, Partial), ConfigRec, HasLensC, finalise, lensOfC, option,
+                    sub)
 import qualified Options.Applicative as Opt
 import qualified Text.Show
 
@@ -71,7 +76,7 @@ instance Exception ConfigBuildError
 
 -- | Configuration parameters.
 data ConfigParams = ConfigParams
-    { cpPaths :: NonEmpty FilePath
+    { cpPaths     :: NonEmpty FilePath
       -- ^ Paths to the configuration files.
     , cpConfigKey :: String
       -- ^ Configuration key.
@@ -94,7 +99,6 @@ instance (KnownSymbol s, FromJSON o) => FromJSON (ConfigWithKey s o) where
 -- Merging only works for vinyl records in config though.
 -- Function has complex constraint you don't need to bother with, it will be
 -- satisfied if you make up config type properly.
--- TODO: consider CLI params as well
 buildConfig ::
        (MonadIO m, MonadThrow m, _)
     => ConfigParams
@@ -102,13 +106,32 @@ buildConfig ::
     -> m (ConfigRec 'Final o)
 buildConfig ConfigParams{..} filler =
     reifySymbol cpConfigKey $ \(_ :: Proxy s) -> liftIO $ do
+        rawConfig :: Value <- fmap mergeOverrideAll . forM cpPaths $
+            decodeFileEither >=> leftToThrow ConfigReadError
         ((ConfigWithKey fileConfig) :: ConfigWithKey s (ConfigRec 'Partial o)) <-
-            map sconcat . forM cpPaths $ decodeFileEither >=> leftToThrow ConfigReadError
+            leftToThrow (ConfigReadError . AesonException) .
+            resToEither $ fromJSON rawConfig
         fileConfigFilled <- filler fileConfig
         config <-
             leftToThrow ConfigIncomplete $
             finalise fileConfigFilled
         pure config
+
+-- | Aeson's 'Result' to 'Either'.
+resToEither :: Result a -> Either String a
+resToEither (Error s)   = Left s
+resToEither (Success a) = Right a
+
+-- | Merges two 'Value's, keys in right one recursively
+-- override keys in left.
+mergeOverride :: Value -> Value -> Value
+mergeOverride (Object o1) (Object o2) =
+    Object $ HM.unionWith mergeOverride o1 o2
+mergeOverride _ b = b
+
+-- | Merges a container of 'Value's, left to right.
+mergeOverrideAll :: (Container c, Element c ~ Value) => c -> Value
+mergeOverrideAll = foldl' mergeOverride (Object mempty)
 
 -- | Utility function for filling up a config reusing existing function
 -- for a subconfig.
