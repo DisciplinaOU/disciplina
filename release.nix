@@ -50,9 +50,17 @@ rec {
   '';
 
   disciplina-trailing-whitespace = runCheck ''
-    for f in $(find ${source} -type f); do
+    cd ${source} 
+
+    for f in $(find . -type f); do
       ${haskellPackages.tw}/bin/tw $f
+
+      if [ "$?" != 0 ]; then
+        status=1
+      fi
     done
+
+    (exit $status)
   '';
 
   disciplina-wallet-macos-sandbox = writeShellScript ''
