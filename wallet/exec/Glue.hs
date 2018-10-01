@@ -103,6 +103,9 @@ knitFaceToUI walletStateRef UiFace{..} WalletFace{..} KnitFace{..} =
       { putCommandResult = \mtid result -> do
           unless silent $
             whenJust (knitCommandResultToUI (commandIdToUI commandId mtid) result) putUiEvent
+          case result of
+            KnitCommandException e -> putUiEvent $ UiBackendEvent $ UiBackendLogEvent $ fromString $ displayException e
+            _ -> pass
           whenJust (resultToUI result =<< mOp) $ putUiEvent . UiCommandResult (commandIdToUI commandId mtid)
       , putCommandOutput = \tid doc -> unless silent $
           putUiEvent $ knitCommandOutputToUI (commandIdToUI commandId (Just tid)) doc
@@ -276,27 +279,30 @@ createWalletState = buildComponent_ "WalletState" $ newIORef WalletState
 
 putWalletEventToUI :: WalletStateRef -> UiFace -> WalletEvent -> IO ()
 putWalletEventToUI walletStateRef UiFace{..} ev = do
-  walletState <- readIORef walletStateRef
-  whenJust (walletEventToUI walletState ev) $ \(walletState', event) -> do
-    writeIORef walletStateRef walletState'
-    putUiEvent event
+  event <- walletEventToUI walletStateRef ev
+  whenJust event putUiEvent
 
 -- The 'Maybe' here is not used for now, but in the future might be, if some
 -- event couldn't be mapped to a UI event.
-walletEventToUI :: WalletState -> WalletEvent -> Maybe (WalletState, UiEvent)
-walletEventToUI WalletState{ selection } = \case
-    WalletStateUpdateEvent accounts ->
-      Just $
-        ( WalletState{ selection = clampSelection accounts, accounts = accounts }
-        , UiWalletEvent $
-            UiWalletUpdate
-              { wuTrees = toTree <$> accounts
-              , wuSelection = toTreeSelection accounts
-              , wuSelectionInfo = toSelectionInfo accounts
-              }
-        )
+walletEventToUI :: WalletStateRef -> WalletEvent -> IO (Maybe UiEvent)
+walletEventToUI walletStateRef = \case
+    WalletLogEvent message ->
+      return . Just . UiBackendEvent $
+        UiBackendLogEvent message
+    WalletStateUpdateEvent accounts -> do
+      WalletState{ selection } <- readIORef walletStateRef
+      writeIORef walletStateRef WalletState
+        { selection = clampSelection accounts selection
+        , accounts = accounts
+        }
+      return . Just . UiWalletEvent $
+        UiWalletUpdate
+          { wuTrees = toTree <$> accounts
+          , wuSelection = toTreeSelection accounts selection
+          , wuSelectionInfo = toSelectionInfo accounts selection
+          }
   where
-    clampSelection accounts = mfilter ((< length accounts) . fromIntegral) selection
+    clampSelection accounts = mfilter ((< length accounts) . fromIntegral)
     toTree Account{..} = Node
       { rootLabel = UiTreeItem
           { wtiLabel = Just $ fromMaybe (pretty accountAddress) accountName
@@ -306,15 +312,15 @@ walletEventToUI WalletState{ selection } = \case
       , subForest = []
       }
 
-    toTreeSelection accounts =
-      clampSelection accounts >>=
+    toTreeSelection accounts selection =
+      clampSelection accounts selection >>=
       \i -> Just UiTreeSelection
         { wtsWalletIdx = i
         , wtsPath = []
         }
 
-    toSelectionInfo accounts = do
-      i <- clampSelection accounts
+    toSelectionInfo accounts selection = do
+      i <- clampSelection accounts selection
       Account{..} <- accounts ^? ix (fromIntegral i)
       Just $ UiSelectionWallet $ UiWalletInfo
         { uwiLabel = Just $ fromMaybe (pretty accountAddress) accountName
