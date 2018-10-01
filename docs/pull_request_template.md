@@ -4,45 +4,24 @@
 
 ### YT issue
 
-https://issues.serokell.io/DSCP-
-
-### Introduced changes
-
-<!--
-Check all that apply. At least one _should_ be checked, otherwise
-describe that weird type of change in the description, maybe it will
-make sense to add it to the list.
--->
-
-- [ ] New feature
-- [ ] Bugfix
-- [ ] Refactoring
-- [ ] New tests (on functionality not fixed/introduced in this PR)
-- [ ] New docs (on functionality not fixed/introduced in this PR)
-- [ ] Infrastructure changes
+https://issues.serokell.io/issue/DSCP-
 
 ### Checklist
 
-If I added new functionality, I
-- [ ] added tests covering it
-- [ ] explained it using haddock in the source code
+Hint: a perfect PR has all the checkmarks set.
 
-If I fixed a bug, I
-- [ ] added a regression test to prevent the bug from silently reappearing again
+Possible related changes (conditional):
+- [ ] I added tests if required, in case they are:
+  - Covering new introduced functionality (feature).
+  - Regression tests preventing the bug from silently reappearing again (bugfix).
+- [ ] I have checked the [sample config](/../../tree/master/docs/config-full-sample.yaml) and [launch scripts](/../../tree/master/scripts/launch) and updated them if it was necessary (especially if executables or CLIs were changed).
+- [ ] I have checked READMEs and changed them accordingly if it's necessary (the main [README.md](/README.md) as well as subproject READMEs for all related executables).
+- [ ] If a public API structure or/and data serialization was changed, I made sure that these changes are reflected in the:
+  - [Swagger](/../../tree/master/specs/disciplina) API specs.
+  - Any [related documentation](/../../tree/master/docs/api-types.md).
+- [ ] If any public documentation was written, I have spellchecked it.
 
-If I changed public API structure or/and data serialization, I made sure that
-- [ ] those changes are reflected in [Swagger API specs](/specs/disciplina)
-- [ ] and also in [related](/docs/api-types.md) [documentation](/docs/authentication.md).
-
-If I changed config structure or/and CLI interface of any executable, I made sure that
-- [ ] [sample config](/docs/config-full-sample.yaml) is updated accordingly
-- [ ] [launch scripts](/scripts/launch) are updated accordingly and work as expected
-
-If I changed the procedure of building a project and/or running any executable or helper script, I
-- [ ] updated [README.md](/README.md) accordingly
-- [ ] as well as subproject READMEs for all related executables
-
-Also,
-- [ ] my commit history is clean, descriptive and do not contain merge or revert commits or commits like "WIP"
-- [ ] my code complies with the [style guide](/docs/code-style.md)
-- [ ] my documentation is checked with a spell checker (like [Grammarly](https://app.grammarly.com))
+Stylistic (obligatory):
+- [ ] My commit history is clean, descriptive and do not contain merge or revert commits or commits like "WIP".
+- [ ] My code complies with the [style guide](/../../tree/master/docs/code-style.md).
+- [ ] My code is documented (haddock) and these docs are decent (full enough and spellchecked).
