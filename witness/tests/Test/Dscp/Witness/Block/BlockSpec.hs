@@ -3,7 +3,6 @@ module Test.Dscp.Witness.Block.BlockSpec where
 import Control.Lens (ix, to)
 import qualified Data.List as L
 import qualified GHC.Exts as Exts
-import Test.QuickCheck.Modifiers (getPositive)
 import Test.QuickCheck.Monadic (pre)
 
 import Dscp.Core
@@ -88,12 +87,12 @@ spec = describe "Block validation + application" $ do
         lift . noThrow $ mapM_ submitBlock blocks
 
     it "Several good blocks are is fine" $ witnessProperty $ do
-        n <- pick $ getPositive <$> arbitrary
+        n <- pick $ choose (1, 5)
         let blocks = makeBlocksChain n
         lift . noThrow $ mapM_ submitBlock blocks
 
     it "Wrong previous block hash is not fine" $ witnessProperty $ do
-        n <- pick $ getPositive <$> arbitrary
+        n <- pick $ choose (1, 5)
         let blocks = makeBlocksChain n
         let spoilBlock block = do
                 badPrevHash <- arbitrary
@@ -111,7 +110,7 @@ spec = describe "Block validation + application" $ do
     it "Wrong difficulty is fatal" $ witnessProperty $ do
         _ <- stop $ pendingWith "To be resolved in [DSCP-261]"
 
-        n <- pick $ getPositive <$> arbitrary
+        n <- pick $ choose (1, 5)
         let blocks = makeBlocksChain n
         let spoilBlock block = do
                 badDiff <- arbitrary
@@ -123,7 +122,7 @@ spec = describe "Block validation + application" $ do
         _ <- stop $ pendingWith "To be resolved in [DSCP-261]"
 
         issuer <- lift $ getSecretKey @WitnessNode
-        n <- pick $ (+1) . getPositive <$> arbitrary
+        n <- pick $ choose (2, 5)
         -- going to modify block before the last one with too high slotId
         let issuerAddr = mkAddr $ toPublic issuer
             blocks = makeBlocksChain n

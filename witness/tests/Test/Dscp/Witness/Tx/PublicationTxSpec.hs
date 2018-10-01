@@ -5,7 +5,6 @@ module Test.Dscp.Witness.Tx.PublicationTxSpec where
 
 import Control.Lens (forOf, _last)
 import qualified GHC.Exts as Exts
-import Test.QuickCheck.Modifiers (Positive (..))
 import Test.QuickCheck.Monadic (pre)
 
 import Dscp.Core
@@ -21,12 +20,12 @@ genSmallMerkleSignature = MerkleSignature <$> arbitrary <*> choose (0, 100)
 
 genPublicationChain
     :: HasWitnessConfig
-    => Positive Int -> SecretKey -> Gen (NonEmpty PublicationTx)
-genPublicationChain (Positive n) secret
-    | n <= 0 = error "genPublicationChain: n <= 0"
+    => Word -> SecretKey -> Gen (NonEmpty PublicationTx)
+genPublicationChain n secret
+    | n <= 0 = error "genPublicationChain: n == 0"
     | otherwise = do
         let addr = mkAddr (toPublic secret)
-        sigs <- vectorUniqueOf n genSmallMerkleSignature
+        sigs <- vectorUniqueOf (fromIntegral n) genSmallMerkleSignature
         return . Exts.fromList . fix $ \pubTxs ->
             zip sigs (genesisHeaderHash : map (hash . ptHeader) pubTxs) <&>
               \(sig, prevHeaderHash) ->
@@ -44,8 +43,6 @@ genPublicationChain (Positive n) secret
 author :: SecretKey
 author = detGen 21 $ elements testGenesisSecrets
 
-deriving instance Num a => Num (Positive a)
-
 submitPub
     :: (MempoolCtx ctx m, WithinWriteSDLock)
     => PublicationTxWitnessed -> m ()
@@ -61,13 +58,13 @@ spec = describe "Publication tx expansion + validation" $ do
         lift . noThrow $ submitPub tw
 
     it "Consequent txs are fine" $ witnessProperty $ do
-        chainLen <- pick arbitrary
+        chainLen <- pick $ choose (1, 5)
         pubs     <- pick $ genPublicationChain chainLen author
         let tws = map (signPubTx author) pubs
         lift . noThrow $ mapM_ submitPub tws
 
     it "Tx with wrong previous hash isn't fine" $ witnessProperty $ do
-        chainLen <- pick $ Positive <$> choose (1, 4)
+        chainLen <- pick $ choose (1, 4)
         pubs     <- pick $ genPublicationChain chainLen author
         badPubs  <- pick $ shuffleNE pubs
         pre (pubs /= badPubs)
@@ -77,7 +74,7 @@ spec = describe "Publication tx expansion + validation" $ do
     it "Foreign author in the chain is not fine" $ witnessProperty $ do
         otherSecret <- pick (arbitrary `suchThat` (/= author))
         let otherAddr = mkAddr (toPublic otherSecret)
-        chainLen    <- pick $ Positive <$> choose (2, 5)
+        chainLen    <- pick $ choose (2, 5)
         pubs        <- pick $ genPublicationChain chainLen author
         let badPubs = pubs & _tailNE . _last . ptAuthorL .~ otherAddr
         let badTws = map (signPubTx author) badPubs
@@ -96,7 +93,7 @@ spec = describe "Publication tx expansion + validation" $ do
             submitPub tw
 
     it "Forking publications chain isn't fine" $ witnessProperty $ do
-        chainLen <- pick $ Positive <$> choose (2, 4)
+        chainLen <- pick $ choose (2, 4)
         pubs     <- pick $ genPublicationChain chainLen author
 
         forkPub' <- pick $ elements (toList pubs)
@@ -109,7 +106,7 @@ spec = describe "Publication tx expansion + validation" $ do
             throwsSome $ submitPub (last badTws)
 
     it "Loops are not fine" $ witnessProperty $ do
-        chainLen <- pick $ Positive <$> choose (2, 5)
+        chainLen <- pick $ choose (2, 5)
         pubs     <- pick $ genPublicationChain chainLen author
         loopPoint <- pick $ elements (init pubs)
         let badPubs = pubs & _tailNE . _last . ptHeaderL .~ ptHeader loopPoint
