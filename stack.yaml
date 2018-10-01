@@ -4,6 +4,7 @@ packages:
 - 'core'
 - 'witness'
 - 'educator'
+- 'multi-educator'
 - 'tools'
 - 'wallet'
 - 'faucet'

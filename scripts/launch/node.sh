@@ -21,6 +21,8 @@ do
         node="witness"
     elif [[ "$var" == "educator" ]] || [ "$var" == "e" ]; then
         node="educator"
+    elif [[ "$var" == "educator" ]] || [ "$var" == "me" ]; then
+        node="multi-educator"
     elif [[ "$var" == "bot" ]] || [ "$var" == "b" ]; then
         educator_bot=true
     elif [[ "$var" == "faucet" ]] || [ "$var" == "f" ]; then
@@ -86,6 +88,14 @@ educator_params="
 --student-api-no-auth 3BAyX5pNpoFrLJcP5bZ2kXihBfmBVLprSyP1RhcPPddm6Dw42jzEPXZz22
 --publication-period 15s
 "
+multi_educator_params="
+--educator-key-dir $files/educator.key
+--sql-path $tmp_files/educator.db
+--educator-listen 127.0.0.1:8090
+--educator-api-no-auth
+--student-api-no-auth 3BAyX5pNpoFrLJcP5bZ2kXihBfmBVLprSyP1RhcPPddm6Dw42jzEPXZz22
+--publication-period 15s
+"
 # Note: Student address in --student-api-no-auth parameter corresponds to secret
 # key with seed 456 (use dscp-keygen to generate one)
 
@@ -132,6 +142,12 @@ if [[ "$node" == "educator" ]]; then
         stack exec "dscp-educator" -- $common_params $witness_params $educator_params
     else
         dscp-educator $common_params $witness_params $educator_params
+    fi
+elif [[ "$node" == "multi-educator" ]]; then
+    if [ -z "$(which dscp-multi-educator)" ]; then
+        stack exec "dscp-multi-educator" -- $common_params $witness_params $educator_params
+    else
+        dscp-multi-educator $common_params $witness_params $educator_params
     fi
 elif [[ "$node" == "witness" ]]; then
     if [ -z "$(which dscp-witness)" ]; then
