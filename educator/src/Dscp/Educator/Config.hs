@@ -1,4 +1,5 @@
-{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE TypeOperators    #-}
 
 -- | All educator's configurations.
 
@@ -6,6 +7,7 @@ module Dscp.Educator.Config
     ( EducatorConfig
     , EducatorConfigRec
     , HasEducatorConfig
+    , defaultEducatorConfig
     , educatorConfig
     , withEducatorConfig
     , fillEducatorConfig
@@ -13,11 +15,12 @@ module Dscp.Educator.Config
     , module Dscp.Witness.Config
     ) where
 
+import Control.Lens ((?~))
 import Data.Reflection (Given, give, given)
-import Loot.Config ((:::), (::<), ConfigKind (Final, Partial), ConfigRec)
+import Loot.Config ((:::), (::<), ConfigKind (Final, Partial), ConfigRec, upcast)
 
 import Dscp.Config
-import Dscp.DB.SQLite (SQLiteParams)
+import Dscp.DB.SQLite (SQLiteDBMode (..), SQLiteParams (..), SQLiteRealParams (..))
 import Dscp.Educator.Launcher.Params (EducatorKeyParams)
 import Dscp.Educator.Web.Params (EducatorWebParams)
 import Dscp.Witness.Config
@@ -34,6 +37,16 @@ type EducatorConfigRecP = ConfigRec 'Partial EducatorConfig
 type EducatorConfigRec = ConfigRec 'Final EducatorConfig
 
 type HasEducatorConfig = Given EducatorConfigRec
+
+defaultEducatorConfig :: EducatorConfigRecP
+defaultEducatorConfig = upcast defaultWitnessConfig
+    & sub #educator . option #db ?~ defSqliteParams
+  where
+    defSqliteParams = SQLiteParams $ SQLiteReal $ SQLiteRealParams
+        { srpPath = "educator-db"
+        , srpConnNum = Nothing
+        , srpMaxPending = 200
+        }
 
 -- instance (HasEducatorConfig, cfg ~ WitnessConfigRec) => Given cfg where
 --     given = rcast (given @EducatorConfigRec)

@@ -29,7 +29,7 @@ data SQLiteRealParams = SQLiteRealParams
       -- ^ Connections pool size.
     , srpMaxPending :: !Int
       -- ^ Maximal number of requests waiting for a free connection.
-    }
+    } deriving (Show, Eq)
 
 -- | Database mode.
 data SQLiteDBMode
@@ -37,10 +37,11 @@ data SQLiteDBMode
       -- ^ In given file using given number of connections
     | SQLiteInMemory
       -- ^ In memory
+    deriving (Show, Eq)
 
 data SQLiteParams = SQLiteParams
     { sdpMode :: SQLiteDBMode
-    }
+    } deriving (Show, Eq)
 
 data SQLiteDB = SQLiteDB
     { sdConnPool   :: Chan Connection

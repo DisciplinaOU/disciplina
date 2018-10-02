@@ -26,6 +26,7 @@ import Fmt ((+|), (+||), (|+), (||+))
 import qualified GHC.Exts as Exts
 import qualified GHC.Generics as G
 import qualified Loot.Log as Log
+import Options.Applicative (Parser, defaultPrefs, execParserPure, getParseResult, info)
 import System.Random (Random)
 import Test.Hspec as T
 import Test.QuickCheck as T (Arbitrary (..), Fixed (..), Gen, Property, Testable (..), conjoin,
@@ -179,6 +180,14 @@ counterexample desc prop = Q.counterexample (toString desc) prop
 -- | Generate smaller amounts of data.
 pickSmall :: (Monad m, Show a) => Gen a -> PropertyM m a
 pickSmall = pick . Q.resize 5
+
+----------------------------------------------------------------------------
+-- CLI interface testing
+----------------------------------------------------------------------------
+
+-- | Run a parser on a list of CLI arguments
+runCliArgs :: Parser a -> [String] -> Maybe a
+runCliArgs p = getParseResult . execParserPure defaultPrefs (info p mempty)
 
 ----------------------------------------------------------------------------
 -- Logging

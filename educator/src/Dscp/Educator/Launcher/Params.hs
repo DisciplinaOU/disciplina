@@ -9,4 +9,4 @@ import Dscp.Resource.Keys (BaseKeyParams)
 -- | Educator key parameters.
 newtype EducatorKeyParams = EducatorKeyParams
     { unEducatorKeyParams :: BaseKeyParams
-    } deriving (Show, FromJSON)
+    } deriving (Show, Eq, FromJSON)

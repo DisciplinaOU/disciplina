@@ -21,5 +21,6 @@ getEducatorConfig = do
     (configParams, cliConfig) <- execParser $
         info (helper <*> versionOption <*> parser) $
         fullDesc <> progDesc "Disciplina educator node."
+    let wrapConfig cfg = defaultEducatorConfig <> cfg <> cliConfig
     buildConfig configParams $
-        fmap (<> cliConfig) . fillEducatorConfig
+        fmap wrapConfig . fillEducatorConfig

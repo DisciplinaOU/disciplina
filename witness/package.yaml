@@ -86,7 +86,6 @@ tests:
       - loot-config
       - loot-log
       - memory
-      - optparse-applicative
       - text-format
       - QuickCheck
 

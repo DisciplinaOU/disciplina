@@ -17,11 +17,12 @@ data EducatorBotParams
       -- ^ Seed to generate initial data (assignments, ...).
     , ebpOperationsDelay :: !(Time Microsecond)
       -- ^ Artificial delay in bot operations.
-    }
+    } deriving (Show, Eq)
 
 data EducatorBotSwitch
     = EducatorBotOff
     | EducatorBotOn EducatorBotParams
+    deriving (Show, Eq)
 
 deriveFromJSON defaultOptions ''EducatorBotParams
 
