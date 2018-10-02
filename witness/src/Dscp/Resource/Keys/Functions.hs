@@ -15,7 +15,7 @@ module Dscp.Resource.Keys.Functions
 import Data.Aeson (eitherDecode', encode)
 import qualified Data.ByteString.Lazy as LBS
 import Fmt ((+|), (+||), (|+), (||+))
-import Loot.Log (MonadLogging, logDebug, logInfo)
+import Loot.Log (MonadLogging, logDebug, logInfo, logError)
 import qualified System.Directory as D
 import System.FilePath ((</>))
 import qualified System.FilePath as FP
@@ -26,7 +26,7 @@ import Dscp.Resource.AppDir
 import Dscp.Resource.Keys.Error (KeyInitError (..), rewrapKeyIOErrors)
 import Dscp.Resource.Keys.Types (BaseKeyParams (..), CommitteeParams (..), KeyJson (..),
                                  KeyResources (..), KeyfileContent)
-import Dscp.System (ensureModeIs, mode600, setMode, whenPosix)
+import Dscp.System (mode600, setMode, getAccessMode, whenPosix)
 import Dscp.Util (leftToThrow)
 import Dscp.Util.Aeson (CustomEncoding (..), Versioned (..))
 
@@ -116,6 +116,10 @@ readStore
     => FilePath -> PassPhrase -> m (KeyResources n)
 readStore path pp = do
     logDebug $ "Reading key from: " +|| path ||+ ""
+    accessMode <- getAccessMode path
+    unless (accessMode <= mode600) $ do
+      logError $ "Key has wrong permissions: " +|| path ||+ " (" +|| accessMode ||+ ")"
+      -- KILL PROGRAM HERE
     content <- rewrapKeyIOErrors $ do
         liftIO $ LBS.readFile path
     Versioned mid <- eitherDecode' @KeyfileContent content
