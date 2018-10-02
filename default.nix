@@ -2,7 +2,7 @@
 
 stackToNix {
   # TODO: properly fix this in stack-to-nix
-  root = gitIgnore ./. [
+  root = constGitIgnore "disciplina-src" ./. [
     "*.nix"
     "/ChangeLog.md"
     "/README.md"

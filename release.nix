@@ -2,7 +2,7 @@
 
 let
   project = import ./. { inherit pkgs; };
-  source = gitIgnore ./. [ "*.icns" "*.png" ];
+  source = constGitIgnore "disciplina-release-src" ./. [ "*.icns" "*.png" ];
 
   runCheck = source: runCommand "check" {} ''
     ${source}
