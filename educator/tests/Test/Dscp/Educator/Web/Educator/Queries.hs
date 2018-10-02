@@ -26,7 +26,7 @@ spec_EducatorApiQueries = describe "Basic database operations" $ do
   describe "Students" $ do
     describe "getStudents" $ do
         it "Returns previously added students" $ sqlitePropertyM $ do
-            students <- pick listUnique
+            students <- pickSmall listUnique
             lift $ forM_ students createStudent
 
             students' <- lift $ educatorGetStudents Nothing
@@ -50,7 +50,7 @@ spec_EducatorApiQueries = describe "Basic database operations" $ do
   describe "Courses" $ do
     describe "getCourses" $ do
         it "Returns previously added courses" $ sqlitePropertyM $ do
-            coursesDetails <- nubBy ((==) `on` cdCourseId) <$> pick arbitrary
+            coursesDetails <- nubBy ((==) `on` cdCourseId) <$> pickSmall arbitrary
             lift $ forM_ coursesDetails createCourse
 
             courses' <- lift $ educatorGetCourses Nothing
@@ -85,7 +85,7 @@ spec_EducatorApiQueries = describe "Basic database operations" $ do
         -- so just checking it at least works.
 
         it "Returns existing assignment properly" $ sqlitePropertyM $ do
-            env <- pick $ genCoreTestEnv simpleCoreTestParams
+            env <- pickSmall $ genCoreTestEnv simpleCoreTestParams
             let assignment = tiOne $ cteAssignments env
             let student = tiOne $ cteStudents env
 
@@ -107,7 +107,7 @@ spec_EducatorApiQueries = describe "Basic database operations" $ do
   describe "Submissions" $ do
     describe "getSubmission" $ do
         it "Fails on request of non-existent submission" $ sqlitePropertyM $ do
-            env <- pick $ genCoreTestEnv simpleCoreTestParams
+            env <- pickSmall $ genCoreTestEnv simpleCoreTestParams
             let submission = tiOne $ cteSubmissions env
             let student = _sStudentId submission
 
@@ -117,7 +117,7 @@ spec_EducatorApiQueries = describe "Basic database operations" $ do
                 educatorGetSubmission (getId submission)
 
         it "Returns existing submission properly" $ sqlitePropertyM $ do
-            env <- pick $ genCoreTestEnv simpleCoreTestParams
+            env <- pickSmall $ genCoreTestEnv simpleCoreTestParams
             let assignment = tiOne $ cteAssignments env
                 submission = tiOne $ cteSubmissions env
                 signedSubmission = tiOne $ cteSignedSubmissions env
@@ -135,7 +135,7 @@ spec_EducatorApiQueries = describe "Basic database operations" $ do
 
     describe "getSubmissions" $ do
         it "Student has no last submissions initially" $ sqlitePropertyM $ do
-            env <- pick $ genCoreTestEnv simpleCoreTestParams
+            env <- pickSmall $ genCoreTestEnv simpleCoreTestParams
             lift $ prepareForAssignments env
             -- even after this ^ there should be no submissions
 
@@ -144,7 +144,7 @@ spec_EducatorApiQueries = describe "Basic database operations" $ do
 
         it "Returns existing submission properly" $
           sqlitePropertyM $ do
-            env <- pick $ genCoreTestEnv wildCoreTestParams
+            env <- pickSmall $ genCoreTestEnv wildCoreTestParams
             let submission = tiOne $ cteSubmissions env
                 signedSubmission = tiOne $ cteSignedSubmissions env
 
@@ -160,7 +160,7 @@ spec_EducatorApiQueries = describe "Basic database operations" $ do
                 }
 
         it "Returns grade when present" $ sqlitePropertyM $ do
-            env <- pick $ genCoreTestEnv simpleCoreTestParams
+            env <- pickSmall $ genCoreTestEnv simpleCoreTestParams
             let txs     = tiList $ ctePrivateTxs env
                 sigSubs = tiList $ cteSignedSubmissions env
 
@@ -183,7 +183,7 @@ spec_EducatorApiQueries = describe "Basic database operations" $ do
                 sortOn fst submissionsAndGrades'
 
         it "Filtering works" $ sqlitePropertyM $ do
-            env <- pick $ genCoreTestEnv simpleCoreTestParams
+            env <- pickSmall $ genCoreTestEnv simpleCoreTestParams
                                          { ctpAssignment = variousItems }
             courseIdF <- pick arbitrary
             assignHF <- pick arbitrary
@@ -219,7 +219,7 @@ spec_EducatorApiQueries = describe "Basic database operations" $ do
   describe "Proofs" $ do
     describe "getProofs" $ do
         it "No proofs initially" $ sqlitePropertyM $ do
-            env <- pick $ genCoreTestEnv simpleCoreTestParams
+            env <- pickSmall $ genCoreTestEnv simpleCoreTestParams
             let student = tiOne $ cteStudents env
             lift $ prepareAndCreateSubmissions env
 
@@ -228,7 +228,7 @@ spec_EducatorApiQueries = describe "Basic database operations" $ do
             return $ proofs === []
 
         it "Returns existing proof properly" $ sqlitePropertyM $ do
-            env <- pick $ genCoreTestEnv simpleCoreTestParams
+            env <- pickSmall $ genCoreTestEnv simpleCoreTestParams
             let student = tiOne $ cteStudents env
                 ptx = tiOne $ ctePrivateTxs env
 
@@ -243,7 +243,7 @@ spec_EducatorApiQueries = describe "Basic database operations" $ do
             return $ bpiTxs proof === [ptx]
 
         it "Proofs are grouped properly" $ sqlitePropertyM $ do
-            env <- pick $ genCoreTestEnv simpleCoreTestParams
+            env <- pickSmall $ genCoreTestEnv simpleCoreTestParams
             let student = tiOne $ cteStudents env
                 ptxs = tiList $ ctePrivateTxs env
 

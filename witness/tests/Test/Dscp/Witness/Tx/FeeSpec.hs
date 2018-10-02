@@ -1,4 +1,4 @@
-module Test.Dscp.Witness.FeeSpec where
+module Test.Dscp.Witness.Tx.FeeSpec where
 
 import Dscp.Core
 import Dscp.Crypto

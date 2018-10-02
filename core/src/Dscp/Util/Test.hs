@@ -176,6 +176,10 @@ expectOne desc xs  =
 counterexample :: Testable prop => Text -> prop -> Property
 counterexample desc prop = Q.counterexample (toString desc) prop
 
+-- | Generate smaller amounts of data.
+pickSmall :: (Monad m, Show a) => Gen a -> PropertyM m a
+pickSmall = pick . Q.resize 5
+
 ----------------------------------------------------------------------------
 -- Logging
 ----------------------------------------------------------------------------

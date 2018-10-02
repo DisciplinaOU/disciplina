@@ -406,7 +406,7 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
 
         it "Cannot see the last submission of other students" $
             sqlitePropertyM $ do
-                env <- pick $ genCoreTestEnv wildCoreTestParams
+                env <- pickSmall $ genCoreTestEnv wildCoreTestParams
                 let student = tiOne $ cteStudents env
                     submissions = tiList $ cteSubmissions env
 
@@ -432,7 +432,7 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
 
         it "Fails when student is not submission owner" $
             sqlitePropertyM $ do
-                env <- pick $ genCoreTestEnv simpleCoreTestParams
+                env <- pickSmall $ genCoreTestEnv simpleCoreTestParams
                 user <- pick arbitrary
 
                 let owner = tiOne $ cteStudents env
@@ -458,7 +458,7 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
     describe "getSubmissions" $ do
         it "Returns existing submission properly and only related to student" $
             sqlitePropertyM $ do
-                env <- pick $ genCoreTestEnv wildCoreTestParams
+                env <- pickSmall $ genCoreTestEnv wildCoreTestParams
                 let sigSubs = tiList $ cteSignedSubmissions env
                 pre (length sigSubs >= 2)
                 let submissions@(someSubmission : _) = map _ssSubmission sigSubs

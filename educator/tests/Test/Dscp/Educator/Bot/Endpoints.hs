@@ -42,9 +42,10 @@ spec_StudentApiWithBotQueries = describe "Basic properties" $ do
     it "Submissions are graded automatically" $
         educatorPropertyM $ do
             seed <- pick arbitrary
-            env <- pick $ genCoreTestEnv simpleCoreTestParams
-                          { ctpSecretKey = oneTestItem (pure studentSK)
-                          , ctpAssignment = oneTestItem (pure assignmentEx) }
+            env <- pickSmall $
+                    genCoreTestEnv simpleCoreTestParams
+                    { ctpSecretKey = oneTestItem (pure studentSK)
+                    , ctpAssignment = oneTestItem (pure assignmentEx) }
             let sigsub = tiOne $ cteSignedSubmissions env
             submissions <- lift $ do
                 StudentApiEndpoints{..} <- testMakeBotHandlers seed
