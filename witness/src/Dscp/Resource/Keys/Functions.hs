@@ -117,7 +117,6 @@ readStore
 readStore path pp = do
     logDebug $ "Reading key from: " +|| path ||+ ""
     content <- rewrapKeyIOErrors $ do
-        whenPosix $ ensureModeIs mode600 path
         liftIO $ LBS.readFile path
     Versioned mid <- eitherDecode' @KeyfileContent content
         & leftToThrow (SecretParseError . toText)
