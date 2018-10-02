@@ -18,10 +18,8 @@ create table if not exists Courses (
     -- Sqlite3 will force ascending primary key to be non-null, replacing
     --  null with autoincremented key (while sqlite2 won't).
     --
-    id    INTEGER,
-    desc  TEXT     not null,
-
-    primary key (id asc)
+    id    INTEGER    PRIMARY KEY AUTOINCREMENT,
+    desc  TEXT     not null
 );
 
 -- Creating 'Subjects' table.

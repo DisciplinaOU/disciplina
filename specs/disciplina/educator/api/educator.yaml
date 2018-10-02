@@ -24,8 +24,6 @@ paths:
       - students
       summary: Get a list of all registered students' addresses
       operationId: getStudents
-      consumes:
-      - application/json
       parameters:
         - in: query
           name: course
@@ -76,10 +74,15 @@ paths:
       - courses
       summary: Get all courses
       operationId: getCourses
-      consumes:
-      - application/json
       produces:
       - application/json
+      parameters:
+      - in: query
+        name: student
+        description: Return only courses which student with given address attends
+        required: false
+        type: string
+        format: byte
       responses:
         200:
           description: A list of all courses
@@ -108,6 +111,8 @@ paths:
       responses:
         201:
           description: successful operation
+          schema:
+            $ref: "#/definitions/CourseId"
         400:
           description: Invalid input
           schema:
@@ -147,34 +152,6 @@ paths:
           $ref: "#/responses/Unauthorized"
 
   /students/{studentAddr}/courses:
-    get:
-      tags:
-      - students
-      summary: Get a list of student's courses
-      description: Gets a list of courses which student is currently attending.
-      operationId: getStudentCourses
-      produces:
-      - application/json
-      parameters:
-      - $ref: "#/parameters/StudentAddr"
-      responses:
-        200:
-          description: successfull operation
-          schema:
-            type: array
-            items:
-              $ref: "#/definitions/Course"
-        400:
-          description: Invalid address value
-          schema:
-            $ref: "#/definitions/ErrResponse"
-        404:
-          description: Student with given address not found
-          schema:
-            $ref: "#/definitions/ErrResponse"
-        401:
-          $ref: "#/responses/Unauthorized"
-
     post:
       tags:
       - students
@@ -190,7 +167,7 @@ paths:
         description: Course to enroll
         required: true
         schema:
-          $ref: "#/definitions/CourseId"
+          $ref: "#/definitions/EnrollStudentToCourse"
       responses:
         201:
           description: successful operation
@@ -213,163 +190,7 @@ paths:
         401:
           $ref: "#/responses/Unauthorized"
 
-  /students/{studentAddr}/courses/{courseId}/assignments:
-    get:
-      tags:
-      - students
-      summary: Get active student's assignments for a given course
-      description: Given student address and course ID, gets a list of all pending assignments student has as a part of a course.
-      operationId: getStudentCourseAssignments
-      produces:
-      - application/json
-      parameters:
-      - $ref: "#/parameters/StudentAddr"
-      - $ref: "#/parameters/CourseId"
-      - in: query
-        name: isFinal
-        description: Return only final/non-final assignments of the course
-        required: false
-        type: boolean
-      responses:
-        200:
-          description: successful operation
-          schema:
-            type: array
-            items:
-              $ref: "#/definitions/Assignment"
-        400:
-          description: Student address or course id value is invalid
-          schema:
-            $ref: "#/definitions/ErrResponse"
-        412:
-          description: Given student does not attend given course
-          schema:
-            $ref: "#/definitions/ErrResponse"
-        401:
-          $ref: "#/responses/Unauthorized"
-
-  /students/{studentAddr}/courses/{courseId}/submissions:
-    get:
-      tags:
-      - students
-      - submissions
-      summary: Get student's course submissions
-      description: Gets a list of student's submissions he made during studying given course.
-      operationId: getStudentCourseSubmissions
-      produces:
-      - application/json
-      parameters:
-      - $ref: "#/parameters/StudentAddr"
-      - $ref: "#/parameters/CourseId"
-      responses:
-        200:
-          description: successful operation
-          schema:
-            type: array
-            items:
-              $ref: "#/definitions/Submission"
-        400:
-          description: Student address or course id value is invalid
-          schema:
-            $ref: "#/definitions/ErrResponse"
-        412:
-          description: Given student does not attend given course
-          schema:
-            $ref: "#/definitions/ErrResponse"
-        401:
-          $ref: "#/responses/Unauthorized"
-
-  /students/{studentAddr}/courses/{courseId}/grades:
-    get:
-      tags:
-      - students
-      summary: Get student's course grades
-      description: Gets a list of grades a student received during studying given course.
-      operationId: getStudentCourseGrades
-      produces:
-      - application/json
-      parameters:
-      - $ref: "#/parameters/StudentAddr"
-      - $ref: "#/parameters/CourseId"
-      - in: query
-        name: isFinal
-        description: Return only grades for final/non-final assignments of the course
-        required: false
-        type: boolean
-      responses:
-        200:
-          description: successful operation
-          schema:
-            type: array
-            items:
-              $ref: "#/definitions/Grade"
-        400:
-          description: Student address or course id value is invalid
-          schema:
-            $ref: "#/definitions/ErrResponse"
-        412:
-          description: Given student does not attend given course
-          schema:
-            $ref: "#/definitions/ErrResponse"
-        401:
-          $ref: "#/responses/Unauthorized"
-
-  /students/{studentAddr}/courses/{courseId}/proofs:
-    get:
-      tags:
-      - students
-      summary: Get proofs of student's course progress
-      description: Gets student's course grades and submissions in form of private transactions, together with corresponding Merkle proofs.
-      operationId: getStudentCourseProofs
-      produces:
-      - application/json
-      parameters:
-      - $ref: "#/parameters/StudentAddr"
-      - $ref: "#/parameters/CourseId"
-      responses:
-        200:
-          description: successful operation
-          schema:
-            $ref: "#/definitions/Proofs"
-        400:
-          description: Student address or course id value is invalid
-          schema:
-            $ref: "#/definitions/ErrResponse"
-        412:
-          description: Given student does not attend given course
-          schema:
-            $ref: "#/definitions/ErrResponse"
-        401:
-          $ref: "#/responses/Unauthorized"
-
   /students/{studentAddr}/assignments:
-    get:
-      tags:
-      - students
-      summary: Get active student's assignments
-      description: Given student address, gets a list of all pending assignments student has.
-      operationId: getStudentAssignments
-      produces:
-      - application/json
-      parameters:
-      - $ref: "#/parameters/StudentAddr"
-      responses:
-        200:
-          description: successful operation
-          schema:
-            type: array
-            items:
-              $ref: "#/definitions/Assignment"
-        400:
-          description: Student address value is invalid
-          schema:
-            $ref: "#/definitions/ErrResponse"
-        404:
-          description: Student with a given address not found
-          schema:
-            $ref: "#/definitions/ErrResponse"
-        401:
-          $ref: "#/responses/Unauthorized"
     post:
       tags:
       - students
@@ -387,7 +208,7 @@ paths:
         description: Assignment to assign
         required: true
         schema:
-          $ref: "#/definitions/Hash"
+          $ref: "#/definitions/AssignToStudent"
       responses:
         201:
           description: successful operation
@@ -434,154 +255,6 @@ paths:
         401:
           $ref: "#/responses/Unauthorized"
 
-  /students/{studentAddr}/assignments/{assignmentHash}/submissions:
-    get:
-      tags:
-      - students
-      - submissions
-      summary: Student's submissions for an assignment
-      description: Gets a list of student's submissions for a given assignment
-      operationId: getStudentAssignmentSubmissions
-      produces:
-      - application/json
-      parameters:
-      - $ref: "#/parameters/StudentAddr"
-      - $ref: "#/parameters/AssignmentHash"
-      responses:
-        200:
-          description: successful operation
-          schema:
-            type: array
-            items:
-              $ref: "#/definitions/Submission"
-        400:
-          description: Student address or assignment hash value is invalid
-          schema:
-            $ref: "#/definitions/ErrResponse"
-        412:
-          description: Given student didn't have given assignment
-          schema:
-            $ref: "#/definitions/ErrResponse"
-        401:
-          $ref: "#/responses/Unauthorized"
-
-  /students/{studentAddr}/assignments/{assignmentHash}/grades:
-    get:
-      tags:
-      - students
-      - grades
-      summary: Get student's assignment grades
-      description: Gets a list of grades a student received for submissions on given assignment.
-      operationId: getStudentAssignmentGrades
-      produces:
-      - application/json
-      parameters:
-      - $ref: "#/parameters/StudentAddr"
-      - $ref: "#/parameters/AssignmentHash"
-      responses:
-        200:
-          description: successful operation
-          schema:
-            type: array
-            items:
-              $ref: "#/definitions/Grade"
-        400:
-          description: Student address or assignment hash value is invalid
-          schema:
-            $ref: "#/definitions/ErrResponse"
-        412:
-          description: Given student didn't have given assignment
-          schema:
-            $ref: "#/definitions/ErrResponse"
-        401:
-          $ref: "#/responses/Unauthorized"
-
-  /students/{studentAddr}/submissions:
-    get:
-      tags:
-      - students
-      - submissions
-      summary: Get all student's submissions
-      description: Gets a list of all student's submissions.
-      operationId: getStudentSubmissions
-      produces:
-      - application/json
-      parameters:
-      - $ref: "#/parameters/StudentAddr"
-      responses:
-        200:
-          description: successful operation
-          schema:
-            type: array
-            items:
-              $ref: "#/definitions/Submission"
-        400:
-          description: Student address value is invalid
-          schema:
-            $ref: "#/definitions/ErrResponse"
-        404:
-          description: Student with given address not found
-          schema:
-            $ref: "#/definitions/ErrResponse"
-        401:
-          $ref: "#/responses/Unauthorized"
-
-  /students/{studentAddr}/grades:
-    get:
-      tags:
-      - students
-      summary: Get all student's grades
-      description: Gets a list of all students grades (aka transactions in a private chain)
-      operationId: getStudentGrades
-      produces:
-      - application/json
-      parameters:
-      - $ref: "#/parameters/StudentAddr"
-      responses:
-        200:
-          description: successful operation
-          schema:
-            type: array
-            items:
-              $ref: "#/definitions/Grade"
-        400:
-          description: Student address value is invalid
-          schema:
-            $ref: "#/definitions/ErrResponse"
-        404:
-          description: Student with given address not found
-          schema:
-            $ref: "#/definitions/ErrResponse"
-        401:
-          $ref: "#/responses/Unauthorized"
-
-  /students/{studentAddr}/proofs:
-    get:
-      tags:
-      - students
-      summary: Get proofs of all student's activity
-      description: Gets all private transactions related to a student together with corresponding Merkle proofs.
-      operationId: getStudentProofs
-      produces:
-      - application/json
-      parameters:
-      - $ref: "#/parameters/StudentAddr"
-      responses:
-        200:
-          description: successful operation
-          schema:
-            $ref: "#/definitions/Proofs"
-        400:
-          description: Student address value is invalid
-          schema:
-            $ref: "#/definitions/ErrResponse"
-        404:
-          description: Student with given address not found
-          schema:
-            $ref: "#/definitions/ErrResponse"
-        401:
-          $ref: "#/responses/Unauthorized"
-
   /submissions:
     get:
       tags:
@@ -589,6 +262,25 @@ paths:
       summary: Get all submissions
       description: Gets a list of all submissions done by all students. This method is inaccessible by students.
       operationId: getSubmissions
+      parameters:
+      - in: query
+        name: course
+        description: Return only submissions related to course with given ID
+        required: false
+        type: integer
+        format: int32
+      - in: query
+        name: student
+        description: Return only submissions submitted by student with given address
+        required: false
+        type: string
+        format: byte
+      - in: query
+        name: assignment
+        description: Return only submissions for given assignment
+        required: false
+        type: string
+        format: byte
       produces:
       - application/json
       responses:
@@ -664,6 +356,25 @@ paths:
       operationId: getGrades
       produces:
       - application/json
+      parameters:
+      - in: query
+        name: course
+        description: Return only grades related to course with given ID
+        required: false
+        type: integer
+        format: int32
+      - in: query
+        name: student
+        description: Return only grades for student with given address
+        required: false
+        type: string
+        format: byte
+      - in: query
+        name: assignment
+        description: Return only grades for given assignment
+        required: false
+        type: string
+        format: byte
       responses:
         200:
           description: successful operation
@@ -710,8 +421,18 @@ paths:
       description: Gets a list of all student assignments. Filter parameters are used to specify specific course or student.
       operationId: getAssignments
       parameters:
-        - $ref: '#/parameters/CourseId'
-        - $ref: '#/parameters/StudentAddr'
+      - in: query
+        name: course
+        description: Return only assignments related to course with given ID
+        required: false
+        type: integer
+        format: int32
+      - in: query
+        name: student
+        description: Return only assignments assigned to a student with given address
+        required: false
+        type: string
+        format: byte
       produces:
       - application/json
       responses:
@@ -747,6 +468,50 @@ paths:
           description: successful operation
         400:
           description: Request body is invalid
+          schema:
+            $ref: "#/definitions/ErrResponse"
+        401:
+          $ref: "#/responses/Unauthorized"
+
+  /proofs:
+    get:
+      tags:
+      - proofs
+      summary: Get Merkle proofs of grades (i. e. private blocks or parts of them)
+      description: Gets all private transactions related with corresponding Merkle proofs, grouped by blocks.
+      operationId: getProofs
+      produces:
+      - application/json
+      parameters:
+      - in: query
+        name: course
+        description: Return only proofs related to the course with given ID
+        required: false
+        type: integer
+        format: int32
+      - in: query
+        name: student
+        description: Return only proofs related to the student with given address
+        required: false
+        type: string
+        format: byte
+      - in: query
+        name: assignment
+        description: Return proofs only for given assignment
+        required: false
+        type: string
+        format: byte
+      responses:
+        200:
+          description: successful operation
+          schema:
+            $ref: "#/definitions/Proofs"
+        400:
+          description: Student address value is invalid
+          schema:
+            $ref: "#/definitions/ErrResponse"
+        404:
+          description: Student with given address not found
           schema:
             $ref: "#/definitions/ErrResponse"
         401:
@@ -816,7 +581,8 @@ definitions:
   Course:
     type: object
     required:
-    - id
+    - desc
+    - subjects
     properties:
       id:
         $ref: "#/definitions/CourseId"
@@ -826,6 +592,12 @@ definitions:
         type: array
         items:
           $ref: "#/definitions/Subject"
+  EnrollStudentToCourse:
+    required:
+    - course
+    properties:
+      course:
+        $ref: "#/definitions/CourseId"
   Assignment:
     type: object
     required:
@@ -861,6 +633,13 @@ definitions:
         type: boolean
       desc:
         type: string
+  AssignToStudent:
+    type: object
+    required:
+    - assignmentHash
+    properties:
+      assignmentHash:
+        $ref: "#/definitions/Hash"
   Submission:
     type: object
     required:

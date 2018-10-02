@@ -1,3 +1,4 @@
+{-# LANGUAGE GADTs            #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Dscp.DB.SQLite.Functions
@@ -21,20 +22,21 @@ module Dscp.DB.SQLite.Functions
        , transactR
        , transactW
        , invokeUnsafe
+       , SQLiteFunctionCall(..)
+       , sqlCall
        ) where
 
 import Control.Concurrent (getNumCapabilities)
 import Control.Concurrent.Chan (newChan, readChan, writeChan)
 import qualified Data.List as L
-import Database.SQLite.Simple (Connection, FromRow, Query, ToRow)
+import Database.SQLite.Simple (Connection, FromRow, Only (..), Query, ToRow)
 import qualified Database.SQLite.Simple as Backend
+import Database.SQLite.Simple.FromField (FromField)
+import Loot.Base.HasLens (HasCtx, HasLens (..))
 import qualified Loot.Log as Log
 import Time (Millisecond, sec, toNum, toUnit)
-import UnliftIO (MonadUnliftIO (..), UnliftIO (..))
+import UnliftIO (MonadUnliftIO (..), UnliftIO (..), askUnliftIO)
 import qualified UnliftIO as UIO
-
-import Loot.Base.HasLens (HasCtx, HasLens (..))
-import UnliftIO (askUnliftIO)
 
 import Dscp.DB.SQLite.Error
 import Dscp.DB.SQLite.Types
@@ -105,7 +107,7 @@ openSQLiteDB params = do
                 mConnNum = srpConnNum realParams
                 maxPending = srpMaxPending realParams
             -- some paths produce db in memory, can't use them
-            when (any (== path) ["", ":memory:"]) $
+            when (path `elem` ["", ":memory:"]) $
                 throwM (SQLInvalidPathError path)
 
             connNum <- case mConnNum of
@@ -274,3 +276,22 @@ instance RequiresTransaction 'WithinTx
 -- | Helps to prevent using 'transactW' when 'transact' is enough.
 class RequiresWriting (w :: OperationType)
 instance RequiresWriting 'Writing
+
+-- | Various sqlite functions or pragmas you may want to call or read.
+data SQLiteFunctionCall res where
+    LastInsertRowId :: SQLiteFunctionCall Word64
+
+-- | Call an sqlite function.
+sqlCall
+    :: (MonadIO m, FromField res)
+    => SQLiteFunctionCall res -> DBT t w m res
+sqlCall fun = do
+    conn <- DBT ask
+    res <- liftIO $ Backend.query conn funString ()
+    return $ case res of
+        [Only r] -> r
+        l   -> error $ "sqlCall: returned weird amount of entries: "
+            <> show (length l)
+  where
+    funString = case fun of
+        LastInsertRowId -> "select last_insert_rowid()"

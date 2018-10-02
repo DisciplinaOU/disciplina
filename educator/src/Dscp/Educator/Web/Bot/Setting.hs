@@ -74,7 +74,7 @@ genBotCourseAssignments n _aCourseId =
 data BotSetting = BotSetting
     {
       -- | All courses info
-      bsCourses           :: [CourseDetails]
+      bsCourses           :: [(Course, Text, [Id Subject])]
       -- | We show a small set of courses at the beginning in order not to
       -- confuse user, and disclose all others later to prevent him getting
       -- bored.
@@ -97,7 +97,6 @@ mkBotSetting params =
   botGen = detGenG (ebpSeed params)
 
   bsCourses =
-    map (\(c, d, s) -> CourseDetails c d s)
     -- using 'courseEx' here helps to keep examples in swagger doc working
     [ (Course 0  , "Patakology", [])
     , (Course 1  , "Learning!", [])
@@ -134,12 +133,12 @@ mkBotSetting params =
     ]
 
   (bsBasicCourses, bsAdvancedCourses) =
-    splitAt 3 (map cdCourseId bsCourses)
+    splitAt 3 (map (view _1) bsCourses)
 
   bsCourseAssignments =
     M.fromList $
     botGen $
-    forM (zip courseSizes bsCourses) $ \(courseSize, CourseDetails course _ _) -> do
+    forM (zip courseSizes bsCourses) $ \(courseSize, (course, _, _)) -> do
         assignments <- genBotCourseAssignments courseSize course
         let assignmentsWithEx =
                 bool identity (assignmentEx :)
@@ -191,7 +190,8 @@ botPrepareInitialData :: (BotWorkMode ctx m, HasBotSetting) => m ()
 botPrepareInitialData = transactW $ do
     exists <- existsCourse (head . Exts.fromList $ bsBasicCourses botSetting)
     unless exists $ do
-        forM_ (bsCourses botSetting) createCourse
+        forM_ (bsCourses botSetting) $
+            \(c, t, s) -> createCourse (CourseDetails (Just c) t s)
         mapM_ createAssignment (bsAssignments botSetting)
 
 -- REMEMBER that all operations below should be no-throw

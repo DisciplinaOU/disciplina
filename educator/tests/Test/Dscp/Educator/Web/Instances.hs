@@ -9,7 +9,7 @@ import Dscp.Educator.Web.Types (IsFinal (..))
 import Dscp.Util.Test
 
 instance Arbitrary CourseDetails where
-    arbitrary = CourseDetails <$> arbitrary <*> arbitrary <*> resize 10 listUnique
+    arbitrary = CourseDetails <$> (Just <$> arbitrary) <*> arbitrary <*> resize 10 listUnique
 
 deriving instance Arbitrary IsFinal
 

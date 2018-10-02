@@ -49,6 +49,7 @@ module Dscp.DB.SQLite.Queries
 
          -- * Destructive actions
        , CourseDetails (..)
+       , nullCourse
        , simpleCourse
        , enrollStudentToCourse
        , submitAssignment
@@ -546,19 +547,30 @@ isAssignedToStudent student assignment = do
     |]
 
 data CourseDetails = CourseDetails
-    { cdCourseId :: Course
+    { cdCourseId :: Maybe Course
     , cdDesc     :: Text
     , cdSubjects :: [Id Subject]
     } deriving (Show, Generic)
 
+-- | Course without any specific information. For testing purposes.
+nullCourse :: CourseDetails
+nullCourse = CourseDetails{ cdCourseId = Nothing, cdDesc = "", cdSubjects = [] }
+
+-- | Course with specific id but without any other information.
+-- For testing purposes.
 simpleCourse :: Course -> CourseDetails
-simpleCourse i = CourseDetails i "" []
+simpleCourse i = nullCourse{ cdCourseId = Just i }
 
 createCourse :: DBM m => CourseDetails -> DBT 'WithinTx 'Writing m (Id Course)
 createCourse params = do
-    let course = cdCourseId params
-    execute createCourseRequest (course, cdDesc params)
-        `ifAlreadyExistsThrow` CourseDomain course
+    course <- case cdCourseId params of
+        Nothing -> do
+            execute createCourseRequest (cdCourseId params, cdDesc params)
+            Course . fromIntegral @Word64 @Word32 <$> sqlCall LastInsertRowId
+        Just course -> do
+            execute createCourseRequest (cdCourseId params, cdDesc params)
+                `ifAlreadyExistsThrow` CourseDomain course
+            return course
     for_ (cdSubjects params) $ \subject -> do
         execute attachSubjectToCourseRequest (subject, course)
     return course
