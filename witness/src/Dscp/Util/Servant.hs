@@ -16,6 +16,10 @@ module Dscp.Util.Servant
     , ForResponseLog (..)
     , buildListForResponse
     , buildForResponse
+    , buildShortResponseList
+    , buildLongResponseList
+    , ApiHasArgClass (..)
+    , ApiCanLogArg (..)
 
     , SimpleJSON
     ) where
@@ -32,7 +36,7 @@ import qualified Data.Text as T
 import qualified Data.Text.Buildable as B
 import qualified Data.Text.Lazy.Builder as B
 import Data.Time.Clock.POSIX (getPOSIXTime)
-import Fmt (blockListF, (+|), (|+))
+import Fmt (blockListF, (+|), (|+), Builder)
 import GHC.IO.Unsafe (unsafePerformIO)
 import GHC.TypeLits (KnownSymbol, symbolVal)
 import Loot.Log (Level (Info))
@@ -426,6 +430,12 @@ instance Buildable (ForResponseLog ()) where
 
 instance Buildable (ForResponseLog Integer) where
     build = buildForResponse
+
+buildShortResponseList :: Buildable a => ForResponseLog [a] -> Builder
+buildShortResponseList = blockListF . (take 4) . unForResponseLog
+
+buildLongResponseList :: Buildable a => ForResponseLog [a] -> Builder
+buildLongResponseList = blockListF . (take 8) . unForResponseLog
 
 -------------------------------------------------------------------------
 -- Deserialisation errors

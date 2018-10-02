@@ -20,6 +20,7 @@ import Servant ((:<|>) (..), Context (..), Handler, ServantErr (..), Server, err
 import Servant.Auth.Server.Internal.ThrowAll (throwAll)
 import Servant.Generic (toServant)
 import UnliftIO (askUnliftIO)
+import Data.Reflection (Reifies, reify)
 
 import Dscp.Core (mkAddr)
 import Dscp.DB.SQLite (SQLiteDB, existsStudent, invoke)
@@ -33,10 +34,11 @@ import Dscp.Educator.Web.Params (EducatorWebParams (..))
 import Dscp.Educator.Web.Student (ProtectedStudentAPI, StudentCheckAction (..),
                                   convertStudentApiHandler, studentAPI, studentApiHandlers)
 import Dscp.Resource.Keys (KeyResources, krPublicKey)
-import Dscp.Web (ServerParams (..), serveWeb)
+import Dscp.Web (ServerParams (..), buildServantLogConfig, serveWeb)
 import Dscp.Web.Metrics (responseTimeMetric)
 import Dscp.Witness.Config
 import Dscp.Witness.Web
+import Dscp.Util.Servant (LoggingApi, ServantLogConfig (..))
 
 type EducatorWebAPI =
     ProtectedEducatorAPI
@@ -111,6 +113,7 @@ serveEducatorAPIsReal withWitnessApi EducatorWebParams{..} = do
 
     logInfo $ "Serving Student API on "+|spAddr|+""
     unliftIO <- askUnliftIO
+    lc <- buildServantLogConfig (<> "web")
     let educatorApiServer = mkEducatorApiServer (convertEducatorApiHandler unliftIO)
     studentApiServer <- mkStudentApiServer (convertStudentApiHandler unliftIO) ewpBotParams
     let witnessApiServer = if withWitnessApi
@@ -120,9 +123,15 @@ serveEducatorAPIsReal withWitnessApi EducatorWebParams{..} = do
     serveWeb spAddr $
       responseTimeMetric metricsEndpoint $
       educatorCors $
-      serveWithContext (Proxy @EducatorWebAPI) srvCtx $
-         educatorApiServer
-         :<|>
-         studentApiServer
-         :<|>
-         witnessApiServer
+      reify lc $ \logConfigP ->
+      serveWithContext (servedApi logConfigP) srvCtx $
+          educatorApiServer
+          :<|>
+          studentApiServer
+          :<|>
+          witnessApiServer
+      where
+          servedApi
+            :: Reifies config ServantLogConfig
+            => Proxy config -> Proxy (LoggingApi config EducatorWebAPI)
+          servedApi _ = Proxy

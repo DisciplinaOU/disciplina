@@ -80,7 +80,7 @@ module Dscp.Core.Foundation.Educator
 
 import Control.Lens (Getter, makeLenses, to)
 import Data.Time.Clock (UTCTime)
-import Fmt (build, mapF, (+|), (|+))
+import Fmt (build, mapF, (+|), (|+), genericF)
 
 import Dscp.Core.Foundation.Address (Address (..))
 import Dscp.Crypto
@@ -110,6 +110,9 @@ newtype Grade = UnsafeGrade
 instance Bounded Grade where
     minBound = UnsafeGrade 0
     maxBound = UnsafeGrade 100
+
+instance Buildable Grade where
+    build = build . getGrade
 
 mkGrade :: Word8 -> Maybe Grade
 mkGrade a =
@@ -237,6 +240,14 @@ newtype ATGDelta = ATGDelta
 instance Buildable ATGDelta where
     build (ATGDelta d) = "ATGDelta { " +| mapF d |+ " }"
 
+instance Buildable Course where
+    build Course{..} = build getCourseId
+
+instance Buildable () where
+    build _ = ""
+
+instance Buildable DocumentType where
+    build = genericF
 ----------------------------------------------------------------------------
 -- Transactions
 ----------------------------------------------------------------------------

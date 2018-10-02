@@ -26,11 +26,13 @@ module Dscp.Educator.Web.Student.Types
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
 import Servant (FromHttpApiData)
+import Fmt (build, (+|), (|+), blockListF)
 
 import Dscp.Core
 import Dscp.Crypto
 import Dscp.Educator.Web.Types
 import Dscp.Util
+import Dscp.Util.Servant (ForResponseLog (..), buildShortResponseList)
 
 -- | Whether student is enrolled into a course.
 newtype IsEnrolled = IsEnrolled { unIsEnrolled :: Bool }
@@ -113,6 +115,68 @@ signedSubmissionToRequest sigSub =
         , nsContentsHash = _sContentsHash submission
         , nsWitness = _ssWitness sigSub
         }
+
+---------------------------------------------------------------------------
+-- Buildable instances
+---------------------------------------------------------------------------
+
+instance Buildable (IsEnrolled) where
+    build (IsEnrolled{..}) =
+      "{ is enrolled = " +| unIsEnrolled |+
+      " }"
+
+instance Buildable (NewSubmission) where
+    build (NewSubmission{..}) =
+      "{ assignment hash = " +| nsAssignmentHash |+
+      ", content hash = " +| nsContentsHash |+
+      " }"
+
+instance Buildable (CourseStudentInfo) where
+    build (CourseStudentInfo{..}) =
+      "{ course id = " +| ciId |+
+      ", description = " +| ciDesc |+
+      ", subjects = " +| blockListF ciSubjects |+
+      ", is enrolled =" +| ciIsEnrolled |+
+      ", is finished =" +|ciIsFinished |+
+      " }"
+
+instance Buildable (AssignmentStudentInfo) where
+    build (AssignmentStudentInfo{..}) =
+      "{ course id = " +| aiCourseId |+
+      ", assignment hash = " +| aiHash |+
+      ", description = " +| aiDesc |+
+      " }"
+
+instance Buildable (SubmissionStudentInfo) where
+    build (SubmissionStudentInfo{..}) =
+      "{ submission hash = " +| siHash |+
+      ", content hash = " +| siContentsHash |+
+      ", assignment hash = " +| siAssignmentHash |+
+      " }"
+
+instance Buildable (ForResponseLog CourseStudentInfo) where
+    build (ForResponseLog CourseStudentInfo{..}) =
+      "{ course id = " +| ciId |+
+      " }"
+
+instance Buildable (ForResponseLog AssignmentStudentInfo) where
+    build (ForResponseLog AssignmentStudentInfo{..}) =
+      "{ hash = " +| aiHash |+
+      " }"
+
+instance Buildable (ForResponseLog SubmissionStudentInfo) where
+    build (ForResponseLog SubmissionStudentInfo{..}) =
+      "{ hash = " +| siHash |+
+      " }"
+
+instance Buildable (ForResponseLog [CourseStudentInfo]) where
+    build = buildShortResponseList
+
+instance Buildable (ForResponseLog [AssignmentStudentInfo]) where
+    build = buildShortResponseList
+
+instance Buildable (ForResponseLog [SubmissionStudentInfo]) where
+    build = buildShortResponseList
 
 ---------------------------------------------------------------------------
 -- JSON instances
