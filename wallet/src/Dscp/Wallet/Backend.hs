@@ -14,10 +14,12 @@ import Dscp.Web
 import Dscp.Witness.Web.Client
 import Dscp.Witness.Web.Types
 
+type SendEvent = WalletEvent -> IO ()
+
 createWalletFace ::
        HasCoreConfig
     => BaseUrl
-    -> (WalletEvent -> IO ())
+    -> SendEvent
     -> ComponentM WalletFace
 createWalletFace serverAddress sendEvent = buildComponent_ "Wallet" $ do
     sendStateUpdateEvent sendEvent
@@ -29,14 +31,17 @@ createWalletFace serverAddress sendEvent = buildComponent_ "Wallet" $ do
         , walletListKeys = listKeys
         , walletSendTx = sendTx wc sendEvent
         , walletTxFee = unFees . estimateFees feeConfig . toList
-        , walletGetBalance = getBalance wc
-        , walletGetTxHistory = getTxHistory wc
+        , walletGetBalance = getBalance wc sendEvent
+        , walletGetTxHistory = getTxHistory wc sendEvent
         }
 
-sendStateUpdateEvent :: (WalletEvent -> IO ()) -> IO ()
+sendStateUpdateEvent :: SendEvent -> IO ()
 sendStateUpdateEvent sendEvent = getAccounts >>= sendEvent . WalletStateUpdateEvent
 
-genKeyPair :: (WalletEvent -> IO ()) -> Maybe Text -> Maybe PassPhrase -> IO Account
+sendLogEvent :: SendEvent -> Text -> IO ()
+sendLogEvent sendEvent = sendEvent . WalletLogEvent
+
+genKeyPair :: SendEvent -> Maybe Text -> Maybe PassPhrase -> IO Account
 genKeyPair sendEvent mName mPassPhrase = do
     (sk, pk) <- keyGen
     let account = Account
@@ -49,7 +54,7 @@ genKeyPair sendEvent mName mPassPhrase = do
     sendStateUpdateEvent sendEvent
     return account
 
-restoreKey :: (WalletEvent -> IO ()) -> Maybe Text -> Encrypted SecretKey -> Maybe PassPhrase -> IO ()
+restoreKey :: SendEvent -> Maybe Text -> Encrypted SecretKey -> Maybe PassPhrase -> IO ()
 restoreKey sendEvent mName eSecretKey mPassPhrase = do
     secretKey <- either throwIO return . decrypt (fromMaybe emptyPassPhrase mPassPhrase) $ eSecretKey
     let publicKey = toPublic secretKey
@@ -68,7 +73,7 @@ listKeys = getAccounts
 sendTx ::
        HasCoreConfig
     => WitnessClient
-    -> (WalletEvent -> IO ())
+    -> SendEvent
     -> Encrypted SecretKey
     -> Maybe PassPhrase
     -> NonEmpty TxOut
@@ -93,12 +98,28 @@ sendTx wc sendEvent eSecretKey mPassPhrase (toList -> outs) = do
             txWitnessed = TxWitnessed { twTx   = tx, twWitness = witness }
         in txWitnessed
 
-    void $ wSubmitTx wc txWitnessed
+    sendLogEvent sendEvent $
+        "Sending transaction: {"
+        <> "\n  tx = " <> pretty (twTx txWitnessed)
+        <> "\n  witness = " <> pretty (twWitness txWitnessed)
+        <> "\n}"
+    res <- wSubmitTx wc txWitnessed
+    sendLogEvent sendEvent $
+        "Transaction result: " <> pretty res
+
     sendStateUpdateEvent sendEvent
     return (twTx txWitnessed)
 
-getBalance :: WitnessClient -> Address -> IO (BlocksOrMempool Coin)
-getBalance wc address = aiBalances <$> wGetAccount wc address False
+getBalance :: WitnessClient -> SendEvent -> Address -> IO (BlocksOrMempool Coin)
+getBalance wc sendEvent address = do
+    res <- aiBalances <$> wGetAccount wc address False
+    sendLogEvent sendEvent $
+        "Balances for " <> pretty address <> ": " <> pretty res
+    return res
 
-getTxHistory :: WitnessClient -> Address -> IO [GTx]
-getTxHistory wc address = map tiTx . fromMaybe [] . aiTransactions <$> wGetAccount wc address True
+getTxHistory :: WitnessClient -> SendEvent -> Address -> IO [GTx]
+getTxHistory wc sendEvent address = do
+    res <- map tiTx . fromMaybe [] . aiTransactions <$> wGetAccount wc address True
+    sendLogEvent sendEvent $
+        "Tx history for " <> pretty address <> ": " <> pretty (length res) <> " entries"
+    return res
