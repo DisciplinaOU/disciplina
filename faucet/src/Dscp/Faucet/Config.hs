@@ -1,4 +1,5 @@
-{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE TypeOperators    #-}
 
 -- | All witness's configurations.
 
@@ -8,6 +9,7 @@ module Dscp.Faucet.Config
     , HasFaucetConfig
     , TransferredAmount (..)
     , DryRun (..)
+    , defaultFaucetConfig
     , faucetConfig
     , withFaucetConfig
     , fillFaucetConfig
@@ -15,6 +17,7 @@ module Dscp.Faucet.Config
     , module Dscp.Core.Config
     ) where
 
+import Control.Lens ((?~))
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Reflection (Given (..), give)
 import Loot.Config ((:::), (::<), ConfigKind (Final, Partial), ConfigRec)
@@ -29,11 +32,11 @@ import Dscp.Web
 
 -- | How much money would be trasferred on each request.
 newtype TransferredAmount = TransferredAmount { getTranferredAmount :: Coin }
-    deriving (FromJSON, ToJSON)
+    deriving (Show, Eq, FromJSON, ToJSON)
 
 -- | Whether need not to communicate with witness backend.
 newtype DryRun = DryRun Bool
-    deriving (FromJSON, ToJSON)
+    deriving (Show, Eq, FromJSON, ToJSON)
 
 -- | Define config parameters for the Faucet
 --    [@logging@] Logging params.
@@ -65,6 +68,12 @@ type FaucetConfigRecP = ConfigRec 'Partial FaucetConfig
 type FaucetConfigRec = ConfigRec 'Final FaucetConfig
 
 type HasFaucetConfig = Given FaucetConfigRec
+
+defaultFaucetConfig :: FaucetConfigRecP
+defaultFaucetConfig = mempty
+    & sub #faucet . option #logging ?~ LoggingParams "faucet" False Nothing Nothing
+    & sub #faucet . option #keys ?~ BaseKeyParams Nothing False Nothing
+    & sub #faucet . option #dryRun ?~ DryRun False
 
 faucetConfig :: HasFaucetConfig => FaucetConfigRec
 faucetConfig = given
