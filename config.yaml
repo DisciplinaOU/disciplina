@@ -76,8 +76,9 @@ alpha:
           - 3BAyX5pSN9HyzCr4K4ggmoUt95TuRmGzAZYm5JhVyPgtMjYRk3D7uW1bQ2
           - 3BAyX5pPp5upFgiCT8TSCNv6E31QniwguFVchoDTDEnUg36PKkfVm6ZVWf
           - 3BAyX5pNqALCrjBnZDSR25QyNGcfpvpoKetEJsuMCHWqr3zQpZ1LEEP3ye
+          - 3BAyX5pSUJ2HhGbdzDo74M1o7Ng1ntqo6gAmuCmNHnvF18JpEJqTUQgfTX
       distribution:
-        - equal: 4
+        - equal: 5
         - specific:
           - # faucet
             - 3BAyX5pMm4mhu7vVRF7skUXLaBoCwneW5C56YPCAtgMT2eJ7H8YBd3vMVU
