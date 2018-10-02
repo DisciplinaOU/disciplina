@@ -13,7 +13,7 @@ import Control.Lens (makeLenses)
 import Loot.Base.HasLens (HasLens (..))
 import qualified Loot.Log as Log
 import Test.Hspec
-import Test.QuickCheck (ioProperty)
+import Test.QuickCheck (ioProperty, resize)
 import Test.QuickCheck.Monadic (PropertyM, monadic, stop)
 
 import Dscp.Core
@@ -53,15 +53,15 @@ instance HasLens SQLiteDB TestSQLiteCtx SQLiteDB where
 instance HasLens (Log.Logging IO) TestSQLiteCtx (Log.Logging IO) where
     lensOf = tqcLogging
 
+educatorPropertyM :: Testable prop => PropertyM TestSQLiteM prop -> Property
+educatorPropertyM action =
+    monadic (ioProperty . runTestSQLiteM) (void $ action >>= stop)
+
 educatorProperty
     :: (Testable prop, Show a, Arbitrary a)
     => (a -> TestSQLiteM prop) -> Property
 educatorProperty action =
-    property $ \input -> ioProperty $ runTestSQLiteM (action input)
-
-educatorPropertyM :: Testable prop => PropertyM TestSQLiteM prop -> Property
-educatorPropertyM action =
-    monadic (ioProperty . runTestSQLiteM) (void $ action >>= stop)
+    educatorPropertyM $ pick (resize 5 arbitrary) >>= lift . action
 
 sqliteProperty
     :: (Testable prop, Show a, Arbitrary a)
