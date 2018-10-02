@@ -12,7 +12,7 @@ import Dscp.Resource.Keys
 data WitnessKeyParams
     = Basic BaseKeyParams       -- ^ Basic key management with a keyfile
     | Committee CommitteeParams -- ^ Generate a key from committee params
-    deriving (Show)
+    deriving (Show, Eq)
 
 -- | JSON instance (for configuration specs)
 instance FromJSON WitnessKeyParams where

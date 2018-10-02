@@ -44,11 +44,14 @@ data FeePolicy tx where
     LinearFeePolicy :: FeeCoefficients -> FeePolicy tx
     UnknownFeePolicy :: FeePolicy Void
 
+deriving instance Eq (FeePolicy tx)
+deriving instance Show (FeePolicy tx)
+
 -- | All fee policies.
 data FeeConfig = FeeConfig
     { fcMoney       :: FeePolicy Tx
     , fcPublication :: FeePolicy PublicationTx
-    }
+    } deriving (Eq, Show)
 
 -- | Calculate fees from tx size.
 calcLinearFees :: Integral i => FeeCoefficients -> i -> Fees

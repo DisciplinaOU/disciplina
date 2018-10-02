@@ -20,12 +20,11 @@ module Dscp.CommonCLI
 import Data.Char (toLower)
 import Data.Version (showVersion)
 import qualified Loot.Log as Log
-import Options.Applicative (Parser, ReadM, auto, eitherReader, help, infoOption, long, metavar,
-                            option, str, strOption, switch)
+import Options.Applicative (Parser, ReadM, auto, eitherReader, flag', help, infoOption, long,
+                            maybeReader, metavar, option, str, strOption, switch)
 import Servant.Client (BaseUrl (..), parseBaseUrl)
 import Text.InterpolatedString.Perl6 (qc)
-import Time.Rational (KnownRat)
-import Time.Units (Microsecond, Millisecond, Minute, Second, Time, toUnit)
+import Time (KnownRatName, Time, unitsP)
 
 import Dscp.Core.Foundation.Address
 import Dscp.Core.Foundation.Witness
@@ -38,17 +37,31 @@ import Dscp.Util
 import Dscp.Web (NetworkAddress (..), ServerParams (..), parseNetAddr)
 import Paths_disciplina_witness (version)
 
+{-
+[Note default-cli-params]
+
+Several parsers in this file are changed in order to not
+yield default values when no related CLI arguments are provided.
+Parsers yielding default values always override corresponding values
+in config file, making using config files without CLI params at all
+effectively impossible.
+
+To support default values of configuration parameters nevertheless,
+default config values are provided in respective `*.Config` modules.
+-}
+
 logParamsParser :: Log.Name -> Parser LoggingParams
 logParamsParser lpDefaultName = do
     lpDebug <- logDebugParser
-    lpConfigPath <- logConfigParser
+    -- [Note default-cli-params]
+    lpConfigPath <- Just <$> logConfigParser
     lpDirectory <- logDirParser
     return LoggingParams {..}
   where
     logDebugParser = switch $
         long "debug" <>
         help "Switch default logging level from Info to Debug"
-    logConfigParser = optional $ strOption $
+    logConfigParser = strOption $
         long "log-config" <>
         metavar "FILEPATH" <>
         help "Path to logger configuration. If not specified, some default config is used."
@@ -64,12 +77,13 @@ versionOption = infoOption ("disciplina-" <> (showVersion version)) $
 
 baseKeyParamsParser :: Text -> Parser BaseKeyParams
 baseKeyParamsParser who = do
-    bkpPath <- kpKeyPathParser
+    -- [Note default-cli-params]
+    bkpPath <- Just <$> kpKeyPathParser
     bkpGenNew <- kpGenKeyParser
     bkpPassphrase <- kpPassphraseParser
     pure BaseKeyParams{..}
   where
-    kpKeyPathParser = optional . strOption $
+    kpKeyPathParser = strOption $
          long [qc|{who}-keyfile|] <>
          metavar "FILEPATH" <>
          help [qc|Path to the secret key of the {who}. If not specified,
@@ -84,23 +98,23 @@ baseKeyParamsParser who = do
          help "Password of secret key."
 
 appDirParamParser :: Parser AppDirParam
-appDirParamParser = AppDirectorySpecific <$>
-                        (strOption $
-                        long "appdir" <>
-                        metavar "FILEPATH" <>
-                        help "Path to application folder. If not specified, \
-                             \OS-dependent folder for applications will be \
-                             \used, for instance '%APPDIR%/Disciplina'.") <|>
-                    pure AppDirectoryOS
+appDirParamParser =
+    AppDirectorySpecific <$> specificP <|>
+    AppDirectoryOS <$ osP
+  where
+    specificP = strOption $
+      long "appdir" <>
+      metavar "FILEPATH" <>
+      help "Path to application folder. To use OS-specific default folder \
+           \(e. g. '%APPDIR%/Disciplina'), provide `--os-appdir` flag instead."
+    osP = flag' () $
+      long "os-appdir" <>
+      help "Use OS-specific default application folder. To use custom application \
+           \folder, provide `--appdir` option instead."
 
 -- | Parses time with specified unit of measurement, e.g. @10s@.
-timeReadM :: KnownRat unit => ReadM (Time unit)
-timeReadM = asum
-    [ toUnit @_ @Second <$> auto
-    , toUnit @_ @Millisecond <$> auto
-    , toUnit @_ @Microsecond <$> auto
-    , toUnit @_ @Minute <$> auto
-    ]
+timeReadM :: KnownRatName unit => ReadM (Time unit)
+timeReadM = maybeReader unitsP
 
 -- | Parses plain number to coin.
 coinReadM :: ReadM Coin

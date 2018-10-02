@@ -45,7 +45,7 @@ import Dscp.Crypto (hash)
 
 -- | Slot duration in milliseconds.
 newtype SlotDuration = SlotDuration { unSlotDuration :: Word64 }
-    deriving (Eq, Ord, Num, Generic)
+    deriving (Show, Eq, Ord, Num, Generic)
 
 ---------------------------------------------------------------------
 -- Reading config

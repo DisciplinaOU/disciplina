@@ -32,7 +32,7 @@ data DB = DB
 data RocksDBParams = RocksDBParams
     { rdpPath :: !FilePath
     -- ^ Path to the database
-    } deriving Show
+    } deriving (Show, Eq)
 
 data RocksDB = RocksDB
     { _rdDatabase :: !DB

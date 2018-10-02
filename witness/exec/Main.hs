@@ -19,5 +19,6 @@ getWitnessConfig = do
     (configParams, cliConfig) <- execParser $
         info (helper <*> versionOption <*> parser) $
         fullDesc <> progDesc "Disciplina witness node."
+    let wrapConfig cfg = defaultWitnessConfig <> cfg <> cliConfig
     buildConfig configParams $
-        fmap (<> cliConfig) . fillWitnessConfig
+        fmap wrapConfig . fillWitnessConfig
