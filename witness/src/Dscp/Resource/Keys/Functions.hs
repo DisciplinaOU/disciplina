@@ -14,14 +14,11 @@ module Dscp.Resource.Keys.Functions
 
 import Data.Aeson (eitherDecode', encode)
 import qualified Data.ByteString.Lazy as LBS
-import Fmt ((+|), (+||), (|+), (||+), octF)
+import Fmt ((+|), (+||), (|+), (||+))
 import Loot.Log (MonadLogging, logDebug, logInfo)
 import qualified System.Directory as D
 import System.FilePath ((</>))
 import qualified System.FilePath as FP
-import System.Posix.Types (FileMode)
-import Data.Bits ((.|.))
-import Dscp.System.Other (IsPosix)
 
 import Dscp.Core
 import Dscp.Crypto
@@ -29,7 +26,7 @@ import Dscp.Resource.AppDir
 import Dscp.Resource.Keys.Error (KeyInitError (..), rewrapKeyIOErrors)
 import Dscp.Resource.Keys.Types (BaseKeyParams (..), CommitteeParams (..), KeyJson (..),
                                  KeyResources (..), KeyfileContent)
-import Dscp.System (mode600, setMode, whenPosix, getAccessMode)
+import Dscp.System (mode600, setMode, whenPosix, checkFileMode)
 import Dscp.Util (leftToThrow)
 import Dscp.Util.Aeson (CustomEncoding (..), Versioned (..))
 
@@ -120,22 +117,12 @@ readStore
 readStore path pp = do
     logDebug $ "Reading key from: " +|| path ||+ ""
     content <- rewrapKeyIOErrors $ do
-        whenPosix $ checkFileMode mode600 path
+        whenPosix $ (checkFileMode mode600 path)
+            >>= leftToThrow SecretFileModeError
         liftIO $ LBS.readFile path
     Versioned mid <- eitherDecode' @KeyfileContent content
         & leftToThrow (SecretParseError . toText)
     mkStore <$> fromSecretJson pp mid
-  where
-    checkFileMode
-      :: (IsPosix, MonadIO m, MonadLogging m, MonadThrow m)
-      => FileMode -> FilePath -> m ()
-    checkFileMode mode filePath = do
-      accessMode <- getAccessMode filePath
-      unless ((accessMode .|. mode) <= mode) $ do
-          throwM $ SecretFileModeError $
-              "File permissions for "+|filePath|+" are too loose: "+|octF accessMode|+
-              ". Should be 0600 or lower. Possible fix: `chmod 0600 "+|filePath|+"`."
-
 
 -- | Write given secret to store.
 writeStoreDumb
