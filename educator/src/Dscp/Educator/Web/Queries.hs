@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE QuasiQuotes #-}
 
@@ -12,6 +13,7 @@ import Database.SQLite.Simple (Only (..), (:.) (..))
 import Loot.Log (MonadLogging)
 import Data.Default (Default (..))
 import Text.InterpolatedString.Perl6 (q, qc)
+import qualified Universum.Unsafe as Unsafe (fromJust)
 
 import Dscp.Core
 import Dscp.Crypto
@@ -36,21 +38,20 @@ type MonadEducatorQuery m =
 data GetAssignmentsFilters = GetAssignmentsFilters
     { afAssignmentHash :: Maybe $ Hash Assignment
     , afCourse         :: Maybe Course
+    , afStudent        :: Maybe Student
     , afDocType        :: Maybe DocumentType
     , afIsFinal        :: Maybe IsFinal
     } deriving (Show, Generic)
 
-instance Default GetAssignmentsFilters where
-    def = GetAssignmentsFilters def def def def
+deriving instance Default GetAssignmentsFilters
 
 commonGetAssignments
     :: (MonadEducatorQuery m, DistinctTag apiTag)
     => ApiCase apiTag
-    -> Student
     -> GetAssignmentsFilters
     -> DBT 'WithinTx w m [ResponseCase apiTag Assignment]
-commonGetAssignments apiCase student filters = do
-    assignments <- query queryText (mconcat $ oneParam student : paramsF)
+commonGetAssignments apiCase filters = do
+    assignments <- query queryText (mconcat $ paramsF)
     forM assignments $
         \( assignH        :: Hash Assignment
          , aiCourseId     :: Course
@@ -63,12 +64,13 @@ commonGetAssignments apiCase student filters = do
             EducatorCase ->
                 return AssignmentEducatorInfo{ aiHash = assignH, .. }
             StudentCase -> do
-                aiLastSubmission <- studentGetLastAssignmentSubmission student assignH
+                aiLastSubmission <- studentGetLastAssignmentSubmission (Unsafe.fromJust $ afStudent filters) assignH
                 return AssignmentStudentInfo{ aiHash = assignH, .. }
   where
     (clausesF, paramsF) = unzip
         [ mkFilter "Assignments.hash = ?" (afAssignmentHash filters)
         , mkFilter "course_id = ?" (afCourse filters)
+        , mkFilter "student_addr = ?" (afStudent filters)
         , mkDocTypeFilter "Assignments.hash" (afDocType filters)
         , let assignTypeF = afIsFinal filters ^. mapping (from assignmentTypeRaw)
           in mkFilter "type = ?" assignTypeF
@@ -79,7 +81,7 @@ commonGetAssignments apiCase student filters = do
         from      Assignments
         left join StudentAssignments
                on StudentAssignments.assignment_hash = Assignments.hash
-        where     student_addr = ?
+        where 1 = 1
     |]
       `filterClauses` clausesF
 
@@ -95,8 +97,7 @@ data GetSubmissionsFilters = GetSubmissionsFilters
     , sfDocType        :: Maybe DocumentType
     } deriving (Show, Generic)
 
-instance Default GetSubmissionsFilters where
-    def = GetSubmissionsFilters def def def def def
+deriving instance Default GetSubmissionsFilters
 
 commonGetSubmissions
     :: forall apiTag m t w.

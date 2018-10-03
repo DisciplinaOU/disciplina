@@ -367,8 +367,8 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
                     let assignH = hash assignment
                     void $ setStudentAssignment student1 assignH
 
-                assignments <- commonGetAssignments StudentCase student1
-                        def{ afCourse = courseF, afDocType = docTypeF, afIsFinal = isFinalF }
+                assignments <- commonGetAssignments StudentCase
+                        def{ afCourse = courseF, afStudent = Just student1, afDocType = docTypeF, afIsFinal = isFinalF }
 
                 let assignments' =
                         applyFilterOn aiCourseId courseF $

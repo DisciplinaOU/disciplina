@@ -46,13 +46,10 @@ educatorApiHandlers =
             }
 
     , eGetCourses =
-        invoke $ educatorGetCourses Nothing
+        invoke ... educatorGetCourses
 
     , eEnrollStudentToCourse = \student (EnrollStudentToCourse course) ->
         transactW $ enrollStudentToCourse student course
-
-    , eGetStudentCourses = \student ->
-        invoke $ educatorGetCourses (Just student)
 
       -- Assignments
 
@@ -60,19 +57,15 @@ educatorApiHandlers =
         void . transactW $ createAssignment (requestToAssignment na)
         -- TODO [DSCP-176]: consider autoassign
 
-    , eGetStudentAssignments = \student ->
-        transactR $ commonGetAssignments EducatorCase student def
+    , eGetAssignments = \afCourse afStudent afIsFinal ->
+        transactR $ commonGetAssignments EducatorCase
+            def{ afCourse, afStudent, afIsFinal }
 
     , eAssignToStudent = \student (AssignToStudent assignmentHash) ->
         transactW $ setStudentAssignment student assignmentHash
 
     , eUnassignFromStudent =
         invoke ... educatorUnassignFromStudent
-
-    , eGetStudentCourseAssignments = \student course afIsFinal ->
-        transactR $
-          commonGetAssignments EducatorCase student
-              def{ afCourse = Just course, afIsFinal }
 
       -- Submissions
 
@@ -82,43 +75,23 @@ educatorApiHandlers =
     , eDeleteSubmission = \submissionH ->
         transactW $ commonDeleteSubmission submissionH Nothing
 
-    , eGetSubmissions =
-        invoke $ commonGetSubmissions EducatorCase def
-
-    , eGetStudentSubmissions = \student ->
+    , eGetSubmissions = \sfCourse sfStudent sfAssignmentHash ->
         invoke $ commonGetSubmissions EducatorCase
-            def{ sfStudent = Just student }
-
-    , eGetStudentAssignmentSubmissions = \student assignH ->
-        invoke $ commonGetSubmissions EducatorCase
-            def{ sfStudent = Just student, sfAssignmentHash = Just assignH }
-
-    , eGetStudentCourseSubmissions = \student course ->
-        invoke $ commonGetSubmissions EducatorCase
-            def{ sfStudent = Just student, sfCourse = Just course }
+            def{ sfCourse, sfStudent, sfAssignmentHash }
 
       -- Grades
 
     , ePostGrade = \(NewGrade subH grade) ->
         invoke $ educatorPostGrade subH grade
 
-    , eGetGrades =
-        invoke $ educatorGetGrades Nothing Nothing Nothing
-
-    , eGetStudentGrades = \student ->
-        invoke $ educatorGetGrades (Just student) Nothing Nothing
-
-    , eGetStudentCourseGrades = \student course isFinalF ->
-        invoke $ educatorGetGrades (Just student) (Just course) isFinalF
+    , eGetGrades = \course student assignment isFinalF ->
+        invoke $ educatorGetGrades course student assignment isFinalF
 
       -- Proofs
 
-    , eGetStudentProofs = \student ->
-        transactR $ commonGetProofs student def
-
-    , eGetStudentCourseProofs = \student courseF ->
-        transactR $ commonGetProofs student
-            def{ pfCourse = Just courseF }
+    , eGetProofs = \pfCourse pfStudent pfAssignment ->
+        transactR $ commonGetProofs
+            def{ pfCourse, pfStudent, pfAssignment }
     }
 
 convertEducatorApiHandler

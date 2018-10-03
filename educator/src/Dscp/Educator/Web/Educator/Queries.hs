@@ -110,16 +110,18 @@ isGradedSubmission submissionH = do
 
 educatorGetGrades
     :: MonadEducatorWebQuery m
-    => Maybe Student
-    -> Maybe Course
+    => Maybe Course
+    -> Maybe Student
+    -> Maybe (Hash Assignment)
     -> Maybe IsFinal
     -> DBT t w m [GradeInfo]
-educatorGetGrades studentF courseIdF isFinalF = do
+educatorGetGrades courseIdF studentF assignmentF isFinalF = do
     query queryText (mconcat paramsF)
   where
     (clausesF, paramsF) = unzip
         [ mkFilter "S.student_addr = ?" studentF
         , mkFilter "course_id = ?" courseIdF
+        , mkFilter "A.hash = ?" assignmentF
         , let assignTypeF = isFinalF ^. mapping (from assignmentTypeRaw)
           in mkFilter "A.type = ?" assignTypeF
         ]

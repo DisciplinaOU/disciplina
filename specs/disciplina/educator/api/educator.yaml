@@ -375,6 +375,11 @@ paths:
         required: false
         type: string
         format: byte
+      - in: query
+        name: isFinal
+        description: Return only grades for final/non-final assignments of the course
+        required: false
+        type: boolean
       responses:
         200:
           description: successful operation
@@ -433,6 +438,11 @@ paths:
         required: false
         type: string
         format: byte
+      - in: query
+        name: isFinal
+        description: Return only final/non-final assignments of the course
+        required: false
+        type: boolean
       produces:
       - application/json
       responses:
