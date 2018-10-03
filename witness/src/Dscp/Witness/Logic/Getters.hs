@@ -121,7 +121,7 @@ getMempoolAccountMaybe addr = do
         SD.liftERoComp $ SD.queryOne (AccountId addr)
 
 -- | Get a list of all transactions for a given account
-getAccountTxs :: WitnessWorkMode ctx m => Address -> m [GTxInBlock]
+getAccountTxs :: WitnessWorkMode ctx m => Address -> m [WithBlock GTxWitnessed]
 getAccountTxs address = runSdMRead $ loadTxs >>= mapM getTx
   where
     loadTxs =
@@ -138,17 +138,17 @@ getAccountTxs address = runSdMRead $ loadTxs >>= mapM getTx
 ----------------------------------------------------------------------------
 
 -- | Safely get transaction.
-getTxMaybe :: HasWitnessConfig => GTxId -> SdM (Maybe GTxInBlock)
+getTxMaybe :: HasWitnessConfig => GTxId -> SdM (Maybe (WithBlock GTxWitnessed))
 getTxMaybe gTxId = do
     SD.queryOne gTxId >>= \case
         Nothing -> pure Nothing
         Just TxBlockRef{..} ->
             getBlockMaybe tbrBlockRef >>= pure . \case
                 Nothing -> Nothing
-                Just block -> fmap (GTxInBlock $ Just block) . (^? ix tbrTxIdx) . bbTxs . bBody $ block
+                Just block -> fmap (WithBlock $ Just block) . (^? ix tbrTxIdx) . bbTxs . bBody $ block
 
 -- | Resolves transaction, throws exception if it's absent.
-getTx :: HasWitnessConfig => GTxId -> SdM GTxInBlock
+getTx :: HasWitnessConfig => GTxId -> SdM (WithBlock GTxWitnessed)
 getTx gTxId = do
     tM <- getTxMaybe gTxId
     maybe (SD.throwLocalError $ LETxAbsent $

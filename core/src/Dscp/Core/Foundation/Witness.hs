@@ -1,3 +1,6 @@
+{-# LANGUAGE DeriveFunctor     #-}
+{-# LANGUAGE DeriveTraversable #-}
+
 -- | Common types for main witness node.
 module Dscp.Core.Foundation.Witness
     (
@@ -28,6 +31,8 @@ module Dscp.Core.Foundation.Witness
     , signPubTx
     , PublicationTxWitness (..)
     , PublicationTxWitnessed (..)
+    , ptwTxL
+    , ptwWitnessL
     , PublicationTx (..)
     , ptAuthorL
     , ptFeesAmountL
@@ -35,11 +40,17 @@ module Dscp.Core.Foundation.Witness
     , PublicationTxId
     , toPtxId
     , GTx (..)
+    , _GMoneyTx
+    , _GPublicationTx
     , GTxId (..)
     , toGTxId
     , GTxWitnessed (..)
+    , _GMoneyTxWitnessed
+    , _GPublicationTxWitnessed
     , unGTxWitnessed
+    , toGTxwId
     , GTxInBlock (..)
+    , WithBlock (..)
 
     -- * Block
     , Difficulty (..)
@@ -61,6 +72,7 @@ module Dscp.Core.Foundation.Witness
 
 import Codec.Serialise (Serialise)
 import Control.Lens (makeLensesWith)
+import Control.Lens (makePrisms)
 import Data.Data (Data)
 
 import Fmt (blockListF, build, indentF, listF, nameF, whenF, (+|), (+||), (|+), (||+))
@@ -140,6 +152,10 @@ type TxId = Hash Tx
 toTxId :: (Serialise Tx) => Tx -> TxId
 toTxId = hash
 
+instance Serialise Tx => HasId Tx where
+    type Id Tx = TxId
+    getId = toTxId
+
 -- | Transaction witness. We sign a pair of transaction hash and private
 -- key. The third element is there to authenticate proposed changes
 -- (@kirill.andreev). Public key hash should be equal to the input address.
@@ -195,6 +211,10 @@ type PublicationTxId = Hash PublicationTx
 toPtxId :: (Serialise PublicationTx) => PublicationTx -> PublicationTxId
 toPtxId = hash
 
+instance Serialise PublicationTx => HasId PublicationTx where
+    type Id PublicationTx = PublicationTxId
+    getId = toPtxId
+
 -- I find this third element hack to be terrible tbh. @volhovm
 --
 -- | Publication witness. As with 'TxWitness', the third element is
@@ -213,6 +233,8 @@ data PublicationTxWitnessed = PublicationTxWitnessed
     { ptwTx      :: PublicationTx
     , ptwWitness :: PublicationTxWitness
     } deriving (Eq, Ord, Show, Generic)
+
+makeLensesWith postfixLFields ''PublicationTxWitnessed
 
 instance Buildable PublicationTxWitnessed where
     build PublicationTxWitnessed {..} =
@@ -245,6 +267,8 @@ data GTx
     | GPublicationTx PublicationTx
     deriving (Generic, Eq, Show)
 
+makePrisms ''GTx
+
 instance Buildable GTx where
     build (GMoneyTx       tw) = "GMoneyTx: "       +| tw |+ ""
     build (GPublicationTx pw) = "GPublciationTx: " +| pw |+ ""
@@ -259,10 +283,16 @@ toGTxId :: (Serialise Tx, Serialise PublicationTx) => GTx -> GTxId
 toGTxId (GMoneyTx tx)       = GTxId . unsafeCastHash . toTxId $ tx
 toGTxId (GPublicationTx tx) = GTxId . unsafeCastHash . toPtxId $ tx
 
+instance (Serialise Tx, Serialise PublicationTx) => HasId GTx where
+    type Id GTx = GTxId
+    getId = toGTxId
+
 data GTxWitnessed
     = GMoneyTxWitnessed TxWitnessed
     | GPublicationTxWitnessed PublicationTxWitnessed
     deriving (Generic, Eq, Ord, Show)
+
+makePrisms ''GTxWitnessed
 
 instance Buildable GTxWitnessed where
     build (GMoneyTxWitnessed       tw) = "GMoneyTxWitnessed: " +| tw |+ ""
@@ -272,12 +302,23 @@ unGTxWitnessed :: GTxWitnessed -> GTx
 unGTxWitnessed (GMoneyTxWitnessed tw)       = GMoneyTx (twTx tw)
 unGTxWitnessed (GPublicationTxWitnessed tw) = GPublicationTx (ptwTx tw)
 
+toGTxwId
+    :: (Serialise Tx, Serialise PublicationTx)
+    => GTxWitnessed -> GTxId
+toGTxwId = toGTxId . unGTxWitnessed
+
 -- | Transaction with reference to block it is published in
 data GTxInBlock = GTxInBlock
     { tbBlock :: Maybe Block
     , tbTx    :: GTxWitnessed
     }
     deriving (Eq, Show, Generic)
+
+-- | Something with reference to block which contains it.
+data WithBlock a = WithBlock
+    { wbBlock :: Maybe Block
+    , wbItem  :: a
+    } deriving (Eq, Show, Functor, Foldable, Traversable, Generic)
 
 ----------------------------------------------------------------------------
 -- Blocks and headers

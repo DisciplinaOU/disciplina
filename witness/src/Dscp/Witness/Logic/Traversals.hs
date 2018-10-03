@@ -10,17 +10,26 @@ module Dscp.Witness.Logic.Traversals
     , getBlocksFrom
     , getBlocksBefore
 
-    , getTxs
+    , txsSource
+    , accountTxsSource
+    , publicationsSource
+    , educatorPublicationsSource
     ) where
 
 import Control.Monad.Trans.Except (throwE)
+import Data.Conduit ((.|))
+import qualified Data.Conduit as C
+import qualified Data.Conduit.Combinators as C
 import qualified Data.List.NonEmpty as NE
+import Fmt ((+|), (|+))
 import qualified Snowdrop.Core as SD
+import qualified Snowdrop.Util as SD
 
 import Dscp.Core
 import Dscp.Snowdrop
 import Dscp.Util
 import Dscp.Witness.Config
+import Dscp.Witness.Logic.Exceptions
 import Dscp.Witness.Logic.Getters
 
 ----------------------------------------------------------------------------
@@ -188,32 +197,97 @@ getBlocksBefore depthDiff (headerHash -> newerH) = runExceptT $ do
 
     pure blocks
 
--- | Retrieves the requested amount of transactions starting with the given one.
--- If no transaction is provided, most recent transactions are retrieved.
-getTxs ::
+-- | Retrieves transactions starting with the given one down the chain.
+-- If no transaction is provided, transactions are retrieved starting from the
+-- most recent ones.
+txsSource ::
        HasWitnessConfig
-    => Int
-    -> Maybe GTxId
-    -> SdM (Either Text (OldestFirst [] GTxInBlock))
-getTxs depth = \case
-    Nothing -> getTipBlock >>= map (Right . OldestFirst) . loadTxs [] depth Nothing
-    Just gTxId -> runExceptT $ do
-        TxBlockRef{..} <- ExceptT $ maybeToRight ("Can't get block ref for tx " <> show gTxId) <$>
-            SD.queryOne gTxId
-        block <- ExceptT $ maybeToRight ("Can't get block " <> show tbrBlockRef) <$>
-            getBlockMaybe tbrBlockRef
-        txs <- lift $ loadTxs [] depth (Just $ tbrTxIdx + 1) block
-        pure $ OldestFirst txs
+    => Maybe GTxId
+    -> C.ConduitT () (WithBlock GTxWitnessed) SdM ()
+txsSource = \case
+    Nothing -> lift getTipBlock >>= loadTxs Nothing
+    Just gTxId -> do
+        (block, txIdx) <- lift $ do
+            TxBlockRef{..} <- gTxId `assertExists` LEMalformed ("Can't get block ref for tx " <> show gTxId)
+            block <- nothingToError (SD.inj . LEMalformed $ "Can't get block " <> show tbrBlockRef)
+                =<< getBlockMaybe tbrBlockRef
+            return (block, tbrTxIdx)
+        loadTxs (Just txIdx) block
   where
-    loadTxs !res depthLeft mLimit block
-        | depthLeft == 0 =
-            return res
-        | limit >= depthLeft =
-            return $ drop (limit - depthLeft) txs ++ res
-        | otherwise = runMaybeT (MaybeT (resolvePrevious block) >>= MaybeT . getBlockMaybe) >>= \case
-            Nothing -> return $ txs ++ res
-            Just nextBlock -> loadTxs (txs ++ res) (depthLeft - limit) Nothing nextBlock
+    loadTxs mSkip block = do
+        C.yieldMany (maybe id drop mSkip txs)
+        nextBlock <- lift . runMaybeT $
+            MaybeT (resolvePrevious block) >>= MaybeT . getBlockMaybe
+        whenJust nextBlock (loadTxs Nothing)
       where
         blockTxs = bbTxs . bBody $ block
-        limit = fromMaybe (length blockTxs) mLimit
-        txs = GTxInBlock (Just block) <$> take limit blockTxs
+        txs = WithBlock (Just block) <$> blockTxs
+
+-- | Get a list of all transactions for a given account.
+accountTxsSource
+    :: HasWitnessConfig
+    => Address -> Maybe GTxId -> C.ConduitT () (WithBlock GTxWitnessed) SdM ()
+accountTxsSource address mStart =
+    loadTxs .| C.mapM getTx
+  where
+    loadTxs = case mStart of
+        Nothing ->
+            lift (SD.queryOne (TxsOf address)) >>=
+            loadNextTx . map unLastTx
+        Just start ->
+            loadNextTx (Just start)
+    loadNextTx = \case
+        Nothing -> pass
+        Just gTxId -> do
+            mGTxId <- lift $ unTxNext <<$>> SD.queryOne (TxHead address gTxId)
+            whenJust mGTxId C.yield
+            loadNextTx mGTxId
+
+-- | Retrieves private blocks starting with the given one down the chain.
+-- If no transaction is provided, blocks are retrieved starting from the most
+-- recent one.
+publicationsSource
+    :: HasWitnessConfig
+    => Maybe PrivateHeaderHash
+    -> C.ConduitT () (WithBlock PrivateBlockHeader) SdM ()
+publicationsSource mStart = do
+    mStartTx <- lift . forM mStart $ \phHash ->
+        toGTxId . GPublicationTx <$>
+        phHash `assertExists` LEPrivateBlockAbsent ("No private header found: " <> show phHash)
+    txsSource mStartTx .| C.concatMap (mapM @WithBlock $ preview gtxPrivateHeaderL)
+  where
+    gtxPrivateHeaderL = _GPublicationTxWitnessed . ptwTxL . ptHeaderL
+
+-- | Retrieves private blocks of the given educator starting with the given one
+-- down the chain.
+-- If no transaction is provided, blocks are retrieved starting from the most
+-- recent one.
+educatorPublicationsSource
+    :: HasWitnessConfig
+    => Address
+    -> Maybe PrivateHeaderHash
+    -> C.ConduitT () (WithBlock PrivateBlockHeader) SdM ()
+educatorPublicationsSource educator = \case
+    Nothing -> do
+        mheader <- lift $ SD.queryOne (PublicationsOf educator)
+        whenJust mheader (loadChain . unLastPublication)
+    Just start -> loadChain start
+  where
+    loadChain pheaderHash = do
+        (header, block) <- lift $ do
+            ptx <- pheaderHash `assertExists` noPrivBlock pheaderHash
+            let header = ptHeader ptx
+            mBlockHash <- SD.queryOne (PublicationBlock pheaderHash)
+            mblock <- mapM (getBlock . unPublicationBlockRef) mBlockHash
+            return (header, mblock)
+        C.yield $ WithBlock block header
+
+        let prevBlock = _pbhPrevBlock header
+        PublicationNext mPrevHash <-
+            lift $ PublicationHead prevBlock `assertExists` noNextPub prevBlock
+        whenJust mPrevHash loadChain
+
+    noNextPub (h :: PrivateHeaderHash) =
+        LEMalformed $ "Can't resolve previous private block: " +| h |+ ""
+    noPrivBlock (h :: PrivateHeaderHash) =
+        LEPrivateBlockAbsent $ "Private block not found: " +| h |+ ""

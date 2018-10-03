@@ -20,6 +20,7 @@ module Dscp.Util
 
          -- * Maybe conversions
        , nothingToThrow
+       , nothingToError
        , nothingToFail
        , nothingToPanic
 
@@ -47,6 +48,9 @@ module Dscp.Util
        , seeOnly
        , postfixLFields
 
+         -- * String-functions adopted
+       , symbolValT
+
          -- * Ids for databases
        , HasId (..)
        , idOf
@@ -60,10 +64,12 @@ module Dscp.Util
 
 import Codec.Serialise (Serialise, serialise)
 import Control.Lens (Getter, LensRules, lens, lensField, lensRules, mappingNamer, to)
+import Control.Monad.Except (MonadError (..))
 import Data.ByteArray (ByteArrayAccess)
 import Data.ByteArray.Encoding (Base (..), convertFromBase, convertToBase)
 import qualified Data.ByteString.Lazy as BSL
 import Fmt ((+|), (|+))
+import GHC.TypeLits (KnownSymbol, symbolVal)
 import UnliftIO (MonadUnliftIO)
 import qualified UnliftIO.Async as UIO
 
@@ -158,6 +164,9 @@ assertJust action message = whenNothingM action $ throwM message
 nothingToThrow :: (MonadThrow m, Exception e) => e -> Maybe a -> m a
 nothingToThrow e = maybe (throwM e) pure
 
+nothingToError :: MonadError e m => e -> Maybe a -> m a
+nothingToError e = maybe (throwError e) pure
+
 nothingToFail :: MonadFail m => Text -> Maybe a -> m a
 nothingToFail e = maybe (fail $ toString e) pure
 
@@ -243,6 +252,13 @@ postfixLFields :: LensRules
 postfixLFields = lensRules & lensField .~ mappingNamer (\s -> [s++"L"])
 
 -----------------------------------------------------------
+-- Adopted functions which work with strings
+-----------------------------------------------------------
+
+symbolValT :: forall s. KnownSymbol s => Text
+symbolValT = toText $ symbolVal (Proxy @s)
+
+-----------------------------------------------------------
 -- Helper to establish notion of SQLite/db ID
 -----------------------------------------------------------
 
@@ -257,6 +273,8 @@ class HasId s where
 
 idOf :: HasId s => Getter s (Id s)
 idOf = to getId
+
+instance HasId ()
 
 -----------------------------------------------------------
 -- Wrapper, that prints an error happened

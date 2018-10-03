@@ -159,6 +159,14 @@ instance Arbitrary PublicationTxWitnessed where
     arbitrary = genericArbitrary
     shrink    = genericShrink
 
+instance Arbitrary GTx where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
+
+instance Arbitrary GTxId where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
+
 instance Arbitrary Header where
     arbitrary = genericArbitrary
     shrink    = genericShrink

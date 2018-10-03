@@ -16,6 +16,7 @@ library:
     - bytestring
     - containers
     - concurrent-extra
+    - conduit
     - componentm
     - data-default
     - directory
@@ -29,6 +30,7 @@ library:
     - http-types
     - http-client-tls
     - interpolatedstring-perl6
+    - generic-arbitrary
     - lens
     - loot-base
     - loot-config

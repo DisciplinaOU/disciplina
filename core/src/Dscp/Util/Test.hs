@@ -27,6 +27,7 @@ import qualified GHC.Exts as Exts
 import qualified GHC.Generics as G
 import qualified Loot.Log as Log
 import Options.Applicative (Parser, defaultPrefs, execParserPure, getParseResult, info)
+import Servant (FromHttpApiData (..), ToHttpApiData (..))
 import System.Random (Random)
 import Test.Hspec as T
 import Test.QuickCheck as T (Arbitrary (..), Fixed (..), Gen, Property, Testable (..), conjoin,
@@ -247,6 +248,18 @@ aesonRoundtripProp
     => Spec
 aesonRoundtripProp =
     it (show $ typeRep $ Proxy @a) $ aesonRoundtrip @a
+
+httpApiRoundtrip
+    :: forall a. (Arbitrary a, ToHttpApiData a, FromHttpApiData a, Eq a, Show a)
+    => Property
+httpApiRoundtrip = property $ \(s :: a) -> do
+    parseUrlPiece (toUrlPiece s) === Right s
+
+httpApiRoundtripProp
+    :: forall a. (Arbitrary a, ToHttpApiData a, FromHttpApiData a, Eq a, Show a, Typeable a)
+    => Spec
+httpApiRoundtripProp =
+    it (show $ typeRep $ Proxy @a) $ httpApiRoundtrip @a
 
 ----------------------------------------------------------------------------
 -- Generics fun

@@ -6,19 +6,27 @@ module Dscp.Witness.Web.Logic
        , getAccountInfo
        , getTransactions
        , getTransactionInfo
+       , getPublications
        , getHashType
        ) where
 
 import Codec.Serialise (serialise)
+import Control.Lens (has)
 import qualified Data.ByteString.Lazy as BS
+import Data.Conduit ((.|))
+import qualified Data.Conduit as C
+import qualified Data.Conduit.Combinators as C
 import Data.Default (def)
+import qualified Data.Map as M
 import Fmt ((+|), (|+))
 
 import Dscp.Core
+import Dscp.Crypto
 import Dscp.Snowdrop
 import Dscp.Util (fromHex, nothingToThrow)
 import Dscp.Util
 import Dscp.Util.Concurrent.NotifyWait
+import Dscp.Witness.Config
 import Dscp.Witness.Launcher.Mode (WitnessWorkMode)
 import Dscp.Witness.Logic
 import qualified Dscp.Witness.Relay as Relay
@@ -43,9 +51,9 @@ submitUserTxAsync :: WitnessWorkMode ctx m => TxWitnessed -> m ()
 submitUserTxAsync tw =
     void . Relay.relayTx $ GMoneyTxWitnessed tw
 
-toBlockInfo :: WitnessWorkMode ctx m => Bool -> Block -> m BlockInfo
+toBlockInfo :: HasWitnessConfig => Bool -> Block -> SdM BlockInfo
 toBlockInfo includeTxs block = do
-    nextHash <- runSdMRead $ resolveNext hh
+    nextHash <- resolveNext hh
     pure BlockInfo
         { biHeaderHash = hh
         , biNextHash = nextHash
@@ -59,7 +67,7 @@ toBlockInfo includeTxs block = do
         , biTotalFees = Coin 0  -- TODO
         , biTransactions =
             if includeTxs
-            then Just $ TxInfo Nothing . unGTxWitnessed <$> txs
+            then Just $ WithBlockInfo Nothing . unGTxWitnessed <$> txs
             else Nothing
         }
   where
@@ -68,9 +76,13 @@ toBlockInfo includeTxs block = do
     txTotalOutput (GMoneyTx tx)      = leftToPanic $ sumCoins $ txOutValue <$> txOuts tx
     txTotalOutput (GPublicationTx _) = Coin 0
 
-toAccountInfo :: WitnessWorkMode ctx m => BlocksOrMempool Account -> Maybe [GTxInBlock] -> m AccountInfo
+toAccountInfo
+    :: WitnessWorkMode ctx m
+    => BlocksOrMempool Account
+    -> Maybe [WithBlock GTxWitnessed]
+    -> m AccountInfo
 toAccountInfo account txs = do
-    transactions <- mapM (mapM toTxInfo) txs
+    transactions <- runSdMRead $ mapM (mapM (fetchBlockInfo . fmap @WithBlock unGTxWitnessed)) txs
     pure AccountInfo
         { aiBalances = Coin . fromIntegral . aBalance <$> account
         , aiCurrentNonce = nonce
@@ -80,13 +92,28 @@ toAccountInfo account txs = do
   where
     nonce = aNonce $ bmTotal account
 
-toTxInfo :: WitnessWorkMode ctx m => GTxInBlock -> m TxInfo
-toTxInfo tx = do
-    blockInfo <- mapM (toBlockInfo False) $ tbBlock tx
-    pure TxInfo
-        { tiBlock = blockInfo
-        , tiTx = unGTxWitnessed $ tbTx tx
+fetchBlockInfo :: HasWitnessConfig => WithBlock a -> SdM (WithBlockInfo a)
+fetchBlockInfo txWithBlock = do
+    blockInfo <- mapM (toBlockInfo False) $ wbBlock txWithBlock
+    pure WithBlockInfo
+        { wbiBlockInfo = blockInfo
+        , wbiItem = wbItem txWithBlock
         }
+
+toPublicationInfo
+    :: PrivateBlockHeader -> PrivateBlockInfoPart
+toPublicationInfo header =
+    PrivateBlockInfoPart
+    { piHash = hash header
+    , piMerkleRoot = mrHash merkleInfo
+    , piTransactionsNum = mrSize merkleInfo
+    , piAtgDelta = toATGSubjectChange . getATGDelta $ _pbhAtgDelta header
+    }
+  where
+    merkleInfo = _pbhBodyProof header
+    toATGChange = bool ATGRemoved ATGAdded
+    toATGSubjectChange =
+        map (uncurry ATGSubjectChange . second toATGChange) . M.toList
 
 getBlocks :: WitnessWorkMode ctx m => Maybe Word64 -> Maybe Int -> m BlockList
 getBlocks mSkip mCount = do
@@ -94,7 +121,7 @@ getBlocks mSkip mCount = do
         eBlocks <- getBlocksFrom skip count
         totalCount <- (+ 1) . unDifficulty . hDifficulty <$> getTipHeader
         return (eBlocks, totalCount)
-    either (throwM . InternalError) (toBlockList totalCount <=< mapM (toBlockInfo False) . reverse . toList) eBlocks
+    either (throwM . InternalError) (toBlockList totalCount <=< mapM (runSdMRead . toBlockInfo False) . reverse . toList) eBlocks
   where
     count = min 100 $ fromMaybe 100 mCount
     skip = fromMaybe 0 mSkip
@@ -104,7 +131,7 @@ getBlockInfo :: WitnessWorkMode ctx m => HeaderHash -> m BlockInfo
 getBlockInfo hh =
     runSdMRead (getBlockMaybe hh) >>=
     nothingToThrow (LogicError $ LEBlockAbsent $ "Block " +| hh |+ " not found") >>=
-    toBlockInfo True
+    runSdMRead . toBlockInfo True
 
 getAccountInfo :: WitnessWorkMode ctx m => Address -> Bool -> m AccountInfo
 getAccountInfo address includeTxs = do
@@ -119,32 +146,66 @@ getAccountInfo address includeTxs = do
         else return Nothing
     toAccountInfo account txs
 
-getTransactions :: WitnessWorkMode ctx m => Maybe Int -> Maybe GTxId -> m TxList
-getTransactions mCount mFrom = do
+toPaginatedList :: HasId a => Int -> [a] -> PaginatedList d a
+toPaginatedList count allItems =
+    let items = take count allItems
+    in PaginatedList
+        { plItems = items
+        , plNextId = map getId . safeHead $ drop count items
+        }
+
+sinkTruncate
+    :: (Monad m, HasId a)
+    => Int -> C.ConduitT a Void m (PaginatedList d a)
+sinkTruncate count = C.take (count + 1) .| (toPaginatedList count <$> C.sinkList)
+
+fitsTxType :: TxTypeFilter -> GTx -> Bool
+fitsTxType = \case
+    AllTxTypes -> \_ -> True
+    MoneyTxType -> has _GMoneyTx
+    PubTxType -> has _GPublicationTx
+
+getTransactions
+    :: (WitnessWorkMode ctx m)
+    => Maybe Int -> Maybe GTxId -> Maybe TxTypeFilter -> Maybe Address -> m TxList
+getTransactions mCount mFrom mTxType mAddress = do
     whenJust mFrom $ \from ->
         runSdMRead (getTxMaybe from) >>=
         void . nothingToThrow (LogicError . LETxAbsent $ "Transaction not found " +| from |+ "")
-    eTxs <- runSdMRead $ getTxs (count + 1) mFrom
-    either (throwM . InternalError) (toTxList . reverse . toList) eTxs
+    runSdMRead . C.runConduit $
+        ourTxsSource
+            .| C.map (fmap @WithBlock unGTxWitnessed)
+            .| C.filter (isProperTxType . wbItem)
+            .| C.mapM fetchBlockInfo
+            .| sinkTruncate count
   where
+    ourTxsSource = maybe txsSource accountTxsSource mAddress mFrom
     count = min 100 $ fromMaybe 100 mCount
-    toTxList txs = do
-        transactions <- mapM toTxInfo $ take count txs
-        pure TxList
-            { tlTransactions = transactions
-            , tlNextId = map (toGTxId . unGTxWitnessed . tbTx) . safeHead $ drop count txs
-            }
+    isProperTxType = fitsTxType (mTxType ?: AllTxTypes)
 
 getTransactionInfo :: WitnessWorkMode ctx m => GTxId -> m TxInfo
 getTransactionInfo txId =
     runSdMRead (getTxMaybe txId) >>=
     nothingToThrow (LogicError . LETxAbsent $ "Transaction not found " +| txId |+ "") >>=
-    toTxInfo
+    runSdMRead . fetchBlockInfo . fmap @WithBlock unGTxWitnessed
+
+getPublications
+    :: WitnessWorkMode ctx m
+    => Maybe Int -> Maybe PrivateHeaderHash -> Maybe Address -> m PrivateBlockList
+getPublications mCount mFrom mEducator = do
+    runSdMRead . C.runConduit $
+        pubsSource
+            .| C.map (fmap @WithBlock toPublicationInfo)
+            .| C.mapM fetchBlockInfo
+            .| sinkTruncate count
+  where
+    count = min 100 $ fromMaybe 100 mCount
+    pubsSource = maybe publicationsSource educatorPublicationsSource mEducator mFrom
 
 -- | As we can't distinguish between different hashes, we have to check whether an entity exists.
 getHashType :: WitnessWorkMode ctx m => Text -> m HashIs
-getHashType hash = fmap (fromMaybe HashIsUnknown) . runMaybeT . asum $
-    [isBlock, isAddress, isTx] <*> [hash]
+getHashType someHash = fmap (fromMaybe HashIsUnknown) . runMaybeT . asum $
+    [isBlock, isAddress, isTx] <*> [someHash]
   where
     is hashType decode getMaybe =
         MaybeT . return . rightToMaybe . decode >=>
@@ -159,7 +220,7 @@ getHashType hash = fmap (fromMaybe HashIsUnknown) . runMaybeT . asum $
         addrFromText
         getAccountMaybe
     isTx = is
-        (distinguishTx . unGTxWitnessed . tbTx)
+        (distinguishTx . unGTxWitnessed . wbItem)
         fromHex
         (runSdMRead . getTxMaybe . GTxId)
     distinguishTx = \case

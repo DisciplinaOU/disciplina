@@ -80,9 +80,17 @@ applyBlockRaw applyFees toVerify block = do
                       (SD.New . NextBlockOfVal . NextBlock $ headerHash block)
               sequence_ . fmap addTx . enumerate . bbTxs . bBody $ block
             addTx (idx, gTx) = SD.modifyRwCompChgAccum $ SD.CAMChange $ SD.ChangeSet $
-                M.singleton
-                    (SD.inj . toGTxId . unGTxWitnessed $ gTx)
-                    (SD.New . TxVal $ TxBlockRef (headerHash block) idx)
+                M.fromList $
+                    [ ( SD.inj . toGTxId . unGTxWitnessed $ gTx
+                      , SD.New . TxVal $ TxBlockRef (headerHash block) idx
+                      )
+                    ] ++
+                    [ ( SD.inj . PublicationBlock . hash $ ptHeader pubTx
+                      , SD.New . SD.inj $ PublicationBlockRef (headerHash block)
+                      )
+                    | GPublicationTxWitnessed pubTxw <- pure gTx
+                    , let pubTx = ptwTx pubTxw
+                    ]
           in SD.runERwCompIO actions def rwComp >>=
                 \((), (SD.CompositeChgAccum blockCS_ stateCS_)) -> pure (blockCS_, stateCS_)
     proof <- runSdRIO $ SD.dmaApply stateDBM stateCS

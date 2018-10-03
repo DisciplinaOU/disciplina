@@ -15,25 +15,27 @@ import Snowdrop.Execution (DbActionsException (..), DbModifyActions (..), SumCha
                            sumChangeSetDBA)
 import Snowdrop.Util
 
-import Dscp.Core.Foundation (Difficulty, GTxId, HeaderHash)
+import Dscp.Core.Foundation
 import Dscp.Snowdrop.Configuration
 import Dscp.Snowdrop.Storage.Types
 
 data BlockStorage = BlockStorage
-    { _bsBlunds      :: Map HeaderHash SBlund
-    , _bsTip         :: TipValue HeaderHash
-    , _bsTxs         :: Map GTxId TxBlockRef
-    , _bsAccLastTxs  :: Map TxsOf LastTx
-    , _bsAccNextTxs  :: Map TxHead TxNext
-    , _bsAccLastPubs :: Map PublicationsOf LastPublication
-    , _bsAccNextPubs :: Map PublicationHead PublicationNext
-    , _bsNextBlocks  :: Map NextBlockOf NextBlock
-    , _bsBlockIdx    :: Map Difficulty HeaderHash
+    { _bsBlunds       :: Map HeaderHash SBlund
+    , _bsTip          :: TipValue HeaderHash
+    , _bsTxs          :: Map GTxId TxBlockRef
+    , _bsAccLastTxs   :: Map TxsOf LastTx
+    , _bsAccNextTxs   :: Map TxHead TxNext
+    , _bsAccPubs      :: Map PrivateHeaderHash PublicationTx
+    , _bsAccLastPubs  :: Map PublicationsOf LastPublication
+    , _bsAccNextPubs  :: Map PublicationHead PublicationNext
+    , _bsAccPubBlocks :: Map PublicationBlock PublicationBlockRef
+    , _bsNextBlocks   :: Map NextBlockOf NextBlock
+    , _bsBlockIdx     :: Map Difficulty HeaderHash
     }
 makeLenses ''BlockStorage
 
 emptyBlockStorage :: BlockStorage
-emptyBlockStorage = BlockStorage mempty (TipValue Nothing) mempty mempty mempty mempty mempty mempty mempty
+emptyBlockStorage = BlockStorage mempty (TipValue Nothing) mempty mempty mempty mempty mempty mempty mempty mempty mempty
 
 queryMany :: (Ord id, Monad m, Foldable f) => (id -> m (Maybe value)) -> f id -> m (Map id value)
 queryMany doOne = foldM (\resp i -> maybe resp (\v -> M.insert i v resp) <$> doOne i) mempty
@@ -69,10 +71,14 @@ blockDbActions = mkActions <$> liftIO (newTVarIO emptyBlockStorage)
         foldr foldF b . map (bimap TxOfIds TxOfVal) . M.toList . _bsAccLastTxs <$> readTVar var
       | prefix == txHeadPrefix =
         foldr foldF b . map (bimap TxHeadIds TxHeadVal) . M.toList . _bsAccNextTxs <$> readTVar var
+      | prefix == publicationIdsPrefix =
+        foldr foldF b . map (bimap PublicationIds PublicationVal) . M.toList . _bsAccPubs <$> readTVar var
       | prefix == publicationOfPrefix =
         foldr foldF b . map (bimap PublicationOfIds PublicationOfVal) . M.toList . _bsAccLastPubs <$> readTVar var
       | prefix == publicationHeadPrefix =
         foldr foldF b . map (bimap PublicationHeadIds PublicationHeadVal) . M.toList . _bsAccNextPubs <$> readTVar var
+      | prefix == publicationBlockIdsPrefix =
+        foldr foldF b . map (bimap PublicationBlockIds PublicationBlockVal) . M.toList . _bsAccPubBlocks <$> readTVar var
       | prefix == nextBlockPrefix =
         foldr foldF b . map (bimap NextBlockOfIds NextBlockOfVal) . M.toList . _bsNextBlocks <$> readTVar var
       | prefix == blockIdxPrefix =
@@ -87,8 +93,10 @@ blockDbActions = mkActions <$> liftIO (newTVarIO emptyBlockStorage)
         (TxIds gTxId)                -> fmap TxVal . M.lookup gTxId . view bsTxs <$> readTVar var
         (TxOfIds txOf)               -> fmap TxOfVal . M.lookup txOf . view bsAccLastTxs <$> readTVar var
         (TxHeadIds txHead)           -> fmap TxHeadVal . M.lookup txHead . view bsAccNextTxs <$> readTVar var
+        (PublicationIds pbh)         -> fmap PublicationVal . M.lookup pbh . view bsAccPubs <$> readTVar var
         (PublicationOfIds pubOf)     -> fmap PublicationOfVal . M.lookup pubOf . view bsAccLastPubs <$> readTVar var
         (PublicationHeadIds pubHead) -> fmap PublicationHeadVal . M.lookup pubHead . view bsAccNextPubs <$> readTVar var
+        (PublicationBlockIds pbh)    -> fmap PublicationBlockVal . M.lookup pbh . view bsAccPubBlocks <$> readTVar var
         (NextBlockOfIds hh)          -> fmap NextBlockOfVal . M.lookup hh . view bsNextBlocks <$> readTVar var
         (BlockIdxIds d)              -> fmap BlockIdxVal . M.lookup d . view bsBlockIdx <$> readTVar var
         i -> throwM $ DbWrongIdQuery $ "Unknown query to block storage " <> show i
@@ -111,12 +119,18 @@ blockDbActions = mkActions <$> liftIO (newTVarIO emptyBlockStorage)
     applyOne var (TxHeadIds txHead) =
         performActionWithTVar var (bsAccNextTxs . at txHead) (applyException txHead) <=<
         projValOp @TxHead
+    applyOne var (PublicationIds pbh) =
+        performActionWithTVar var (bsAccPubs . at pbh) (applyException pbh) <=<
+        projValOp @PrivateHeaderHash
     applyOne var (PublicationOfIds pubOf) =
         performActionWithTVar var (bsAccLastPubs . at pubOf) (applyException pubOf) <=<
         projValOp @PublicationsOf
     applyOne var (PublicationHeadIds pubHead) =
         performActionWithTVar var (bsAccNextPubs . at pubHead) (applyException pubHead) <=<
         projValOp @PublicationHead
+    applyOne var (PublicationBlockIds pbh) =
+        performActionWithTVar var (bsAccPubBlocks . at pbh) (applyException pbh) <=<
+        projValOp @PublicationBlock
     applyOne var (NextBlockOfIds hh) =
         performActionWithTVar var (bsNextBlocks . at hh) (applyException hh) <=<
         projValOp @NextBlockOf

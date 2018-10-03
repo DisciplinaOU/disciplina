@@ -1,7 +1,6 @@
 module Test.Dscp.Core.Serialise where
 
-import Dscp.Core (Address, Assignment, AssignmentType, Course, DocumentType, Grade,
-                  SignedSubmission, Subject, Submission, SubmissionWitness)
+import Dscp.Core
 import Dscp.Util.Test
 
 spec_coreSerialise :: Spec
@@ -29,3 +28,8 @@ spec_coreAeson = describe "Core datatypes JSON serialisation" $ do
     aesonRoundtripProp @Submission
     aesonRoundtripProp @SubmissionWitness
     aesonRoundtripProp @SignedSubmission
+
+spec_coreHttpApi :: Spec
+spec_coreHttpApi = describe "Core datatypes HttpApiData serialisation" $ do
+    httpApiRoundtripProp @Address
+    httpApiRoundtripProp @GTxId

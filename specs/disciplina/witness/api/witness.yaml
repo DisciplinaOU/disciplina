@@ -177,6 +177,20 @@ paths:
         maximum: 100
         type: integer
         format: int32
+      - in: query
+        name: txType
+        description: Filter on transaction type.
+        default: all
+        type: string
+        enum:
+          - all
+          - money
+          - publications
+      - in: query
+        name: account
+        description: Remain only transactions affecting given account.
+        type: string
+        format: byte
       responses:
         200:
           description: Successful operation
@@ -188,7 +202,7 @@ paths:
                 items:
                   allOf:
                   - $ref: "#/definitions/TransactionInfo"
-                  - $ref: "#/definitions/TransactionBlockInfo"
+                  - $ref: "#/definitions/AndBlockInfo"
               nextId:
                 $ref: "#/definitions/Hash"
 
@@ -215,7 +229,6 @@ paths:
           description: Transaction cannot be applied.
           schema:
             $ref: '#/definitions/TxValidationError'
-
   /transactions/{transactionHash}:
     get:
       summary: Get information about a transaction.
@@ -238,7 +251,7 @@ paths:
           schema:
             allOf:
             - $ref: "#/definitions/TransactionInfo"
-            - $ref: "#/definitions/TransactionBlockInfo"
+            - $ref: "#/definitions/AndBlockInfo"
         400:
           description: Invalid input
           schema:
@@ -263,6 +276,50 @@ paths:
           description: Transaction accepted. Returns transaction id.
           schema:
             $ref: "#/definitions/Hash"
+
+  /publications:
+    get:
+      summary: Get list of recent publications of the given educator.
+      description: >-
+        Return a batch of `count` most recent publications.
+        If `nextId` key is present in the result, it can be passed as `from` parameter to get the next batch.
+      operationId: getEducatorPublications
+      produces:
+      - application/json
+      parameters:
+      - in: query
+        name: from
+        description: >-
+          Get a batch of publications starting with the specified one.
+          If not specified, get the most recent publications.
+        type: string
+        format: byte
+      - in: query
+        name: count
+        description: The amount of publications returned.
+        default: 100
+        maximum: 100
+        type: integer
+        format: int32
+      - in: query
+        name: educator
+        description: Return only publications of the given author.
+        type: string
+        format: byte
+      responses:
+        200:
+          description: Successful operation
+          schema:
+            type: object
+            properties:
+              transactions:
+                type: array
+                items:
+                  allOf:
+                  - $ref: "#/definitions/PrivateBlockInfo"
+                  - $ref: "#/definitions/AndBlockInfo"
+              nextId:
+                $ref: "#/definitions/Hash"
 
 definitions:
   Hash:
@@ -381,7 +438,7 @@ definitions:
             $ref: "#/definitions/Hash"
           prevBlock:
             $ref: "#/definitions/Hash"
-  TransactionBlockInfo:
+  AndBlockInfo:
     type: object
     properties:
       block:
@@ -394,7 +451,7 @@ definitions:
         items:
           allOf:
           - $ref: "#/definitions/TransactionInfo"
-          - $ref: "#/definitions/TransactionBlockInfo"
+          - $ref: "#/definitions/AndBlockInfo"
   BlockTransactionList:
     type: object
     properties:
@@ -448,6 +505,32 @@ definitions:
         $ref: "#/definitions/Tx"
       witness:
         $ref: "#/definitions/TxWitness"
+  AtgDelta:
+    type: array
+    items:
+      type: object
+      properties:
+        subjectId:
+          type: integer
+        status:
+          type: string
+          enum:
+            - removed
+            - added
+  PrivateBlockInfo:
+    type: object
+    properties:
+      hash:
+        $ref: "#/definitions/Hash"
+      merkleRoot:
+        type: string
+        format: byte
+        description: Hex-encoded root of merkle tree which the private block contains.
+      transactionsNum:
+        type: integer
+        format: int32
+      atgDelta:
+        $ref: "#/definitions/AtgDelta"
   ErrResponse:
     type: object
     required:
@@ -460,12 +543,14 @@ definitions:
 
           - BlockNotFound
           - TransactionNotFound
+          - PrivateBlockNotFound
         description: >-
           Error type:
             * `InvalidFormat` - Failed to deserialise one of parameters.
 
             * `BlockNotFound` - Specified block does not exist.
             * `TransactionNotFound` - Specified transaction does not exist.
+            * `PrivateBlockNotFound` - Specified private block does not exist.
 
   TxValidationError:
     type: object

@@ -36,6 +36,7 @@ hoistWitnessClient nat es =
     , wGetAccount = nat ... wGetAccount es
     , wGetTransactions = nat ... wGetTransactions es
     , wGetTransaction = nat ... wGetTransaction es
+    , wGetPublications = nat ... wGetPublications es
     , wGetHashType = nat ... wGetHashType es
     }
 
@@ -58,4 +59,4 @@ instance AllocResource WitnessClient where
     allocResource params =
         buildComponentR "witness client"
             (createWitnessClient params)
-            (\_ -> pass)  -- items clean on itself on GC, kaef
+            (\_ -> pass)  -- things clean up on themselves on GC, kaef
