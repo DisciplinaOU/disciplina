@@ -18,6 +18,7 @@ data KeyInitError
     | SecretParseError Text
     | SecretConfMismatch Text
     | SecretIOError Text
+    | SecretFileModeError Text
 
 instance Show KeyInitError where
     show = toString . pretty
@@ -32,6 +33,8 @@ instance Buildable KeyInitError where
             "Configuration/CLI params mismatch: "+|msg|+""
         SecretIOError msg ->
             "Some I/O error occured: "+|msg|+""
+        SecretFileModeError msg ->
+            "File permission error: "+|msg|+""
 
 instance Exception KeyInitError
 
