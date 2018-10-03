@@ -1,6 +1,8 @@
 module Dscp.Core.Governance
     ( Governance (..)
-    , CommitteeSecret (..)
+    , CommitteeSecret
+    , mkCommitteeSecret
+    , unCommitteeSecret
     , Committee (..)
     , mkClosedCommittee
     , committeeDerive
@@ -30,6 +32,11 @@ data Governance
 newtype CommitteeSecret = CommitteeSecret
     { unCommitteeSecret :: ByteString
     } deriving (Eq, Ord, Show, Generic)
+
+mkCommitteeSecret :: ByteString -> Either Text CommitteeSecret
+mkCommitteeSecret sec
+    | null sec = Left "CommitteeSecret is empty"
+    | otherwise = Right $ CommitteeSecret sec
 
 -- | Committee is a fixed order list of addresses allowed to issue
 -- block. It can be either closed or open (for testing). Participants'

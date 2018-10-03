@@ -45,7 +45,7 @@ parseInputWithSecret = \case
         content <- decode $ LBS.fromStrict input
         fromKeyfileContent pp content
     CommSecret n -> \input ->
-        pure $ committeeDerive (CommitteeSecret input) n
+         flip committeeDerive n <$> eitherToMaybe (mkCommitteeSecret input)
     SecretFromSeed -> \input -> asum
         [ do
             -- we need this clause as soon as many code uses
