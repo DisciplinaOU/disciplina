@@ -32,6 +32,19 @@ library:
     - wai
     - wai-cors
 
+tests:
+  disciplina-faucet-test:
+    <<: *test-common
+
+    build-tools:
+      - tasty-discover
+
+    dependencies:
+      - disciplina-core
+      - disciplina-faucet
+      - tasty
+      - tasty-hspec
+
 executables:
   dscp-faucet:
     <<: *exec-common

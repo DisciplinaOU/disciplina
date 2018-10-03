@@ -37,7 +37,7 @@ data LoggingParams = LoggingParams
     -- ^ Path to log directory
     , lpConfigPath  :: !(Maybe FilePath)
     -- ^ Path to logger configuration
-    } deriving Show
+    } deriving (Show, Eq)
 
 ----------------------------------------------------------------------------
 -- Other

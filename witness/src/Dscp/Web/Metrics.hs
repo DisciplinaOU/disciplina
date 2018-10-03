@@ -15,7 +15,7 @@ import Dscp.Util (countingTime)
 import Dscp.Web.Types (NetworkAddress (..))
 
 newtype MetricsEndpoint = MetricsEndpoint { unMetricsEndpoint :: Maybe Endpoint }
-    deriving (Show)
+    deriving (Show, Eq)
 
 reportTime :: MonadIO m => Name -> MetricsEndpoint -> m a -> m a
 reportTime name (MetricsEndpoint mEndpoint) m = case mEndpoint of
@@ -27,7 +27,7 @@ reportTime name (MetricsEndpoint mEndpoint) m = case mEndpoint of
         return a
 
 responseTimeMetric :: MetricsEndpoint -> Middleware
-responseTimeMetric endpoint app = \request f ->
+responseTimeMetric endpoint app request f =
     reportTime "disciplina.timer.http_request" endpoint (app request f)
 
 addrToEndpoint :: NetworkAddress -> Endpoint

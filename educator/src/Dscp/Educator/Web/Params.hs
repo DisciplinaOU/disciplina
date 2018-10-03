@@ -16,6 +16,6 @@ data EducatorWebParams = EducatorWebParams
     , ewpBotParams         :: EducatorBotSwitch
     , ewpEducatorAPINoAuth :: NoAuthContext "educator"
     , ewpStudentAPINoAuth  :: NoAuthContext "student"
-    }
+    } deriving (Show, Eq)
 
 deriveFromJSON defaultOptions ''EducatorWebParams

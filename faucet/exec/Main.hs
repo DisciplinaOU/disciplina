@@ -32,5 +32,6 @@ getFaucetConfig = do
     (configParams, cliConfig) <- execParser $
         info (helper <*> versionOption <*> parser) $
         fullDesc <> progDesc "Disciplina faucet node."
+    let wrapConfig cfg = defaultFaucetConfig <> cfg <> cliConfig
     buildConfig configParams $
-        fmap (<> cliConfig) . fillFaucetConfig
+        fmap wrapConfig . fillFaucetConfig

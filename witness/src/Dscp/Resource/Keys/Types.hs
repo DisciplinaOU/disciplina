@@ -37,7 +37,7 @@ data BaseKeyParams = BaseKeyParams
       -- When 'False', file should be present and it will be used.
     , bkpPassphrase :: !(Maybe PassPhrase)
       -- ^ Password of encrypted secret key stored on disk.
-    } deriving (Show)
+    } deriving (Show, Eq)
 
 -- | In case of committee governance, these keys help us to generate
 -- keys.
@@ -48,7 +48,7 @@ data CommitteeParams
                             , cpSecret       :: CommitteeSecret }
       -- ^ In closed committee you should provide a (common) secret
       -- and your index.
-    deriving (Show)
+    deriving (Show, Eq)
 
 -- | Context providing access to secret key.
 --

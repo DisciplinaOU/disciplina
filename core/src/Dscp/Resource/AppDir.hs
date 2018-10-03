@@ -20,7 +20,7 @@ data AppDirParam
       -- ^ Dedicated folder inside OS directory for applications
     | AppDirectorySpecific !FilePath
       -- ^ Given path
-    deriving (Show)
+    deriving (Show, Eq)
 
 type AppDir = FilePath
 

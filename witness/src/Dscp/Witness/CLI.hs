@@ -15,8 +15,7 @@ module Dscp.Witness.CLI
 import qualified Data.Set as Set
 import Loot.Config (OptParser, (.::), (.:<), (.<>))
 import Loot.Network.ZMQ.Common (PreZTNodeId (..), parsePreZTNodeId)
-import Options.Applicative (Parser, auto, eitherReader, help, long, metavar, option, strOption,
-                            value)
+import Options.Applicative (Parser, auto, eitherReader, help, long, metavar, option, strOption)
 
 import Dscp.CommonCLI (appDirParamParser, baseKeyParamsParser, logParamsParser,
                        networkAddressParser, serverParamsParser)
@@ -24,8 +23,7 @@ import Dscp.Core.Governance (CommitteeSecret (..))
 import Dscp.DB.Rocks.Real.Types (RocksDBParams (..))
 import Dscp.Resource.Keys
 import Dscp.Resource.Network (NetCliParams (..), NetServParams (..))
-import Dscp.Web.Metrics (MetricsEndpoint (..))
-import Dscp.Web.Types (naHost, naPort)
+import Dscp.Web.Metrics (MetricsEndpoint (..), addrToEndpoint)
 import Dscp.Witness.Config
 import Dscp.Witness.Keys
 
@@ -37,8 +35,10 @@ rocksParamsParser :: Parser RocksDBParams
 rocksParamsParser = fmap RocksDBParams $ strOption $
     long "db-path" <>
     metavar "FILEPATH" <>
-    help "Path to database directory for witness node." <>
-    value "witness-db"
+    help "Path to database directory for witness node. If not specified, \
+         \'witness-db' directory is used."
+    -- Removed default 'witness-db' value
+    -- See [Note default-cli-params] in 'Dscp.CommonCLI'
 
 ----------------------------------------------------------------------------
 -- ZMQ TCP
@@ -81,12 +81,11 @@ netServParamsParser =
 ----------------------------------------------------------------------------
 
 metricsServerParser :: Parser MetricsEndpoint
-metricsServerParser = do
-    mNetAddr <- optional $
+metricsServerParser =
+    -- Removed 'optional'
+    -- See [Note default-cli-params] in 'Dscp.CommonCLI'
+    MetricsEndpoint . Just . addrToEndpoint <$>
         networkAddressParser "metrics-server" "Server to report the metrics to."
-    return $ MetricsEndpoint $ toEndpoint <$> mNetAddr
-  where
-    toEndpoint = liftA2 (,) naHost (fromIntegral . naPort)
 
 ---------------------------------------------------------------------------
 -- Utils
@@ -126,6 +125,6 @@ witnessConfigParser = #witness .:<
      #db .:: rocksParamsParser .<>
      #network .:: netServParamsParser .<>
      #keys .:: witnessKeyParamsParser .<>
-     #api .:: optional (serverParamsParser "Witness") .<>
+     #api .:: (Just <$> serverParamsParser "Witness") .<>
      #appDir .:: appDirParamParser .<>
      #metricsEndpoint .:: metricsServerParser)

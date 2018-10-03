@@ -25,8 +25,10 @@ sqliteParamsParser = do
     srpPath <- strOption $
         long "sql-path" <>
         metavar "FILEPATH" <>
-        help "Path to database directory for educator's private data." <>
-        value "educator-db"
+        help "Path to database directory for educator's private data. If not \
+             \specified, 'educator-db' directory is used."
+        -- Removed default value `educator-db`
+        -- See [Note default-cli-params] in 'Dscp.CommonCLI'
     srpConnNum <- optional . option auto $
         long "sql-conns" <>
         metavar "INTEGER" <>

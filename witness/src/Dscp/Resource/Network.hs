@@ -111,7 +111,7 @@ data NetServParams = NetServParams
     , nsInternalAddress :: !(Maybe PreZTNodeId)
       -- ^ Optional internal address that we'll bind to
       -- (nsOurAddress should be an external, addressable one anyway).
-    } deriving (Show)
+    } deriving (Show, Eq)
 
 -- | Resources needed for ZMQ TCP client + server.
 data NetServResources = NetServResources

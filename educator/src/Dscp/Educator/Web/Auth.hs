@@ -140,6 +140,9 @@ data NoAuthContext s
     = NoAuthOnContext (NoAuthData s)
     | NoAuthOffContext
 
+deriving instance Show (NoAuthData s) => Show (NoAuthContext s)
+deriving instance Eq (NoAuthData s) => Eq (NoAuthContext s)
+
 instance (d ~ NoAuthData s) => IsAuth (NoAuth s) d where
     type AuthArgs (NoAuth s) = '[NoAuthContext s]
     runAuth _ _ = \case
