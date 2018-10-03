@@ -68,6 +68,19 @@ genBotCourseAssignments n _aCourseId =
 -- Constants
 ---------------------------------------------------------------------
 
+{- [Note examples-in-bot]
+We for sure want the bot to contain some entities which later can be used as
+examples in documentation, especially in swagger docs. This way developers
+can check their work on the spot as well as quickly find which of intermediate
+steps causes a bug.
+
+Note that many entities already have hardcoded examples, e.g. `courseEx` and
+`assignmentEx` variables, so that one can easily get a sample of a type in ghci.
+
+This tag will be mentioned everywhere where bot includes such an example,
+as well as in every case we rely on this bot behaviour.
+-}
+
 -- | Set of courses and other stuff educator provides.
 -- Could be plain constants, but we want to generate them with seed.
 -- Contains excessive data for convenience.
@@ -100,6 +113,7 @@ mkBotSetting params =
     -- using 'courseEx' here helps to keep examples in swagger doc working
     [ (Course 0  , "Patakology", [])
     , (Course 1  , "Learning!", [])
+    -- [Note: examples-in-bot]
     , (courseEx  , "Boredom", [])
 
     , (Course 101, "Introduction To Basics", [])
@@ -140,6 +154,7 @@ mkBotSetting params =
     botGen $
     forM (zip courseSizes bsCourses) $ \(courseSize, (course, _, _)) -> do
         assignments <- genBotCourseAssignments courseSize course
+        -- [Note: examples-in-bot]
         let assignmentsWithEx =
                 bool identity (assignmentEx :)
                 (course == _aCourseId assignmentEx)

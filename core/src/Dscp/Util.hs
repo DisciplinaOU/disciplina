@@ -6,6 +6,7 @@ module Dscp.Util
        , allUniqueOrd
        , Size (..)
        , sizeSerialised
+       , Seed (..)
        , execUnmasked
 
          -- * Exceptions processing
@@ -108,6 +109,10 @@ newtype Size a = Size { unSize :: Word64 }
 -- | Count size of serialised item.
 sizeSerialised :: Serialise a => a -> Size a
 sizeSerialised = Size . fromIntegral . BSL.length . serialise
+
+-- | Seed for deterministic random generator.
+newtype Seed a = Seed { unSeed :: a }
+    deriving (Eq, Ord, Show, Enum, Num, IsString)
 
 -- | Executes the action unmasked.
 -- Spawns a thread under hood.

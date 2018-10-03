@@ -14,10 +14,16 @@ import qualified Data.Text as T
 import Dscp.Core
 import Dscp.Crypto
 import Dscp.Educator.Web.Auth
+import Dscp.Educator.Web.Student.Types
 import Dscp.Resource.Keys
 import Dscp.Util
 import Dscp.Util.Aeson
 import Dscp.Util.Serialise
+import Dscp.Util.Test
+
+----------------------------------------------------------------------------
+-- Helpers
+----------------------------------------------------------------------------
 
 -- | How to output bytestring-like data.
 data View
@@ -55,6 +61,30 @@ readPrettyOption = \case
     "one-line" -> pure $ Pretty False
     other -> Left $ "Unknown prettiness option: " <> other
 
+mkSignedSubmissionExample :: SecretKey -> Seed Text -> NewSubmission
+mkSignedSubmissionExample secret (Seed seed) =
+    -- [Note: examples-in-bot] we assume that 'assignmentEx'
+    -- is an existing assignment in educator bot
+    let submission =
+            Submission
+            { _sStudentId = mkAddr $ toPublic secret
+            , _sContentsHash = detGenG seed arbitrary
+            , _sAssignmentHash = hash assignmentEx
+            }
+        signedSubmission =
+            SignedSubmission
+            { _ssSubmission = submission
+            , _ssWitness = SubmissionWitness
+                { _swKey = toPublic secret
+                , _swSig = sign secret (hash submission)
+                }
+            }
+    in signedSubmissionToRequest signedSubmission
+
+----------------------------------------------------------------------------
+-- Commands
+----------------------------------------------------------------------------
+
 -- | All commands keygen supports.
 data KeygenCommand
     = PrintSecretKey View
@@ -63,6 +93,7 @@ data KeygenCommand
     | PrintEncryptedSecretKey PassPhrase View
     | PrintKeyFile PassPhrase Pretty
     | PrintEducatorAuthToken Text
+    | PrintStudentSubmission (Seed Text)
 
 -- | Parse a command.
 parseKeygenCommand :: Text -> Either Text KeygenCommand
@@ -108,6 +139,13 @@ parseKeygenCommand command =
         "educator-auth" : [endpointName] ->
             return $ PrintEducatorAuthToken endpointName
 
+        "student-submission" : [] ->
+            return $ PrintStudentSubmission ""
+        "student-submission" : [seed] ->
+            return $ PrintStudentSubmission (Seed seed)
+        "student-submission" : _ ->
+            Left "'student-submission': failed to parse options"
+
         _ -> Left $ "Unknown command: " <> command
 
 -- | Produce output following the given command.
@@ -129,3 +167,5 @@ keygenCommandExecutor secret = \case
            Versioned $ toSecretJson pp secret
     PrintEducatorAuthToken endpointName ->
         makeAuthToken secret endpointName
+    PrintStudentSubmission seed ->
+        decodeUtf8 $ encodePretty $ mkSignedSubmissionExample secret seed
