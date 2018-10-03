@@ -24,6 +24,9 @@ demo: &demo
           - # Faucet
             - 3BAyX5pNrN2UzxPZhrFAocCti3nVRUZRk7CZtudT2iLhGH6T1eq5FzqEuk
             - 1000
+          - # Educator
+            - 3BAyX5pQbc8bg6SEz3RkYjEUs71PjLobGVRNq2bhHX2YZQaRPbeLyfz9Y8
+            - 1000
           - # Test key #1, secret: ffRB5uhVEV24NXsYUuw1irt9HF5i5IRWJXHJzagXU8Y=
             - 3BAyX5pPvmtsKAyDhtfeUZ1beJdFZzHLTHt6nHrzdGcpfagpgeysRNPyMe
             - 1000
