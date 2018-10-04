@@ -18,6 +18,7 @@ module Dscp.Educator.Config
 import Control.Lens ((?~))
 import Data.Reflection (Given, give, given)
 import Loot.Config ((:::), (::<), ConfigKind (Final, Partial), ConfigRec, upcast)
+import Time (Second, Time)
 
 import Dscp.Config
 import Dscp.DB.SQLite (SQLiteDBMode (..), SQLiteParams (..), SQLiteRealParams (..))
@@ -30,6 +31,9 @@ type EducatorConfig = WitnessConfig ++
        '[ "db" ::: SQLiteParams
         , "keys" ::: EducatorKeyParams
         , "api" ::: EducatorWebParams
+        , "publishing" ::<
+           '[ "period" ::: Time Second
+            ]
         ]
      ]
 

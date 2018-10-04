@@ -25,8 +25,8 @@ module Dscp.Educator.Web.Student.Types
 
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
+import Fmt (blockListF, build, (+|), (|+))
 import Servant (FromHttpApiData)
-import Fmt (build, (+|), (|+), blockListF)
 
 import Dscp.Core
 import Dscp.Crypto

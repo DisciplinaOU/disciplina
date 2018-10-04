@@ -235,7 +235,9 @@ spec_EducatorApiQueries = describe "Basic database operations" $ do
             lift $ do
                 prepareAndCreateSubmissions env
                 void $ createTransaction ptx
-                createBlock Nothing
+                mblock <- runMaybeT $ createPrivateBlock Nothing
+                let !_ = mblock ?: error "No private block created"
+                return ()
 
             proofs <- lift $ commonGetProofs student def
             let proof = expectOne "block proofs" proofs
@@ -254,9 +256,11 @@ spec_EducatorApiQueries = describe "Basic database operations" $ do
                 prepareAndCreateSubmissions env
                 void $ createTransaction ptx1
                 void $ createTransaction ptx2
-                createBlock Nothing
+                mblock1 <- runMaybeT $ createPrivateBlock Nothing
                 void $ createTransaction ptx3
-                createBlock Nothing
+                mblock2 <- runMaybeT $ createPrivateBlock Nothing
+                let !_ = (mblock1 >> mblock2) ?: error "No private blocks created"
+                return ()
 
             proofs <- lift $ commonGetProofs student def
             let resTxs = map bpiTxs proofs

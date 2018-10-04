@@ -22,6 +22,7 @@ import Dscp.Network.Wrapped
 import Dscp.Snowdrop.Mode
 import Dscp.Util
 import Dscp.Util.Concurrent.NotifyWait
+import Dscp.Util.Timing
 import Dscp.Web.Metrics
 import Dscp.Witness.Config
 import Dscp.Witness.Launcher.Mode

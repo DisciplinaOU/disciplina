@@ -11,7 +11,7 @@ import Mon.Network (Endpoint)
 import Mon.Types (Name)
 import Network.Wai (Middleware)
 
-import Dscp.Util (countingTime)
+import Dscp.Util.Timing (countingTime)
 import Dscp.Web.Types (NetworkAddress (..))
 
 newtype MetricsEndpoint = MetricsEndpoint { unMetricsEndpoint :: Maybe Endpoint }

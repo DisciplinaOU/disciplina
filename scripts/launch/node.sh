@@ -56,13 +56,15 @@ witness_web_addr="127.0.0.1:8091"
 
 # educator-only params
 educator_params="
---educator-keyfile $tmp_files/educator.key
---educator-gen-key
+--educator-keyfile $files/educator.key
 --sql-path $tmp_files/educator.db
 --educator-listen 127.0.0.1:8090
 --educator-api-no-auth
---student-api-no-auth 3BAyX5pUsPCFfK45adsJpj7X6waKEB1kxdvMn1Tj2VYsrJuHApTviPEpK3
+--student-api-no-auth 3BAyX5pNpoFrLJcP5bZ2kXihBfmBVLprSyP1RhcPPddm6Dw42jzEPXZz22
+--publication-period 15s
 "
+# Note: Student address in --student-api-no-auth parameter corresponds to secret
+# key with seed 456
 
 # witness params (and educator's as well)
 witness_params="

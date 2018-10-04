@@ -10,7 +10,7 @@ import Data.Default (Default (..))
 import Dscp.Core.Arbitrary
 import qualified Dscp.Crypto.MerkleTree as MerkleTree
 import Dscp.DB.SQLite as DB
-import Dscp.Util (Id (..), allUniqueOrd)
+import Dscp.Util
 
 import Test.Dscp.DB.SQLite.Common
 
@@ -302,7 +302,8 @@ spec_Instances = do
                         ptId <- DB.createTransaction trans
                         return ptId
 
-                    DB.createBlock Nothing
+                    mblock <- runMaybeT (DB.createPrivateBlock Nothing)
+                    let !_ = mblock ?: error "No private block created"
 
                     transPacksSince <- DB.getProvenStudentTransactions studentId def{ pfSince = Just pointSince }
 

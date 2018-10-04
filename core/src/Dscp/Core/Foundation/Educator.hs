@@ -69,6 +69,7 @@ module Dscp.Core.Foundation.Educator
 
     -- * Activity Type Graph
     , ATGDelta (..)
+    , isEmptyATGDelta
     , ATGNode (..)
     , atgnSubjectId
     , atgnChildren
@@ -80,7 +81,7 @@ module Dscp.Core.Foundation.Educator
 
 import Control.Lens (Getter, makeLenses, to)
 import Data.Time.Clock (UTCTime)
-import Fmt (build, mapF, (+|), (|+), genericF)
+import Fmt (build, genericF, mapF, (+|), (|+))
 
 import Dscp.Core.Foundation.Address (Address (..))
 import Dscp.Crypto
@@ -240,6 +241,10 @@ newtype ATGDelta = ATGDelta
 instance Buildable ATGDelta where
     build (ATGDelta d) = "ATGDelta { " +| mapF d |+ " }"
 
+-- | Whether does 'ATGDelta' carries no changes actually.
+isEmptyATGDelta :: ATGDelta -> Bool
+isEmptyATGDelta  = null . getATGDelta
+
 instance Buildable Course where
     build Course{..} = build getCourseId
 
@@ -248,6 +253,7 @@ instance Buildable () where
 
 instance Buildable DocumentType where
     build = genericF
+
 ----------------------------------------------------------------------------
 -- Transactions
 ----------------------------------------------------------------------------

@@ -42,6 +42,11 @@ data PublicationTxTypeId
     = PublicationTxTypeId
     deriving (Eq, Ord, Show, Generic)
 
+-- TODO [DSCP-256]: remove PublicationAuthorDoesNotExist?
+-- We can safely assume that if account does not exist, it actually
+-- exists and equals to 'def', what's the point of multiplying exceptions?
+-- (PublicationCantAffordFee already stands for the same thing).
+-- Similar concern is about money transactions.
 data PublicationValidationException
     = PublicationSignatureIsIncorrect
     | PublicationPrevBlockIsIncorrect
@@ -63,7 +68,8 @@ instance Buildable PublicationValidationException where
         PublicationPrevBlockIsIncorrect -> "Publication previous block is incorrect"
         StorageIsCorrupted -> "Storage is inconsistent"
         PublicationIsBroken -> "Bad publication"
-        PublicationAuthorDoesNotExist -> "Publicaion author does not exist"
+        PublicationAuthorDoesNotExist -> "Publicaion author is not registered in \
+                                         \chain and can't pay for fees"
         PublicationFeeIsTooLow -> "The fee specified in the publication tx is " <>
                                   "lower than the minimal one."
         PublicationCantAffordFee -> "Publication author can't afford the fee"

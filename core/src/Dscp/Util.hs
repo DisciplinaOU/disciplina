@@ -6,7 +6,7 @@ module Dscp.Util
        , allUniqueOrd
        , Size (..)
        , sizeSerialised
-       , countingTime
+       , Seed (..)
        , execUnmasked
 
          -- * Exceptions processing
@@ -53,7 +53,6 @@ module Dscp.Util
 
          -- * Catch errors and report to logs
        , dieGracefully
-       , foreverAlive
 
          -- * Re-exports
        , module Snowdrop.Util
@@ -64,10 +63,7 @@ import Control.Lens (Getter, LensRules, lens, lensField, lensRules, mappingNamer
 import Data.ByteArray (ByteArrayAccess)
 import Data.ByteArray.Encoding (Base (..), convertFromBase, convertToBase)
 import qualified Data.ByteString.Lazy as BSL
-import Data.Time.Clock.POSIX (getPOSIXTime)
-import Fmt ((+|), (+||), (|+), (||+))
-import GHC.TypeLits (KnownSymbol)
-import Time (KnownRat, Time, UnitName, threadDelay)
+import Fmt ((+|), (|+))
 import UnliftIO (MonadUnliftIO)
 import qualified UnliftIO.Async as UIO
 
@@ -106,15 +102,6 @@ listToMaybeWarn msg = \case
 allUniqueOrd :: Ord a => [a] -> Bool
 allUniqueOrd = all (null . drop 1) . group . sort
 
-countingTime :: MonadIO m => m a -> m (Double, a)
-countingTime m = do
-    t <- liftIO $ getPOSIXTime
-    a <- m
-    t' <- liftIO $ getPOSIXTime
-    let diff :: Double
-        diff = fromRational . toRational $ t' - t
-    return (diff, a)
-
 -- | Size of serialised item.
 newtype Size a = Size { unSize :: Word64 }
     deriving (Eq, Ord, Show)
@@ -122,6 +109,10 @@ newtype Size a = Size { unSize :: Word64 }
 -- | Count size of serialised item.
 sizeSerialised :: Serialise a => a -> Size a
 sizeSerialised = Size . fromIntegral . BSL.length . serialise
+
+-- | Seed for deterministic random generator.
+newtype Seed a = Seed { unSeed :: a }
+    deriving (Eq, Ord, Show, Enum, Num, IsString)
 
 -- | Executes the action unmasked.
 -- Spawns a thread under hood.
@@ -275,17 +266,3 @@ dieGracefully :: (MonadLogging m, MonadCatch m) => Text -> m () -> m ()
 dieGracefully desc action =
     action `catchAny` \e -> do
         logError $ fromString $ "Exception in " <> toString desc <> ": " <> show e
-
-foreverAlive
-    :: (MonadIO m, MonadCatch m, MonadLogging m,
-        KnownRat unit, KnownSymbol(UnitName unit))
-    => Text -> Time unit -> m () -> m a
-foreverAlive name recovery action =
-    forever action `catchAny` \e -> do
-        printNecrolog e
-        threadDelay recovery
-        foreverAlive name recovery action
-  where
-    printNecrolog e =
-        logError $ name |+ " died (" +|| e ||+ "); \
-                   \ressurecting in " +|| recovery ||+ ""

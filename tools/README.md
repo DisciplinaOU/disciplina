@@ -74,6 +74,7 @@ Following commands are supported:
 * `esecret[:<password="">[:<view=hex>]]` - display encrypted secret key.
 * `keyfile[:<password="">[:<prettiness=pretty>]]` - display keyfile.
 * `educator-auth:endpointName` - produce JWT token for educator node from given educator secret key and name of accessed endpoint.
+* `student-submission[:<seed="">]` - produce JSON request for `POST /api/student/v1/submissions` endpoint.
 
 ### Examples
 
@@ -128,7 +129,18 @@ echo '9JsCkzFH/W7SbgvgokeJTsckJs/uoAPWWwC40Y6UfFo=' | dscp-keygen --secret --com
 echo '9JsCkzFH/W7SbgvgokeJTsckJs/uoAPWWwC40Y6UfFo=' | dscp-keygen --secret --command "educator-auth:/api/student/v1/courses"
 ```
 You can later append token with
-* `-H "Authorization: Bearer <token>"` for `curl`
-* `Authorization:Bearer\ <token>` to [`http`](https://httpie.org/).
+1. `-H "Authorization: Bearer <token>"` for `curl`
+2. `Authorization:Bearer\ <token>` for [`http`](https://httpie.org/).
+
+* Submit a new submission from student - owner of given secret key:
+
+```base
+echo 456 \
+    | dscp-keygen --seed --command student-submission:3656234 \
+    | http POST :8090/api/student/v1/submissions
+```
+(_Reminder: option of `student-submission` command is seed which allows to generate unique submissions._)
+
+See [example of use](/scripts/test/student-submissions-spam.sh).
 
 For **testing purposes** you will most probably want to always run `dscp-keygen --seed` and vary command only.
