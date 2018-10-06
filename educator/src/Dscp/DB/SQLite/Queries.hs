@@ -1,3 +1,4 @@
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE QuasiQuotes #-}
 
 module Dscp.DB.SQLite.Queries
@@ -271,20 +272,20 @@ getStudentTransactions student = do
 
 data GetProvenStudentTransactionsFilters = GetProvenStudentTransactionsFilters
     { pfCourse :: Maybe Course
+    , pfStudent :: Maybe Student
+    , pfAssignment :: Maybe (Hash Assignment)
     , pfSince  :: Maybe UTCTime
     } deriving (Show, Generic)
 
-instance Default GetProvenStudentTransactionsFilters where
-    def = GetProvenStudentTransactionsFilters def def
+deriving instance Default GetProvenStudentTransactionsFilters
 
 -- | Returns list of transaction blocks along with block-proof of a student since given moment.
 getProvenStudentTransactions
     :: forall m w.
        DBM m
-    => Id Student
-    -> GetProvenStudentTransactionsFilters
+    => GetProvenStudentTransactionsFilters
     -> DBT 'WithinTx w m [(MerkleProof PrivateTx, [(Word32, PrivateTx)])]
-getProvenStudentTransactions studentId filters = do
+getProvenStudentTransactions filters = do
     -- Contains `(tx, idx, blockId)` map.
     txsBlockList <- getTxsBlockMap
 
@@ -314,11 +315,13 @@ getProvenStudentTransactions studentId filters = do
     -- Returns, effectively, `[(tx, idx, blockId)]`.
     getTxsBlockMap :: DBT t w m [TxInBlock]
     getTxsBlockMap = do
-        query getTxsBlockMapQuery (oneParam studentId <> mconcat filteringParams)
+        query getTxsBlockMapQuery $ mconcat filteringParams
       where
         (filteringClauses, filteringParams) = unzip
             [ mkFilter "time >= ?"     $ pfSince filters
             , mkFilter "course_id = ?" $ pfCourse filters
+            , mkFilter "StudentAssignments.student_addr = ?" $ pfStudent filters
+            , mkFilter "Assignments.hash = ?" $ pfAssignment filters
             ]
 
         getTxsBlockMapQuery = [q|
@@ -346,8 +349,7 @@ getProvenStudentTransactions studentId filters = do
             left join  Assignments
                    on  StudentAssignments.assignment_hash = Assignments.hash
 
-            where      StudentAssignments.student_addr  =  ?
-                  and  Transactions.idx                <> -1
+            where      Transactions.idx                <> -1
         |]
           `filterClauses` filteringClauses
 

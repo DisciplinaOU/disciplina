@@ -32,8 +32,8 @@ studentApiHandlers student =
 
     , sGetAssignments = \afCourse afDocType afIsFinal ->
         transactR $
-            commonGetAssignments StudentCase student
-                def{ afCourse, afDocType, afIsFinal }
+            commonGetAssignments StudentCase
+                def{ afCourse, afStudent = Just student, afDocType, afIsFinal }
 
     , sGetAssignment = \assignH ->
         transactR $ studentGetAssignment student assignH
@@ -53,7 +53,7 @@ studentApiHandlers student =
         transactW $ commonDeleteSubmission subH (Just student)
 
     , sGetProofs = \pfSince ->
-        transactR $ commonGetProofs student def{ pfSince }
+        transactR $ commonGetProofs def{ pfSince, pfStudent = Just student }
     }
 
 convertStudentApiHandler

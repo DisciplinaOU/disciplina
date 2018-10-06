@@ -305,7 +305,8 @@ spec_Instances = do
                     mblock <- runMaybeT (DB.createPrivateBlock Nothing)
                     let !_ = mblock ?: error "No private block created"
 
-                    transPacksSince <- DB.getProvenStudentTransactions studentId def{ pfSince = Just pointSince }
+                    transPacksSince <- DB.getProvenStudentTransactions
+                        def{ pfStudent = Just studentId, pfSince = Just pointSince }
 
                     let transSince = join $ map (map snd . snd) transPacksSince
 

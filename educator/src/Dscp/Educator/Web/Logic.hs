@@ -4,18 +4,16 @@ module Dscp.Educator.Web.Logic
     ( commonGetProofs
     ) where
 
-import Dscp.Core
 import Dscp.DB.SQLite
 import Dscp.Educator.Web.Types
 import Dscp.Util.Aeson
 
 commonGetProofs
     :: MonadEducatorWebQuery m
-    => Student
-    -> GetProvenStudentTransactionsFilters
+    => GetProvenStudentTransactionsFilters
     -> DBT 'WithinTx w m [BlkProofInfo]
-commonGetProofs student filters = do
-    rawProofs <- getProvenStudentTransactions student filters
+commonGetProofs filters = do
+    rawProofs <- getProvenStudentTransactions filters
     return
         [ BlkProofInfo{ bpiMtreeSerialized = CustomEncoding mtree, bpiTxs }
         | (mtree, indicedTxs) <- rawProofs

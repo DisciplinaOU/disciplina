@@ -94,7 +94,7 @@ spec_EducatorApiQueries = describe "Basic database operations" $ do
                 void $ createAssignment assignment
                 setStudentAssignment student (hash assignment)
 
-            res <- lift $ commonGetAssignments EducatorCase student def
+            res <- lift $ commonGetAssignments EducatorCase def{ afStudent = Just student }
             return $ res === one AssignmentEducatorInfo
                 { aiHash = hash assignment
                 , aiCourseId = _aCourseId assignment
@@ -223,7 +223,7 @@ spec_EducatorApiQueries = describe "Basic database operations" $ do
             let student = tiOne $ cteStudents env
             lift $ prepareAndCreateSubmissions env
 
-            proofs <- lift $ commonGetProofs student def
+            proofs <- lift $ commonGetProofs def{ pfStudent = Just student }
 
             return $ proofs === []
 
@@ -239,7 +239,7 @@ spec_EducatorApiQueries = describe "Basic database operations" $ do
                 let !_ = mblock ?: error "No private block created"
                 return ()
 
-            proofs <- lift $ commonGetProofs student def
+            proofs <- lift $ commonGetProofs def{ pfStudent = Just student }
             let proof = expectOne "block proofs" proofs
 
             return $ bpiTxs proof === [ptx]
@@ -262,7 +262,7 @@ spec_EducatorApiQueries = describe "Basic database operations" $ do
                 let !_ = (mblock1 >> mblock2) ?: error "No private blocks created"
                 return ()
 
-            proofs <- lift $ commonGetProofs student def
+            proofs <- lift $ commonGetProofs def{ pfStudent = Just student }
             let resTxs = map bpiTxs proofs
 
             return $ map sort resTxs === [sort [ptx1, ptx2], [ptx3]]

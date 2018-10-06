@@ -61,8 +61,8 @@ data EducatorApiEndpoints route = EducatorApiEndpoints
 
     , eGetStudents :: route
         :- "students"
+        :> QueryParam "course" Course
         :> Summary "Get a list of all registered students' addresses"
-        :> QueryParam "courseId" Course
         :> Get '[DSON] [StudentInfo]
 
       -- Courses
@@ -76,6 +76,7 @@ data EducatorApiEndpoints route = EducatorApiEndpoints
 
     , eGetCourses :: route
         :- "courses"
+        :> QueryParam "student" Student
         :> Summary "Get all courses"
         :> Get '[DSON] [CourseEducatorInfo]
 
@@ -88,14 +89,6 @@ data EducatorApiEndpoints route = EducatorApiEndpoints
         :> ReqBody '[DSON] EnrollStudentToCourse
         :> PostCreated '[DSON] ()
 
-    , eGetStudentCourses :: route
-        :- "students" :> Capture "studentAddr" Student
-        :> "courses"
-        :> Summary "Get a list of student's courses"
-        :> Description "Gets a list of courses which student is currently \
-                        \attending."
-        :> Get '[DSON] [CourseEducatorInfo]
-
       -- Assignments
 
     , eAddCourseAssignment :: route
@@ -105,12 +98,12 @@ data EducatorApiEndpoints route = EducatorApiEndpoints
         :> ReqBody '[DSON] NewAssignment
         :> PostCreated '[DSON] ()
 
-    , eGetStudentAssignments :: route
-        :- "students" :> Capture "studentAddr" Student
-        :> "assignments"
-        :> Summary "Get active student's assignments"
-        :> Description "Given student address, gets a list of all pending \
-                        \assignments student has."
+    , eGetAssignments :: route
+        :- "assignments"
+        :> QueryParam "course" Course
+        :> QueryParam "student" Student
+        :> QueryParam "isFinal" IsFinal
+        :> Summary "Get all assignments"
         :> Get '[DSON] [AssignmentEducatorInfo]
 
     , eAssignToStudent :: route
@@ -131,17 +124,6 @@ data EducatorApiEndpoints route = EducatorApiEndpoints
                         \raises error."
         :> Delete '[DSON] ()
 
-    , eGetStudentCourseAssignments :: route
-        :- "students" :> Capture "studentAddr" Student
-        :> "courses"  :> Capture "courseId" Course
-        :> "assignments"
-        :> Summary "Get active student's assignments for a given course"
-        :> Description "Given student address and course ID, gets a list of \
-                        \all pending assignments student has as a part of a \
-                        \course."
-        :> QueryParam "isFinal" IsFinal
-        :> Get '[DSON] [AssignmentEducatorInfo]
-
       -- Submissions
 
     , eGetSubmission :: route
@@ -159,34 +141,12 @@ data EducatorApiEndpoints route = EducatorApiEndpoints
 
     , eGetSubmissions :: route
         :- "submissions"
+        :> QueryParam "course" Course
+        :> QueryParam "student" Student
+        :> QueryParam "assignment" (Hash Assignment)
         :> Summary "Get all submissions"
         :> Description "Gets a list of all submissions done by all students. \
                       \This method is inaccessible by students."
-        :> Get '[DSON] [SubmissionEducatorInfo]
-
-    , eGetStudentSubmissions :: route
-        :- "students" :> Capture "studentAddr" Student
-        :> "submissions"
-        :> Summary "Get all student's submissions"
-        :> Description "Gets a list of all student's submissions."
-        :> Get '[DSON] [SubmissionEducatorInfo]
-
-    , eGetStudentAssignmentSubmissions :: route
-        :- "students"    :> Capture "studentAddr" Student
-        :> "assignments" :> Capture "assignmentHash" (Hash Assignment)
-        :> "submissions"
-        :> Summary "Student's submissions for an assignment"
-        :> Description "Gets a list of student's submissions for a given \
-                    \assignment"
-        :> Get '[DSON] [SubmissionEducatorInfo]
-
-    , eGetStudentCourseSubmissions :: route
-        :- "students" :> Capture "studentAddr" Student
-        :> "courses"  :> Capture "courseId" Course
-        :> "submissions"
-        :> Summary "Get student's course submissions"
-        :> Description "Gets a list of student's submissions he made during \
-                        \studying given course."
         :> Get '[DSON] [SubmissionEducatorInfo]
 
       -- Grades
@@ -200,46 +160,24 @@ data EducatorApiEndpoints route = EducatorApiEndpoints
 
     , eGetGrades :: route
         :- "grades"
+        :> QueryParam "course" Course
+        :> QueryParam "student" Student
+        :> QueryParam "assignment" (Hash Assignment)
+        :> QueryParam "isFinal" IsFinal
         :> Summary "Get all grades"
         :> Description "Gets a list of all grades performed by all students."
         :> Get '[DSON] [GradeInfo]
 
-    , eGetStudentGrades :: route
-        :- "students" :> Capture "studentAddr" Student
-        :> "grades"
-        :> Summary "Get all student's grades"
-        :> Description "Gets a list of all students grades (aka transactions \
-                        \in a private chain)"
-        :> Get '[DSON] [GradeInfo]
-
-    , eGetStudentCourseGrades :: route
-        :- "students" :> Capture "studentAddr" Student
-        :> "courses"  :> Capture "courseId" Course
-        :> "grades"
-        :> Summary "Get student's course grades"
-        :> Description "Gets a list of grades a student received during \
-                        \studying given course."
-        :> QueryParam "isFinal" IsFinal
-        :> Get '[DSON] [GradeInfo]
-
       -- Proofs
 
-    , eGetStudentProofs :: route
-        :- "students" :> Capture "studentAddr" Student
-        :> "proofs"
+    , eGetProofs :: route
+        :- "proofs"
+        :> QueryParam "course" Course
+        :> QueryParam "student" Student
+        :> QueryParam "assignment" (Hash Assignment)
         :> Summary "Get proofs of all student's activity"
         :> Description "Gets all private transactions related to a student \
                         \together with corresponding Merkle proofs."
-        :> Get '[DSON] [BlkProofInfo]
-
-    , eGetStudentCourseProofs :: route
-        :- "students" :> Capture "studentAddr" Student
-        :> "courses"  :> Capture "courseId" Course
-        :> "proofs"
-        :> Summary "Get proofs of student's course progress"
-        :> Description "Gets student's course grades and submissions in form \
-                        \of private transactions, together with corresponding \
-                        \Merkle proofs."
         :> Get '[DSON] [BlkProofInfo]
 
    } deriving (Generic)

@@ -56,8 +56,8 @@ studentGetAssignment
     -> Hash Assignment
     -> DBT 'WithinTx w m AssignmentStudentInfo
 studentGetAssignment student assignH =
-    commonGetAssignments StudentCase student def
-        { afAssignmentHash = Just assignH }
+    commonGetAssignments StudentCase def
+        { afAssignmentHash = Just assignH, afStudent = Just student }
         >>= listToMaybeWarn "assignment"
         >>= nothingToThrow (AbsentError $ AssignmentDomain assignH)
 
@@ -67,7 +67,7 @@ studentGetAllAssignments
     => Student
     -> DBT 'WithinTx w m [AssignmentStudentInfo]
 studentGetAllAssignments student =
-    commonGetAssignments StudentCase student def
+    commonGetAssignments StudentCase def{ afStudent = Just student }
 
 studentGetSubmission
     :: MonadEducatorWebQuery m
