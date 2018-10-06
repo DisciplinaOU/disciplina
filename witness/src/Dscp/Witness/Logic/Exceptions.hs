@@ -5,6 +5,7 @@ module Dscp.Witness.Logic.Exceptions
     ) where
 
 import Control.Exception (Exception)
+import Data.Data (Data)
 import qualified Data.Text.Buildable as B
 import qualified Text.Show
 
@@ -12,7 +13,7 @@ data LogicException
     = LEBlockAbsent Text
     | LETxAbsent Text
     | LEMalformed Text
-    deriving (Eq)
+    deriving (Eq, Data)
 
 instance Exception LogicException
 

@@ -460,14 +460,12 @@ definitions:
 
           - BlockNotFound
           - AccountNotFound
-          - TransactionNotFound
         description: >-
           Error type:
             * `InvalidFormat` - Failed to deserialise one of parameters.
 
             * `BlockNotFound` - Specified block does not exist.
             * `AccountNotFound` - Specified account does not exist.
-            * `TransactionNotFound` - Specified transaction does not exist.
 
   TxValidationError:
     type: object
@@ -478,6 +476,9 @@ definitions:
         type: string
         enum:
           - InvalidFormat
+          - MTxNoOutputs
+          - MTxDuplicatedOutputs
+          - InsuffucientFees
           - AuthorDoesNotExist
           - SignatureIsCorrupted
           - NotASingletonSelfUpdate
@@ -485,10 +486,14 @@ definitions:
           - PaymentMustBePositive
           - ReceiverMustIncreaseBalance
           - SumMustBeNonNegative
+          - CannotAffordFees
           - BalanceCannotBecomeNegative
         description: >-
           Error type:
             * `InvalidFormat` - Failed to deserialise one of parameters.
+            * `MTxNoOutputs` - Transaction has no outputs.
+            * `MTxDuplicatedOutputs` - Transaction has duplicated outputs.
+            * `InsufficientFees` - Input of transaction is too small to provide appropriate fees amount.
             * `AuthorDoesNotExist` - Source account has never received money.
             * `SignatureIsCorrupted` - Bad signature provided.
             * `NotASingletonSelfUpdate` - Cannot send money to yourself more than once in transaction.
@@ -496,7 +501,8 @@ definitions:
             * `PaymentMustBePositive` - You can only decrease your funds by outcoming transaction.
             * `ReceiverMustIncreaseBalance` - You can only increase the funds of receiver by outcoming transaction.
             * `SumMustBeNonNegative` - Sum of payments plus fee must be less or equal to amount of money you spend.
-            * `BalanceCannotBecomeNegative` - Balance cannot become negative.
+            * `CannotAffordFees` - User balance is too small to afford transaction outputs and fees.
+            * `BalanceCannotBecomeNegative` - User balance is too small to afford transaction outputs.
 
 externalDocs:
   description: Find out more about Swagger

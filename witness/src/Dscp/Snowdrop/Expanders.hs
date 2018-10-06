@@ -242,7 +242,7 @@ seqExpandersBalanceTx feesReceiverAddr (Fees minimalFees) =
         let hasDuplicates l = length l /= length (ordNub l)
         when (hasDuplicates $ map fst changesList) $
             throwLocalError $
-            ExpanderInternalError "Changeset produced by tx has duplicates"
+            AccountInternalError "Changeset produced by tx has duplicates"
 
         -- Adding fees
         let feeAmount =

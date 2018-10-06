@@ -6,7 +6,7 @@ module Dscp.Snowdrop.Types
     , AccountId(..)
     , Account(..)
     , Author(..)
-    , PublicationValidationException(..)
+    , PublicationException(..)
     , _PublicationSignatureIsIncorrect
     , _PublicationPrevBlockIsIncorrect
     , _StorageIsCorrupted
@@ -14,7 +14,11 @@ module Dscp.Snowdrop.Types
     , _PublicationAuthorDoesNotExist
     , _PublicationFeeIsTooLow
     , _PublicationCantAffordFee
-    , AccountValidationException(..)
+    , _PublicationLocalLoop
+    , AccountException(..)
+    , _MTxNoOutputs
+    , _MTxDuplicateOutputs
+    , _InsufficientFees
     , _AuthorDoesNotExist
     , _SignatureIsMissing
     , _SignatureIsCorrupted
@@ -48,7 +52,7 @@ data PublicationTxTypeId
 -- exists and equals to 'def', what's the point of multiplying exceptions?
 -- (PublicationCantAffordFee already stands for the same thing).
 -- Similar concern is about money transactions.
-data PublicationValidationException
+data PublicationException
     = PublicationSignatureIsIncorrect
     | PublicationPrevBlockIsIncorrect
     | StorageIsCorrupted
@@ -56,14 +60,15 @@ data PublicationValidationException
     | PublicationAuthorDoesNotExist
     | PublicationFeeIsTooLow -- ^
     | PublicationCantAffordFee -- ^ Publication owner can not afford the fee
+    | PublicationLocalLoop
     deriving (Eq, Ord)
 
-makePrisms ''PublicationValidationException
+makePrisms ''PublicationException
 
-instance Show PublicationValidationException where
+instance Show PublicationException where
     show = toString . pretty
 
-instance Buildable PublicationValidationException where
+instance Buildable PublicationException where
     build = \case
         PublicationSignatureIsIncorrect -> "Publication signature is incorrect"
         PublicationPrevBlockIsIncorrect -> "Publication previous block is incorrect"
@@ -74,6 +79,7 @@ instance Buildable PublicationValidationException where
         PublicationFeeIsTooLow -> "The fee specified in the publication tx is " <>
                                   "lower than the minimal one."
         PublicationCantAffordFee -> "Publication author can't afford the fee"
+        PublicationLocalLoop -> "Transaction would create a loop in educator's chain"
 
 data AccountTxTypeId = AccountTxTypeId deriving (Eq, Ord, Show, Generic)
 
@@ -81,8 +87,12 @@ data AccountTxTypeId = AccountTxTypeId deriving (Eq, Ord, Show, Generic)
 --
 -- NOTE: this exception is thrown by witness API, keep 'witness.yaml' doc
 -- updated.
-data AccountValidationException
-    = AuthorDoesNotExist
+-- TODO [DSCP-256] Add fields?
+data AccountException
+    = MTxNoOutputs
+    | MTxDuplicateOutputs
+    | InsufficientFees
+    | AuthorDoesNotExist
     | SignatureIsMissing
     | SignatureIsCorrupted
     | TransactionIsCorrupted
@@ -95,12 +105,16 @@ data AccountValidationException
                                    -- to the total amount received.
     | CannotAffordFees             -- ^ Given account state cannot afford given fees.
     | BalanceCannotBecomeNegative
-    deriving (Eq, Ord, Enum, Bounded, Data)
+    | AccountInternalError String
+    deriving (Eq, Ord, Data)
 
-makePrisms ''AccountValidationException
+makePrisms ''AccountException
 
-instance Buildable AccountValidationException where
+instance Buildable AccountException where
     build = \case
+        MTxNoOutputs -> "Transaction has no outputs"
+        MTxDuplicateOutputs -> "Duplicated transaction outputs"
+        InsufficientFees -> "Amount of money left for fees in transaction is not enough"
         AuthorDoesNotExist -> "Source account has never received any money"
         SignatureIsMissing -> "Transaction has no correct signature"
         SignatureIsCorrupted -> "Bad signature"
@@ -114,8 +128,10 @@ instance Buildable AccountValidationException where
         SumMustBeNonNegative -> "Tx input value < tx sum of outputs"
         CannotAffordFees -> "Tx sender can not afford fees"
         BalanceCannotBecomeNegative -> "Balance can not become negative"
+        AccountInternalError s ->
+            fromString $ "Expander failed internally: " <> s
 
-instance Show AccountValidationException where
+instance Show AccountException where
     show = toString . pretty
 
 -- | Wrapper for address.

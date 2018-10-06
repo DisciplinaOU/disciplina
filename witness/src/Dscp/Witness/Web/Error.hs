@@ -18,12 +18,33 @@ import Servant (ServantErr (..), err400, err404, err500, err503)
 import Dscp.Snowdrop
 import Dscp.Util.Servant
 import Dscp.Web.Class
+import Dscp.Witness.Logic.Exceptions
 import Dscp.Witness.Relay (RelayException)
 
+-- | All kinds of SD exceptions which we care about.
+data SdExceptions
+    = SdAccountError AccountException
+    | SdLogicError LogicException
+    deriving (Show)
+
+instance Buildable SdExceptions where
+    build = \case
+        SdAccountError err -> B.build err
+        SdLogicError err -> B.build err
+
+fromSnowdropException :: Exceptions -> Maybe SdExceptions
+fromSnowdropException = \case
+    AccountError e -> pure $ SdAccountError e
+    LogicError e -> pure $ SdLogicError e
+    PublicationError{} -> mzero
+    BlockApplicationError{} -> mzero
+    SdInternalError{} -> mzero
+
+-- | All witness API exceptions.
 data WitnessAPIError
     = BlockNotFound
     | TransactionNotFound
-    | TxError AccountValidationException
+    | SdError SdExceptions
     | InternalError Text
     | ServiceUnavailable Text
     | InvalidFormat
@@ -33,32 +54,18 @@ instance Buildable WitnessAPIError where
     build = \case
         BlockNotFound -> "Specified block does not exist."
         TransactionNotFound -> "Specified transaction does not exist."
-        TxError err -> B.build err
+        SdError err -> B.build err
         InternalError msg -> "Internal error: " <> B.build msg
         ServiceUnavailable msg -> "Service unavailable: " <> B.build msg
         InvalidFormat -> "Failed to deserialise one of parameters."
-
-fromSnowdropException :: Exceptions -> WitnessAPIError
-fromSnowdropException = \case
-    AccountValidationError e -> TxError e
-    other -> InternalError $ pretty other
 
 instance Exception WitnessAPIError where
     fromException e@(SomeException e') =
         asum
         [ cast e'
-        , fromSnowdropException <$> fromException e
+        , fmap SdError . fromSnowdropException =<< fromException e
         , ServiceUnavailable . show @Text @RelayException <$> fromException e
         ]
-
-instance HasErrorTag WitnessAPIError where
-    errorTag = \case
-        BlockNotFound -> "BlockNotFound"
-        TransactionNotFound -> "TransactionNotFound"
-        TxError err -> errorTag err
-        InternalError{} -> "InternalError"
-        ServiceUnavailable{} -> "ServiceUnavailable"
-        InvalidFormat -> "InvalidFormat"
 
 -- | Contains info about error in client-convenient form.
 data ErrResponse = ErrResponse
@@ -75,30 +82,50 @@ toErrResponse err =
     , erError = errorTag err
     }
 
+-- | Make up error which will be returned to client.
+witnessToServantErr :: WitnessAPIError -> ServantErr
+witnessToServantErr err =
+    (toServantErrNoReason err){ errBody = encode $ toErrResponse err }
+
 ---------------------------------------------------------------------------
 -- JSON instances
 ---------------------------------------------------------------------------
 
+deriveJSON defaultOptions ''SdExceptions
 deriveJSON defaultOptions ''WitnessAPIError
 deriveJSON defaultOptions ''ErrResponse
 
 ---------------------------------------------------------------------------
--- Functions
+-- Error instances
 ---------------------------------------------------------------------------
+
+instance HasErrorTag SdExceptions where
+    errorTag = \case
+        SdAccountError e -> errorTag e
+        SdLogicError e -> errorTag e
+
+instance HasErrorTag WitnessAPIError where
+    errorTag = \case
+        BlockNotFound -> "BlockNotFound"
+        TransactionNotFound -> "TransactionNotFound"
+        SdError err -> errorTag err
+        InternalError{} -> "InternalError"
+        ServiceUnavailable{} -> "ServiceUnavailable"
+        InvalidFormat -> "InvalidFormat"
+
+instance ToServantErrNoReason SdExceptions where
+    toServantErrNoReason = \case
+        SdAccountError e -> toServantErrNoReason e
+        SdLogicError e -> toServantErrNoReason e
 
 instance ToServantErrNoReason WitnessAPIError where
     toServantErrNoReason = \case
         BlockNotFound        -> err404
         TransactionNotFound  -> err404
-        TxError err          -> toServantErrNoReason err
+        SdError err          -> toServantErrNoReason err
         InternalError{}      -> err500
         ServiceUnavailable{} -> err503
         InvalidFormat        -> err400
-
--- | Make up error which will be returned to client.
-witnessToServantErr :: WitnessAPIError -> ServantErr
-witnessToServantErr err =
-    (toServantErrNoReason err){ errBody = encode $ toErrResponse err }
 
 ---------------------------------------------------------------------------
 -- Other
