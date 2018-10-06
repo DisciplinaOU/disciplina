@@ -37,9 +37,9 @@ instance ToServantErrNoReason AccountException where
         TransactionIsCorrupted      -> err500
         NotASingletonSelfUpdate     -> err400
         NonceMustBeIncremented      -> err403
-        PaymentMustBePositive       -> err400
+        PaymentMustBePositive       -> err500
         ReceiverOnlyGetsMoney       -> err500
-        ReceiverMustIncreaseBalance -> err400
+        ReceiverMustIncreaseBalance -> err500
         SumMustBeNonNegative        -> err400
         CannotAffordFees            -> err403
         BalanceCannotBecomeNegative -> err403

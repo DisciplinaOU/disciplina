@@ -498,8 +498,6 @@ definitions:
             * `SignatureIsCorrupted` - Bad signature provided.
             * `NotASingletonSelfUpdate` - Cannot send money to yourself more than once in transaction.
             * `NonceMustBeIncremented` - Bad nonce for source account is used. Should be exactly "currentNonce" returned by /accounts/{address} endpoint.
-            * `PaymentMustBePositive` - You can only decrease your funds by outcoming transaction.
-            * `ReceiverMustIncreaseBalance` - You can only increase the funds of receiver by outcoming transaction.
             * `SumMustBeNonNegative` - Sum of payments plus fee must be less or equal to amount of money you spend.
             * `CannotAffordFees` - User balance is too small to afford transaction outputs and fees.
             * `BalanceCannotBecomeNegative` - User balance is too small to afford transaction outputs.
