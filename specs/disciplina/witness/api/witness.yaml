@@ -494,7 +494,6 @@ definitions:
             * `MTxNoOutputs` - Transaction has no outputs.
             * `MTxDuplicatedOutputs` - Transaction has duplicated outputs.
             * `InsufficientFees` - Input of transaction is too small to provide appropriate fees amount.
-            * `AuthorDoesNotExist` - Source account has never received money.
             * `SignatureIsCorrupted` - Bad signature provided.
             * `NotASingletonSelfUpdate` - Cannot send money to yourself more than once in transaction.
             * `NonceMustBeIncremented` - Bad nonce for source account is used. Should be exactly "currentNonce" returned by /accounts/{address} endpoint.

@@ -5,7 +5,7 @@ module Dscp.Snowdrop.Expanders
     ) where
 
 import Control.Lens (contramap)
-import Data.Default (Default)
+import Data.Default (Default (..))
 import qualified Data.List as List
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -131,9 +131,7 @@ seqExpandersPublicationTx feesReceiverAddr =
                           (\issuer -> Upd issuer { aBalance = aBalance issuer + feeAmount })
                           mFeesReceiver
 
-            account@Account {..} <-
-                maybe (throwLocalError PublicationAuthorDoesNotExist) pure =<<
-                queryOne (AccountId ptAuthor)
+            account@Account {..} <- fromMaybe def <$> queryOne (AccountId ptAuthor)
 
             let feesChanges
                     | feeAmount == 0 = []
@@ -206,7 +204,7 @@ seqExpandersBalanceTx feesReceiverAddr (Fees minimalFees) =
         -- How much money user has spent as the tx input.
         let inputSent = coinToInteger $ txInValue twTx
 
-        inpPrevAcc <- maybe (throwLocalError AuthorDoesNotExist) pure =<< getCurAcc inAddr
+        inpPrevAcc <- fromMaybe def <$> getCurAcc inAddr
 
         let inpNewBal     = aBalance inpPrevAcc + inputBack - inputSent
         let newInpAccount = Account

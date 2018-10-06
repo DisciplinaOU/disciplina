@@ -11,7 +11,6 @@ module Dscp.Snowdrop.Types
     , _PublicationPrevBlockIsIncorrect
     , _StorageIsCorrupted
     , _PublicationIsBroken
-    , _PublicationAuthorDoesNotExist
     , _PublicationFeeIsTooLow
     , _PublicationCantAffordFee
     , _PublicationLocalLoop
@@ -19,7 +18,6 @@ module Dscp.Snowdrop.Types
     , _MTxNoOutputs
     , _MTxDuplicateOutputs
     , _InsufficientFees
-    , _AuthorDoesNotExist
     , _SignatureIsMissing
     , _SignatureIsCorrupted
     , _TransactionIsCorrupted
@@ -47,7 +45,6 @@ data PublicationTxTypeId
     = PublicationTxTypeId
     deriving (Eq, Ord, Show, Generic)
 
--- TODO [DSCP-256]: remove PublicationAuthorDoesNotExist?
 -- We can safely assume that if account does not exist, it actually
 -- exists and equals to 'def', what's the point of multiplying exceptions?
 -- (PublicationCantAffordFee already stands for the same thing).
@@ -57,7 +54,6 @@ data PublicationException
     | PublicationPrevBlockIsIncorrect
     | StorageIsCorrupted
     | PublicationIsBroken
-    | PublicationAuthorDoesNotExist
     | PublicationFeeIsTooLow -- ^
     | PublicationCantAffordFee -- ^ Publication owner can not afford the fee
     | PublicationLocalLoop
@@ -74,8 +70,6 @@ instance Buildable PublicationException where
         PublicationPrevBlockIsIncorrect -> "Publication previous block is incorrect"
         StorageIsCorrupted -> "Storage is inconsistent"
         PublicationIsBroken -> "Bad publication"
-        PublicationAuthorDoesNotExist -> "Publicaion author is not registered in \
-                                         \chain and can't pay for fees"
         PublicationFeeIsTooLow -> "The fee specified in the publication tx is " <>
                                   "lower than the minimal one."
         PublicationCantAffordFee -> "Publication author can't afford the fee"
@@ -92,7 +86,6 @@ data AccountException
     = MTxNoOutputs
     | MTxDuplicateOutputs
     | InsufficientFees
-    | AuthorDoesNotExist
     | SignatureIsMissing
     | SignatureIsCorrupted
     | TransactionIsCorrupted
@@ -115,7 +108,6 @@ instance Buildable AccountException where
         MTxNoOutputs -> "Transaction has no outputs"
         MTxDuplicateOutputs -> "Duplicated transaction outputs"
         InsufficientFees -> "Amount of money left for fees in transaction is not enough"
-        AuthorDoesNotExist -> "Source account has never received any money"
         SignatureIsMissing -> "Transaction has no correct signature"
         SignatureIsCorrupted -> "Bad signature"
         TransactionIsCorrupted -> "Transaction is corrupted"

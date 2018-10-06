@@ -16,6 +16,7 @@ module Dscp.Snowdrop.AccountValidation
        ) where
 
 import Control.Monad.Error.Class (MonadError)
+import Data.Default (def)
 import qualified Data.List as List
 import qualified Data.Map as Map
 import Snowdrop.Core (ERoComp, HasKeyValue, PreValidator (..), StatePException, StateTx (..),
@@ -88,8 +89,8 @@ authenticate proof = do
 
     let authorId = gett pk
 
-    before <- AccountId authorId           `assertExists` AuthorDoesNotExist
-    ()     <- realHashfromExpander == hash `check`        TransactionIsCorrupted
+    before <- fromMaybe def <$> queryOne (AccountId authorId)
+    ()     <- realHashfromExpander == hash `check` TransactionIsCorrupted
 
     return $ Authenticated
         (AccountId authorId)

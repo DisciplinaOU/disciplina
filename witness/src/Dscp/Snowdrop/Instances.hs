@@ -31,7 +31,6 @@ instance ToServantErrNoReason AccountException where
         MTxNoOutputs                -> err400
         MTxDuplicateOutputs         -> err400
         InsufficientFees            -> err400
-        AuthorDoesNotExist          -> err403
         SignatureIsMissing          -> err500
         SignatureIsCorrupted        -> err400
         TransactionIsCorrupted      -> err500

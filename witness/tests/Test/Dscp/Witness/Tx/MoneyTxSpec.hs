@@ -135,7 +135,7 @@ spec = describe "Money tx expansion + validation" $ do
             let txData = txData'{ tdSecret = secret }
 
             let tx = makeTx properSteps txData
-            lift $ throwsPrism (_AccountError . _AuthorDoesNotExist) $
+            lift $ throwsPrism (_AccountError . _BalanceCannotBecomeNegative) $
                 applyTx tx
 
         it "Can't spend more money than currently present" $ witnessProperty $ do
