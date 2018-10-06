@@ -129,18 +129,29 @@ preValidateSimpleMoneyTransfer =
 
         allOutputs <- mapM validateSaneArrival recipients
 
+        let fees' = coinToInteger (unFees fees)
         let balanceBefore = aBalance before
         -- Total amount of coins sent (sum of real tx outputs + a fee output)
         let receivedTotal = sum allOutputs
         -- Previous value minus fees (the outputs that were specified in the
         -- tx itself + innacuracy in fee calcuation comparing to minimal fees)
-        let receivedNoFees = receivedTotal - coinToInteger (unFees fees)
+        let receivedNoFees = receivedTotal - fees'
 
         paid <- validateSaneDeparture payer before
 
-        unless (paid >= receivedTotal) $ throwLocalError SumMustBeNonNegative
-        unless (balanceBefore - receivedNoFees >= 0) $ throwLocalError BalanceCannotBecomeNegative
-        unless (balanceBefore - receivedTotal >= 0) $ throwLocalError CannotAffordFees
+        unless (paid >= receivedTotal) $
+            throwLocalError SumMustBeNonNegative
+                { aeSent = paid, aeReceived = receivedNoFees
+                , aeFees = coinToInteger (unFees fees) }
+
+        unless (balanceBefore - receivedNoFees >= 0) $
+            throwLocalError BalanceCannotBecomeNegative
+                { aeSpent = paid, aeBalance = balanceBefore }
+
+        unless (balanceBefore - receivedTotal >= 0) $
+            throwLocalError CannotAffordFees
+                { aeOutputsSum = receivedNoFees, aeBalance = balanceBefore
+                , aeFees = fees' }
 
 -- | Require that whole projects into part or throw error.
 requirePart :: (HasReview e e1, MonadError e m, HasPrism s hash) => s -> e1 -> m hash
@@ -172,10 +183,12 @@ validateSaneDeparture self before = case self of
 
         unless (aNonce account == aNonce before + 1) $
             throwLocalError NonceMustBeIncremented
+                { aePreviousNonce = aNonce before, aeNewNonce = aNonce account }
         unless (paid > 0) $
             throwLocalError PaymentMustBePositive
         unless (aBalance account >= 0) $
             throwLocalError BalanceCannotBecomeNegative
+                { aeSpent = paid, aeBalance = aBalance before }
 
         return paid
 

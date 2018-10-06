@@ -253,6 +253,8 @@ seqExpandersBalanceTx feesReceiverAddr (Fees minimalFees) =
 
         unless (feeAmount >= coinToInteger minimalFees) $
             throwLocalError InsufficientFees
+                { aeActualFees = feeAmount
+                , aeExpectedFees = coinToInteger minimalFees }
 
         let changes :: Map Ids (ValueOp Values)
             changes = Map.fromList changesList

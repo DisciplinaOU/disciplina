@@ -81,23 +81,29 @@ data AccountTxTypeId = AccountTxTypeId deriving (Eq, Ord, Show, Generic)
 --
 -- NOTE: this exception is thrown by witness API, keep 'witness.yaml' doc
 -- updated.
--- TODO [DSCP-256] Add fields?
 data AccountException
     = MTxNoOutputs
     | MTxDuplicateOutputs
     | InsufficientFees
+      { aeExpectedFees :: Integer, aeActualFees :: Integer }
     | SignatureIsMissing
     | SignatureIsCorrupted
     | TransactionIsCorrupted
     | NotASingletonSelfUpdate      -- ^ 'Author' account updated multiple times.
     | NonceMustBeIncremented
+      { aePreviousNonce :: Nonce, aeNewNonce :: Nonce }
     | PaymentMustBePositive
     | ReceiverOnlyGetsMoney        -- ^ Receiver can only change its 'aBalance', never 'aNonce'.
     | ReceiverMustIncreaseBalance  -- ^ Receiver cannot decrease in its 'aBalance'.
-    | SumMustBeNonNegative         -- ^ Amount of money sent must be greater of equal
-                                   -- to the total amount received.
-    | CannotAffordFees             -- ^ Given account state cannot afford given fees.
+    | SumMustBeNonNegative
+      { aeSent :: Integer, aeReceived :: Integer, aeFees :: Integer }
+      -- ^ Amount of money sent must be greater of equal
+      -- to the total amount received.
+    | CannotAffordFees
+      { aeOutputsSum :: Integer, aeBalance :: Integer, aeFees :: Integer }
+      -- ^ Given account state cannot afford given fees.
     | BalanceCannotBecomeNegative
+      { aeSpent :: Integer, aeBalance :: Integer }
     | AccountInternalError String
     deriving (Eq, Ord, Data)
 
@@ -105,21 +111,40 @@ makePrisms ''AccountException
 
 instance Buildable AccountException where
     build = \case
-        MTxNoOutputs -> "Transaction has no outputs"
-        MTxDuplicateOutputs -> "Duplicated transaction outputs"
-        InsufficientFees -> "Amount of money left for fees in transaction is not enough"
-        SignatureIsMissing -> "Transaction has no correct signature"
-        SignatureIsCorrupted -> "Bad signature"
-        TransactionIsCorrupted -> "Transaction is corrupted"
-        NotASingletonSelfUpdate -> "Author account is updated multiple times"
-        NonceMustBeIncremented -> "Nonce should've been incremented by one"
-        PaymentMustBePositive -> "Spent amount of money must be positive"
-        ReceiverOnlyGetsMoney -> "Improper changes of receiver account (its is \
-                                 \only possible to add tokens)"
-        ReceiverMustIncreaseBalance -> "One of receivers' balance decreased or didn't change"
-        SumMustBeNonNegative -> "Tx input value < tx sum of outputs"
-        CannotAffordFees -> "Tx sender can not afford fees"
-        BalanceCannotBecomeNegative -> "Balance can not become negative"
+        MTxNoOutputs ->
+            "Transaction has no outputs"
+        MTxDuplicateOutputs ->
+            "Duplicated transaction outputs"
+        InsufficientFees{..} ->
+            "Amount of money left for fees in transaction is not enough, \
+             \expected " +| aeExpectedFees |+ ", got " +| aeActualFees |+ ""
+        SignatureIsMissing ->
+            "Transaction has no correct signature"
+        SignatureIsCorrupted ->
+            "Bad signature"
+        TransactionIsCorrupted ->
+            "Transaction is corrupted"
+        NotASingletonSelfUpdate ->
+            "Author account is updated multiple times"
+        NonceMustBeIncremented{..} ->
+            "Nonce should've been incremented by one: previous nonce was "
+            +| aePreviousNonce |+ ", new nonce is " +| aeNewNonce |+ ""
+        PaymentMustBePositive ->
+            "Spent amount of money must be positive"
+        ReceiverOnlyGetsMoney ->
+            "Improper changes of receiver account (its is only possible to add \
+            \tokens)"
+        ReceiverMustIncreaseBalance ->
+            "One of receivers' balance decreased or didn't change"
+        SumMustBeNonNegative{..} ->
+            "Tx input value (" +| aeSent |+ ") is not greater than \
+            \sum of outputs (" +| aeReceived |+ ") plus fees (" +| aeFees |+ ")"
+        CannotAffordFees{..} ->
+            "Tx sender can not afford fees: sending " +| aeOutputsSum |+ " \
+            \and fees are " +| aeFees |+ ", while balance is " +| aeBalance |+ ""
+        BalanceCannotBecomeNegative{..} ->
+            "Balance can not become negative: spending " +| aeSpent |+ ", \
+            \while balance is " +| aeBalance |+ ""
         AccountInternalError s ->
             fromString $ "Expander failed internally: " <> s
 
