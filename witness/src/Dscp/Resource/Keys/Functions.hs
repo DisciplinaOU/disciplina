@@ -26,7 +26,7 @@ import Dscp.Resource.AppDir
 import Dscp.Resource.Keys.Error (KeyInitError (..), rewrapKeyIOErrors)
 import Dscp.Resource.Keys.Types (BaseKeyParams (..), CommitteeParams (..), KeyJson (..),
                                  KeyResources (..), KeyfileContent)
-import Dscp.System (ensureModeIs, mode600, setMode, whenPosix)
+import Dscp.System (mode600, setMode, whenPosix, checkFileMode)
 import Dscp.Util (leftToThrow)
 import Dscp.Util.Aeson (CustomEncoding (..), Versioned (..))
 
@@ -112,12 +112,13 @@ genStore comParamsM = do
 
 -- | Read store under given path.
 readStore
-    :: (MonadIO m, MonadCatch m, MonadLogging m)
+    :: (MonadIO m, MonadCatch m, MonadLogging m, MonadThrow m)
     => FilePath -> PassPhrase -> m (KeyResources n)
 readStore path pp = do
     logDebug $ "Reading key from: " +|| path ||+ ""
     content <- rewrapKeyIOErrors $ do
-        whenPosix $ ensureModeIs mode600 path
+        whenPosix $ (checkFileMode mode600 path)
+            >>= leftToThrow SecretFileModeError
         liftIO $ LBS.readFile path
     Versioned mid <- eitherDecode' @KeyfileContent content
         & leftToThrow (SecretParseError . toText)
@@ -168,7 +169,7 @@ createStore path pp = do
 -- dedicated flag is passed.
 linkStore
     :: forall m n.
-       (MonadIO m, MonadCatch m, MonadLogging m,
+       (MonadIO m, MonadCatch m, MonadLogging m, MonadThrow m,
         HasCoreConfig, Buildable (Proxy n))
     => BaseKeyParams -> AppDir -> m (KeyResources n)
 linkStore params@BaseKeyParams{..} appDir = do

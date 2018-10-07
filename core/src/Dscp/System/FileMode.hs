@@ -1,7 +1,7 @@
 -- | File modes management.
 
 module Dscp.System.FileMode
-    ( getAccessMode
+    ( checkFileMode
     , setMode
     , ensureModeIs
 
@@ -12,6 +12,7 @@ import Fmt (octF, (+|), (|+))
 import Loot.Log (MonadLogging, logWarning)
 import qualified System.Posix.Files as PSX
 import qualified System.Posix.Types as PSX (FileMode)
+import Data.Bits ((.|.))
 
 import Dscp.System.Other (IsPosix)
 
@@ -41,3 +42,16 @@ ensureModeIs mode path = do
             "Key file at "+|path|+" has access mode "+|octF accessMode|+
             " instead of 600. Fixing it automatically."
         setMode mode path
+
+checkFileMode
+    :: (IsPosix, MonadIO m, MonadLogging m)
+    => PSX.FileMode -> FilePath -> m (Either Text ())
+checkFileMode mode filePath = do
+    accessMode <- getAccessMode filePath
+    if (accessMode .|. mode) > mode
+    then return $ Left $
+        "File permissions for "+|filePath|+
+        " are too loose: "+|octF accessMode|+
+        ". Should be 0600 or lower. Possible fix: `chmod 0600 "
+        +|filePath|+"`."
+    else return $ Right ()
