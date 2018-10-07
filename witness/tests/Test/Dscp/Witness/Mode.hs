@@ -77,7 +77,7 @@ testCommittee :: Committee
 testCommittee =
     CommitteeOpen
     { commN = 2
-    , commSecret = detGen 12 (CommitteeSecret <$> arbitrary)
+    , commSecret = detGen 121 ((leftToPanic . mkCommitteeSecret) <$> arbitrary)
     }
 
 testCommitteeSecrets :: [SecretKey]

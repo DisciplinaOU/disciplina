@@ -19,13 +19,14 @@ import Options.Applicative (Parser, auto, eitherReader, help, long, metavar, opt
 
 import Dscp.CommonCLI (appDirParamParser, baseKeyParamsParser, logParamsParser,
                        networkAddressParser, serverParamsParser)
-import Dscp.Core.Governance (CommitteeSecret (..))
+import Dscp.Core.Governance (mkCommitteeSecret)
 import Dscp.DB.Rocks.Real.Types (RocksDBParams (..))
 import Dscp.Resource.Keys
 import Dscp.Resource.Network (NetCliParams (..), NetServParams (..))
 import Dscp.Web.Metrics (MetricsEndpoint (..), addrToEndpoint)
 import Dscp.Witness.Config
 import Dscp.Witness.Keys
+import Dscp.Util (eitherToMaybe)
 
 ----------------------------------------------------------------------------
 -- DB
@@ -93,7 +94,7 @@ metricsServerParser =
 
 committeeParamsParser :: Parser CommitteeParams
 committeeParamsParser =
-    combine <$> nParser <*> optional commSecretParser
+    combine <$> nParser <*> commSecretParser
   where
     combine cpParticipantN Nothing         = CommitteeParamsOpen {..}
     combine cpParticipantN (Just cpSecret) = CommitteeParamsClosed {..}
@@ -104,7 +105,7 @@ committeeParamsParser =
          help "Committee participant index. In event of secret key file \
               \generation, will be used to derive the secret.")
 
-    commSecretParser = CommitteeSecret <$> strOption
+    commSecretParser = eitherToMaybe . mkCommitteeSecret <$> strOption
         (long "comm-sec" <>
          metavar "BYTESTRING" <>
          help "Committee secret key. Common key for the core nodes \

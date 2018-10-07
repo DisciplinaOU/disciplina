@@ -111,7 +111,7 @@ instance ToJSONKey Address
 deriving instance FromJSON GenAddressMap
 deriving instance ToJSON GenAddressMap
 instance FromJSON CommitteeSecret where
-    parseJSON = withText "CommitteeSecret" $ pure . CommitteeSecret . encodeUtf8
+    parseJSON = withText "CommitteeSecret" $ leftToFail . mkCommitteeSecret . encodeUtf8
 
 deriving instance ToJSON GenesisDistribution
 deriving instance FromJSON GenesisDistribution
