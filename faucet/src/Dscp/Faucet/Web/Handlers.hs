@@ -5,7 +5,7 @@ module Dscp.Faucet.Web.Handlers
        , convertFaucetApiHandler
        ) where
 
-import Servant (Handler, throwError)
+import Servant (Handler)
 
 import Dscp.Core
 import Dscp.Crypto
@@ -16,6 +16,7 @@ import Dscp.Faucet.Web.Logic
 import Dscp.Faucet.Web.Types
 import Dscp.Rio
 import Dscp.Util.Aeson
+import Dscp.Web.Class
 
 faucetApiHandlers
     :: forall m ctx. FaucetWorkMode ctx m
@@ -42,6 +43,4 @@ convertFaucetApiHandler
     -> FaucetRealMode a
     -> Handler a
 convertFaucetApiHandler ctx handler =
-    liftIO (runRIO ctx handler)
-        `catch` (throwError . toServantErr)
-        `catchAny` (throwError . unexpectedToServantErr)
+    processServerErrors @APIError (runRIO ctx handler)

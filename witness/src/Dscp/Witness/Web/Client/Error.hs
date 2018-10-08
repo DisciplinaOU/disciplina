@@ -3,11 +3,11 @@ module Dscp.Witness.Web.Client.Error
     , servantToWitnessError
     ) where
 
-import Data.Aeson (decode)
 import qualified Data.Text.Buildable as B
-import Servant.Client (GenResponse (..), ServantError (..))
+import Servant.Client (ServantError (..))
 import qualified Text.Show
 
+import Dscp.Web.Class
 import Dscp.Witness.Web.Error
 
 data WitnessClientError
@@ -26,9 +26,6 @@ instance Exception WitnessClientError
 
 servantToWitnessError :: ServantError -> WitnessClientError
 servantToWitnessError servantError =
-    maybe (SomeClientError $ show servantError) WitnessClientError mWalletError
-  where
-    mWalletError = do
-        FailureResponse Response{..} <- pure servantError
-        errResponse <- decode @ErrResponse responseBody
-        return (erContent errResponse)
+    maybe (SomeClientError $ show servantError)
+          WitnessClientError
+          (fromServantError servantError)

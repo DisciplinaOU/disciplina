@@ -4,7 +4,6 @@ module Dscp.Witness.Web.Error
     ( WitnessAPIError (..)
     , ErrResponse (..)
     , DSON
-    , witnessToServantErr
     ) where
 
 import Data.Aeson (encode)
@@ -13,7 +12,7 @@ import Data.Aeson.TH (deriveJSON)
 import Data.Reflection (Reifies (..))
 import qualified Data.Text.Buildable as B
 import Data.Typeable (cast)
-import Servant (ServantErr (..), err400, err500, err503)
+import Servant (err400, err500, err503)
 
 import Dscp.Snowdrop
 import Dscp.Util.Servant
@@ -63,33 +62,12 @@ instance Exception WitnessAPIError where
         , ServiceUnavailable . show @Text @RelayException <$> fromException e
         ]
 
--- | Contains info about error in client-convenient form.
-data ErrResponse = ErrResponse
-    { erError   :: !Text
-      -- ^ Enum which identifies type of error, for frontend
-    , erContent :: !WitnessAPIError
-      -- ^ Error itself, to allow client deserialise the error
-    } deriving (Show, Generic)
-
-toErrResponse :: WitnessAPIError -> ErrResponse
-toErrResponse err =
-    ErrResponse
-    { erContent = err
-    , erError = errorTag err
-    }
-
--- | Make up error which will be returned to client.
-witnessToServantErr :: WitnessAPIError -> ServantErr
-witnessToServantErr err =
-    (toServantErrNoReason err){ errBody = encode $ toErrResponse err }
-
 ---------------------------------------------------------------------------
 -- JSON instances
 ---------------------------------------------------------------------------
 
 deriveJSON defaultOptions ''SdExceptions
 deriveJSON defaultOptions ''WitnessAPIError
-deriveJSON defaultOptions ''ErrResponse
 
 ---------------------------------------------------------------------------
 -- Error instances
@@ -107,17 +85,19 @@ instance HasErrorTag WitnessAPIError where
         ServiceUnavailable{} -> "ServiceUnavailable"
         InvalidFormat -> "InvalidFormat"
 
-instance ToServantErrNoReason SdExceptions where
-    toServantErrNoReason = \case
-        SdAccountError e -> toServantErrNoReason e
-        SdLogicError e -> toServantErrNoReason e
+instance ToServantErr SdExceptions where
+    toServantErrNoBody = \case
+        SdAccountError e -> toServantErrNoBody e
+        SdLogicError e -> toServantErrNoBody e
 
-instance ToServantErrNoReason WitnessAPIError where
-    toServantErrNoReason = \case
-        SdError err          -> toServantErrNoReason err
+instance ToServantErr WitnessAPIError where
+    toServantErrNoBody = \case
+        SdError err          -> toServantErrNoBody err
         InternalError{}      -> err500
         ServiceUnavailable{} -> err503
         InvalidFormat        -> err400
+
+instance FromServantErr WitnessAPIError
 
 ---------------------------------------------------------------------------
 -- Other

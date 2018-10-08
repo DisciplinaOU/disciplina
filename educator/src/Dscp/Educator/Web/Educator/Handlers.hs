@@ -6,7 +6,7 @@ module Dscp.Educator.Web.Educator.Handlers
        ) where
 
 import Data.Default (def)
-import Servant (Handler, throwError)
+import Servant (Handler)
 import UnliftIO (UnliftIO (..))
 
 import Dscp.DB.SQLite
@@ -18,6 +18,7 @@ import Dscp.Educator.Web.Educator.Types
 import Dscp.Educator.Web.Logic
 import Dscp.Educator.Web.Queries
 import Dscp.Educator.Web.Types
+import Dscp.Web.Class
 
 educatorApiHandlers
     :: forall m ctx. MonadEducatorWeb ctx m
@@ -99,6 +100,4 @@ convertEducatorApiHandler
     -> m a
     -> Handler a
 convertEducatorApiHandler (UnliftIO unliftIO) handler =
-    liftIO (unliftIO handler)
-        `catch` (throwError . toServantErr)
-        `catchAny` (throwError . unexpectedToServantErr)
+    processServerErrors @APIError (unliftIO handler)

@@ -9,12 +9,12 @@ module Dscp.Faucet.Web.Error
        ) where
 
 import Control.Lens (makePrisms)
-import Data.Aeson (ToJSON (..), Value (..), encode, object, (.=))
-import Data.Data (Data, toConstr)
+import Data.Data (Data)
 import Data.Reflection (Reifies (..))
-import Servant (ServantErr (..), err400, err403, err500, err503)
+import Servant (ServantErr (..), err400, err403, err503)
 
 import Dscp.Util.Servant
+import Dscp.Web.Class
 
 -- | Any error backend may return.
 data APIError
@@ -35,27 +35,20 @@ instance Exception APIError
 -- JSON instances
 ---------------------------------------------------------------------------
 
-instance ToJSON APIError where
-    toJSON err = object
-        [ "error" .= String (show $ toConstr err) ]
-
 ---------------------------------------------------------------------------
 -- Functions
 ---------------------------------------------------------------------------
 
--- | Get HTTP error code of error.
-toServantErrNoReason :: APIError -> ServantErr
-toServantErrNoReason = \case
-    InvalidFormat -> err400
-    AddressAlreadyGifted -> err403
-    SourceAccountExhausted -> err503
+instance HasErrorTag APIError where
+    -- HTTP error is enough to distinguish possible errors for now
+    errorTag _ = ""
 
--- | Make up error which will be returned to client.
-toServantErr :: APIError -> ServantErr
-toServantErr err = (toServantErrNoReason err){ errBody = encode err }
-
-unexpectedToServantErr :: SomeException -> ServantErr
-unexpectedToServantErr err = err500{ errBody = show err }
+instance ToServantErr APIError where
+    toServantErrNoBody = \case
+        InvalidFormat -> err400
+        AddressAlreadyGifted -> err403
+        SourceAccountExhausted -> err503
+    toServantErr = toServantErrJustTag
 
 ---------------------------------------------------------------------------
 -- Other
@@ -63,7 +56,7 @@ unexpectedToServantErr err = err500{ errBody = show err }
 
 data FaucetDecodeErrTag
 instance Reifies FaucetDecodeErrTag String where
-    reflect _ = decodeUtf8 $ encode InvalidFormat
+    reflect _ = decodeUtf8 . errBody $ toServantErr InvalidFormat
 
 -- | Marker like 'JSON' for servant, but returns just "InvalidFormat" on
 -- decoding error.

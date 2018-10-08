@@ -27,8 +27,8 @@ instance HasErrorTag AccountException where
 instance HasErrorTag LogicException where
     errorTag = show . toConstr
 
-instance ToServantErrNoReason AccountException where
-    toServantErrNoReason = \case
+instance ToServantErr AccountException where
+    toServantErrNoBody = \case
         MTxNoOutputs{}                -> err400
         MTxDuplicateOutputs{}         -> err400
         InsufficientFees{}            -> err400
@@ -45,8 +45,8 @@ instance ToServantErrNoReason AccountException where
         BalanceCannotBecomeNegative{} -> err403
         AccountInternalError{}        -> err500
 
-instance ToServantErrNoReason LogicException where
-    toServantErrNoReason = \case
+instance ToServantErr LogicException where
+    toServantErrNoBody = \case
         LEBlockAbsent{} -> err404
         LETxAbsent{} -> err404
         LEMalformed{} -> err500
