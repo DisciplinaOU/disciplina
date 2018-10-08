@@ -1,8 +1,8 @@
-{ pkgs ? import ./closure.nix }: with pkgs;
+{ pkgs ? import ./pkgs.nix }: with pkgs;
 
 let
   project = import ./. { inherit pkgs; };
-  source = gitIgnore ./. [ "*.png" ];
+  source = constGitIgnore "disciplina-release-src" ./. [ "*.icns" "*.png" ];
 
   runCheck = source: runCommand "check" {} ''
     ${source}
@@ -14,7 +14,7 @@ let
     executable = true;
     checkPhase = "${shellcheck}/bin/shellcheck $out";
     text = ''
-      #!/bin/sh -e
+      #!${stdenv.shell} -e
       ${source}
     '';
   };
@@ -62,20 +62,33 @@ rec {
 
   disciplina-wallet = haskell.lib.justStaticExecutables project.disciplina-wallet;
 
-  disciplina-wallet-wrapped = writeShellScript ''
+  disciplina-wallet-flatpak = buildFlatpak {
+    app-id = "io.disciplina.Wallet";
+    command = disciplina-wallet-flatpak-wrapper;
+    finish-args = [ "--share=network" ];
+  };
+
+  disciplina-wallet-flatpak-wrapper = writeShellScript ''
     ${disciplina-wallet}/bin/dscp-wallet --witness https://witness.disciplina.io \
       --config ${./config.yaml} --config-key alpha
   '';
 
-  disciplina-wallet-flatpak = buildFlatpak {
-    app-id = "io.disciplina.Wallet";
-    command = disciplina-wallet-wrapped;
-    finish-args = [ "--share=network" ];
-  };
-
   disciplina-wallet-macos-app = buildMacOSApp {
     name = "Disciplina";
-    target = disciplina-wallet-macos-sandbox;
+    icon = ./wallet/icon.icns;
+    target = disciplina-wallet-macos-wrapper;
     withOpen = true;
   };
+
+  disciplina-wallet-macos-wrapper = writeShellScript ''
+    export TERMINFO=/usr/share/terminfo
+
+    ${disciplina-wallet}/bin/dscp-wallet --witness https://witness.disciplina.io \
+      --config ${./config.yaml} --config-key alpha
+  '';
+
+  disciplina-wallet-macos-zip = runCommand "disciplina-wallet-macos.zip" {} ''
+    cd ${disciplina-wallet-macos-app}/Applications
+    ${zip}/bin/zip -r --symlinks $out Disciplina.app
+  '';
 }
