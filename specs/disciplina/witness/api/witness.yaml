@@ -458,14 +458,14 @@ definitions:
         enum:
           - InvalidFormat
 
-          - LEBlockAbsent
-          - LETxAbsent
+          - BlockNotFound
+          - TransactionNotFound
         description: >-
           Error type:
             * `InvalidFormat` - Failed to deserialise one of parameters.
 
-            * `LEBlockNotFound` - Specified block does not exist.
-            * `LETransactionNotFound` - Specified transaction does not exist.
+            * `BlockNotFound` - Specified block does not exist.
+            * `TransactionNotFound` - Specified transaction does not exist.
 
   TxValidationError:
     type: object

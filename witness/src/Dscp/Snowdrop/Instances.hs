@@ -24,9 +24,6 @@ deriveJSON defaultOptions ''LogicException
 instance HasErrorTag AccountException where
     errorTag = show . toConstr
 
-instance HasErrorTag LogicException where
-    errorTag = show . toConstr
-
 instance ToServantErr AccountException where
     toServantErrNoBody = \case
         MTxNoOutputs{}                -> err400
@@ -44,6 +41,12 @@ instance ToServantErr AccountException where
         CannotAffordFees{}            -> err403
         BalanceCannotBecomeNegative{} -> err403
         AccountInternalError{}        -> err500
+
+instance HasErrorTag LogicException where
+    errorTag = \case
+        LEBlockAbsent{} -> "BlockNotFound"
+        LETxAbsent{} -> "TransactionNotFound"
+        LEMalformed{} -> "InternalError"
 
 instance ToServantErr LogicException where
     toServantErrNoBody = \case
