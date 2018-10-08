@@ -15,18 +15,19 @@ module Dscp.Witness.CLI
 import qualified Data.Set as Set
 import Loot.Config (OptParser, (.::), (.:<), (.<>))
 import Loot.Network.ZMQ.Common (PreZTNodeId (..), parsePreZTNodeId)
-import Options.Applicative (Parser, auto, eitherReader, help, long, metavar, option, strOption)
+import Options.Applicative (Parser, ReadM, auto, eitherReader, help, long, maybeReader, metavar,
+                            option, strOption)
 
 import Dscp.CommonCLI (appDirParamParser, baseKeyParamsParser, logParamsParser,
                        networkAddressParser, serverParamsParser)
-import Dscp.Core.Governance (mkCommitteeSecret)
+import Dscp.Core.Governance
 import Dscp.DB.Rocks.Real.Types (RocksDBParams (..))
 import Dscp.Resource.Keys
 import Dscp.Resource.Network (NetCliParams (..), NetServParams (..))
+import Dscp.Util (eitherToMaybe)
 import Dscp.Web.Metrics (MetricsEndpoint (..), addrToEndpoint)
 import Dscp.Witness.Config
 import Dscp.Witness.Keys
-import Dscp.Util (eitherToMaybe)
 
 ----------------------------------------------------------------------------
 -- DB
@@ -94,7 +95,7 @@ metricsServerParser =
 
 committeeParamsParser :: Parser CommitteeParams
 committeeParamsParser =
-    combine <$> nParser <*> commSecretParser
+    combine <$> nParser <*> optional commSecretParser
   where
     combine cpParticipantN Nothing         = CommitteeParamsOpen {..}
     combine cpParticipantN (Just cpSecret) = CommitteeParamsClosed {..}
@@ -105,7 +106,7 @@ committeeParamsParser =
          help "Committee participant index. In event of secret key file \
               \generation, will be used to derive the secret.")
 
-    commSecretParser = eitherToMaybe . mkCommitteeSecret <$> strOption
+    commSecretParser = option committeeSecretReadM
         (long "comm-sec" <>
          metavar "BYTESTRING" <>
          help "Committee secret key. Common key for the core nodes \
@@ -115,6 +116,14 @@ witnessKeyParamsParser :: Parser WitnessKeyParams
 witnessKeyParamsParser =
     Committee <$> committeeParamsParser <|>
     Basic <$> baseKeyParamsParser "witness"
+
+---------------------------------------------------------------------------
+-- Readers
+---------------------------------------------------------------------------
+
+committeeSecretReadM :: ReadM CommitteeSecret
+committeeSecretReadM =
+    maybeReader $ eitherToMaybe . mkCommitteeSecret . fromString
 
 ---------------------------------------------------------------------------
 -- Partial CLI parser for config
