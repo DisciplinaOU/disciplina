@@ -118,7 +118,7 @@ seqExpandersPublicationTx feesReceiverAddr =
             let phHash = hash ptHeader
             let prevHash = ptHeader ^. pbhPrevBlock
             let (prevHashM :: Maybe PrivateHeaderHash) =
-                    prevHash <$ guard (prevHash /= genesisHeaderHash)
+                    prevHash <$ guard (prevHash /= genesisHeaderHash ptAuthor)
 
             when (prevHash == phHash) $
                 throwLocalError PublicationLocalLoop

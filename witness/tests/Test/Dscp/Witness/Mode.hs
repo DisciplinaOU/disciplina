@@ -6,6 +6,7 @@ module Test.Dscp.Witness.Mode
     , witnessProperty
 
     , testGenesisSecrets
+    , testSomeGenesisSecret
     , testGenesisAddresses
     , testGenesisAddressAmount
     , testCommittee
@@ -13,8 +14,9 @@ module Test.Dscp.Witness.Mode
     , testCommitteeAddrs
     ) where
 
-import Control.Lens (makeLenses, (&~), (?=))
+import Control.Lens (makeLenses, (&~), (.=), (?=))
 import Data.Default (def)
+import qualified Data.List as L
 import qualified Data.Map as M
 import Fmt ((+|), (+||), (|+), (||+))
 import Loot.Base.HasLens (HasLens (..))
@@ -67,6 +69,9 @@ type WitnessTestMode = RIO TestWitnessCtx
 testGenesisSecrets :: [SecretKey]
 testGenesisSecrets = detGen 123 $ vectorUnique 10
 
+testSomeGenesisSecret :: SecretKey
+testSomeGenesisSecret = L.head testGenesisSecrets
+
 testGenesisAddresses :: [Address]
 testGenesisAddresses = mkAddr . toPublic <$> testGenesisSecrets
 
@@ -91,9 +96,11 @@ testCommitteeAddrs = map (mkAddr . toPublic) testCommitteeSecrets
 testWitnessConfig :: WitnessConfigRec
 testWitnessConfig =
     finaliseDeferredUnsafe $ def &~ do
-        sub #core . sub #generated . option #genesisInfo ?= formGenesisInfo genConfig
-        sub #core . option #genesis ?= genConfig
-        sub #core . option #fee ?= feeCoefs
+        sub #core .= def &: do
+            sub #generated . option #genesisInfo ?= formGenesisInfo genConfig
+            option #genesis ?= genConfig
+            option #fee ?= feeCoefs
+            option #slotDuration ?= 10000000
   where
     genesisAddressMap =
         GenAddressMap $ M.fromList $

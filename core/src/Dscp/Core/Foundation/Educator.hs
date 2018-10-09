@@ -327,14 +327,14 @@ instance Buildable PrivateBlockHeader where
 -- | Genesis hash, serves as previous block reference for the first block.
 -- TODO: move to 'Genesis' module when it is formed somehow. Also, should
 -- private genesis hash actually make some sense?
-genesisHeaderHash :: PrivateHeaderHash
-genesisHeaderHash = unsafeHash ("pvaforever" :: ByteString)
+genesisHeaderHash :: Address -> PrivateHeaderHash
+genesisHeaderHash educator = unsafeHash (educator, "pvaforever" :: ByteString)
 
 -- | Get previous block header, if previous block exists,
 -- 'Nothing' otherwise.
-getPrevBlockRefMaybe :: PrivateBlockHeader -> Maybe PrivateHeaderHash
-getPrevBlockRefMaybe PrivateBlockHeader {..} =
-    if _pbhPrevBlock == genesisHeaderHash
+getPrevBlockRefMaybe :: Address -> PrivateBlockHeader -> Maybe PrivateHeaderHash
+getPrevBlockRefMaybe educator PrivateBlockHeader {..} =
+    if _pbhPrevBlock == genesisHeaderHash educator
     then Nothing
     else Just _pbhPrevBlock
 

@@ -146,16 +146,16 @@ getAccountInfo address includeTxs = do
         else return Nothing
     toAccountInfo account txs
 
-toPaginatedList :: HasId a => Int -> [a] -> PaginatedList d a
+toPaginatedList :: (Show a, Show (Id a)) => HasId a => Int -> [a] -> PaginatedList d a
 toPaginatedList count allItems =
     let items = take count allItems
     in PaginatedList
         { plItems = items
-        , plNextId = map getId . safeHead $ drop count items
+        , plNextId = map getId . safeHead $ drop count allItems
         }
 
 sinkTruncate
-    :: (Monad m, HasId a)
+    :: (Monad m, HasId a, Show a, Show (Id a))
     => Int -> C.ConduitT a Void m (PaginatedList d a)
 sinkTruncate count = C.take (count + 1) .| (toPaginatedList count <$> C.sinkList)
 

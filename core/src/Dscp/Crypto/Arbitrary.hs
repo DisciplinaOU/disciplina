@@ -48,7 +48,7 @@ instance (Arbitrary ba, FromByteArray ba) =>
 ----------------------------------------------------------------------------
 
 instance Arbitrary a => Arbitrary (MerkleSignature a) where
-    arbitrary = genericArbitrary
+    arbitrary = MerkleSignature <$> arbitrary <*> choose (0, 100)
     shrink = genericShrink
 
 instance Arbitrary a => Arbitrary (MerkleProof a) where

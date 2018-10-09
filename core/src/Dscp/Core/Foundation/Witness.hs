@@ -5,7 +5,9 @@
 module Dscp.Core.Foundation.Witness
     (
     -- * Common
-      StakeholderId (..)
+      SecretKeyData (..)
+    , mkSecretKeyData
+    , StakeholderId (..)
     , SlotId (..)
 
     -- * Transaction
@@ -28,7 +30,6 @@ module Dscp.Core.Foundation.Witness
     , TxWitnessed (..)
     , twTxL
     , twWitnessL
-    , signPubTx
     , PublicationTxWitness (..)
     , PublicationTxWitnessed (..)
     , ptwTxL
@@ -87,6 +88,24 @@ import Dscp.Util
 -- General
 ----------------------------------------------------------------------------
 
+-- | Carries all data related to a secret key, evaluating it lazily.
+data SecretKeyData = SecretKeyData
+    { skSecret  :: !SecretKey
+    , skPublic  :: PublicKey
+    , skAddress :: Address
+    } deriving (Show)
+
+instance Eq SecretKeyData where
+    (==) = (==) `on` skSecret
+
+-- | Make secret key data.
+mkSecretKeyData :: SecretKey -> SecretKeyData
+mkSecretKeyData sk =
+    let skSecret = sk
+        skPublic = toPublic sk
+        skAddress = mkAddr skPublic
+    in SecretKeyData{..}
+
 newtype StakeholderId = StakeholderId
     { unStakeholderId :: PublicKey
     } deriving (Eq, Show, Generic)
@@ -113,8 +132,8 @@ instance Buildable Nonce where
 
 -- | Tx input account. Can be used for other tx types too.
 data TxInAcc = TxInAcc
-    { tiaAddr  :: Address
-    , tiaNonce :: Nonce
+    { tiaAddr  :: !Address
+    , tiaNonce :: !Nonce
     } deriving (Eq, Ord, Generic, Show)
 
 makeLensesWith postfixLFields ''TxInAcc
@@ -124,8 +143,8 @@ instance Buildable TxInAcc where
 
 -- | Money transaction output.
 data TxOut = TxOut
-    { txOutAddr  :: Address
-    , txOutValue :: Coin
+    { txOutAddr  :: !Address
+    , txOutValue :: !Coin
     } deriving (Eq, Ord, Generic, Show)
 
 makeLensesWith postfixLFields ''TxOut
@@ -135,9 +154,9 @@ instance Buildable TxOut where
 
 -- | Transaction. Accounting-style money transfer.
 data Tx = Tx
-    { txInAcc   :: TxInAcc
-    , txInValue :: Coin
-    , txOuts    :: [TxOut]
+    { txInAcc   :: !TxInAcc
+    , txInValue :: !Coin
+    , txOuts    :: ![TxOut]
     } deriving (Eq, Ord, Generic, Show)
 
 makeLensesWith postfixLFields ''Tx
@@ -161,8 +180,8 @@ instance Serialise Tx => HasId Tx where
 -- (@kirill.andreev). Public key hash should be equal to the input address.
 -- Also, public key should be the same which used to validate signature.
 data TxWitness = TxWitness
-    { txwSig :: Signature (TxId, PublicKey, ())
-    , txwPk  :: PublicKey
+    { txwSig :: !(Signature (TxId, PublicKey, ()))
+    , txwPk  :: !PublicKey
     } deriving (Eq, Ord, Show, Generic)
 
 makeLensesWith postfixLFields ''TxWitness
@@ -173,8 +192,8 @@ instance Buildable TxWitness where
 
 -- | Transaction coupled with witness.
 data TxWitnessed = TxWitnessed
-    { twTx      :: Tx
-    , twWitness :: TxWitness
+    { twTx      :: !Tx
+    , twWitness :: !TxWitness
     } deriving (Eq, Ord, Show, Generic)
 
 makeLensesWith postfixLFields ''TxWitnessed
@@ -239,22 +258,6 @@ makeLensesWith postfixLFields ''PublicationTxWitnessed
 instance Buildable PublicationTxWitnessed where
     build PublicationTxWitnessed {..} =
         "PublicationTxWitnessed { " +| ptwTx |+ ", " +| ptwWitness |+  " }"
-
-signPubTx
-    :: (Serialise PublicationTx, Serialise PrivateBlockHeader)
-    => SecretKey -> PublicationTx -> PublicationTxWitnessed
-signPubTx sk tx =
-    PublicationTxWitnessed
-    { ptwTx = tx
-    , ptwWitness = witness
-    }
-  where
-    pk = toPublic sk
-    witness =
-        PublicationTxWitness
-        { pwSig = sign sk (toPtxId tx, pk, ptHeader tx)
-        , pwPk = pk
-        }
 
 ----------------------------------------------------------------------------
 -- Transactions (united)

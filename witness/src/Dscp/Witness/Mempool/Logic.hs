@@ -6,7 +6,7 @@ module Dscp.Witness.Mempool.Logic
     , addTxToMempool
     , takeTxsMempool
     , normalizeMempool
-    , readFromMempoolLocked
+    , runSdMempoolRead
 
       -- * Helpers
     , onlyLostTxs
@@ -15,7 +15,8 @@ module Dscp.Witness.Mempool.Logic
 import UnliftIO (MonadUnliftIO)
 
 import qualified Data.Set as S
-import Loot.Base.HasLens (HasLens', lensOf)
+import Loot.Base.HasLens (HasCtx, HasLens', lensOf)
+import Loot.Log (MonadLogging)
 
 import qualified Snowdrop.Core as SD
 import qualified Snowdrop.Execution as Pool
@@ -29,6 +30,7 @@ import Dscp.Crypto
 import qualified Dscp.Snowdrop as SD
 import Dscp.Snowdrop.Actions (sdActionsComposition)
 import Dscp.Snowdrop.Configuration (Exceptions, Ids, Values)
+import Dscp.Snowdrop.Mode
 import Dscp.Witness.Mempool.Type
 import Dscp.Witness.SDLock
 
@@ -36,6 +38,7 @@ type MempoolCtx ctx m =
     ( MonadIO         m
     , MonadUnliftIO   m
     , MonadReader ctx m
+    , MonadLogging    m
     , HasLens' ctx MempoolVar
     , HasLens' ctx SD.SDVars
     , HasLens' ctx SD.LoggingIO
@@ -83,7 +86,7 @@ normalizeMempool = do
     Mempool pool conf <- view (lensOf @MempoolVar)
     writeToMempool pool $ Pool.normalizeMempool conf
 
-type SDM =
+type SdMemWriteM =
     SD.ERwComp
         Exceptions
         Ids
@@ -95,11 +98,13 @@ type SDM =
             ChgAccum
             GTxWitnessed)
 
+type SdMemReadM = SdM_ ChgAccum
+
 readFromMempool
     :: forall ctx m a
     .  (MempoolCtx ctx m, WithinReadSDLock)
     => Pool.Mempool Ids Values ChgAccum GTxWitnessed
-    -> SDM a
+    -> SdMemReadM a
     -> m a
 readFromMempool pool action = do
     actions <- view (lensOf @SD.SDVars)
@@ -107,24 +112,13 @@ readFromMempool pool action = do
     let dbActions = sdActionsComposition (AVLP.RememberForProof False) actions
     SD.runRIO logger $
         SD.unwrapSDBaseRethrow $
-        Pool.actionWithMempool pool dbActions action
-
-readFromMempoolLocked
-    :: forall ctx m a
-    .  MempoolCtx ctx m
-    => Pool.Mempool Ids Values ChgAccum GTxWitnessed
-    -> SDLock
-    -> SDM a
-    -> m a
-readFromMempoolLocked pool lock action = do
-    readingSDLockOf lock $
-        readFromMempool pool action
+        Pool.actionWithMempool pool dbActions $ SD.liftERoComp action
 
 writeToMempool
     :: forall ctx m a
     .  (MempoolCtx ctx m, WithinWriteSDLock)
     => Pool.Mempool Ids Values ChgAccum GTxWitnessed
-    -> SDM a
+    -> SdMemWriteM a
     -> m a
 writeToMempool pool action = do
     actions <- view (lensOf @SD.SDVars)
@@ -133,6 +127,14 @@ writeToMempool pool action = do
     SD.runRIO logger $
         SD.unwrapSDBaseRethrow $
         Pool.actionWithMempool pool dbActions action
+
+runSdMempoolRead
+    :: forall ctx m a.
+       (MempoolCtx ctx m, HasCtx ctx m '[SDLock])
+    => SdMemReadM a -> m a
+runSdMempoolRead action = do
+    Mempool pool _ <- view (lensOf @MempoolVar)
+    readingSDLock $ readFromMempool pool action
 
 ----------------------------------------------------------------------------
 -- Helpers

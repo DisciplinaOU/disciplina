@@ -7,6 +7,7 @@ module Dscp.Resource.Keys.Types
     , krPublicKey
     , getSecretKey
     , getPublicKey
+    , getSecretKeyData
 
     , KeyJson (..)
     , KeyfileContent
@@ -15,13 +16,14 @@ module Dscp.Resource.Keys.Types
     , ourPublicKey
     ) where
 
-import Control.Lens (makeLenses)
+import Control.Lens (makeLenses, to)
 import Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.:), (.=))
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
 import Loot.Base.HasLens (HasLens', lensOf)
 
 import Dscp.Core.Aeson ()
+import Dscp.Core.Foundation.Witness
 import Dscp.Core.Governance (CommitteeSecret (..))
 import Dscp.Crypto (Encrypted, PassPhrase, PublicKey, SecretKey)
 import Dscp.Util.Aeson (Base64Encoded, CustomEncoding (..), Versioned)
@@ -78,6 +80,13 @@ getPublicKey
        (MonadReader ctx m, HasLens' ctx (KeyResources node))
     => m PublicKey
 getPublicKey = view $ lensOf @(KeyResources node) . krPublicKey
+
+getSecretKeyData
+    :: forall node ctx m.
+       (MonadReader ctx m, HasLens' ctx (KeyResources node))
+    => m SecretKeyData
+getSecretKeyData =
+    view $ lensOf @(KeyResources node) . krSecretKey . to mkSecretKeyData
 
 ---------------------------------------------------------------------
 -- Instances

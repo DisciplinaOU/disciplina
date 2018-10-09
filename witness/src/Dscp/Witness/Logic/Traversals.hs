@@ -214,8 +214,10 @@ txsSource = \case
             return (block, tbrTxIdx)
         loadTxs (Just txIdx) block
   where
-    loadTxs mSkip block = do
-        C.yieldMany (maybe id drop mSkip txs)
+    loadTxs mIdx block = do
+        -- last txs in the block go first
+        C.yieldMany (reverse $ maybe id (take . succ) mIdx txs)
+
         nextBlock <- lift . runMaybeT $
             MaybeT (resolvePrevious block) >>= MaybeT . getBlockMaybe
         whenJust nextBlock (loadTxs Nothing)
@@ -239,9 +241,9 @@ accountTxsSource address mStart =
     loadNextTx = \case
         Nothing -> pass
         Just gTxId -> do
-            mGTxId <- lift $ unTxNext <<$>> SD.queryOne (TxHead address gTxId)
-            whenJust mGTxId C.yield
-            loadNextTx mGTxId
+            C.yield gTxId
+            lift (SD.queryOne (TxHead address gTxId)) >>=
+                loadNextTx . map unTxNext
 
 -- | Retrieves private blocks starting with the given one down the chain.
 -- If no transaction is provided, blocks are retrieved starting from the most
@@ -282,12 +284,10 @@ educatorPublicationsSource educator = \case
             return (header, mblock)
         C.yield $ WithBlock block header
 
-        let prevBlock = _pbhPrevBlock header
-        PublicationNext mPrevHash <-
-            lift $ PublicationHead prevBlock `assertExists` noNextPub prevBlock
-        whenJust mPrevHash loadChain
+        let prevHash = _pbhPrevBlock header
+        unless (prevHash == educatorGenesisHash) $
+            loadChain prevHash
 
-    noNextPub (h :: PrivateHeaderHash) =
-        LEMalformed $ "Can't resolve previous private block: " +| h |+ ""
+    educatorGenesisHash = genesisHeaderHash educator
     noPrivBlock (h :: PrivateHeaderHash) =
         LEPrivateBlockAbsent $ "Private block not found: " +| h |+ ""

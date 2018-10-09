@@ -50,6 +50,9 @@ import Dscp.Core.Foundation
 import Dscp.Crypto
 import Dscp.Util.Test
 
+instance Arbitrary SecretKeyData where
+    arbitrary = mkSecretKeyData <$> arbitrary
+
 instance Arbitrary Address where
     arbitrary = Address <$> arbitrary
 
@@ -118,7 +121,9 @@ instance Arbitrary PrivateBlockHeader where
     arbitrary = genericArbitrary
     shrink    = genericShrink
 
-deriving instance Arbitrary Coin
+instance Arbitrary Coin where
+    arbitrary = Coin <$> choose (0, 10000)
+
 deriving instance Arbitrary Nonce
 deriving instance Arbitrary Difficulty
 deriving instance Arbitrary SlotId

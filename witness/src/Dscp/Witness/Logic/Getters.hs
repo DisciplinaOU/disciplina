@@ -19,10 +19,11 @@ module Dscp.Witness.Logic.Getters
 
     , getTxMaybe
     , getTx
+
+    , getPrivateTipHash
     ) where
 
 import Control.Lens (ix)
-import Loot.Base.HasLens (lensOf)
 import qualified Snowdrop.Block as SD
 import qualified Snowdrop.Core as SD
 import qualified Snowdrop.Execution as SD
@@ -34,7 +35,6 @@ import Dscp.Witness.Config
 import Dscp.Witness.Launcher.Mode
 import Dscp.Witness.Logic.Exceptions
 import Dscp.Witness.Mempool
-import Dscp.Witness.SDLock
 
 ----------------------------------------------------------------------------
 -- Block/Header/Tip getters
@@ -114,11 +114,7 @@ getAccountMaybe =
 getMempoolAccountMaybe
     :: WitnessWorkMode ctx m
     => Address -> m (Maybe Account)
-getMempoolAccountMaybe addr = do
-    Mempool pool _ <- view (lensOf @MempoolVar)
-    lock           <- view (lensOf @SDLock)
-    readFromMempoolLocked pool lock $
-        SD.liftERoComp $ SD.queryOne (AccountId addr)
+getMempoolAccountMaybe addr = runSdMempoolRead $ SD.queryOne (AccountId addr)
 
 -- | Get a list of all transactions for a given account
 getAccountTxs :: WitnessWorkMode ctx m => Address -> m [WithBlock GTxWitnessed]
@@ -155,3 +151,10 @@ getTx gTxId = do
               "Can't get transaction with id " <> pretty gTxId)
           pure
           tM
+
+----------------------------------------------------------------------------
+-- Publication getters
+----------------------------------------------------------------------------
+
+getPrivateTipHash :: HasWitnessConfig => Address -> SdM_ chgacc (Maybe PrivateHeaderHash)
+getPrivateTipHash educator = fmap unLastPublication <$> SD.queryOne (PublicationsOf educator)

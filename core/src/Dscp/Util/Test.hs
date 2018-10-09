@@ -30,6 +30,7 @@ import Options.Applicative (Parser, defaultPrefs, execParserPure, getParseResult
 import Servant (FromHttpApiData (..), ToHttpApiData (..))
 import System.Random (Random)
 import Test.Hspec as T
+import Test.Hspec.QuickCheck as T (modifyMaxSuccess)
 import Test.QuickCheck as T (Arbitrary (..), Fixed (..), Gen, Property, Testable (..), conjoin,
                              cover, elements, expectFailure, forAll, frequency, infiniteList,
                              infiniteListOf, ioProperty, label, listOf, listOf1, oneof, property,
@@ -174,6 +175,11 @@ expectOne :: Text -> [a] -> a
 expectOne _    [x] = x
 expectOne desc xs  =
     error $ "expectOne: " <> pretty (length xs) <> " entities (" <> desc <> ")"
+
+expectSome :: Text -> [a] -> NonEmpty a
+expectSome _    (nonEmpty -> Just l) = l
+expectSome desc _ =
+    error $ "expectSome: empty list (" <> desc <> ")"
 
 counterexample :: Testable prop => Text -> prop -> Property
 counterexample desc prop = Q.counterexample (toString desc) prop

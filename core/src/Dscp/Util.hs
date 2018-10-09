@@ -47,6 +47,7 @@ module Dscp.Util
        , _tailNE
        , seeOnly
        , postfixLFields
+       , (&:)
 
          -- * String-functions adopted
        , symbolValT
@@ -250,6 +251,12 @@ seeOnly b = lens (const b) const
 -- | For datatype with "myNyan" field it will create "myNyanL" lens.
 postfixLFields :: LensRules
 postfixLFields = lensRules & lensField .~ mappingNamer (\s -> [s++"L"])
+
+-- | Version of 'Control.Lens.&~' with modified priority, suitable for defining
+-- configs in do-notaion.
+infixl 9 &:
+(&:) :: a -> State a () -> a
+(&:) = flip execState
 
 -----------------------------------------------------------
 -- Adopted functions which work with strings
