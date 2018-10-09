@@ -14,7 +14,7 @@ import Dscp.Util (wrapRethrow)
 
 -- | Exception during secret key extraction from storage.
 data KeyInitError
-    = SecretWrongPassPhraseError DecryptionError
+    = SecretDecryptionError DecryptionError
     | SecretParseError Text
     | SecretConfMismatch Text
     | SecretIOError Text
@@ -25,8 +25,10 @@ instance Show KeyInitError where
 
 instance Buildable KeyInitError where
     build = \case
-        SecretWrongPassPhraseError password ->
-            "Wrong password for educator key storage provided ("+|password|+")"
+        SecretDecryptionError msg ->
+            "Error while decrypting educator key: "+|msg|+
+            ". Either retype password or" +|
+            "make sure educator.key file corresponds to the right account"
         SecretParseError _ ->
             "Invalid educator secret key storage format"
         SecretConfMismatch msg ->
