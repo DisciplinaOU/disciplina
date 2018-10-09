@@ -89,7 +89,7 @@ spec = describe "Publication tx expansion + validation" $ do
             subtracted <- pick $ choose (1, fee)
             return $ Coin (fee - subtracted)
         let tw = signPubTx author badPub
-        lift . throwsPrism (_PublicationValidationError . _PublicationFeeIsTooLow) $
+        lift . throwsPrism (_PublicationError . _PublicationFeeIsTooLow) $
             submitPub tw
 
     it "Forking publications chain isn't fine" $ witnessProperty $ do

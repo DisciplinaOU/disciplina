@@ -4,27 +4,44 @@ module Dscp.Witness.Web.Error
     ( WitnessAPIError (..)
     , ErrResponse (..)
     , DSON
-    , witnessToServantErr
     ) where
 
-import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), encode, withText)
+import Data.Aeson (encode)
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
 import Data.Reflection (Reifies (..))
-import qualified Data.Text as T
 import qualified Data.Text.Buildable as B
 import Data.Typeable (cast)
-import Servant (ServantErr (..), err400, err404, err500, err503)
+import Servant (err400, err500, err503)
 
 import Dscp.Snowdrop
 import Dscp.Util.Servant
+import Dscp.Web.Class
+import Dscp.Witness.Logic.Exceptions
 import Dscp.Witness.Relay (RelayException)
-import Dscp.Witness.Web.Util
 
+-- | All kinds of SD exceptions which we care about.
+data SdExceptions
+    = SdAccountError AccountException
+    | SdLogicError LogicException
+    deriving (Show)
+
+instance Buildable SdExceptions where
+    build = \case
+        SdAccountError err -> B.build err
+        SdLogicError err -> B.build err
+
+fromSnowdropException :: Exceptions -> Maybe SdExceptions
+fromSnowdropException = \case
+    AccountError e -> pure $ SdAccountError e
+    LogicError e -> pure $ SdLogicError e
+    PublicationError{} -> mzero
+    BlockApplicationError{} -> mzero
+    SdInternalError{} -> mzero
+
+-- | All witness API exceptions.
 data WitnessAPIError
-    = BlockNotFound
-    | TransactionNotFound
-    | TxError AccountValidationException
+    = SdError SdExceptions
     | InternalError Text
     | ServiceUnavailable Text
     | InvalidFormat
@@ -32,9 +49,7 @@ data WitnessAPIError
 
 instance Buildable WitnessAPIError where
     build = \case
-        BlockNotFound -> "Specified block does not exist."
-        TransactionNotFound -> "Specified transaction does not exist."
-        TxError err -> B.build err
+        SdError err -> B.build err
         InternalError msg -> "Internal error: " <> B.build msg
         ServiceUnavailable msg -> "Service unavailable: " <> B.build msg
         InvalidFormat -> "Failed to deserialise one of parameters."
@@ -43,70 +58,46 @@ instance Exception WitnessAPIError where
     fromException e@(SomeException e') =
         asum
         [ cast e'
-        , fmap TxError . (^? _AccountValidationError) =<< fromException e
+        , fmap SdError . fromSnowdropException =<< fromException e
         , ServiceUnavailable . show @Text @RelayException <$> fromException e
         ]
-
--- | Contains info about error in client-convenient form.
-data ErrResponse = ErrResponse
-    { erError :: !WitnessAPIError
-    } deriving (Show, Generic)
 
 ---------------------------------------------------------------------------
 -- JSON instances
 ---------------------------------------------------------------------------
 
-deriveJSON defaultOptions ''ErrResponse
+deriveJSON defaultOptions ''SdExceptions
+deriveJSON defaultOptions ''WitnessAPIError
 
-uaPrefix :: Text
-uaPrefix = "<unavailable>"
+---------------------------------------------------------------------------
+-- Error instances
+---------------------------------------------------------------------------
 
-prefixUnavailable :: Text -> Text
-prefixUnavailable = (<>) uaPrefix
+instance HasErrorTag SdExceptions where
+    errorTag = \case
+        SdAccountError e -> errorTag e
+        SdLogicError e -> errorTag e
 
-unprefixUnavailable :: Text -> Maybe Text
-unprefixUnavailable txt =
-    if T.take l txt == uaPrefix
-    then Just $ T.drop l txt
-    else Nothing
-  where
-    l = length uaPrefix
-
-instance ToJSON WitnessAPIError where
-    toJSON = String . \case
-        BlockNotFound -> "BlockNotFound"
-        TransactionNotFound -> "TransactionNotFound"
-        TxError err -> snowdropErrorToShortJSON err
-        InternalError msg -> msg
-        ServiceUnavailable msg -> prefixUnavailable msg
+instance HasErrorTag WitnessAPIError where
+    errorTag = \case
+        SdError err -> errorTag err
+        InternalError{} -> "InternalError"
+        ServiceUnavailable{} -> "ServiceUnavailable"
         InvalidFormat -> "InvalidFormat"
 
-instance FromJSON WitnessAPIError where
-    parseJSON = withText "error" $ pure . \case
-        "BlockNotFound" -> BlockNotFound
-        "TransactionNotFound" -> TransactionNotFound
-        "InvalidFormat" -> InvalidFormat
-        msg | Just err <- parseShortJSONToSnowdropError msg -> TxError err
-            | Just err <- unprefixUnavailable msg -> ServiceUnavailable err
-            | otherwise -> InternalError msg
+instance ToServantErr SdExceptions where
+    toServantErrNoBody = \case
+        SdAccountError e -> toServantErrNoBody e
+        SdLogicError e -> toServantErrNoBody e
 
----------------------------------------------------------------------------
--- Functions
----------------------------------------------------------------------------
+instance ToServantErr WitnessAPIError where
+    toServantErrNoBody = \case
+        SdError err          -> toServantErrNoBody err
+        InternalError{}      -> err500
+        ServiceUnavailable{} -> err503
+        InvalidFormat        -> err400
 
--- | Get HTTP error code of error.
-toServantErrNoReason :: WitnessAPIError -> ServantErr
-toServantErrNoReason = \case
-    BlockNotFound        -> err404
-    TransactionNotFound  -> err404
-    TxError err          -> snowdropToServantErrNoReason err
-    InternalError{}      -> err500
-    ServiceUnavailable{} -> err503
-    InvalidFormat        -> err400
-
--- | Make up error which will be returned to client.
-witnessToServantErr :: WitnessAPIError -> ServantErr
-witnessToServantErr err = (toServantErrNoReason err){ errBody = encode $ ErrResponse err }
+instance FromServantErr WitnessAPIError
 
 ---------------------------------------------------------------------------
 -- Other

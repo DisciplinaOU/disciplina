@@ -6,16 +6,18 @@ module Dscp.Snowdrop.Types
     , AccountId(..)
     , Account(..)
     , Author(..)
-    , PublicationValidationException(..)
+    , PublicationException(..)
     , _PublicationSignatureIsIncorrect
     , _PublicationPrevBlockIsIncorrect
     , _StorageIsCorrupted
     , _PublicationIsBroken
-    , _PublicationAuthorDoesNotExist
     , _PublicationFeeIsTooLow
     , _PublicationCantAffordFee
-    , AccountValidationException(..)
-    , _AuthorDoesNotExist
+    , _PublicationLocalLoop
+    , AccountException(..)
+    , _MTxNoOutputs
+    , _MTxDuplicateOutputs
+    , _InsufficientFees
     , _SignatureIsMissing
     , _SignatureIsCorrupted
     , _TransactionIsCorrupted
@@ -30,6 +32,7 @@ module Dscp.Snowdrop.Types
     ) where
 
 import Control.Lens (makePrisms)
+import Data.Data (Data)
 import Data.Default (Default (..))
 import Data.Text.Buildable (Buildable (..))
 import Fmt (build, (+|), (|+))
@@ -42,37 +45,35 @@ data PublicationTxTypeId
     = PublicationTxTypeId
     deriving (Eq, Ord, Show, Generic)
 
--- TODO [DSCP-256]: remove PublicationAuthorDoesNotExist?
 -- We can safely assume that if account does not exist, it actually
 -- exists and equals to 'def', what's the point of multiplying exceptions?
 -- (PublicationCantAffordFee already stands for the same thing).
 -- Similar concern is about money transactions.
-data PublicationValidationException
+data PublicationException
     = PublicationSignatureIsIncorrect
     | PublicationPrevBlockIsIncorrect
     | StorageIsCorrupted
     | PublicationIsBroken
-    | PublicationAuthorDoesNotExist
     | PublicationFeeIsTooLow -- ^
     | PublicationCantAffordFee -- ^ Publication owner can not afford the fee
+    | PublicationLocalLoop
     deriving (Eq, Ord)
 
-makePrisms ''PublicationValidationException
+makePrisms ''PublicationException
 
-instance Show PublicationValidationException where
+instance Show PublicationException where
     show = toString . pretty
 
-instance Buildable PublicationValidationException where
+instance Buildable PublicationException where
     build = \case
         PublicationSignatureIsIncorrect -> "Publication signature is incorrect"
         PublicationPrevBlockIsIncorrect -> "Publication previous block is incorrect"
         StorageIsCorrupted -> "Storage is inconsistent"
         PublicationIsBroken -> "Bad publication"
-        PublicationAuthorDoesNotExist -> "Publicaion author is not registered in \
-                                         \chain and can't pay for fees"
         PublicationFeeIsTooLow -> "The fee specified in the publication tx is " <>
                                   "lower than the minimal one."
         PublicationCantAffordFee -> "Publication author can't afford the fee"
+        PublicationLocalLoop -> "Transaction would create a loop in educator's chain"
 
 data AccountTxTypeId = AccountTxTypeId deriving (Eq, Ord, Show, Generic)
 
@@ -80,41 +81,74 @@ data AccountTxTypeId = AccountTxTypeId deriving (Eq, Ord, Show, Generic)
 --
 -- NOTE: this exception is thrown by witness API, keep 'witness.yaml' doc
 -- updated.
-data AccountValidationException
-    = AuthorDoesNotExist
+data AccountException
+    = MTxNoOutputs
+    | MTxDuplicateOutputs
+    | InsufficientFees
+      { aeExpectedFees :: Integer, aeActualFees :: Integer }
     | SignatureIsMissing
     | SignatureIsCorrupted
     | TransactionIsCorrupted
     | NotASingletonSelfUpdate      -- ^ 'Author' account updated multiple times.
     | NonceMustBeIncremented
+      { aePreviousNonce :: Nonce, aeNewNonce :: Nonce }
     | PaymentMustBePositive
     | ReceiverOnlyGetsMoney        -- ^ Receiver can only change its 'aBalance', never 'aNonce'.
     | ReceiverMustIncreaseBalance  -- ^ Receiver cannot decrease in its 'aBalance'.
-    | SumMustBeNonNegative         -- ^ Amount of money sent must be greater of equal
-                                   -- to the total amount received.
-    | CannotAffordFees             -- ^ Given account state cannot afford given fees.
+    | SumMustBeNonNegative
+      { aeSent :: Integer, aeReceived :: Integer, aeFees :: Integer }
+      -- ^ Amount of money sent must be greater of equal
+      -- to the total amount received.
+    | CannotAffordFees
+      { aeOutputsSum :: Integer, aeBalance :: Integer, aeFees :: Integer }
+      -- ^ Given account state cannot afford given fees.
     | BalanceCannotBecomeNegative
-    deriving (Eq, Ord, Enum, Bounded)
+      { aeSpent :: Integer, aeBalance :: Integer }
+    | AccountInternalError String
+    deriving (Eq, Ord, Data)
 
-makePrisms ''AccountValidationException
+makePrisms ''AccountException
 
-instance Buildable AccountValidationException where
+instance Buildable AccountException where
     build = \case
-        AuthorDoesNotExist -> "Source account has never received any money"
-        SignatureIsMissing -> "Transaction has no correct signature"
-        SignatureIsCorrupted -> "Bad signature"
-        TransactionIsCorrupted -> "Transaction is corrupted"
-        NotASingletonSelfUpdate -> "Author account is updated multiple times"
-        NonceMustBeIncremented -> "Nonce should've been incremented by one"
-        PaymentMustBePositive -> "Spent amount of money must be positive"
-        ReceiverOnlyGetsMoney -> "Improper changes of receiver account (its is \
-                                 \only possible to add tokens)"
-        ReceiverMustIncreaseBalance -> "One of receivers' balance decreased or didn't change"
-        SumMustBeNonNegative -> "Tx input value < tx sum of outputs"
-        CannotAffordFees -> "Tx sender can not afford fees"
-        BalanceCannotBecomeNegative -> "Balance can not become negative"
+        MTxNoOutputs ->
+            "Transaction has no outputs"
+        MTxDuplicateOutputs ->
+            "Duplicated transaction outputs"
+        InsufficientFees{..} ->
+            "Amount of money left for fees in transaction is not enough, \
+             \expected " +| aeExpectedFees |+ ", got " +| aeActualFees |+ ""
+        SignatureIsMissing ->
+            "Transaction has no correct signature"
+        SignatureIsCorrupted ->
+            "Bad signature"
+        TransactionIsCorrupted ->
+            "Transaction is corrupted"
+        NotASingletonSelfUpdate ->
+            "Author account is updated multiple times"
+        NonceMustBeIncremented{..} ->
+            "Nonce should've been incremented by one: previous nonce was "
+            +| aePreviousNonce |+ ", new nonce is " +| aeNewNonce |+ ""
+        PaymentMustBePositive ->
+            "Spent amount of money must be positive"
+        ReceiverOnlyGetsMoney ->
+            "Improper changes of receiver account (its is only possible to add \
+            \tokens)"
+        ReceiverMustIncreaseBalance ->
+            "One of receivers' balance decreased or didn't change"
+        SumMustBeNonNegative{..} ->
+            "Tx input value (" +| aeSent |+ ") is not greater than \
+            \sum of outputs (" +| aeReceived |+ ") plus fees (" +| aeFees |+ ")"
+        CannotAffordFees{..} ->
+            "Tx sender can not afford fees: sending " +| aeOutputsSum |+ " \
+            \and fees are " +| aeFees |+ ", while balance is " +| aeBalance |+ ""
+        BalanceCannotBecomeNegative{..} ->
+            "Balance can not become negative: spending " +| aeSpent |+ ", \
+            \while balance is " +| aeBalance |+ ""
+        AccountInternalError s ->
+            fromString $ "Expander failed internally: " <> s
 
-instance Show AccountValidationException where
+instance Show AccountException where
     show = toString . pretty
 
 -- | Wrapper for address.

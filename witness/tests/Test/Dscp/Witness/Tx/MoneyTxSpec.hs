@@ -116,7 +116,7 @@ spec = describe "Money tx expansion + validation" $ do
             nonce <- pick $ arbitrary `suchThat` (/= 0)
             let steps = properSteps & tcsInAcc .~ \addr -> TxInAcc addr nonce
             let tx = makeTx steps txData
-            lift $ throwsPrism (_AccountValidationError . _NonceMustBeIncremented) $
+            lift $ throwsPrism (_AccountError . _NonceMustBeIncremented) $
                 applyTx tx
 
         it "Bad input address is not fine" $ witnessProperty $ do
@@ -135,8 +135,7 @@ spec = describe "Money tx expansion + validation" $ do
             let txData = txData'{ tdSecret = secret }
 
             let tx = makeTx properSteps txData
-            lift $ throwsPrism ((_AccountValidationError . _AuthorDoesNotExist)
-                             <> (_AccountExpanderError   . _CantResolveSender)) $
+            lift $ throwsPrism (_AccountError . _BalanceCannotBecomeNegative) $
                 applyTx tx
 
         it "Can't spend more money than currently present" $ witnessProperty $ do
@@ -150,7 +149,7 @@ spec = describe "Money tx expansion + validation" $ do
             let txOuts = L.head $ manyEnoughL
             txData <- pick $ genSafeTxData <&> \td -> td{ tdOuts = Exts.fromList txOuts }
             let tx = makeTx properSteps txData
-            lift $ throwsPrism (_AccountValidationError . _BalanceCannotBecomeNegative) $
+            lift $ throwsPrism (_AccountError . _BalanceCannotBecomeNegative) $
                 applyTx tx
 
         it "Too high input is processed fine" $ witnessProperty $ do
@@ -170,14 +169,14 @@ spec = describe "Money tx expansion + validation" $ do
             let steps = properSteps
                     & tcsTx %~ \f inAcc inVal _ -> f inAcc inVal []
             let tx = makeTx steps txData
-            lift $ throwsPrism (_AccountExpanderError . _MTxNoOutputs) $
+            lift $ throwsPrism (_AccountError . _MTxNoOutputs) $
                 applyTx tx
 
         it "Non positive output amount is not fine" $ witnessProperty $ do
             txData <- pick genSafeTxData
                       <&> tdOutsL . _headNE . txOutValueL .~ minBound @Coin
             let tx = makeTx properSteps txData
-            lift $ throwsPrism (_AccountValidationError .
+            lift $ throwsPrism (_AccountError .
                                 (_ReceiverMustIncreaseBalance <> _PaymentMustBePositive)) $
                 applyTx tx
 
@@ -211,7 +210,7 @@ spec = describe "Money tx expansion + validation" $ do
             let steps = properSteps & tcsTx %~
                     \f inAcc _ outs -> f inAcc spent outs
                 tx = makeTx steps txData
-            lift $ throwsPrism (_AccountExpanderError . _InsufficientFees) $
+            lift $ throwsPrism (_AccountError . _InsufficientFees) $
                 applyTx tx
 
         it "Tx input < sum tx outs + fee => failure" $ witnessProperty $ do
@@ -225,7 +224,7 @@ spec = describe "Money tx expansion + validation" $ do
             let steps = properSteps & tcsTx %~
                     \f inAcc _ outs -> f inAcc (Coin inVal) outs
                 tx = makeTx steps txData
-            lift $ throwsPrism (_AccountExpanderError . _InsufficientFees) $
+            lift $ throwsPrism (_AccountError . _InsufficientFees) $
                 applyTx tx
 
     describe "State modifications are correct" $ do
@@ -236,7 +235,7 @@ spec = describe "Money tx expansion + validation" $ do
             -- going to skip transaction before the last one
             let initTxs = init . Exts.fromList $ init txs
             lift $ forM_ initTxs applyTx
-            lift $ throwsPrism (_AccountValidationError . _NonceMustBeIncremented) $
+            lift $ throwsPrism (_AccountError . _NonceMustBeIncremented) $
                 applyTx (last txs)
 
         it "Several transactions exhausting account" $ witnessProperty $ do
@@ -246,5 +245,5 @@ spec = describe "Money tx expansion + validation" $ do
                              (coinToInteger testGenesisAddressAmount * 3) `div` 4
                 txData = txData'{ tdOuts = one $ TxOut destination spentPerTx }
                 txs = makeTxsChain 2 properSteps txData
-            lift $ throwsPrism (_AccountValidationError . _BalanceCannotBecomeNegative) $
+            lift $ throwsPrism (_AccountError . _BalanceCannotBecomeNegative) $
                 mapM_ applyTx txs

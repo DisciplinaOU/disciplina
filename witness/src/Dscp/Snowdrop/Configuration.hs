@@ -31,15 +31,8 @@ module Dscp.Snowdrop.Configuration
     , PublicationTxProof
     , Proofs (..)
     , Exceptions (..)
-    , _AccountValidationError
-    , _AccountExpanderError
-    , _PublicationValidationError
-    , _PublicationExpanderError
-    , AccountExpanderException (..)
-    , _MTxNoOutputs
-    , _CantResolveSender
-    , _InsufficientFees
-    , PublicationExpanderException (..)
+    , _AccountError
+    , _PublicationError
 
     , TxIds (..)
 
@@ -68,9 +61,8 @@ import Dscp.Core (Fees, HeaderHash)
 import qualified Dscp.Core.Foundation as T
 import Dscp.Crypto (HasAbstractSignature, Hash, PublicKey, SigScheme, Signature, hashF, verify)
 import Dscp.Snowdrop.Storage.Types
-import Dscp.Snowdrop.Types (Account, AccountId (..), AccountTxTypeId (..),
-                            AccountValidationException, PublicationTxTypeId (..),
-                            PublicationValidationException)
+import Dscp.Snowdrop.Types (Account, AccountException, AccountId (..), AccountTxTypeId (..),
+                            PublicationException, PublicationTxTypeId (..))
 import Dscp.Witness.Logic.Exceptions (LogicException)
 
 ----------------------------------------------------------------------------
@@ -270,55 +262,36 @@ data Proofs
 -- Exceptions
 ----------------------------------------------------------------------------
 
--- TODO [DSCP-256]: Since expansion and validatoin are always couples,
--- merge 'AccountExpanderException' and 'AccountValidationException'
--- TODO [DSCP-256]: Add fieldsPublicationExpanderError
-data AccountExpanderException
-    = MTxNoOutputs
-    | MTxDuplicateOutputs
-    | CantResolveSender
-    | InsufficientFees
-    | ExpanderInternalError String
-
-makePrisms ''AccountExpanderException
-
-instance Show AccountExpanderException where
-    show = toString . pretty
-
-instance Buildable AccountExpanderException where
-    build = \case
-        MTxNoOutputs -> "Transaction has no outputs"
-        MTxDuplicateOutputs -> "Duplicated transaction outputs"
-        CantResolveSender -> "Source account is not registered in chain"
-        InsufficientFees -> "Amount of money left for fees in transaction is not enough"
-        ExpanderInternalError s ->
-            fromString $ "Expander failed internally: " <> s
-
-data PublicationExpanderException
-    = PublicationLocalLoop
-
-instance Show PublicationExpanderException where
-    show = toString . pretty
-
-instance Buildable PublicationExpanderException where
-    build = \case
-        PublicationLocalLoop -> "Previous block and current block are the same"
-
-data Exceptions
+data InternalExceptions
     = ExpanderRestrictionError   RestrictionInOutException
     | BlockStateError           (BlockStateException        Ids)
-    | BlockApplicationError     (BlockApplicationException  HeaderHash)
     | StateModificationError    (StateModificationException Ids)
-    | AccountValidationError     AccountValidationException
-    | PublicationValidationError PublicationValidationException
     | RedundantIdError           RedundantIdException
     | ValidatorExecError         ValidatorExecException
     | CSMappendError            (CSMappendException         Ids)
     | TxValidationError          TxValidationException
     | StatePError                StatePException
-    | AccountExpanderError       AccountExpanderException
-    | PublicationExpanderError   PublicationExpanderException
-    | LogicError                 LogicException
+
+instance Show InternalExceptions where
+    show = toString . pretty
+
+instance Buildable InternalExceptions where
+    build = \case
+        ExpanderRestrictionError err -> B.build err
+        BlockStateError err -> B.build err
+        StateModificationError err -> B.build err
+        StatePError err -> B.build err
+        RedundantIdError err -> B.build err
+        ValidatorExecError err -> B.build err
+        CSMappendError err -> B.build err
+        TxValidationError err -> B.build err
+
+data Exceptions
+    = BlockApplicationError (BlockApplicationException  HeaderHash)
+    | AccountError          AccountException
+    | PublicationError      PublicationException
+    | LogicError            LogicException
+    | SdInternalError       InternalExceptions
 
 makePrisms ''Exceptions
 
@@ -329,20 +302,11 @@ instance Show Exceptions where
 
 instance Buildable Exceptions where
     build = \case
-        ExpanderRestrictionError err -> B.build err
-        BlockStateError err -> B.build err
         BlockApplicationError err -> B.build err
-        StateModificationError err -> B.build err
-        AccountValidationError err -> B.build err
-        PublicationValidationError err -> B.build err
-        RedundantIdError err -> B.build err
-        ValidatorExecError err -> B.build err
-        CSMappendError err -> B.build err
-        TxValidationError err -> B.build err
-        StatePError err -> B.build err
-        AccountExpanderError err -> B.build err
-        PublicationExpanderError err -> B.build err
+        AccountError err -> B.build err
+        PublicationError err -> B.build err
         LogicError err -> B.build err
+        SdInternalError err -> B.build err
 
 ----------------------------------------------------------------------------
 -- TxIds
@@ -386,4 +350,22 @@ deriveView withInjProj ''Values
 deriveIdView withInjProj ''Values
 
 deriveView withInjProj ''TxIds
+deriveView withInjProj ''InternalExceptions
 deriveView withInj ''Exceptions
+
+instance HasReview Exceptions RestrictionInOutException where
+    inj = SdInternalError . inj
+instance HasReview Exceptions (BlockStateException Ids) where
+    inj = SdInternalError . inj
+instance HasReview Exceptions (StateModificationException Ids) where
+    inj = SdInternalError . inj
+instance HasReview Exceptions RedundantIdException where
+    inj = SdInternalError . inj
+instance HasReview Exceptions ValidatorExecException where
+    inj = SdInternalError . inj
+instance HasReview Exceptions (CSMappendException Ids) where
+    inj = SdInternalError . inj
+instance HasReview Exceptions TxValidationException where
+    inj = SdInternalError . inj
+instance HasReview Exceptions StatePException where
+    inj = SdInternalError . inj

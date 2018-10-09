@@ -6,7 +6,7 @@ module Dscp.Educator.Web.Student.Handlers
        ) where
 
 import Data.Default (def)
-import Servant (Handler, throwError)
+import Servant (Handler)
 import UnliftIO (UnliftIO (..))
 
 import Dscp.Core (Student)
@@ -18,6 +18,7 @@ import Dscp.Educator.Web.Student.Error
 import Dscp.Educator.Web.Student.Logic
 import Dscp.Educator.Web.Student.Queries
 import Dscp.Educator.Web.Types
+import Dscp.Web.Class
 
 studentApiHandlers
     :: forall m ctx. MonadEducatorWeb ctx m
@@ -61,6 +62,4 @@ convertStudentApiHandler
     -> m a
     -> Handler a
 convertStudentApiHandler (UnliftIO unliftIO) handler =
-    liftIO (unliftIO handler)
-        `catch` (throwError . toServantErr)
-        `catchAny` (throwError . unexpectedToServantErr)
+    processServerErrors @APIError (unliftIO handler)

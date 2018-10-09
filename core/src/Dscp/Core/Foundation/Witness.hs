@@ -61,6 +61,7 @@ module Dscp.Core.Foundation.Witness
 
 import Codec.Serialise (Serialise)
 import Control.Lens (makeLensesWith)
+import Data.Data (Data)
 
 import Fmt (blockListF, build, indentF, listF, nameF, whenF, (+|), (+||), (|+), (||+))
 
@@ -93,7 +94,7 @@ newtype StakeholderId = StakeholderId
 
 -- | Count of transactions originated _from_ given account, modulo @2^32@.
 newtype Nonce = Nonce { unNonce :: Word32 }
-    deriving (Eq, Ord, Show, Num, Enum, Real, Integral, Bounded, Generic)
+    deriving (Eq, Ord, Show, Num, Enum, Real, Integral, Bounded, Data, Generic)
 
 instance Buildable Nonce where
     build (Nonce n) = "#" +| n |+ ""

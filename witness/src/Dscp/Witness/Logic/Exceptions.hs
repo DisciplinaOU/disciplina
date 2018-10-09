@@ -4,7 +4,7 @@ module Dscp.Witness.Logic.Exceptions
     ( LogicException (..)
     ) where
 
-import Control.Exception (Exception)
+import Data.Data (Data)
 import qualified Data.Text.Buildable as B
 import qualified Text.Show
 
@@ -12,9 +12,7 @@ data LogicException
     = LEBlockAbsent Text
     | LETxAbsent Text
     | LEMalformed Text
-    deriving (Eq)
-
-instance Exception LogicException
+    deriving (Eq, Data)
 
 instance Show LogicException where
     show = toString . pretty
