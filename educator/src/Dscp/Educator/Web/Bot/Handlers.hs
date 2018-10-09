@@ -50,9 +50,9 @@ addBotHandlers student StudentApiEndpoints{..} = botEndpoints
             botProvideInitSetting student
             sGetSubmission subH
 
-        , sMakeSubmission = \newSub -> do
+        , sAddSubmission = \newSub -> do
             botProvideInitSetting student
-            res <- sMakeSubmission newSub
+            res <- sAddSubmission newSub
 
             delayed $ do
                 requestToSignedSubmission newSub >>= botGradeSubmission

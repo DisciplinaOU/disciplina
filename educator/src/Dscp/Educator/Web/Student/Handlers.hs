@@ -25,11 +25,16 @@ studentApiHandlers
     => Student -> StudentApiHandlers m
 studentApiHandlers student =
     StudentApiEndpoints
-    { sGetCourses = \isEnrolledF ->
+    {
+      -- Courses
+
+      sGetCourses = \isEnrolledF ->
         transactR $ studentGetCourses student isEnrolledF
 
     , sGetCourse = \course ->
         transactR $ studentGetCourse student course
+
+      -- Assignments
 
     , sGetAssignments = \afCourse afDocType afIsFinal ->
         transactR $
@@ -39,19 +44,23 @@ studentApiHandlers student =
     , sGetAssignment = \assignH ->
         transactR $ studentGetAssignment student assignH
 
+      -- Submissions`
+
     , sGetSubmissions = \sfCourse sfAssignmentHash sfDocType ->
         invoke $
         commonGetSubmissions StudentCase
             def{ sfStudent = Just student, sfCourse, sfAssignmentHash, sfDocType }
 
+    , sAddSubmission = \newSub ->
+        studentMakeSubmissionVerified student newSub
+
     , sGetSubmission = \subH ->
         invoke $ studentGetSubmission student subH
 
-    , sMakeSubmission = \newSub ->
-        studentMakeSubmissionVerified student newSub
-
     , sDeleteSubmission = \subH ->
         transactW $ commonDeleteSubmission subH (Just student)
+
+      -- Proofs
 
     , sGetProofs = \pfSince ->
         transactR $ commonGetProofs def{ pfSince, pfStudent = Just student }

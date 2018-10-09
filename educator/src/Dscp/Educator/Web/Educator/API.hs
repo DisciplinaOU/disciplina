@@ -1,6 +1,3 @@
-{-# LANGUAGE DataKinds     #-}
-{-# LANGUAGE TypeOperators #-}
-
 -- | Educator HTTP API definition.
 
 module Dscp.Educator.Web.Educator.API
@@ -23,6 +20,25 @@ import Dscp.Educator.Web.Educator.Error
 import Dscp.Educator.Web.Educator.Types
 import Dscp.Educator.Web.Types
 
+data EducatorApiEndpoints route = EducatorApiEndpoints
+    { eGetStudents             :: route :- GetStudents
+    , eAddStudent              :: route :- AddStudent
+    , eDeleteStudent           :: route :- DeleteStudent
+    , eAddStudentCourse        :: route :- AddStudentCourse
+    , eAddStudentAssignment    :: route :- AddStudentAssignment
+    , eDeleteStudentAssignment :: route :- DeleteStudentAssignment
+    , eGetCourses              :: route :- GetCourses
+    , eAddCourse               :: route :- AddCourse
+    , eGetAssignments          :: route :- GetAssignments
+    , eAddAssignment           :: route :- AddAssignment
+    , eGetSubmissions          :: route :- GetSubmissions
+    , eGetSubmission           :: route :- GetSubmission
+    , eDeleteSubmission        :: route :- DeleteSubmission
+    , eGetGrades               :: route :- GetGrades
+    , eAddGrade                :: route :- AddGrade
+    , eGetProofs               :: route :- GetProofs
+    } deriving (Generic)
+
 type EducatorAPI =
     "api" :> "educator" :> "v1" :> ToServant (EducatorApiEndpoints AsApi)
 
@@ -37,147 +53,153 @@ educatorAPI = Proxy
 protectedEducatorAPI :: Proxy ProtectedEducatorAPI
 protectedEducatorAPI = Proxy
 
--- TODO [DSCP-176]: add a way to fetch ALL assignments, even whose which are not assigned to any student
+---------------------------------------------------------------------------
+-- Students
+---------------------------------------------------------------------------
 
-data EducatorApiEndpoints route = EducatorApiEndpoints
-    {
-      -- Students
+type GetStudents
+    = "students"
+    :> QueryParam "course" Course
+    :> Summary "Get a list of all registered students' addresses"
+    :> Get '[DSON] [StudentInfo]
 
-      eNewStudent :: route
-        :- "students"
-        :> Summary "Add a new student address to a database"
-        :> ReqBody '[DSON] NewStudent
-        :> PostCreated '[DSON] ()
+type AddStudent
+    = "students"
+    :> Summary "Add a new student address to a database"
+    :> ReqBody '[DSON] NewStudent
+    :> PostCreated '[DSON] ()
 
-    , eRemoveStudent :: route
-        :- "students" :> Capture "studentAddr" Student
-        :> Summary "Remove a student from a database"
-        :> Description "Removes a student only if he's not currently \
-                        \attending any course. We will not automatically \
-                        \perform a cascade deletion, because it will make \
-                        \this operation particularly dangerous. If a student \
-                        \attends any course, an error will be raised."
-        :> Delete '[DSON] ()
+type DeleteStudent
+    = "students" :> Capture "student" Student
+    :> Summary "Remove a student from a database"
+    :> Description "Removes a student only if he's not currently \
+                    \attending any course. We will not automatically \
+                    \perform a cascade deletion, because it will make \
+                    \this operation particularly dangerous. If a student \
+                    \attends any course, an error will be raised."
+    :> Delete '[DSON] ()
 
-    , eGetStudents :: route
-        :- "students"
-        :> QueryParam "course" Course
-        :> Summary "Get a list of all registered students' addresses"
-        :> Get '[DSON] [StudentInfo]
+type AddStudentCourse
+    = "students" :> Capture "student" Student
+    :> "courses"
+    :> Summary "Enroll a student in a new course"
+    :> Description "Given existing student and course, enroll the \
+                    \student to the course."
+    :> ReqBody '[DSON] NewStudentCourse
+    :> PostCreated '[DSON] ()
 
-      -- Courses
+type AddStudentAssignment
+    = "students" :> Capture "student" Student
+    :> "assignments"
+    :> Summary "Assign an assignment to a student"
+    :> Description "Assigns a new assignment to a student in scope of \
+                    \given course."
+    :> ReqBody '[DSON] NewStudentAssignment
+    :> PostCreated '[DSON] ()
 
-    , eAddCourse :: route
-        :- "courses"
-        :> Summary "Add a new course to a database"
-        :> ReqBody '[DSON] NewCourse
-        :> PostCreated '[DSON] Course
+type DeleteStudentAssignment
+    = "students"    :> Capture "student" Student
+    :> "assignments" :> Capture "assignment" (Hash Assignment)
+    :> Summary "Unassign an assignment from a student"
+    :> Description "If given student has been assigned a given \
+                    \assignment, then unassigns it from them, otherwise \
+                    \raises error."
+    :> Delete '[DSON] ()
+
+---------------------------------------------------------------------------
+-- Courses
+---------------------------------------------------------------------------
+
+type GetCourses
+    = "courses"
+    :> QueryParam "student" Student
+    :> Summary "Get all courses"
+    :> Get '[DSON] [CourseEducatorInfo]
+
+type AddCourse
+    = "courses"
+    :> Summary "Add a new course to a database"
+    :> ReqBody '[DSON] NewCourse
+    :> PostCreated '[DSON] Course
     -- TODO: return proper JSON-object here
 
-    , eGetCourses :: route
-        :- "courses"
-        :> QueryParam "student" Student
-        :> Summary "Get all courses"
-        :> Get '[DSON] [CourseEducatorInfo]
+---------------------------------------------------------------------------
+-- Assignments
+---------------------------------------------------------------------------
 
-    , eEnrollStudentToCourse :: route
-        :- "students" :> Capture "studentAddr" Student
-        :> "courses"
-        :> Summary "Enroll a student in a new course"
-        :> Description "Given existing student and course, enroll the \
-                        \student to the course."
-        :> ReqBody '[DSON] EnrollStudentToCourse
-        :> PostCreated '[DSON] ()
+type GetAssignments
+    = "assignments"
+    :> QueryParam "course" Course
+    :> QueryParam "student" Student
+    :> QueryParam "isFinal" IsFinal
+    :> Summary "Get all assignments"
+    :> Get '[DSON] [AssignmentEducatorInfo]
 
-      -- Assignments
+type AddAssignment
+    = "assignments"
+    :> Summary "Add assignment to a course"
+    :> QueryFlag "autoAssign"
+    :> ReqBody '[DSON] NewAssignment
+    :> PostCreated '[DSON] ()
 
-    , eAddCourseAssignment :: route
-        :- "assignments"
-        :> Summary "Add assignment to a course"
-        :> QueryFlag "autoAssign"
-        :> ReqBody '[DSON] NewAssignment
-        :> PostCreated '[DSON] ()
+---------------------------------------------------------------------------
+-- Submissions
+---------------------------------------------------------------------------
 
-    , eGetAssignments :: route
-        :- "assignments"
-        :> QueryParam "course" Course
-        :> QueryParam "student" Student
-        :> QueryParam "isFinal" IsFinal
-        :> Summary "Get all assignments"
-        :> Get '[DSON] [AssignmentEducatorInfo]
+type GetSubmissions
+    = "submissions"
+    :> QueryParam "course" Course
+    :> QueryParam "student" Student
+    :> QueryParam "assignment" (Hash Assignment)
+    :> Summary "Get all submissions"
+    :> Description "Gets a list of all submissions done by all students. \
+                  \This method is inaccessible by students."
+    :> Get '[DSON] [SubmissionEducatorInfo]
 
-    , eAssignToStudent :: route
-        :- "students" :> Capture "studentAddr" Student
-        :> "assignments"
-        :> Summary "Assign an assignment to a student"
-        :> Description "Assigns a new assignment to a student in scope of \
-                        \given course."
-        :> ReqBody '[DSON] AssignToStudent
-        :> PostCreated '[DSON] ()
+type GetSubmission
+    = "submissions" :> Capture "submission" (Hash Submission)
+    :> Summary "Get info about a submission"
+    :> Description "Gets a submission data by given submission hash."
+    :> Get '[DSON] SubmissionEducatorInfo
 
-    , eUnassignFromStudent :: route
-        :- "students"    :> Capture "studentAddr" Student
-        :> "assignments" :> Capture "assignmentHash" (Hash Assignment)
-        :> Summary "Unassign an assignment from a student"
-        :> Description "If given student has been assigned a given \
-                        \assignment, then unassigns it from them, otherwise \
-                        \raises error."
-        :> Delete '[DSON] ()
+type DeleteSubmission
+    = "submissions" :> Capture "submission" (Hash Submission)
+    :> Summary "Delete a submission"
+    :> Description "Deletes a submission from a database. Only ungraded \
+                    \submissions can be deleted."
+    :> Delete '[DSON] ()
 
-      -- Submissions
+---------------------------------------------------------------------------
+-- Grades
+---------------------------------------------------------------------------
 
-    , eGetSubmission :: route
-        :- "submissions" :> Capture "submissionHash" (Hash Submission)
-        :> Summary "Get info about a submission"
-        :> Description "Gets a submission data by given submission hash."
-        :> Get '[DSON] SubmissionEducatorInfo
+type GetGrades
+    = "grades"
+    :> QueryParam "course" Course
+    :> QueryParam "student" Student
+    :> QueryParam "assignment" (Hash Assignment)
+    :> QueryParam "isFinal" IsFinal
+    :> Summary "Get all grades"
+    :> Description "Gets a list of all grades performed by all students."
+    :> Get '[DSON] [GradeInfo]
 
-    , eDeleteSubmission :: route
-        :- "submissions" :> Capture "submissionHash" (Hash Submission)
-        :> Summary "Delete a submission"
-        :> Description "Deletes a submission from a database. Only ungraded \
-                        \submissions can be deleted."
-        :> Delete '[DSON] ()
+type AddGrade
+    = "grades"
+    :> Summary "Post a new grade"
+    :> Description "Posts a new grade with a given body."
+    :> ReqBody '[DSON] NewGrade
+    :> PostCreated '[DSON] ()
 
-    , eGetSubmissions :: route
-        :- "submissions"
-        :> QueryParam "course" Course
-        :> QueryParam "student" Student
-        :> QueryParam "assignment" (Hash Assignment)
-        :> Summary "Get all submissions"
-        :> Description "Gets a list of all submissions done by all students. \
-                      \This method is inaccessible by students."
-        :> Get '[DSON] [SubmissionEducatorInfo]
+---------------------------------------------------------------------------
+-- Proofs
+---------------------------------------------------------------------------
 
-      -- Grades
-
-    , ePostGrade :: route
-        :- "grades"
-        :> Summary "Post a new grade"
-        :> Description "Posts a new grade with a given body."
-        :> ReqBody '[DSON] NewGrade
-        :> PostCreated '[DSON] ()
-
-    , eGetGrades :: route
-        :- "grades"
-        :> QueryParam "course" Course
-        :> QueryParam "student" Student
-        :> QueryParam "assignment" (Hash Assignment)
-        :> QueryParam "isFinal" IsFinal
-        :> Summary "Get all grades"
-        :> Description "Gets a list of all grades performed by all students."
-        :> Get '[DSON] [GradeInfo]
-
-      -- Proofs
-
-    , eGetProofs :: route
-        :- "proofs"
-        :> QueryParam "course" Course
-        :> QueryParam "student" Student
-        :> QueryParam "assignment" (Hash Assignment)
-        :> Summary "Get proofs of all student's activity"
-        :> Description "Gets all private transactions related to a student \
-                        \together with corresponding Merkle proofs."
-        :> Get '[DSON] [BlkProofInfo]
-
-   } deriving (Generic)
+type GetProofs
+    = "proofs"
+    :> QueryParam "course" Course
+    :> QueryParam "student" Student
+    :> QueryParam "assignment" (Hash Assignment)
+    :> Summary "Get proofs of all student's activity"
+    :> Description "Gets all private transactions related to a student \
+                    \together with corresponding Merkle proofs."
+    :> Get '[DSON] [BlkProofInfo]

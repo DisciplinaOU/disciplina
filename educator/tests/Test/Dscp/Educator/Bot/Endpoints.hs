@@ -49,7 +49,7 @@ spec_StudentApiWithBotQueries = describe "Basic properties" $ do
             let sigsub = tiOne $ cteSignedSubmissions env
             submissions <- lift $ do
                 StudentApiEndpoints{..} <- testMakeBotHandlers seed
-                void $ sMakeSubmission (signedSubmissionToRequest sigsub)
+                void $ sAddSubmission (signedSubmissionToRequest sigsub)
                 sGetSubmissions Nothing Nothing Nothing
             [submission] <- pure submissions
             return (isJust $ siGrade submission)

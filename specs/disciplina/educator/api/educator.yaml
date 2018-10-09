@@ -21,23 +21,27 @@ servers:
 security:
   - EducatorAuth: []
 tags:
-  - name: students
-    description: Methods for working with students and their data.
+  - name: Students
+    description: Methods for working with students and their data
+  - name: Courses
+    description: Methods for working with courses
+  - name: Assignments
+    description: Methods for working with assignments
+  - name: Submissions
+    description: Methods for working with submissions
+  - name: Grades
+    description: Methods for working with grades
+  - name: Proofs
+    description: Methods for working with proofs
 paths:
   /students:
     get:
       tags:
-        - students
+        - Students
       summary: Get a list of all registered students' addresses
       operationId: getStudents
       parameters:
-        - in: query
-          name: course
-          description: Return only students attending the given course
-          required: false
-          schema:
-            type: integer
-            format: int32
+        - $ref: '#/components/parameters/CourseFilter'
       responses:
         200:
           description: A list of all registered students' addresses
@@ -51,12 +55,12 @@ paths:
           $ref: '#/components/responses/Unauthorized'
     post:
       tags:
-        - students
+        - Students
       summary: Add a new student address to a database
       operationId: addStudent
       responses:
         201:
-          description: successful operation
+          description: Successful operation
         400:
           description: Invalid input
           content:
@@ -72,62 +76,10 @@ paths:
               $ref: '#/components/schemas/Student'
         description: Student object that needs to be added to the system
         required: true
-  /courses:
-    get:
-      tags:
-        - courses
-      summary: Get all courses
-      operationId: getCourses
-      parameters:
-        - in: query
-          name: student
-          description: Return only courses which student with given address attends
-          required: false
-          schema:
-            type: string
-            format: byte
-      responses:
-        200:
-          description: A list of all courses
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Course'
-        401:
-          $ref: '#/components/responses/Unauthorized'
-    post:
-      tags:
-        - courses
-      summary: Add a new course to a database
-      operationId: addCourse
-      responses:
-        201:
-          description: successful operation
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CourseId'
-        400:
-          description: Invalid input
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrResponse'
-        401:
-          $ref: '#/components/responses/Unauthorized'
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Course'
-        description: Course object that needs to be added to the system
-        required: true
-  /students/{studentAddr}:
+  /students/{student}:
     delete:
       tags:
-        - students
+        - Students
       summary: Remove a student from a database
       description: >-
         Removes a student only if he's not currently attending any course. We
@@ -136,10 +88,10 @@ paths:
         an error will be raised.
       operationId: deleteStudent
       parameters:
-        - $ref: '#/components/parameters/StudentAddr'
+        - $ref: '#/components/parameters/Student'
       responses:
         200:
-          description: successful operation
+          description: Successful operation
           content:
             application/json:
               schema:
@@ -164,18 +116,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrResponse'
-  /students/{studentAddr}/courses:
+  /students/{student}/courses:
     post:
       tags:
-        - students
+        - Students
       summary: Enroll a student in a new course
       description: Given existing student and course, enroll the student to the course.
-      operationId: enrollStudentToCourse
+      operationId: addStudentCourse
       parameters:
-        - $ref: '#/components/parameters/StudentAddr'
+        - $ref: '#/components/parameters/Student'
       responses:
         201:
-          description: successful operation
+          description: Successful operation
         400:
           description: Student address value or request body is invalid
           content:
@@ -206,21 +158,21 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/EnrollStudentToCourse'
+              $ref: '#/components/schemas/StudentCourse'
         description: Course to enroll
         required: true
-  /students/{studentAddr}/assignments:
+  /students/{student}/assignments:
     post:
       tags:
-        - students
+        - Students
       summary: Assign an assignment to a student
       description: Assigns a new assignment to a student in scope of given course.
-      operationId: assignToStudent
+      operationId: addStudentAssignment
       parameters:
-        - $ref: '#/components/parameters/StudentAddr'
+        - $ref: '#/components/parameters/Student'
       responses:
         201:
-          description: successful operation
+          description: Successful operation
         400:
           description: Student address value or request body is invalid
           content:
@@ -251,21 +203,21 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AssignToStudent'
+              $ref: '#/components/schemas/StudentAssignment'
         description: Assignment to assign
         required: true
-  /students/{studentAddr}/assignments/{assignmentHash}:
+  /students/{student}/assignments/{assignment}:
     delete:
       tags:
-        - students
+        - Students
       summary: Unassign an assignment from a student
       description: >-
         If given student has been assigned a given assignment, then unassigns it
         from them, otherwise raises error.
-      operationId: unassignFromStudent
+      operationId: deleteStudentAssignment
       parameters:
-        - $ref: '#/components/parameters/StudentAddr'
-        - $ref: '#/components/parameters/AssignmentHash'
+        - $ref: '#/components/parameters/Student'
+        - $ref: '#/components/parameters/Assignment'
       responses:
         400:
           description: Student address or assignment hash are invalid
@@ -281,40 +233,133 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrResponse'
+
+  /courses:
+    get:
+      tags:
+        - Courses
+      summary: Get all courses
+      operationId: getCourses
+      parameters:
+        - $ref: '#/components/parameters/StudentFilter'
+      responses:
+        200:
+          description: A list of all courses
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Course'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags:
+        - Courses
+      summary: Add a new course to a database
+      operationId: addCourse
+      responses:
+        201:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Id'
+        400:
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrResponse'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Course'
+        description: Course object that needs to be added to the system
+        required: true
+
+  /assignments:
+    get:
+      tags:
+        - Assignments
+      summary: Get all assignments
+      description: >-
+        Gets a list of all student assignments. Filter parameters are used to
+        specify specific course or student.
+      operationId: getAssignments
+      parameters:
+        - $ref: '#/components/parameters/CourseFilter'
+        - $ref: '#/components/parameters/StudentFilter'
+        - in: query
+          name: isFinal
+          description: Return only final/non-final assignments of the course
+          required: false
+          schema:
+            type: boolean
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Assignment'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags:
+        - Assignments
+      summary: Add assignment
+      operationId: addAssignment
+      parameters:
+        - in: query
+          name: autoAssign
+          description: >-
+            Automatically subscribe all students attending related course to new
+            assignment.
+          required: false
+          allowEmptyValue: true
+          schema:
+            type: boolean
+      responses:
+        201:
+          description: Successful operation
+        400:
+          description: Request body is invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrResponse'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Assignment'
+        description: An assignment
+        required: true
+
   /submissions:
     get:
       tags:
-        - submissions
+        - Submissions
       summary: Get all submissions
       description: >-
         Gets a list of all submissions done by all students. This method is
         inaccessible by students.
       operationId: getSubmissions
       parameters:
-        - in: query
-          name: course
-          description: Return only submissions related to course with given ID
-          required: false
-          schema:
-            type: integer
-            format: int32
-        - in: query
-          name: student
-          description: Return only submissions submitted by student with given address
-          required: false
-          schema:
-            type: string
-            format: byte
-        - in: query
-          name: assignment
-          description: Return only submissions for given assignment
-          required: false
-          schema:
-            type: string
-            format: byte
+        - $ref: '#/components/parameters/CourseFilter'
+        - $ref: '#/components/parameters/StudentFilter'
+        - $ref: '#/components/parameters/AssignmentFilter'
       responses:
         200:
-          description: successful operation
+          description: Successful operation
           content:
             application/json:
               schema:
@@ -323,18 +368,18 @@ paths:
                   $ref: '#/components/schemas/Submission'
         401:
           $ref: '#/components/responses/Unauthorized'
-  /submissions/{submissionHash}:
+  /submissions/{submission}:
     get:
       tags:
-        - submissions
+        - Submissions
       summary: Get info about a submission
       description: Gets a submission data by given submission hash.
       operationId: getSubmission
       parameters:
-        - $ref: '#/components/parameters/SubmissionHash'
+        - $ref: '#/components/parameters/Submission'
       responses:
         200:
-          description: successful operation
+          description: Successful operation
           content:
             application/json:
               schema:
@@ -355,17 +400,17 @@ paths:
                 $ref: '#/components/schemas/ErrResponse'
     delete:
       tags:
-        - submissions
+        - Submissions
       summary: Delete a submission
       description: >-
         Deletes a submission from a database. Only ungraded submissions can be
         deleted.
       operationId: deleteSubmission
       parameters:
-        - $ref: '#/components/parameters/SubmissionHash'
+        - $ref: '#/components/parameters/Submission'
       responses:
         200:
-          description: successful operation
+          description: Successful operation
         400:
           description: Submission hash value is invalid
           content:
@@ -386,35 +431,18 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrResponse'
+
   /grades:
     get:
       tags:
-        - grades
+        - Grades
       summary: Get all grades
       description: Gets a list of all grades performed by all students.
       operationId: getGrades
       parameters:
-        - in: query
-          name: course
-          description: Return only grades related to course with given ID
-          required: false
-          schema:
-            type: integer
-            format: int32
-        - in: query
-          name: student
-          description: Return only grades for student with given address
-          required: false
-          schema:
-            type: string
-            format: byte
-        - in: query
-          name: assignment
-          description: Return only grades for given assignment
-          required: false
-          schema:
-            type: string
-            format: byte
+        - $ref: '#/components/parameters/CourseFilter'
+        - $ref: '#/components/parameters/StudentFilter'
+        - $ref: '#/components/parameters/AssignmentFilter'
         - in: query
           name: isFinal
           description: Return only grades for final/non-final assignments of the course
@@ -423,7 +451,7 @@ paths:
             type: boolean
       responses:
         200:
-          description: successful operation
+          description: Successful operation
           content:
             application/json:
               schema:
@@ -434,13 +462,13 @@ paths:
           $ref: '#/components/responses/Unauthorized'
     post:
       tags:
-        - grades
+        - Grades
       summary: Post a new grade
       description: Posts a new grade with a given body.
-      operationId: postGrade
+      operationId: addGrade
       responses:
         201:
-          description: successful operation
+          description: Successful operation
           content:
             application/json:
               schema:
@@ -460,117 +488,29 @@ paths:
               $ref: '#/components/schemas/Grade'
         description: A grade
         required: true
-  /assignments:
-    get:
-      tags:
-        - assignments
-      summary: Get all assignments
-      description: >-
-        Gets a list of all student assignments. Filter parameters are used to
-        specify specific course or student.
-      operationId: getAssignments
-      parameters:
-        - in: query
-          name: course
-          description: Return only assignments related to course with given ID
-          required: false
-          schema:
-            type: integer
-            format: int32
-        - in: query
-          name: student
-          description: Return only assignments assigned to a student with given address
-          required: false
-          schema:
-            type: string
-            format: byte
-        - in: query
-          name: isFinal
-          description: Return only final/non-final assignments of the course
-          required: false
-          schema:
-            type: boolean
-      responses:
-        200:
-          description: successful operation
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Assignment'
-        401:
-          $ref: '#/components/responses/Unauthorized'
-    post:
-      tags:
-        - assignments
-      summary: Add assignment to a course
-      operationId: addCourseAssignment
-      parameters:
-        - in: query
-          name: autoAssign
-          description: >-
-            Automatically subscribe all students attending related course to new
-            assignment.
-          required: false
-          schema:
-            type: boolean
-      responses:
-        201:
-          description: successful operation
-        400:
-          description: Request body is invalid
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrResponse'
-        401:
-          $ref: '#/components/responses/Unauthorized'
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/AssignmentReq'
-        description: An assignment
-        required: true
+
   /proofs:
     get:
       tags:
-        - proofs
+        - Proofs
       summary: Get Merkle proofs of grades (i. e. private blocks or parts of them)
       description: >-
         Gets all private transactions related with corresponding Merkle proofs,
         grouped by blocks.
       operationId: getProofs
       parameters:
-        - in: query
-          name: course
-          description: Return only proofs related to the course with given ID
-          required: false
-          schema:
-            type: integer
-            format: int32
-        - in: query
-          name: student
-          description: Return only proofs related to the student with given address
-          required: false
-          schema:
-            type: string
-            format: byte
-        - in: query
-          name: assignment
-          description: Return proofs only for given assignment
-          required: false
-          schema:
-            type: string
-            format: byte
+        - $ref: '#/components/parameters/CourseFilter'
+        - $ref: '#/components/parameters/StudentFilter'
+        - $ref: '#/components/parameters/AssignmentFilter'
       responses:
         200:
-          description: successful operation
+          description: Successful operation
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Proofs'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Proof'
         400:
           description: Student address value is invalid
           content:
@@ -587,38 +527,59 @@ paths:
                 $ref: '#/components/schemas/ErrResponse'
 components:
   parameters:
-    StudentAddr:
+    # Path parameters
+    Course:
       in: path
-      name: studentAddr
-      description: Student's Disciplina address
-      required: true
-      schema:
-        type: string
-        format: byte
-    CourseId:
-      in: path
-      name: courseId
+      name: course
       description: Course ID
       required: true
       schema:
-        type: integer
-        format: int32
-    AssignmentHash:
+        $ref: '#/components/schemas/Id'
+    Student:
       in: path
-      name: assignmentHash
+      name: student
+      description: Student's Disciplina address
+      required: true
+      schema:
+        $ref: '#/components/schemas/Address'
+    Assignment:
+      in: path
+      name: assignment
       description: Assignment hash
       required: true
       schema:
-        type: string
-        format: byte
-    SubmissionHash:
+        $ref: '#/components/schemas/Hash'
+    Submission:
       in: path
-      name: submissionHash
+      name: submission
       description: Submission hash
       required: true
       schema:
-        type: string
-        format: byte
+        $ref: '#/components/schemas/Hash'
+
+    # Query filters
+    CourseFilter:
+      in: query
+      name: course
+      description: Filter result items by given course
+      required: false
+      schema:
+        $ref: '#/components/schemas/Id'
+    StudentFilter:
+      in: query
+      name: student
+      description: Filter result items by given student
+      required: false
+      schema:
+        $ref: '#/components/schemas/Address'
+    AssignmentFilter:
+      in: query
+      name: assignment
+      description: Filter result items by given assignment
+      required: false
+      schema:
+        $ref: '#/components/schemas/Hash'
+
   responses:
     Unauthorized:
       description: Unauthorized
@@ -626,74 +587,27 @@ components:
         WWW-Authenticate:
           schema:
             type: string
-  securitySchemes:
-    EducatorAuth:
-      type: apiKey
-      name: Authorization
-      in: header
-      description: >
-        Authentication system requires a JWS in Authorization header in `Bearer
-        ` format. Example header:
 
-        ```
-
-        Authorization: Bearer
-        eyJhbGciOiJFZERTQSIsImp3ayI6eyJjcnYiOiJFZDI1NTE5IiwieCI6InFlU3ZrUzZnaW9CcjRlX2I2em8zTWlPT1NYQW90VjkwdDVLajNsMjh5cm8iLCJrdHkiOiJPS1AifX0.eyJwYXRoIjoiL2FwaS9lZHVjYXRvci92MS9zdHVkZW50cyIsInRpbWUiOiIyMDI1LTAxLTAxVDAwOjAwOjAwWiJ9.0_sRvkXTaJTlnLHSjReH70VNFOLx0kdGHDmiDWhUr6H25UCvc5kPD6qn9pDlUwe0uKMpQCGIt_v4hnwWcfVlDA
-
-        ```
-
-
-        JWS header MUST contain "jwk" parameter ([RFC7515, section
-        4.1.3](https://tools.ietf.org/html/rfc7515#section-4.1.3)) with a
-
-        public JWK corresponding to the signature. JWK MUST have key type "OKP"
-        and curve type "Ed25519", public key parameter "x"
-
-        should be encoded via base64Url (accordingly to
-        [RFC8037](https://tools.ietf.org/html/rfc8037)). Example JWK:
-
-        ```
-
-        { "kty": "OKP", "crv": "Ed25519", "x":
-        "2qbm2mPrVVW_yFsHUMzNt3hLdalGLTN8ucI4e-Cn6fI" }
-
-        ```
-
-        This JWK represents a Disciplina public key of an Educator. The whole
-        JWS should be created via the Educator's secret key.
-
-        JWS payload MUST be a JSON object with fields "path" and "time". Field
-        "path" should contain the endpoint URL path and "time"
-
-        should contain the time the request has been made in
-        [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601) format. Example JWS
-
-        payload:
-
-        ```
-
-        {
-          "time": "2025-01-01T00:00:00.000000000Z",
-          "path": "/api/educator/v1/students"
-        }
-
-        ```
-
-        If the request's raw path doesn't match the one in "path" or "time" is
-        more than 5 minutes behind the server current time,
-
-        the authentication process will fail.
   schemas:
+    # Primitives
+    Id:
+      type: integer
+      format: int32
+      description: Numeric item ID
     Hash:
       type: string
-      format: byte
-      description: Hex encoded blake2b (256 bits) hash
+      format: hex
+      description: Blake2b (256 bits) hash
     Address:
       type: string
-      format: byte
+      format: base58
+      description: Disciplina address
     Time:
       type: string
       format: date-time
+      description: Time in ISO format
+
+    # Entities
     Student:
       type: object
       required:
@@ -701,29 +615,40 @@ components:
       properties:
         addr:
           $ref: '#/components/schemas/Address'
-    CourseId:
-      type: integer
-      format: int32
+    StudentCourse:
+      type: object
+      required:
+        - course
+      properties:
+        course:
+          $ref: '#/components/schemas/Id'
+    StudentAssignment:
+      type: object
+      required:
+        - assignment
+      properties:
+        assignment:
+          $ref: '#/components/schemas/Hash'
     Course:
       type: object
       required:
+        - id
         - desc
         - subjects
       properties:
         id:
-          $ref: '#/components/schemas/CourseId'
+          allOf:
+            - $ref: '#/components/schemas/Id'
+            - readOnly: true
         desc:
           type: string
         subjects:
           type: array
           items:
             $ref: '#/components/schemas/Subject'
-    EnrollStudentToCourse:
-      required:
-        - course
-      properties:
-        course:
-          $ref: '#/components/schemas/CourseId'
+    Subject:
+      type: integer
+      format: int32
     Assignment:
       type: object
       required:
@@ -734,38 +659,17 @@ components:
         - desc
       properties:
         hash:
-          $ref: '#/components/schemas/Hash'
+          allOf:
+            - readOnly: true
+            - $ref: '#/components/schemas/Hash'
         courseId:
-          $ref: '#/components/schemas/CourseId'
+          $ref: '#/components/schemas/Id'
         contentsHash:
           $ref: '#/components/schemas/Hash'
         isFinal:
           type: boolean
         desc:
           type: string
-    AssignmentReq:
-      type: object
-      required:
-        - courseId
-        - contentsHash
-        - isFinal
-        - desc
-      properties:
-        courseId:
-          $ref: '#/components/schemas/CourseId'
-        contentsHash:
-          $ref: '#/components/schemas/Hash'
-        isFinal:
-          type: boolean
-        desc:
-          type: string
-    AssignToStudent:
-      type: object
-      required:
-        - assignmentHash
-      properties:
-        assignmentHash:
-          $ref: '#/components/schemas/Hash'
     Submission:
       type: object
       required:
@@ -776,11 +680,13 @@ components:
         - witness
       properties:
         hash:
-          $ref: '#/components/schemas/Hash'
+          allOf:
+            - readOnly: true
+            - $ref: '#/components/schemas/Hash'
         contentsHash:
           $ref: '#/components/schemas/Hash'
-        assignment:
-          $ref: '#/components/schemas/Assignment'
+        assignmentHash:
+          $ref: '#/components/schemas/Hash'
         studentAddr:
           $ref: '#/components/schemas/Address'
         witness:
@@ -789,17 +695,20 @@ components:
     Grade:
       type: object
       required:
+        - timestamp
         - submissionHash
         - grade
+        - hasProof
       properties:
+        timestamp:
+          allOf:
+            - $ref: '#/components/schemas/Time'
+            - readOnly: true
         submissionHash:
           $ref: '#/components/schemas/Hash'
         grade:
           type: integer
           format: int32
-        timestamp:
-          $ref: '#/components/schemas/Time'
-          readOnly: true
         hasProof:
           type: boolean
           readOnly: true
@@ -817,7 +726,7 @@ components:
           format: int32
         timestamp:
           $ref: '#/components/schemas/Time'
-    BlkProof:
+    Proof:
       type: object
       required:
         - mtreeSerialized
@@ -830,13 +739,8 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Transaction'
-    Proofs:
-      type: array
-      items:
-        $ref: '#/components/schemas/BlkProof'
-    Subject:
-      type: integer
-      format: int32
+
+    # Errors
     ErrResponse:
       type: object
       required:
@@ -874,3 +778,32 @@ components:
 
               * `StudentIsActive` - Can not delete a student because he is attending a course.
               * `DeletingGradedSubmission` - Attempt to delete an already graded submission.
+  securitySchemes:
+    EducatorAuth:
+      type: apiKey
+      name: Authorization
+      in: header
+      description: |
+        Authentication system requires a JWS in Authorization header in `Bearer <JWS>` format. Example header:
+        ```
+        Authorization: Bearer eyJhbGciOiJFZERTQSIsImp3ayI6eyJjcnYiOiJFZDI1NTE5IiwieCI6InFlU3ZrUzZnaW9CcjRlX2I2em8zTWlPT1NYQW90VjkwdDVLajNsMjh5cm8iLCJrdHkiOiJPS1AifX0.eyJwYXRoIjoiL2FwaS9lZHVjYXRvci92MS9zdHVkZW50cyIsInRpbWUiOiIyMDI1LTAxLTAxVDAwOjAwOjAwWiJ9.0_sRvkXTaJTlnLHSjReH70VNFOLx0kdGHDmiDWhUr6H25UCvc5kPD6qn9pDlUwe0uKMpQCGIt_v4hnwWcfVlDA
+        ```
+
+        JWS header MUST contain "jwk" parameter ([RFC7515, section 4.1.3](https://tools.ietf.org/html/rfc7515#section-4.1.3)) with a
+        public JWK corresponding to the signature. JWK MUST have key type "OKP" and curve type "Ed25519", public key parameter "x"
+        should be encoded via base64Url (accordingly to [RFC8037](https://tools.ietf.org/html/rfc8037)). Example JWK:
+        ```
+        { "kty": "OKP", "crv": "Ed25519", "x": "2qbm2mPrVVW_yFsHUMzNt3hLdalGLTN8ucI4e-Cn6fI" }
+        ```
+        This JWK represents a Disciplina public key of an Educator. The whole JWS should be created via the Educator's secret key.
+        JWS payload MUST be a JSON object with fields "path" and "time". Field "path" should contain the endpoint URL path and "time"
+        should contain the time the request has been made in [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601) format. Example JWS
+        payload:
+        ```
+        {
+          "time": "2025-01-01T00:00:00.000000000Z",
+          "path": "/api/educator/v1/students"
+        }
+        ```
+        If the request's raw path doesn't match the one in "path" or "time" is more than 5 minutes behind the server current time,
+        the authentication process will fail.
