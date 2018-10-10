@@ -57,6 +57,17 @@ instance ToJSON SubmissionWitness where
 instance FromJSON SubmissionWitness where
     parseJSON = parseJSONSerialise Base16
 
+instance ToJSON ATGSubjectChange where
+    toJSON = String . \case
+        ATGAdded -> "added"
+        ATGRemoved -> "removed"
+
+instance FromJSON ATGSubjectChange where
+    parseJSON = withText "ATG subject change" $ \case
+        "added" -> pure ATGAdded
+        "removed" -> pure ATGRemoved
+        _ -> fail "Invalid ATG subject change"
+
 instance FromJSON Governance where
   parseJSON = withObject "governance" $ \o -> do
     (governanceType :: Text) <- o .: "type"
@@ -123,7 +134,6 @@ deriving instance FromJSON GenesisDistribution
 deriveJSON defaultOptions ''Assignment
 deriveJSON defaultOptions ''Submission
 deriveJSON defaultOptions ''SignedSubmission
-deriveJSON defaultOptions ''MerkleSignature
 deriveJSON defaultOptions ''PrivateTx
 deriveJSON defaultOptions ''PrivateBlockHeader
 deriveJSON defaultOptions ''Header

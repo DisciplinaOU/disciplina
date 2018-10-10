@@ -79,7 +79,7 @@ paths:
           schema:
             type: object
             properties:
-              transactions:
+              blocks:
                 type: array
                 items:
                   $ref: "#/definitions/BlockInfo"
@@ -178,15 +178,6 @@ paths:
         type: integer
         format: int32
       - in: query
-        name: txType
-        description: Filter on transaction type.
-        default: all
-        type: string
-        enum:
-          - all
-          - money
-          - publications
-      - in: query
         name: account
         description: Remain only transactions affecting given account.
         type: string
@@ -250,7 +241,7 @@ paths:
           description: Successful operation
           schema:
             allOf:
-            - $ref: "#/definitions/TransactionInfo"
+            - $ref: "#/definitions/GeneralizedTransactionInfo"
             - $ref: "#/definitions/AndBlockInfo"
         400:
           description: Invalid input
@@ -316,7 +307,7 @@ paths:
                 type: array
                 items:
                   allOf:
-                  - $ref: "#/definitions/PrivateBlockInfo"
+                  - $ref: "#/definitions/PublicationInfo"
                   - $ref: "#/definitions/AndBlockInfo"
               nextId:
                 $ref: "#/definitions/Hash"
@@ -394,7 +385,7 @@ definitions:
       currentNonce:
         type: integer
         format: int32
-  TransactionInfo:
+  GeneralizedTransactionInfo:
     type: object
     discriminator: txType
     properties:
@@ -403,6 +394,17 @@ definitions:
         enum:
         - money
         - publication
+      txId:
+        $ref: "#/definitions/Hash"
+      outValue:
+        $ref: "#/definitions/Coin"
+      money:
+        $ref: "#/definitions/TransactionInfo"
+      publication:
+        $ref: "#/definitions/PublicationInfo"
+  TransactionInfo:
+    type: object
+    properties:
       txId:
         $ref: "#/definitions/Hash"
       outValue:
@@ -429,15 +431,20 @@ definitions:
                   $ref: "#/definitions/Address"
                 value:
                   $ref: "#/definitions/Coin"
+  PublicationInfo:
+    type: object
+    properties:
+      txId:
+        $ref: "#/definitions/Hash"
       publication:
         type: object
         properties:
           author:
             $ref: "#/definitions/Address"
-          block:
-            $ref: "#/definitions/Hash"
-          prevBlock:
-            $ref: "#/definitions/Hash"
+          feesAmount:
+            $ref: "#/definitions/Coin"
+          header:
+            $ref: "#/definitions/PrivateBlockHeader"
   AndBlockInfo:
     type: object
     properties:
@@ -452,13 +459,22 @@ definitions:
           allOf:
           - $ref: "#/definitions/TransactionInfo"
           - $ref: "#/definitions/AndBlockInfo"
+  GeneralizedTransactionList:
+    type: object
+    properties:
+      transactions:
+        type: array
+        items:
+          allOf:
+          - $ref: "#/definitions/GeneralizedTransactionInfo"
+          - $ref: "#/definitions/AndBlockInfo"
   BlockTransactionList:
     type: object
     properties:
       transactions:
         type: array
         items:
-          $ref: "#/definitions/TransactionInfo"
+          $ref: "#/definitions/GeneralizedTransactionInfo"
   TxInAcc:
     type: object
     description: Transaction source account info.
@@ -517,18 +533,19 @@ definitions:
           enum:
             - removed
             - added
-  PrivateBlockInfo:
+  PrivateBlockHeader:
     type: object
     properties:
-      hash:
+      prevBlock:
         $ref: "#/definitions/Hash"
-      merkleRoot:
-        type: string
-        format: byte
-        description: Hex-encoded root of merkle tree which the private block contains.
-      transactionsNum:
-        type: integer
-        format: int32
+      bodyProof:
+        type: object
+        properties:
+          root:
+            $ref: "#/definitions/Hash"
+          transactionsNum:
+            type: integer
+            format: int32
       atgDelta:
         $ref: "#/definitions/AtgDelta"
   ErrResponse:

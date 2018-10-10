@@ -68,6 +68,7 @@ module Dscp.Core.Foundation.Educator
     , getPrevBlockRefMaybe
 
     -- * Activity Type Graph
+    , ATGSubjectChange (..)
     , ATGDelta (..)
     , isEmptyATGDelta
     , ATGNode (..)
@@ -229,13 +230,23 @@ makeLenses ''Submission
 makeLenses ''SubmissionWitness
 makeLenses ''SignedSubmission
 
+data ATGSubjectChange
+    = ATGAdded
+    | ATGRemoved
+    deriving (Eq, Ord, Show, Generic)
+
+instance Buildable ATGSubjectChange where
+    build = \case
+        ATGAdded -> "added"
+        ATGRemoved -> "removed"
+
 -- | ATGDelta is a diff for set of subjects which are taught by Educator.
 -- Implemented as 'Map SubjectId Bool' to avoid representing invalid diffs
 -- (like, subject is present simultaneously in added and removed sets).
 -- TODO: maybe we should separately make up a library for such stuff,
 -- like 'MapModifier'?
 newtype ATGDelta = ATGDelta
-    { getATGDelta :: Map (Id Subject) Bool
+    { getATGDelta :: Map (Id Subject) ATGSubjectChange
     } deriving (Show, Eq, Ord, Monoid, Generic)
 
 instance Buildable ATGDelta where
@@ -327,14 +338,14 @@ instance Buildable PrivateBlockHeader where
 -- | Genesis hash, serves as previous block reference for the first block.
 -- TODO: move to 'Genesis' module when it is formed somehow. Also, should
 -- private genesis hash actually make some sense?
-genesisHeaderHash :: Address -> PrivateHeaderHash
-genesisHeaderHash educator = unsafeHash (educator, "pvaforever" :: ByteString)
+genesisHeaderHash :: PrivateHeaderHash
+genesisHeaderHash = unsafeHash ("pvaforever" :: ByteString)
 
 -- | Get previous block header, if previous block exists,
 -- 'Nothing' otherwise.
-getPrevBlockRefMaybe :: Address -> PrivateBlockHeader -> Maybe PrivateHeaderHash
-getPrevBlockRefMaybe educator PrivateBlockHeader {..} =
-    if _pbhPrevBlock == genesisHeaderHash educator
+getPrevBlockRefMaybe :: PrivateBlockHeader -> Maybe PrivateHeaderHash
+getPrevBlockRefMaybe PrivateBlockHeader {..} =
+    if _pbhPrevBlock == genesisHeaderHash
     then Nothing
     else Just _pbhPrevBlock
 

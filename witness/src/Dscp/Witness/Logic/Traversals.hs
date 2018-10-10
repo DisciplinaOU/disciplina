@@ -17,6 +17,7 @@ module Dscp.Witness.Logic.Traversals
     ) where
 
 import Control.Monad.Trans.Except (throwE)
+import Data.Coerce (coerce)
 import Data.Conduit ((.|))
 import qualified Data.Conduit as C
 import qualified Data.Conduit.Combinators as C
@@ -208,7 +209,7 @@ txsSource = \case
     Nothing -> lift getTipBlock >>= loadTxs Nothing
     Just gTxId -> do
         (block, txIdx) <- lift $ do
-            TxBlockRef{..} <- gTxId `assertExists` LEMalformed ("Can't get block ref for tx " <> show gTxId)
+            TxBlockRef{..} <- gTxId `assertExists` LETxAbsent ("Can't get block ref for tx " <> show gTxId)
             block <- nothingToError (SD.inj . LEMalformed $ "Can't get block " <> show tbrBlockRef)
                 =<< getBlockMaybe tbrBlockRef
             return (block, tbrTxIdx)
@@ -250,15 +251,12 @@ accountTxsSource address mStart =
 -- recent one.
 publicationsSource
     :: HasWitnessConfig
-    => Maybe PrivateHeaderHash
-    -> C.ConduitT () (WithBlock PrivateBlockHeader) SdM ()
-publicationsSource mStart = do
-    mStartTx <- lift . forM mStart $ \phHash ->
-        toGTxId . GPublicationTx <$>
-        phHash `assertExists` LEPrivateBlockAbsent ("No private header found: " <> show phHash)
-    txsSource mStartTx .| C.concatMap (mapM @WithBlock $ preview gtxPrivateHeaderL)
-  where
-    gtxPrivateHeaderL = _GPublicationTxWitnessed . ptwTxL . ptHeaderL
+    => Maybe PublicationTxId
+    -> C.ConduitT () (WithBlock PublicationTx) SdM ()
+publicationsSource mStart' = do
+    let mStart = coerce @(Maybe PublicationTxId) @(Maybe GTxId) mStart'
+    txsSource mStart
+        .| C.concatMap (mapM @WithBlock $ preview (_GPublicationTxWitnessed . ptwTxL))
 
 -- | Retrieves private blocks of the given educator starting with the given one
 -- down the chain.
@@ -267,27 +265,31 @@ publicationsSource mStart = do
 educatorPublicationsSource
     :: HasWitnessConfig
     => Address
-    -> Maybe PrivateHeaderHash
-    -> C.ConduitT () (WithBlock PrivateBlockHeader) SdM ()
+    -> Maybe PublicationTxId
+    -> C.ConduitT () (WithBlock PublicationTx) SdM ()
 educatorPublicationsSource educator = \case
     Nothing -> do
         mheader <- lift $ SD.queryOne (PublicationsOf educator)
-        whenJust mheader (loadChain . unLastPublication)
-    Just start -> loadChain start
+        whenJust mheader $ \(LastPublication header) -> do
+            ptxId <- lift $ header `assertExists` noPrivHeader header
+            loadChain ptxId
+    Just ptxId -> loadChain ptxId
   where
-    loadChain pheaderHash = do
-        (header, block) <- lift $ do
-            ptx <- pheaderHash `assertExists` noPrivBlock pheaderHash
-            let header = ptHeader ptx
-            mBlockHash <- SD.queryOne (PublicationBlock pheaderHash)
-            mblock <- mapM (getBlock . unPublicationBlockRef) mBlockHash
-            return (header, mblock)
-        C.yield $ WithBlock block header
+    loadChain ptxId = do
+        PublicationData{ pdTx = ptx } <-
+            lift $ ptxId `assertExists` noPubTxId ptxId
+        mblock <- lift $ do
+            mBlockHash <- SD.queryOne (PublicationBlock ptxId)
+            mapM (getBlock . unPublicationBlockRef) mBlockHash
+        C.yield $ WithBlock mblock ptx
 
-        let prevHash = _pbhPrevBlock header
-        unless (prevHash == educatorGenesisHash) $
-            loadChain prevHash
+        let prevHash = _pbhPrevBlock (ptHeader ptx)
+        unless (prevHash == genesisHeaderHash) $
+            lift (prevHash `assertExists` noPrivHeader prevHash)
+            >>= loadChain
 
-    educatorGenesisHash = genesisHeaderHash educator
-    noPrivBlock (h :: PrivateHeaderHash) =
-        LEPrivateBlockAbsent $ "Private block not found: " +| h |+ ""
+    noPrivHeader (h :: PrivateHeaderHash) =
+        LEPrivateBlockAbsent $ "Publication for such private header hash not \
+                               \found: " +| h |+ ""
+    noPubTxId (ptxId :: PublicationTxId) =
+        LEMalformed $ "No publication transaction found: " +| ptxId |+ ""

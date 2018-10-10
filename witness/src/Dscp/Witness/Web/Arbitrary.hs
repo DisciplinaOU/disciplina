@@ -7,6 +7,8 @@ import Dscp.Util.Test
 import Dscp.Witness.Web.Types
 import Test.QuickCheck.Arbitrary.Generic (genericArbitrary, genericShrink)
 
+deriving instance Arbitrary a => Arbitrary (Detailed a)
+
 instance (Arbitrary a, Arbitrary (Id a)) => Arbitrary (PaginatedList d a) where
     arbitrary = genericArbitrary
     shrink = genericShrink
@@ -28,22 +30,6 @@ instance Arbitrary AccountInfo where
     shrink = genericShrink
 
 instance Arbitrary HashIs where
-    arbitrary = genericArbitrary
-    shrink = genericShrink
-
-instance Arbitrary TxTypeFilter where
-    arbitrary = genericArbitrary
-    shrink = genericShrink
-
-instance Arbitrary ATGChange where
-    arbitrary = genericArbitrary
-    shrink = genericShrink
-
-instance Arbitrary ATGSubjectChange where
-    arbitrary = genericArbitrary
-    shrink = genericShrink
-
-instance Arbitrary PrivateBlockInfoPart where
     arbitrary = genericArbitrary
     shrink = genericShrink
 

@@ -20,22 +20,23 @@ import Dscp.Snowdrop.Configuration
 import Dscp.Snowdrop.Storage.Types
 
 data BlockStorage = BlockStorage
-    { _bsBlunds       :: Map HeaderHash SBlund
-    , _bsTip          :: TipValue HeaderHash
-    , _bsTxs          :: Map GTxId TxBlockRef
-    , _bsAccLastTxs   :: Map TxsOf LastTx
-    , _bsAccNextTxs   :: Map TxHead TxNext
-    , _bsAccPubs      :: Map PrivateHeaderHash PublicationTx
-    , _bsAccLastPubs  :: Map PublicationsOf LastPublication
-    , _bsAccNextPubs  :: Map PublicationHead PublicationNext
-    , _bsAccPubBlocks :: Map PublicationBlock PublicationBlockRef
-    , _bsNextBlocks   :: Map NextBlockOf NextBlock
-    , _bsBlockIdx     :: Map Difficulty HeaderHash
+    { _bsBlunds        :: Map HeaderHash SBlund
+    , _bsTip           :: TipValue HeaderHash
+    , _bsTxs           :: Map GTxId TxBlockRef
+    , _bsAccLastTxs    :: Map TxsOf LastTx
+    , _bsAccNextTxs    :: Map TxHead TxNext
+    , _bsPrivBlockPubs :: Map PrivateHeaderHash PublicationTxId
+    , _bsAccPubs       :: Map PublicationTxId PublicationData
+    , _bsAccLastPubs   :: Map PublicationsOf LastPublication
+    , _bsAccNextPubs   :: Map PublicationHead PublicationNext
+    , _bsAccPubBlocks  :: Map PublicationBlock PublicationBlockRef
+    , _bsNextBlocks    :: Map NextBlockOf NextBlock
+    , _bsBlockIdx      :: Map Difficulty HeaderHash
     }
 makeLenses ''BlockStorage
 
 emptyBlockStorage :: BlockStorage
-emptyBlockStorage = BlockStorage mempty (TipValue Nothing) mempty mempty mempty mempty mempty mempty mempty mempty mempty
+emptyBlockStorage = BlockStorage mempty (TipValue Nothing) mempty mempty mempty mempty mempty mempty mempty mempty mempty mempty
 
 queryMany :: (Ord id, Monad m, Foldable f) => (id -> m (Maybe value)) -> f id -> m (Map id value)
 queryMany doOne = foldM (\resp i -> maybe resp (\v -> M.insert i v resp) <$> doOne i) mempty
@@ -71,6 +72,8 @@ blockDbActions = mkActions <$> liftIO (newTVarIO emptyBlockStorage)
         foldr foldF b . map (bimap TxOfIds TxOfVal) . M.toList . _bsAccLastTxs <$> readTVar var
       | prefix == txHeadPrefix =
         foldr foldF b . map (bimap TxHeadIds TxHeadVal) . M.toList . _bsAccNextTxs <$> readTVar var
+      | prefix == privateBlockTxPrefix =
+        foldr foldF b . map (bimap PrivateBlockTx PrivateBlockTxVal) . M.toList . _bsPrivBlockPubs <$> readTVar var
       | prefix == publicationIdsPrefix =
         foldr foldF b . map (bimap PublicationIds PublicationVal) . M.toList . _bsAccPubs <$> readTVar var
       | prefix == publicationOfPrefix =
@@ -93,7 +96,8 @@ blockDbActions = mkActions <$> liftIO (newTVarIO emptyBlockStorage)
         (TxIds gTxId)                -> fmap TxVal . M.lookup gTxId . view bsTxs <$> readTVar var
         (TxOfIds txOf)               -> fmap TxOfVal . M.lookup txOf . view bsAccLastTxs <$> readTVar var
         (TxHeadIds txHead)           -> fmap TxHeadVal . M.lookup txHead . view bsAccNextTxs <$> readTVar var
-        (PublicationIds pbh)         -> fmap PublicationVal . M.lookup pbh . view bsAccPubs <$> readTVar var
+        (PrivateBlockTx pbh)         -> fmap PrivateBlockTxVal . M.lookup pbh . view bsPrivBlockPubs <$> readTVar var
+        (PublicationIds ptxId)       -> fmap PublicationVal . M.lookup ptxId . view bsAccPubs <$> readTVar var
         (PublicationOfIds pubOf)     -> fmap PublicationOfVal . M.lookup pubOf . view bsAccLastPubs <$> readTVar var
         (PublicationHeadIds pubHead) -> fmap PublicationHeadVal . M.lookup pubHead . view bsAccNextPubs <$> readTVar var
         (PublicationBlockIds pbh)    -> fmap PublicationBlockVal . M.lookup pbh . view bsAccPubBlocks <$> readTVar var
@@ -119,9 +123,12 @@ blockDbActions = mkActions <$> liftIO (newTVarIO emptyBlockStorage)
     applyOne var (TxHeadIds txHead) =
         performActionWithTVar var (bsAccNextTxs . at txHead) (applyException txHead) <=<
         projValOp @TxHead
-    applyOne var (PublicationIds pbh) =
-        performActionWithTVar var (bsAccPubs . at pbh) (applyException pbh) <=<
+    applyOne var (PrivateBlockTx pbh) =
+        performActionWithTVar var (bsPrivBlockPubs . at pbh) (applyException pbh) <=<
         projValOp @PrivateHeaderHash
+    applyOne var (PublicationIds ptxId) =
+        performActionWithTVar var (bsAccPubs . at ptxId) (applyException ptxId) <=<
+        projValOp @PublicationTxId
     applyOne var (PublicationOfIds pubOf) =
         performActionWithTVar var (bsAccLastPubs . at pubOf) (applyException pubOf) <=<
         projValOp @PublicationsOf

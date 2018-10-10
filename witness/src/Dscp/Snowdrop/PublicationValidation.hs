@@ -71,7 +71,7 @@ preValidatePublication =
 
         let prevHash = privHeader ^. pbhPrevBlock
         let (prevHashM :: Maybe PrivateHeaderHash) =
-                prevHash <$ guard (prevHash /= genesisHeaderHash authorId)
+                prevHash <$ guard (prevHash /= genesisHeaderHash)
 
         -- Checking that prevBlockHash matches the one from storage.
         lastPub <- queryOne (PublicationsOf authorId)

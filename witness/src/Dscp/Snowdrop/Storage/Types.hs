@@ -12,6 +12,7 @@ module Dscp.Snowdrop.Storage.Types
     , PublicationBlock (..)
     , PublicationHead (..)
     , PublicationNext (..)
+    , PublicationData (..)
 
     , NextBlockOf (..)
     , NextBlock (..)
@@ -68,7 +69,7 @@ data TxNext = TxNext { unTxNext :: GTxId }
 
 -- | Points to public block which contains given publication.
 newtype PublicationBlock = PublicationBlock
-    { unPublicationBlock :: PrivateHeaderHash
+    { unPublicationBlock :: PublicationTxId
     } deriving (Eq, Ord, Show, Generic)
 
 instance Buildable PublicationBlock where
@@ -109,6 +110,16 @@ data PublicationNext
     = PublicationNext (Maybe PrivateHeaderHash)
     deriving (Eq, Ord, Show, Generic)
 
+-- | Publication taken by id.
+data PublicationData = PublicationData
+    { pdTx   :: PublicationTx
+    , pdTxId :: PublicationTxId
+    } deriving (Eq, Ord, Show, Generic)
+
+instance Buildable PublicationData where
+    build PublicationData{..} =
+        "PublicationData {" +| pdTxId |+ " }"
+
 -- | Key/value types for nextBlock chain storage
 newtype NextBlockOf = NextBlockOf { unNextBlockOf :: HeaderHash }
     deriving (Eq, Ord, Show, Buildable, Generic)
@@ -131,5 +142,6 @@ instance Serialise PublicationsOf
 instance Serialise PublicationNext
 instance Serialise PublicationHead
 instance Serialise PublicationBlock
+instance Serialise PublicationData
 instance Serialise NextBlockOf
 instance Serialise NextBlock

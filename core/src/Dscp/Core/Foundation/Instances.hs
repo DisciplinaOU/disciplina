@@ -47,6 +47,7 @@ instance Serialise Grade
 instance Serialise ATGNode
 instance Serialise ATGEdge
 
+instance Serialise ATGSubjectChange
 deriving instance Serialise ATGDelta
 deriving instance Serialise ATG
 

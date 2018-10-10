@@ -10,12 +10,9 @@ module Dscp.Witness.Web.Types
     , BlockList (..)
     , AccountInfo (..)
     , TxInfo
+    , GTxInfo
     , TxList
-    , PrivateBlockList
-    , TxTypeFilter (..)
-    , ATGChange (..)
-    , ATGSubjectChange (..)
-    , PrivateBlockInfoPart (..)
+    , PublicationList
     , HashIs (..)
     ) where
 
@@ -25,10 +22,8 @@ import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (Options (..), deriveJSON)
 import Fmt (build, genericF, (+|), (|+))
 import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
-import Servant (FromHttpApiData (..), ToHttpApiData (..))
 
 import Dscp.Core
-import Dscp.Crypto
 import Dscp.Util
 import Dscp.Util.Aeson
 import Dscp.Util.Servant (ForResponseLog (..), buildForResponse)
@@ -43,7 +38,8 @@ data BlocksOrMempool a = BlocksOrMempool
 
 -- | Paginated list of something.
 -- Parameter @d@ is required to tell name of entities for JSON encoding,
--- needed not to subvert backward-compatibility.
+-- helps not to subvert backward-compatibility.
+-- TODO: does anyone care at all?
 data PaginatedList (d :: Symbol) a = PaginatedList
     { plItems  :: [a]
       -- ^ Requested amount of entities.
@@ -66,7 +62,7 @@ data BlockInfo = BlockInfo
     , biTransactionCount :: Int
     , biTotalOutput      :: Coin
     , biTotalFees        :: Coin
-    , biTransactions     :: Maybe [TxInfo]
+    , biTransactions     :: Maybe [GTxInfo]
     } deriving (Eq, Show, Generic)
 
 data WithBlockInfo a = WithBlockInfo
@@ -74,7 +70,8 @@ data WithBlockInfo a = WithBlockInfo
     , wbiItem      :: a
     } deriving (Eq, Show, Generic)
 
-type TxInfo = WithBlockInfo GTx
+type TxInfo = WithBlockInfo Tx
+type GTxInfo = WithBlockInfo GTx
 
 data BlockList = BlockList
     { blBlocks     :: [BlockInfo]
@@ -86,30 +83,13 @@ data AccountInfo = AccountInfo
     { aiBalances         :: BlocksOrMempool Coin
     , aiCurrentNonce     :: Nonce
     , aiTransactionCount :: Integer
-    , aiTransactions     :: Maybe [TxInfo]
+    , aiTransactions     :: Maybe [GTxInfo]  -- TODO: remove this field?
     } deriving (Eq, Show, Generic)
 
 type TxList = PaginatedList "transactions" TxInfo
 
-data ATGChange
-    = ATGAdded
-    | ATGRemoved
-    deriving (Eq, Show, Generic)
-
-data ATGSubjectChange = ATGSubjectChange
-    { ascSubjectId :: Id Subject
-    , ascStatus    :: ATGChange
-    } deriving (Eq, Show, Generic)
-
-data PrivateBlockInfoPart = PrivateBlockInfoPart
-    { piHash            :: PrivateHeaderHash
-    , piMerkleRoot      :: Hash Raw
-    , piTransactionsNum :: Word32
-    , piAtgDelta        :: [ATGSubjectChange]
-    } deriving (Eq, Show, Generic)
-
-type PrivateBlockInfo = WithBlockInfo PrivateBlockInfoPart
-type PrivateBlockList = PaginatedList "publications" PrivateBlockInfo
+type PublicationInfo = WithBlockInfo PublicationTx
+type PublicationList = PaginatedList "publications" PublicationInfo
 
 data HashIs
     = HashIsUnknown
@@ -119,22 +99,12 @@ data HashIs
     | HashIsPublicationTx
     deriving (Eq, Show, Generic)
 
-data TxTypeFilter
-    = AllTxTypes
-    | MoneyTxType
-    | PubTxType
-    deriving (Eq, Show, Generic)
-
 ---------------------------------------------------------------------------
 -- Instances
 ---------------------------------------------------------------------------
 
 deriving instance (Eq (Id a), Eq a) => Eq (PaginatedList d a)
 deriving instance (Show (Id a), Show a) => Show (PaginatedList d a)
-
-instance HasId PrivateBlockInfoPart where
-    type Id PrivateBlockInfoPart = PrivateHeaderHash
-    getId = piHash
 
 instance HasId a => HasId (WithBlockInfo a) where
     type Id (WithBlockInfo a) = Id a
@@ -182,20 +152,12 @@ instance Buildable (ForResponseLog HashIs) where
 instance Buildable (ForResponseLog TxId) where
     build = buildForResponse
 
-instance Buildable TxTypeFilter where
-    build = \case
-        AllTxTypes -> "all transaction types"
-        MoneyTxType -> "only money transactions"
-        PubTxType -> "only publication transactions"
-
 ---------------------------------------------------------------------------
 -- JSON instances
 ---------------------------------------------------------------------------
 
 deriveJSON defaultOptions ''BlocksOrMempool
 deriveJSON defaultOptions ''BlockList
-deriveJSON defaultOptions ''ATGSubjectChange
-deriveJSON defaultOptions ''PrivateBlockInfoPart
 deriveJSON defaultOptions{ omitNothingFields = True } ''BlockInfo
 deriveJSON defaultOptions{ omitNothingFields = True } ''AccountInfo
 
@@ -210,33 +172,47 @@ instance FromJSON (Detailed a) => FromJSON (WithBlockInfo a) where
         Detailed item <- parseJSON v
         return $ WithBlockInfo block item
 
+instance ToJSON (Detailed Tx) where
+    toJSON (Detailed tx) = object $
+        [ "txId" .= toTxId tx
+        , "money" .= tx
+        , case sumCoins . map txOutValue . txOuts $ tx of
+            Right c  -> "outValue" .= c
+            Left err -> "outValue" .= err
+        ]
+
+instance FromJSON (Detailed Tx) where
+    parseJSON = withObject "detailed tx" $ \o ->
+        Detailed <$> o .: "money"
+
+instance ToJSON (Detailed PublicationTx) where
+    toJSON (Detailed pTx) = object $
+        [ "txId" .= toPtxId pTx
+        , "publication" .= pTx
+        ]
+
+instance FromJSON (Detailed PublicationTx) where
+    parseJSON = withObject "detailed pub tx" $ \o ->
+        Detailed <$> o .: "publication"
+
 instance ToJSON (Detailed GTx) where
-    toJSON (Detailed gtx) = object $
-        case gtx of
-            GMoneyTx tx ->
-                [ "txId" .= toTxId tx
-                , "txType" .= ("money" :: Text)
-                , "money" .= tx
-                , case sumCoins . map txOutValue . txOuts $ tx of
-                    Right c  -> "txOutValue" .= c
-                    Left err -> "txOutValue" .= err
-                ]
-            GPublicationTx pTx ->
-                [ "txId" .= toPtxId pTx
-                , "txType" .= ("publication" :: Text)
-                , "publication" .= pTx
-                ]
+    toJSON (Detailed gtx) = object
+        [ "txType" .= case gtx of
+            GMoneyTx _       -> ("money" :: Text)
+            GPublicationTx _ -> ("publication" :: Text)
+        , "txId" .= toGTxId gtx
+        , case gtx of
+           GMoneyTx tx        -> "money" .= Detailed tx
+           GPublicationTx pTx -> "publication" .= Detailed pTx
+        ]
 
 instance FromJSON (Detailed GTx) where
-    parseJSON = withObject "tx info" $ \o -> do
+    parseJSON = withObject "detailed gtx" $ \o -> do
         txType :: Text <- o .: "txType"
         Detailed <$> case txType of
-            "money"       -> GMoneyTx <$> o .: "money"
-            "publication" -> GPublicationTx <$> o .: "publication"
+            "money"       -> GMoneyTx . unDetailed <$> o .: "money"
+            "publication" -> GPublicationTx . unDetailed <$> o .: "publication"
             other         -> fail $ "invalid transaction type: " ++ toString other
-
-deriving instance ToJSON (Detailed PrivateBlockInfoPart)
-deriving instance FromJSON (Detailed PrivateBlockInfoPart)
 
 instance (ToJSON (Id a), ToJSON a, KnownSymbol d) =>
          ToJSON (PaginatedList d a) where
@@ -266,31 +242,3 @@ instance FromJSON HashIs where
         "money-transaction" -> pure HashIsMoneyTx
         "publication-transaction" -> pure HashIsPublicationTx
         _ -> fail "Invalid hash type"
-
-instance ToJSON ATGChange where
-    toJSON = String . \case
-        ATGAdded -> "added"
-        ATGRemoved -> "removed"
-
-instance FromJSON ATGChange where
-    parseJSON = withText "ATG change" $ \case
-        "added" -> pure ATGAdded
-        "removed" -> pure ATGRemoved
-        _ -> fail "Invalid ATGChange"
-
----------------------------------------------------------------------------
--- HttpApiData instances
----------------------------------------------------------------------------
-
-instance ToHttpApiData TxTypeFilter where
-    toUrlPiece = \case
-        AllTxTypes -> "all"
-        MoneyTxType -> "money"
-        PubTxType -> "publication"
-
-instance FromHttpApiData TxTypeFilter where
-    parseUrlPiece = \case
-        "all" -> pure AllTxTypes
-        "money" -> pure MoneyTxType
-        "publication" -> pure PubTxType
-        _ -> Left "Invalid transaction type filter"

@@ -11,17 +11,17 @@ module Dscp.Witness.Web.Logic
        ) where
 
 import Codec.Serialise (serialise)
-import Control.Lens (has)
 import qualified Data.ByteString.Lazy as BS
+import Data.Coerce (coerce)
 import Data.Conduit ((.|))
 import qualified Data.Conduit as C
 import qualified Data.Conduit.Combinators as C
 import Data.Default (def)
-import qualified Data.Map as M
+-- import qualified Data.Map as M
 import Fmt ((+|), (|+))
 
 import Dscp.Core
-import Dscp.Crypto
+-- import Dscp.Crypto
 import Dscp.Snowdrop
 import Dscp.Util (fromHex, nothingToThrow)
 import Dscp.Util
@@ -100,21 +100,6 @@ fetchBlockInfo txWithBlock = do
         , wbiItem = wbItem txWithBlock
         }
 
-toPublicationInfo
-    :: PrivateBlockHeader -> PrivateBlockInfoPart
-toPublicationInfo header =
-    PrivateBlockInfoPart
-    { piHash = hash header
-    , piMerkleRoot = mrHash merkleInfo
-    , piTransactionsNum = mrSize merkleInfo
-    , piAtgDelta = toATGSubjectChange . getATGDelta $ _pbhAtgDelta header
-    }
-  where
-    merkleInfo = _pbhBodyProof header
-    toATGChange = bool ATGRemoved ATGAdded
-    toATGSubjectChange =
-        map (uncurry ATGSubjectChange . second toATGChange) . M.toList
-
 getBlocks :: WitnessWorkMode ctx m => Maybe Word64 -> Maybe Int -> m BlockList
 getBlocks mSkip mCount = do
     (eBlocks, totalCount) <- runSdMRead $ do
@@ -159,31 +144,20 @@ sinkTruncate
     => Int -> C.ConduitT a Void m (PaginatedList d a)
 sinkTruncate count = C.take (count + 1) .| (toPaginatedList count <$> C.sinkList)
 
-fitsTxType :: TxTypeFilter -> GTx -> Bool
-fitsTxType = \case
-    AllTxTypes -> \_ -> True
-    MoneyTxType -> has _GMoneyTx
-    PubTxType -> has _GPublicationTx
-
 getTransactions
     :: (WitnessWorkMode ctx m)
-    => Maybe Int -> Maybe GTxId -> Maybe TxTypeFilter -> Maybe Address -> m TxList
-getTransactions mCount mFrom mTxType mAddress = do
-    whenJust mFrom $ \from ->
-        runSdMRead (getTxMaybe from) >>=
-        void . nothingToThrow (LogicError . LETxAbsent $ "Transaction not found " +| from |+ "")
+    => Maybe Int -> Maybe TxId -> Maybe Address -> m TxList
+getTransactions mCount mFrom mAddress = do
     runSdMRead . C.runConduit $
         ourTxsSource
-            .| C.map (fmap @WithBlock unGTxWitnessed)
-            .| C.filter (isProperTxType . wbItem)
+            .| C.concatMap (mapM @WithBlock $ preview (_GMoneyTxWitnessed . twTxL))
             .| C.mapM fetchBlockInfo
             .| sinkTruncate count
   where
-    ourTxsSource = maybe txsSource accountTxsSource mAddress mFrom
+    ourTxsSource = maybe txsSource accountTxsSource mAddress (coerce mFrom)
     count = min 100 $ fromMaybe 100 mCount
-    isProperTxType = fitsTxType (mTxType ?: AllTxTypes)
 
-getTransactionInfo :: WitnessWorkMode ctx m => GTxId -> m TxInfo
+getTransactionInfo :: WitnessWorkMode ctx m => GTxId -> m GTxInfo
 getTransactionInfo txId =
     runSdMRead (getTxMaybe txId) >>=
     nothingToThrow (LogicError . LETxAbsent $ "Transaction not found " +| txId |+ "") >>=
@@ -191,11 +165,10 @@ getTransactionInfo txId =
 
 getPublications
     :: WitnessWorkMode ctx m
-    => Maybe Int -> Maybe PrivateHeaderHash -> Maybe Address -> m PrivateBlockList
+    => Maybe Int -> Maybe PublicationTxId -> Maybe Address -> m PublicationList
 getPublications mCount mFrom mEducator = do
     runSdMRead . C.runConduit $
         pubsSource
-            .| C.map (fmap @WithBlock toPublicationInfo)
             .| C.mapM fetchBlockInfo
             .| sinkTruncate count
   where

@@ -18,9 +18,7 @@ import Dscp.Educator.Launcher.Mode
 import Dscp.Network
 import Dscp.Resource.Keys
 import Dscp.Util.Timing
-import Dscp.Witness.Logic
-import Dscp.Witness.Mempool
-import Dscp.Witness.SDLock
+import Dscp.Witness
 
 educatorWorkers
     :: CombinedWorkMode ctx m

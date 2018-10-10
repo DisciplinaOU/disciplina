@@ -23,6 +23,7 @@ module Dscp.Snowdrop.Configuration
     , txHeadPrefix
     , nextBlockPrefix
     , blockIdxPrefix
+    , privateBlockTxPrefix
     , blockPrefixes
     , Ids (..)
     , Values (..)
@@ -150,11 +151,15 @@ publicationIdsPrefix = Prefix 11
 publicationBlockIdsPrefix :: Prefix
 publicationBlockIdsPrefix = Prefix 12
 
+privateBlockTxPrefix :: Prefix
+privateBlockTxPrefix = Prefix 13
+
 -- | Prefixes stored in block storage
 blockPrefixes :: Set Prefix
 blockPrefixes = S.fromList
     [ tipPrefix
     , blockPrefix
+    , privateBlockTxPrefix
     , publicationIdsPrefix
     , publicationOfPrefix
     , publicationHeadPrefix
@@ -174,7 +179,8 @@ data Ids
     | TxIds               T.GTxId
     | TxOfIds             TxsOf
     | TxHeadIds           TxHead
-    | PublicationIds      T.PrivateHeaderHash
+    | PrivateBlockTx      T.PrivateHeaderHash
+    | PublicationIds      T.PublicationTxId
     | PublicationOfIds    PublicationsOf
     | PublicationHeadIds  PublicationHead
     | PublicationBlockIds PublicationBlock
@@ -190,6 +196,7 @@ instance Buildable Ids where
         TxIds               gTxId        -> build gTxId
         TxOfIds             t            -> build t
         TxHeadIds           th           -> build th
+        PrivateBlockTx      h            -> build h
         PublicationIds      i            -> build i
         PublicationOfIds    p            -> build p
         PublicationHeadIds  ph           -> build ph
@@ -204,6 +211,7 @@ instance IdSumPrefixed Ids where
     idSumPrefix (TxIds               _) = txPrefix
     idSumPrefix (TxOfIds             _) = txOfPrefix
     idSumPrefix (TxHeadIds           _) = txHeadPrefix
+    idSumPrefix (PrivateBlockTx      _) = privateBlockTxPrefix
     idSumPrefix (PublicationIds      _) = publicationIdsPrefix
     idSumPrefix (PublicationOfIds    _) = publicationOfPrefix
     idSumPrefix (PublicationHeadIds  _) = publicationHeadPrefix
@@ -225,7 +233,8 @@ data Values
     | TxVal               TxBlockRef
     | TxOfVal             LastTx
     | TxHeadVal           TxNext
-    | PublicationVal      T.PublicationTx
+    | PrivateBlockTxVal   T.PublicationTxId
+    | PublicationVal      PublicationData
     | PublicationOfVal    LastPublication
     | PublicationHeadVal  PublicationNext
     | PublicationBlockVal PublicationBlockRef
@@ -239,7 +248,8 @@ type instance SValue  AccountId            = Account
 type instance SValue  T.GTxId              = TxBlockRef
 type instance SValue  TxsOf                = LastTx
 type instance SValue  TxHead               = TxNext
-type instance SValue  T.PrivateHeaderHash  = T.PublicationTx
+type instance SValue  T.PrivateHeaderHash  = T.PublicationTxId
+type instance SValue  T.PublicationTxId    = PublicationData
 type instance SValue  PublicationsOf       = LastPublication
 type instance SValue  PublicationHead      = PublicationNext
 type instance SValue  PublicationBlock     = PublicationBlockRef

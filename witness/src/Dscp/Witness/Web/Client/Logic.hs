@@ -59,4 +59,4 @@ instance AllocResource WitnessClient where
     allocResource params =
         buildComponentR "witness client"
             (createWitnessClient params)
-            (\_ -> pass)  -- things clean up on themselves on GC, kaef
+            (\_ -> pass)  -- things clean up by themselves on GC, kaef

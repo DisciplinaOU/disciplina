@@ -85,7 +85,7 @@ applyBlockRaw applyFees toVerify block = do
                       , SD.New . TxVal $ TxBlockRef (headerHash block) idx
                       )
                     ] ++
-                    [ ( SD.inj . PublicationBlock . hash $ ptHeader pubTx
+                    [ ( SD.inj . PublicationBlock $ hash pubTx
                       , SD.New . SD.inj $ PublicationBlockRef (headerHash block)
                       )
                     | GPublicationTxWitnessed pubTxw <- pure gTx

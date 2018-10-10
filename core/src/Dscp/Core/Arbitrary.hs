@@ -113,6 +113,10 @@ genCommonDocumentType = frequency [(5, pure Offline), (1, pure Online)]
 instance Arbitrary PrivateTx where
     arbitrary = PrivateTx <$> arbitrary <*> arbitrary <*> arbitrary
 
+instance Arbitrary ATGSubjectChange where
+    arbitrary = genericArbitrary
+    shrink    = genericShrink
+
 instance Arbitrary ATGDelta where
     arbitrary = genericArbitrary
     shrink    = genericShrink

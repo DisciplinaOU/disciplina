@@ -34,7 +34,7 @@ createAndSubmitPub genSecret = do
     sig <- pick arbitrary
     lastHeaderHash <- lift . runSdMempoolRead $ getPrivateTipHash (skAddress sk)
     let ptHeader = PrivateBlockHeader
-            { _pbhPrevBlock = lastHeaderHash ?: genesisHeaderHash (skAddress sk)
+            { _pbhPrevBlock = lastHeaderHash
             , _pbhBodyProof = sig
             , _pbhAtgDelta = mempty
             }
@@ -59,13 +59,12 @@ dumpBlock slotId = void . applyBlock =<< createBlock slotId
 getTransactionsPaged
     :: WitnessWorkMode ctx m
     => Int
-    -> Maybe TxTypeFilter
     -> Maybe Address
-    -> m [[WithBlockInfo GTx]]
-getTransactionsPaged chunkSize mTxType mAddress = getFrom Nothing
+    -> m [[WithBlockInfo Tx]]
+getTransactionsPaged chunkSize mAddress = getFrom Nothing
   where
     getFrom mFrom = do
-        txList <- getTransactions (Just chunkSize) mFrom mTxType mAddress
+        txList <- getTransactions (Just chunkSize) mFrom mAddress
         next <- maybe (pure []) (getFrom . Just) (plNextId txList)
         return (plItems txList : next)
 
@@ -77,13 +76,13 @@ spec = describe "Explorer" $ do
         txs <- replicateM n $ createAndSubmitTx selectGenesisSecret
         lift $ dumpBlock 0
 
-        res <- lift $ getTransactions Nothing Nothing Nothing Nothing
+        res <- lift $ getTransactions Nothing Nothing Nothing
         -- return from recent-first order, discarding genesis transactions
         let resTop = reverse . take n $ plItems res
         -- comparing transactions on their id for prettier errors
-        return $ map (toGTxId . wbiItem) resTop
+        return $ map (toTxId . wbiItem) resTop
                  ===
-                 map (toGTxId . GMoneyTx) txs
+                 map toTxId txs
 
     it "Pagination works fine" $ witnessProperty $ do
         txsNum <- pick $ choose (1, 5)
@@ -91,15 +90,15 @@ spec = describe "Explorer" $ do
         txs <- replicateM txsNum $ createAndSubmitTx selectGenesisSecret
         lift $ dumpBlock 0
 
-        res <- lift $ getTransactionsPaged chunkSize Nothing Nothing
+        res <- lift $ getTransactionsPaged chunkSize Nothing
         return $ conjoin
             [ property $
                   all ((== chunkSize) . length) $
                   maybe [] init (nonEmpty res)
 
-            , map (toGTxId . wbiItem) (reverse . take txsNum $ concat res)
+            , map (toTxId . wbiItem) (reverse . take txsNum $ concat res)
               ===
-              map (toGTxId . GMoneyTx) txs
+              map toTxId txs
             ]
 
     it "Filtering on address works fine (when the address is tx input)" $ witnessProperty $ do
@@ -110,11 +109,11 @@ spec = describe "Explorer" $ do
         lift $ dumpBlock 0
 
         let expected = filter (\tx -> interestingAddress `elem` txRelatedAddrs tx) txs
-        res <- lift $ getTransactions Nothing Nothing Nothing (Just interestingAddress)
+        res <- lift $ getTransactions Nothing Nothing (Just interestingAddress)
         let resTop = reverse . take (length expected) $ plItems res
-        return $ map (toGTxId . wbiItem) resTop
+        return $ map (toTxId . wbiItem) resTop
                  ===
-                 map (toGTxId . GMoneyTx) expected
+                 map toTxId expected
 
   describe "getPublications" $ do
     it "Returns all transactions at once just fine" $ witnessProperty $ do
@@ -124,9 +123,9 @@ spec = describe "Explorer" $ do
 
         res <- lift $ getPublications Nothing Nothing Nothing
         let resTop = reverse $ plItems res
-        return $ map (piHash . wbiItem) resTop
+        return $ map (toPtxId . wbiItem) resTop
                  ===
-                 map (hash . ptHeader) txs
+                 map toPtxId txs
 
     it "Filtering on author works fine" $ witnessProperty $ do
         let selectSecret = oneof [selectGenesisSecret, pure testSomeGenesisSecret]
@@ -138,6 +137,6 @@ spec = describe "Explorer" $ do
         let expected = filter (\tx -> interestingAddress == ptAuthor tx) txs
         res <- lift $ getPublications Nothing Nothing (Just interestingAddress)
         let resTop = reverse $ plItems res
-        return $ map (piHash . wbiItem) resTop
+        return $ map (toPtxId . wbiItem) resTop
                  ===
-                 map (hash . ptHeader) expected
+                 map toPtxId expected

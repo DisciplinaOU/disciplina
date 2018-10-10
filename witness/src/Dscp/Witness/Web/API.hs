@@ -54,21 +54,20 @@ data WitnessEndpoints route = WitnessEndpoints
     , wGetTransactions :: route
         :- "transactions"
         :> QueryParam "count" Int
-        :> QueryParam "from" GTxId
-        :> QueryParam "type" TxTypeFilter
+        :> QueryParam "from" TxId
         :> QueryParam "account" Address
         :> Verb 'GET 200 '[DSON] TxList
 
     , wGetTransaction :: route
         :- "transactions" :> Capture "transactionHash" GTxId
-        :> Verb 'GET 200 '[DSON] TxInfo
+        :> Verb 'GET 200 '[DSON] GTxInfo
 
     , wGetPublications :: route
         :- "publications"
         :> QueryParam "count" Int
-        :> QueryParam "from" PrivateHeaderHash
+        :> QueryParam "from" PublicationTxId
         :> QueryParam "educator" Address
-        :> Verb 'GET 200 '[DSON] PrivateBlockList
+        :> Verb 'GET 200 '[DSON] PublicationList
 
     , wGetHashType :: route
         :- "hash" :> Capture "hash" Text

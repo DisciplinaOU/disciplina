@@ -156,5 +156,7 @@ getTx gTxId = do
 -- Publication getters
 ----------------------------------------------------------------------------
 
-getPrivateTipHash :: HasWitnessConfig => Address -> SdM_ chgacc (Maybe PrivateHeaderHash)
-getPrivateTipHash educator = fmap unLastPublication <$> SD.queryOne (PublicationsOf educator)
+getPrivateTipHash :: HasWitnessConfig => Address -> SdM_ chgacc PrivateHeaderHash
+getPrivateTipHash educator =
+    maybe genesisHeaderHash unLastPublication <$>
+    SD.queryOne (PublicationsOf educator)

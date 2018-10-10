@@ -112,13 +112,14 @@ seqExpandersPublicationTx feesReceiverAddr =
     SeqExpanders $ one $ Expander
         (Set.fromList [publicationOfPrefix])
         (Set.fromList [accountPrefix, publicationHeadPrefix, publicationOfPrefix,
-                       publicationIdsPrefix, publicationBlockIdsPrefix])
+                       publicationIdsPrefix, publicationBlockIdsPrefix, privateBlockTxPrefix])
         $ \PublicationTxWitnessed { ptwTx } -> do
             let PublicationTx{ ptHeader, ptAuthor, ptFeesAmount } = ptwTx
+            let ptxId = hash ptwTx
             let phHash = hash ptHeader
             let prevHash = ptHeader ^. pbhPrevBlock
             let (prevHashM :: Maybe PrivateHeaderHash) =
-                    prevHash <$ guard (prevHash /= genesisHeaderHash ptAuthor)
+                    prevHash <$ guard (prevHash /= genesisHeaderHash)
 
             when (prevHash == phHash) $
                 throwLocalError PublicationLocalLoop
@@ -154,7 +155,8 @@ seqExpandersPublicationTx feesReceiverAddr =
             pure $ mkDiffCS $ Map.fromList $
                 [ PublicationsOf  ptAuthor ==> change (LastPublication phHash)
                 , PublicationHead phHash   ==> New    (PublicationNext prevHashM)
-                , PublicationIds  phHash   ==> New    ptwTx
+                , PublicationIds  ptxId    ==> New    (PublicationData ptwTx (hash ptwTx))
+                , PrivateBlockTx  phHash   ==> New    (PrivateBlockTxVal ptxId)
                 ] ++ feesChanges
 
 ----------------------------------------------------------------------------
