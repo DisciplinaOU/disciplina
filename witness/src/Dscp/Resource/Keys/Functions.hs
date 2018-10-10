@@ -42,7 +42,7 @@ toSecretJson pp secret =
 fromSecretJson :: MonadThrow m => PassPhrase -> KeyJson -> m SecretKey
 fromSecretJson pp KeyJson{..} = do
     decrypt pp (unCustomEncoding kjEncSecretKey)
-        & leftToThrow SecretWrongPassPhraseError
+        & leftToThrow SecretDecryptionError
 
 toKeyfileContent :: PassPhrase -> SecretKey -> KeyfileContent
 toKeyfileContent pp sk = Versioned $ toSecretJson pp sk
