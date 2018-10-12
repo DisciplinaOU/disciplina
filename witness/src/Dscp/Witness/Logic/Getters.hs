@@ -190,8 +190,8 @@ getTxWithBlock gTxId = WithBlock <$> getTxBlock gTxId <*> getTx gTxId
 ----------------------------------------------------------------------------
 
 getPrivateTipHash
-    :: (WitnessWorkMode ctx m, KnownSdReadMode mode, WithinReadSDLock)
-    => Address -> SdReadM mode m PrivateHeaderHash
+    :: HasWitnessConfig
+    => Address -> SdM_ chgacc PrivateHeaderHash
 getPrivateTipHash educator =
-    liftSdM $ maybe genesisHeaderHash unLastPublication <$>
+    maybe genesisHeaderHash unLastPublication <$>
     SD.queryOne (PublicationsOf educator)

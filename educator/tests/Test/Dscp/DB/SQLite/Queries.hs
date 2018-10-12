@@ -302,7 +302,7 @@ spec_Instances = do
                         ptId <- DB.createTransaction trans
                         return ptId
 
-                    mblock <- runMaybeT (DB.createPrivateBlock Nothing)
+                    mblock <- DB.createPrivateBlock Nothing
                     let !_ = mblock ?: error "No private block created"
 
                     transPacksSince <- DB.getProvenStudentTransactions

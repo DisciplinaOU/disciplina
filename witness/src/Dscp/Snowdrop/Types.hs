@@ -46,16 +46,13 @@ data PublicationTxTypeId
     = PublicationTxTypeId
     deriving (Eq, Ord, Show, Generic)
 
--- We can safely assume that if account does not exist, it actually
--- exists and equals to 'def', what's the point of multiplying exceptions?
--- (PublicationCantAffordFee already stands for the same thing).
--- Similar concern is about money transactions.
 data PublicationException
     = PublicationSignatureIsIncorrect
     | PublicationPrevBlockIsIncorrect
     | StorageIsCorrupted
     | PublicationIsBroken Text
-    | PublicationFeeIsTooLow -- ^
+    | PublicationFeeIsTooLow
+      { peMinimalFee :: Integer, peGivenFee :: Integer }
     | PublicationCantAffordFee -- ^ Publication owner can not afford the fee
     | PublicationLocalLoop
     deriving (Eq, Ord)
@@ -67,14 +64,21 @@ instance Show PublicationException where
 
 instance Buildable PublicationException where
     build = \case
-        PublicationSignatureIsIncorrect -> "Publication signature is incorrect"
-        PublicationPrevBlockIsIncorrect -> "Publication previous block is incorrect"
-        StorageIsCorrupted -> "Storage is inconsistent"
-        PublicationIsBroken msg -> "Bad publication: " +| msg |+ ""
-        PublicationFeeIsTooLow -> "The fee specified in the publication tx is " <>
-                                  "lower than the minimal one."
-        PublicationCantAffordFee -> "Publication author can't afford the fee"
-        PublicationLocalLoop -> "Transaction would create a loop in educator's chain"
+        PublicationSignatureIsIncorrect ->
+            "Publication signature is incorrect"
+        PublicationPrevBlockIsIncorrect ->
+            "Publication previous block is incorrect"
+        StorageIsCorrupted ->
+            "Storage is inconsistent"
+        PublicationIsBroken msg ->
+            "Bad publication" +| msg |+ ""
+        PublicationFeeIsTooLow{..} ->
+            "The fee specified in the publication tx " <> show peGivenFee <>
+            " is lower than the minimal one " <> show peMinimalFee
+        PublicationCantAffordFee ->
+            "Publication author can't afford the fee"
+        PublicationLocalLoop ->
+            "Transaction would create a loop in educator's chain"
 
 data AccountTxTypeId = AccountTxTypeId deriving (Eq, Ord, Show, Generic)
 

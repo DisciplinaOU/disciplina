@@ -14,6 +14,7 @@ spec_cryptoSerialise = do
             serialiseRoundtripProp @SecretKey
             serialiseRoundtripProp @PublicKey
             serialiseRoundtripProp @(Signature Raw)
+            serialiseRoundtripProp @(MerkleSignature Int)
 
     describe "Crypto datatypes JSON serialisation" $ do
         aesonRoundtripProp @(MerkleSignature ())

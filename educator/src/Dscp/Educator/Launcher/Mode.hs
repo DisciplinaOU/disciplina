@@ -9,7 +9,7 @@ module Dscp.Educator.Launcher.Mode
 
       -- * Constraints
     , EducatorWorkMode
-    , CombinedWorkMode
+    , FullEducatorWorkMode
 
       -- * Implementations
     , EducatorContext (..)
@@ -37,7 +37,7 @@ import qualified Dscp.Witness as W
 ---------------------------------------------------------------------
 
 -- | Set of typeclasses which define capabilities of bare Educator node.
-type EducatorWorkMode ctx m =
+type EducatorOnlyWorkMode ctx m =
     ( Basic.BasicWorkMode m
 
     , HasEducatorConfig
@@ -51,8 +51,13 @@ type EducatorWorkMode ctx m =
     )
 
 -- | Set of typeclasses which define capabilities both of Educator and Witness.
-type CombinedWorkMode ctx m =
-    ( EducatorWorkMode ctx m
+type EducatorWorkMode ctx m =
+    ( EducatorOnlyWorkMode ctx m
+    , W.WitnessWorkMode ctx m
+    )
+
+type FullEducatorWorkMode ctx m =
+    ( EducatorOnlyWorkMode ctx m
     , W.FullWitnessWorkMode ctx m
     )
 
@@ -91,5 +96,5 @@ instance HasLens DB.Plugin EducatorContext DB.Plugin where
 _sanity :: EducatorRealMode ()
 _sanity = withEducatorConfig (error "") $ W.withWitnessConfig (error "") _sanityCallee
   where
-    _sanityCallee :: CombinedWorkMode ctx m => m ()
+    _sanityCallee :: EducatorWorkMode ctx m => m ()
     _sanityCallee = pass

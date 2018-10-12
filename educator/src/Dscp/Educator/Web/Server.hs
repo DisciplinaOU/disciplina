@@ -25,7 +25,7 @@ import UnliftIO (askUnliftIO)
 import Dscp.Core (mkAddr)
 import Dscp.DB.SQLite (SQLiteDB, existsStudent, invoke)
 import Dscp.Educator.Config
-import Dscp.Educator.Launcher.Mode (CombinedWorkMode, EducatorNode, EducatorWorkMode)
+import Dscp.Educator.Launcher.Mode (EducatorNode, EducatorWorkMode)
 import Dscp.Educator.Web.Auth
 import Dscp.Educator.Web.Bot (EducatorBotParams (..), addBotHandlers, initializeBot)
 import Dscp.Educator.Web.Educator (EducatorPublicKey (..), ProtectedEducatorAPI,
@@ -101,7 +101,7 @@ educatorCors = cors $ const $ Just $
     , corsMethods = ["GET", "POST", "DELETE"]
     }
 
-serveEducatorAPIsReal :: CombinedWorkMode ctx m => Bool -> m ()
+serveEducatorAPIsReal :: EducatorWorkMode ctx m => Bool -> m ()
 serveEducatorAPIsReal withWitnessApi = do
     let webCfg = educatorConfig ^. sub #educator . sub #api
         ServerParams{..}  = webCfg ^. option #serverParams

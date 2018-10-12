@@ -1,17 +1,14 @@
 module Dscp.Util.Timing
        ( countingTime
        , foreverAlive
-       , periodically
+       , notFasterThan
        ) where
 
 import qualified Control.Concurrent as C
 import Data.Time.Clock.POSIX (getPOSIXTime)
-import Fmt ((+|), (+||), (|+), (||+))
+import Fmt ((+||), (|+), (||+))
 import Loot.Log (MonadLogging, logError)
 import Time (KnownRat, KnownRatName, Second, Time, threadDelay, toNum)
-import UnliftIO (MonadUnliftIO)
-
-import Dscp.Util.TimeLimit (logWarningWaitOnce)
 
 -- | Evaluate how much time did action take.
 countingTime :: MonadIO m => m a -> m (Double, a)
@@ -38,22 +35,12 @@ foreverAlive name recovery action =
         logError $ name |+ " died (" +|| e ||+ "); \
                    \ressurecting in " +|| recovery ||+ ""
 
--- | Execute an action periodically till the end of node's days.
-periodically
-    :: (MonadUnliftIO m, MonadCatch m, MonadLogging m, KnownRat unit)
-    => Text -> Time unit -> m () -> m a
-periodically desc period action = loop
-  where
-    periodSec = toNum @Second period
-    loop = do
-        start <- liftIO getPOSIXTime
-        safeAction
-        end <- liftIO getPOSIXTime
-        let remaining = periodSec - (end - start)
-        liftIO $ C.threadDelay (round $ remaining * 1000000)
-        loop
-    safeAction =
-        logWarningWaitOnce period desc $
-        action `catchAny` reportFailure
-    reportFailure e =
-        logError $ "Periodic action '" +| desc |+ "' failed: " +|| e ||+ ""
+-- | Execute an action, finishing not faster than in given amount of time.
+-- Useful in pair with 'foreverAlive' to get periodically invoked actions.
+notFasterThan
+    :: (MonadIO m, KnownRat unit)
+    => Time unit -> m () -> m ()
+notFasterThan minTime action = do
+    (takenTime, ()) <- countingTime action
+    let remaining = toNum @Second minTime - takenTime
+    liftIO $ C.threadDelay (round $ remaining * 1000000)

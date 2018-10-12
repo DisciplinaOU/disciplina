@@ -1,5 +1,5 @@
 {-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE QuasiQuotes    #-}
 
 module Dscp.DB.SQLite.Queries
        ( -- * Domain-level database errors (missing entites, mostly)
@@ -54,6 +54,11 @@ module Dscp.DB.SQLite.Queries
        , simpleCourse
        , enrollStudentToCourse
        , submitAssignment
+       , getLastBlockIdAndIdx
+       , getPrivateBlock
+       , getPrivateBlockIdxByHash
+       , getPrivateBlocksAfter
+       , getPrivateBlocksAfterHash
        , createPrivateBlock
        , createSignedSubmission
        , setStudentAssignment
@@ -73,6 +78,7 @@ import Data.Time.Clock (UTCTime, getCurrentTime)
 import Database.SQLite.Simple (Only (..), Query)
 import Database.SQLite.Simple.ToField (ToField)
 import Database.SQLite.Simple.ToRow (ToRow (..))
+import Snowdrop.Util (OldestFirst (..))
 import Text.InterpolatedString.Perl6 (q)
 
 import Dscp.Core
@@ -271,10 +277,10 @@ getStudentTransactions student = do
     |]
 
 data GetProvenStudentTransactionsFilters = GetProvenStudentTransactionsFilters
-    { pfCourse :: Maybe Course
-    , pfStudent :: Maybe Student
+    { pfCourse     :: Maybe Course
+    , pfStudent    :: Maybe Student
     , pfAssignment :: Maybe (Hash Assignment)
-    , pfSince  :: Maybe UTCTime
+    , pfSince      :: Maybe UTCTime
     } deriving (Show, Generic)
 
 deriving instance Default GetProvenStudentTransactionsFilters
@@ -396,11 +402,14 @@ getAllNonChainedTransactions = do
         where  idx = -1
     |]
 
+genesisBlockIdx :: Word32
+genesisBlockIdx = 1
+
 getLastBlockIdAndIdx
     :: MonadIO m
     => DBT t w m (Hash PrivateBlockHeader, Word32)
 getLastBlockIdAndIdx = do
-    fromMaybe (genesisHeaderHash, 1) . listToMaybe <$> query [q|
+    fromMaybe (genesisHeaderHash, genesisBlockIdx) . listToMaybe <$> query [q|
         -- getLastBlockIdAndIdx
         select    hash,
                   idx
@@ -409,10 +418,61 @@ getLastBlockIdAndIdx = do
         limit     1
     |] ()
 
+getPrivateBlock
+    :: MonadIO m
+    => Word32 -> DBT t w m (Maybe PrivateBlockHeader)
+getPrivateBlock idx = do
+    listToMaybe <$> query getPrivateBlockQuery (Only idx)
+  where
+    getPrivateBlockQuery = [q|
+        -- getPrivateBlockQuery
+        select    prev_hash, mroot, atg_delta
+        from      Blocks
+        where     idx = ?
+    |]
+
+getPrivateBlockIdxByHash
+    :: MonadIO m
+    => PrivateHeaderHash -> DBT t w m (Maybe Word32)
+getPrivateBlockIdxByHash phHash
+    | phHash == genesisHeaderHash = pure $ Just genesisBlockIdx
+    | otherwise =
+        fmap fromOnly . listToMaybe <$>
+        query getPrivateBlockByHashQuery (Only phHash)
+  where
+    getPrivateBlockByHashQuery = [q|
+        -- getPrivateBlockByHashQuery
+        select    idx
+        from      Blocks
+        where     hash = ?
+    |]
+
+-- | Returns blocks starting from given one (including) up to the tip.
+getPrivateBlocksAfter
+    :: MonadIO m
+    => Word32 -> DBT t w m (OldestFirst [] PrivateBlockHeader)
+getPrivateBlocksAfter idx =
+    OldestFirst <$> query getPrivateBlocksAfterQuery (Only idx)
+  where
+    getPrivateBlocksAfterQuery = [q|
+        -- getPrivateBlockAfterQuery
+        select    prev_hash, mroot, atg_delta
+        from      Blocks
+        where     idx > ?
+        order by  idx asc
+    |]
+
+getPrivateBlocksAfterHash
+    :: MonadIO m
+    => PrivateHeaderHash -> DBT t w m (Maybe $ OldestFirst [] PrivateBlockHeader)
+getPrivateBlocksAfterHash phHash = do
+    midx <- getPrivateBlockIdxByHash phHash
+    forM midx getPrivateBlocksAfter
+
 createPrivateBlock
     :: DBM m
-    => Maybe ATGDelta -> MaybeT (DBT 'WithinTx 'Writing m) PrivateBlockHeader
-createPrivateBlock delta = do
+    => Maybe ATGDelta -> DBT 'WithinTx 'Writing m (Maybe PrivateBlockHeader)
+createPrivateBlock delta = runMaybeT $ do
     (prev, idx) <- lift getLastBlockIdAndIdx
     txs         <- lift getAllNonChainedTransactions
 

@@ -136,8 +136,9 @@ seqExpandersPublicationTx feesReceiverAddr (Fees minFee) =
 
             account <- fromMaybe def <$> queryOne (AccountId ptAuthor)
 
-            when (isPaid && feeAmount < fromIntegral (coinToInteger minFee)) $
+            when (isPaid && feeAmount < coinToInteger minFee) $
                 throwLocalError PublicationFeeIsTooLow
+                    { peMinimalFee = coinToInteger minFee, peGivenFee = feeAmount }
 
             when (aBalance account < feeAmount) $
                 throwLocalError PublicationCantAffordFee
