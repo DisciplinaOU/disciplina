@@ -51,8 +51,11 @@ createAndSubmitPub genSecret = do
 -- | Dump all mempool transactions into a new block.
 dumpBlock
     :: (WitnessWorkMode ctx m, WithinWriteSDLock)
-    => SlotId -> m ()
-dumpBlock slotId = void . applyBlock =<< createBlock slotId
+    => SlotId -> m HeaderHash
+dumpBlock slotId = do
+    block <- createBlock slotId
+    void $ applyBlock block
+    return (headerHash block)
 
 -- | Run 'getTransactions' with pagination page by page until all transactions
 -- are fetched.
@@ -74,7 +77,7 @@ spec = describe "Explorer" $ do
     it "Returns all transactions at once just fine" $ witnessProperty $ do
         n <- pick $ choose (1, 3)
         txs <- replicateM n $ createAndSubmitTx selectGenesisSecret
-        lift $ dumpBlock 0
+        _ <- lift $ dumpBlock 0
 
         res <- lift $ getTransactions Nothing Nothing Nothing
         -- return from recent-first order, discarding genesis transactions
@@ -88,7 +91,7 @@ spec = describe "Explorer" $ do
         txsNum <- pick $ choose (1, 5)
         chunkSize <- pick $ choose (1, 3)
         txs <- replicateM txsNum $ createAndSubmitTx selectGenesisSecret
-        lift $ dumpBlock 0
+        _ <- lift $ dumpBlock 0
 
         res <- lift $ getTransactionsPaged chunkSize Nothing
         return $ conjoin
@@ -101,12 +104,33 @@ spec = describe "Explorer" $ do
               map toTxId txs
             ]
 
+    it "Blocks info is present" $ witnessProperty $ do
+        -- TODO [DSCP-335] Uncomment when mempool is taken into consideration
+        -- And also adjust one similar test below.
+        -- _ <- createAndSubmitTx selectGenesisSecret
+        -- blockHash <- lift $ dumpBlock 0
+        -- _ <- createAndSubmitTx selectGenesisSecret
+
+        -- res <- lift $ getTransactions Nothing Nothing Nothing
+        -- let tx2 : tx1 : _ = traceShowId $ plItems res
+        -- return $ conjoin
+        --     [ fmap biHeaderHash (wbiBlockInfo tx1) === Just blockHash
+        --     , property $ isNothing (wbiBlockInfo tx2)
+        --     ]
+
+        _ <- createAndSubmitTx selectGenesisSecret
+        blockHash <- lift $ dumpBlock 0
+
+        res <- lift $ getTransactions Nothing Nothing Nothing
+        let tx : _ = plItems res
+        return $ fmap biHeaderHash (wbiBlockInfo tx) === Just blockHash
+
     it "Filtering on address works fine (when the address is tx input)" $ witnessProperty $ do
         let selectSecret = oneof [selectGenesisSecret, pure testSomeGenesisSecret]
             interestingAddress = mkAddr $ toPublic testSomeGenesisSecret
         n <- pick $ choose (1, 5)
         txs <- replicateM n $ createAndSubmitTx selectSecret
-        lift $ dumpBlock 0
+        _ <- lift $ dumpBlock 0
 
         let expected = filter (\tx -> interestingAddress `elem` txRelatedAddrs tx) txs
         res <- lift $ getTransactions Nothing Nothing (Just interestingAddress)
@@ -119,7 +143,7 @@ spec = describe "Explorer" $ do
     it "Returns all transactions at once just fine" $ witnessProperty $ do
         n <- pick $ choose (1, 3)
         txs <- replicateM n $ createAndSubmitPub (pure testSomeGenesisSecret)
-        lift $ dumpBlock 0
+        _ <- lift $ dumpBlock 0
 
         res <- lift $ getPublications Nothing Nothing Nothing
         let resTop = reverse $ plItems res
@@ -132,7 +156,7 @@ spec = describe "Explorer" $ do
             interestingAddress = mkAddr $ toPublic testSomeGenesisSecret
         n <- pick $ choose (1, 5)
         txs <- replicateM n $ createAndSubmitPub selectSecret
-        lift $ dumpBlock 0
+        _ <- lift $ dumpBlock 0
 
         let expected = filter (\tx -> interestingAddress == ptAuthor tx) txs
         res <- lift $ getPublications Nothing Nothing (Just interestingAddress)
@@ -140,3 +164,11 @@ spec = describe "Explorer" $ do
         return $ map (toPtxId . wbiItem) resTop
                  ===
                  map toPtxId expected
+
+    it "Blocks info is present" $ witnessProperty $ do
+        _ <- createAndSubmitPub selectGenesisSecret
+        blockHash <- lift $ dumpBlock 0
+
+        res <- lift $ getPublications Nothing Nothing Nothing
+        let tx : _ = plItems res
+        return $ fmap biHeaderHash (wbiBlockInfo tx) === Just blockHash
