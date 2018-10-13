@@ -20,7 +20,7 @@ import Control.Monad.Component (ComponentM, buildComponent_)
 import Data.Text (pack)
 import Data.Tree (Tree (..))
 import Data.Unique
-import Dscp.Core (TxOut (..), addrFromText, coinToInteger)
+import Dscp.Core (TxOut (..), addrFromText, coinToInteger, unsafeMkCoin)
 import Dscp.Util (toHex)
 import NType (AllConstrained, Elem, KnownSpine)
 
@@ -181,7 +181,7 @@ knitFaceToUI walletStateRef UiFace{..} WalletFace{..} KnitFace{..} =
                   let diff = coinToInteger total - coinToInteger confirmed
                       sign = if diff < 0 then " - " else " + "
                       pending = if diff == 0 then ""
-                                else sign <> pretty (abs diff) <> " pending \
+                                else sign <> pretty (unsafeMkCoin $ abs diff) <> " pending \
                                      \= " <> pretty total
                   in Right $ pretty confirmed <> pending
                 _ -> Left "Unrecognized return value"

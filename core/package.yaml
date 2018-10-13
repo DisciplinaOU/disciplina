@@ -46,6 +46,7 @@ library:
     - random
     - reflection
     - safe-exceptions >= 0.1.4
+    - scientific
     - serialise
     - serokell-util
     - servant

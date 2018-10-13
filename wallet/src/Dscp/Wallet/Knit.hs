@@ -39,7 +39,7 @@ instance
   ) => ComponentInflate components Wallet where
   componentInflate = \case
       ValueAddress a -> ExprLit $ toLit (LitAddress a)
-      ValueCoin c -> ExprLit $ toLit (LitNumber . fromIntegral . coinToInteger $ c)
+      ValueCoin c -> ExprLit $ toLit (LitNumber . (/1000000) . fromIntegral . coinToInteger $ c)
       ValueTx txId inAddr inValue outs -> componentInflate . ValueList $
         [ toValue . ValueString . toHex $ txId
         , toValue . ValueAddress $ inAddr
@@ -249,7 +249,7 @@ tyCoin :: (Elem components Core, Elem components Wallet) => TyProjection compone
 tyCoin = TyProjection "Coin" (\v -> fromValueCoin v <|> fromValueNumber v)
   where
     fromValueCoin = preview _ValueCoin <=< fromValue
-    fromValueNumber = return . Coin <=< toBoundedInteger <=< preview _ValueNumber <=< fromValue
+    fromValueNumber = return . Coin <=< toBoundedInteger . (*1000000) <=< preview _ValueNumber <=< fromValue
 
 tyTxOut :: Elem components Wallet => TyProjection components TxOut
 tyTxOut = TyProjection "TxOut" (preview _ValueTxOut <=< fromValue)
