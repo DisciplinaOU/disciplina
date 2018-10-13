@@ -7,6 +7,8 @@ import Data.Aeson (FromJSON (..), FromJSONKey (..), ToJSON (..), ToJSONKey, Valu
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveFromJSON, deriveJSON)
 import Data.Typeable (gcast)
+import Data.Fixed (Micro, Fixed(MkFixed), showFixed)
+import qualified Data.Text as T
 
 import Dscp.Core.Config
 import Dscp.Core.Fees
@@ -86,8 +88,12 @@ instance FromJSON Governance where
 -- Standalone derivations for newtypes
 ---------------------------------------------------------------------------
 
-deriving instance ToJSON Coin
-deriving instance FromJSON Coin
+instance ToJSON Coin where
+    toJSON (Coin c) = String $ T.pack $
+                      showFixed True (MkFixed $ fromIntegral c :: Micro)
+
+instance FromJSON Coin where
+    parseJSON = withText "Coin" $ leftToFail . parseCoin
 
 deriving instance ToJSON Nonce
 deriving instance FromJSON Nonce
