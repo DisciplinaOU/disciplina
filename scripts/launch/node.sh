@@ -41,7 +41,7 @@ if [[ "$node" == "" ]]; then
 fi
 
 ##################
-# Launch
+# Preliminaries
 ##################
 
 # permanent read-only files: configs, secrets...
@@ -49,14 +49,37 @@ files="$root/run"
 # gitignored files: databases...
 tmp_files="$files/tmp/$node"
 
+witness_web_addr="127.0.0.1:8091"
+
+educator_keyfile_seed="educator-1"
+
+### Actions ###
+
+if [[ "$no_clean" != true ]]; then
+    rm -rf $tmp_files
+fi
+
 mkdir $tmp_files 2> /dev/null || true
 
+# Generate educator keyfile
+if [[ $node == "educator" ]]; then
+    if ! which dscp-keygen > /dev/null; then
+        echo "dscp-keygen not found, install it with 'stack install disciplina-tools'"
+        exit 2
+    fi
+    echo $educator_keyfile_seed \
+        | dscp-keygen --seed --command "keyfile" \
+        > "${tmp_files}/educator.key"
+    chmod 0600 ${tmp_files}/educator.key
+fi
 
-witness_web_addr="127.0.0.1:8091"
+##################
+# Launch
+##################
 
 # educator-only params
 educator_params="
---educator-keyfile $files/educator.key
+--educator-keyfile $tmp_files/educator.key
 --sql-path $tmp_files/educator.db
 --educator-listen 127.0.0.1:8090
 --educator-api-no-auth
@@ -64,7 +87,7 @@ educator_params="
 --publication-period 15s
 "
 # Note: Student address in --student-api-no-auth parameter corresponds to secret
-# key with seed 456
+# key with seed 456 (use dscp-keygen to generate one)
 
 # witness params (and educator's as well)
 witness_params="
@@ -75,8 +98,7 @@ witness_params="
 --db-path $tmp_files/witness.db
 --log-dir $tmp_files/logs
 --witness-listen $witness_web_addr
---witness-keyfile $tmp_files/witness.key
---witness-gen-key
+--comm-n 0
 --metrics-server 127.0.0.1:8125
 --log-config run/log-config.yaml
 "
@@ -107,10 +129,6 @@ fi
 # profiling parameters
 if [[ "$profiling" == true ]]; then
     common_params="+RTS -p -RTS"
-fi
-
-if [[ "$no_clean" != true ]]; then
-    rm -rf $tmp_files
 fi
 
 if [[ "$node" == "educator" ]]; then
