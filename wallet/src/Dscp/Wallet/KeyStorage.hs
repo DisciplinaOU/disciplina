@@ -7,13 +7,13 @@ import Data.Aeson (eitherDecode, encode)
 import Data.Aeson.TH (defaultOptions, deriveJSON)
 import Dscp.Core (mkAddr)
 import Dscp.Util.Aeson (Versioned (..))
-import System.Directory (XdgDirectory (..), createDirectoryIfMissing, doesFileExist, getXdgDirectory)
+import System.Directory (createDirectoryIfMissing, doesFileExist)
 import System.FileLock (SharedExclusive (..), withFileLock)
 import System.FilePath.Posix ((</>))
 
 import qualified Data.ByteString.Lazy as LBS
 
-import Dscp.System (appName)
+import Dscp.Resource.AppDir (getOSAppDir)
 import Dscp.Util.Aeson (Base64Encoded, CustomEncoding (..))
 import Dscp.Wallet.Face
 
@@ -32,7 +32,7 @@ deriveJSON defaultOptions ''StorageAccount
 
 getDataDir :: IO FilePath
 getDataDir = do
-    dir <- getXdgDirectory XdgData appName
+    dir <- getOSAppDir
     createDirectoryIfMissing True dir
     return dir
 

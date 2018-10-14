@@ -5,11 +5,14 @@
 module Dscp.Resource.AppDir
        ( AppDirParam(..)
        , AppDir
+       , getOSAppDir
        ) where
 
 import Data.Aeson (FromJSON (..), ToJSON (..))
 import Fmt ((+|), (|+))
 import System.Directory (XdgDirectory (XdgData), createDirectoryIfMissing, getXdgDirectory)
+import System.Environment (lookupEnv)
+import System.IO.Error (catchIOError, isDoesNotExistError, ioError)
 
 import Dscp.Resource.Class (AllocResource (..), buildComponentR)
 import Dscp.System (appName)
@@ -27,7 +30,13 @@ type AppDir = FilePath
 -- | Return folder for this application, which will be within directory next to
 -- other applications in the system, e.g. "~/.local/share/disciplina".
 getOSAppDir :: MonadIO m => m FilePath
-getOSAppDir = liftIO $ getXdgDirectory XdgData appName
+getOSAppDir = liftIO $
+    getXdgDirectory XdgData appName `catchIOError` \e ->
+        -- only for `DoesNotExistError`s, this is to provide a fallback in case
+        -- `$HOME` is not set
+        if isDoesNotExistError e
+        then fromMaybe "." <$> lookupEnv "PWD"
+        else ioError e
 
 -- | Create application directory if absent.
 prepareAppDir
