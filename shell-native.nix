@@ -17,6 +17,7 @@ stdenv.mkDerivation rec {
     rocksdb
     zeromq
     zlib
+    git
   ];
 
   shellHook = ''

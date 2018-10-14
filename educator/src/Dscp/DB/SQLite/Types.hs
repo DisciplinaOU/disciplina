@@ -1,9 +1,15 @@
 module Dscp.DB.SQLite.Types
        ( -- * SQLite bindings
          SQLiteRealParams (..)
+       , srpPathL
+       , srpConnNumL
+       , srpMaxPendingL
        , SQLiteDBMode (..)
+       , _SQLiteReal
+       , _SQLiteInMemory
        , SQLiteDB (..)
        , SQLiteParams (..)
+       , sdpModeL
 
          -- * Educator schema
        , TxBlockIdx (..)
@@ -11,12 +17,13 @@ module Dscp.DB.SQLite.Types
        ) where
 
 import Control.Concurrent.Chan (Chan)
+import Control.Lens (Prism', makeLensesWith, makePrisms, prism)
 import Data.Aeson (FromJSON (..))
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveFromJSON)
-
-import Control.Lens (Prism', prism)
 import Database.SQLite.Simple (Connection)
+
+import Dscp.Util
 
 ----------------------------------------------------------
 -- SQLite bindings
@@ -31,6 +38,8 @@ data SQLiteRealParams = SQLiteRealParams
       -- ^ Maximal number of requests waiting for a free connection.
     } deriving (Show, Eq)
 
+makeLensesWith postfixLFields ''SQLiteRealParams
+
 -- | Database mode.
 data SQLiteDBMode
     = SQLiteReal !SQLiteRealParams
@@ -39,9 +48,13 @@ data SQLiteDBMode
       -- ^ In memory
     deriving (Show, Eq)
 
+makePrisms ''SQLiteDBMode
+
 data SQLiteParams = SQLiteParams
     { sdpMode :: SQLiteDBMode
     } deriving (Show, Eq)
+
+makeLensesWith postfixLFields ''SQLiteParams
 
 data SQLiteDB = SQLiteDB
     { sdConnPool   :: Chan Connection

@@ -2,8 +2,11 @@
 
 module Dscp.Witness.Keys
        ( WitnessKeyParams (..)
+       , _Basic
+       , _Committee
        ) where
 
+import Control.Lens (makePrisms)
 import Data.Aeson (FromJSON (..), Value (..), withObject, (.:))
 
 import Dscp.Resource.Keys
@@ -13,6 +16,8 @@ data WitnessKeyParams
     = Basic BaseKeyParams       -- ^ Basic key management with a keyfile
     | Committee CommitteeParams -- ^ Generate a key from committee params
     deriving (Show, Eq)
+
+makePrisms ''WitnessKeyParams
 
 -- | JSON instance (for configuration specs)
 instance FromJSON WitnessKeyParams where

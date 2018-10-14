@@ -18,8 +18,9 @@ module Dscp.CommonCLI
 
 import Data.Char (toLower)
 import Data.Version (showVersion)
+import Loot.Config.CLI (ModParser, (..:), (<*<))
 import Options.Applicative (Parser, ReadM, auto, eitherReader, flag', help, infoOption, long,
-                            maybeReader, metavar, option, str, strOption, switch)
+                            maybeReader, metavar, option, str, strOption)
 import Servant.Client (BaseUrl (..), parseBaseUrl)
 import Text.InterpolatedString.Perl6 (qc)
 import Time (KnownRatName, Time, unitsP)
@@ -28,47 +29,32 @@ import Dscp.Core.Foundation
 import Dscp.Crypto (PassPhrase)
 import Dscp.Crypto (mkPassPhrase)
 import Dscp.Resource.AppDir
-import Dscp.Resource.Keys (BaseKeyParams (..))
+import Dscp.Resource.Keys
 import Dscp.Util
 import Dscp.Web (NetworkAddress (..), ServerParams (..), parseNetAddr)
 import Paths_disciplina_witness (version)
-
-{-
-[Note default-cli-params]
-
-Several parsers in this file are changed in order to not
-yield default values when no related CLI arguments are provided.
-Parsers yielding default values always override corresponding values
-in config file, making using config files without CLI params at all
-effectively impossible.
-
-To support default values of configuration parameters nevertheless,
-default config values are provided in respective `*.Config` modules.
--}
 
 versionOption :: Parser (a -> a)
 versionOption = infoOption ("disciplina-" <> (showVersion version)) $
     long "version" <>
     help "Show version."
 
-baseKeyParamsParser :: Text -> Parser BaseKeyParams
-baseKeyParamsParser who = do
-    -- [Note default-cli-params]
-    bkpPath <- Just <$> kpKeyPathParser
-    bkpGenNew <- kpGenKeyParser
-    bkpPassphrase <- kpPassphraseParser
-    pure BaseKeyParams{..}
+baseKeyParamsParser :: Text -> ModParser BaseKeyParams
+baseKeyParamsParser who =
+    bkpPathL       ..: kpKeyPathParser <*<
+    bkpGenNewL     ..: kpGenKeyParser <*<
+    bkpPassphraseL ..: kpPassphraseParser
   where
-    kpKeyPathParser = strOption $
+    kpKeyPathParser = fmap Just . strOption $
          long [qc|{who}-keyfile|] <>
          metavar "FILEPATH" <>
          help [qc|Path to the secret key of the {who}. If not specified,
                  <homeDir>/{who}.key is used.|]
-    kpGenKeyParser = switch $
+    kpGenKeyParser = flag' True $
          long [qc|{who}-gen-key|] <>
          help [qc|Generate the key and write it to '{who}-keyfile-path' path.
                  If file already exists at given path, secret in it used.|]
-    kpPassphraseParser = optional . option passphraseReadM $
+    kpPassphraseParser = fmap Just . option passphraseReadM $
          long [qc|{who}-keyfile-pass|] <>
          metavar "PASSWORD" <>
          help "Password of secret key."

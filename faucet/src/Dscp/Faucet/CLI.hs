@@ -4,7 +4,7 @@ module Dscp.Faucet.CLI
     ( faucetConfigParser
     ) where
 
-import Loot.Config (OptParser, (.::), (.:<), (.<>))
+import Loot.Config (OptModParser, (%::), (.::), (.:<), (<*<))
 import Options.Applicative (Parser, flag', help, long, metavar, option)
 
 import Dscp.CommonCLI
@@ -21,13 +21,13 @@ dryRunParser = fmap DryRun . flag' True $
     long "dry-run" <>
     help "Do not communicate with witness backend"
 
-faucetConfigParser :: OptParser FaucetConfig
+faucetConfigParser :: OptModParser FaucetConfig
 faucetConfigParser = #faucet .:<
-    (#keys .:: baseKeyParamsParser "faucet" .<>
-     #api .:: serverParamsParser "faucet" .<>
-     #witnessBackend .:: clientAddressParser "witness-backend" wbHelp .<>
-     #transferredAmount .:: transferredAmountParser .<>
-     #dryRun .:: dryRunParser .<>
+    (#keys %:: baseKeyParamsParser "faucet" <*<
+     #api .:: serverParamsParser "faucet" <*<
+     #witnessBackend .:: clientAddressParser "witness-backend" wbHelp <*<
+     #transferredAmount .:: transferredAmountParser <*<
+     #dryRun .:: dryRunParser <*<
      #appDir .:: appDirParamParser)
   where
     wbHelp = "Address of witness node to accept faucet transactions"

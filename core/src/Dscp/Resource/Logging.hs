@@ -12,15 +12,15 @@ module Dscp.Resource.Logging
 
 import Control.Applicative ((<|>))
 import Control.Monad.Component (ComponentM, buildComponent)
-import Data.Aeson (FromJSON (..), ToJSON, encode, withObject, (.:), (.:?), toJSON)
+import Data.Aeson (FromJSON (..), ToJSON, encode, toJSON, withObject, (.:), (.:?))
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveFromJSON)
 import Fmt ((+|), (|+))
-import Loot.Log (Logging (..), Name, NameSelector (CallstackName, GivenName),
-                 logInfo, modifyLogName, Level(Debug))
+import Loot.Log (Level (Debug), Logging (..), Name, NameSelector (CallstackName, GivenName),
+                 logInfo, modifyLogName)
 import Loot.Log.Rio (LoggingIO)
-import Loot.Log.Syslog (SyslogConfig(..), loggerName, withPERROR, minLevel,
-    stopLoggers, defaultLoggerConfig, prepareSyslog)
+import Loot.Log.Syslog (SyslogConfig (..), defaultLoggerConfig, loggerName, minLevel, prepareSyslog,
+                        stopLoggers, withPERROR)
 import Loot.Log.Warper (LoggerConfig, prepareLogWarper)
 import System.Wlog (productionB, removeAllHandlers, showTidB)
 import qualified Text.Show
@@ -111,7 +111,7 @@ instance FromJSON LoggingConfig where
         let readConf val = case val :: Text of
                 "syslog" -> Syslog <$> v .: "syslog"
                 "warper" -> Warper <$> v .: "warper"
-                name -> fail . toString $ "unknown logging selection: " <> name
+                name     -> fail . toString $ "unknown logging selection: " <> name
         maybe (readConf "syslog" <|> readConf "warper") readConf =<< v .:? "use"
 
 deriveFromJSON defaultOptions ''LoggingParams

@@ -1,5 +1,8 @@
 module Dscp.Resource.Keys.Types
     ( BaseKeyParams (..)
+    , bkpPathL
+    , bkpGenNewL
+    , bkpPassphraseL
     , CommitteeParams (..)
 
     , KeyResources (..)
@@ -14,7 +17,7 @@ module Dscp.Resource.Keys.Types
     , ourSecretKeyData
     ) where
 
-import Control.Lens (Getter, makeLenses, to)
+import Control.Lens (Getter, makeLenses, makeLensesWith, to)
 import Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.:), (.=))
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
@@ -24,6 +27,7 @@ import Dscp.Core.Aeson ()
 import Dscp.Core.Foundation.Witness
 import Dscp.Core.Governance (CommitteeSecret (..))
 import Dscp.Crypto (Encrypted, PassPhrase, PublicKey, SecretKey)
+import Dscp.Util (postfixLFields)
 import Dscp.Util.Aeson (Base64Encoded, CustomEncoding (..), Versioned)
 
 -- | Contains all parameters required for manipulating with secret key.
@@ -38,6 +42,8 @@ data BaseKeyParams = BaseKeyParams
     , bkpPassphrase :: !(Maybe PassPhrase)
       -- ^ Password of encrypted secret key stored on disk.
     } deriving (Show, Eq)
+
+makeLensesWith postfixLFields ''BaseKeyParams
 
 -- | In case of committee governance, these keys help us to generate
 -- keys.

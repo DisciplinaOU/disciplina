@@ -2,16 +2,20 @@ module Dscp.DB.Rocks.Real.Types
        ( MonadRealDB
        , DB (..)
        , RocksDBParams (..)
+       , rdpPathL
+       , rdpCleanL
        , RocksDB (..)
        , rdDatabase
        , Rocks.BatchOp (..)
        ) where
 
-import Control.Lens (makeLenses)
+import Control.Lens (makeLenses, makeLensesWith)
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveFromJSON)
 import qualified Database.RocksDB as Rocks
 import Loot.Base.HasLens (HasLens')
+
+import Dscp.Util (postfixLFields)
 
 -- | Set of constraints necessary to operate on real DB.
 type MonadRealDB ctx m =
@@ -41,5 +45,6 @@ data RocksDB = RocksDB
     { _rdDatabase :: !DB
     }
 
+makeLensesWith postfixLFields ''RocksDBParams
 makeLenses ''RocksDB
 deriveFromJSON defaultOptions ''RocksDBParams
