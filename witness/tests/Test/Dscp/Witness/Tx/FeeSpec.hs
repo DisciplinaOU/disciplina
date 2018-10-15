@@ -1,8 +1,8 @@
 module Test.Dscp.Witness.Tx.FeeSpec where
 
 import Dscp.Core
-import Dscp.Crypto
 import Dscp.Util.Test
+import Dscp.Witness
 
 -- | There is a little sense to try all possible coefficients since this will
 -- hardly reveal edge cases processed wrong.
@@ -14,16 +14,7 @@ testFeeCoefficients =
 spec :: Spec
 spec = describe "Transaction fees" $ do
     it "fixFees always converges for money tx and linear coefs" . property $
-      \txTemplate sk ->
+      \outs sk ->
         let tw = fixFees (LinearFeePolicy testFeeCoefficients) $ \fees ->
-                let outs = txOuts txTemplate
-                    inValue = Coin (sum $ map (unCoin . txOutValue) outs)
-                              `unsafeAddCoin` unFees fees
-                    tx = txTemplate{ txInValue = inValue }
-
-                    pk = toPublic sk
-                    signature   = sign sk (toTxId tx, pk, ())
-                    witness     = TxWitness   { txwSig = signature, txwPk = pk }
-                    txWitnessed = TxWitnessed { twTx   = tx, twWitness = witness }
-                in txWitnessed
+                   signTx sk $ createTx sk 0 outs fees
         in tw `seq` ()

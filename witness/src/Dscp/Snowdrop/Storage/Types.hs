@@ -1,5 +1,6 @@
 module Dscp.Snowdrop.Storage.Types
     ( TxBlockRef (..)
+    , PublicationBlockRef (..)
 
     , TxsOf (..)
     , LastTx (..)
@@ -8,8 +9,10 @@ module Dscp.Snowdrop.Storage.Types
 
     , PublicationsOf (..)
     , LastPublication (..)
+    , PublicationBlock (..)
     , PublicationHead (..)
     , PublicationNext (..)
+    , PublicationData (..)
 
     , NextBlockOf (..)
     , NextBlock (..)
@@ -24,9 +27,18 @@ import Dscp.Core.Foundation
 -- | Transaction position in blockchain
 data TxBlockRef = TxBlockRef
     { tbrBlockRef :: HeaderHash
-    , tbrTxIdx    :: Int  -- ^ Index of tx in the block
+    , tbrTxIdx    :: Int  -- ^ Zero-based index of tx in the block
     }
     deriving (Eq, Ord, Show, Generic)
+
+-- | Points to public block which contains given publication.
+newtype PublicationBlockRef = PublicationBlockRef
+    { unPublicationBlockRef :: HeaderHash
+    } deriving (Eq, Ord, Show, Generic)
+
+instance Buildable PublicationBlockRef where
+    build (PublicationBlockRef h) =
+        "PublicationBlockRef { " +| h |+ " }"
 
 -- | Account transaction linked-list storage structure.
 -- |
@@ -55,6 +67,14 @@ instance Buildable TxHead where
 data TxNext = TxNext { unTxNext :: GTxId }
     deriving (Eq, Ord, Show, Generic)
 
+-- | Points to public block which contains given publication.
+newtype PublicationBlock = PublicationBlock
+    { unPublicationBlock :: PublicationTxId
+    } deriving (Eq, Ord, Show, Generic)
+
+instance Buildable PublicationBlock where
+    build (PublicationBlock h) =
+        "PublicationBlock { " +| h |+ " }"
 
 -- | Educator publication linked-list storage structure.
 -- |
@@ -71,7 +91,7 @@ instance Buildable PublicationsOf where
 
 -- | Points to the `PublicationHead addr` in the database.
 newtype LastPublication = LastPublication
-    { unLastPublication :: PrivateBlockHeader
+    { unLastPublication :: PrivateHeaderHash
     } deriving (Eq, Ord, Show, Generic)
 
 -- | Once 'LastPublication' is known, you can walk the chain of
@@ -90,6 +110,16 @@ data PublicationNext
     = PublicationNext (Maybe PrivateHeaderHash)
     deriving (Eq, Ord, Show, Generic)
 
+-- | Publication taken by id.
+data PublicationData = PublicationData
+    { pdTx   :: PublicationTx
+    , pdTxId :: PublicationTxId
+    } deriving (Eq, Ord, Show, Generic)
+
+instance Buildable PublicationData where
+    build PublicationData{..} =
+        "PublicationData {" +| pdTxId |+ " }"
+
 -- | Key/value types for nextBlock chain storage
 newtype NextBlockOf = NextBlockOf { unNextBlockOf :: HeaderHash }
     deriving (Eq, Ord, Show, Buildable, Generic)
@@ -102,6 +132,7 @@ newtype NextBlock = NextBlock { unNextBlock :: HeaderHash }
 ----------------------------------------------------------------------------
 
 instance Serialise TxBlockRef
+instance Serialise PublicationBlockRef
 instance Serialise LastTx
 instance Serialise TxsOf
 instance Serialise TxNext
@@ -110,5 +141,7 @@ instance Serialise LastPublication
 instance Serialise PublicationsOf
 instance Serialise PublicationNext
 instance Serialise PublicationHead
+instance Serialise PublicationBlock
+instance Serialise PublicationData
 instance Serialise NextBlockOf
 instance Serialise NextBlock

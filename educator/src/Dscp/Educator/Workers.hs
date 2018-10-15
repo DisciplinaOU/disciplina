@@ -7,7 +7,6 @@ module Dscp.Educator.Workers
 
 import Fmt (build, fmt, nameF)
 import Fmt ((+||), (||+))
-import Loot.Base.HasLens (lensOf)
 import Loot.Config (option, sub)
 import Loot.Log (logInfo, logWarning)
 import Time (ms, toUnit)
@@ -19,8 +18,7 @@ import Dscp.Educator.Launcher.Mode
 import Dscp.Network
 import Dscp.Resource.Keys
 import Dscp.Util.Timing
-import Dscp.Witness.Mempool
-import Dscp.Witness.SDLock
+import Dscp.Witness
 
 educatorWorkers
     :: CombinedWorkMode ctx m
@@ -36,10 +34,9 @@ makePublicationTx
     :: CombinedWorkMode ctx m
     => PrivateBlockHeader -> m PublicationTxWitnessed
 makePublicationTx header = do
-    sk <- view $ lensOf @(KeyResources EducatorNode) . krSecretKey
-    pk <- view $ lensOf @(KeyResources EducatorNode) . krPublicKey
+    sk <- getSecretKeyData @EducatorNode
     let tx = PublicationTx
-            { ptAuthor = mkAddr pk
+            { ptAuthor = skAddress sk
             , ptFeesAmount = unFees $ calcFeePub (fcPublication feeConfig) header
             , ptHeader = header
             }

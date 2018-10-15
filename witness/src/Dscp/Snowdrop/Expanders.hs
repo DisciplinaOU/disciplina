@@ -111,9 +111,11 @@ seqExpandersPublicationTx ::
 seqExpandersPublicationTx feesReceiverAddr =
     SeqExpanders $ one $ Expander
         (Set.fromList [publicationOfPrefix])
-        (Set.fromList [accountPrefix, publicationHeadPrefix, publicationOfPrefix])
+        (Set.fromList [accountPrefix, publicationHeadPrefix, publicationOfPrefix,
+                       publicationIdsPrefix, publicationBlockIdsPrefix, privateBlockTxPrefix])
         $ \PublicationTxWitnessed { ptwTx } -> do
             let PublicationTx{ ptHeader, ptAuthor, ptFeesAmount } = ptwTx
+            let ptxId = hash ptwTx
             let phHash = hash ptHeader
             let prevHash = ptHeader ^. pbhPrevBlock
             let (prevHashM :: Maybe PrivateHeaderHash) =
@@ -151,8 +153,10 @@ seqExpandersPublicationTx feesReceiverAddr =
 
             let change = if isJust maybePub then Upd else New
             pure $ mkDiffCS $ Map.fromList $
-                [ PublicationsOf  ptAuthor ==> change (LastPublication ptHeader)
+                [ PublicationsOf  ptAuthor ==> change (LastPublication phHash)
                 , PublicationHead phHash   ==> New    (PublicationNext prevHashM)
+                , PublicationIds  ptxId    ==> New    (PublicationData ptwTx (hash ptwTx))
+                , PrivateBlockTx  phHash   ==> New    (PrivateBlockTxVal ptxId)
                 ] ++ feesChanges
 
 ----------------------------------------------------------------------------

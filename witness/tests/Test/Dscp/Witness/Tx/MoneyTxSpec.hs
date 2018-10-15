@@ -14,6 +14,8 @@ import Dscp.Snowdrop
 import Dscp.Util
 import Dscp.Util.Test
 import Dscp.Witness
+
+import Test.Dscp.Witness.Common
 import Test.Dscp.Witness.Mode
 
 -- | Describes tx construction in steps. This is something you want
@@ -56,18 +58,6 @@ instance Buildable TxData where
 
 instance Show TxData where
     show = toString . pretty
-
--- | Generate output `Address` which does not make transaction invalid.
-genSafeOutAddr :: Gen Address
-genSafeOutAddr = arbitrary `suchThat` (`notElem` testGenesisAddresses)
-
--- | Generate output `TxOut` which does not make transaction invalid.
-genSafeTxOuts :: Word64 -> Gen Word32 -> Gen [TxOut]
-genSafeTxOuts maxVal genN = do
-    n <- fromIntegral <$> genN
-    txOutAddrs <- vectorUniqueOf n genSafeOutAddr
-    txOutValues <- vectorOf n $ Coin <$> choose (1, maxVal)
-    return $ zipWith TxOut txOutAddrs txOutValues
 
 -- | Generate `TxData` which does not make transaction invalid.
 genSafeTxData :: Gen TxData

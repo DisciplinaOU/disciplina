@@ -13,6 +13,8 @@ module Dscp.Util.Aeson
 
     , toJSONSerialise
     , parseJSONSerialise
+
+    , mergeObjects
     ) where
 
 import Codec.Serialise (Serialise, deserialiseOrFail, serialise)
@@ -21,6 +23,7 @@ import Data.Aeson.Types (Parser)
 import Data.ByteArray (ByteArray, ByteArrayAccess)
 import qualified Data.ByteArray as BA
 import qualified Data.ByteString.Lazy as LBS
+import qualified Data.HashMap.Strict as HM
 import Data.Reflection (Reifies (..))
 import qualified Data.SemVer as SemVer
 import Fmt ((+||), (||+))
@@ -103,6 +106,17 @@ parseJSONSerialise base v =
     parseJSON v
     >>= leftToFail . fromBase base
     >>= leftToFail . first (show @Text) . deserialiseOrFail . LBS.fromStrict
+
+---------------------------------------------------------------------
+-- Helpers
+---------------------------------------------------------------------
+
+-- | Assuming given arguments are 'Object's, merges their content.
+mergeObjects :: Value -> Value -> Value
+mergeObjects (Object a) (Object b) = Object $ HM.unionWithKey mergeUnique a b
+  where
+    mergeUnique k _ _ = error $ "mergeObjects: duplicated values for key " <> show k
+mergeObjects _ _ = error "mergeObjects: one of arguments is not an object"
 
 ---------------------------------------------------------------------
 -- Instances

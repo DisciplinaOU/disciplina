@@ -11,6 +11,7 @@ import Dscp.Crypto
 import Dscp.Wallet.Face
 import Dscp.Wallet.KeyStorage
 import Dscp.Web
+import Dscp.Witness.Logic.Tx
 import Dscp.Witness.Web.Client
 import Dscp.Witness.Web.Types
 
@@ -82,21 +83,12 @@ sendTx wc sendEvent eSecretKey mPassPhrase (toList -> outs) = do
     secretKey <-
         either throwIO return .
         decrypt (fromMaybe emptyPassPhrase mPassPhrase) $ eSecretKey
-    let publicKey = toPublic secretKey
-        address = mkAddr publicKey
+    let secretData = mkSecretKeyData secretKey
 
     nonce <- fromIntegral . unNonce . aiCurrentNonce <$>
-             wGetAccount wc address False
+             wGetAccount wc (skAddress secretData) False
 
-    txWitnessed <- pure . fixFees (fcMoney feeConfig) $ \fees ->
-        let inAcc   = TxInAcc { tiaNonce = nonce, tiaAddr = address }
-            inValue = Coin (sum $ map (unCoin . txOutValue) outs) `unsafeAddCoin` unFees fees
-            tx      = Tx { txInAcc = inAcc, txInValue = inValue, txOuts = outs }
-
-            signature   = sign secretKey (toTxId tx, publicKey, ())
-            witness     = TxWitness   { txwSig = signature, txwPk = publicKey }
-            txWitnessed = TxWitnessed { twTx   = tx, twWitness = witness }
-        in txWitnessed
+    let txWitnessed = createTxw (fcMoney feeConfig) secretData nonce outs
 
     sendLogEvent sendEvent $
         "Sending transaction: {"
@@ -119,7 +111,7 @@ getBalance wc sendEvent address = do
 
 getTxHistory :: WitnessClient -> SendEvent -> Address -> IO [GTx]
 getTxHistory wc sendEvent address = do
-    res <- map tiTx . fromMaybe [] . aiTransactions <$> wGetAccount wc address True
+    res <- map wbiItem . fromMaybe [] . aiTransactions <$> wGetAccount wc address True
     sendLogEvent sendEvent $
         "Tx history for " <> pretty address <> ": " <> pretty (length res) <> " entries"
     return res

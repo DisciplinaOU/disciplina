@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 
 # Submits plenty of unique submission requests to Student API.
+# Arguments:
+# 1. Number of submitted publications (default: 1)
 
 # Dependencies:
 # * httpie

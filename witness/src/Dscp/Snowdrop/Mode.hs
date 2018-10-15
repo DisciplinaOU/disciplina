@@ -5,6 +5,7 @@ module Dscp.Snowdrop.Mode
     , SdM_
     , SdM
     , StateSdM
+    , MonadSD
     , runSdRIO
     , runSdM
     , runSdMRead
@@ -14,19 +15,21 @@ module Dscp.Snowdrop.Mode
     ) where
 
 import Data.Default (def)
-import Loot.Base.HasLens (lensOf)
+import Loot.Base.HasLens (HasCtx, lensOf)
+import Loot.Log (Logging, ModifyLogName, MonadLogging)
 import Loot.Log.Rio (LoggingIO)
 import qualified Snowdrop.Core as SD
 import Snowdrop.Execution (BaseMException (..))
 import qualified Snowdrop.Execution as SD
 import Snowdrop.Util (RIO, runRIO)
+import UnliftIO (MonadUnliftIO)
 
 import Dscp.Snowdrop.Actions
 import Dscp.Snowdrop.Configuration
 import Dscp.Snowdrop.IOCtx (IOCtx)
 import Dscp.Util
 import Dscp.Witness.AVL (AvlHash)
-import Dscp.Witness.Launcher.Mode
+import Dscp.Witness.Config
 import qualified Dscp.Witness.SDLock as Lock
 import Snowdrop.Execution (AVLChgAccum, RememberForProof)
 
@@ -34,13 +37,22 @@ import Snowdrop.Execution (AVLChgAccum, RememberForProof)
 type SdM_ chgacc = SD.ERoComp Exceptions Ids Values (IOCtx chgacc)
 
 -- | Monad representing actions in snowdrop BaseM, related to rocksdb storage.
-type SdM a = SdM_ (SD.SumChangeSet Ids Values) a
+type SdM = SdM_ (SD.SumChangeSet Ids Values)
 
 -- | Monad representing actions in snowdrop BaseM, related to AVL+ storage.
 type StateSdM a = SdM_ (AVLChgAccum AvlHash Ids Values) a
 
+type MonadSD ctx m =
+    ( MonadUnliftIO m
+    , MonadMask m
+    , MonadLogging m
+    , ModifyLogName m
+    , HasCtx ctx m '[Lock.SDLock, Logging IO, SDVars]
+    , HasWitnessConfig
+    )
+
 -- This is terrible
-runSdRIO :: WitnessWorkMode ctx m => RIO LoggingIO a -> m a
+runSdRIO :: MonadSD ctx m => RIO LoggingIO a -> m a
 runSdRIO action = do
     logger <- view (lensOf @LoggingIO)
     liftIO $ runRIO logger action
@@ -51,19 +63,19 @@ unwrapSDBaseRethrow :: MonadCatch m => m a -> m a
 unwrapSDBaseRethrow = wrapRethrow $ \(BaseMException e) -> e :: Exceptions
 
 -- | SdM runner, should be protected by some lock.
-runSdM :: (WitnessWorkMode ctx m, Lock.WithinReadSDLock) => SdM a -> m a
+runSdM :: (MonadSD ctx m, Lock.WithinReadSDLock) => SdM a -> m a
 runSdM action = do
     blockDBA <- SD.dmaAccessActions . nsBlockDBActions <$> view (lensOf @SDVars)
     unwrapSDBaseRethrow $
         SD.runERoCompIO @Exceptions blockDBA def action
 
 -- | Often used SdM runner that takes read lock.
-runSdMRead :: WitnessWorkMode ctx m => SdM a -> m a
+runSdMRead :: MonadSD ctx m => SdM a -> m a
 runSdMRead action = Lock.readingSDLock $ runSdM action
 
 -- | SdM runner, should be protected by some lock.
 runStateSdM
-    :: (WitnessWorkMode ctx m, Lock.WithinReadSDLock)
+    :: (MonadSD ctx m, Lock.WithinReadSDLock)
     => RememberForProof -> StateSdM a -> m a
 runStateSdM recForProof action = do
     stateDBA <- SD.dmaAccessActions . flip nsStateDBActions recForProof <$> view (lensOf @SDVars)
@@ -71,5 +83,5 @@ runStateSdM recForProof action = do
         SD.runERoCompIO @Exceptions stateDBA def action
 
 -- | Often used SdM runner that takes read lock.
-runStateSdMRead :: WitnessWorkMode ctx m => RememberForProof -> StateSdM a -> m a
+runStateSdMRead :: MonadSD ctx m => RememberForProof -> StateSdM a -> m a
 runStateSdMRead recForProof action = Lock.readingSDLock $ runStateSdM recForProof action

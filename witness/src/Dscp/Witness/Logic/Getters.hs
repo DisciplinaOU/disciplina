@@ -19,10 +19,11 @@ module Dscp.Witness.Logic.Getters
 
     , getTxMaybe
     , getTx
+
+    , getPrivateTipHash
     ) where
 
 import Control.Lens (ix)
-import Loot.Base.HasLens (lensOf)
 import qualified Snowdrop.Block as SD
 import qualified Snowdrop.Core as SD
 import qualified Snowdrop.Execution as SD
@@ -34,7 +35,6 @@ import Dscp.Witness.Config
 import Dscp.Witness.Launcher.Mode
 import Dscp.Witness.Logic.Exceptions
 import Dscp.Witness.Mempool
-import Dscp.Witness.SDLock
 
 ----------------------------------------------------------------------------
 -- Block/Header/Tip getters
@@ -114,14 +114,10 @@ getAccountMaybe =
 getMempoolAccountMaybe
     :: WitnessWorkMode ctx m
     => Address -> m (Maybe Account)
-getMempoolAccountMaybe addr = do
-    Mempool pool _ <- view (lensOf @MempoolVar)
-    lock           <- view (lensOf @SDLock)
-    readFromMempoolLocked pool lock $
-        SD.liftERoComp $ SD.queryOne (AccountId addr)
+getMempoolAccountMaybe addr = runSdMempoolRead $ SD.queryOne (AccountId addr)
 
 -- | Get a list of all transactions for a given account
-getAccountTxs :: WitnessWorkMode ctx m => Address -> m [GTxInBlock]
+getAccountTxs :: WitnessWorkMode ctx m => Address -> m [WithBlock GTxWitnessed]
 getAccountTxs address = runSdMRead $ loadTxs >>= mapM getTx
   where
     loadTxs =
@@ -138,20 +134,29 @@ getAccountTxs address = runSdMRead $ loadTxs >>= mapM getTx
 ----------------------------------------------------------------------------
 
 -- | Safely get transaction.
-getTxMaybe :: HasWitnessConfig => GTxId -> SdM (Maybe GTxInBlock)
+getTxMaybe :: HasWitnessConfig => GTxId -> SdM (Maybe (WithBlock GTxWitnessed))
 getTxMaybe gTxId = do
     SD.queryOne gTxId >>= \case
         Nothing -> pure Nothing
         Just TxBlockRef{..} ->
             getBlockMaybe tbrBlockRef >>= pure . \case
                 Nothing -> Nothing
-                Just block -> fmap (GTxInBlock $ Just block) . (^? ix tbrTxIdx) . bbTxs . bBody $ block
+                Just block -> fmap (WithBlock $ Just block) . (^? ix tbrTxIdx) . bbTxs . bBody $ block
 
 -- | Resolves transaction, throws exception if it's absent.
-getTx :: HasWitnessConfig => GTxId -> SdM GTxInBlock
+getTx :: HasWitnessConfig => GTxId -> SdM (WithBlock GTxWitnessed)
 getTx gTxId = do
     tM <- getTxMaybe gTxId
     maybe (SD.throwLocalError $ LETxAbsent $
               "Can't get transaction with id " <> pretty gTxId)
           pure
           tM
+
+----------------------------------------------------------------------------
+-- Publication getters
+----------------------------------------------------------------------------
+
+getPrivateTipHash :: HasWitnessConfig => Address -> SdM_ chgacc PrivateHeaderHash
+getPrivateTipHash educator =
+    maybe genesisHeaderHash unLastPublication <$>
+    SD.queryOne (PublicationsOf educator)

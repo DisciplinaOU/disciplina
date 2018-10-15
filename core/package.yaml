@@ -36,6 +36,7 @@ library:
     - lens
     - memory
     - mon
+    - mtl
     - o-clock
     - optparse-applicative
     - parser-combinators
@@ -48,6 +49,7 @@ library:
     - serialise
     - serokell-util
     - servant
+    - servant-server
     - servant-client-core
     - semver
     - snowdrop-util

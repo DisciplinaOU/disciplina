@@ -7,7 +7,7 @@ module Dscp.Crypto.Aeson () where
 import Prelude hiding (toStrict)
 
 import Codec.Serialise (Serialise)
-import Data.Aeson (FromJSON (..), ToJSON (..))
+import Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.:), (.=))
 import Data.ByteArray (ByteArrayAccess)
 import Data.ByteArray (convert)
 import Data.Reflection (Reifies (..))
@@ -60,3 +60,15 @@ instance (Serialise a, IsEncoding enc) =>
 instance (Serialise a, IsEncoding enc) =>
          FromJSON (CustomEncoding enc $ MerkleProof a) where
     parseJSON = fmap CustomEncoding . parseJSONSerialise (reflect (Proxy @enc))
+
+instance ToJSON (MerkleSignature a) where
+    toJSON MerkleSignature{..} = object
+        [ "root" .= mrHash
+        , "transactionsNum" .= mrSize
+        ]
+
+instance FromJSON (MerkleSignature a) where
+    parseJSON = withObject "merkle signature" $ \o -> do
+        mrHash <- o .: "root"
+        mrSize <- o .: "transactionsNum"
+        return MerkleSignature{..}

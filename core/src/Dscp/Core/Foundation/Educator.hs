@@ -68,6 +68,7 @@ module Dscp.Core.Foundation.Educator
     , getPrevBlockRefMaybe
 
     -- * Activity Type Graph
+    , ATGSubjectChange (..)
     , ATGDelta (..)
     , isEmptyATGDelta
     , ATGNode (..)
@@ -229,13 +230,23 @@ makeLenses ''Submission
 makeLenses ''SubmissionWitness
 makeLenses ''SignedSubmission
 
+data ATGSubjectChange
+    = ATGAdded
+    | ATGRemoved
+    deriving (Eq, Ord, Show, Generic)
+
+instance Buildable ATGSubjectChange where
+    build = \case
+        ATGAdded -> "added"
+        ATGRemoved -> "removed"
+
 -- | ATGDelta is a diff for set of subjects which are taught by Educator.
 -- Implemented as 'Map SubjectId Bool' to avoid representing invalid diffs
 -- (like, subject is present simultaneously in added and removed sets).
 -- TODO: maybe we should separately make up a library for such stuff,
 -- like 'MapModifier'?
 newtype ATGDelta = ATGDelta
-    { getATGDelta :: Map (Id Subject) Bool
+    { getATGDelta :: Map (Id Subject) ATGSubjectChange
     } deriving (Show, Eq, Ord, Monoid, Generic)
 
 instance Buildable ATGDelta where

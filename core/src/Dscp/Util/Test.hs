@@ -27,8 +27,10 @@ import qualified GHC.Exts as Exts
 import qualified GHC.Generics as G
 import qualified Loot.Log as Log
 import Options.Applicative (Parser, defaultPrefs, execParserPure, getParseResult, info)
+import Servant (FromHttpApiData (..), ToHttpApiData (..))
 import System.Random (Random)
 import Test.Hspec as T
+import Test.Hspec.QuickCheck as T (modifyMaxSuccess)
 import Test.QuickCheck as T (Arbitrary (..), Fixed (..), Gen, Property, Testable (..), conjoin,
                              cover, elements, expectFailure, forAll, frequency, infiniteList,
                              infiniteListOf, ioProperty, label, listOf, listOf1, oneof, property,
@@ -174,6 +176,11 @@ expectOne _    [x] = x
 expectOne desc xs  =
     error $ "expectOne: " <> pretty (length xs) <> " entities (" <> desc <> ")"
 
+expectSome :: Text -> [a] -> NonEmpty a
+expectSome _    (nonEmpty -> Just l) = l
+expectSome desc _ =
+    error $ "expectSome: empty list (" <> desc <> ")"
+
 counterexample :: Testable prop => Text -> prop -> Property
 counterexample desc prop = Q.counterexample (toString desc) prop
 
@@ -247,6 +254,18 @@ aesonRoundtripProp
     => Spec
 aesonRoundtripProp =
     it (show $ typeRep $ Proxy @a) $ aesonRoundtrip @a
+
+httpApiRoundtrip
+    :: forall a. (Arbitrary a, ToHttpApiData a, FromHttpApiData a, Eq a, Show a)
+    => Property
+httpApiRoundtrip = property $ \(s :: a) -> do
+    parseUrlPiece (toUrlPiece s) === Right s
+
+httpApiRoundtripProp
+    :: forall a. (Arbitrary a, ToHttpApiData a, FromHttpApiData a, Eq a, Show a, Typeable a)
+    => Spec
+httpApiRoundtripProp =
+    it (show $ typeRep $ Proxy @a) $ httpApiRoundtrip @a
 
 ----------------------------------------------------------------------------
 -- Generics fun

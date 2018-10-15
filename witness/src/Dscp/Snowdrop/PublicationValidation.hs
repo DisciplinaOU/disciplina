@@ -75,11 +75,13 @@ preValidatePublication =
 
         -- Checking that prevBlockHash matches the one from storage.
         lastPub <- queryOne (PublicationsOf authorId)
-        () <- check (fmap (hash . unLastPublication) lastPub == prevHashM)
+        () <- check (fmap unLastPublication lastPub == prevHashM)
                     PublicationPrevBlockIsIncorrect
 
+        let phHash = hash privHeader
+
         -- Getting actual changes
-        let hd  = proj =<< inj (PublicationHead (hash privHeader)) `Map.lookup` changes
+        let hd  = proj =<< inj (PublicationHead phHash) `Map.lookup` changes
         let box = proj =<< inj (PublicationsOf  authorId)          `Map.lookup` changes
 
         () <- mconcat
@@ -90,12 +92,12 @@ preValidatePublication =
             , -- Check that we move head pointer correctly.
               if | isNothing lastPub ->
                     -- The pointer is set in the first time here?
-                    check (box == Just (New (LastPublication privHeader))) $
+                    check (box == Just (New (LastPublication phHash))) $
                         PublicationIsBroken
 
                  | otherwise ->
                     -- The pointer is moved to the correct destination here?
-                    check (box == Just (Upd (LastPublication privHeader))) $
+                    check (box == Just (Upd (LastPublication phHash))) $
                         PublicationIsBroken
             ]
 

@@ -50,6 +50,9 @@ import Dscp.Core.Foundation
 import Dscp.Crypto
 import Dscp.Util.Test
 
+instance Arbitrary SecretKeyData where
+    arbitrary = mkSecretKeyData <$> arbitrary
+
 instance Arbitrary Address where
     arbitrary = Address <$> arbitrary
 
@@ -110,6 +113,10 @@ genCommonDocumentType = frequency [(5, pure Offline), (1, pure Online)]
 instance Arbitrary PrivateTx where
     arbitrary = PrivateTx <$> arbitrary <*> arbitrary <*> arbitrary
 
+instance Arbitrary ATGSubjectChange where
+    arbitrary = genericArbitrary
+    shrink    = genericShrink
+
 instance Arbitrary ATGDelta where
     arbitrary = genericArbitrary
     shrink    = genericShrink
@@ -118,7 +125,9 @@ instance Arbitrary PrivateBlockHeader where
     arbitrary = genericArbitrary
     shrink    = genericShrink
 
-deriving instance Arbitrary Coin
+instance Arbitrary Coin where
+    arbitrary = Coin <$> choose (0, 10000)
+
 deriving instance Arbitrary Nonce
 deriving instance Arbitrary Difficulty
 deriving instance Arbitrary SlotId
@@ -158,6 +167,14 @@ instance Arbitrary PublicationTxWitness where
 instance Arbitrary PublicationTxWitnessed where
     arbitrary = genericArbitrary
     shrink    = genericShrink
+
+instance Arbitrary GTx where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
+
+instance Arbitrary GTxId where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
 
 instance Arbitrary Header where
     arbitrary = genericArbitrary

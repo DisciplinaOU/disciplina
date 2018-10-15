@@ -47,9 +47,11 @@ instance HasErrorTag LogicException where
         LEBlockAbsent{} -> "BlockNotFound"
         LETxAbsent{} -> "TransactionNotFound"
         LEMalformed{} -> "InternalError"
+        LEPrivateBlockAbsent{} -> "PrivateBlockNotFound"
 
 instance ToServantErr LogicException where
     toServantErrNoBody = \case
         LEBlockAbsent{} -> err404
         LETxAbsent{} -> err404
         LEMalformed{} -> err500
+        LEPrivateBlockAbsent{} -> err404

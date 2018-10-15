@@ -79,7 +79,7 @@ paths:
           schema:
             type: object
             properties:
-              transactions:
+              blocks:
                 type: array
                 items:
                   $ref: "#/definitions/BlockInfo"
@@ -177,6 +177,11 @@ paths:
         maximum: 100
         type: integer
         format: int32
+      - in: query
+        name: account
+        description: Remain only transactions affecting given account.
+        type: string
+        format: byte
       responses:
         200:
           description: Successful operation
@@ -188,7 +193,7 @@ paths:
                 items:
                   allOf:
                   - $ref: "#/definitions/TransactionInfo"
-                  - $ref: "#/definitions/TransactionBlockInfo"
+                  - $ref: "#/definitions/AndBlockInfo"
               nextId:
                 $ref: "#/definitions/Hash"
 
@@ -215,7 +220,6 @@ paths:
           description: Transaction cannot be applied.
           schema:
             $ref: '#/definitions/TxValidationError'
-
   /transactions/{transactionHash}:
     get:
       summary: Get information about a transaction.
@@ -237,8 +241,8 @@ paths:
           description: Successful operation
           schema:
             allOf:
-            - $ref: "#/definitions/TransactionInfo"
-            - $ref: "#/definitions/TransactionBlockInfo"
+            - $ref: "#/definitions/GeneralizedTransactionInfo"
+            - $ref: "#/definitions/AndBlockInfo"
         400:
           description: Invalid input
           schema:
@@ -263,6 +267,50 @@ paths:
           description: Transaction accepted. Returns transaction id.
           schema:
             $ref: "#/definitions/Hash"
+
+  /publications:
+    get:
+      summary: Get list of recent publications of the given educator.
+      description: >-
+        Return a batch of `count` most recent publications.
+        If `nextId` key is present in the result, it can be passed as `from` parameter to get the next batch.
+      operationId: getEducatorPublications
+      produces:
+      - application/json
+      parameters:
+      - in: query
+        name: from
+        description: >-
+          Get a batch of publications starting with the specified one.
+          If not specified, get the most recent publications.
+        type: string
+        format: byte
+      - in: query
+        name: count
+        description: The amount of publications returned.
+        default: 100
+        maximum: 100
+        type: integer
+        format: int32
+      - in: query
+        name: educator
+        description: Return only publications of the given author.
+        type: string
+        format: byte
+      responses:
+        200:
+          description: Successful operation
+          schema:
+            type: object
+            properties:
+              transactions:
+                type: array
+                items:
+                  allOf:
+                  - $ref: "#/definitions/PublicationInfo"
+                  - $ref: "#/definitions/AndBlockInfo"
+              nextId:
+                $ref: "#/definitions/Hash"
 
 definitions:
   Hash:
@@ -337,7 +385,7 @@ definitions:
       currentNonce:
         type: integer
         format: int32
-  TransactionInfo:
+  GeneralizedTransactionInfo:
     type: object
     discriminator: txType
     properties:
@@ -346,6 +394,17 @@ definitions:
         enum:
         - money
         - publication
+      txId:
+        $ref: "#/definitions/Hash"
+      outValue:
+        $ref: "#/definitions/Coin"
+      money:
+        $ref: "#/definitions/TransactionInfo"
+      publication:
+        $ref: "#/definitions/PublicationInfo"
+  TransactionInfo:
+    type: object
+    properties:
       txId:
         $ref: "#/definitions/Hash"
       outValue:
@@ -372,16 +431,21 @@ definitions:
                   $ref: "#/definitions/Address"
                 value:
                   $ref: "#/definitions/Coin"
+  PublicationInfo:
+    type: object
+    properties:
+      txId:
+        $ref: "#/definitions/Hash"
       publication:
         type: object
         properties:
           author:
             $ref: "#/definitions/Address"
-          block:
-            $ref: "#/definitions/Hash"
-          prevBlock:
-            $ref: "#/definitions/Hash"
-  TransactionBlockInfo:
+          feesAmount:
+            $ref: "#/definitions/Coin"
+          header:
+            $ref: "#/definitions/PrivateBlockHeader"
+  AndBlockInfo:
     type: object
     properties:
       block:
@@ -394,14 +458,23 @@ definitions:
         items:
           allOf:
           - $ref: "#/definitions/TransactionInfo"
-          - $ref: "#/definitions/TransactionBlockInfo"
+          - $ref: "#/definitions/AndBlockInfo"
+  GeneralizedTransactionList:
+    type: object
+    properties:
+      transactions:
+        type: array
+        items:
+          allOf:
+          - $ref: "#/definitions/GeneralizedTransactionInfo"
+          - $ref: "#/definitions/AndBlockInfo"
   BlockTransactionList:
     type: object
     properties:
       transactions:
         type: array
         items:
-          $ref: "#/definitions/TransactionInfo"
+          $ref: "#/definitions/GeneralizedTransactionInfo"
   TxInAcc:
     type: object
     description: Transaction source account info.
@@ -448,6 +521,33 @@ definitions:
         $ref: "#/definitions/Tx"
       witness:
         $ref: "#/definitions/TxWitness"
+  AtgDelta:
+    type: array
+    items:
+      type: object
+      properties:
+        subjectId:
+          type: integer
+        status:
+          type: string
+          enum:
+            - removed
+            - added
+  PrivateBlockHeader:
+    type: object
+    properties:
+      prevBlock:
+        $ref: "#/definitions/Hash"
+      bodyProof:
+        type: object
+        properties:
+          root:
+            $ref: "#/definitions/Hash"
+          transactionsNum:
+            type: integer
+            format: int32
+      atgDelta:
+        $ref: "#/definitions/AtgDelta"
   ErrResponse:
     type: object
     required:
@@ -460,12 +560,14 @@ definitions:
 
           - BlockNotFound
           - TransactionNotFound
+          - PrivateBlockNotFound
         description: >-
           Error type:
             * `InvalidFormat` - Failed to deserialise one of parameters.
 
             * `BlockNotFound` - Specified block does not exist.
             * `TransactionNotFound` - Specified transaction does not exist.
+            * `PrivateBlockNotFound` - Specified private block does not exist.
 
   TxValidationError:
     type: object

@@ -15,17 +15,14 @@ import Dscp.Util.Test
 import Dscp.Witness
 import Test.Dscp.Witness.Mode
 
-genSmallMerkleSignature :: Gen (MerkleSignature a)
-genSmallMerkleSignature = MerkleSignature <$> arbitrary <*> choose (0, 100)
-
 genPublicationChain
     :: HasWitnessConfig
-    => Word -> SecretKey -> Gen (NonEmpty PublicationTx)
+    => Word -> SecretKeyData -> Gen (NonEmpty PublicationTx)
 genPublicationChain n secret
     | n <= 0 = error "genPublicationChain: n == 0"
     | otherwise = do
-        let addr = mkAddr (toPublic secret)
-        sigs <- vectorUniqueOf (fromIntegral n) genSmallMerkleSignature
+        let addr = mkAddr (skPublic secret)
+        sigs <- vectorUniqueOf (fromIntegral n) arbitrary
         return . Exts.fromList . fix $ \pubTxs ->
             zip sigs (genesisHeaderHash : map (hash . ptHeader) pubTxs) <&>
               \(sig, prevHeaderHash) ->
@@ -40,8 +37,8 @@ genPublicationChain n secret
                 , ptHeader
                 }
 
-author :: SecretKey
-author = detGen 21 $ elements testGenesisSecrets
+author :: SecretKeyData
+author = mkSecretKeyData . detGen 21 $ elements testGenesisSecrets
 
 submitPub
     :: (MempoolCtx ctx m, WithinWriteSDLock)
@@ -73,7 +70,7 @@ spec = describe "Publication tx expansion + validation" $ do
 
     it "Foreign author in the chain is not fine" $ witnessProperty $ do
         otherSecret <- pick (arbitrary `suchThat` (/= author))
-        let otherAddr = mkAddr (toPublic otherSecret)
+        let otherAddr = mkAddr (skPublic otherSecret)
         chainLen    <- pick $ choose (2, 5)
         pubs        <- pick $ genPublicationChain chainLen author
         let badPubs = pubs & _tailNE . _last . ptAuthorL .~ otherAddr
