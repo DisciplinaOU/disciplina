@@ -55,4 +55,4 @@ publicationTxSubmitter =
     Worker "publicationTxSubmitter" [] [] $ \_ ->
         foreverAlive "Tx publisher" (sec 10) $
         notFasterThan (sec 1) $
-            updateMempoolWithPublications
+            void updateMempoolWithPublications

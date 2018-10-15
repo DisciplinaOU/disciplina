@@ -42,7 +42,7 @@ type EducatorConfig = WitnessConfig ++
 type EducatorConfigRecP = ConfigRec 'Partial EducatorConfig
 type EducatorConfigRec = ConfigRec 'Final EducatorConfig
 
-type HasEducatorConfig = Given EducatorConfigRec
+type HasEducatorConfig = (Given EducatorConfigRec, HasWitnessConfig)
 
 defaultEducatorConfig :: EducatorConfigRecP
 defaultEducatorConfig = upcast defaultWitnessConfig
@@ -65,7 +65,7 @@ educatorConfig :: HasEducatorConfig => EducatorConfigRec
 educatorConfig = given
 
 withEducatorConfig :: EducatorConfigRec -> (HasEducatorConfig => a) -> a
-withEducatorConfig = give
+withEducatorConfig conf a = give (rcast @_ @WitnessConfig conf) $ give conf a
 
 fillEducatorConfig :: EducatorConfigRecP -> IO EducatorConfigRecP
 fillEducatorConfig = fillExpandedConfig fillWitnessConfig

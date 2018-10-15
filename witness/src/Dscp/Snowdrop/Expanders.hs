@@ -142,6 +142,7 @@ seqExpandersPublicationTx feesReceiverAddr (Fees minFee) =
 
             when (aBalance account < feeAmount) $
                 throwLocalError PublicationCantAffordFee
+                    { peFee = feeAmount, peBalance = aBalance account }
 
             let dIssuer =
                     maybe (New Account { aBalance = feeAmount, aNonce = 0 })

@@ -14,14 +14,13 @@ module Dscp.Educator.Launcher.Mode
       -- * Implementations
     , EducatorContext (..)
     , EducatorRealMode
-    , ecWitnessCtx
     ) where
 
 import Control.Lens (makeLenses)
-import Loot.Base.HasLens (HasLens', HasLens (..))
+import Loot.Base.HasLens (HasLens')
 
-import Dscp.DB.SQLite (SQLiteDB)
 import Dscp.DB.CanProvideDB as DB
+import Dscp.DB.SQLite (SQLiteDB)
 import Dscp.Educator.Config (HasEducatorConfig, withEducatorConfig)
 import Dscp.Educator.Launcher.Marker (EducatorNode)
 import Dscp.Educator.Launcher.Resource (EducatorResources)
@@ -66,9 +65,10 @@ type FullEducatorWorkMode ctx m =
 ---------------------------------------------------------------------
 
 data EducatorContext = EducatorContext
-    { _ecResources  :: !EducatorResources
+    { _ecResources   :: !EducatorResources
       -- ^ Resources, allocated from params.
-    , _ecWitnessCtx :: !W.WitnessContext
+    , _ecWitnessVars :: !W.WitnessVariables
+      -- ^ Wintess variables (non-resources).
     }
 
 makeLenses ''EducatorContext
@@ -81,13 +81,9 @@ type EducatorRealMode = RIO EducatorContext
 ---------------------------------------------------------------------
 
 deriveHasLens 'ecResources ''EducatorContext ''EducatorResources
-deriveHasLens 'ecWitnessCtx ''EducatorContext ''W.WitnessResources
-deriveHasLens 'ecWitnessCtx ''EducatorContext ''W.WitnessVariables
-deriveHasLens 'ecWitnessCtx ''EducatorContext ''NetServResources
-
--- I get weird errors from 'deriveHasLens' when I'm tryng to derive it
-instance HasLens DB.Plugin EducatorContext DB.Plugin where
-    lensOf = (lensOf @W.WitnessContext) . (lensOf @DB.Plugin)
+deriveHasLens 'ecResources ''EducatorContext ''W.WitnessResources
+deriveHasLens 'ecResources ''EducatorContext ''NetServResources
+deriveHasLens 'ecWitnessVars ''EducatorContext ''W.WitnessVariables
 
 ----------------------------------------------------------------------------
 -- Sanity check

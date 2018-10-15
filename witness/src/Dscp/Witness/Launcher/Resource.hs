@@ -20,7 +20,8 @@ import Control.Lens (makeLenses)
 import Loot.Base.HasLens (HasLens (..))
 
 import Dscp.Config
-import Dscp.DB.Rocks.Real (RocksDB)
+import Dscp.DB.CanProvideDB as Rocks
+import Dscp.DB.CanProvideDB.Rocks as RealRocks
 import Dscp.Resource.AppDir
 import Dscp.Resource.Class (AllocResource (..), buildComponentR)
 import Dscp.Resource.Keys (KeyResources (..), genStore, linkStore)
@@ -35,7 +36,7 @@ import Dscp.Witness.Launcher.Marker (WitnessNode)
 -- working.
 data WitnessResources = WitnessResources
     { _wrLogging :: !LoggingIO
-    , _wrDB      :: !RocksDB
+    , _wrDB      :: !Rocks.Plugin
     , _wrNetwork :: !NetServResources
     , _wrKey     :: !(KeyResources WitnessNode)
     , _wrAppDir  :: !AppDir
@@ -70,7 +71,7 @@ instance AllocResource WitnessResources where
     allocResource witnessCfg = do
         let cfg = witnessCfg ^. sub #witness
         _wrLogging <- view (lensOf @LoggingIO)
-        _wrDB <- allocResource $ cfg ^. option #db
+        _wrDB <- fmap RealRocks.plugin . allocResource $ cfg ^. option #db
         _wrNetwork <- do
             let modGivenName (GivenName x) = GivenName $ x <> "network"
                 modGivenName x             = x

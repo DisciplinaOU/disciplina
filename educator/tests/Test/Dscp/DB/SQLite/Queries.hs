@@ -12,7 +12,7 @@ import qualified Dscp.Crypto.MerkleTree as MerkleTree
 import Dscp.DB.SQLite as DB
 import Dscp.Util
 
-import Test.Dscp.DB.SQLite.Common
+import Test.Dscp.Educator.Mode
 
 spec_Instances :: Spec
 spec_Instances = do

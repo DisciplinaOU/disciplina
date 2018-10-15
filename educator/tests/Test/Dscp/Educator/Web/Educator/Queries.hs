@@ -13,7 +13,7 @@ import Dscp.Educator.Web.Logic
 import Dscp.Educator.Web.Queries
 import Dscp.Educator.Web.Types
 import Dscp.Util
-import Test.Dscp.DB.SQLite.Common
+import Test.Dscp.Educator.Mode
 import Test.Dscp.Educator.Web.Instances ()
 import Test.Dscp.Educator.Web.Scenarios
 

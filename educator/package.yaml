@@ -72,6 +72,7 @@ tests:
       - interpolatedstring-perl6
       - lens
       - loot-base
+      - loot-config
       - loot-log
       - safe-exceptions >= 0.1.4
       - sqlite-simple

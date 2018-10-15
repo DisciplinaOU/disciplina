@@ -16,7 +16,7 @@ import Dscp.Util
 import Dscp.Witness
 
 -- | Form and store a new private block made up from hanging private transactions.
-dumpPrivateBlock :: EducatorWorkMode ctx m => m ()
+dumpPrivateBlock :: EducatorWorkMode ctx m => m (Maybe PrivateBlockHeader)
 dumpPrivateBlock = do
     mblock <- transactW $ createPrivateBlock Nothing
     case mblock of
@@ -25,6 +25,7 @@ dumpPrivateBlock = do
         Just block ->
             logInfo . fmt $
                 nameF "Created new private block" (build block)
+    return mblock
 
 -- | Update mempool with lacking private blocks.
 -- Heavyweight operation.
@@ -44,10 +45,13 @@ publishMissingBlocks =
         forM_ pubTxs $ addTxToMempool . GPublicationTxWitnessed
 
 -- | Update mempool with lacking private blocks, if needed.
-updateMempoolWithPublications :: EducatorWorkMode ctx m => m ()
+-- Returns whether the update was performed.
+updateMempoolWithPublications :: EducatorWorkMode ctx m => m Bool
 updateMempoolWithPublications = do
     sk <- ourSecretKeyData @EducatorNode
     publishedPrivTip <- runSdMempoolLocked $ getPrivateTipHash (skAddress sk)
     (storedPrivTip, _) <- invoke getLastBlockIdAndIdx
-    when (publishedPrivTip /= storedPrivTip)
-        publishMissingBlocks
+
+    let needUpdate = publishedPrivTip /= storedPrivTip
+    when needUpdate publishMissingBlocks
+    return needUpdate

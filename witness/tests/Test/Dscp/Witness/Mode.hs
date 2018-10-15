@@ -19,21 +19,19 @@ import Control.Lens (makeLenses, (&~), (.=), (?=))
 import Data.Default (def)
 import qualified Data.List as L
 import qualified Data.Map as M
-import Fmt ((+|), (+||), (|+), (||+))
-import Loot.Base.HasLens (HasLens (..))
 import Loot.Config.Record (finaliseDeferredUnsafe, option, sub)
-import Loot.Log (Level (Warning), Logging (..))
+import Loot.Log (Logging (..))
 
 import Dscp.Core
 import Dscp.Crypto
 import Dscp.DB.CanProvideDB as DB
-import Dscp.DB.CanProvideDB.Pure as Pure
+import Dscp.DB.CanProvideDB.Pure as PureDB
 import Dscp.Resource.Keys
 import Dscp.Rio
-import Dscp.Snowdrop
+import Dscp.Snowdrop.Actions
 import Dscp.Util
+import Dscp.Util.HasLens
 import Dscp.Util.Test
-import Dscp.Web.Metrics
 import Dscp.Witness
 
 ----------------------------------------------------------------------------
@@ -41,29 +39,16 @@ import Dscp.Witness
 ----------------------------------------------------------------------------
 
 data TestWitnessCtx = TestWitnessCtx
-    { _twcMempoolVar :: MempoolVar
-    , _twcSDVars     :: SDVars
-    , _twcSDLock     :: SDLock
-    , _twcLogging    :: Logging IO
-    , _twcKeys       :: KeyResources WitnessNode
-    , _twcRelayState :: RelayState
-    , _twcPureDB     :: DB.Plugin
+    { _twcVars    :: WitnessVariables
+    , _twcLogging :: Logging IO
+    , _twcKeys    :: KeyResources WitnessNode
+    , _twcDb      :: DB.Plugin
     }
 
 makeLenses ''TestWitnessCtx
+deriveHasLensDirect ''TestWitnessCtx
 
-#define GenHasLens(SUBRES, IMPL) \
-    instance HasLens (SUBRES) TestWitnessCtx (SUBRES) where \
-        lensOf = IMPL
-
-GenHasLens(MempoolVar, twcMempoolVar)
-GenHasLens(SDVars, twcSDVars)
-GenHasLens(SDLock, twcSDLock)
-GenHasLens(Logging IO, twcLogging)
-GenHasLens(KeyResources WitnessNode, twcKeys)
-GenHasLens(RelayState, twcRelayState)
-GenHasLens(MetricsEndpoint, seeOnly (MetricsEndpoint Nothing))
-GenHasLens(DB.Plugin, twcPureDB)
+deriveHasLens 'twcVars ''TestWitnessCtx ''WitnessVariables
 
 type WitnessTestMode' = RIO TestWitnessCtx
 
@@ -137,27 +122,28 @@ testWitnessConfig =
 -- Runner
 ----------------------------------------------------------------------------
 
+mkTestWitnessVariables
+    :: (MonadIO m, HasWitnessConfig)
+    => PublicKey -> DB.Plugin -> m WitnessVariables
+mkTestWitnessVariables issuer db = do
+    _wvMempool    <- newMempoolVar issuer
+    _wvSDActions  <- liftIO $ runReaderT initSDActions db
+    _wvRelayState <- newRelayState
+    _wvSDLock     <- newSDLock
+    return WitnessVariables{..}
+
 runWitnessTestMode :: WitnessTestMode' a -> IO a
 runWitnessTestMode action =
-    withWitnessConfig testWitnessConfig $ runRIO _twcLogging $ do
-        _twcPureDB     <- Pure.plugin <$> liftIO Pure.newCtxVar
-        _twcSDVars     <- initSDActions `runReaderT` _twcPureDB
-        _twcSDLock     <- newSDLock
-        _twcRelayState <- newRelayState
-        _twcKeys       <- genStore (Just $ CommitteeParamsOpen 0)
-        _twcMempoolVar <- newMempoolVar (_twcKeys ^. krPublicKey)
+    withWitnessConfig testWitnessConfig $ runRIO testLogging $ do
+        _twcKeys <- genStore (Just $ CommitteeParamsOpen 0)
+        _twcDb   <- PureDB.plugin <$> liftIO PureDB.newCtxVar
+        _twcVars <- mkTestWitnessVariables (_twcKeys ^. krPublicKey) _twcDb
+        let _twcLogging = testLogging
         let ctx = TestWitnessCtx{..}
 
         runRIO ctx $ do
             markWithinWriteSDLockUnsafe applyGenesisBlock
             action
-  where
-    _twcLogging = Logging
-        { _log = \lvl _ txt ->
-            when (lvl >= Warning) $
-                putTextLn $ "[" +|| lvl ||+ "] " +| txt |+ ""
-        , _logName = pure (error "No logging name in tests")
-        }
 
 witnessProperty
     :: Testable prop

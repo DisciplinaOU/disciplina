@@ -53,7 +53,8 @@ data PublicationException
     | PublicationIsBroken Text
     | PublicationFeeIsTooLow
       { peMinimalFee :: Integer, peGivenFee :: Integer }
-    | PublicationCantAffordFee -- ^ Publication owner can not afford the fee
+    | PublicationCantAffordFee
+      { peFee :: Integer, peBalance :: Integer }  -- ^ Publication owner can not afford the fee
     | PublicationLocalLoop
     deriving (Eq, Ord)
 
@@ -75,8 +76,9 @@ instance Buildable PublicationException where
         PublicationFeeIsTooLow{..} ->
             "The fee specified in the publication tx " <> show peGivenFee <>
             " is lower than the minimal one " <> show peMinimalFee
-        PublicationCantAffordFee ->
-            "Publication author can't afford the fee"
+        PublicationCantAffordFee{..} ->
+            "Publication author can't afford the fee \
+            \(fee: " +| peFee |+ ", balance: " +| peBalance |+ ")"
         PublicationLocalLoop ->
             "Transaction would create a loop in educator's chain"
 
