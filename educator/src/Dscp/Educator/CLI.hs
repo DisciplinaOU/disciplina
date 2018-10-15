@@ -10,20 +10,17 @@ module Dscp.Educator.CLI
     , publishingPeriodParser
     ) where
 
-import Control.Lens (dimap, iso)
-import Loot.Config (ModParser, OptModParser, upcast, (%::), (..:), (.::), (.:<), (<*<))
-import Options.Applicative (Parser, auto, flag', help, long, metavar, option, strOption, switch,
-                            value)
+import Control.Lens (iso)
+import Loot.Config (ModParser, OptModParser, uplift, (%::), (..:), (.::), (.:<), (<*<))
+import Options.Applicative (Parser, auto, flag', help, long, metavar, option, strOption)
 import Time (Second, Time)
 
 import Dscp.CommonCLI
-import Dscp.Config (rcast)
 import Dscp.DB.SQLite
 import Dscp.Educator.Config
 import Dscp.Educator.Launcher.Params (EducatorKeyParams (..))
 import Dscp.Educator.Web.Auth
-import Dscp.Educator.Web.Bot.Params (EducatorBotParams (..), EducatorBotSwitch (..))
-import Dscp.Educator.Web.Params (EducatorWebParams (..))
+import Dscp.Educator.Web.Bot.Params
 import Dscp.Witness.CLI (witnessConfigParser)
 
 sqliteParamsParser :: ModParser SQLiteParams
@@ -49,46 +46,41 @@ sqliteParamsParser = over (sdpModeL._SQLiteReal) <$>
         metavar "INTEGER" <>
         help "Maximal number of threads waiting for free connection in pool."
 
-educatorBotParamsParser :: Parser EducatorBotSwitch
-educatorBotParamsParser = do
-    enabled <- switch $
+educatorBotParamsParser :: ModParser EducatorBotParams
+educatorBotParamsParser =
+    ebpEnabledL         ..: enabledParser <*<
+    ebpSeedL            ..: seedParser <*<
+    ebpOperationsDelayL ..: delayParser
+  where
+    enabledParser = flag' True $
         long "educator-bot" <>
         help "Enable bot which would automatically react on student actions."
-    ebpSeed <- strOption $
+    seedParser = strOption $
         long "educator-bot-seed" <>
         metavar "TEXT" <>
-        help "Seed for bot pregenerated data." <>
-        value "Memes generator"
-    ebpOperationsDelay <- option timeReadM $
+        help "Seed for bot pregenerated data."
+    delayParser = option timeReadM $
         long "educator-bot-delay" <>
         metavar "TIME" <>
-        help "Delay before user action and bot reaction on it." <>
-        value 0
-    return $
-      if enabled
-        then EducatorBotOn EducatorBotParams{..}
-        else EducatorBotOff
+        help "Delay before user action and bot reaction on it."
 
 noAuthContextParser :: Parser (NoAuthData s) -> Parser (NoAuthContext s)
-noAuthContextParser dataParser =
-    maybe NoAuthOffContext NoAuthOnContext <$> optional dataParser
+noAuthContextParser = fmap NoAuthOnContext
 
-educatorWebParamsParser :: Parser EducatorWebParams
-educatorWebParamsParser = do
-    ewpServerParams <- serverParamsParser "Educator"
-    ewpBotParams <- educatorBotParamsParser
-    ewpEducatorAPINoAuth <- noAuthContextParser . flag' () $
-        long "educator-api-no-auth" <>
-        help "Make authentication into Educator API optional."
-    ewpStudentAPINoAuth <- noAuthContextParser . option addressReadM $
-        long "student-api-no-auth" <>
-        metavar "ADDRESS" <>
-        help "Make authentication into Student API optional. \
-             \Requires id of student which is pretended as request author. \
-             \You can still provide authentication header to specify request \
-             \author, if invalid data is passed authentication will \
-             \automatically roll back to no-auth scheme."
-    return EducatorWebParams{..}
+educatorApiNoAuthParser :: Parser (NoAuthContext "educator")
+educatorApiNoAuthParser = noAuthContextParser . flag' () $
+    long "educator-api-no-auth" <>
+    help "Make authentication into Educator API optional."
+
+studentApiNoAuthParser :: Parser (NoAuthContext "student")
+studentApiNoAuthParser = noAuthContextParser . option addressReadM $
+    long "student-api-no-auth" <>
+    metavar "ADDRESS" <>
+    help "Make authentication into Student API optional. \
+         \Requires id of student which is pretended as request author. \
+         \You can still provide authentication header to specify request \
+         \author, if invalid data is passed authentication will \
+         \automatically roll back to no-auth scheme."
 
 educatorKeyParamsParser :: ModParser EducatorKeyParams
 educatorKeyParamsParser =
@@ -106,12 +98,17 @@ publishingPeriodParser = option timeReadM $
 
 educatorConfigParser :: OptModParser EducatorConfig
 educatorConfigParser =
-    fmap (dimap rcast upcast) witnessConfigParser <*<
+    uplift witnessConfigParser <*<
     #educator .:<
         (#db %:: sqliteParamsParser <*<
          #keys %:: educatorKeyParamsParser <*<
-         #api .:: educatorWebParamsParser <*<
+         #api .:<
+             (#serverParams .:: serverParamsParser "Educator" <*<
+              #botParams %:: educatorBotParamsParser <*<
+              #educatorAPINoAuth .:: educatorApiNoAuthParser <*<
+              #studentAPINoAuth .:: studentApiNoAuthParser
+             ) <*<
          #publishing .:<
-            (#period .:: publishingPeriodParser
-            )
+            (#period .:: publishingPeriodParser)
         )
+
