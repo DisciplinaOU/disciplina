@@ -1,6 +1,3 @@
-{-# LANGUAGE OverloadedLabels #-}
-{-# LANGUAGE StrictData       #-}
-
 module Test.Dscp.Educator.Mode
   ( module Test.Dscp.Educator.Mode
   , module Dscp.Core
@@ -12,10 +9,7 @@ module Test.Dscp.Educator.Mode
 
 import Prelude hiding (fold)
 
-import Control.Lens (makeLenses, (&~), (.=), (?=))
-import Data.Coerce (coerce)
-import Data.Default (def)
-import Loot.Config.Record (finaliseDeferredUnsafe, option, sub)
+import Control.Lens (makeLenses)
 import qualified Loot.Log as Log
 import Test.Hspec
 import Test.QuickCheck (ioProperty, resize)
@@ -30,10 +24,10 @@ import Dscp.DB.SQLite
 import Dscp.Educator.Arbitrary ()
 import Dscp.Educator.Config
 import Dscp.Educator.Launcher
+import Dscp.Educator.TestConfig
 import Dscp.Resource.Keys
 import Dscp.Resource.SQLite
 import Dscp.Rio
-import Dscp.Snowdrop.Actions
 import Dscp.Util
 import Dscp.Util.HasLens
 import Dscp.Util.Test
@@ -56,67 +50,16 @@ deriveHasLens 'tecWitnessVariables ''TestEducatorCtx ''WitnessVariables
 
 type TestEducatorM = RIO TestEducatorCtx
 
-testCommittee :: Committee
-testCommittee =
-    CommitteeOpen
-    { commN = 2
-    , commSecret = detGen 121 ((leftToPanic . mkCommitteeSecret) <$> arbitrary)
-    }
-
--- | Witness test configuration.
--- Only those parts are defined which are actually used in tests.
---
--- Hello copy-pasta!
-testEducatorConfig :: EducatorConfigRec
-testEducatorConfig =
-    finaliseDeferredUnsafe $ def &~ do
-        sub #core .= def &: do
-            sub #generated . option #genesisInfo ?= formGenesisInfo genConfig
-            option #genesis ?= genConfig
-            option #fee ?= feeCoefs
-            option #slotDuration ?= 10000000
-  where
-    genConfig =
-        GenesisConfig
-        { gcGenesisSeed = "meme tests"
-        , gcGovernance = GovCommittee testCommittee
-        , gcDistribution = GenesisDistribution . one $ GDEqual (Coin 100)
-        }
-    feeCoefs =
-        FeeConfig
-        { fcMoney = LinearFeePolicy
-            FeeCoefficients
-            { fcMinimal       = Coin 10
-            , fcMultiplier    = 0.1
-            }
-        , fcPublication = LinearFeePolicy
-            FeeCoefficients
-            { fcMinimal       = Coin 10
-            , fcMultiplier    = 0.1
-            }
-        }
-
--- TODO: remove this cope-paste when DSCP-335 is merged, or in DSCP-335 itself
-mkTestWitnessVariables
-    :: (MonadIO m, HasWitnessConfig)
-    => PublicKey -> DB.Plugin -> m WitnessVariables
-mkTestWitnessVariables issuer db = do
-    _wvMempool    <- newMempoolVar issuer
-    _wvSDActions  <- liftIO $ runReaderT initSDActions db
-    _wvRelayState <- newRelayState
-    _wvSDLock     <- newSDLock
-    return WitnessVariables{..}
-
 runTestSQLiteM :: TestEducatorM a -> IO a
 runTestSQLiteM action =
     withEducatorConfig testEducatorConfig $
     withWitnessConfig (rcast testEducatorConfig) $
     runRIO _tecLogging $ do
-        _tecKeys <- genStore (Just $ CommitteeParamsOpen 0)
+        _tecWitnessKeys <- genStore (Just $ CommitteeParamsOpen 0)
         _tecWitnessDb <- PureDB.plugin <$> liftIO PureDB.newCtxVar
-        _tecWitnessVariables <- mkTestWitnessVariables (_tecKeys ^. krPublicKey)
+        _tecWitnessVariables <- mkTestWitnessVariables (_tecWitnessKeys ^. krPublicKey)
                                                        _tecWitnessDb
-        let _tecWitnessKeys = coerce _tecKeys
+        let _tecKeys = KeyResources $ mkSecretKeyData testSomeGenesisSecret
         bracket openDB closeSQLiteDB $ \_tecEducatorDb -> do
             let ctx = TestEducatorCtx{..}
             runRIO ctx $ do

@@ -6,6 +6,7 @@
 module Dscp.Witness.Config
     ( WitnessConfig
     , WitnessConfigRec
+    , WitnessConfigRecP
     , HasWitnessConfig
     , defaultWitnessConfig
     , witnessConfig

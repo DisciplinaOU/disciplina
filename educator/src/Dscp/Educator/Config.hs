@@ -6,6 +6,7 @@
 module Dscp.Educator.Config
     ( EducatorConfig
     , EducatorConfigRec
+    , EducatorConfigRecP
     , HasEducatorConfig
     , defaultEducatorConfig
     , educatorConfig
