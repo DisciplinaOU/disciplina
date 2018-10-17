@@ -5,12 +5,12 @@ demo: &demo
       money:
         type: linear
         coeffs:
-          minimal: 10
+          minimal: 0.000010
           multiplier: 0.1
       publication:
         type: linear
         coeffs:
-          minimal: 10
+          minimal: 0.000010
           multiplier: 1
     genesis: &demo-genesis
       genesisSeed: "GromakNaRechke"
