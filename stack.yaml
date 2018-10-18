@@ -23,6 +23,8 @@ extra-deps:
 - safe-exceptions-0.1.7.0
 - servant-auth-0.3.2.0
 - servant-auth-server-0.4.0.0
+- cborg-0.2.1.0
+- serialise-0.2.1.0
 
 - git: https://github.com/serokell/auth-data-structures.git
   commit: f9a0cd66f443d7b0e04a3c8ae8d475f8344b823b
@@ -70,13 +72,6 @@ extra-deps:
 # - log-warper-1.8.9 - overriden above
 # - serokell-util-0.6.0 - overriden above
 - vinyl-0.8.1.1
-
-# using master, because 0.2.0.0 causes segfaults
-- git: https://github.com/well-typed/cborg
-  commit: 37de2c0ae6bc7fa53f24f8d13748a7c370da9149
-  subdirs:
-  - cborg
-  - serialise
 
 - git: https://github.com/int-index/caps
   commit: 2f46fc6d5480bdef0a17f64359ad6eb29510dba4
