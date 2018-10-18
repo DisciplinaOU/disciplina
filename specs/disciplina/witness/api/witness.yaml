@@ -1,18 +1,22 @@
-swagger: "2.0"
+openapi: 3.0.0
 info:
-  description: "This is an HTTP API for interacting with Disciplina Witness node. It is used by Block Explorer frontend to request info about blocks, accounts and transactions, and by Disciplina Wallet to make transactions."
+  description: >-
+    This is an HTTP API for interacting with Disciplina Witness node. It is used
+    by Block Explorer frontend to request info about blocks, accounts and
+    transactions, and by Disciplina Wallet to make transactions.
   version: 0.1.0
-  title:  Disciplina Witness API
-  termsOfService: "https://disciplina.io/tnc.pdf"
+  title: Disciplina Witness API
+  termsOfService: 'https://disciplina.io/tnc.pdf'
   contact:
     email: hi@serokell.io
   license:
     name: Apache 2.0
-    url: "http://www.apache.org/licenses/LICENSE-2.0.html"
-basePath: /api/witness/v1
-schemes:
-  - https
-  - http
+    url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+externalDocs:
+  description: Find out more about Swagger
+  url: 'http://swagger.io'
+servers:
+  - url: /api/witness/v1
 paths:
   /ping:
     get:
@@ -25,248 +29,276 @@ paths:
     get:
       summary: Get type of entity identified by given hash
       operationId: getHashType
-      produces:
-      - application/json
       parameters:
-      - in: path
-        name: hash
-        description: Block header hash, tx id or address.
-        required: true
-        type: string
-        format: byte
+        - in: path
+          name: hash
+          description: Block header hash, tx id or address.
+          required: true
+          schema:
+            type: string
+            format: byte
       responses:
         200:
-          description: >-
+          description: |-
             Type of the entity:
               * `block`
               * `address`
               * `money-transaction`
               * `publication-transaction`
               * `unknown`
-          schema:
-            type: string
-            enum:
-            - block
-            - address
-            - money-transaction
-            - publication-transaction
-            - unknown
+          content:
+            application/json:
+              schema:
+                type: string
+                enum:
+                  - block
+                  - address
+                  - money-transaction
+                  - publication-transaction
+                  - unknown
   /blocks:
     get:
       summary: Get list of blocks.
       description: >-
-        Return a batch of `count` most recent blocks, skipping `skip` blocks from the tip.
+        Return a batch of `count` most recent blocks, skipping `skip` blocks
+        from the tip.
       operationId: getBlocks
-      produces:
-      - application/json
       parameters:
-      - in: query
-        name: skip
-        description: The amount of blocks to skip.
-        default: 0
-        type: integer
-        format: int64
-      - in: query
-        name: count
-        description: The amount of blocks returned.
-        default: 100
-        maximum: 100
-        type: integer
-        format: int32
+        - in: query
+          name: skip
+          description: The amount of blocks to skip.
+          schema:
+            type: integer
+            format: int64
+            default: 0
+        - in: query
+          name: count
+          description: The amount of blocks returned.
+          schema:
+            type: integer
+            format: int32
+            maximum: 100
+            default: 100
       responses:
         200:
           description: Successful operation
-          schema:
-            type: object
-            properties:
-              blocks:
-                type: array
-                items:
-                  $ref: "#/definitions/BlockInfo"
-              totalCount:
-                type: integer
-                format: int64
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  blocks:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/BlockInfo'
+                  totalCount:
+                    type: integer
+                    format: int64
         400:
           description: Invalid input
-          schema:
-            $ref: "#/definitions/ErrResponse"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrResponse'
   /blocks/{headerHash}:
     get:
       summary: Get information about a block.
       operationId: getBlock
-      produces:
-      - application/json
       parameters:
-      - in: path
-        name: headerHash
-        description: Block identifier (hash of the block header).
-        required: true
-        type: string
-        format: byte
+        - in: path
+          name: headerHash
+          description: Block identifier (hash of the block header).
+          required: true
+          schema:
+            type: string
+            format: byte
       responses:
         200:
           description: Successful operation
-          schema:
-            allOf:
-            - $ref: "#/definitions/BlockInfo"
-            - $ref: "#/definitions/BlockTransactionList"
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BlockInfo'
+                  - $ref: '#/components/schemas/BlockTransactionList'
         400:
           description: Invalid input
-          schema:
-            $ref: "#/definitions/ErrResponse"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrResponse'
         404:
           description: Block not found
-          schema:
-            $ref: "#/definitions/ErrResponse"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrResponse'
   /accounts/{address}:
     get:
       summary: Get information about an account.
       operationId: getAccount
-      produces:
-      - application/json
       parameters:
-      - in: path
-        name: address
-        description: Address of an account being requested.
-        required: true
-        type: string
-        format: byte
-      - in: query
-        name: includeTxs
-        description: >-
-          Whether to include transaction history for the account.
-          Both incoming and outgoing transactions are included
-        type: boolean
-        allowEmptyValue: true
+        - in: path
+          name: address
+          description: Address of an account being requested.
+          required: true
+          schema:
+            type: string
+            format: byte
+        - in: query
+          name: includeTxs
+          description: >-
+            Whether to include transaction history for the account. Both
+            incoming and outgoing transactions are included
+          allowEmptyValue: true
+          schema:
+            type: boolean
       responses:
         200:
           description: Successful operation
-          schema:
-            allOf:
-            - $ref: "#/definitions/AccountInfo"
-            - $ref: "#/definitions/TransactionList"
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/AccountInfo'
+                  - $ref: '#/components/schemas/TransactionList'
         400:
           description: Invalid input
-          schema:
-            $ref: "#/definitions/ErrResponse"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrResponse'
         404:
           description: Account not found
-          schema:
-            $ref: "#/definitions/ErrResponse"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrResponse'
   /transactions:
     get:
       summary: Get list of recent transactions.
       description: >-
-        Return a batch of `count` most recent transactions.
-        If `nextId` key is present in the result, it can be passed as `from` parameter to get the next batch.
+        Return a batch of `count` most recent transactions. If `nextId` key is
+        present in the result, it can be passed as `from` parameter to get the
+        next batch.
       operationId: getTransactions
-      produces:
-      - application/json
       parameters:
-      - in: query
-        name: from
-        description: >-
-          Get a batch of transactions starting with the specified one.
-          If not specified, get the most recent transactions.
-        type: string
-        format: byte
-      - in: query
-        name: count
-        description: The amount of transactions returned.
-        default: 100
-        maximum: 100
-        type: integer
-        format: int32
-      - in: query
-        name: account
-        description: Remain only transactions affecting given account.
-        type: string
-        format: byte
+        - in: query
+          name: from
+          description: >-
+            Get a batch of transactions starting with the specified one. If not
+            specified, get the most recent transactions.
+          schema:
+            type: string
+            format: byte
+        - in: query
+          name: count
+          description: The amount of transactions returned.
+          schema:
+            type: integer
+            format: int32
+            maximum: 100
+            default: 100
+        - in: query
+          name: account
+          description: Remain only transactions affecting given account.
+          schema:
+            type: string
+            format: byte
       responses:
         200:
           description: Successful operation
-          schema:
-            type: object
-            properties:
-              transactions:
-                type: array
-                items:
-                  allOf:
-                  - $ref: "#/definitions/TransactionInfo"
-                  - $ref: "#/definitions/AndBlockInfo"
-              nextId:
-                $ref: "#/definitions/Hash"
-
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  transactions:
+                    type: array
+                    items:
+                      allOf:
+                        - $ref: '#/components/schemas/TransactionInfo'
+                        - $ref: '#/components/schemas/AndBlockInfo'
+                  nextId:
+                    $ref: '#/components/schemas/Hash'
     post:
       summary: Submit a formed transaction.
       operationId: submitTx
-      produces:
-      - application/json
-      parameters:
-      - in: body
-        name: txWitnessed
-        schema:
-          $ref: "#/definitions/TxWitnessed"
       responses:
         201:
-          description: Transaction passed validation. If no transactions spending money from the same account are submitted concurrently to other witness node, transaction will eventually appear in blockchain. Returns transaction id.
-          schema:
-            $ref: "#/definitions/Hash"
+          description: >-
+            Transaction passed validation. If no transactions spending money
+            from the same account are submitted concurrently to other witness
+            node, transaction will eventually appear in blockchain. Returns
+            transaction id.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Hash'
         400:
           description: Formed transaction is invalid.
-          schema:
-            $ref: '#/definitions/TxValidationError'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TxValidationError'
         403:
           description: Transaction cannot be applied.
-          schema:
-            $ref: '#/definitions/TxValidationError'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TxValidationError'
+      requestBody:
+        $ref: '#/components/requestBodies/TxWitnessed'
   /transactions/{transactionHash}:
     get:
       summary: Get information about a transaction.
       description: >-
-        `txType` field of the result object will denote the type of transaction: "money" or "publication".
-        The corresponding key in the object will contain the rest of information about the transaction.
+        `txType` field of the result object will denote the type of transaction:
+        "money" or "publication". The corresponding key in the object will
+        contain the rest of information about the transaction.
       operationId: getTransaction
-      produces:
-      - application/json
       parameters:
-      - in: path
-        name: transactionHash
-        description: Hash of the transaction being requested.
-        required: true
-        type: string
-        format: byte
+        - in: path
+          name: transactionHash
+          description: Hash of the transaction being requested.
+          required: true
+          schema:
+            type: string
+            format: byte
       responses:
         200:
           description: Successful operation
-          schema:
-            allOf:
-            - $ref: "#/definitions/GeneralizedTransactionInfo"
-            - $ref: "#/definitions/AndBlockInfo"
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/GeneralizedTransactionInfo'
+                  - $ref: '#/components/schemas/AndBlockInfo'
         400:
           description: Invalid input
-          schema:
-            $ref: "#/definitions/ErrResponse"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrResponse'
         404:
           description: Transaction not found
-          schema:
-            $ref: "#/definitions/ErrResponse"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrResponse'
   /transactions/async:
     post:
       summary: Submit a formed transaction asynchronously.
       operationId: submitTxAsync
-      produces:
-      - application/json
-      parameters:
-      - in: body
-        name: txWitnessed
-        schema:
-          $ref: "#/definitions/TxWitnessed"
       responses:
         202:
           description: Transaction accepted. Returns transaction id.
-          schema:
-            $ref: "#/definitions/Hash"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Hash'
+      requestBody:
+        $ref: '#/components/requestBodies/TxWitnessed'
 
   /publications:
     get:
@@ -275,334 +307,343 @@ paths:
         Return a batch of `count` most recent publications.
         If `nextId` key is present in the result, it can be passed as `from` parameter to get the next batch.
       operationId: getEducatorPublications
-      produces:
-      - application/json
       parameters:
-      - in: query
-        name: from
-        description: >-
-          Get a batch of publications starting with the specified one.
-          If not specified, get the most recent publications.
-        type: string
-        format: byte
-      - in: query
-        name: count
-        description: The amount of publications returned.
-        default: 100
-        maximum: 100
-        type: integer
-        format: int32
-      - in: query
-        name: educator
-        description: Return only publications of the given author.
-        type: string
-        format: byte
+        - in: query
+          name: from
+          description: >-
+            Get a batch of publications starting with the specified one.
+            If not specified, get the most recent publications.
+          schema:
+            type: string
+            format: byte
+        - in: query
+          name: count
+          description: The amount of publications returned.
+          schema:
+            default: 100
+            maximum: 100
+            type: integer
+            format: int32
+        - in: query
+          name: educator
+          description: Return only publications of the given author.
+          schema:
+            type: string
+            format: byte
       responses:
         200:
           description: Successful operation
-          schema:
-            type: object
-            properties:
-              transactions:
-                type: array
-                items:
-                  allOf:
-                  - $ref: "#/definitions/PublicationInfo"
-                  - $ref: "#/definitions/AndBlockInfo"
-              nextId:
-                $ref: "#/definitions/Hash"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  transactions:
+                    type: array
+                    items:
+                      allOf:
+                        - $ref: '#/components/schemas/PublicationInfo'
+                        - $ref: '#/components/schemas/AndBlockInfo'
+                  nextId:
+                    $ref: '#/components/schemas/Hash'
 
-definitions:
-  Hash:
-    type: string
-    format: byte
-    description: Hex-encoded hash value.
-  Address:
-    type: string
-    format: byte
-  Coin:
-    type: integer
-    format: int64
-  BlockInfo:
-    type: object
-    properties:
-      headerHash:
-        $ref: "#/definitions/Hash"
-      nextHash:
-        $ref: "#/definitions/Hash"
-      merkleRootHash:
-        $ref: "#/definitions/Hash"
-      header:
-        $ref: "#/definitions/BlockHeader"
-      isGenesis:
-        type: boolean
-      since:
-        type: integer
-        format: int64
-        description: Microseconds since UNIX epoch start
-      size:
-        type: integer
-        format: int64
-        description: Size in bytes
-      transactionCount:
-        type: integer
-        format: int32
-  BlockHeader:
-    type: object
-    properties:
-      signature:
-        type: string
-        format: byte
-      issuer:
-        type: string
-        format: byte
-      difficulty:
-        type: integer
-        format: int64
-      slotId:
-        type: integer
-        format: int64
-      prevHash:
-        $ref: "#/definitions/Hash"
-      totalOutput:
-        $ref: "#/definitions/Coin"
-      totalFees:
-        $ref: "#/definitions/Coin"
-  AccountInfo:
-    type: object
-    properties:
-      balances:
-        type: object
-        properties:
-          confirmed:
-            type: integer
-            format: int32
-            description: Balance according to current chain.
-          total:
-            type: integer
-            format: int32
-            description: Balance derived from both chain and transactions which are not yet in blocks.
-      currentNonce:
-        type: integer
-        format: int32
-  GeneralizedTransactionInfo:
-    type: object
-    discriminator: txType
-    properties:
-      txType:
-        type: string
-        enum:
-        - money
-        - publication
-      txId:
-        $ref: "#/definitions/Hash"
-      outValue:
-        $ref: "#/definitions/Coin"
-      money:
-        $ref: "#/definitions/TransactionInfo"
-      publication:
-        $ref: "#/definitions/PublicationInfo"
-  TransactionInfo:
-    type: object
-    properties:
-      txId:
-        $ref: "#/definitions/Hash"
-      outValue:
-        $ref: "#/definitions/Coin"
-      money:
-        type: object
-        properties:
-          inAcc:
-            type: object
-            properties:
-              addr:
-                $ref: "#/definitions/Address"
-              nonce:
-                type: integer
-                format: int32
-          inValue:
-            $ref: "#/definitions/Coin"
-          outs:
-            type: array
-            items:
-              type: object
-              properties:
-                address:
-                  $ref: "#/definitions/Address"
-                value:
-                  $ref: "#/definitions/Coin"
-  PublicationInfo:
-    type: object
-    properties:
-      txId:
-        $ref: "#/definitions/Hash"
-      publication:
-        type: object
-        properties:
-          author:
-            $ref: "#/definitions/Address"
-          feesAmount:
-            $ref: "#/definitions/Coin"
-          header:
-            $ref: "#/definitions/PrivateBlockHeader"
-  AndBlockInfo:
-    type: object
-    properties:
-      block:
-        $ref: "#/definitions/BlockInfo"
-  TransactionList:
-    type: object
-    properties:
-      transactions:
-        type: array
-        items:
-          allOf:
-          - $ref: "#/definitions/TransactionInfo"
-          - $ref: "#/definitions/AndBlockInfo"
-  GeneralizedTransactionList:
-    type: object
-    properties:
-      transactions:
-        type: array
-        items:
-          allOf:
-          - $ref: "#/definitions/GeneralizedTransactionInfo"
-          - $ref: "#/definitions/AndBlockInfo"
-  BlockTransactionList:
-    type: object
-    properties:
-      transactions:
-        type: array
-        items:
-          $ref: "#/definitions/GeneralizedTransactionInfo"
-  TxInAcc:
-    type: object
-    description: Transaction source account info.
-    properties:
-      nonce:
-        type: integer
-        format: int32
-        description: Current account nonce, received in /accounts/{address} endpoint.
-      addr:
-        $ref: "#/definitions/Address"
-  TxOut:
-    type: object
-    description: Transaction output.
-    properties:
-      outAddr:
-        $ref: "#/definitions/Address"
-      outValue:
-        $ref: "#/definitions/Coin"
-  Tx:
-    type: object
-    description: Transaction content.
-    properties:
-      inAcc:
-        $ref: "#/definitions/TxInAcc"
-      inValue:
-        $ref: "#/definitions/Coin"
-      outs:
-        type: array
-        items:
-          $ref: "#/definitions/TxOut"
-  TxWitness:
-    type: object
-    properties:
-      sig:
-        type: string
-        description: Evaluated as 'signEd25519(sourceSecretKey, blake2bHash(Tx) + sourcePublicKey)', and passed in hex-encoded form to the endpoint.
-      pk:
-        type: string
-        description: Hex-encoded public key of the source account.
-  TxWitnessed:
-    type: object
-    properties:
-      tx:
-        $ref: "#/definitions/Tx"
-      witness:
-        $ref: "#/definitions/TxWitness"
-  AtgDelta:
-    type: array
-    items:
+components:
+  requestBodies:
+    TxWitnessed:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/TxWitnessed'
+  schemas:
+    Hash:
+      type: string
+      format: byte
+      description: Hex-encoded hash value.
+    Address:
+      type: string
+      format: byte
+    Coin:
+      type: integer
+      format: int64
+    BlockInfo:
       type: object
       properties:
-        subjectId:
+        headerHash:
+          $ref: '#/components/schemas/Hash'
+        nextHash:
+          $ref: '#/components/schemas/Hash'
+        merkleRootHash:
+          $ref: '#/components/schemas/Hash'
+        header:
+          $ref: '#/components/schemas/BlockHeader'
+        isGenesis:
+          type: boolean
+        since:
           type: integer
-        status:
+          format: int64
+          description: Microseconds since UNIX epoch start
+        size:
+          type: integer
+          format: int64
+          description: Size in bytes
+        transactionCount:
+          type: integer
+          format: int32
+    BlockHeader:
+      type: object
+      properties:
+        signature:
+          type: string
+          format: byte
+        issuer:
+          type: string
+          format: byte
+        difficulty:
+          type: integer
+          format: int64
+        slotId:
+          type: integer
+          format: int64
+        prevHash:
+          $ref: '#/components/schemas/Hash'
+        totalOutput:
+          $ref: '#/components/schemas/Coin'
+        totalFees:
+          $ref: '#/components/schemas/Coin'
+    AccountInfo:
+      type: object
+      properties:
+        balances:
+          type: object
+          properties:
+            confirmed:
+              type: integer
+              format: int32
+              description: Balance according to current chain.
+            total:
+              type: integer
+              format: int32
+              description: >-
+                Balance derived from both chain and transactions which are not
+                yet in blocks.
+        currentNonce:
+          type: integer
+          format: int32
+    GeneralizedTransactionInfo:
+      type: object
+      discriminator:
+        propertyName: txType
+      properties:
+        txType:
           type: string
           enum:
-            - removed
-            - added
-  PrivateBlockHeader:
-    type: object
-    properties:
-      prevBlock:
-        $ref: "#/definitions/Hash"
-      bodyProof:
+            - money
+            - publication
+        txId:
+          $ref: '#/components/schemas/Hash'
+        outValue:
+          $ref: '#/components/schemas/Coin'
+        money:
+          $ref: '#/components/schemas/TransactionInfo'
+        publication:
+          $ref: '#/components/schemas/PublicationInfo'
+    TransactionInfo:
+      type: object
+      properties:
+        txId:
+          $ref: '#/components/schemas/Hash'
+        outValue:
+          $ref: '#/components/schemas/Coin'
+        money:
+          type: object
+          properties:
+            inAcc:
+              type: object
+              properties:
+                addr:
+                  $ref: '#/components/schemas/Address'
+                nonce:
+                  type: integer
+                  format: int32
+            inValue:
+              $ref: '#/components/schemas/Coin'
+            outs:
+              type: array
+              items:
+                type: object
+                properties:
+                  address:
+                    $ref: '#/components/schemas/Address'
+                  value:
+                    $ref: '#/components/schemas/Coin'
+    PublicationInfo:
+      type: object
+      properties:
+        txId:
+          $ref: "#/components/schemas/Hash"
+        publication:
+          type: object
+          properties:
+            author:
+              $ref: '#/components/schemas/Address'
+            feesAmount:
+              $ref: '#/components/schemas/Coin'
+            header:
+              $ref: '#/components/schemas/PrivateBlockHeader'
+    AndBlockInfo:
+      type: object
+      properties:
+        block:
+          $ref: '#/components/schemas/BlockInfo'
+    TransactionList:
+      type: object
+      properties:
+        transactions:
+          type: array
+          items:
+            allOf:
+              - $ref: '#/components/schemas/TransactionInfo'
+              - $ref: '#/components/schemas/AndBlockInfo'
+    GeneralizedTransactionList:
+      type: object
+      properties:
+        transactions:
+          type: array
+          items:
+            allOf:
+            - $ref: '#/components/schemas/GeneralizedTransactionInfo'
+            - $ref: "#/components/schemas/AndBlockInfo"
+    BlockTransactionList:
+      type: object
+      properties:
+        transactions:
+          type: array
+          items:
+            $ref: '#/components/schemas/GeneralizedTransactionInfo'
+    TxInAcc:
+      type: object
+      description: Transaction source account info.
+      properties:
+        nonce:
+          type: integer
+          format: int32
+          description: Current account nonce, received in /accounts/{address} endpoint.
+        addr:
+          $ref: '#/components/schemas/Address'
+    TxOut:
+      type: object
+      description: Transaction output.
+      properties:
+        outAddr:
+          $ref: '#/components/schemas/Address'
+        outValue:
+          $ref: '#/components/schemas/Coin'
+    Tx:
+      type: object
+      description: Transaction content.
+      properties:
+        inAcc:
+          $ref: '#/components/schemas/TxInAcc'
+        inValue:
+          $ref: '#/components/schemas/Coin'
+        outs:
+          type: array
+          items:
+            $ref: '#/components/schemas/TxOut'
+    TxWitness:
+      type: object
+      properties:
+        sig:
+          type: string
+          description: >-
+            Evaluated as 'signEd25519(sourceSecretKey, blake2bHash(Tx) +
+            sourcePublicKey)', and passed in hex-encoded form to the endpoint.
+        pk:
+          type: string
+          description: Hex-encoded public key of the source account.
+    TxWitnessed:
+      type: object
+      properties:
+        tx:
+          $ref: '#/components/schemas/Tx'
+        witness:
+          $ref: '#/components/schemas/TxWitness'
+    AtgDelta:
+      type: array
+      items:
         type: object
         properties:
-          root:
-            $ref: "#/definitions/Hash"
-          transactionsNum:
+          subjectId:
             type: integer
-            format: int32
-      atgDelta:
-        $ref: "#/definitions/AtgDelta"
-  ErrResponse:
-    type: object
-    required:
-      - error
-    properties:
-      error:
-        type: string
-        enum:
-          - InvalidFormat
+          status:
+            type: string
+            enum:
+              - removed
+              - added
+    PrivateBlockHeader:
+      type: object
+      properties:
+        prevBlock:
+          $ref: '#/components/schemas/Hash'
+        bodyProof:
+          type: object
+          properties:
+            root:
+              $ref: '#/components/schemas/Hash'
+            transactionsNum:
+              type: integer
+              format: int32
+        atgDelta:
+          $ref: "#/components/schemas/AtgDelta"
+    ErrResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          enum:
+            - InvalidFormat
+            - BlockNotFound
+            - TransactionNotFound
+            - PrivateBlockNotFound
+          description: |-
+            Error type:
+              * `InvalidFormat` - Failed to deserialise one of parameters.
 
-          - BlockNotFound
-          - TransactionNotFound
-          - PrivateBlockNotFound
-        description: >-
-          Error type:
-            * `InvalidFormat` - Failed to deserialise one of parameters.
-
-            * `BlockNotFound` - Specified block does not exist.
-            * `TransactionNotFound` - Specified transaction does not exist.
-            * `PrivateBlockNotFound` - Specified private block does not exist.
-
-  TxValidationError:
-    type: object
-    required:
-      - error
-    properties:
-      error:
-        type: string
-        enum:
-          - InvalidFormat
-          - MTxNoOutputs
-          - MTxDuplicatedOutputs
-          - InsuffucientFees
-          - AuthorDoesNotExist
-          - SignatureIsCorrupted
-          - NotASingletonSelfUpdate
-          - NonceMustBeIncremented
-          - PaymentMustBePositive
-          - ReceiverMustIncreaseBalance
-          - SumMustBeNonNegative
-          - CannotAffordFees
-          - BalanceCannotBecomeNegative
-        description: >-
-          Error type:
-            * `InvalidFormat` - Failed to deserialise one of parameters.
-            * `MTxNoOutputs` - Transaction has no outputs.
-            * `MTxDuplicatedOutputs` - Transaction has duplicated outputs.
-            * `InsufficientFees` - Input of transaction is too small to provide appropriate fees amount.
-            * `SignatureIsCorrupted` - Bad signature provided.
-            * `NotASingletonSelfUpdate` - Cannot send money to yourself more than once in transaction.
-            * `NonceMustBeIncremented` - Bad nonce for source account is used. Should be exactly "currentNonce" returned by /accounts/{address} endpoint.
-            * `SumMustBeNonNegative` - Sum of payments plus fee must be less or equal to amount of money you spend.
-            * `CannotAffordFees` - User balance is too small to afford transaction outputs and fees.
-            * `BalanceCannotBecomeNegative` - User balance is too small to afford transaction outputs.
-
-externalDocs:
-  description: Find out more about Swagger
-  url: 'http://swagger.io'
+              * `BlockNotFound` - Specified block does not exist.
+              * `TransactionNotFound` - Specified transaction does not exist.
+              * `PrivateBlockNotFound` - Specified private block does not exist.
+    TxValidationError:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          enum:
+            - InvalidFormat
+            - MTxNoOutputs
+            - MTxDuplicatedOutputs
+            - InsuffucientFees
+            - AuthorDoesNotExist
+            - SignatureIsCorrupted
+            - NotASingletonSelfUpdate
+            - NonceMustBeIncremented
+            - PaymentMustBePositive
+            - ReceiverMustIncreaseBalance
+            - SumMustBeNonNegative
+            - CannotAffordFees
+            - BalanceCannotBecomeNegative
+          description: |-
+            Error type:
+              * `InvalidFormat` - Failed to deserialise one of parameters.
+              * `MTxNoOutputs` - Transaction has no outputs.
+              * `MTxDuplicatedOutputs` - Transaction has duplicated outputs.
+              * `InsufficientFees` - Input of transaction is too small to provide appropriate fees amount.
+              * `SignatureIsCorrupted` - Bad signature provided.
+              * `NotASingletonSelfUpdate` - Cannot send money to yourself more than once in transaction.
+              * `NonceMustBeIncremented` - Bad nonce for source account is used. Should be exactly "currentNonce" returned by /accounts/{address} endpoint.
+              * `SumMustBeNonNegative` - Sum of payments plus fee must be less or equal to amount of money you spend.
+              * `CannotAffordFees` - User balance is too small to afford transaction outputs and fees.
+              * `BalanceCannotBecomeNegative` - User balance is too small to afford transaction outputs.
