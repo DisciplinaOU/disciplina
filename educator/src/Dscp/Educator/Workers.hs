@@ -8,7 +8,7 @@ module Dscp.Educator.Workers
 import Fmt ((+||), (||+))
 import Loot.Config (option, sub)
 import Loot.Log (logWarning)
-import Time (ms, sec, toUnit)
+import Time (minute, ms, sec, toUnit)
 
 import Dscp.Core
 import Dscp.Educator.Config
@@ -44,8 +44,13 @@ privateBlockCreatorWorker =
                          \witness slot duration ("
                          +|| period ||+ " <= " +|| slotDuration ||+ ")"
 
+    withRecovery action =
+        recoverAll "Private block publisher"
+                   (capDelay (minute 5) $ expBackoff (sec 1)) $
+                   action
     work =
-        foreverAlive "Private block publisher" period $
+        forever $
+        withRecovery $
         notFasterThan period $
             void dumpPrivateBlock
 
@@ -53,6 +58,9 @@ privateBlockCreatorWorker =
 publicationTxSubmitter :: forall m ctx. EducatorWorkMode ctx m => Worker m
 publicationTxSubmitter =
     Worker "publicationTxSubmitter" [] [] $ \_ ->
-        foreverAlive "Tx publisher" (sec 10) $
+        forever $
+        recoverAll actionName (capDelay (minute 5) $ expBackoff (sec 1)) $
         notFasterThan (sec 1) $
             void updateMempoolWithPublications
+  where
+    actionName = "Publication tx submitter"

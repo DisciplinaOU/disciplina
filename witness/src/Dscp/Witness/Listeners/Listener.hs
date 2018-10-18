@@ -43,7 +43,7 @@ witnessListeners = do
 blockIssuingListener :: forall ctx m. WitnessWorkMode ctx m => Listener m
 blockIssuingListener =
     Listener "blockIssuingListener" [] $ \btq ->
-        foreverAlive "BlockIssuingListener" (sec 2) (action btq)
+        forever $ recoverAll "BlockIssuingListener" (constDelay (sec 2)) (action btq)
   where
     action :: ListenerEnv NetTag -> m ()
     action btq = do
@@ -100,6 +100,6 @@ txPublisher :: WitnessWorkMode ctx m => RelayState -> Listener m
 txPublisher (RelayState _ pipe _) = Listener
     "txRetranslationPublisher"
     [] $ \btq -> do
-        foreverAlive "Tx publisher" (sec 1) $ atomically $ do
+        forever . recoverAll "Tx publisher" retryOnSpot $ atomically $ do
             tx <- STM.readTBQueue pipe
             servPub btq (PubTx tx)
