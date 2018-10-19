@@ -280,6 +280,36 @@ paths:
               $ref: '#/components/schemas/Course'
         description: Course object that needs to be added to the system
         required: true
+  /course/{course}:
+    get:
+      tags:
+        - Courses
+      summary: Get info about a course
+      description: Gets a course data by given course ID.
+      operationId: getCourse
+      parameters:
+        - $ref: '#/components/parameters/Course'
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Course'
+        400:
+          description: Course ID is invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrResponse'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        404:
+          description: Course with given ID not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrResponse'
 
   /assignments:
     get:

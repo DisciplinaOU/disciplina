@@ -29,6 +29,7 @@ data EducatorApiEndpoints route = EducatorApiEndpoints
     , eDeleteStudentAssignment :: route :- DeleteStudentAssignment
     , eGetCourses              :: route :- GetCourses
     , eAddCourse               :: route :- AddCourse
+    , eGetCourse               :: route :- GetCourse
     , eGetAssignments          :: route :- GetAssignments
     , eAddAssignment           :: route :- AddAssignment
     , eGetSubmissions          :: route :- GetSubmissions
@@ -122,6 +123,11 @@ type AddCourse
     :> ReqBody '[DSON] NewCourse
     :> PostCreated '[DSON] Course
     -- TODO: return proper JSON-object here
+
+type GetCourse
+    = "courses" :> Capture "course" Course
+    :> Summary "Get info about a course"
+    :> Get '[DSON] CourseEducatorInfo
 
 ---------------------------------------------------------------------------
 -- Assignments

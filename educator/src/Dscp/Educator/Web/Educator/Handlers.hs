@@ -58,6 +58,9 @@ educatorApiHandlers =
             , cdSubjects = subjects
             }
 
+    , eGetCourse =
+        invoke ... educatorGetCourse
+
       -- Assignments
 
     , eGetAssignments = \afCourse afStudent afIsFinal ->

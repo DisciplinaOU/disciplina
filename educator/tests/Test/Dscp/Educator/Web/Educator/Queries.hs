@@ -80,6 +80,25 @@ spec_EducatorApiQueries = describe "Basic database operations" $ do
             return $ sort (map ciId res1) === sort courses
                 .&&. map ciId res2 === one (course1)
 
+    describe "getCourse" $ do
+        it "Fails on request of non-existent course" $ sqlitePropertyM $ do
+            env <- pickSmall $ genCoreTestEnv simpleCoreTestParams
+            let course = tiOne $ cteCourses env
+
+            lift . throwsPrism (_AbsentError . _CourseDomain) $
+                educatorGetCourse (getId course)
+
+        it "Returns existing course properly" $ sqlitePropertyM $ do
+            env <- pickSmall $ genCoreTestEnv simpleCoreTestParams
+            course <- lift $ createCourse . simpleCourse . tiOne . cteCourses $ env
+
+            res <- lift $ educatorGetCourse (getId course)
+            return $ res === CourseEducatorInfo
+                { ciId = getId course
+                , ciDesc = ""
+                , ciSubjects = []
+                }
+
     describe "getAssignments" $ do
         -- This endpoint is fully covered by tests for Student API,
         -- so just checking it at least works.
