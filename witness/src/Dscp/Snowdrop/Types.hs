@@ -39,6 +39,7 @@ import Fmt (build, (+|), (|+))
 import qualified Text.Show
 
 import Dscp.Core.Foundation (Address, Nonce)
+import Dscp.Core (unsafeMkCoin)
 
 -- | Transaction type for publication.
 data PublicationTxTypeId
@@ -117,7 +118,7 @@ instance Buildable AccountException where
             "Duplicated transaction outputs"
         InsufficientFees{..} ->
             "Amount of money left for fees in transaction is not enough, \
-             \expected " +| aeExpectedFees |+ ", got " +| aeActualFees |+ ""
+             \expected " +| unsafeMkCoin aeExpectedFees |+ ", got " +| unsafeMkCoin aeActualFees |+ ""
         SignatureIsMissing ->
             "Transaction has no correct signature"
         SignatureIsCorrupted ->
@@ -137,14 +138,14 @@ instance Buildable AccountException where
         ReceiverMustIncreaseBalance ->
             "One of receivers' balance decreased or didn't change"
         SumMustBeNonNegative{..} ->
-            "Tx input value (" +| aeSent |+ ") is not greater than \
-            \sum of outputs (" +| aeReceived |+ ") plus fees (" +| aeFees |+ ")"
+            "Tx input value (" +| unsafeMkCoin aeSent |+ ") is not greater than \
+            \sum of outputs (" +| unsafeMkCoin aeReceived |+ ") plus fees (" +| unsafeMkCoin aeFees |+ ")"
         CannotAffordFees{..} ->
-            "Tx sender can not afford fees: sending " +| aeOutputsSum |+ " \
-            \and fees are " +| aeFees |+ ", while balance is " +| aeBalance |+ ""
+            "Tx sender can not afford fees: sending " +| unsafeMkCoin aeOutputsSum |+ " \
+            \and fees are " +| unsafeMkCoin aeFees |+ ", while balance is " +| unsafeMkCoin aeBalance |+ ""
         BalanceCannotBecomeNegative{..} ->
-            "Balance can not become negative: spending " +| aeSpent |+ ", \
-            \while balance is " +| aeBalance |+ ""
+            "Balance can not become negative: spending " +| unsafeMkCoin aeSpent |+ ", \
+            \while balance is " +| unsafeMkCoin aeBalance |+ ""
         AccountInternalError s ->
             fromString $ "Expander failed internally: " <> s
 
