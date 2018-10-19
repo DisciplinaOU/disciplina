@@ -723,9 +723,33 @@ components:
       type: object
       required:
         - addr
+        - courses
+        - assignments
+        - completedAssignments
       properties:
         addr:
           $ref: '#/components/schemas/Address'
+        courses:
+          allOf:
+            - $ref: '#/components/schemas/Count'
+            - readOnly: true
+              description: Count of courses enrolled in
+        assignments:
+          allOf:
+            - $ref: '#/components/schemas/Count'
+            - readOnly: true
+              description: >-
+                Total count of assignments.
+                If `course` filter is used, only assignments
+                related to the course are counted.
+        completedAssignments:
+          allOf:
+            - $ref: '#/components/schemas/Count'
+            - readOnly: true
+              description: >-
+                Count of completed assignments.
+                If `course` filter is used, only assignments
+                related to the course are counted.
     StudentCourse:
       type: object
       required:
@@ -746,6 +770,9 @@ components:
         - id
         - desc
         - subjects
+        - students
+        - assignments
+        - ungradedSubmissions
       properties:
         id:
           allOf:
@@ -757,6 +784,21 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Subject'
+        studends:
+          allOf:
+            - $ref: '#/components/schemas/Count'
+            - readOnly: true
+              description: Count of students enrolled in the course
+        assignments:
+          allOf:
+            - $ref: '#/components/schemas/Count'
+            - readOnly: true
+              description: Count of assignments in the course
+        ungradedSubmissions:
+          allOf:
+            - $ref: '#/components/schemas/Count'
+            - readOnly: true
+              description: Count of ungraded submissions in the course
     Subject:
       type: integer
       format: int32
@@ -769,6 +811,7 @@ components:
         - contentsHash
         - isFinal
         - desc
+        - submissions
       properties:
         hash:
           allOf:
@@ -786,6 +829,11 @@ components:
           type: boolean
         desc:
           type: string
+        submissions:
+          allOf:
+            - $ref: '#/components/schemas/Count'
+            - readOnly: true
+              description: Count of submissions for the assignment
     Submission:
       type: object
       required:
@@ -813,6 +861,8 @@ components:
         witness:
           type: string
           format: binary
+        grade:
+          $ref: '#/components/schemas/Grade'
     Grade:
       type: object
       required:
