@@ -61,6 +61,7 @@ protectedEducatorAPI = Proxy
 type GetStudents
     = "students"
     :> QueryParam "course" Course
+    :> QueryParam "isEnrolled" IsEnrolled
     :> Summary "Get a list of all registered students' addresses"
     :> Get '[DSON] [StudentInfo]
 
@@ -157,6 +158,7 @@ type GetSubmissions
     :> QueryParam "course" Course
     :> QueryParam "student" Student
     :> QueryParam "assignment" (Hash Assignment)
+    :> QueryParam "isGraded" IsGraded
     :> Summary "Get all submissions"
     :> Description "Gets a list of all submissions done by all students. \
                   \This method is inaccessible by students."

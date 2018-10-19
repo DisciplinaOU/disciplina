@@ -16,6 +16,8 @@ module Dscp.Educator.Web.Types
        , DistinctTag
 
          -- * Flags
+       , IsEnrolled (..)
+       , IsGraded (..)
        , IsFinal (..)
        , _IsFinal
        , HasProof (..)
@@ -90,11 +92,19 @@ type DistinctTag tag =
 -- Types
 ---------------------------------------------------------------------------
 
+-- | Whether student is enrolled into a course.
+newtype IsEnrolled = IsEnrolled { unIsEnrolled :: Bool }
+    deriving (Eq, Show)
+
 -- | Whether assignment is final in course.
 newtype IsFinal = IsFinal { unIsFinal :: Bool }
     deriving (Eq, Show)
 
 makePrisms ''IsFinal
+
+-- | Whether submission is graded.
+newtype IsGraded = IsGraded { unIsGraded :: Bool }
+    deriving (Eq, Show)
 
 -- | Whether transaction has been published into public chain.
 newtype HasProof = HasProof { unHasProof :: Bool }
@@ -120,9 +130,19 @@ data BlkProofInfo = BlkProofInfo
 -- Buildable instances
 ---------------------------------------------------------------------------
 
+instance Buildable (IsEnrolled) where
+    build (IsEnrolled{..}) =
+      "{ is enrolled = " +| unIsEnrolled |+
+      " }"
+
 instance Buildable (IsFinal) where
     build (IsFinal{..}) =
       "{ is final = " +| unIsFinal |+
+      " }"
+
+instance Buildable (IsGraded) where
+    build (IsGraded{..}) =
+      "{ is enrolled = " +| unIsGraded |+
       " }"
 
 instance Buildable (StudentInfo) where
@@ -190,7 +210,9 @@ assignmentTypeRaw = iso forth back . from _IsFinal
 -- JSON instances
 ---------------------------------------------------------------------------
 
+deriveJSON defaultOptions ''IsEnrolled
 deriveJSON defaultOptions ''IsFinal
+deriveJSON defaultOptions ''IsGraded
 deriveJSON defaultOptions ''HasProof
 deriveJSON defaultOptions ''GradeInfo
 deriveJSON defaultOptions ''StudentInfo
@@ -200,7 +222,9 @@ deriveJSON defaultOptions ''BlkProofInfo
 -- FromHttpApiData instances
 ---------------------------------------------------------------------------
 
+deriving instance FromHttpApiData IsEnrolled
 deriving instance FromHttpApiData IsFinal
+deriving instance FromHttpApiData IsGraded
 
 ---------------------------------------------------------------------------
 -- SQLite instances

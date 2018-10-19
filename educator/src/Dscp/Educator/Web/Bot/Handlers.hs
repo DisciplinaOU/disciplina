@@ -9,6 +9,7 @@ import Dscp.Core (Student)
 import Dscp.Educator.Web.Bot.Params
 import Dscp.Educator.Web.Bot.Setting
 import Dscp.Educator.Web.Student
+import Dscp.Educator.Web.Types
 
 
 initializeBot

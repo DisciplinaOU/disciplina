@@ -28,8 +28,8 @@ educatorApiHandlers =
     {
       -- Students
 
-      eGetStudents =
-        invoke ... educatorGetStudents
+      eGetStudents = \mCourse _mIsEnrolled ->
+        invoke $ educatorGetStudents mCourse
 
     , eAddStudent = \(NewStudent student) ->
         void . invoke $ createStudent student
@@ -73,7 +73,7 @@ educatorApiHandlers =
 
       -- Submissions
 
-    , eGetSubmissions = \sfCourse sfStudent sfAssignmentHash ->
+    , eGetSubmissions = \sfCourse sfStudent sfAssignmentHash _sfIsGraded ->
         invoke $ commonGetSubmissions EducatorCase
             def{ sfCourse, sfStudent, sfAssignmentHash }
 
