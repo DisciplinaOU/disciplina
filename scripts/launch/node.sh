@@ -100,7 +100,8 @@ witness_params="
 --witness-listen $witness_web_addr
 --comm-n 0
 --metrics-server 127.0.0.1:8125
---log-config run/log-config.yaml
+--log-config run/syslog-config.yaml
+--log-type Syslog
 "
 
 # parameters for faucet
@@ -114,7 +115,8 @@ faucet_params="
 --faucet-keyfile $files/faucet.key
 --faucet-gen-key
 --log-dir $tmp_files/logs
---log-config run/log-config.yaml
+--log-config run/syslog-config.yaml
+--log-type Syslog
 "
 
 # bot parameters

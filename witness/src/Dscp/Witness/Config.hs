@@ -57,7 +57,7 @@ instance HasWitnessConfig => Given CoreConfigRec where
 
 defaultWitnessConfig :: WitnessConfigRecP
 defaultWitnessConfig = mempty
-    & sub #witness . option #logging ?~ LoggingParams "witness" False Nothing Nothing
+    & sub #witness . option #logging ?~ LoggingParams Nothing "witness" False Nothing Nothing
     & sub #witness . option #db ?~ RocksDBParams "witness-db"
     & sub #witness . option #keys ?~ Basic (BaseKeyParams Nothing False Nothing)
     & sub #witness . option #api ?~ Nothing

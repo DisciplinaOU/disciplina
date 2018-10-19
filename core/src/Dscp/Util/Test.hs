@@ -224,7 +224,7 @@ testLogging =
     { Log._log = \lvl _ msg ->
         when (lvl >= Log.Warning) $
             throwM $ TestLoggedError lvl msg
-    , Log._logName = return $ error "Loger name requested in test"
+    , Log._logName = return $ error "Logger name requested in test"
     }
 
 ----------------------------------------------------------------------------
