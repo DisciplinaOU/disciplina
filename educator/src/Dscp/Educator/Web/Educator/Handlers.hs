@@ -63,7 +63,7 @@ educatorApiHandlers =
 
       -- Assignments
 
-    , eGetAssignments = \afCourse afStudent afIsFinal ->
+    , eGetAssignments = \afCourse afStudent afIsFinal _afSince ->
         transactR $ commonGetAssignments EducatorCase
             def{ afCourse, afStudent, afIsFinal }
 
@@ -73,7 +73,7 @@ educatorApiHandlers =
 
       -- Submissions
 
-    , eGetSubmissions = \sfCourse sfStudent sfAssignmentHash _sfIsGraded ->
+    , eGetSubmissions = \sfCourse sfStudent sfAssignmentHash _sfIsGraded _sfSince ->
         invoke $ commonGetSubmissions EducatorCase
             def{ sfCourse, sfStudent, sfAssignmentHash }
 
@@ -85,7 +85,7 @@ educatorApiHandlers =
 
       -- Grades
 
-    , eGetGrades = \course student assignment isFinalF ->
+    , eGetGrades = \course student assignment isFinalF _since ->
         invoke $ educatorGetGrades course student assignment isFinalF
 
     , eAddGrade = \(NewGrade subH grade) ->

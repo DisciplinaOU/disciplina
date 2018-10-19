@@ -332,6 +332,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/CourseFilter'
         - $ref: '#/components/parameters/StudentFilter'
+        - $ref: '#/components/parameters/SinceFilter'
         - in: query
           name: isFinal
           description: Return only final/non-final assignments of the course
@@ -396,6 +397,7 @@ paths:
         - $ref: '#/components/parameters/CourseFilter'
         - $ref: '#/components/parameters/StudentFilter'
         - $ref: '#/components/parameters/AssignmentFilter'
+        - $ref: '#/components/parameters/SinceFilter'
         - in: query
           name: isGraded
           description: Return only submissions with/without grade
@@ -488,6 +490,7 @@ paths:
         - $ref: '#/components/parameters/CourseFilter'
         - $ref: '#/components/parameters/StudentFilter'
         - $ref: '#/components/parameters/AssignmentFilter'
+        - $ref: '#/components/parameters/SinceFilter'
         - in: query
           name: isFinal
           description: Return only grades for final/non-final assignments of the course
@@ -624,6 +627,13 @@ components:
       required: false
       schema:
         $ref: '#/components/schemas/Hash'
+    SinceFilter:
+      in: query
+      name: since
+      description: Return only items starting with the given time
+      required: false
+      schema:
+        $ref: '#/components/schemas/Time'
 
   responses:
     Unauthorized:
@@ -698,6 +708,7 @@ components:
       type: object
       required:
         - hash
+        - timestamp
         - courseId
         - contentsHash
         - isFinal
@@ -707,6 +718,10 @@ components:
           allOf:
             - readOnly: true
             - $ref: '#/components/schemas/Hash'
+        timestamp:
+          allOf:
+            - $ref: '#/components/schemas/Time'
+            - readOnly: true
         courseId:
           $ref: '#/components/schemas/Id'
         contentsHash:
@@ -719,6 +734,7 @@ components:
       type: object
       required:
         - hash
+        - timestamp
         - contentsHash
         - assignmentHash
         - studentAddr
@@ -728,6 +744,10 @@ components:
           allOf:
             - readOnly: true
             - $ref: '#/components/schemas/Hash'
+        timestamp:
+          allOf:
+            - $ref: '#/components/schemas/Time'
+            - readOnly: true
         contentsHash:
           $ref: '#/components/schemas/Hash'
         assignmentHash:

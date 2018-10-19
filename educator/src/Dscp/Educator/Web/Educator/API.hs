@@ -9,6 +9,7 @@ module Dscp.Educator.Web.Educator.API
     , EducatorApiHandlers
     ) where
 
+import Data.Time.Clock (UTCTime)
 import Servant
 import Servant.Generic
 
@@ -139,6 +140,7 @@ type GetAssignments
     :> QueryParam "course" Course
     :> QueryParam "student" Student
     :> QueryParam "isFinal" IsFinal
+    :> QueryParam "since" UTCTime
     :> Summary "Get all assignments"
     :> Get '[DSON] [AssignmentEducatorInfo]
 
@@ -159,6 +161,7 @@ type GetSubmissions
     :> QueryParam "student" Student
     :> QueryParam "assignment" (Hash Assignment)
     :> QueryParam "isGraded" IsGraded
+    :> QueryParam "since" UTCTime
     :> Summary "Get all submissions"
     :> Description "Gets a list of all submissions done by all students. \
                   \This method is inaccessible by students."
@@ -187,6 +190,7 @@ type GetGrades
     :> QueryParam "student" Student
     :> QueryParam "assignment" (Hash Assignment)
     :> QueryParam "isFinal" IsFinal
+    :> QueryParam "since" UTCTime
     :> Summary "Get all grades"
     :> Description "Gets a list of all grades performed by all students."
     :> Get '[DSON] [GradeInfo]

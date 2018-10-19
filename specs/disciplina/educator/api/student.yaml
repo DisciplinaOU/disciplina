@@ -400,6 +400,7 @@ components:
       type: object
       required:
         - hash
+        - timestamp
         - courseId
         - contentsHash
         - isFinal
@@ -407,6 +408,8 @@ components:
       properties:
         hash:
           $ref: '#/components/schemas/Hash'
+        timestamp:
+          $ref: '#/components/schemas/Time'
         courseId:
           $ref: '#/components/schemas/Id'
         contentsHash:
@@ -421,6 +424,7 @@ components:
       type: object
       required:
         - hash
+        - timestamp
         - contentsHash
         - assignmentHash
       properties:
@@ -428,6 +432,10 @@ components:
           allOf:
             - readOnly: true
             - $ref: '#/components/schemas/Hash'
+        timestamp:
+          allOf:
+            - $ref: '#/components/schemas/Time'
+            - readOnly: true
         contentsHash:
           $ref: '#/components/schemas/Hash'
         assignmentHash:
