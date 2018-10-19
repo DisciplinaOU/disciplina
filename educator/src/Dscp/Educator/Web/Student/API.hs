@@ -54,6 +54,7 @@ protectedStudentAPI = Proxy
 type GetCourses
     = "courses"
     :> QueryParam "isEnrolled" IsEnrolled
+    :> QueryFlag "onlyCount"
     :> Summary "Get Educator's courses"
     :> Description "Gets a list of Educator's courses, both enrolled and available."
     :> Verb 'GET 200 '[DSON] [CourseStudentInfo]
@@ -73,6 +74,7 @@ type GetAssignments
     :> QueryParam "course" Core.Course
     :> QueryParam "type" Core.DocumentType
     :> QueryParam "isFinal" IsFinal
+    :> QueryFlag "onlyCount"
     :> Summary "Get student's assignments"
     :> Description "Gets a list of student's assignments. Filter parameters are \
                    \used to specify specific course, type, etc."
@@ -94,11 +96,11 @@ type GetSubmissions
     :> QueryParam "course" Core.Course
     :> QueryParam "assignment" (Hash Core.Assignment)
     :> QueryParam "type" Core.DocumentType
+    :> QueryFlag "onlyCount"
     :> Summary "Get student's submissions"
     :> Description "Gets a list of student's submissions. Filter parameters are \
                    \used to specify specific course, assignment, etc."
     :> Verb 'GET 200 '[DSON] [SubmissionStudentInfo]
-
 
 type AddSubmission
     = "submissions"
@@ -129,6 +131,7 @@ type DeleteSubmission
 type GetProofs
     = "proofs"
     :> QueryParam "since" UTCTime
+    :> QueryFlag "onlyCount"
     :> Summary "Get available proofs for student"
     :> Description "Gets private transactions together with corresponding Merkle \
                    \subtrees. Transactions from same blocks are grouped together \

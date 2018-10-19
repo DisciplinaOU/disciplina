@@ -48,15 +48,23 @@ paths:
             should all of them.
           schema:
             type: boolean
+        - $ref: '#/components/parameters/OnlyCount'
       responses:
         200:
           description: Successful operation
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Course'
+                type: object
+                required:
+                  - count
+                properties:
+                  count:
+                    $ref: '#/components/schemas/Count'
+                  courses:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Course'
         401:
           $ref: '#/components/responses/Unauthorized'
   /courses/{course}:
@@ -102,6 +110,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/CourseFilter'
         - $ref: '#/components/parameters/DocumentTypeFilter'
+        - $ref: '#/components/parameters/OnlyCount'
         - in: query
           name: isFinal
           required: false
@@ -114,9 +123,16 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Assignment'
+                type: object
+                required:
+                  - count
+                properties:
+                  count:
+                    $ref: '#/components/schemas/Count'
+                  assignments:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Assignment'
         401:
           $ref: '#/components/responses/Unauthorized'
   /assignments/{assignment}:
@@ -157,15 +173,23 @@ paths:
         - $ref: '#/components/parameters/CourseFilter'
         - $ref: '#/components/parameters/AssignmentFilter'
         - $ref: '#/components/parameters/DocumentTypeFilter'
+        - $ref: '#/components/parameters/OnlyCount'
       responses:
         200:
           description: Successful operation
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Submission'
+                type: object
+                required:
+                  - count
+                properties:
+                  count:
+                    $ref: '#/components/schemas/Count'
+                  submissions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Submission'
         401:
           $ref: '#/components/responses/Unauthorized'
     post:
@@ -275,15 +299,23 @@ paths:
       operationId: getProofs
       parameters:
         - $ref: '#/components/parameters/SinceFilter'
+        - $ref: '#/components/parameters/OnlyCount'
       responses:
         200:
           description: successfull operation
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Proof'
+                type: object
+                required:
+                  - count
+                properties:
+                  count:
+                    $ref: '#/components/schemas/Count'
+                  proofs:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Proof'
         401:
           $ref: '#/components/responses/Unauthorized'
 components:
@@ -343,6 +375,14 @@ components:
       required: false
       schema:
         $ref: '#/components/schemas/Time'
+    OnlyCount:
+      in: query
+      name: onlyCount
+      description: If this parameter is present, return only the total count of items
+      required: false
+      allowEmptyValue: true
+      schema:
+        type: boolean
 
   responses:
     Unauthorized:
@@ -370,6 +410,10 @@ components:
       type: string
       format: date-time
       description: Time in ISO format
+    Count:
+      type: integer
+      format: int32
+      description: Count of items returned
 
     # Entities
     Course:

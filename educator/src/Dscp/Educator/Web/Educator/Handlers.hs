@@ -28,7 +28,7 @@ educatorApiHandlers =
     {
       -- Students
 
-      eGetStudents = \mCourse _mIsEnrolled ->
+      eGetStudents = \mCourse _mIsEnrolled _onlyCount ->
         invoke $ educatorGetStudents mCourse
 
     , eAddStudent = \(NewStudent student) ->
@@ -48,8 +48,8 @@ educatorApiHandlers =
 
       -- Courses
 
-    , eGetCourses =
-        invoke ... educatorGetCourses
+    , eGetCourses = \mStudent _onlyCount ->
+        invoke $ educatorGetCourses mStudent
 
     , eAddCourse = \(NewCourse mcid desc subjects) ->
         transactW $ createCourse CourseDetails
@@ -63,7 +63,7 @@ educatorApiHandlers =
 
       -- Assignments
 
-    , eGetAssignments = \afCourse afStudent afIsFinal _afSince ->
+    , eGetAssignments = \afCourse afStudent afIsFinal _afSince _afOnlyCount ->
         transactR $ commonGetAssignments EducatorCase
             def{ afCourse, afStudent, afIsFinal }
 
@@ -73,7 +73,7 @@ educatorApiHandlers =
 
       -- Submissions
 
-    , eGetSubmissions = \sfCourse sfStudent sfAssignmentHash _sfIsGraded _sfSince ->
+    , eGetSubmissions = \sfCourse sfStudent sfAssignmentHash _sfIsGraded _sfSince _sfOnlyCount ->
         invoke $ commonGetSubmissions EducatorCase
             def{ sfCourse, sfStudent, sfAssignmentHash }
 
@@ -85,7 +85,7 @@ educatorApiHandlers =
 
       -- Grades
 
-    , eGetGrades = \course student assignment isFinalF _since ->
+    , eGetGrades = \course student assignment isFinalF _since _onlyCount ->
         invoke $ educatorGetGrades course student assignment isFinalF
 
     , eAddGrade = \(NewGrade subH grade) ->
@@ -93,7 +93,7 @@ educatorApiHandlers =
 
       -- Proofs
 
-    , eGetProofs = \pfCourse pfStudent pfAssignment ->
+    , eGetProofs = \pfCourse pfStudent pfAssignment _pfOnlyCount ->
         transactR $ commonGetProofs
             def{ pfCourse, pfStudent, pfAssignment }
     }

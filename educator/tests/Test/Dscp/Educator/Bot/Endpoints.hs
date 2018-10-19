@@ -30,13 +30,13 @@ spec_StudentApiWithBotQueries = describe "Basic properties" $ do
     it "Student gets assigned on courses on first request" $
         educatorProperty $ \seed -> do
             StudentApiEndpoints{..} <- testMakeBotHandlers seed
-            courses <- sGetCourses Nothing
+            courses <- sGetCourses Nothing False
             return (not $ null courses)
 
     it "Student gets some assignments on first request" $
         educatorProperty $ \seed -> do
             StudentApiEndpoints{..} <- testMakeBotHandlers seed
-            assignments <- sGetAssignments Nothing Nothing Nothing
+            assignments <- sGetAssignments Nothing Nothing Nothing False
             return (not $ null assignments)
 
     it "Submissions are graded automatically" $
@@ -50,6 +50,6 @@ spec_StudentApiWithBotQueries = describe "Basic properties" $ do
             submissions <- lift $ do
                 StudentApiEndpoints{..} <- testMakeBotHandlers seed
                 void $ sAddSubmission (signedSubmissionToRequest sigsub)
-                sGetSubmissions Nothing Nothing Nothing
+                sGetSubmissions Nothing Nothing Nothing False
             [submission] <- pure submissions
             return (isJust $ siGrade submission)

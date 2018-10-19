@@ -27,25 +27,25 @@ addBotHandlers student StudentApiEndpoints{..} = botEndpoints
   where
     botEndpoints :: (BotWorkMode ctx m, HasBotSetting) => StudentApiHandlers m
     botEndpoints = StudentApiEndpoints
-        { sGetCourses = \isEnrolledF -> do
+        { sGetCourses = \isEnrolledF onlyCount -> do
             botProvideInitSetting student
-            sGetCourses isEnrolledF
+            sGetCourses isEnrolledF onlyCount
 
         , sGetCourse = \course -> do
             botProvideInitSetting student
             sGetCourse course
 
-        , sGetAssignments = \courseIdF docTypeF isFinalF -> do
+        , sGetAssignments = \courseIdF docTypeF isFinalF onlyCount -> do
             botProvideInitSetting student
-            sGetAssignments courseIdF docTypeF isFinalF
+            sGetAssignments courseIdF docTypeF isFinalF onlyCount
 
         , sGetAssignment = \assignH -> do
             botProvideInitSetting student
             sGetAssignment assignH
 
-        , sGetSubmissions = \courseF assignHF docTypeF -> do
+        , sGetSubmissions = \courseF assignHF docTypeF onlyCount -> do
             botProvideInitSetting student
-            sGetSubmissions courseF assignHF docTypeF
+            sGetSubmissions courseF assignHF docTypeF onlyCount
 
         , sGetSubmission = \subH -> do
             botProvideInitSetting student
@@ -58,7 +58,7 @@ addBotHandlers student StudentApiEndpoints{..} = botEndpoints
             delayed $ do
                 requestToSignedSubmission newSub >>= botGradeSubmission
 
-                allAssigns <- sGetAssignments Nothing Nothing Nothing
+                allAssigns <- sGetAssignments Nothing Nothing Nothing False
                 botProvideUnlockedAssignments student res allAssigns
 
             -- Easter egg: once a couple of courses is completed,
@@ -67,7 +67,7 @@ addBotHandlers student StudentApiEndpoints{..} = botEndpoints
             -- Frontend team can still unlock courses quickly if they need
             -- because assignments for first two courses are fixed disregard
             -- the seed.
-            courses <- sGetCourses (Just $ IsEnrolled True)
+            courses <- sGetCourses (Just $ IsEnrolled True) False
             when (length (filter ciIsFinished courses) >= 2) $
                 botProvideAdvancedSetting student
 
@@ -77,7 +77,7 @@ addBotHandlers student StudentApiEndpoints{..} = botEndpoints
             botProvideInitSetting student
             sDeleteSubmission subH
 
-        , sGetProofs = \sinceF -> do
+        , sGetProofs = \sinceF onlyCount -> do
             botProvideInitSetting student
-            sGetProofs sinceF
+            sGetProofs sinceF onlyCount
         }

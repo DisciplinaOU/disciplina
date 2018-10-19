@@ -51,15 +51,23 @@ paths:
           required: false
           schema:
             type: boolean
+        - $ref: '#/components/parameters/OnlyCount'
       responses:
         200:
           description: A list of all registered students' addresses
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Student'
+                type: object
+                required:
+                  - count
+                properties:
+                  count:
+                    $ref: '#/components/schemas/Count'
+                  students:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Student'
         401:
           $ref: '#/components/responses/Unauthorized'
     post:
@@ -251,15 +259,23 @@ paths:
       operationId: getCourses
       parameters:
         - $ref: '#/components/parameters/StudentFilter'
+        - $ref: '#/components/parameters/OnlyCount'
       responses:
         200:
           description: A list of all courses
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Course'
+                type: object
+                required:
+                  - count
+                properties:
+                  count:
+                    $ref: '#/components/schemas/Count'
+                  courses:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Course'
         401:
           $ref: '#/components/responses/Unauthorized'
     post:
@@ -333,6 +349,7 @@ paths:
         - $ref: '#/components/parameters/CourseFilter'
         - $ref: '#/components/parameters/StudentFilter'
         - $ref: '#/components/parameters/SinceFilter'
+        - $ref: '#/components/parameters/OnlyCount'
         - in: query
           name: isFinal
           description: Return only final/non-final assignments of the course
@@ -345,9 +362,16 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Assignment'
+                type: object
+                required:
+                  - count
+                properties:
+                  count:
+                    $ref: '#/components/schemas/Count'
+                  assignments:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Assignment'
         401:
           $ref: '#/components/responses/Unauthorized'
     post:
@@ -398,6 +422,7 @@ paths:
         - $ref: '#/components/parameters/StudentFilter'
         - $ref: '#/components/parameters/AssignmentFilter'
         - $ref: '#/components/parameters/SinceFilter'
+        - $ref: '#/components/parameters/OnlyCount'
         - in: query
           name: isGraded
           description: Return only submissions with/without grade
@@ -410,9 +435,16 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Submission'
+                type: object
+                required:
+                  - count
+                properties:
+                  count:
+                    $ref: '#/components/schemas/Count'
+                  submissions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Submission'
         401:
           $ref: '#/components/responses/Unauthorized'
   /submissions/{submission}:
@@ -491,6 +523,7 @@ paths:
         - $ref: '#/components/parameters/StudentFilter'
         - $ref: '#/components/parameters/AssignmentFilter'
         - $ref: '#/components/parameters/SinceFilter'
+        - $ref: '#/components/parameters/OnlyCount'
         - in: query
           name: isFinal
           description: Return only grades for final/non-final assignments of the course
@@ -503,9 +536,16 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Grade'
+                type: object
+                required:
+                  - count
+                properties:
+                  count:
+                    $ref: '#/components/schemas/Count'
+                  grades:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Grade'
         401:
           $ref: '#/components/responses/Unauthorized'
     post:
@@ -550,15 +590,23 @@ paths:
         - $ref: '#/components/parameters/CourseFilter'
         - $ref: '#/components/parameters/StudentFilter'
         - $ref: '#/components/parameters/AssignmentFilter'
+        - $ref: '#/components/parameters/OnlyCount'
       responses:
         200:
           description: Successful operation
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Proof'
+                type: object
+                required:
+                  - count
+                properties:
+                  count:
+                    $ref: '#/components/schemas/Count'
+                  proofs:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Proof'
         400:
           description: Student address value is invalid
           content:
@@ -634,6 +682,14 @@ components:
       required: false
       schema:
         $ref: '#/components/schemas/Time'
+    OnlyCount:
+      in: query
+      name: onlyCount
+      description: If this parameter is present, return only the total count of items
+      required: false
+      allowEmptyValue: true
+      schema:
+        type: boolean
 
   responses:
     Unauthorized:

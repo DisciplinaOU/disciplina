@@ -63,6 +63,7 @@ type GetStudents
     = "students"
     :> QueryParam "course" Course
     :> QueryParam "isEnrolled" IsEnrolled
+    :> QueryFlag "onlyCount"
     :> Summary "Get a list of all registered students' addresses"
     :> Get '[DSON] [StudentInfo]
 
@@ -116,6 +117,7 @@ type DeleteStudentAssignment
 type GetCourses
     = "courses"
     :> QueryParam "student" Student
+    :> QueryFlag "onlyCount"
     :> Summary "Get all courses"
     :> Get '[DSON] [CourseEducatorInfo]
 
@@ -141,6 +143,7 @@ type GetAssignments
     :> QueryParam "student" Student
     :> QueryParam "isFinal" IsFinal
     :> QueryParam "since" UTCTime
+    :> QueryFlag "onlyCount"
     :> Summary "Get all assignments"
     :> Get '[DSON] [AssignmentEducatorInfo]
 
@@ -162,6 +165,7 @@ type GetSubmissions
     :> QueryParam "assignment" (Hash Assignment)
     :> QueryParam "isGraded" IsGraded
     :> QueryParam "since" UTCTime
+    :> QueryFlag "onlyCount"
     :> Summary "Get all submissions"
     :> Description "Gets a list of all submissions done by all students. \
                   \This method is inaccessible by students."
@@ -191,6 +195,7 @@ type GetGrades
     :> QueryParam "assignment" (Hash Assignment)
     :> QueryParam "isFinal" IsFinal
     :> QueryParam "since" UTCTime
+    :> QueryFlag "onlyCount"
     :> Summary "Get all grades"
     :> Description "Gets a list of all grades performed by all students."
     :> Get '[DSON] [GradeInfo]
@@ -211,6 +216,7 @@ type GetProofs
     :> QueryParam "course" Course
     :> QueryParam "student" Student
     :> QueryParam "assignment" (Hash Assignment)
+    :> QueryFlag "onlyCount"
     :> Summary "Get proofs of all student's activity"
     :> Description "Gets all private transactions related to a student \
                     \together with corresponding Merkle proofs."
