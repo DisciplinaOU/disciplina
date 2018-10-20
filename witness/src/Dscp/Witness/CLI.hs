@@ -12,9 +12,8 @@ module Dscp.Witness.CLI
     , witnessConfigParser
     ) where
 
-import qualified Data.Set as Set
 import Loot.Config (OptParser, (.::), (.:<), (.<>))
-import Loot.Network.ZMQ.Common (PreZTNodeId (..), parsePreZTNodeId)
+import Loot.Network.ZMQ.Common (ZTNodeId (..), parseZTNodeId)
 import Options.Applicative (Parser, ReadM, auto, eitherReader, help, long, maybeReader, metavar,
                             option, strOption, switch)
 
@@ -49,36 +48,26 @@ rocksParamsParser = do
 ----------------------------------------------------------------------------
 
 -- | Parse peers to connect to.
-peersParser :: Parser (Set PreZTNodeId)
-peersParser = fmap Set.fromList . many $
-    option (eitherReader parsePreZTNodeId)
+peersParser :: Parser [ZTNodeId]
+peersParser = fmap ordNub $ many $
+    option (eitherReader parseZTNodeId)
     (long "peer" <>
      metavar "HOST:PORT1:PORT2" <>
-     help "Peer(s) we should connect to.")
+     help "Peer(s) to connect to.")
 
 -- | Parser for ZTNodeId we will bind on.
-ourZTNodeIdParser :: Parser PreZTNodeId
-ourZTNodeIdParser = option (eitherReader parsePreZTNodeId)
+ourZTNodeIdParser :: Parser ZTNodeId
+ourZTNodeIdParser = option (eitherReader parseZTNodeId)
     (long "bind" <>
      metavar "HOST:PORT1:PORT2" <>
-     help "Host/ports to bind on, also the public address we share with other nodes. \
+     help "Host/ports to bind on. \
           \Two ports are needed for hosting pub/sub ZMQ sockets accordingly.")
-
--- | Parser for ZTNodeId we will bind on.
-internalZTNodeIdParser :: Parser PreZTNodeId
-internalZTNodeIdParser = option (eitherReader parsePreZTNodeId)
-    (long "bind-internal" <>
-     metavar "HOST:PORT1:PORT2" <>
-     help "Overrides address to bind on, still the --bind value must be addressable \
-          \and designates publically visible address. Use this option \
-          \when the node is behind NAT.")
 
 netCliParamsParser :: Parser NetCliParams
 netCliParamsParser = NetCliParams <$> peersParser
 
 netServParamsParser :: Parser NetServParams
-netServParamsParser =
-    NetServParams <$> peersParser <*> ourZTNodeIdParser <*> optional internalZTNodeIdParser
+netServParamsParser = NetServParams <$> peersParser <*> ourZTNodeIdParser
 
 ----------------------------------------------------------------------------
 -- Metrics server
