@@ -4,11 +4,8 @@
 
 module Dscp.Educator.Web.Student.Types
     (
-      -- * Flags
-      IsEnrolled (..)
-
       -- * Requests
-    , NewSubmission (..)
+      NewSubmission (..)
     , nsOwner
 
       -- * Responses
@@ -26,17 +23,12 @@ module Dscp.Educator.Web.Student.Types
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
 import Fmt (blockListF, build, (+|), (|+))
-import Servant (FromHttpApiData)
 
 import Dscp.Core
 import Dscp.Crypto
 import Dscp.Educator.Web.Types
 import Dscp.Util
 import Dscp.Util.Servant (ForResponseLog (..), buildShortResponseList)
-
--- | Whether student is enrolled into a course.
-newtype IsEnrolled = IsEnrolled { unIsEnrolled :: Bool }
-    deriving (Eq, Show)
 
 data NewSubmission = NewSubmission
     { nsAssignmentHash :: (Hash Assignment)
@@ -120,11 +112,6 @@ signedSubmissionToRequest sigSub =
 -- Buildable instances
 ---------------------------------------------------------------------------
 
-instance Buildable (IsEnrolled) where
-    build (IsEnrolled{..}) =
-      "{ is enrolled = " +| unIsEnrolled |+
-      " }"
-
 instance Buildable (NewSubmission) where
     build (NewSubmission{..}) =
       "{ assignment hash = " +| nsAssignmentHash |+
@@ -186,9 +173,3 @@ deriveJSON defaultOptions ''NewSubmission
 deriveJSON defaultOptions ''CourseStudentInfo
 deriveJSON defaultOptions ''AssignmentStudentInfo
 deriveJSON defaultOptions ''SubmissionStudentInfo
-
----------------------------------------------------------------------------
--- HttpApiData instances
----------------------------------------------------------------------------
-
-deriving instance FromHttpApiData IsEnrolled

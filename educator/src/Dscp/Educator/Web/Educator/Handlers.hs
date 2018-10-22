@@ -28,16 +28,28 @@ educatorApiHandlers =
     {
       -- Students
 
-      eNewStudent = \(NewStudent student) ->
+      eGetStudents = \mCourse _mIsEnrolled _onlyCount ->
+        invoke $ educatorGetStudents mCourse
+
+    , eAddStudent = \(NewStudent student) ->
         void . invoke $ createStudent student
 
-    , eRemoveStudent =
+    , eDeleteStudent =
         invoke ... educatorRemoveStudent
 
-    , eGetStudents =
-        invoke ... educatorGetStudents
+    , eAddStudentCourse = \student (NewStudentCourse course) ->
+        transactW $ enrollStudentToCourse student course
+
+    , eAddStudentAssignment = \student (NewStudentAssignment assignmentHash) ->
+        transactW $ setStudentAssignment student assignmentHash
+
+    , eDeleteStudentAssignment =
+        invoke ... educatorUnassignFromStudent
 
       -- Courses
+
+    , eGetCourses = \mStudent _onlyCount ->
+        invoke $ educatorGetCourses mStudent
 
     , eAddCourse = \(NewCourse mcid desc subjects) ->
         transactW $ createCourse CourseDetails
@@ -46,29 +58,24 @@ educatorApiHandlers =
             , cdSubjects = subjects
             }
 
-    , eGetCourses =
-        invoke ... educatorGetCourses
-
-    , eEnrollStudentToCourse = \student (EnrollStudentToCourse course) ->
-        transactW $ enrollStudentToCourse student course
+    , eGetCourse =
+        invoke ... educatorGetCourse
 
       -- Assignments
 
-    , eAddCourseAssignment = \_autoAssign na -> do
-        void . transactW $ createAssignment (requestToAssignment na)
-        -- TODO [DSCP-176]: consider autoassign
-
-    , eGetAssignments = \afCourse afStudent afIsFinal ->
+    , eGetAssignments = \afCourse afStudent afIsFinal _afSince _afOnlyCount ->
         transactR $ commonGetAssignments EducatorCase
             def{ afCourse, afStudent, afIsFinal }
 
-    , eAssignToStudent = \student (AssignToStudent assignmentHash) ->
-        transactW $ setStudentAssignment student assignmentHash
-
-    , eUnassignFromStudent =
-        invoke ... educatorUnassignFromStudent
+    , eAddAssignment = \_autoAssign na -> do
+        void . transactW $ createAssignment (requestToAssignment na)
+        -- TODO [DSCP-176]: consider autoassign
 
       -- Submissions
+
+    , eGetSubmissions = \sfCourse sfStudent sfAssignmentHash _sfIsGraded _sfSince _sfOnlyCount ->
+        invoke $ commonGetSubmissions EducatorCase
+            def{ sfCourse, sfStudent, sfAssignmentHash }
 
     , eGetSubmission =
         invoke ... educatorGetSubmission
@@ -76,21 +83,17 @@ educatorApiHandlers =
     , eDeleteSubmission = \submissionH ->
         transactW $ commonDeleteSubmission submissionH Nothing
 
-    , eGetSubmissions = \sfCourse sfStudent sfAssignmentHash ->
-        invoke $ commonGetSubmissions EducatorCase
-            def{ sfCourse, sfStudent, sfAssignmentHash }
-
       -- Grades
 
-    , ePostGrade = \(NewGrade subH grade) ->
-        invoke $ educatorPostGrade subH grade
-
-    , eGetGrades = \course student assignment isFinalF ->
+    , eGetGrades = \course student assignment isFinalF _since _onlyCount ->
         invoke $ educatorGetGrades course student assignment isFinalF
+
+    , eAddGrade = \(NewGrade subH grade) ->
+        invoke $ educatorPostGrade subH grade
 
       -- Proofs
 
-    , eGetProofs = \pfCourse pfStudent pfAssignment ->
+    , eGetProofs = \pfCourse pfStudent pfAssignment _pfOnlyCount ->
         transactR $ commonGetProofs
             def{ pfCourse, pfStudent, pfAssignment }
     }

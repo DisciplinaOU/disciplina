@@ -25,13 +25,18 @@ studentApiHandlers
     => Student -> StudentApiHandlers m
 studentApiHandlers student =
     StudentApiEndpoints
-    { sGetCourses = \isEnrolledF ->
+    {
+      -- Courses
+
+      sGetCourses = \isEnrolledF _onlyCount ->
         transactR $ studentGetCourses student isEnrolledF
 
     , sGetCourse = \course ->
         transactR $ studentGetCourse student course
 
-    , sGetAssignments = \afCourse afDocType afIsFinal ->
+      -- Assignments
+
+    , sGetAssignments = \afCourse afDocType afIsFinal _onlyCount ->
         transactR $
             commonGetAssignments StudentCase
                 def{ afCourse, afStudent = Just student, afDocType, afIsFinal }
@@ -39,21 +44,25 @@ studentApiHandlers student =
     , sGetAssignment = \assignH ->
         transactR $ studentGetAssignment student assignH
 
-    , sGetSubmissions = \sfCourse sfAssignmentHash sfDocType ->
+      -- Submissions`
+
+    , sGetSubmissions = \sfCourse sfAssignmentHash sfDocType _onlyCount ->
         invoke $
         commonGetSubmissions StudentCase
             def{ sfStudent = Just student, sfCourse, sfAssignmentHash, sfDocType }
 
+    , sAddSubmission = \newSub ->
+        studentMakeSubmissionVerified student newSub
+
     , sGetSubmission = \subH ->
         invoke $ studentGetSubmission student subH
-
-    , sMakeSubmission = \newSub ->
-        studentMakeSubmissionVerified student newSub
 
     , sDeleteSubmission = \subH ->
         transactW $ commonDeleteSubmission subH (Just student)
 
-    , sGetProofs = \pfSince ->
+      -- Proofs
+
+    , sGetProofs = \pfSince _onlyCount ->
         transactR $ commonGetProofs def{ pfSince, pfStudent = Just student }
     }
 

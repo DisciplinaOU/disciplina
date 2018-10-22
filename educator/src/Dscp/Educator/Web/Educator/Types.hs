@@ -9,8 +9,8 @@ module Dscp.Educator.Web.Educator.Types
     , NewCourse (..)
     , NewGrade (..)
     , NewAssignment (..)
-    , EnrollStudentToCourse (..)
-    , AssignToStudent (..)
+    , NewStudentCourse (..)
+    , NewStudentAssignment (..)
 
       -- * Responses
     , CourseEducatorInfo (..)
@@ -56,12 +56,12 @@ data NewAssignment = NewAssignment
     , naDesc         :: Text
     } deriving (Show, Eq, Generic)
 
-data EnrollStudentToCourse = EnrollStudentToCourse
-    { escCourseId :: Course
+data NewStudentCourse = NewStudentCourse
+    { nscCourseId :: Course
     } deriving (Show, Eq, Generic)
 
-data AssignToStudent = AssignToStudent
-    { atsAssignmentHash :: Hash Assignment
+data NewStudentAssignment = NewStudentAssignment
+    { nsaAssignmentHash :: Hash Assignment
     }
 
 data CourseEducatorInfo = CourseEducatorInfo
@@ -161,14 +161,14 @@ instance Buildable (NewAssignment) where
       ", description = " +| naDesc |+
       " }"
 
-instance Buildable (EnrollStudentToCourse) where
-    build (EnrollStudentToCourse{..}) =
-      "{ course id = " +| escCourseId |+
+instance Buildable (NewStudentCourse) where
+    build (NewStudentCourse{..}) =
+      "{ course id = " +| nscCourseId |+
       " }"
 
-instance Buildable AssignToStudent where
-    build (AssignToStudent{..}) =
-      "{ hash = " +| atsAssignmentHash |+
+instance Buildable NewStudentAssignment where
+    build (NewStudentAssignment{..}) =
+      "{ hash = " +| nsaAssignmentHash |+
       " }"
 
 instance Buildable (CourseEducatorInfo) where
@@ -224,8 +224,8 @@ deriveJSON defaultOptions ''NewStudent
 deriveJSON defaultOptions ''NewCourse
 deriveJSON defaultOptions ''NewGrade
 deriveJSON defaultOptions ''NewAssignment
-deriveJSON defaultOptions ''EnrollStudentToCourse
-deriveJSON defaultOptions ''AssignToStudent
+deriveJSON defaultOptions ''NewStudentCourse
+deriveJSON defaultOptions ''NewStudentAssignment
 deriveJSON defaultOptions ''CourseEducatorInfo
 deriveJSON defaultOptions ''AssignmentEducatorInfo
 deriveJSON defaultOptions ''SubmissionEducatorInfo

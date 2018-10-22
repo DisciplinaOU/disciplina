@@ -77,6 +77,27 @@ educatorGetCourses studentF = do
     |]
       `filterClauses` [clauseF]
 
+educatorGetCourse
+    :: MonadEducatorWebQuery m
+    => Course -> DBT t w m CourseEducatorInfo
+educatorGetCourse courseId = do
+    mcourse <-
+        query queryText (Only courseId)
+        >>= listToMaybeWarn "courses"
+    Only mdesc <-
+        pure mcourse `assertJust` AbsentError (CourseDomain courseId)
+
+    ciSubjects <- getCourseSubjects courseId
+    let ciDesc = fromMaybe "" mdesc
+    return CourseEducatorInfo{ ciId = courseId, .. }
+  where
+    queryText :: Query
+    queryText = [q|
+        select    desc
+        from      Courses
+        where     id = ?
+    |]
+
 educatorUnassignFromStudent
     :: MonadEducatorWebQuery m
     => Student
