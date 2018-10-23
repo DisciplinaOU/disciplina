@@ -51,12 +51,18 @@ default config values are provided in respective `*.Config` modules.
 
 logParamsParser :: Log.Name -> Parser LoggingParams
 logParamsParser lpDefaultName = do
+    lpLoggingType <- logTypeParser
     lpDebug <- logDebugParser
     -- [Note default-cli-params]
     lpConfigPath <- Just <$> logConfigParser
     lpDirectory <- logDirParser
     return LoggingParams {..}
   where
+    logTypeParser = optional $ option auto $
+        long "log-type" <>
+        metavar "[Syslog | Warper]" <>
+        help "Logging type to use (Syslog or Warper). If not specified, \
+             \Syslog will be used."
     logDebugParser = switch $
         long "debug" <>
         help "Switch default logging level from Info to Debug"

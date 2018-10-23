@@ -53,6 +53,8 @@ sample:
   witness:
     # Logging config for witness node
     logging:
+      # Logging type, optional, can be Warper (for `log-warper`) or Syslog (default)
+      loggingType: Syslog
       # Default logger name (displayed in logs in the beginnings of lines)
       defaultName: "witness"
       # Whether or not to enable debug logs
@@ -60,7 +62,7 @@ sample:
       # Directory where to put logs (optional)
       directory: "/var/log/dscp-witness"
       # Path to logger YAML config (optional)
-      configPath: "./run/log-config.yaml"
+      configPath: "./run/syslog-config.yaml"
 
     # RocksDB parameters
     db:
@@ -187,6 +189,7 @@ sample:
   faucet:
     # Logging config for faucet. See option `witness.logging`.
     logging:
+      loggingType: Warper
       defaultName: "faucet"
       debug: false
       directory: "/var/log/dscp-faucet"
