@@ -7,6 +7,7 @@ import Data.Aeson (FromJSON (..), FromJSONKey (..), ToJSON (..), ToJSONKey, Valu
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveFromJSON, deriveJSON)
 import Data.Typeable (gcast)
+import Data.Scientific (scientific, toBoundedInteger)
 
 import Dscp.Core.Config
 import Dscp.Core.Fees
@@ -82,12 +83,17 @@ instance FromJSON Governance where
         "governanceOpen" -> return GovOpen
         _ -> fail "Governance type is invalid"
 
+instance ToJSON Coin where
+    toJSON coin = Number $ scientific (coinToInteger coin) (-6)
+
+instance FromJSON Coin where
+    parseJSON = withScientific "Coin" $
+        maybe (fail "Coin is in invalid format") pure .
+        (fmap Coin) . toBoundedInteger . (*1000000)
+
 ---------------------------------------------------------------------------
 -- Standalone derivations for newtypes
 ---------------------------------------------------------------------------
-
-deriving instance ToJSON Coin
-deriving instance FromJSON Coin
 
 deriving instance ToJSON Nonce
 deriving instance FromJSON Nonce

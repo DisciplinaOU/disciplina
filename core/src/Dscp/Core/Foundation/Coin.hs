@@ -7,13 +7,18 @@ module Dscp.Core.Foundation.Coin
     , coinToInteger
     , coinFromInteger
     , unsafeAddCoin
+    , unsafeParseCoin
+    , parseCoin
     , addCoins
     , sumCoins
     ) where
 
 import Control.Lens (makePrisms)
 
-import Fmt (build, whenF, (+||), (||+))
+import Fmt (build, (|+))
+import Data.Fixed (Micro, Fixed(MkFixed), showFixed)
+
+import Dscp.Util (leftToPanic)
 
 -- | Coin amount.
 newtype Coin = Coin { unCoin :: Word64 }
@@ -45,8 +50,18 @@ coinFromInteger i
 unsafeMkCoin :: Integral i => i -> Coin
 unsafeMkCoin = either error identity . coinFromInteger . fromIntegral
 
+-- | Safely parse coin from Text.
+parseCoin :: Text -> Either Text Coin
+parseCoin = \coin -> case (readEither @Text @Micro $ coin) of
+                     Right (MkFixed value) -> coinFromInteger value
+                     Left _ -> Left "expected coin (Micro)"
+
+-- | Same as 'parseCoin', but errors if Left happens.
+unsafeParseCoin :: Text -> Coin
+unsafeParseCoin = leftToPanic . parseCoin
+
 instance Buildable Coin where
-    build (Coin c) = c ||+ " coin" +|| whenF (c /= 1) "s"
+    build (Coin c) = showFixed True (MkFixed $ fromIntegral c :: Micro) |+ " DSCP"
 
 addCoins :: Coin -> Coin -> Either Text Coin
 addCoins a b = sumCoins [a, b]
