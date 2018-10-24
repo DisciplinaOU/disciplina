@@ -96,12 +96,9 @@ witness_params="
 --config-key singleton
 --bind 127.0.0.1:4010:4011
 --db-path $tmp_files/witness.db
---log-dir $tmp_files/logs
 --witness-listen $witness_web_addr
 --comm-n 0
 --metrics-server 127.0.0.1:8125
---log-config run/syslog-config.yaml
---log-type Syslog
 "
 
 # parameters for faucet
@@ -114,9 +111,6 @@ faucet_params="
 --config-key singleton
 --faucet-keyfile $files/faucet.key
 --faucet-gen-key
---log-dir $tmp_files/logs
---log-config run/syslog-config.yaml
---log-type Syslog
 "
 
 # bot parameters

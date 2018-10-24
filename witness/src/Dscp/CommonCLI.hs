@@ -4,8 +4,7 @@
 -- | Common CLI params.
 
 module Dscp.CommonCLI
-       ( logParamsParser
-       , versionOption
+       ( versionOption
        , baseKeyParamsParser
        , passphraseReadM
        , timeReadM
@@ -19,7 +18,6 @@ module Dscp.CommonCLI
 
 import Data.Char (toLower)
 import Data.Version (showVersion)
-import qualified Loot.Log as Log
 import Options.Applicative (Parser, ReadM, auto, eitherReader, flag', help, infoOption, long,
                             maybeReader, metavar, option, str, strOption, switch)
 import Servant.Client (BaseUrl (..), parseBaseUrl)
@@ -31,7 +29,6 @@ import Dscp.Crypto (PassPhrase)
 import Dscp.Crypto (mkPassPhrase)
 import Dscp.Resource.AppDir
 import Dscp.Resource.Keys (BaseKeyParams (..))
-import Dscp.Resource.Logging (LoggingParams (..))
 import Dscp.Util
 import Dscp.Web (NetworkAddress (..), ServerParams (..), parseNetAddr)
 import Paths_disciplina_witness (version)
@@ -48,32 +45,6 @@ effectively impossible.
 To support default values of configuration parameters nevertheless,
 default config values are provided in respective `*.Config` modules.
 -}
-
-logParamsParser :: Log.Name -> Parser LoggingParams
-logParamsParser lpDefaultName = do
-    lpLoggingType <- logTypeParser
-    lpDebug <- logDebugParser
-    -- [Note default-cli-params]
-    lpConfigPath <- Just <$> logConfigParser
-    lpDirectory <- logDirParser
-    return LoggingParams {..}
-  where
-    logTypeParser = optional $ option auto $
-        long "log-type" <>
-        metavar "[Syslog | Warper]" <>
-        help "Logging type to use (Syslog or Warper). If not specified, \
-             \Syslog will be used."
-    logDebugParser = switch $
-        long "debug" <>
-        help "Switch default logging level from Info to Debug"
-    logConfigParser = strOption $
-        long "log-config" <>
-        metavar "FILEPATH" <>
-        help "Path to logger configuration. If not specified, some default config is used."
-    logDirParser = optional $ strOption $
-        long "log-dir" <>
-        metavar "FILEPATH" <>
-        help "Path to logs directory. If not specified, logs are not writen on disk."
 
 versionOption :: Parser (a -> a)
 versionOption = infoOption ("disciplina-" <> (showVersion version)) $

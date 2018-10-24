@@ -36,6 +36,64 @@ demo: &demo
           - # Test key #2, secret: fOhZOFr6SSnYv1/xfKPPMHdWLdQDboysJ4Q794Gezmw=
             - 3BAyX5pSiFerJgLsJZ9XyoBDMHPtq3NLqm5AGPcBpba6W644zSiSWy3vVr
             - 1000
+  witness:
+    logging:
+      defaultName: "witness"
+      config:
+        syslog: &demo-witness-syslog
+          loggers-tree:
+            witness:
+              withPERROR: true
+              min-level: Debug
+              sub-loggers:
+                network:
+                  min-level: Info
+                web:
+                  min-level: Info
+        warper: &demo-witness-warper
+          filePrefix: "run/tmp/witness/logs"
+          loggerTree:
+            handlers:
+              - file: node.log
+            severity: Info+
+            witness:
+              severity: Debug+
+              network:
+                severity: Info+
+              web:
+                severity: Info+
+            init:
+              log:
+                severity: Debug+
+
+  educator:
+    logging:
+      defaultName: "educator"
+      config:
+        warper:
+          <<: *demo-witness-warper
+          filePrefix: "run/tmp/educator/logs"
+        syslog:
+          <<: *demo-witness-syslog
+
+  faucet:
+    logging:
+      defaultName: "faucet"
+      config:
+        warper:
+          filePrefix: "run/tmp/faucet/logs"
+          loggerTree:
+            handlers:
+              - file: node.log
+            severity: Info+
+            init:
+              log:
+                severity: Debug+
+        syslog:
+          loggers-tree:
+            faucet:
+              withPERROR: true
+              min-level: Debug
 
 singleton:
   <<: *demo

@@ -13,7 +13,7 @@ fi
 # Make sure we're using proper version of tmux.
 tmux_actual_version=$(tmux -V | awk '{print $2}')
 # All tmux versions contain two numbers only.
-tmux_proper_versions=("2.3" "2.4" "2.5" "2.6" "2.7" "2.7-rc" "master")
+tmux_proper_versions=("2.3" "2.4" "2.5" "2.6" "2.7" "2.7-rc" "2.8" "master")
 checker=""
 for version in "${tmux_proper_versions[@]}"; do
     if [ "${version}" == "${tmux_actual_version}" ]; then
@@ -87,8 +87,6 @@ function witness_args {
     --bind $bind
     --witness-listen $bind_api
     --db-path $witness_dir/witness.db
-    --log-dir $witness_dir/logs
-    --log-config $files/log-config.yaml
     --comm-n $index
     --metrics-server 127.0.0.1:8125
     $peers

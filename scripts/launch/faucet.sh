@@ -8,5 +8,4 @@ faucet_params="
 --witness-backend 127.0.0.1:4020
 --translated-amount 20
 --faucet-keyfile ./run/faucet.key
---log-dir logs
 "

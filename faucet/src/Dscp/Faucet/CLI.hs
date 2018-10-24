@@ -23,8 +23,7 @@ dryRunParser = fmap DryRun . flag' True $
 
 faucetConfigParser :: OptParser FaucetConfig
 faucetConfigParser = #faucet .:<
-    (#logging .:: logParamsParser "faucet" .<>
-     #keys .:: baseKeyParamsParser "faucet" .<>
+    (#keys .:: baseKeyParamsParser "faucet" .<>
      #api .:: serverParamsParser "faucet" .<>
      #witnessBackend .:: clientAddressParser "witness-backend" wbHelp .<>
      #transferredAmount .:: transferredAmountParser .<>
