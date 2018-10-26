@@ -53,16 +53,45 @@ sample:
   witness:
     # Logging config for witness node
     logging:
-      # Logging type, optional, can be Warper (for `log-warper`) or Syslog (default)
-      loggingType: Syslog
       # Default logger name (displayed in logs in the beginnings of lines)
       defaultName: "witness"
-      # Whether or not to enable debug logs
-      debug: false
-      # Directory where to put logs (optional)
-      directory: "/var/log/dscp-witness"
-      # Path to logger YAML config (optional)
-      configPath: "./run/syslog-config.yaml"
+      # Logging configuration, specifies the logging settings
+      config:
+        # The "use" selector, optional, specifies where to output the logs
+        # Available configuration are "syslog" and "warper"
+        # If "use" has one of these valid values, this config will be used
+        # If both config are defined but "use" is not, "syslog" will be used
+        # If only one of the configs is defined and "use" is not, this config will be used
+        use: syslog
+        # Syslog configuration
+        # See a complete explanation in (loot-log)[https://github.com/serokell/lootbox/blob/master/docs/example/syslog.yaml]
+        syslog:
+          loggers-tree:
+            witness:
+              withPERROR: true
+              min-level: Debug
+              sub-loggers:
+                network:
+                  min-level: Info
+                web:
+                  min-level: Info
+        # Warper configuration
+        # See a complete explanation in (log-warper)[https://github.com/serokell/log-warper/blob/master/logger-config-example.yaml]
+        warper:
+          filePrefix: "run/tmp/witness/logs"
+          loggerTree:
+            handlers:
+              - file: node.log
+            severity: Info+
+            witness:
+              severity: Debug+
+              network:
+                severity: Info+
+              web:
+                severity: Info+
+            init:
+              log:
+                severity: Debug+
 
     # RocksDB parameters
     db:
@@ -133,6 +162,16 @@ sample:
 
   # Educator node config
   educator:
+    # Logging config for educator node. See option `witness.logging`.
+    logging:
+      defaultName: "educator"
+      config:
+        syslog:
+          loggers-tree:
+            witness:
+              withPERROR: true
+              min-level: Debug
+
     # SQLite DB params
     db:
       # DB usage mode. If `null`, in-memory SQLite db is used.
@@ -187,13 +226,16 @@ sample:
 
   # Faucet config
   faucet:
-    # Logging config for faucet. See option `witness.logging`.
+    # Logging config for faucet node. See option `witness.logging`.
     logging:
-      loggingType: Warper
       defaultName: "faucet"
-      debug: false
-      directory: "/var/log/dscp-faucet"
-      configPath: "./run/log-config.yaml"
+      config:
+        warper:
+          filePrefix: "run/tmp/educator/logs"
+          loggerTree:
+            handlers:
+              - file: node.log
+            severity: Info+
 
     # Faucet config params. See option `witness.keys.base`
     keys:

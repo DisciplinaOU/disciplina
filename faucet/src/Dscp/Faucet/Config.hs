@@ -71,7 +71,7 @@ type HasFaucetConfig = Given FaucetConfigRec
 
 defaultFaucetConfig :: FaucetConfigRecP
 defaultFaucetConfig = mempty
-    & sub #faucet . option #logging ?~ LoggingParams Nothing "faucet" False Nothing Nothing
+    & sub #faucet . option #logging ?~ basicLoggingParams "faucet" False
     & sub #faucet . option #keys ?~ BaseKeyParams Nothing False Nothing
     & sub #faucet . option #dryRun ?~ DryRun False
 

@@ -24,7 +24,7 @@ import Dscp.Core.Config
 import Dscp.DB.Rocks.Real.Types (RocksDBParams (..))
 import Dscp.Resource.AppDir (AppDirParam (..))
 import Dscp.Resource.Keys (BaseKeyParams (..))
-import Dscp.Resource.Logging (LoggingParams (..))
+import Dscp.Resource.Logging (LoggingParams (..), basicLoggingParams)
 import Dscp.Resource.Network (NetServParams)
 import Dscp.Web (MetricsEndpoint (..), ServerParams)
 import Dscp.Witness.Keys (WitnessKeyParams (..))
@@ -57,7 +57,7 @@ instance HasWitnessConfig => Given CoreConfigRec where
 
 defaultWitnessConfig :: WitnessConfigRecP
 defaultWitnessConfig = mempty
-    & sub #witness . option #logging ?~ LoggingParams Nothing "witness" False Nothing Nothing
+    & sub #witness . option #logging ?~ basicLoggingParams "witness" False
     & sub #witness . option #db ?~ RocksDBParams "witness-db"
     & sub #witness . option #keys ?~ Basic (BaseKeyParams Nothing False Nothing)
     & sub #witness . option #api ?~ Nothing

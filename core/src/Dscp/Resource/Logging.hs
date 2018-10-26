@@ -4,24 +4,26 @@
 
 module Dscp.Resource.Logging
     ( LoggingParams(..)
-    , LoggingType (..)
+    , LoggingConfig (..)
+    , basicLoggingParams
     , allocLogging
     , noLogging
     ) where
 
+import Control.Applicative ((<|>))
 import Control.Monad.Component (ComponentM, buildComponent)
-import Data.Aeson (FromJSON (..), ToJSON, encode, withText)
+import Data.Aeson (FromJSON (..), ToJSON, encode, withObject, (.:), (.:?), toJSON)
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveFromJSON)
 import Fmt ((+|), (|+))
 import Loot.Log (Logging (..), Name, NameSelector (CallstackName, GivenName),
-                 logInfo, logWarning, modifyLogName, Level(Debug))
+                 logInfo, modifyLogName, Level(Debug))
 import Loot.Log.Rio (LoggingIO)
 import Loot.Log.Syslog (SyslogConfig(..), loggerName, withPERROR, minLevel,
-    stopLoggers, syslogConfigFromFile, defaultLoggerConfig, prepareSyslog)
+    stopLoggers, defaultLoggerConfig, prepareSyslog)
 import Loot.Log.Warper (LoggerConfig, prepareLogWarper)
-import System.Wlog (debugPlus, lcTree, ltSeverity, maybeLogsDirB, parseLoggerConfig, productionB,
-                    removeAllHandlers, showTidB)
+import System.Wlog (productionB, removeAllHandlers, showTidB)
+import qualified Text.Show
 
 import Dscp.Rio (runRIO)
 
@@ -31,86 +33,66 @@ import Dscp.Rio (runRIO)
 
 -- | Contains all parameters required for hierarchical logger initialization.
 data LoggingParams = LoggingParams
-    { lpLoggingType :: !(Maybe LoggingType)
-    -- ^ Logger system that will be use (Syslog if nothing is specified)
+    { lpConfig      :: !LoggingConfig
+    -- ^ Logger configuration that will be used
     , lpDefaultName :: !Name
     -- ^ Logger name which will be used by default
-    , lpDebug       :: !Bool
-    -- ^ When configuration file is not specified, this turns on
-    -- console logging to debug.
-    , lpDirectory   :: !(Maybe FilePath)
-    -- ^ Path to log directory
-    , lpConfigPath  :: !(Maybe FilePath)
-    -- ^ Path to logger configuration
     } deriving (Show, Eq)
 
-data LoggingType
-    = Warper
-    | Syslog
-    deriving (Eq, Show, Read)
+-- Orphan instances required by tests, based on ToJSON for simplicity
+instance Show LoggerConfig where
+    show = decodeUtf8 . encode
+
+instance Eq LoggerConfig where
+    a == b = toJSON a == toJSON b
+
+instance Eq SyslogConfig where
+    a == b = toJSON a == toJSON b
+
+-- | Contains the configuration for a logging type
+data LoggingConfig
+    = Warper LoggerConfig
+    | Syslog SyslogConfig
+    deriving (Show, Eq)
+
+-- | Creates a basic 'LoggingParams': a slightly modified syslog default
+basicLoggingParams :: Name -> Bool -> LoggingParams
+basicLoggingParams lpDefaultName debug = LoggingParams {..}
+  where
+    lpConfig = Syslog $ SyslogConfig [simpleLoggerConfig]
+    simpleLoggerConfig = defaultLoggerConfig
+        & loggerName .~ show lpDefaultName
+        & withPERROR .~ True
+        & minLevel %~ if debug then const Debug else id
 
 ----------------------------------------------------------------------------
 -- Other
 ----------------------------------------------------------------------------
 
-getWarperLoggerConfig :: MonadIO m => LoggingParams -> m LoggerConfig
-getWarperLoggerConfig LoggingParams{..} = do
-    let tree = mempty & ltSeverity .~ Just debugPlus -- (bool infoPlus debugPlus lpDebug)
-    let cfgBuilder =
-            (productionB <>
-             showTidB <>
-             maybeLogsDirB lpDirectory)
-            & lcTree .~ tree
-    cfg <- readLoggerConfig lpConfigPath
-    pure $ cfg <> cfgBuilder
-  where
-    readLoggerConfig :: MonadIO m => Maybe FilePath -> m LoggerConfig
-    readLoggerConfig = maybe (pure productionB) parseLoggerConfig
-
-getSyslogLoggerConfig :: MonadIO m => LoggingParams -> m (SyslogConfig, Maybe Text)
-getSyslogLoggerConfig LoggingParams{..} =
-    case lpConfigPath of
-        Nothing -> return (fallbackLogConfig, Just "No configuration file specified")
-        Just filePath -> syslogConfigFromFile filePath >>= \case
-            Right config -> return (config, Nothing)
-            Left e -> return (fallbackLogConfig, Just $ show e)
-  where
-    fallbackLogConfig = SyslogConfig [fallbackLoggerConfig]
-    fallbackLoggerConfig = defaultLoggerConfig
-        & loggerName .~ show lpDefaultName
-        & withPERROR .~ True
-        & minLevel %~ if lpDebug then const Debug else id
-
 allocLogging :: LoggingParams -> ComponentM LoggingIO
-allocLogging params = buildComponent "logging" pre fin
+allocLogging LoggingParams{..} = buildComponent "logging" pre fin
   where
-    selectedType = fromMaybe Syslog $ lpLoggingType params -- Syslog is default
-
-    pre = case selectedType of
-        Warper -> do
-            config <- getWarperLoggerConfig params
+    givenName = GivenName lpDefaultName
+    pre = case lpConfig of
+        Warper config -> do
             (config', logging) <-
-                prepareLogWarper config (GivenName $ lpDefaultName params)
-            printCfg logging config' Nothing
+                prepareLogWarper (config <> productionB <> showTidB) givenName
+            printCfg logging config'
             return logging
-        Syslog -> do
-            (config, warning) <- getSyslogLoggerConfig params
-            logging <- prepareSyslog config (GivenName $ lpDefaultName params)
-            printCfg logging config warning
+        Syslog config -> do
+            logging <- prepareSyslog config givenName
+            printCfg logging config
             return logging
 
-    fin _ = case selectedType of
-        Warper -> removeAllHandlers
-        Syslog -> stopLoggers
+    fin _ = case lpConfig of
+        Warper _ -> removeAllHandlers
+        Syslog _ -> stopLoggers
 
-    printCfg :: (ToJSON c) => LoggingIO -> c -> Maybe Text-> IO ()
-    printCfg logging finalConfig warning =
+    printCfg :: (ToJSON c) => LoggingIO -> c -> IO ()
+    printCfg logging finalConfig =
         runRIO logging $ modifyLogName (<> "init" <> "log") $ do
             let configText = decodeUtf8 (encode finalConfig) :: Text
             logInfo $ "Logging config: "+|configText|+""
-            whenJust warning $ \message -> logWarning $
-                "Problem with configuration loading: "+|message|+". Defaults \
-                \will be used."
 
 ---------------------------------------------------------------------------
 -- JSON instances
@@ -119,11 +101,18 @@ allocLogging params = buildComponent "logging" pre fin
 instance FromJSON Name where
     parseJSON = fmap fromString . parseJSON
 
-instance FromJSON LoggingType where
-    parseJSON = withText "LoggingType" $ \case
-        "Syslog" -> pure Syslog
-        "Warper" -> pure Warper
-        _ -> fail "Unknown logging type. Available options: Syslog or Warper"
+-- | 'LoggingConfig' has a quite flexible 'FromJSON' implementation:
+-- It accepts 3 subsection: a "use" selector, "syslog" and "warper" configurations
+-- If only one of the configs is defined it will be used, "use" is not necessary
+-- If both are defined and "use" is not specified, "syslog" will be used
+-- If "use" has a value of "syslog" or "warper", this chosen config will be used
+instance FromJSON LoggingConfig where
+    parseJSON = withObject "LoggingConfig" $ \v -> do
+        let readConf val = case val :: Text of
+                "syslog" -> Syslog <$> v .: "syslog"
+                "warper" -> Warper <$> v .: "warper"
+                name -> fail . toString $ "unknown logging selection: " <> name
+        maybe (readConf "syslog" <|> readConf "warper") readConf =<< v .:? "use"
 
 deriveFromJSON defaultOptions ''LoggingParams
 

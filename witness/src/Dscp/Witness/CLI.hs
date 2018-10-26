@@ -18,7 +18,7 @@ import Loot.Network.ZMQ.Common (PreZTNodeId (..), parsePreZTNodeId)
 import Options.Applicative (Parser, ReadM, auto, eitherReader, help, long, maybeReader, metavar,
                             option, strOption)
 
-import Dscp.CommonCLI (appDirParamParser, baseKeyParamsParser, logParamsParser,
+import Dscp.CommonCLI (appDirParamParser, baseKeyParamsParser,
                        networkAddressParser, serverParamsParser)
 import Dscp.Core.Governance
 import Dscp.DB.Rocks.Real.Types (RocksDBParams (..))
@@ -131,8 +131,7 @@ committeeSecretReadM =
 
 witnessConfigParser :: OptParser WitnessConfig
 witnessConfigParser = #witness .:<
-    (#logging .:: logParamsParser "witness" .<>
-     #db .:: rocksParamsParser .<>
+    (#db .:: rocksParamsParser .<>
      #network .:: netServParamsParser .<>
      #keys .:: witnessKeyParamsParser .<>
      #api .:: (Just <$> serverParamsParser "Witness") .<>
