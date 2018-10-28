@@ -5,6 +5,7 @@ import Dscp.Crypto
 import Dscp.Educator.Web.Bot
 import Dscp.Educator.Web.Student
 import Dscp.Util.Test
+import Dscp.Witness.Config
 import Test.QuickCheck.Monadic (pick)
 
 import Test.Dscp.Educator.Mode
@@ -16,7 +17,7 @@ studentSK :: SecretKey
 studentSK = studentSKEx
 
 testMakeBotHandlers
-    :: TestEducatorM ~ m
+    :: (TestEducatorM ~ m, HasWitnessConfig)
     => Text -> m (StudentApiHandlers m)
 testMakeBotHandlers seed =
     initializeBot

@@ -122,16 +122,16 @@ resolveNext = SD.queryOne . NextBlockOf . headerHash >=> pure . map unNextBlock
 -- TODO [DSCP-367] Unite these two below
 -- | Safely get an account.
 getAccountMaybe
-    :: WitnessWorkMode ctx m
+    :: (WitnessWorkMode ctx m, WithinReadSDLock)
     => Address -> SdReadM 'ChainOnly m (Maybe Account)
 getAccountMaybe =
-    lift . runStateSdMLocked . SD.queryOne . AccountId
+    lift . runStateSdM . SD.queryOne . AccountId
 
 -- | Safely get an account taking mempool into consideration.
 getMempoolAccountMaybe
-    :: WitnessWorkMode ctx m
+    :: (WitnessWorkMode ctx m, WithinReadSDLock)
     => Address -> SdReadM 'ChainAndMempool m (Maybe Account)
-getMempoolAccountMaybe addr = readingSDLock $ liftSdM $ SD.queryOne (AccountId addr)
+getMempoolAccountMaybe addr = liftSdM $ SD.queryOne (AccountId addr)
 
 -- | Get a list of all transactions for a given account
 getAccountTxs

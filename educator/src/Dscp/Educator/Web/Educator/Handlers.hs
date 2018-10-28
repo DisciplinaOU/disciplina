@@ -26,9 +26,12 @@ educatorApiHandlers
 educatorApiHandlers =
     EducatorApiEndpoints
     {
+      eGetStatus =
+        getEducatorStatus
+
       -- Students
 
-      eGetStudents = \mCourse _mIsEnrolled _onlyCount ->
+    , eGetStudents = \mCourse _mIsEnrolled _onlyCount ->
         invoke $ educatorGetStudents mCourse
 
     , eAddStudent = \(NewStudent student) ->

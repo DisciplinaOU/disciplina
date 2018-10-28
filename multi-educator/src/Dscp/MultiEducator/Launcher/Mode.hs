@@ -56,6 +56,7 @@ import qualified Dscp.Witness as W
 type MultiEducatorWorkMode ctx m =
     ( Basic.BasicWorkMode m
 
+    , HasWitnessConfig
     , HasMultiEducatorConfig
 
     , MonadReader ctx m
@@ -66,8 +67,6 @@ type MultiEducatorWorkMode ctx m =
     -- the full educator context in multiToNormal from other lenses
     , HasLens' ctx MultiEducatorResources
     , HasLens' ctx W.WitnessVariables
-
-    , MonadThrow m
     )
 
 -- | Set of typeclasses which define capabilities both of Educator and Witness.

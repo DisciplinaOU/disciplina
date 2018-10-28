@@ -22,7 +22,8 @@ import Dscp.Educator.Web.Educator.Types
 import Dscp.Educator.Web.Types
 
 data EducatorApiEndpoints route = EducatorApiEndpoints
-    { eGetStudents             :: route :- GetStudents
+    { eGetStatus               :: route :- GetStatus
+    , eGetStudents             :: route :- GetStudents
     , eAddStudent              :: route :- AddStudent
     , eDeleteStudent           :: route :- DeleteStudent
     , eAddStudentCourse        :: route :- AddStudentCourse
@@ -54,6 +55,14 @@ educatorAPI = Proxy
 
 protectedEducatorAPI :: Proxy ProtectedEducatorAPI
 protectedEducatorAPI = Proxy
+
+---------------------------------------------------------------------------
+-- General
+---------------------------------------------------------------------------
+
+type GetStatus
+    = "status"
+    :> Get '[DSON] EducatorInfo
 
 ---------------------------------------------------------------------------
 -- Students

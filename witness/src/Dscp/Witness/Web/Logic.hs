@@ -84,7 +84,7 @@ toAccountInfo
 toAccountInfo account txs = do
     transactions <- mapM (mapM (fetchBlockInfo . fmap @WithBlock unGTxWitnessed)) txs
     pure AccountInfo
-        { aiBalances = Coin . fromIntegral . aBalance <$> account
+        { aiBalances = leftToPanic . coinFromInteger . aBalance <$> account
         , aiCurrentNonce = nonce
         , aiTransactionCount = fromIntegral nonce
         , aiTransactions = transactions
@@ -193,7 +193,7 @@ getHashType someHash = fmap (fromMaybe HashIsUnknown) . runMaybeT . asum $
     isAddress = is
         (const HashIsAddress)
         addrFromText
-        (runSdReadMLocked @'ChainAndMempool . getMempoolAccountMaybe)
+        (\x -> runSdReadMLocked @'ChainAndMempool $ getMempoolAccountMaybe x)
     isTx = is
         (distinguishTx . unGTxWitnessed)
         fromHex

@@ -11,7 +11,6 @@ import Dscp.Educator.Web.Bot.Setting
 import Dscp.Educator.Web.Student
 import Dscp.Educator.Web.Types
 
-
 initializeBot
     :: BotWorkMode ctx m
     => EducatorBotParams -> (HasBotSetting => m a) -> m a

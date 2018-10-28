@@ -13,6 +13,7 @@ module Dscp.Educator.Web.Educator.Types
     , NewStudentAssignment (..)
 
       -- * Responses
+    , EducatorInfo (..)
     , CourseEducatorInfo (..)
     , AssignmentEducatorInfo (..)
     , SubmissionEducatorInfo (..)
@@ -27,12 +28,13 @@ module Dscp.Educator.Web.Educator.Types
 import Control.Lens (from)
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
-import Fmt (build, (+|), (|+), listF)
+import Fmt (build, listF, (+|), (|+))
 
 import Dscp.Core
 import Dscp.Crypto
 import Dscp.Educator.Web.Types
-import Dscp.Util.Servant (ForResponseLog (..), buildShortResponseList, buildLongResponseList)
+import Dscp.Util.Servant (ForResponseLog (..), buildLongResponseList, buildShortResponseList)
+import Dscp.Witness.Web.Types
 
 data NewStudent = NewStudent
     { nsAddr :: Student
@@ -63,6 +65,11 @@ data NewStudentCourse = NewStudentCourse
 data NewStudentAssignment = NewStudentAssignment
     { nsaAssignmentHash :: Hash Assignment
     }
+
+data EducatorInfo = EducatorInfo
+    { eiAddress  :: Address
+    , eiBalances :: BlocksOrMempool Coin
+    } deriving (Show, Eq, Ord, Generic)
 
 data CourseEducatorInfo = CourseEducatorInfo
     { ciId       :: Course
@@ -192,6 +199,12 @@ instance Buildable (SubmissionEducatorInfo) where
       ", assignment hash = " +| siAssignmentHash |+
       " }"
 
+instance Buildable (ForResponseLog EducatorInfo) where
+    build (ForResponseLog EducatorInfo{..})=
+      "{ address = " +| eiAddress |+
+      ", balances = " +| eiBalances |+
+      " }"
+
 instance Buildable (ForResponseLog CourseEducatorInfo) where
     build (ForResponseLog CourseEducatorInfo{..}) =
       "{ course id = " +| ciId |+
@@ -226,6 +239,7 @@ deriveJSON defaultOptions ''NewGrade
 deriveJSON defaultOptions ''NewAssignment
 deriveJSON defaultOptions ''NewStudentCourse
 deriveJSON defaultOptions ''NewStudentAssignment
+deriveJSON defaultOptions ''EducatorInfo
 deriveJSON defaultOptions ''CourseEducatorInfo
 deriveJSON defaultOptions ''AssignmentEducatorInfo
 deriveJSON defaultOptions ''SubmissionEducatorInfo
