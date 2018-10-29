@@ -24,7 +24,7 @@ main = do
 getKeygenConfig :: IO KeygenConfig
 getKeygenConfig =
     execParser $
-        info (helper <*> versionOption <*> keygenConfigParser ) $
+        info (helper <*> versionOption <*> keygenConfigParser) $
         fullDesc <>
-        progDesc "Disciplina keygen. Can be used for producing secret key \
+        progDesc "Disciplina keygen. Can be used for producing a secret key \
                  \and its derivative data."
