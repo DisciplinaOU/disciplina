@@ -49,84 +49,68 @@ This is a small tool to manipulate with secret key. Along with generating new on
 
 Main usage pattern is
 ```bash
-echo <input with secret> | dscp-keygen <input-type-option> --command <command>
+echo <input with secret> | dscp-keygen <input-type-option> <command> <command-arguments>
 ```
 
-Input defines which secret key will be used as base for further operations.
-It can be specified directly, as encrypted key with password, as path to keyfile or be generated from scratch, depending on `input-type-option` option.
+Input defines which secret key will be used as a base for further operations.
+It can be specified directly, as encrypted key with a password, as a path to the keyfile or be generated from scratch, depending on `input-type-option` option.
 
-Execute `dscp-keygen --help` for the list of available 'input-type' options.
+Execute `dscp-keygen --help` for the list of available 'input-type' options and to see available commands.
 
-Command stands for data to be derived from the base secret key. Commands have options (not mandatory), which vary how data will be displayed.
+Each command stands for data to be derived from the base secret key. For the description and list of arguments for each command execute `dscp-keygen <command> --help`.
 
-List of options types:
-
-* View - determines how to display raw data, can be `raw`, `base64` or `hex`.
-* Prettiness - for large outputs, whether to use pretty multiline output.
-  Can be `pretty` or `one-line`
-* Password - password used to generate secret key.
-
-Following commands are supported:
-
-* `secret[:<view=base64>]` - display secret itself.
-* `public[:<view=hex>]` - display public key.
-* `address` - address, base58bitcoin.
-* `esecret[:<password="">[:<view=hex>]]` - display encrypted secret key.
-* `keyfile[:<password="">[:<prettiness=pretty>]]` - display keyfile.
-* `educator-auth:endpointName` - produce JWT token for educator node from given educator secret key and name of accessed endpoint.
-* `student-submission[:<seed="">]` - produce JSON request for `POST /api/student/v1/submissions` endpoint.
+Note, that name of the command argument sometimes collides with options related to the input (e.g. `--password` may relate to a secret on input or to a secret on output).
+In such cases, all the options before the command name are considered related to the input, and options after the command name - to the output.
 
 ### Examples
-
-_Reminder: no option after `:` is mandatory._
 
 * Generate secret key:
 
 ```bash
-echo 1000 | dscp-keygen --seed --command secret
+echo 1000 | dscp-keygen --seed secret
 ```
 
 * Generate truly random secret:
 
 ```bash
-cat /dev/urandom | head -c 32 | dscp-keygen --seed --command secret
+cat /dev/urandom | head -c 32 | dscp-keygen --seed secret
 ```
 
 * Generate key file with password:
 
 ```bash
-echo 1000 | dscp-keygen --seed --command keyfile:password > secret.key
+echo 1000 | dscp-keygen --seed keyfile --password=qwerty123 > secret.key
 chmod 660 secret.key
 ```
 
 * Read key file:
 
 ```base
-cat secret.key | dscp-keygen --keyfile --password qwerty123 --command secret
+cat secret.key | dscp-keygen --keyfile --password qwerty123 secret
 ```
 
 * Produce public key:
 
 ```base
-echo '9JsCkzFH/W7SbgvgokeJTsckJs/uoAPWWwC40Y6UfFo=' | dscp-keygen --secret  --command "public:hex"
+echo '9JsCkzFH/W7SbgvgokeJTsckJs/uoAPWWwC40Y6UfFo=' | dscp-keygen --secret public --hex
 ```
 
 * Produce address:
 
 ```base
-echo '9JsCkzFH/W7SbgvgokeJTsckJs/uoAPWWwC40Y6UfFo=' | dscp-keygen --secret --command "address"
+echo '9JsCkzFH/W7SbgvgokeJTsckJs/uoAPWWwC40Y6UfFo=' | dscp-keygen --secret address
 ```
 
 * Encrypt secret key:
 
 ```base
-echo '9JsCkzFH/W7SbgvgokeJTsckJs/uoAPWWwC40Y6UfFo=' | dscp-keygen --secret --command "esecret:12345678"
+echo '9JsCkzFH/W7SbgvgokeJTsckJs/uoAPWWwC40Y6UfFo=' | dscp-keygen --secret esecret --password=12345678
 ```
 
 * Produce JWT token to authenticate in Educator or Student API:
 
 ```base
-echo '9JsCkzFH/W7SbgvgokeJTsckJs/uoAPWWwC40Y6UfFo=' | dscp-keygen --secret --command "educator-auth:/api/student/v1/courses"
+echo '9JsCkzFH/W7SbgvgokeJTsckJs/uoAPWWwC40Y6UfFo=' | dscp-keygen --secret educator-auth /api/student/v1/courses
 ```
 You can later append token with
 1. `-H "Authorization: Bearer <token>"` for `curl`
@@ -136,10 +120,9 @@ You can later append token with
 
 ```base
 echo 456 \
-    | dscp-keygen --seed --command student-submission:3656234 \
+    | dscp-keygen --seed student-submission --sub-seed=3656234 \
     | http POST :8090/api/student/v1/submissions
 ```
-(_Reminder: option of `student-submission` command is seed which allows to generate unique submissions._)
 
 See [example of use](/scripts/test/student-submissions-spam.sh).
 
