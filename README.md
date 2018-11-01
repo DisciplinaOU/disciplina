@@ -1,5 +1,7 @@
 # Disciplina
 
+[![Build status](https://badge.buildkite.com/e7979d0942ce6a3cf7c9cea9a9e23915789f0baeed89ee14f3.svg?branch=master)](https://buildkite.com/disciplina/disciplina)
+
 Blockchain platform for the field of education.
 
 ## Build
