@@ -92,23 +92,24 @@ getByGTx applyFees pk t =
 ----------------------------------------------------------------------------
 
 toProofPublicationTx :: Fees -> PublicationTxWitnessed -> (StateTxType, Proofs)
-toProofPublicationTx fee (PublicationTxWitnessed tx (PublicationTxWitness {..})) =
+toProofPublicationTx minFee (PublicationTxWitnessed tx (PublicationTxWitness {..})) =
     (txType, Conf.PublicationTxWitness $ WithSignature
         { wsSignature = toDscpSig pwSig
         , wsPublicKey = toDscpPK pwPk
         , wsBody = (toPtxId tx, pwPk, ptHeader)
         } `PersonalisedProof`
-            fee
+            minFee
     )
   where
     PublicationTx { ptHeader } = tx
     txType = StateTxType $ getId (Proxy @TxIds) PublicationTxTypeId
 
 
-seqExpandersPublicationTx ::
-       Address
+seqExpandersPublicationTx
+    :: Address
+    -> Fees
     -> SeqExpanders Exceptions Ids Proofs Values ctx PublicationTxWitnessed
-seqExpandersPublicationTx feesReceiverAddr =
+seqExpandersPublicationTx feesReceiverAddr (Fees minFee) =
     SeqExpanders $ one $ Expander
         (Set.fromList [publicationOfPrefix])
         (Set.fromList [accountPrefix, publicationHeadPrefix, publicationOfPrefix,
@@ -128,23 +129,31 @@ seqExpandersPublicationTx feesReceiverAddr =
             maybePub <- queryOne (PublicationsOf ptAuthor)
             mFeesReceiver <- queryOne (AccountId feesReceiverAddr)
 
+            let isPaid = ptAuthor /= feesReceiverAddr
+
+            account <- fromMaybe def <$> queryOne (AccountId ptAuthor)
+
+            when (isPaid && feeAmount < fromIntegral (coinToInteger minFee)) $
+                throwLocalError PublicationFeeIsTooLow
+
+            when (aBalance account < feeAmount) $
+                throwLocalError PublicationCantAffordFee
+
             let dIssuer =
                     maybe (New Account { aBalance = feeAmount, aNonce = 0 })
                           (\issuer -> Upd issuer { aBalance = aBalance issuer + feeAmount })
                           mFeesReceiver
 
-            account@Account {..} <- fromMaybe def <$> queryOne (AccountId ptAuthor)
-
             let feesChanges
                     | feeAmount == 0 = []
-                    | ptAuthor /= feesReceiverAddr =
+                    | isPaid =
                           [ AccountId ptAuthor ==>
                                 Upd account
                                     -- You can say that `PubOf ==> LastPub`
                                     -- mechanism will prevent double-pub
                                     -- but lets not depend on that impl detail.
-                                    { aNonce   = aNonce + 1
-                                    , aBalance = aBalance - feeAmount
+                                    { aNonce   = aNonce account + 1
+                                    , aBalance = aBalance account - feeAmount
                                     }
                           , AccountId feesReceiverAddr ==> dIssuer ]
                     -- If publication author and fees receiver are the same
@@ -168,14 +177,14 @@ seqExpandersGTx
     -> Fees
     -> GTxWitnessed
     -> SeqExpanders Exceptions Ids Proofs Values ctx GTxWitnessed
-seqExpandersGTx addr fee (GMoneyTxWitnessed _) =
-    flip contramap (seqExpandersBalanceTx addr fee) $ \(GMoneyTxWitnessed tx) -> tx
-seqExpandersGTx addr _ (GPublicationTxWitnessed _) =
-    flip contramap (seqExpandersPublicationTx addr) $ \(GPublicationTxWitnessed ptx) -> ptx
+seqExpandersGTx addr minFee (GMoneyTxWitnessed _) =
+    flip contramap (seqExpandersBalanceTx addr minFee) $ \(GMoneyTxWitnessed tx) -> tx
+seqExpandersGTx addr minFee (GPublicationTxWitnessed _) =
+    flip contramap (seqExpandersPublicationTx addr minFee) $ \(GPublicationTxWitnessed ptx) -> ptx
 
 toProofBalanceTx :: Fees -> TxWitnessed -> (StateTxType, Proofs)
-toProofBalanceTx fee (TxWitnessed tx (TxWitness {..})) =
-    (txType, AddressTxWitness $ WithSignature {..} `PersonalisedProof` fee)
+toProofBalanceTx minFee (TxWitnessed tx (TxWitness {..})) =
+    (txType, AddressTxWitness $ WithSignature {..} `PersonalisedProof` minFee)
   where
     txType = StateTxType $ getId (Proxy @TxIds) AccountTxTypeId
     wsSignature = toDscpSig txwSig

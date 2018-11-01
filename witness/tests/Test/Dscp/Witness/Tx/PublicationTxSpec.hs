@@ -9,6 +9,7 @@ import Test.QuickCheck.Monadic (pre)
 
 import Dscp.Core
 import Dscp.Crypto
+import Dscp.Resource.Keys
 import Dscp.Snowdrop
 import Dscp.Util
 import Dscp.Util.Test
@@ -37,8 +38,8 @@ genPublicationChain n secret
                 , ptHeader
                 }
 
-author :: SecretKeyData
-author = mkSecretKeyData . detGen 21 $ elements testGenesisSecrets
+selectAuthor :: Gen SecretKeyData
+selectAuthor = fmap mkSecretKeyData $ elements (testGenesisSecrets <> testCommitteeSecrets)
 
 submitPub
     :: (MempoolCtx ctx m, WithinWriteSDLock)
@@ -49,18 +50,21 @@ submitPub tx = do
 
 spec :: Spec
 spec = describe "Publication tx expansion + validation" $ do
-    it "First correct tx is fine" $ witnessProperty $ do
+    it "First correct tx in chain is fine" $ witnessProperty $ do
+        author <- pick selectAuthor
         pub :| [] <- pick $ genPublicationChain 1 author
         let tw = signPubTx author pub
         lift . noThrow $ submitPub tw
 
     it "Consequent txs are fine" $ witnessProperty $ do
+        author <- pick selectAuthor
         chainLen <- pick $ choose (1, 5)
         pubs     <- pick $ genPublicationChain chainLen author
         let tws = map (signPubTx author) pubs
         lift . noThrow $ mapM_ submitPub tws
 
     it "Tx with wrong previous hash isn't fine" $ witnessProperty $ do
+        author <- pick selectAuthor
         chainLen <- pick $ choose (1, 4)
         pubs     <- pick $ genPublicationChain chainLen author
         badPubs  <- pick $ shuffleNE pubs
@@ -69,6 +73,7 @@ spec = describe "Publication tx expansion + validation" $ do
         lift $ throwsSome $ mapM_ submitPub badTws
 
     it "Foreign author in the chain is not fine" $ witnessProperty $ do
+        author <- pick selectAuthor
         otherSecret <- pick (arbitrary `suchThat` (/= author))
         let otherAddr = mkAddr (skPublic otherSecret)
         chainLen    <- pick $ choose (2, 5)
@@ -80,16 +85,20 @@ spec = describe "Publication tx expansion + validation" $ do
             throwsSome $ submitPub (last badTws)
 
     it "Not enough fees is not fine" $ witnessProperty $ do
+        author <- pick selectAuthor
+        issuingWitness <- lift $ getSecretKeyData @WitnessNode
+        pre (author /= issuingWitness)  -- no fees are fine otherwise
         pub :| [] <- pick $ genPublicationChain 1 author
-        badPub <- forOf ptFeesAmountL pub $ \(Coin fee) -> do
+        badPub <- forOf (ptFeesAmountL . _Coin) pub $ \fee -> do
             when (fee == 0) $ error "Fees were not expected to be absent"
             subtracted <- pick $ choose (1, fee)
-            return $ Coin (fee - subtracted)
+            return (fee - subtracted)
         let tw = signPubTx author badPub
         lift . throwsPrism (_PublicationError . _PublicationFeeIsTooLow) $
             submitPub tw
 
     it "Forking publications chain isn't fine" $ witnessProperty $ do
+        author <- pick selectAuthor
         chainLen <- pick $ choose (2, 4)
         pubs     <- pick $ genPublicationChain chainLen author
 
@@ -103,6 +112,7 @@ spec = describe "Publication tx expansion + validation" $ do
             throwsSome $ submitPub (last badTws)
 
     it "Loops are not fine" $ witnessProperty $ do
+        author <- pick selectAuthor
         chainLen <- pick $ choose (2, 5)
         pubs     <- pick $ genPublicationChain chainLen author
         loopPoint <- pick $ elements (init pubs)
@@ -115,15 +125,8 @@ spec = describe "Publication tx expansion + validation" $ do
             void . applyBlock =<< createBlock 0
             throwsSome $ submitPub (last badTws)
 
-    it "Small fees are not fine" $ witnessProperty $ do
-        pub :| [] <- pick $ genPublicationChain 1 author
-        badPub <- pick $
-            forOf (ptFeesAmountL . _Coin) pub $ \fee ->
-            choose (0, fee - 1)
-        let badTw = signPubTx author badPub
-        lift . throwsSome $ submitPub badTw
-
     it "Wrong signature is not fine" $ witnessProperty $ do
+        author <- pick selectAuthor
         pub :| [] <- pick $ genPublicationChain 1 author
         let saneTw = signPubTx author pub
         otherTw   <- pick arbitrary

@@ -1,5 +1,6 @@
 {-# LANGUAGE CPP              #-}
 {-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE OverloadedLists  #-}
 
 module Test.Dscp.Witness.Mode
     ( WitnessTestMode
@@ -109,7 +110,10 @@ testWitnessConfig =
         GenesisConfig
         { gcGenesisSeed = "meme tests"
         , gcGovernance = GovCommittee testCommittee
-        , gcDistribution = GenesisDistribution . one $ GDSpecific genesisAddressMap
+        , gcDistribution = GenesisDistribution
+            [ GDEqual testGenesisAddressAmount
+            , GDSpecific genesisAddressMap
+            ]
         }
     feeCoefs =
         FeeConfig

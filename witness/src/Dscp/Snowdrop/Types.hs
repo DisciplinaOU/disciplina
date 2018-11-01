@@ -38,8 +38,8 @@ import Data.Text.Buildable (Buildable (..))
 import Fmt (build, (+|), (|+))
 import qualified Text.Show
 
-import Dscp.Core.Foundation (Address, Nonce)
 import Dscp.Core (unsafeMkCoin)
+import Dscp.Core.Foundation (Address, Nonce)
 
 -- | Transaction type for publication.
 data PublicationTxTypeId
@@ -54,7 +54,7 @@ data PublicationException
     = PublicationSignatureIsIncorrect
     | PublicationPrevBlockIsIncorrect
     | StorageIsCorrupted
-    | PublicationIsBroken
+    | PublicationIsBroken Text
     | PublicationFeeIsTooLow -- ^
     | PublicationCantAffordFee -- ^ Publication owner can not afford the fee
     | PublicationLocalLoop
@@ -70,7 +70,7 @@ instance Buildable PublicationException where
         PublicationSignatureIsIncorrect -> "Publication signature is incorrect"
         PublicationPrevBlockIsIncorrect -> "Publication previous block is incorrect"
         StorageIsCorrupted -> "Storage is inconsistent"
-        PublicationIsBroken -> "Bad publication"
+        PublicationIsBroken msg -> "Bad publication: " +| msg |+ ""
         PublicationFeeIsTooLow -> "The fee specified in the publication tx is " <>
                                   "lower than the minimal one."
         PublicationCantAffordFee -> "Publication author can't afford the fee"
