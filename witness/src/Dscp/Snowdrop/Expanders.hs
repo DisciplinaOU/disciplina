@@ -167,7 +167,7 @@ seqExpandersPublicationTx feesReceiverAddr (Fees minFee) =
             pure $ mkDiffCS $ Map.fromList $
                 [ PublicationsOf  ptAuthor ==> change (LastPublication phHash)
                 , PublicationHead phHash   ==> New    (PublicationNext prevHashM)
-                , PublicationIds  ptxId    ==> New    (PublicationData ptw)
+                , PublicationIds  ptxId    ==> New    (PublicationItself ptw)
                 , PrivateBlockTx  phHash   ==> New    (PrivateBlockTxVal ptxId)
                 ] ++ feesChanges
 
@@ -248,7 +248,7 @@ seqExpandersBalanceTx feesReceiverAddr (Fees minimalFees) =
         when txAlreadyExists $
             throwLocalError $ TransactionAlreadyExists (pretty txId)
 
-        let miscChanges = txId ==> New (TxData tw)
+        let miscChanges = txId ==> New (TxItself tw)
 
         miscChanges2 <- forM (inAddr : map txOutAddr outOther) $ \txAddr ->
             queryOne (TxsOf txAddr) >>= return . \case
@@ -302,7 +302,7 @@ seqExpandersBalanceTx feesReceiverAddr (Fees minimalFees) =
     -- Account prefixes are used during the computation to access current balance
     inP  = Set.fromList [accountPrefix, txOfPrefix]
     -- Expander returns account changes only
-    outP = Set.fromList [accountPrefix, txHeadPrefix, txOfPrefix]
+    outP = Set.fromList [accountPrefix, txPrefix, txHeadPrefix, txOfPrefix]
 
 --------------------------------------------------------------------------
 -- Utils

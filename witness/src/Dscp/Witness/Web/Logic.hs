@@ -21,7 +21,6 @@ import Fmt ((+|), (|+))
 
 import Dscp.Core
 import Dscp.Snowdrop
-import Dscp.Util (fromHex)
 import Dscp.Util
 import Dscp.Util.Concurrent.NotifyWait
 import Dscp.Witness.Config
@@ -78,12 +77,12 @@ toBlockInfo includeTxs block = do
     txTotalOutput (GPublicationTx _) = Coin 0
 
 toAccountInfo
-    :: (WitnessWorkMode ctx m, KnownSdReadMode mode, WithinReadSDLock)
+    :: HasWitnessConfig
     => BlocksOrMempool Account
     -> Maybe [WithBlock GTxWitnessed]
-    -> SdReadM mode m AccountInfo
+    -> SdM_ chgacc AccountInfo
 toAccountInfo account txs = do
-    transactions <- mapM (mapM (liftSdM . fetchBlockInfo . fmap @WithBlock unGTxWitnessed)) txs
+    transactions <- mapM (mapM (fetchBlockInfo . fmap @WithBlock unGTxWitnessed)) txs
     pure AccountInfo
         { aiBalances = Coin . fromIntegral . aBalance <$> account
         , aiCurrentNonce = nonce
@@ -130,11 +129,11 @@ getAccountInfo address includeTxs = do
         return BlocksOrMempool
               { bmConfirmed = blockAccount
               , bmTotal     = poolAccount }
+    -- TODO: remove this, same info can be found in an another place
     txs <- if includeTxs
         then runSdMLocked $ Just <$> getAccountTxs address
         else return Nothing
-    -- TODO [DSCP-335] What to do with this?
-    runSdReadMLocked @'ChainOnly $ toAccountInfo account txs
+    runSdMLocked $ toAccountInfo account txs
 
 toPaginatedList :: (Show a, Show (Id a)) => HasId a => Int -> [a] -> PaginatedList d a
 toPaginatedList count allItems =
@@ -162,7 +161,7 @@ getTransactions mCount mFrom mAddress = do
     count = min 100 $ fromMaybe 100 mCount
 
 getTransactionInfo :: WitnessWorkMode ctx m => GTxId -> m GTxInfo
-getTransactionInfo txId = runSdMLocked $
+getTransactionInfo txId = runSdMempoolLocked $
     getTxWithBlock txId >>=
     fetchBlockInfo . fmap @WithBlock unGTxWitnessed
 

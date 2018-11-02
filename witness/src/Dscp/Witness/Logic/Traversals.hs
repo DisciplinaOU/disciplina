@@ -26,7 +26,6 @@ import qualified Data.Conduit.Combinators as C
 import qualified Data.List.NonEmpty as NE
 import Fmt ((+|), (|+))
 import qualified Snowdrop.Core as SD
-import qualified Snowdrop.Util as SD
 
 import Dscp.Core
 import Dscp.Snowdrop
@@ -255,7 +254,7 @@ accountTxsSource address mStart =
 mempoolTxsSource
     :: (WitnessWorkMode ctx m, WithinReadSDLock)
     => C.ConduitT () GTxWitnessed (SdReadM 'ChainAndMempool m) ()
-mempoolTxsSource = lift (lift $ readTxsMempool) >>= C.yieldMany
+mempoolTxsSource = lift (lift $ readTxsMempool) >>= C.yieldMany . reverse
 
 -- | Get all transactions, from both chain and mempool, starting from the given one.
 txsSource
@@ -271,16 +270,14 @@ txsSource (Just start) = do
             chainTxsSource (Just start)
         Nothing -> do
             mempoolTxsSource
-                .| C.dropWhile ((/= start) . toGTxwId)
-                .| C.map (WithBlock Nothing)
-                .| ensureHasAtLeastOneTx
+                .| do C.dropWhile ((/= start) . toGTxwId)
+                      ensureHasAtLeastOneTx
+                      C.map (WithBlock Nothing)
             chainTxsSource Nothing
   where
     ensureHasAtLeastOneTx =
-        C.await >>= \case
-            Nothing -> lift2xSdM $ SD.throwLocalError $
-                       LETxAbsent $ "Transaction not found: " <> show start
-            Just tx -> C.leftover tx
+        whenM C.null $
+            throwM (LogicError . LETxAbsent $ "Transaction not found: " <> show start)
 
 -- | Retrieves publication transaction starting with the given one down the chain.
 -- If no transaction is provided, blocks are retrieved starting from the tip.
@@ -322,8 +319,7 @@ educatorPublicationsSource educator = \case
     Just ptxId -> loadChain ptxId
   where
     loadChain ptxId = do
-        ptx <-
-            lift2xSdM $ fmap pdTx $ ptxId `assertExists` noPubTxId ptxId
+        ptx <- lift2xSdM . fmap piTx $ ptxId `assertExists` noPubTxId ptxId
         mblock <- lift2xSdM $ do
             mBlockHash <- SD.queryOne (TxBlockRefId $ coerce ptxId)
             mapM (getBlock . tbrBlockRef) mBlockHash

@@ -2,8 +2,8 @@ module Dscp.Snowdrop.Storage.Types
     ( TxBlockRefId (..)
     , TxBlockRef (..)
 
-    , TxData (..)
-    , tdTx
+    , TxItself (..)
+    , tiTx
     , TxsOf (..)
     , LastTx (..)
     , TxHead (..)
@@ -14,8 +14,8 @@ module Dscp.Snowdrop.Storage.Types
     , PublicationBlock (..)
     , PublicationHead (..)
     , PublicationNext (..)
-    , PublicationData (..)
-    , pdTx
+    , PublicationItself (..)
+    , piTx
 
     , NextBlockOf (..)
     , NextBlock (..)
@@ -40,15 +40,15 @@ data TxBlockRef = TxBlockRef
     }
     deriving (Eq, Ord, Show, Generic)
 
-newtype TxData = TxData
-    { tdTw :: TxWitnessed
+newtype TxItself = TxItself
+    { tiTw :: TxWitnessed
     } deriving (Eq, Ord, Show, Generic)
 
-tdTx :: TxData -> Tx
-tdTx = twTx . tdTw
+tiTx :: TxItself -> Tx
+tiTx = twTx . tiTw
 
-instance Buildable TxData where
-    build (TxData tx) = "TxData { " +| twTx tx |+ " }"
+instance Buildable TxItself where
+    build (TxItself tx) = "TxItself { " +| twTx tx |+ " }"
 
 -- | Account transaction linked-list storage structure.
 -- |
@@ -121,16 +121,16 @@ data PublicationNext
     deriving (Eq, Ord, Show, Generic)
 
 -- | Publication taken by id.
-newtype PublicationData = PublicationData
-    { pdTw   :: PublicationTxWitnessed
+newtype PublicationItself = PublicationItself
+    { piTw   :: PublicationTxWitnessed
     } deriving (Eq, Ord, Show, Generic)
 
-pdTx :: PublicationData -> PublicationTx
-pdTx = ptwTx . pdTw
+piTx :: PublicationItself -> PublicationTx
+piTx = ptwTx . piTw
 
-instance Buildable PublicationData where
+instance Buildable PublicationItself where
     build pd =
-        "PublicationData {" +| pdTx pd |+ " }"
+        "PublicationItself {" +| piTx pd |+ " }"
 
 -- | Key/value types for nextBlock chain storage
 newtype NextBlockOf = NextBlockOf { unNextBlockOf :: HeaderHash }
@@ -145,7 +145,7 @@ newtype NextBlock = NextBlock { unNextBlock :: HeaderHash }
 
 instance Serialise TxBlockRefId
 instance Serialise TxBlockRef
-instance Serialise TxData
+instance Serialise TxItself
 instance Serialise LastTx
 instance Serialise TxsOf
 instance Serialise TxNext
@@ -155,6 +155,6 @@ instance Serialise PublicationsOf
 instance Serialise PublicationNext
 instance Serialise PublicationHead
 instance Serialise PublicationBlock
-instance Serialise PublicationData
+instance Serialise PublicationItself
 instance Serialise NextBlockOf
 instance Serialise NextBlock

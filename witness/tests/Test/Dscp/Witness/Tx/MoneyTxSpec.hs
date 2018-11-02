@@ -239,8 +239,10 @@ spec = describe "Money tx expansion + validation" $ do
                 mapM_ applyTx txs
 
         it "Two same transactions" $ witnessProperty $ do
+            _ <- stop $ pendingWith "[DSCP-369] Make addTxToMempool do not check transaction presence"
+
             txData <- pick genSafeTxData
             let tx = makeTx properSteps txData
             lift $ do
-                noThrow $ applyTx tx
+                applyTx tx
                 throwsPrism (_AccountError . _TransactionAlreadyExists) $ applyTx tx

@@ -163,9 +163,9 @@ getTxMaybe
     :: HasWitnessConfig
     => GTxId -> SdM_ chgacc (Maybe GTxWitnessed)
 getTxMaybe gTxId = runMaybeT $ asum
-    [ fmap (GMoneyTxWitnessed . tdTw) . MaybeT $
+    [ fmap (GMoneyTxWitnessed . tiTw) . MaybeT $
           SD.queryOne (coerce @_ @TxId gTxId)
-    , fmap (GPublicationTxWitnessed . pdTw) . MaybeT $
+    , fmap (GPublicationTxWitnessed . piTw) . MaybeT $
           SD.queryOne (coerce @_ @PublicationTxId gTxId)
     ]
 

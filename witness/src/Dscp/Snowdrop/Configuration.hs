@@ -36,6 +36,7 @@ module Dscp.Snowdrop.Configuration
     , Exceptions (..)
     , _AccountError
     , _PublicationError
+    , _LogicError
 
     , TxIds (..)
 
@@ -230,12 +231,12 @@ data Values
     = TipValueVal        (TipValue HeaderHash)
     | BlundVal            SBlund
     | AccountOutVal       Account
-    | TxVal               TxData
+    | TxVal               TxItself
     | TxBlockVal          TxBlockRef
     | TxOfVal             LastTx
     | TxHeadVal           TxNext
     | PrivateBlockTxVal   T.PublicationTxId
-    | PublicationVal      PublicationData
+    | PublicationVal      PublicationItself
     | PublicationOfVal    LastPublication
     | PublicationHeadVal  PublicationNext
     | NextBlockOfVal      NextBlock
@@ -245,12 +246,12 @@ data Values
 type instance SValue  TipKey               = TipValue HeaderHash
 type instance SValue (BlockRef HeaderHash) = SBlund
 type instance SValue  AccountId            = Account
-type instance SValue  T.TxId               = TxData
+type instance SValue  T.TxId               = TxItself
 type instance SValue  TxBlockRefId         = TxBlockRef
 type instance SValue  TxsOf                = LastTx
 type instance SValue  TxHead               = TxNext
 type instance SValue  T.PrivateHeaderHash  = T.PublicationTxId
-type instance SValue  T.PublicationTxId    = PublicationData
+type instance SValue  T.PublicationTxId    = PublicationItself
 type instance SValue  PublicationsOf       = LastPublication
 type instance SValue  PublicationHead      = PublicationNext
 type instance SValue  NextBlockOf          = NextBlock
