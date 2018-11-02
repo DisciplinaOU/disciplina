@@ -3,20 +3,18 @@ module Dscp.Resource.Keys.Types
     , CommitteeParams (..)
 
     , KeyResources (..)
-    , krSecretKey
-    , krPublicKey
-    , getSecretKey
-    , getPublicKey
-    , getSecretKeyData
 
     , KeyJson (..)
     , KeyfileContent
+    , krSecretKey
+    , krPublicKey
 
     , ourSecretKey
     , ourPublicKey
+    , ourSecretKeyData
     ) where
 
-import Control.Lens (makeLenses, to)
+import Control.Lens (Getter, makeLenses, to)
 import Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.:), (.=))
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
@@ -60,33 +58,18 @@ data CommitteeParams
 --
 -- It may be used for various purposes, in order not to mix them we carry
 -- phantom type in it.
-data KeyResources who = KeyResources
-    { _krSecretKey :: !SecretKey
+newtype KeyResources who = KeyResources
+    { _krSecretKeyData :: SecretKeyData
       -- ^ Some secret key.
-    , _krPublicKey :: !PublicKey
-      -- ^ Corresponding public key, must be exactly equal to 'toPublic sk'.
     }
 
 makeLenses ''KeyResources
 
-getSecretKey
-    :: forall node ctx m.
-       (MonadReader ctx m, HasLens' ctx (KeyResources node))
-    => m SecretKey
-getSecretKey = view $ lensOf @(KeyResources node) . krSecretKey
+krSecretKey :: Getter (KeyResources who) SecretKey
+krSecretKey = krSecretKeyData . to skSecret
 
-getPublicKey
-    :: forall node ctx m.
-       (MonadReader ctx m, HasLens' ctx (KeyResources node))
-    => m PublicKey
-getPublicKey = view $ lensOf @(KeyResources node) . krPublicKey
-
-getSecretKeyData
-    :: forall node ctx m.
-       (MonadReader ctx m, HasLens' ctx (KeyResources node))
-    => m SecretKeyData
-getSecretKeyData =
-    view $ lensOf @(KeyResources node) . krSecretKey . to mkSecretKeyData
+krPublicKey :: Getter (KeyResources who) PublicKey
+krPublicKey = krSecretKeyData . to skPublic
 
 ---------------------------------------------------------------------
 -- Instances
@@ -136,10 +119,16 @@ ourSecretKey
     :: forall node ctx m.
        (HasLens' ctx (KeyResources node), MonadReader ctx m)
     => m SecretKey
-ourSecretKey = view $ lensOf @(KeyResources node) . krSecretKey
+ourSecretKey = view $ lensOf @(KeyResources node) . krSecretKeyData . to skSecret
 
 ourPublicKey
     :: forall node ctx m.
        (HasLens' ctx (KeyResources node), MonadReader ctx m)
     => m PublicKey
-ourPublicKey = view $ lensOf @(KeyResources node) . krPublicKey
+ourPublicKey = view $ lensOf @(KeyResources node) . krSecretKeyData . to skPublic
+
+ourSecretKeyData
+    :: forall node ctx m.
+       (MonadReader ctx m, HasLens' ctx (KeyResources node))
+    => m SecretKeyData
+ourSecretKeyData = view $ lensOf @(KeyResources node) . krSecretKeyData

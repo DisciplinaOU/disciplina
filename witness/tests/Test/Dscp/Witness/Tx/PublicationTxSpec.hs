@@ -86,7 +86,7 @@ spec = describe "Publication tx expansion + validation" $ do
 
     it "Not enough fees is not fine" $ witnessProperty $ do
         author <- pick selectAuthor
-        issuingWitness <- lift $ getSecretKeyData @WitnessNode
+        issuingWitness <- lift $ ourSecretKeyData @WitnessNode
         pre (author /= issuingWitness)  -- no fees are fine otherwise
         pub :| [] <- pick $ genPublicationChain 1 author
         badPub <- forOf (ptFeesAmountL . _Coin) pub $ \fee -> do

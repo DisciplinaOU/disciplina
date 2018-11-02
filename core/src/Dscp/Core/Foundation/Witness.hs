@@ -7,6 +7,7 @@ module Dscp.Core.Foundation.Witness
     -- * Common
       SecretKeyData (..)
     , mkSecretKeyData
+    , secretKeyDataFromPair
     , StakeholderId (..)
     , SlotId (..)
 
@@ -98,12 +99,21 @@ data SecretKeyData = SecretKeyData
 instance Eq SecretKeyData where
     (==) = (==) `on` skSecret
 
+instance Ord SecretKeyData where
+    compare = compare `on` skSecret
+
 -- | Make secret key data.
 mkSecretKeyData :: SecretKey -> SecretKeyData
 mkSecretKeyData sk =
     let skSecret = sk
         skPublic = toPublic sk
         skAddress = mkAddr skPublic
+    in SecretKeyData{..}
+
+-- | Make secret key data when public key is already known.
+secretKeyDataFromPair :: (SecretKey, PublicKey) -> SecretKeyData
+secretKeyDataFromPair (skSecret, skPublic) =
+    let skAddress = mkAddr skPublic
     in SecretKeyData{..}
 
 newtype StakeholderId = StakeholderId
