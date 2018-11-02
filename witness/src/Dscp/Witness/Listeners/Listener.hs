@@ -76,7 +76,7 @@ getBlocksListener =
   where
     respond btq cliId (GetBlocksMsg{..}) = do
         logDebug "getBlocksMsg: received request"
-        res <- runSdMRead $ getBlocksFromTo gbOlder gbNewer
+        res <- runSdMLocked $ getBlocksFromTo gbOlder gbNewer
         let response = either NoBlocksMsg BlocksMsg res
         atomically $ servSend btq cliId response
         logDebug "getBlocksMsg: response sent"
@@ -88,7 +88,7 @@ getTipListener =
   where
     respond btq cliId GetTipMsg = do
         logDebug "getTipMsg: received request"
-        tip <- runSdMRead getTipBlock
+        tip <- runSdMLocked getTipBlock
         atomically $ servSend btq cliId (TipMsg tip)
         logDebug "getTipMsg: response sent"
 

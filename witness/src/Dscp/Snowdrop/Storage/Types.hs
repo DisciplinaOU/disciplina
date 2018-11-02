@@ -1,7 +1,9 @@
 module Dscp.Snowdrop.Storage.Types
-    ( TxBlockRef (..)
-    , PublicationBlockRef (..)
+    ( TxBlockRefId (..)
+    , TxBlockRef (..)
 
+    , TxData (..)
+    , tdTx
     , TxsOf (..)
     , LastTx (..)
     , TxHead (..)
@@ -13,6 +15,7 @@ module Dscp.Snowdrop.Storage.Types
     , PublicationHead (..)
     , PublicationNext (..)
     , PublicationData (..)
+    , pdTx
 
     , NextBlockOf (..)
     , NextBlock (..)
@@ -24,6 +27,12 @@ import Fmt ((+|), (|+))
 
 import Dscp.Core.Foundation
 
+newtype TxBlockRefId = TxBlockRefId GTxId
+    deriving (Eq, Ord, Show, Generic)
+
+instance Buildable TxBlockRefId where
+    build (TxBlockRefId txId) = "TxBlockRefId { " +| txId |+ " }"
+
 -- | Transaction position in blockchain
 data TxBlockRef = TxBlockRef
     { tbrBlockRef :: HeaderHash
@@ -31,14 +40,15 @@ data TxBlockRef = TxBlockRef
     }
     deriving (Eq, Ord, Show, Generic)
 
--- | Points to public block which contains given publication.
-newtype PublicationBlockRef = PublicationBlockRef
-    { unPublicationBlockRef :: HeaderHash
+newtype TxData = TxData
+    { tdTw :: TxWitnessed
     } deriving (Eq, Ord, Show, Generic)
 
-instance Buildable PublicationBlockRef where
-    build (PublicationBlockRef h) =
-        "PublicationBlockRef { " +| h |+ " }"
+tdTx :: TxData -> Tx
+tdTx = twTx . tdTw
+
+instance Buildable TxData where
+    build (TxData tx) = "TxData { " +| twTx tx |+ " }"
 
 -- | Account transaction linked-list storage structure.
 -- |
@@ -111,14 +121,16 @@ data PublicationNext
     deriving (Eq, Ord, Show, Generic)
 
 -- | Publication taken by id.
-data PublicationData = PublicationData
-    { pdTx   :: PublicationTx
-    , pdTxId :: PublicationTxId
+newtype PublicationData = PublicationData
+    { pdTw   :: PublicationTxWitnessed
     } deriving (Eq, Ord, Show, Generic)
 
+pdTx :: PublicationData -> PublicationTx
+pdTx = ptwTx . pdTw
+
 instance Buildable PublicationData where
-    build PublicationData{..} =
-        "PublicationData {" +| pdTxId |+ " }"
+    build pd =
+        "PublicationData {" +| pdTx pd |+ " }"
 
 -- | Key/value types for nextBlock chain storage
 newtype NextBlockOf = NextBlockOf { unNextBlockOf :: HeaderHash }
@@ -131,8 +143,9 @@ newtype NextBlock = NextBlock { unNextBlock :: HeaderHash }
 -- Instances
 ----------------------------------------------------------------------------
 
+instance Serialise TxBlockRefId
 instance Serialise TxBlockRef
-instance Serialise PublicationBlockRef
+instance Serialise TxData
 instance Serialise LastTx
 instance Serialise TxsOf
 instance Serialise TxNext

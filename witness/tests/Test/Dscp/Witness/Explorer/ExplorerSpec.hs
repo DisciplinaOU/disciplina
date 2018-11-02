@@ -4,8 +4,8 @@ import Data.Default (def)
 
 import Dscp.Core
 import Dscp.Crypto
-import Dscp.Snowdrop.Types
 import Dscp.Snowdrop.Mode
+import Dscp.Snowdrop.Types
 import Dscp.Util.Test
 import Dscp.Witness
 
@@ -19,7 +19,7 @@ createAndSubmitTx
 createAndSubmitTx genSecret = do
     sk <- pick $ mkSecretKeyData <$> genSecret
     outs <- pick $ genSafeTxOuts 100 (choose (1, 5))
-    account <- lift $ fromMaybe def <$> getMempoolAccountMaybe (skAddress sk)
+    account <- lift . runSdReadM $ fromMaybe def <$> getMempoolAccountMaybe (skAddress sk)
 
     let txw = createTxw (fcMoney feeConfig) sk (aNonce account) outs
     isNew <- lift $ addTxToMempool (GMoneyTxWitnessed txw)
@@ -33,7 +33,8 @@ createAndSubmitPub
 createAndSubmitPub genSecret = do
     sk <- pick $ mkSecretKeyData <$> genSecret
     sig <- pick arbitrary
-    lastHeaderHash <- lift . runSdMempoolRead $ getPrivateTipHash (skAddress sk)
+    lastHeaderHash <- lift $ runSdReadMLocked @'ChainAndMempool $
+                      getPrivateTipHash (skAddress sk)
     let ptHeader = PrivateBlockHeader
             { _pbhPrevBlock = lastHeaderHash
             , _pbhBodyProof = sig
@@ -108,6 +109,7 @@ spec = describe "Explorer" $ do
     it "Blocks info is present" $ witnessProperty $ do
         -- TODO [DSCP-335] Uncomment when mempool is taken into consideration
         -- And also adjust one similar test below.
+        --
         -- _ <- createAndSubmitTx selectGenesisSecret
         -- blockHash <- lift $ dumpBlock 0
         -- _ <- createAndSubmitTx selectGenesisSecret

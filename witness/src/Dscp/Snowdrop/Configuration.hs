@@ -17,8 +17,8 @@ module Dscp.Snowdrop.Configuration
     , publicationIdsPrefix
     , publicationOfPrefix
     , publicationHeadPrefix
-    , publicationBlockIdsPrefix
     , txPrefix
+    , txBlockPrefix
     , txOfPrefix
     , txHeadPrefix
     , nextBlockPrefix
@@ -148,8 +148,8 @@ blockIdxPrefix = Prefix 10
 publicationIdsPrefix :: Prefix
 publicationIdsPrefix = Prefix 11
 
-publicationBlockIdsPrefix :: Prefix
-publicationBlockIdsPrefix = Prefix 12
+txBlockPrefix :: Prefix
+txBlockPrefix = Prefix 12
 
 privateBlockTxPrefix :: Prefix
 privateBlockTxPrefix = Prefix 13
@@ -163,8 +163,8 @@ blockPrefixes = S.fromList
     , publicationIdsPrefix
     , publicationOfPrefix
     , publicationHeadPrefix
-    , publicationBlockIdsPrefix
     , txPrefix
+    , txBlockPrefix
     , txOfPrefix
     , txHeadPrefix
     , nextBlockPrefix
@@ -176,14 +176,14 @@ data Ids
     = TipKeyIds           TipKey
     | BlockRefIds        (BlockRef  HeaderHash)
     | AccountInIds        AccountId
-    | TxIds               T.GTxId
+    | TxIds               T.TxId
+    | TxBlockIds          TxBlockRefId
     | TxOfIds             TxsOf
     | TxHeadIds           TxHead
     | PrivateBlockTx      T.PrivateHeaderHash
     | PublicationIds      T.PublicationTxId
     | PublicationOfIds    PublicationsOf
     | PublicationHeadIds  PublicationHead
-    | PublicationBlockIds PublicationBlock
     | NextBlockOfIds      NextBlockOf
     | BlockIdxIds         T.Difficulty
     deriving (Eq, Ord, Show, Generic)
@@ -193,14 +193,14 @@ instance Buildable Ids where
         TipKeyIds           t            -> build t
         BlockRefIds        (BlockRef  r) -> "block ref " +| hashF r
         AccountInIds       (AccountId a) -> build a
-        TxIds               gTxId        -> build gTxId
+        TxIds               ti           -> build ti
+        TxBlockIds          ri           -> build ri
         TxOfIds             t            -> build t
         TxHeadIds           th           -> build th
         PrivateBlockTx      h            -> build h
         PublicationIds      i            -> build i
         PublicationOfIds    p            -> build p
         PublicationHeadIds  ph           -> build ph
-        PublicationBlockIds pb           -> build pb
         NextBlockOfIds      hh           -> build hh
         BlockIdxIds         d            -> build d
 
@@ -209,6 +209,7 @@ instance IdSumPrefixed Ids where
     idSumPrefix (BlockRefIds         _) = blockPrefix
     idSumPrefix (AccountInIds        _) = accountPrefix
     idSumPrefix (TxIds               _) = txPrefix
+    idSumPrefix (TxBlockIds          _) = txBlockPrefix
     idSumPrefix (TxOfIds             _) = txOfPrefix
     idSumPrefix (TxHeadIds           _) = txHeadPrefix
     idSumPrefix (PrivateBlockTx      _) = privateBlockTxPrefix
@@ -217,7 +218,6 @@ instance IdSumPrefixed Ids where
     idSumPrefix (PublicationHeadIds  _) = publicationHeadPrefix
     idSumPrefix (NextBlockOfIds      _) = nextBlockPrefix
     idSumPrefix (BlockIdxIds         _) = blockIdxPrefix
-    idSumPrefix (PublicationBlockIds _) = publicationBlockIdsPrefix
 
 instance HasReview Ids (BlockRef (CurrentBlockRef HeaderHash)) where
     inj (BlockRef (CurrentBlockRef h)) = BlockRefIds (BlockRef h)
@@ -230,14 +230,14 @@ data Values
     = TipValueVal        (TipValue HeaderHash)
     | BlundVal            SBlund
     | AccountOutVal       Account
-    | TxVal               TxBlockRef
+    | TxVal               TxData
+    | TxBlockVal          TxBlockRef
     | TxOfVal             LastTx
     | TxHeadVal           TxNext
     | PrivateBlockTxVal   T.PublicationTxId
     | PublicationVal      PublicationData
     | PublicationOfVal    LastPublication
     | PublicationHeadVal  PublicationNext
-    | PublicationBlockVal PublicationBlockRef
     | NextBlockOfVal      NextBlock
     | BlockIdxVal         HeaderHash
     deriving (Eq, Show, Generic)
@@ -245,14 +245,14 @@ data Values
 type instance SValue  TipKey               = TipValue HeaderHash
 type instance SValue (BlockRef HeaderHash) = SBlund
 type instance SValue  AccountId            = Account
-type instance SValue  T.GTxId              = TxBlockRef
+type instance SValue  T.TxId               = TxData
+type instance SValue  TxBlockRefId         = TxBlockRef
 type instance SValue  TxsOf                = LastTx
 type instance SValue  TxHead               = TxNext
 type instance SValue  T.PrivateHeaderHash  = T.PublicationTxId
 type instance SValue  T.PublicationTxId    = PublicationData
 type instance SValue  PublicationsOf       = LastPublication
 type instance SValue  PublicationHead      = PublicationNext
-type instance SValue  PublicationBlock     = PublicationBlockRef
 type instance SValue  NextBlockOf          = NextBlock
 type instance SValue  T.Difficulty         = HeaderHash
 

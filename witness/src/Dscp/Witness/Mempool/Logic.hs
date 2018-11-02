@@ -5,8 +5,10 @@ module Dscp.Witness.Mempool.Logic
     , newMempoolVar
     , addTxToMempool
     , takeTxsMempool
+    , readTxsMempool
     , normalizeMempool
-    , runSdMempoolRead
+    , runSdMempool
+    , runSdMempoolLocked
 
       -- * Helpers
     , onlyLostTxs
@@ -65,6 +67,13 @@ addTxToMempool tx = do
             Pool.processTxAndInsertToMempool conf tx
         return isNew
 
+-- | See all mempool transactions.
+readTxsMempool :: (MempoolCtx ctx m, WithinReadSDLock) => m [GTxWitnessed]
+readTxsMempool = do
+    Mempool pool _ <- view (lensOf @MempoolVar)
+    readFromMempoolUnsafe pool $
+        map fst <$> gets Pool.msTxs
+
 -- | Take all mempool transactions, leaving it empty.
 takeTxsMempool
     :: forall ctx m
@@ -85,6 +94,14 @@ normalizeMempool = do
     Mempool pool conf <- view (lensOf @MempoolVar)
     writeToMempool pool $ Pool.normalizeMempool conf
 
+----------------------------------------------------------------------------
+-- Types
+----------------------------------------------------------------------------
+
+-- | Read-only action with mempool.
+type SdMemReadM = SdM_ ChgAccum
+
+-- | Read-write action with mempool.
 type SdMemWriteM =
     SD.ERwComp
         Exceptions
@@ -97,29 +114,30 @@ type SdMemWriteM =
             ChgAccum
             GTxWitnessed)
 
-type SdMemReadM = SdM_ ChgAccum
+-- | We expect that some actions can be run with both 'runSdM' and 'runSdMempoolRead'
+_sdMGeneralizationCheck :: ()
+_sdMGeneralizationCheck =
+    let _ = action :: SdMemReadM ()
+        _ = SD.liftERoComp action :: SdMemWriteM ()
+        _ = action :: SdM ()
+    in ()
+  where
+    action :: SdM_ chgacc ()
+    action = pass
 
-readFromMempool
+----------------------------------------------------------------------------
+-- Runners
+----------------------------------------------------------------------------
+
+-- | Perform an action with mempool in context.
+-- Unsafe, because allows read-write actions but requires just a read lock.
+readFromMempoolUnsafe
     :: forall ctx m a
     .  (MempoolCtx ctx m, WithinReadSDLock)
     => Pool.Mempool Ids Values ChgAccum GTxWitnessed
-    -> SdMemReadM a
-    -> m a
-readFromMempool pool action = do
-    actions <- view (lensOf @SD.SDVars)
-    logger  <- view (lensOf @SD.LoggingIO)
-    let dbActions = sdActionsComposition actions
-    SD.runRIO logger $
-        SD.unwrapSDBaseRethrow $
-        Pool.actionWithMempool pool dbActions $ SD.liftERoComp action
-
-writeToMempool
-    :: forall ctx m a
-    .  (MempoolCtx ctx m, WithinWriteSDLock)
-    => Pool.Mempool Ids Values ChgAccum GTxWitnessed
     -> SdMemWriteM a
     -> m a
-writeToMempool pool action = do
+readFromMempoolUnsafe pool action = do
     actions <- view (lensOf @SD.SDVars)
     logger  <- view (lensOf @SD.LoggingIO)
     let dbActions = sdActionsComposition actions
@@ -127,13 +145,40 @@ writeToMempool pool action = do
         SD.unwrapSDBaseRethrow $
         Pool.actionWithMempool pool dbActions action
 
-runSdMempoolRead
-    :: forall ctx m a.
-       (MempoolCtx ctx m, HasCtx ctx m '[SDLock])
+-- | Perform a read-only action so that it takes the mempool into account.
+readFromMempool
+    :: forall ctx m a
+    .  (MempoolCtx ctx m, WithinReadSDLock)
+    => Pool.Mempool Ids Values ChgAccum GTxWitnessed
+    -> SdMemReadM a
+    -> m a
+readFromMempool pool = readFromMempoolUnsafe pool . SD.liftERoComp
+
+-- | Perform a read-write action, allowing modifying the mempool.
+writeToMempool
+    :: forall ctx m a
+    .  (MempoolCtx ctx m, WithinWriteSDLock)
+    => Pool.Mempool Ids Values ChgAccum GTxWitnessed
+    -> SdMemWriteM a
+    -> m a
+writeToMempool = readFromMempoolUnsafe
+
+-- | Similar to 'runSdM', but with the mempool taken into consideration.
+runSdMempool
+    :: (MempoolCtx ctx m, WithinReadSDLock)
     => SdMemReadM a -> m a
-runSdMempoolRead action = do
+runSdMempool action = do
     Mempool pool _ <- view (lensOf @MempoolVar)
-    readingSDLock $ readFromMempool pool action
+    readFromMempool pool action
+
+runSdMempoolLocked
+    :: (MempoolCtx ctx m, HasCtx ctx m '[SDLock])
+    => SdMemReadM a -> m a
+runSdMempoolLocked action = readingSDLock $ runSdMempool action
+
+instance KnownSdReadMode 'ChainAndMempool where
+    type SdReadModeChgAcc 'ChainAndMempool = ChgAccum
+    liftSdM = lift . runSdMempool
 
 ----------------------------------------------------------------------------
 -- Helpers

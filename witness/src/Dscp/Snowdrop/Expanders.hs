@@ -5,6 +5,7 @@ module Dscp.Snowdrop.Expanders
     ) where
 
 import Control.Lens (contramap)
+import Data.Coerce (coerce)
 import Data.Default (Default (..))
 import qualified Data.List as List
 import qualified Data.Map.Strict as Map
@@ -113,8 +114,8 @@ seqExpandersPublicationTx feesReceiverAddr (Fees minFee) =
     SeqExpanders $ one $ Expander
         (Set.fromList [publicationOfPrefix])
         (Set.fromList [accountPrefix, publicationHeadPrefix, publicationOfPrefix,
-                       publicationIdsPrefix, publicationBlockIdsPrefix, privateBlockTxPrefix])
-        $ \PublicationTxWitnessed { ptwTx } -> do
+                       publicationIdsPrefix, privateBlockTxPrefix])
+        $ \ptw@PublicationTxWitnessed { ptwTx } -> do
             let PublicationTx{ ptHeader, ptAuthor, ptFeesAmount } = ptwTx
             let ptxId = hash ptwTx
             let phHash = hash ptHeader
@@ -166,7 +167,7 @@ seqExpandersPublicationTx feesReceiverAddr (Fees minFee) =
             pure $ mkDiffCS $ Map.fromList $
                 [ PublicationsOf  ptAuthor ==> change (LastPublication phHash)
                 , PublicationHead phHash   ==> New    (PublicationNext prevHashM)
-                , PublicationIds  ptxId    ==> New    (PublicationData ptwTx (hash ptwTx))
+                , PublicationIds  ptxId    ==> New    (PublicationData ptw)
                 , PrivateBlockTx  phHash   ==> New    (PrivateBlockTxVal ptxId)
                 ] ++ feesChanges
 
@@ -197,7 +198,7 @@ seqExpandersBalanceTx :: Address
                       -> Fees
                       -> SeqExpanders Exceptions Ids Proofs Values ctx TxWitnessed
 seqExpandersBalanceTx feesReceiverAddr (Fees minimalFees) =
-    SeqExpanders $ one $ Expander inP outP $ \TxWitnessed{..} -> do
+    SeqExpanders $ one $ Expander inP outP $ \tw@TxWitnessed{..} -> do
         let outputs = txOuts twTx
         -- check for output duplicates
         let uniqOutAddrs = ordNub $ map txOutAddr outputs
@@ -239,17 +240,26 @@ seqExpandersBalanceTx feesReceiverAddr (Fees minimalFees) =
 
             pure (AccountId txOutAddr ==> ch)
 
-        let txId = toGTxId $ GMoneyTx twTx
-        miscChanges <- forM (inAddr : map txOutAddr outOther) $ \txAddr ->
+        let txId = toTxId twTx
+        let gTxId = coerce @_ @GTxId txId
+
+        -- before we can add next changeset entry, we have to check our transaction is new
+        txAlreadyExists <- queryOneExists txId
+        when txAlreadyExists $
+            throwLocalError $ TransactionAlreadyExists (pretty txId)
+
+        let miscChanges = txId ==> New (TxData tw)
+
+        miscChanges2 <- forM (inAddr : map txOutAddr outOther) $ \txAddr ->
             queryOne (TxsOf txAddr) >>= return . \case
-                Nothing -> [TxsOf txAddr ==> New (LastTx txId)]
+                Nothing -> [TxsOf txAddr ==> New (LastTx gTxId)]
                 Just (LastTx prevTxId) ->
-                    [ TxsOf  txAddr      ==> Upd (LastTx txId)
-                    , TxHead txAddr txId ==> New (TxNext prevTxId)
+                    [ TxsOf  txAddr      ==> Upd (LastTx gTxId)
+                    , TxHead txAddr gTxId ==> New (TxNext prevTxId)
                     ]
 
         -- Money flow related changes (w/o fees)
-        let changesList = inp : outs ++ concat miscChanges
+        let changesList = inp : miscChanges : outs ++ concat miscChanges2
 
         -- Checking for duplicates
         let hasDuplicates l = length l /= length (ordNub l)

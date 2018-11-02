@@ -19,11 +19,12 @@ module Dscp.Witness.Logic.Getters
 
     , getTxMaybe
     , getTx
+    , getTxWithBlock
 
     , getPrivateTipHash
     ) where
 
-import Control.Lens (ix)
+import Data.Coerce (coerce)
 import qualified Snowdrop.Block as SD
 import qualified Snowdrop.Core as SD
 import qualified Snowdrop.Util as SD
@@ -33,14 +34,15 @@ import Dscp.Snowdrop
 import Dscp.Witness.Config
 import Dscp.Witness.Launcher.Context
 import Dscp.Witness.Logic.Exceptions
-import Dscp.Witness.Mempool
+import Dscp.Witness.Mempool ()
+import Dscp.Witness.SDLock
 
 ----------------------------------------------------------------------------
 -- Block/Header/Tip getters
 ----------------------------------------------------------------------------
 
 -- | Retrieves current tip.
-getTipHash :: HasWitnessConfig => SdM HeaderHash
+getTipHash :: HasWitnessConfig => SdM_ chgacc HeaderHash
 getTipHash = do
     x <- SD.unTipValue <$>
         (SD.queryOne SD.TipKey >>=
@@ -48,7 +50,7 @@ getTipHash = do
     pure $ fromMaybe genesisHash x
 
 -- | Retrieves current tip block.
-getTipBlock :: HasWitnessConfig => SdM Block
+getTipBlock :: HasWitnessConfig => SdM_ chgacc Block
 getTipBlock = do
     tipHash <- getTipHash
     if tipHash == genesisHash
@@ -58,11 +60,15 @@ getTipBlock = do
           SD.queryOne (SD.BlockRef tipHash))
 
 -- | Retrieves current tip header.
-getTipHeader :: HasWitnessConfig => SdM Header
+getTipHeader
+    :: HasWitnessConfig
+    => SdM Header
 getTipHeader = bHeader <$> getTipBlock
 
 -- | Safely get block.
-getBlockMaybe :: (HasWitnessConfig, HasHeaderHash x) => x -> SdM (Maybe Block)
+getBlockMaybe
+    :: (HasWitnessConfig, HasHeaderHash x)
+    => x -> SdM_ chgacc (Maybe Block)
 getBlockMaybe (headerHash -> h)
     | h == genesisHash = pure $ Just genesisBlock
     | otherwise =
@@ -70,7 +76,9 @@ getBlockMaybe (headerHash -> h)
           SD.queryOne (SD.BlockRef h)
 
 -- | Resolves block, throws exception if it's absent.
-getBlock :: (HasWitnessConfig, HasHeaderHash x) => x -> SdM Block
+getBlock
+    :: (HasWitnessConfig, HasHeaderHash x)
+    => x -> SdM_ chgacc Block
 getBlock o = do
     bM <- getBlockMaybe o
     maybe (SD.throwLocalError $ LEBlockAbsent $
@@ -79,17 +87,22 @@ getBlock o = do
           bM
 
 -- | Safely resolve header.
-getHeaderMaybe :: (HasWitnessConfig, HasHeaderHash x) => x -> SdM (Maybe Header)
+getHeaderMaybe
+    :: (HasWitnessConfig, HasHeaderHash x)
+    => x -> SdM (Maybe Header)
 getHeaderMaybe = fmap (fmap bHeader) . getBlockMaybe
 
 -- | Resolves header, throws exception if it's absent.
-getHeader :: (HasWitnessConfig, HasHeaderHash x) => x -> SdM Header
+getHeader
+    :: (HasWitnessConfig, HasHeaderHash x)
+    => x -> SdM_ chgacc Header
 getHeader = fmap bHeader . getBlock
 
 -- | Given the element, get the previous one. If the element itself
 -- doesn't exist, this method will throw.
-resolvePrevious ::
-       (HasWitnessConfig, HasHeaderHash x) => x -> SdM (Maybe HeaderHash)
+resolvePrevious
+    :: (HasWitnessConfig, HasHeaderHash x)
+    => x -> SdM_ chacc (Maybe HeaderHash)
 resolvePrevious o = do
     header <- getHeader o
     if headerHash header == genesisHash
@@ -97,27 +110,34 @@ resolvePrevious o = do
     else pure $ Just $ hPrevHash header
 
 -- | Given the element, get the next one.
-resolveNext :: (HasWitnessConfig, HasHeaderHash x) => x -> SdM (Maybe HeaderHash)
+resolveNext
+    :: (HasWitnessConfig, HasHeaderHash x)
+    => x -> SdM_ chgacc (Maybe HeaderHash)
 resolveNext = SD.queryOne . NextBlockOf . headerHash >=> pure . map unNextBlock
 
 ----------------------------------------------------------------------------
 -- Account getters
 ----------------------------------------------------------------------------
 
+-- TODO [DSCP-367] Unite these two below
 -- | Safely get an account.
-getAccountMaybe :: WitnessWorkMode ctx m => Address -> m (Maybe Account)
+getAccountMaybe
+    :: WitnessWorkMode ctx m
+    => Address -> SdReadM 'ChainOnly m (Maybe Account)
 getAccountMaybe =
-    runStateSdMRead . SD.queryOne . AccountId
+    lift . runStateSdMLocked . SD.queryOne . AccountId
 
 -- | Safely get an account taking mempool into consideration.
 getMempoolAccountMaybe
     :: WitnessWorkMode ctx m
-    => Address -> m (Maybe Account)
-getMempoolAccountMaybe addr = runSdMempoolRead $ SD.queryOne (AccountId addr)
+    => Address -> SdReadM 'ChainAndMempool m (Maybe Account)
+getMempoolAccountMaybe addr = readingSDLock $ liftSdM $ SD.queryOne (AccountId addr)
 
 -- | Get a list of all transactions for a given account
-getAccountTxs :: WitnessWorkMode ctx m => Address -> m [WithBlock GTxWitnessed]
-getAccountTxs address = runSdMRead $ loadTxs >>= mapM getTx
+getAccountTxs
+    :: HasWitnessConfig
+    => Address -> SdM [WithBlock GTxWitnessed]
+getAccountTxs address = loadTxs >>= mapM getTxWithBlock
   where
     loadTxs =
         SD.queryOne (TxsOf address) >>=
@@ -132,18 +152,27 @@ getAccountTxs address = runSdMRead $ loadTxs >>= mapM getTx
 -- Transaction getters
 ----------------------------------------------------------------------------
 
+-- | Get a block where transaction lies in.
+-- Return 'Nothing' for mempool transactions.
+getTxBlock :: HasWitnessConfig => GTxId -> SdM_ chgacc (Maybe Block)
+getTxBlock gTxId =
+    SD.queryOne (TxBlockRefId gTxId) >>= mapM (getBlock . tbrBlockRef)
+
 -- | Safely get transaction.
-getTxMaybe :: HasWitnessConfig => GTxId -> SdM (Maybe (WithBlock GTxWitnessed))
-getTxMaybe gTxId = do
-    SD.queryOne gTxId >>= \case
-        Nothing -> pure Nothing
-        Just TxBlockRef{..} ->
-            getBlockMaybe tbrBlockRef >>= pure . \case
-                Nothing -> Nothing
-                Just block -> fmap (WithBlock $ Just block) . (^? ix tbrTxIdx) . bbTxs . bBody $ block
+getTxMaybe
+    :: HasWitnessConfig
+    => GTxId -> SdM_ chgacc (Maybe GTxWitnessed)
+getTxMaybe gTxId = runMaybeT $ asum
+    [ fmap (GMoneyTxWitnessed . tdTw) . MaybeT $
+          SD.queryOne (coerce @_ @TxId gTxId)
+    , fmap (GPublicationTxWitnessed . pdTw) . MaybeT $
+          SD.queryOne (coerce @_ @PublicationTxId gTxId)
+    ]
 
 -- | Resolves transaction, throws exception if it's absent.
-getTx :: HasWitnessConfig => GTxId -> SdM (WithBlock GTxWitnessed)
+getTx
+    :: HasWitnessConfig
+    => GTxId -> SdM_ chgacc GTxWitnessed
 getTx gTxId = do
     tM <- getTxMaybe gTxId
     maybe (SD.throwLocalError $ LETxAbsent $
@@ -151,11 +180,18 @@ getTx gTxId = do
           pure
           tM
 
+-- | Get a transaction with block it is contained in, throw an error if that transaction
+-- is not found.
+getTxWithBlock :: HasWitnessConfig => GTxId -> SdM_ chgacc (WithBlock GTxWitnessed)
+getTxWithBlock gTxId = WithBlock <$> getTxBlock gTxId <*> getTx gTxId
+
 ----------------------------------------------------------------------------
 -- Publication getters
 ----------------------------------------------------------------------------
 
-getPrivateTipHash :: HasWitnessConfig => Address -> SdM_ chgacc PrivateHeaderHash
+getPrivateTipHash
+    :: (WitnessWorkMode ctx m, KnownSdReadMode mode, WithinReadSDLock)
+    => Address -> SdReadM mode m PrivateHeaderHash
 getPrivateTipHash educator =
-    maybe genesisHeaderHash unLastPublication <$>
+    liftSdM $ maybe genesisHeaderHash unLastPublication <$>
     SD.queryOne (PublicationsOf educator)

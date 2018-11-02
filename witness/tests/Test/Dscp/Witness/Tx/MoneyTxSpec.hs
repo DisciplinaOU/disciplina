@@ -237,3 +237,10 @@ spec = describe "Money tx expansion + validation" $ do
                 txs = makeTxsChain 2 properSteps txData
             lift $ throwsPrism (_AccountError . _BalanceCannotBecomeNegative) $
                 mapM_ applyTx txs
+
+        it "Two same transactions" $ witnessProperty $ do
+            txData <- pick genSafeTxData
+            let tx = makeTx properSteps txData
+            lift $ do
+                noThrow $ applyTx tx
+                throwsPrism (_AccountError . _TransactionAlreadyExists) $ applyTx tx
