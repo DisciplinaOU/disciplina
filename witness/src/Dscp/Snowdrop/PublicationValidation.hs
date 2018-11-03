@@ -6,8 +6,8 @@ module Dscp.Snowdrop.PublicationValidation
        ( validatePublication
        ) where
 
-import qualified Data.List as List
 import qualified Data.Map as Map
+import Fmt ((+||), (||+))
 import Snowdrop.Core (PreValidator (..), StateTx (..), StateTxType (..), Validator, ValueOp (..),
                       changeSet, mkValidator, queryOne)
 import Snowdrop.Util
@@ -52,23 +52,6 @@ preValidatePublication =
 
         let authorId = unAccountId aAccountId
 
-        let (authorAccM :: Maybe (AccountId, Account)) =
-              let isAuthor (AccountInIds accId, _) = accId == aAccountId
-                  isAuthor _                       = False
-              in List.find isAuthor (Map.toList changes) <&> \case
-                     (AccountInIds accId, Upd (AccountOutVal it)) -> (accId, it)
-                     _ -> error "preValidatePub: author acc is not Upd"
-        -- The amount of money spent from author's account
-        let feesChosen = case snd <$> authorAccM of
-                Nothing     -> 0
-                Just newAcc -> aBalance aAccount - aBalance newAcc
-
-        when (feesChosen < fromIntegral (coinToInteger $ unFees aMinFees)) $
-            throwLocalError PublicationFeeIsTooLow
-
-        when (aBalance aAccount < feesChosen) $
-            throwLocalError PublicationCantAffordFee
-
         let prevHash = privHeader ^. pbhPrevBlock
         let (prevHashM :: Maybe PrivateHeaderHash) =
                 prevHash <$ guard (prevHash /= genesisHeaderHash)
@@ -81,24 +64,26 @@ preValidatePublication =
         let phHash = hash privHeader
 
         -- Getting actual changes
-        let hd  = proj =<< inj (PublicationHead phHash) `Map.lookup` changes
-        let box = proj =<< inj (PublicationsOf  authorId)          `Map.lookup` changes
+        let hd  = proj =<< inj (PublicationHead phHash)   `Map.lookup` changes
+        let box = proj =<< inj (PublicationsOf  authorId) `Map.lookup` changes
 
         () <- mconcat
             [ -- Check that we continue the chain correctly.
-              check (hd == Just (New (PublicationNext prevHashM)))
-                  PublicationIsBroken
+              check (hd == Just (New (PublicationNext prevHashM))) $
+                  PublicationIsBroken $ "Odd next publication in changeset: " +|| hd ||+ ""
 
             , -- Check that we move head pointer correctly.
               if | isNothing lastPub ->
                     -- The pointer is set in the first time here?
                     check (box == Just (New (LastPublication phHash))) $
-                        PublicationIsBroken
+                        PublicationIsBroken $ "Odd chain head in changeset: " +|| box ||+
+                                              " (expected New)"
 
                  | otherwise ->
                     -- The pointer is moved to the correct destination here?
                     check (box == Just (Upd (LastPublication phHash))) $
-                        PublicationIsBroken
+                        PublicationIsBroken $ "Odd chain head in changeset: " +|| box ||+
+                                              " (expected Upd)"
             ]
 
         return ()
