@@ -24,11 +24,13 @@ parseBytesWith :: Show a => Show b => FromByteArray a => (a -> Maybe b) -> ByteS
 parseBytesWith interpret =
     asum . map ((interpret =<<) . eitherToMaybe) . sequence bytestringDecoders
 
+-- | How to interpret given input into a secret key.
 data SecretDataType
     = PlainSecret (Maybe PassPhrase)
     | KeyfileSecret (Maybe PassPhrase)
     | CommSecret Integer
     | SecretFromSeed
+    deriving (Show)
 
 parseInputWithSecret :: SecretDataType -> ByteString -> Maybe SecretKey
 parseInputWithSecret = \case

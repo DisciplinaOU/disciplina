@@ -1,5 +1,7 @@
 module KeygenCommands
-    ( KeygenCommand
+    ( View (..)
+    , Pretty (..)
+    , KeygenCommand (..)
     , parseKeygenCommand
     , keygenCommandExecutor
     ) where
@@ -30,6 +32,7 @@ data View
     = RawView
     | HexView
     | Base64View
+    deriving (Show)
 
 -- | Parse 'View' from command option.
 readView :: Text -> Either Text View
@@ -54,6 +57,7 @@ readPassPhrase pp = first show . mkPassPhrase $ encodeUtf8 pp
 
 -- | Whether to use pretty multiline output.
 newtype Pretty = Pretty Bool
+    deriving (Show)
 
 readPrettyOption :: Text -> Either Text Pretty
 readPrettyOption = \case
@@ -94,6 +98,7 @@ data KeygenCommand
     | PrintKeyFile PassPhrase Pretty
     | PrintEducatorAuthToken Text
     | PrintStudentSubmission (Seed Text)
+    deriving (Show)
 
 -- | Parse a command.
 parseKeygenCommand :: Text -> Either Text KeygenCommand

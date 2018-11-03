@@ -32,6 +32,6 @@ fi
 
 for (( i=1; i<=$requests_num; i++ )) do
     echo $student_secret_seed \
-        | dscp-keygen --seed --command student-submission:$run_seed-$i \
+        | dscp-keygen --seed student-submission --sub-seed=$run_seed-$i \
         | http --check-status POST $educator_node/api/student/v1/submissions
 done

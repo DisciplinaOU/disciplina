@@ -23,6 +23,7 @@ module Dscp.Util
        , nothingToError
        , nothingToFail
        , nothingToPanic
+       , (<?:>)
 
          -- * Either conversions
        , leftToThrow
@@ -173,6 +174,11 @@ nothingToFail e = maybe (fail $ toString e) pure
 
 nothingToPanic :: Text -> Maybe a -> a
 nothingToPanic e = fromMaybe (error e)
+
+-- | Like '?:' from Universum, for monads.
+infixr 2 <?:>
+(<?:>) :: Functor f => f (Maybe a) -> a -> f a
+a <?:> b = fromMaybe b <$> a
 
 -----------------------------------------------------------
 -- Either conversions
