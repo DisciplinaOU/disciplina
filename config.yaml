@@ -37,6 +37,10 @@ demo: &demo
             - 3BAyX5pSiFerJgLsJZ9XyoBDMHPtq3NLqm5AGPcBpba6W644zSiSWy3vVr
             - 1000
   witness:
+    db:
+      path: "/var/db/dscp-witness"
+      clean: false
+
     logging:
       defaultName: "witness"
       config:
