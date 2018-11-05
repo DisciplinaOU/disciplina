@@ -17,17 +17,15 @@ import Data.Conduit ((.|))
 import qualified Data.Conduit as C
 import qualified Data.Conduit.Combinators as C
 import Data.Default (def)
--- import qualified Data.Map as M
 import Fmt ((+|), (|+))
 
 import Dscp.Core
--- import Dscp.Crypto
 import Dscp.Snowdrop
 import Dscp.Util (fromHex, nothingToThrow)
 import Dscp.Util
 import Dscp.Util.Concurrent.NotifyWait
 import Dscp.Witness.Config
-import Dscp.Witness.Launcher.Mode (WitnessWorkMode)
+import Dscp.Witness.Launcher.Context (WitnessWorkMode)
 import Dscp.Witness.Logic
 import qualified Dscp.Witness.Relay as Relay
 import Dscp.Witness.SDLock
@@ -184,18 +182,22 @@ getHashType someHash = fmap (fromMaybe HashIsUnknown) . runMaybeT . asum $
         MaybeT . return . rightToMaybe . decode >=>
         MaybeT . getMaybe >=>
         MaybeT . return . Just . hashType
+
     isBlock = is
         (const HashIsBlock)
         (fromHex @HeaderHash)
         (runSdMRead . getBlockMaybe)
+
     isAddress = is
         (const HashIsAddress)
         addrFromText
         getAccountMaybe
+
     isTx = is
         (distinguishTx . unGTxWitnessed . wbItem)
         fromHex
         (runSdMRead . getTxMaybe . GTxId)
+
     distinguishTx = \case
         GMoneyTx _ -> HashIsMoneyTx
         GPublicationTx _ -> HashIsPublicationTx

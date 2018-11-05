@@ -87,6 +87,7 @@ function witness_args {
     --bind $bind
     --witness-listen $bind_api
     --db-path $witness_dir/witness.db
+    --db-clean
     --comm-n $index
     --metrics-server 127.0.0.1:8125
     $peers

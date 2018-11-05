@@ -24,14 +24,15 @@ import qualified Snowdrop.Execution as SD
 import Snowdrop.Util (RIO, runRIO)
 import UnliftIO (MonadUnliftIO)
 
+import Dscp.DB.CanProvideDB (ProvidesPlugin (providePlugin))
 import Dscp.Snowdrop.Actions
 import Dscp.Snowdrop.Configuration
 import Dscp.Snowdrop.IOCtx (IOCtx)
+import Dscp.Snowdrop.Storage.Avlp
 import Dscp.Util
 import Dscp.Witness.AVL (AvlHash)
 import Dscp.Witness.Config
 import qualified Dscp.Witness.SDLock as Lock
-import Snowdrop.Execution (AVLChgAccum, RememberForProof)
 
 -- | Alias for ERoComp with concrete config types.
 type SdM_ chgacc = SD.ERoComp Exceptions Ids Values (IOCtx chgacc)
@@ -49,6 +50,7 @@ type MonadSD ctx m =
     , ModifyLogName m
     , HasCtx ctx m '[Lock.SDLock, Logging IO, SDVars]
     , HasWitnessConfig
+    , ProvidesPlugin m
     )
 
 -- This is terrible
@@ -65,8 +67,11 @@ unwrapSDBaseRethrow = wrapRethrow $ \(BaseMException e) -> e :: Exceptions
 -- | SdM runner, should be protected by some lock.
 runSdM :: (MonadSD ctx m, Lock.WithinReadSDLock) => SdM a -> m a
 runSdM action = do
-    blockDBA <- SD.dmaAccessActions . nsBlockDBActions <$> view (lensOf @SDVars)
-    unwrapSDBaseRethrow $
+    blockDBA <- view (lensOf @SDVars) <&> SD.dmaAccessActions . nsBlockDBActions
+    plugin   <- providePlugin
+    unwrapSDBaseRethrow $ do
+        initAVLStorage @AvlHash plugin initAccounts
+
         SD.runERoCompIO @Exceptions blockDBA def action
 
 -- | Often used SdM runner that takes read lock.
@@ -76,12 +81,15 @@ runSdMRead action = Lock.readingSDLock $ runSdM action
 -- | SdM runner, should be protected by some lock.
 runStateSdM
     :: (MonadSD ctx m, Lock.WithinReadSDLock)
-    => RememberForProof -> StateSdM a -> m a
-runStateSdM recForProof action = do
-    stateDBA <- SD.dmaAccessActions . flip nsStateDBActions recForProof <$> view (lensOf @SDVars)
-    unwrapSDBaseRethrow $
+    => StateSdM a -> m a
+runStateSdM action = do
+    stateDBA <- view (lensOf @SDVars) <&> SD.dmaAccessActions . nsStateDBActions
+    plugin   <- providePlugin
+    unwrapSDBaseRethrow $ do
+        initAVLStorage @AvlHash plugin initAccounts
+
         SD.runERoCompIO @Exceptions stateDBA def action
 
 -- | Often used SdM runner that takes read lock.
-runStateSdMRead :: MonadSD ctx m => RememberForProof -> StateSdM a -> m a
-runStateSdMRead recForProof action = Lock.readingSDLock $ runStateSdM recForProof action
+runStateSdMRead :: MonadSD ctx m => StateSdM a -> m a
+runStateSdMRead action = Lock.readingSDLock $ runStateSdM action

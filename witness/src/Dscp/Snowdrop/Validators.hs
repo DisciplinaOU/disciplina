@@ -5,7 +5,6 @@ module Dscp.Snowdrop.Validators
     , validator
     ) where
 
-
 import qualified Snowdrop.Block as SD
 import qualified Snowdrop.Core as SD
 import qualified Snowdrop.Util as SD
@@ -79,7 +78,7 @@ _baseValidator =
 
 blkStateConfig
     :: HasWitnessConfig
-    => SD.BlkStateConfiguration SHeader SPayload BlockBody SUndo HeaderHash
+    => SD.BlkStateConfiguration SHeader SPayload BlockBody (SD.Undo Ids Values) HeaderHash
                                 (SD.ERwComp Exceptions Ids Values (IOCtx chgAccum) chgAccum)
 blkStateConfig = SD.inmemoryBlkStateConfiguration simpleBlkConfiguration validator
 

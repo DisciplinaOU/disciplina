@@ -33,3 +33,4 @@ stack-to-nix.yaml
 *.out
 *.pdf
 *.run.xml
+tmp

@@ -1,8 +1,6 @@
-{-# LANGUAGE TemplateHaskell #-}
+-- | Real implementation of WitnessWorkMode.
+module Dscp.Witness.Launcher.Context
 
--- | Module contains the definition of Witness's WorkMode and its implementations.
-
-module Dscp.Witness.Launcher.Mode
     (
       -- * Markers
       WitnessNode
@@ -19,8 +17,6 @@ module Dscp.Witness.Launcher.Mode
       -- * RealMode
     , WitnessRealMode
 
-    , -- to avoid importing snowdrop imn Educator
-      SD.OSParamsBuilder
     ) where
 
 import Control.Lens (makeLenses)
@@ -29,9 +25,8 @@ import Loot.Base.HasLens (HasLens')
 import Loot.Log.Rio (LoggingIO)
 import Loot.Network.Class (NetworkingCli, NetworkingServ)
 import Loot.Network.ZMQ as Z
-import qualified Snowdrop.Block as SD
 
-import qualified Dscp.Launcher.Mode as Basic
+import Dscp.DB.CanProvideDB (ProvidesPlugin, Plugin)
 import Dscp.Network ()
 import Dscp.Resource.Keys (KeyResources)
 import Dscp.Resource.Network
@@ -44,6 +39,7 @@ import Dscp.Witness.Launcher.Resource
 import Dscp.Witness.Mempool.Type (MempoolVar)
 import Dscp.Witness.Relay (RelayState)
 import Dscp.Witness.SDLock (SDLock)
+import qualified Dscp.Launcher.Mode as Basic
 
 ---------------------------------------------------------------------
 -- WorkMode class
@@ -55,8 +51,6 @@ import Dscp.Witness.SDLock (SDLock)
 -- and actally only listeners/workers require it.
 type WitnessWorkMode ctx m =
     ( Basic.BasicWorkMode m
-    -- , MonadDB m  -- this will be replaced in PR which actually puts us on RocksDB
-
     , HasWitnessConfig
 
     , MonadReader ctx m
@@ -67,6 +61,9 @@ type WitnessWorkMode ctx m =
     , HasLens' ctx (KeyResources WitnessNode)
     , HasLens' ctx RelayState
     , HasLens' ctx SDLock
+    , HasLens' ctx Plugin
+
+    , ProvidesPlugin m
     )
 
 type NetworkMode ctx m =
@@ -105,6 +102,7 @@ data WitnessContext = WitnessContext
     , _wcSDActions  :: !SDVars
     , _wcRelayState :: !RelayState
     , _wcSDLock     :: !SDLock
+    , _wcDBPlugin   :: !Plugin
     }
 
 makeLenses ''WitnessContext

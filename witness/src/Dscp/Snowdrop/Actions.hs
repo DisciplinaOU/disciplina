@@ -5,97 +5,89 @@ module Dscp.Snowdrop.Actions
     , SDActionsM (..)
     , initSDActions
     , sdActionsComposition
+    , initAccounts
     ) where
 
-import Control.Monad.Free (Free (..))
-import qualified Data.Map as M
-import qualified Data.Tree.AVL as AVL
-import Loot.Log (MonadLogging)
-import Loot.Log.Rio (LoggingIO)
-import Snowdrop.Execution (DbModifyActions (..), SumChangeSet, avlClientDbActions)
-import Snowdrop.Util (RIO, gett)
-
+import qualified Data.Map as Map
 import Data.Time.Clock (UTCTime (..))
+import UnliftIO (MonadUnliftIO)
+
 import qualified Snowdrop.Block as SD
+import qualified Snowdrop.Execution as SD (CompositeChgAccum, DbAccessActions (..),
+                                           DbModifyActions (..), SumChangeSet,
+                                           constructCompositeActions)
+import qualified Snowdrop.Util as SD (ExecM, RIO (..))
 
 import Dscp.Core
 import Dscp.Crypto
+import qualified Dscp.DB.CanProvideDB as DB
 import Dscp.Snowdrop.Configuration (BlockPlusAVLComposition, Ids (..), Values (..))
 import Dscp.Snowdrop.Serialise ()
-import Dscp.Snowdrop.Storage.Pure (blockDbActions)
+import Dscp.Snowdrop.Storage.Avlp
+import Dscp.Snowdrop.Storage.PluginBased
 import Dscp.Snowdrop.Types
 import Dscp.Witness.AVL (AvlHash (..), AvlProof)
 import Dscp.Witness.Config
-import Snowdrop.Execution (AVLChgAccum, ClientError (..), CompositeChgAccum, DbAccessActions,
-                           RememberForProof, RootHash, avlServerDbActions,
-                           constructCompositeActions, deserialiseM, dmaAccessActions,
-                           initAVLPureStorage)
 
 -- It should be something more complex than IO.
-type SDVars = SDActionsM (RIO LoggingIO)
+type SDVars = SDActionsM SD.ExecM
+
+deriving instance MonadUnliftIO (SD.RIO ctx)
+
+type SDDataActions  m = SD.DbModifyActions (AVLChgAccum AvlHash Ids Values) Ids Values m AvlProof
+type SDBlockActions m = SD.DbModifyActions (SD.SumChangeSet Ids Values) Ids Values m ()
 
 -- Parameter m will be instantiated with RIO Context when the context is defined.
 data SDActionsM m = SDActionsM
-    { nsStateDBActions  :: RememberForProof
-                        -> DbModifyActions (AVLChgAccum AvlHash Ids Values) Ids Values m AvlProof
-    , nsBlockDBActions  :: DbModifyActions (SumChangeSet Ids Values) Ids Values m ()
+    { nsStateDBActions  :: SDDataActions m
+    , nsBlockDBActions  :: SDBlockActions m
     , nsSDParamsBuilder :: SD.OSParamsBuilder
     }
 
-initSDActions ::
-       forall m n.
-       (Each [MonadIO, MonadCatch, MonadLogging] [m, n], HasWitnessConfig)
-    => m (SDActionsM n)
+initSDActions
+    ::  forall n m
+    .   ( MonadUnliftIO n
+        , MonadCatch n
+        , HasWitnessConfig
+        , MonadIO m
+        , DB.ProvidesPlugin m
+        )
+    =>  m (SDActionsM n)
 initSDActions = do
-    avlInitState <- initAVLPureStorage @Ids @Values initAccounts
-    (serverStDba, serverLookupHash) <- avlServerDbActions @Ids @Values @n avlInitState
-    serverBlkDba <- liftIO $ blockDbActions
-    let startTime = UTCTime (toEnum 0) (toEnum 0)
+    plugin       <- DB.providePlugin
+    stateHandler <- mkAvlDbModifyActions @AvlHash @Ids @Values plugin
+    blockHandler <- blockActions plugin
+
+    let startTime         = UTCTime            (toEnum 0) (toEnum 0)
     let nsSDParamsBuilder = SD.OSParamsBuilder (const $ SD.OSParams startTime startTime)
-    let sdActions = SDActionsM serverStDba serverBlkDba nsSDParamsBuilder
-
-    -- This is something to be used by AVL client (???)
-    let retrieveF :: AvlHash -> m (Maybe ByteString)
-        retrieveF h = serverLookupHash h >>= \resp -> do
-          whenJust resp $ \resp' -> do
-            (respV :: AVL.MapLayer AvlHash Ids Values AvlHash) <- deserialiseM resp'
-            let respProof = AVL.Proof . Free $ pure <$> respV
-            when (not $ AVL.checkProof h respProof) $ throwM BrokenProofError
-          pure resp
-    let (rootHash :: RootHash AvlHash) = gett avlInitState
-
-    -- What am I supposed to do with it?
-    -- pva701: it will be used in a AVL client, keep it compatible
-    _clientStDba <- avlClientDbActions @Ids @Values @m retrieveF rootHash
+    let sdActions         = SDActionsM          stateHandler blockHandler nsSDParamsBuilder
 
     pure sdActions
-  where
 
+initAccounts :: HasWitnessConfig => Map Ids Values
+initAccounts = Map.fromList
+    [
+      ( AccountInIds (AccountId genesisBlockAddress)
+      , AccountOutVal (Account (coinToInteger totalCoins) 0)
+      )
+    ]
+  where
     genesisBlockAddress = mkAddr $ toPublic genesisSk
     totalCoins = totalCoinsAddrMap $ giAddressMap genesisInfo
 
-    initAccounts :: Map Ids Values
-    initAccounts = M.fromList
-        [
-          ( AccountInIds (AccountId genesisBlockAddress)
-          , AccountOutVal (Account (coinToInteger totalCoins) 0)
-          )
-        ]
-
 sdActionsComposition
   :: MonadCatch m
-  => RememberForProof
-  -> SDActionsM m
-  -> DbAccessActions
-      (CompositeChgAccum
-          (SumChangeSet Ids Values)
+  => SDActionsM m
+  -> SD.DbAccessActions
+      (SD.CompositeChgAccum
+          (SD.SumChangeSet Ids Values)
           (AVLChgAccum AvlHash Ids Values)
           BlockPlusAVLComposition)
       Ids
       Values
       m
-sdActionsComposition remForProof SDActionsM{..} =
-    constructCompositeActions
+sdActionsComposition SDActionsM{..} =
+    SD.constructCompositeActions
         @BlockPlusAVLComposition
-        (dmaAccessActions nsBlockDBActions)
-        (dmaAccessActions $ nsStateDBActions remForProof)
+        (SD.dmaAccessActions nsBlockDBActions)
+        (SD.dmaAccessActions nsStateDBActions)

@@ -4,6 +4,7 @@ module Dscp.DB.Rocks.Real.Types
        , RocksDBParams (..)
        , RocksDB (..)
        , rdDatabase
+       , Rocks.BatchOp (..)
        ) where
 
 import Control.Lens (makeLenses)
@@ -30,8 +31,10 @@ data DB = DB
 
 -- | Set of parameters provided on opening connection.
 data RocksDBParams = RocksDBParams
-    { rdpPath :: !FilePath
-    -- ^ Path to the database
+    { rdpPath  :: !FilePath
+      -- ^ Path to the database
+    , rdpClean :: !Bool
+      -- ^ Whether DB should be cleaned/removed on start.
     } deriving (Show, Eq)
 
 data RocksDB = RocksDB

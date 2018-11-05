@@ -35,7 +35,7 @@ resignBlock block =
 -- | Submit block to validation.
 submitBlock
     :: (HasWitnessConfig, WithinWriteSDLock)
-    => Block -> WitnessTestMode ()
+    => Block -> WitnessTestMode' ()
 submitBlock = void . applyBlock
 
 -- | Make sound list of blocks.
@@ -70,7 +70,7 @@ submitSpoiledChain
     :: (HasWitnessConfig, WithinWriteSDLock)
     => NonEmpty Block
     -> (Block -> Gen Block)
-    -> PropertyM WitnessTestMode Bool
+    -> PropertyM WitnessTestMode' Bool
 submitSpoiledChain chain spoilBlock = do
     let lastBlock = last chain
     badLastBlock <- pick $ spoilBlock lastBlock

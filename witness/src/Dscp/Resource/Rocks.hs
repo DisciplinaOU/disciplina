@@ -2,7 +2,7 @@
 
 module Dscp.Resource.Rocks () where
 
-import Dscp.DB.Rocks.Real (RocksDB, RocksDBParams, closeNodeDB, openNodeDB)
+import Dscp.DB.Rocks.Real
 import Dscp.Resource.Class (AllocResource (..), buildComponentR)
 
 ----------------------------------------------------------------------------

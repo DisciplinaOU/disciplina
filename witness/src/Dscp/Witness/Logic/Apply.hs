@@ -1,8 +1,7 @@
--- | Creating and application.
+-- | Block application.
 
-module Dscp.Witness.Logic.Processing
-    ( createPayload
-    , createBlock
+module Dscp.Witness.Logic.Apply
+    ( applyBlockRaw
     , applyBlock
     , applyGenesisBlock
     ) where
@@ -10,6 +9,7 @@ module Dscp.Witness.Logic.Processing
 import Data.Default (def)
 import qualified Data.Map as M
 import Data.Time.Clock (UTCTime (..))
+
 import Loot.Base.HasLens (lensOf)
 import Serokell.Util (enumerate)
 import qualified Snowdrop.Block as SD
@@ -19,46 +19,30 @@ import qualified Snowdrop.Util as SD
 
 import Dscp.Core
 import Dscp.Crypto
-import Dscp.Resource.Keys (ourSecretKey)
+import Dscp.DB.CanProvideDB (providePlugin)
 import Dscp.Snowdrop
-import Dscp.Witness.AVL (AvlProof)
-import Dscp.Witness.Launcher.Marker
-import Dscp.Witness.Launcher.Mode
-import Dscp.Witness.Logic.Getters
-import Dscp.Witness.Mempool (takeTxsMempool)
+import qualified Dscp.Snowdrop.Storage.Avlp as Avlp
+import Dscp.Witness.AVL (AvlHash, AvlProof)
+import Dscp.Witness.Launcher.Context
 import Dscp.Witness.SDLock
 
-
--- | Empty mempool(s), create block body.
-createPayload
-    :: forall ctx m
-    .  (WitnessWorkMode ctx m, WithinWriteSDLock)
-    => m BlockBody
-createPayload = BlockBody <$> takeTxsMempool @ctx
-
--- | Create a public block.
-createBlock
-    :: (WitnessWorkMode ctx m, WithinWriteSDLock)
-    => SlotId -> m Block
-createBlock newSlot = do
-    tipHeader <- runSdM getTipHeader
-    let tipHash = headerHash tipHeader
-    let diff = hDifficulty tipHeader + 1
-
-    payload <- createPayload
-    sk <- ourSecretKey @WitnessNode
-    let sgn = sign sk $ BlockToSign diff newSlot tipHash (hash payload)
-    let header = Header sgn (toPublic sk) diff newSlot tipHash
-    let block = Block header payload
-    pure block
-
 -- | Apply verified block.
-applyBlockRaw :: (WitnessWorkMode ctx m, WithinWriteSDLock) => Bool -> Bool -> Block -> m AvlProof
+applyBlockRaw
+    :: forall ctx m
+    .  ( WitnessWorkMode ctx m
+       , WithinWriteSDLock
+       )
+    => Bool
+    -> Bool
+    -> Block
+    -> m AvlProof
 applyBlockRaw applyFees toVerify block = do
-    (sdActions :: SDVars) <- view (lensOf @SDVars)
+    plugin <- providePlugin
+    sdActions <- view (lensOf @SDVars)
+
     let sdOSParamsBuilder = nsSDParamsBuilder sdActions
     let blockDBM = nsBlockDBActions sdActions
-    let stateDBM = nsStateDBActions sdActions (SD.RememberForProof True)
+    let stateDBM = nsStateDBActions sdActions
 
     (blockCS, stateCS) <-
         let actions = SD.constructCompositeActions @BlockPlusAVLComposition
@@ -79,6 +63,7 @@ applyBlockRaw applyFees toVerify block = do
                       (SD.inj . NextBlockOf . hPrevHash . bHeader $ block)
                       (SD.New . NextBlockOfVal . NextBlock $ headerHash block)
               sequence_ . fmap addTx . enumerate . bbTxs . bBody $ block
+
             addTx (idx, gTx) = SD.modifyRwCompChgAccum $ SD.CAMChange $ SD.ChangeSet $
                 M.fromList $
                     [ ( SD.inj . toGTxId . unGTxWitnessed $ gTx
@@ -91,12 +76,19 @@ applyBlockRaw applyFees toVerify block = do
                     | GPublicationTxWitnessed pubTxw <- pure gTx
                     , let pubTx = ptwTx pubTxw
                     ]
-          in SD.runERwCompIO actions def rwComp >>=
-                \((), (SD.CompositeChgAccum blockCS_ stateCS_)) -> pure (blockCS_, stateCS_)
+          in do
+              Avlp.initAVLStorage @AvlHash plugin initAccounts
+
+              res <- SD.runERwCompIO actions def rwComp <&>
+                  \((), (SD.CompositeChgAccum blockCS_ stateCS_)) -> (blockCS_, stateCS_)
+
+              return res
+
     proof <- runSdRIO $ SD.dmaApply stateDBM stateCS
     runSdRIO $ SD.dmaApply blockDBM blockCS
     pure proof
 
+-- | Apply block with verification.
 applyBlock :: (WitnessWorkMode ctx m, WithinWriteSDLock) => Block -> m AvlProof
 applyBlock = applyBlockRaw True True
 

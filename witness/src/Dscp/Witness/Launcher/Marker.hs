@@ -4,7 +4,7 @@ module Dscp.Witness.Launcher.Marker
 
 import qualified Data.Text.Buildable
 
--- | Indicator of witness.
+-- | Indicator of educator.
 data WitnessNode
 
 -- Used not only in logs, change with care (@martoon).

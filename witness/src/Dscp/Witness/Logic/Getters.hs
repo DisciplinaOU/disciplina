@@ -26,13 +26,12 @@ module Dscp.Witness.Logic.Getters
 import Control.Lens (ix)
 import qualified Snowdrop.Block as SD
 import qualified Snowdrop.Core as SD
-import qualified Snowdrop.Execution as SD
 import qualified Snowdrop.Util as SD
 
 import Dscp.Core
 import Dscp.Snowdrop
 import Dscp.Witness.Config
-import Dscp.Witness.Launcher.Mode
+import Dscp.Witness.Launcher.Context
 import Dscp.Witness.Logic.Exceptions
 import Dscp.Witness.Mempool
 
@@ -108,7 +107,7 @@ resolveNext = SD.queryOne . NextBlockOf . headerHash >=> pure . map unNextBlock
 -- | Safely get an account.
 getAccountMaybe :: WitnessWorkMode ctx m => Address -> m (Maybe Account)
 getAccountMaybe =
-    runStateSdMRead (SD.RememberForProof False) . SD.queryOne . AccountId
+    runStateSdMRead . SD.queryOne . AccountId
 
 -- | Safely get an account taking mempool into consideration.
 getMempoolAccountMaybe

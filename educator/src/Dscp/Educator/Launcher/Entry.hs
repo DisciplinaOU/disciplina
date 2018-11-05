@@ -59,6 +59,5 @@ educatorEntry =
     withWitnessBackground $
     withEducatorBackground $ do
         serveAPIs
-
         logInfo "All done"
         forever $ liftIO $ threadDelay 10000000

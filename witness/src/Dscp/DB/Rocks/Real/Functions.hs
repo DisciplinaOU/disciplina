@@ -1,43 +1,85 @@
 {-# LANGUAGE TypeApplications #-}
 
 module Dscp.DB.Rocks.Real.Functions
-       ( -- * Closing/opening
-         openRocksDB
+       (
+
+         -- * Carrier constraint
+         HasRocksDB
+
+         -- * Closing/opening
+       , openRocksDB
        , closeRocksDB
        , openNodeDB
        , closeNodeDB
+
          -- * Reading/writing
-       , rocksGetBytes
-       , rocksPutBytes
-       , rocksDelete
+       -- , rocksGetBytes
+       -- , rocksPutBytes
+       -- , rocksDelete
+       -- , rocksWriteBatch
+
+       -- , getDB
+
+         -- * More high-level interface
+       , DeserialisationError
+       , get
+       , getWith
+       , writeBatch
+       , iterate
        ) where
 
-import qualified Database.RocksDB as Rocks
-import Loot.Base.HasLens (HasLens (..), HasLens')
+import Prelude hiding (get, put, iterate)
 
-import Dscp.DB.Rocks.Class (MonadDB (..), MonadDBRead (..))
-import Dscp.DB.Rocks.Real.Types (DB (..), MonadRealDB, RocksDB (..), RocksDBParams (..), rdDatabase)
+import Codec.Serialise
+import Control.Monad.Reader (MonadReader)
+import Control.Monad.Trans.Resource (runResourceT)
+import qualified Database.RocksDB as Rocks
+import Loot.Base.HasLens (HasLens')
+import System.Directory (doesDirectoryExist, removeDirectoryRecursive)
+import UnliftIO (MonadUnliftIO)
+
+import Dscp.DB.Rocks.Real.Types (DB (..), RocksDB (..), RocksDBParams (..))
+import Dscp.Util
+import Dscp.Util.Serialise
 
 -----------------------------------------------------------
 -- Opening/closing
 -----------------------------------------------------------
 
+data DeserialisationError = DeserialisationError DeserialiseFailure
+    deriving (Show, Typeable)
+
+instance Exception DeserialisationError
+
+type HasRocksDB ctx m = (MonadReader ctx m, HasLens' ctx RocksDB, MonadIO m, MonadThrow m)
+
 openRocksDB :: MonadIO m => FilePath -> m DB
 openRocksDB path = do
-    let rocksReadOpts = Rocks.defaultReadOptions
+    let rocksReadOpts  = Rocks.defaultReadOptions
         rocksWriteOpts = Rocks.defaultWriteOptions
-        rocksOptions = Rocks.defaultOptions
+        rocksOptions   = Rocks.defaultOptions
             { Rocks.createIfMissing = True
-            , Rocks.compression = Rocks.NoCompression
+            , Rocks.compression     = Rocks.NoCompression
             }
     rocksDB <- Rocks.open path rocksOptions
-    return DB {..}
+    return DB
+        { rocksReadOpts
+        , rocksWriteOpts
+        , rocksOptions
+        , rocksDB
+        }
 
 closeRocksDB :: MonadIO m => DB -> m ()
 closeRocksDB = Rocks.close . rocksDB
 
 openNodeDB :: MonadIO m => RocksDBParams -> m RocksDB
-openNodeDB RocksDBParams{..} = RocksDB <$> openRocksDB rdpPath
+openNodeDB RocksDBParams{..} = liftIO $ do
+    dirExists <- doesDirectoryExist rdpPath
+
+    when (rdpClean && dirExists) $ do
+        removeDirectoryRecursive rdpPath
+
+    RocksDB <$> openRocksDB rdpPath
 
 closeNodeDB :: MonadIO m => RocksDB -> m ()
 closeNodeDB = closeRocksDB . _rdDatabase
@@ -46,28 +88,37 @@ closeNodeDB = closeRocksDB . _rdDatabase
 -- Reading/writing
 ------------------------------------------------------------
 
--- | Read ByteString from RocksDb using given key.
-rocksGetBytes :: MonadIO m => ByteString -> DB -> m (Maybe ByteString)
-rocksGetBytes key DB {..} = Rocks.get rocksDB rocksReadOpts key
+get :: (Serialise a, Serialise b, MonadThrow m, MonadIO m) => DB -> a -> m (Maybe b)
+get db = getWith db serialise'
 
--- | Write ByteString to RocksDB for given key.
-rocksPutBytes :: MonadIO m => ByteString -> ByteString -> DB -> m ()
-rocksPutBytes k v DB {..} = Rocks.put rocksDB rocksWriteOpts k v
+getWith :: (Serialise b, MonadThrow m, MonadIO m) => DB -> (a -> ByteString) -> a -> m (Maybe b)
+getWith db project a = do
+    traverse (leftToThrow DeserialisationError . deserialiseOrFail')
+        =<< rocksGetBytes db (project a)
+  where
+    -- | Read ByteString from RocksDb using given key.
+    rocksGetBytes :: MonadIO m => DB -> ByteString -> m (Maybe ByteString)
+    rocksGetBytes DB {..} key = Rocks.get rocksDB rocksReadOpts key
 
--- | Delete element from RocksDB for given key.
-rocksDelete :: MonadIO m => ByteString -> DB -> m ()
-rocksDelete k DB {..} = Rocks.delete rocksDB rocksWriteOpts k
+-- | Write a batch.
+writeBatch :: MonadIO m => DB -> [Rocks.BatchOp] -> m ()
+writeBatch DB {..} = Rocks.write rocksDB rocksWriteOpts
 
-------------------------------------------------------------
--- Instances
-------------------------------------------------------------
-
-getDB :: (MonadReader ctx m, HasLens' ctx RocksDB) => m DB
-getDB = view $ lensOf @RocksDB . rdDatabase
-
-instance MonadRealDB ctx m => MonadDBRead m where
-    dbGet key = getDB >>= rocksGetBytes key
-
-instance MonadRealDB ctx m => MonadDB m where
-    dbPut key val = getDB >>= rocksPutBytes key val
-    dbDelete key = getDB >>= rocksDelete key
+-- | Iterator implemented as a left fold.
+iterate ::
+       (MonadIO m, MonadUnliftIO m)
+    => DB
+    -> ByteString
+    -> b
+    -> (b -> (ByteString, ByteString) -> b)
+    -> m b
+iterate DB {..} prefix f0 foldF =
+    runResourceT $
+    Rocks.withIterator rocksDB rocksReadOpts $ \iter -> do
+        Rocks.iterSeek iter prefix
+        let process acc =
+                Rocks.iterEntry iter >>= \case
+                    Nothing -> pure acc
+                    Just e -> do Rocks.iterNext iter
+                                 process (foldF acc e)
+        process f0

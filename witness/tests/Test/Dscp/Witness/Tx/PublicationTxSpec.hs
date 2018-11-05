@@ -116,13 +116,15 @@ spec = describe "Publication tx expansion + validation" $ do
         chainLen <- pick $ choose (2, 5)
         pubs     <- pick $ genPublicationChain chainLen author
         loopPoint <- pick $ elements (init pubs)
+
         let badPubs = pubs & _tailNE . _last . ptHeaderL .~ ptHeader loopPoint
-        let badTws = map (signPubTx author) badPubs
+        let badTws  = map (signPubTx author) badPubs
+
         lift $ do
             mapM_ submitPub (init badTws)
             -- 'addTxToMempool' kicks duplicated transactions, so we have to
             -- dump them into block
-            void . applyBlock =<< createBlock 0
+            void . applyBlock =<< createBlock runSdM 0
             throwsSome $ submitPub (last badTws)
 
     it "Wrong signature is not fine" $ witnessProperty $ do

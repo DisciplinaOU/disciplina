@@ -37,7 +37,6 @@ import Dscp.Educator.Web.Bot.Params
 import Dscp.Educator.Web.Student.Types
 import Dscp.Util
 import Dscp.Util.Test
-import Dscp.Witness.Instances ()
 
 ---------------------------------------------------------------------
 -- Generation

@@ -10,27 +10,23 @@ module Dscp.Witness.Launcher.Entry
 import Control.Concurrent (threadDelay)
 import Fmt ((+|), (|+))
 import Loot.Config (option, sub)
-import Loot.Log (logInfo)
+import Loot.Log (logDebug, logInfo)
 import Time (sec)
 import UnliftIO.Async (async, cancel)
 
 import Dscp.Network (runListener, runWorker, withServer)
 import Dscp.Util.TimeLimit
 import Dscp.Witness.Config
-import Dscp.Witness.Launcher.Mode
+import Dscp.Witness.Launcher.Context
 import Dscp.Witness.Listeners
-import Dscp.Witness.Logic
-import Dscp.Witness.SDLock
+import Dscp.Witness.Logic.Init
 import Dscp.Witness.Web
 import Dscp.Witness.Workers
 
 -- | Listeners, workers and no interaction with user.
 withWitnessBackground :: FullWitnessWorkMode ctx m => m () -> m ()
 withWitnessBackground cont = do
-    -- this should be done only if resource is not initialised,
-    -- and this call should be in SDActions allocation code, but
-    -- now we always start with the empty state.
-    writingSDLock "apply genesis block" applyGenesisBlock
+    initStorage
 
     -- todo git revision
     logInfo $ "Genesis header: " +| genesisHeader |+ ""
@@ -61,5 +57,5 @@ witnessEntry =
             void . async $
                 serveWitnessAPIReal serverParams
 
-        logInfo "All done"
+        logDebug "Witness initialisation is complete"
         forever $ liftIO $ threadDelay 10000000

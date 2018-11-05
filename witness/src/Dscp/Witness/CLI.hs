@@ -16,7 +16,7 @@ import qualified Data.Set as Set
 import Loot.Config (OptParser, (.::), (.:<), (.<>))
 import Loot.Network.ZMQ.Common (PreZTNodeId (..), parsePreZTNodeId)
 import Options.Applicative (Parser, ReadM, auto, eitherReader, help, long, maybeReader, metavar,
-                            option, strOption)
+                            option, strOption, switch)
 
 import Dscp.CommonCLI (appDirParamParser, baseKeyParamsParser,
                        networkAddressParser, serverParamsParser)
@@ -34,13 +34,15 @@ import Dscp.Witness.Keys
 ----------------------------------------------------------------------------
 
 rocksParamsParser :: Parser RocksDBParams
-rocksParamsParser = fmap RocksDBParams $ strOption $
-    long "db-path" <>
-    metavar "FILEPATH" <>
-    help "Path to database directory for witness node. If not specified, \
-         \'witness-db' directory is used."
-    -- Removed default 'witness-db' value
-    -- See [Note default-cli-params] in 'Dscp.CommonCLI'
+rocksParamsParser = do
+    rdpPath <- strOption $
+        long "db-path" <>
+        metavar "FILEPATH" <>
+        help "Path to database directory for witness node."
+    rdpClean <- switch $
+        long "db-clean" <>
+        help "Clean db on every app start"
+    pure RocksDBParams{..}
 
 ----------------------------------------------------------------------------
 -- ZMQ TCP

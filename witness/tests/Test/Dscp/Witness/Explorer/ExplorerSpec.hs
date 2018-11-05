@@ -5,6 +5,7 @@ import Data.Default (def)
 import Dscp.Core
 import Dscp.Crypto
 import Dscp.Snowdrop.Types
+import Dscp.Snowdrop.Mode
 import Dscp.Util.Test
 import Dscp.Witness
 
@@ -53,7 +54,7 @@ dumpBlock
     :: (WitnessWorkMode ctx m, WithinWriteSDLock)
     => SlotId -> m HeaderHash
 dumpBlock slotId = do
-    block <- createBlock slotId
+    block <- createBlock runSdM slotId
     void $ applyBlock block
     return (headerHash block)
 

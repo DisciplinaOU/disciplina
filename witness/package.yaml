@@ -45,6 +45,7 @@ library:
     - parsec
     - prettyprinter
     - reflection
+    - resourcet
     - rocksdb-haskell
     - safe-exceptions >= 0.1.4
     - serialise
@@ -77,6 +78,7 @@ tests:
       - tasty-discover
       - hspec-discover
     dependencies:
+      - AVL
       - containers
       - data-default
       - disciplina-core
