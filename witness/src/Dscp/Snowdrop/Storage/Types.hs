@@ -95,16 +95,16 @@ newtype LastPublication = LastPublication
     } deriving (Eq, Ord, Show, Generic)
 
 -- | Once 'LastPublication' is known, you can walk the chain of
--- | `PublicationHead bh ~> PublicationNext bh`,
+-- | `PublicationHead author bh ~> PublicationNext bh`,
 -- | (which is `(blockHash, Maybe blockHash)`)
 -- | where phead contains block hash and pnext has prev block hash.
-newtype PublicationHead
-    = PublicationHead PrivateHeaderHash
+data PublicationHead
+    = PublicationHead Address PrivateHeaderHash
     deriving (Eq, Ord, Show, Generic)
 
 instance Buildable PublicationHead where
-    build (PublicationHead blk) =
-        "PublicationHead { " +| blk |+  " }"
+    build (PublicationHead author blk) =
+        "PublicationHead { block " +| blk |+ ", author " +| author |+ " }"
 
 data PublicationNext
     = PublicationNext (Maybe PrivateHeaderHash)

@@ -64,7 +64,7 @@ preValidatePublication =
         let phHash = hash privHeader
 
         -- Getting actual changes
-        let hd  = proj =<< inj (PublicationHead phHash)   `Map.lookup` changes
+        let hd  = proj =<< inj (PublicationHead authorId phHash) `Map.lookup` changes
         let box = proj =<< inj (PublicationsOf  authorId) `Map.lookup` changes
 
         () <- mconcat

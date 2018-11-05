@@ -122,7 +122,7 @@ seqExpandersPublicationTx feesReceiverAddr (Fees minFee) =
             let (prevHashM :: Maybe PrivateHeaderHash) =
                     prevHash <$ guard (prevHash /= genesisHeaderHash)
 
-            headerWasEarlier <- queryOneExists (PublicationHead phHash)
+            headerWasEarlier <- queryOneExists (PublicationHead ptAuthor phHash)
             let headerIsLast = prevHash == phHash
             when (headerWasEarlier || headerIsLast) $
                 throwLocalError PublicationLocalLoop
@@ -165,9 +165,9 @@ seqExpandersPublicationTx feesReceiverAddr (Fees minFee) =
             let change = if isJust maybePub then Upd else New
             pure $ mkDiffCS $ Map.fromList $
                 [ PublicationsOf  ptAuthor ==> change (LastPublication phHash)
-                , PublicationHead phHash   ==> New    (PublicationNext prevHashM)
                 , PublicationIds  ptxId    ==> New    (PublicationData ptwTx (hash ptwTx))
                 , PrivateBlockTx  phHash   ==> New    (PrivateBlockTxVal ptxId)
+                , PublicationHead ptAuthor phHash ==> New (PublicationNext prevHashM)
                 ] ++ feesChanges
 
 ----------------------------------------------------------------------------
