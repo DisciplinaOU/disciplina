@@ -61,7 +61,7 @@ spec_EducatorApiQueries = describe "Basic database operations" $ do
                               \(CourseEducatorInfo courseId desc subjs) ->
                                   (Just courseId, desc, subjs)
             return $
-                cover (length coursesDetails > 1) 50 "enough courses" $
+                cover (length coursesDetails > 1) 10 "enough courses" $
                 sort coursesBone === sort coursesBone'
 
     describe "getCourses" $ do
