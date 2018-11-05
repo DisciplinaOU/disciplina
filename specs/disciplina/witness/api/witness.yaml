@@ -430,23 +430,14 @@ components:
           type: integer
           format: int32
     GeneralizedTransactionInfo:
-      type: object
+      oneOf:
+      - $ref: '#/components/schemas/TransactionInfo'
+      - $ref: '#/components/schemas/PublicationInfo'
       discriminator:
         propertyName: txType
-      properties:
-        txType:
-          type: string
-          enum:
-            - money
-            - publication
-        txId:
-          $ref: '#/components/schemas/Hash'
-        outValue:
-          $ref: '#/components/schemas/Coin'
-        money:
-          $ref: '#/components/schemas/TransactionInfo'
-        publication:
-          $ref: '#/components/schemas/PublicationInfo'
+        mapping:
+          money: '#/components/schemas/TransactionInfo'
+          publication: '#/components/schemas/PublicationInfo'
     TransactionInfo:
       type: object
       properties:
