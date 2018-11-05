@@ -173,27 +173,25 @@ instance FromJSON (Detailed a) => FromJSON (WithBlockInfo a) where
         return $ WithBlockInfo block item
 
 instance ToJSON (Detailed Tx) where
-    toJSON (Detailed tx) = object $
-        [ "txId" .= toTxId tx
-        , "money" .= tx
-        , case sumCoins . map txOutValue . txOuts $ tx of
-            Right c  -> "outValue" .= c
-            Left err -> "outValue" .= err
-        ]
+    toJSON (Detailed tx) = mergeObjects extraFields (toJSON tx)
+      where
+        extraFields = object
+            [ "txId" .= toTxId tx
+            , case sumCoins . map txOutValue . txOuts $ tx of
+                  Right c  -> "outValue" .= c
+                  Left err -> "outValue" .= err
+            ]
 
 instance FromJSON (Detailed Tx) where
-    parseJSON = withObject "detailed tx" $ \o ->
-        Detailed <$> o .: "money"
+    parseJSON = fmap Detailed . parseJSON
 
 instance ToJSON (Detailed PublicationTx) where
-    toJSON (Detailed pTx) = object $
-        [ "txId" .= toPtxId pTx
-        , "publication" .= pTx
-        ]
+    toJSON (Detailed pTx) = mergeObjects extraFields (toJSON pTx)
+        where
+          extraFields = object [ "txId" .= toPtxId pTx ]
 
 instance FromJSON (Detailed PublicationTx) where
-    parseJSON = withObject "detailed pub tx" $ \o ->
-        Detailed <$> o .: "publication"
+    parseJSON = fmap Detailed . parseJSON
 
 instance ToJSON (Detailed GTx) where
     toJSON (Detailed gtx) = mergeObjects (object [ "txType" .= txType]) txObj
