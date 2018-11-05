@@ -430,23 +430,14 @@ components:
           type: integer
           format: int32
     GeneralizedTransactionInfo:
-      type: object
+      oneOf:
+      - $ref: '#/components/schemas/TransactionInfo'
+      - $ref: '#/components/schemas/PublicationInfo'
       discriminator:
         propertyName: txType
-      properties:
-        txType:
-          type: string
-          enum:
-            - money
-            - publication
-        txId:
-          $ref: '#/components/schemas/Hash'
-        outValue:
-          $ref: '#/components/schemas/Coin'
-        money:
-          $ref: '#/components/schemas/TransactionInfo'
-        publication:
-          $ref: '#/components/schemas/PublicationInfo'
+        mapping:
+          money: '#/components/schemas/TransactionInfo'
+          publication: '#/components/schemas/PublicationInfo'
     TransactionInfo:
       type: object
       properties:
@@ -454,42 +445,36 @@ components:
           $ref: '#/components/schemas/Hash'
         outValue:
           $ref: '#/components/schemas/Coin'
-        money:
+        inAcc:
           type: object
           properties:
-            inAcc:
-              type: object
-              properties:
-                addr:
-                  $ref: '#/components/schemas/Address'
-                nonce:
-                  type: integer
-                  format: int32
-            inValue:
-              $ref: '#/components/schemas/Coin'
-            outs:
-              type: array
-              items:
-                type: object
-                properties:
-                  address:
-                    $ref: '#/components/schemas/Address'
-                  value:
-                    $ref: '#/components/schemas/Coin'
+            addr:
+              $ref: '#/components/schemas/Address'
+            nonce:
+              type: integer
+              format: int32
+        inValue:
+          $ref: '#/components/schemas/Coin'
+        outs:
+          type: array
+          items:
+            type: object
+            properties:
+              address:
+                $ref: '#/components/schemas/Address'
+              value:
+                $ref: '#/components/schemas/Coin'
     PublicationInfo:
       type: object
       properties:
         txId:
           $ref: "#/components/schemas/Hash"
-        publication:
-          type: object
-          properties:
-            author:
-              $ref: '#/components/schemas/Address'
-            feesAmount:
-              $ref: '#/components/schemas/Coin'
-            header:
-              $ref: '#/components/schemas/PrivateBlockHeader'
+        author:
+          $ref: '#/components/schemas/Address'
+        feesAmount:
+          $ref: '#/components/schemas/Coin'
+        header:
+          $ref: '#/components/schemas/PrivateBlockHeader'
     AndBlockInfo:
       type: object
       properties:

@@ -173,45 +173,39 @@ instance FromJSON (Detailed a) => FromJSON (WithBlockInfo a) where
         return $ WithBlockInfo block item
 
 instance ToJSON (Detailed Tx) where
-    toJSON (Detailed tx) = object $
-        [ "txId" .= toTxId tx
-        , "money" .= tx
-        , case sumCoins . map txOutValue . txOuts $ tx of
-            Right c  -> "outValue" .= c
-            Left err -> "outValue" .= err
-        ]
+    toJSON (Detailed tx) = mergeObjects extraFields (toJSON tx)
+      where
+        extraFields = object
+            [ "txId" .= toTxId tx
+            , case sumCoins . map txOutValue . txOuts $ tx of
+                  Right c  -> "outValue" .= c
+                  Left err -> "outValue" .= err
+            ]
 
 instance FromJSON (Detailed Tx) where
-    parseJSON = withObject "detailed tx" $ \o ->
-        Detailed <$> o .: "money"
+    parseJSON = fmap Detailed . parseJSON
 
 instance ToJSON (Detailed PublicationTx) where
-    toJSON (Detailed pTx) = object $
-        [ "txId" .= toPtxId pTx
-        , "publication" .= pTx
-        ]
+    toJSON (Detailed pTx) = mergeObjects extraFields (toJSON pTx)
+        where
+          extraFields = object [ "txId" .= toPtxId pTx ]
 
 instance FromJSON (Detailed PublicationTx) where
-    parseJSON = withObject "detailed pub tx" $ \o ->
-        Detailed <$> o .: "publication"
+    parseJSON = fmap Detailed . parseJSON
 
 instance ToJSON (Detailed GTx) where
-    toJSON (Detailed gtx) = object
-        [ "txType" .= case gtx of
-            GMoneyTx _       -> ("money" :: Text)
-            GPublicationTx _ -> ("publication" :: Text)
-        , "txId" .= toGTxId gtx
-        , case gtx of
-           GMoneyTx tx        -> "money" .= Detailed tx
-           GPublicationTx pTx -> "publication" .= Detailed pTx
-        ]
+    toJSON (Detailed gtx) = mergeObjects (object [ "txType" .= txType]) txObj
+      where
+        (txType, txObj) = case gtx of
+            GMoneyTx tx        -> ("money" :: Text, toJSON $ Detailed tx)
+            GPublicationTx pTx -> ("publication" :: Text, toJSON $ Detailed pTx)
 
 instance FromJSON (Detailed GTx) where
     parseJSON = withObject "detailed gtx" $ \o -> do
         txType :: Text <- o .: "txType"
         Detailed <$> case txType of
-            "money"       -> GMoneyTx . unDetailed <$> o .: "money"
-            "publication" -> GPublicationTx . unDetailed <$> o .: "publication"
+            "money"       -> GMoneyTx . unDetailed <$> parseJSON (Object o)
+            "publication" -> GPublicationTx . unDetailed <$> parseJSON (Object o)
             other         -> fail $ "invalid transaction type: " ++ toString other
 
 instance (ToJSON (Id a), ToJSON a, KnownSymbol d) =>
