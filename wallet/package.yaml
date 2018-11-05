@@ -30,8 +30,10 @@ library:
     - filepath
     - knit
     - lens
+    - loot-config
     - memory
     - optparse-applicative
+    - reflection
     - scientific
     - serialise
     - serokell-util
@@ -58,8 +60,10 @@ executables:
       - double-conversion
       - disciplina-core
       - disciplina-wallet
+      - disciplina-witness
       - knit
       - lens
+      - loot-log
       - ntype
       - random
       - serokell-util
@@ -79,6 +83,7 @@ executables:
       - componentm
       - disciplina-core
       - disciplina-wallet
+      - disciplina-witness
       - knit
       - ntype
       - text

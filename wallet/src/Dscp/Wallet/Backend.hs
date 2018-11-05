@@ -10,6 +10,7 @@ import Dscp.Core
 import Dscp.Crypto
 import Dscp.Wallet.Face
 import Dscp.Wallet.KeyStorage
+import Dscp.Wallet.Config
 import Dscp.Web
 import Dscp.Witness.Logic.Tx
 import Dscp.Witness.Web.Client
@@ -18,7 +19,7 @@ import Dscp.Witness.Web.Types
 type SendEvent = WalletEvent -> IO ()
 
 createWalletFace ::
-       HasCoreConfig
+       HasWalletConfig
     => BaseUrl
     -> SendEvent
     -> ComponentM WalletFace
@@ -31,7 +32,7 @@ createWalletFace serverAddress sendEvent = buildComponent_ "Wallet" $ do
         , walletRestoreKey = restoreKey sendEvent
         , walletListKeys = listKeys
         , walletSendTx = sendTx wc sendEvent
-        , walletTxFee = unFees . estimateFees feeConfig . toList
+        , walletTxFee = unFees . estimateFees (giveL @WalletConfig @FeeConfig) . toList
         , walletGetBalance = getBalance wc sendEvent
         , walletGetTxHistory = getTxHistory wc sendEvent
         }
@@ -72,7 +73,7 @@ listKeys :: IO [Account]
 listKeys = getAccounts
 
 sendTx ::
-       HasCoreConfig
+       HasWalletConfig
     => WitnessClient
     -> SendEvent
     -> Encrypted SecretKey
@@ -88,7 +89,7 @@ sendTx wc sendEvent eSecretKey mPassPhrase (toList -> outs) = do
     nonce <- fromIntegral . unNonce . aiCurrentNonce <$>
              wGetAccount wc (skAddress secretData) False
 
-    let txWitnessed = createTxw (fcMoney feeConfig) secretData nonce outs
+    let txWitnessed = createTxw (fcMoney (giveL @WalletConfig @FeeConfig)) secretData nonce outs
 
     sendLogEvent sendEvent $
         "Sending transaction: {"
