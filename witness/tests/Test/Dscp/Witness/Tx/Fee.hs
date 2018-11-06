@@ -1,4 +1,4 @@
-module Test.Dscp.Witness.Tx.FeeSpec where
+module Test.Dscp.Witness.Tx.Fee where
 
 import Dscp.Core
 import Dscp.Util.Test
@@ -11,8 +11,8 @@ testFeeCoefficients :: FeeCoefficients
 testFeeCoefficients =
     FeeCoefficients{fcMinimal = Coin 10, fcMultiplier = 0.1}
 
-spec :: Spec
-spec = describe "Transaction fees" $ do
+spec_Transaction_fees :: Spec
+spec_Transaction_fees = do
     it "fixFees always converges for money tx and linear coefs" . property $
       \outs sk ->
         let tw = fixFees (LinearFeePolicy testFeeCoefficients) $ \fees ->

@@ -1,4 +1,4 @@
-module Test.Dscp.Witness.Explorer.ExplorerSpec where
+module Test.Dscp.Witness.Explorer.Explorer where
 
 import Data.Default (def)
 import qualified Data.Map.Strict as M
@@ -127,8 +127,8 @@ spoilFairCV (FairCV cv) = do
                 return (hhash, proof')
             return (addr, subCv')
 
-spec :: Spec
-spec = describe "Explorer" $ do
+spec_Explorer :: Spec
+spec_Explorer = describe "Explorer" $ do
     describe "getTransaction" $ do
         it "Returns existing tx fine" . once $ witnessProperty $ do
             tx <- createAndSubmitTxGen selectGenesisSecret

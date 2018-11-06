@@ -1,7 +1,4 @@
-{-# LANGUAGE PartialTypeSignatures #-}
-{-# OPTIONS_GHC -Wno-partial-type-signatures #-}
-
-module Test.Dscp.Witness.Tx.PublicationTxSpec where
+module Test.Dscp.Witness.Tx.PublicationTx where
 
 import Control.Lens (forOf, _last)
 import qualified GHC.Exts as Exts
@@ -48,8 +45,8 @@ submitPub
     => PublicationTxWitnessed -> m ()
 submitPub = addTxToMempool . GPublicationTxWitnessed
 
-spec :: Spec
-spec = describe "Publication tx expansion + validation" $ do
+spec_Publication_tx_application :: Spec
+spec_Publication_tx_application = do
     it "First correct tx in chain is fine" $ witnessProperty $ do
         author <- pick selectAuthor
         pub :| [] <- pick $ genPublicationChain 1 author

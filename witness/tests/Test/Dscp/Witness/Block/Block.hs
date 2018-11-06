@@ -1,4 +1,4 @@
-module Test.Dscp.Witness.Block.BlockSpec where
+module Test.Dscp.Witness.Block.Block where
 
 import Control.Lens (has)
 import qualified Data.List as L
@@ -76,8 +76,8 @@ submitSpoiledChain isExpectedError chain spoilBlock = do
         mapM_ submitBlock (init chain)
         throwsMatching isExpectedError $ submitBlock badLastBlock
 
-spec :: Spec
-spec = describe "Block validation + application" $ do
+spec_Block_validation_with_application :: Spec
+spec_Block_validation_with_application = do
   describe "Block header" $ do
     it "Good block is fine" $ witnessProperty $ do
         let blocks = makeBlocksChain 1

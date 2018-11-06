@@ -1,4 +1,4 @@
-module Test.Dscp.Witness.Tx.MoneyTxSpec where
+module Test.Dscp.Witness.Tx.MoneyTx where
 
 import Control.Lens (makeLenses, makeLensesWith, traversed)
 import qualified Data.List as L
@@ -93,8 +93,8 @@ makeTxsChain n steps dat
 applyTx :: (HasWitnessConfig, WithinWriteSDLock) => TxWitnessed -> WitnessTestMode' ()
 applyTx tw = void $ addTxToMempool (GMoneyTxWitnessed tw)
 
-spec :: Spec
-spec = describe "Money tx expansion + validation" $ do
+spec_Money_tx_application :: Spec
+spec_Money_tx_application = do
     it "Correct tx is fine" $ witnessProperty $ do
         txData <- pick genSafeTxData
         let tx = makeTx properSteps txData
