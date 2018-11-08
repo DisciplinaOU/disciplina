@@ -1,5 +1,5 @@
-{-# LANGUAGE GADTs      #-}
-{-# LANGUAGE StrictData #-}
+{-# LANGUAGE GADTs         #-}
+{-# LANGUAGE StrictData    #-}
 {-# LANGUAGE TypeOperators #-}
 
 -- | Common datatypes for educator and student HTTP APIs
@@ -32,25 +32,26 @@ module Dscp.Educator.Web.Types
        ) where
 
 import Control.Lens (Iso', from, iso, makePrisms)
+import Data.Aeson (FromJSON, ToJSON)
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
+import Data.Singletons.Bool (SBoolI)
 import Data.Time.Clock (UTCTime)
 import Database.SQLite.Simple (FromRow (..), field)
-import Servant (FromHttpApiData (..))
-import Data.Singletons.Bool (SBoolI)
-import UnliftIO (MonadUnliftIO)
-import Loot.Log (MonadLogging)
+import Fmt (build, (+|), (+||), (|+), (||+))
 import Loot.Base.HasLens (HasCtx)
-import Fmt (build, (+|), (|+), (+||), (||+))
+import Loot.Log (MonadLogging)
+import Servant (FromHttpApiData (..))
+import UnliftIO (MonadUnliftIO)
 
-import Dscp.DB.SQLite.Types
-import Dscp.Util.Type (type (==))
 import Dscp.Core
 import Dscp.Crypto
 import Dscp.DB.SQLite.Instances ()
+import Dscp.DB.SQLite.Types
 import Dscp.Util.Aeson (CustomEncoding, HexEncoded)
-import Dscp.Util.Servant (ForResponseLog (..), buildForResponse,
-                          buildShortResponseList, buildLongResponseList)
+import Dscp.Util.Servant (ForResponseLog (..), buildForResponse, buildLongResponseList,
+                          buildShortResponseList)
+import Dscp.Util.Type (type (==))
 
 type MonadEducatorWebQuery m =
     ( MonadIO m
@@ -210,10 +211,18 @@ assignmentTypeRaw = iso forth back . from _IsFinal
 -- JSON instances
 ---------------------------------------------------------------------------
 
-deriveJSON defaultOptions ''IsEnrolled
-deriveJSON defaultOptions ''IsFinal
-deriveJSON defaultOptions ''IsGraded
-deriveJSON defaultOptions ''HasProof
+deriving instance ToJSON IsEnrolled
+deriving instance FromJSON IsEnrolled
+
+deriving instance ToJSON IsFinal
+deriving instance FromJSON IsFinal
+
+deriving instance ToJSON IsGraded
+deriving instance FromJSON IsGraded
+
+deriving instance ToJSON HasProof
+deriving instance FromJSON HasProof
+
 deriveJSON defaultOptions ''GradeInfo
 deriveJSON defaultOptions ''StudentInfo
 deriveJSON defaultOptions ''BlkProofInfo

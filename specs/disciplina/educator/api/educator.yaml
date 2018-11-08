@@ -753,7 +753,7 @@ components:
     StudentCourse:
       type: object
       required:
-        - course
+        - courseId
       properties:
         course:
           $ref: '#/components/schemas/Id'
