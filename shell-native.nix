@@ -11,6 +11,7 @@ stdenv.mkDerivation rec {
   ];
 
   buildInputs = [
+    git
     gmp
     openssl
     rocksdb

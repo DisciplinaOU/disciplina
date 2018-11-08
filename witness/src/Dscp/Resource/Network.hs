@@ -18,13 +18,13 @@ import Control.Lens (makeLenses)
 import Data.Aeson (FromJSON (..), withText)
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveFromJSON)
+import Data.Default (def)
 import Data.Reflection (Given (given), give)
-import qualified Data.Set as Set
 import Loot.Base.HasLens (HasLens (..))
 import Loot.Log (Logging)
-import Loot.Network.ZMQ (PreZTNodeId, ZTGlobalEnv, ZTNetCliEnv, ZTNetServEnv, createNetCliEnv,
-                         createNetServEnv, mkZTNodeId, parsePreZTNodeId, termNetCliEnv,
-                         termNetServEnv, ztGlobalEnv, ztGlobalEnvRelease)
+import Loot.Network.ZMQ (ZTGlobalEnv, ZTNetCliEnv, ZTNetServEnv, ZTNodeId, createNetCliEnv,
+                         createNetServEnv, parseZTNodeId, termNetCliEnv, termNetServEnv,
+                         ztGlobalEnv, ztGlobalEnvRelease)
 import qualified Text.Show
 
 import Dscp.Resource.Class (AllocResource (..), buildComponentR)
@@ -65,7 +65,7 @@ netLogging = given
 
 -- | Client networking params.
 data NetCliParams = NetCliParams
-    { ncPeers   :: !(Set PreZTNodeId)
+    { ncPeers   :: ![ZTNodeId]
       -- ^ Peers we should connect to.
     } deriving (Show)
 
@@ -87,12 +87,9 @@ instance WithNetLogging => AllocResource NetCliResources where
     allocResource NetCliParams {..} =
         buildComponentR "netcli" allocate release
       where
-        allocate = do
-            ncPeersFinal <-
-                liftIO $ Set.fromList <$> mapM mkZTNodeId (Set.toList ncPeers)
-
+        allocate = liftIO $ do
             global <- ztGlobalEnv (unNetLogging netLogging)
-            cli <- createNetCliEnv global ncPeersFinal
+            cli <- createNetCliEnv global def ncPeers
             pure $ NetCliResources global cli
         release NetCliResources{..} = do
             termNetCliEnv _ncClientEnv
@@ -104,13 +101,10 @@ instance WithNetLogging => AllocResource NetCliResources where
 
 -- | Server networking params.
 data NetServParams = NetServParams
-    { nsPeers           :: !(Set PreZTNodeId)
+    { nsPeers      :: ![ZTNodeId]
       -- ^ Peers we should connect to
-    , nsOurAddress      :: !PreZTNodeId
+    , nsOurAddress :: !ZTNodeId
       -- ^ Our binding address
-    , nsInternalAddress :: !(Maybe PreZTNodeId)
-      -- ^ Optional internal address that we'll bind to
-      -- (nsOurAddress should be an external, addressable one anyway).
     } deriving (Show, Eq)
 
 -- | Resources needed for ZMQ TCP client + server.
@@ -131,16 +125,13 @@ instance WithNetLogging => AllocResource NetServResources where
     allocResource NetServParams {..} =
         buildComponentR "netcli" allocate release
       where
-        allocate = do
-            nsPeersFinal <- liftIO $ Set.fromList <$> mapM mkZTNodeId (Set.toList nsPeers)
-            nsOurAddressFinal <- liftIO $ mkZTNodeId nsOurAddress
-
+        allocate = liftIO $ do
             global <- ztGlobalEnv (unNetLogging netLogging)
-            cli <- createNetCliEnv global nsPeersFinal
-            serv <- createNetServEnv global nsOurAddressFinal nsInternalAddress
+            cli <- createNetCliEnv global def nsPeers
+            serv <- createNetServEnv global def nsOurAddress
 
             pure $ NetServResources global cli serv
-        release NetServResources{..} = do
+        release NetServResources{..} = liftIO $ do
             termNetCliEnv _nsClientEnv
             termNetServEnv _nsServerEnv
             ztGlobalEnvRelease _nsGlobalEnv
@@ -149,9 +140,9 @@ instance WithNetLogging => AllocResource NetServResources where
 -- JSON instances for params
 ---------------------------------------------------------------------------
 
-instance FromJSON PreZTNodeId where
+instance FromJSON ZTNodeId where
     parseJSON = withText "ZMQ node ID" $
-        either fail pure . parsePreZTNodeId . toString
+        either fail pure . parseZTNodeId . toString
 
 deriveFromJSON defaultOptions ''NetCliParams
 deriveFromJSON defaultOptions ''NetServParams
