@@ -4,7 +4,10 @@
 -- | CLI for educator.
 
 module Dscp.Educator.CLI
-    ( educatorConfigParser
+    ( sqliteParamsParser
+    , educatorConfigParser
+    , educatorWebParamsParser
+    , publishingPeriodParser
     ) where
 
 import Loot.Config (OptParser, upcast, (.::), (.:<), (.<>))

@@ -1,0 +1,96 @@
+<<: !include "../hpack/module.yaml"
+
+name: disciplina-multi-educator
+description: Disciplina Multi-key educator
+
+library:
+  <<: *lib-common
+
+  build-tools:
+    - autoexporter
+
+  dependencies:
+    - aeson
+    - aeson-options
+    - bytestring
+    - containers
+    - data-default
+    - directory
+    - direct-sqlite
+    - disciplina-core
+    - disciplina-witness
+    - disciplina-educator
+    - exceptions
+    - filepath
+    - fmt
+    - interpolatedstring-perl6
+    - jose
+    - http-types
+    - lens
+    - loot-base
+    - loot-config
+    - loot-log
+    - loot-network
+    - mtl
+    - optparse-applicative
+    - o-clock
+    - reflection
+    - safe-exceptions >= 0.1.4
+    - serialise
+    - servant-auth-server
+    - servant-generic
+    - servant-server
+    - singleton-bool
+    - sqlite-simple
+    - template-haskell
+    - text
+    - text-format
+    - time
+    - QuickCheck
+    - unliftio
+    - wai
+    - wai-cors
+
+  tests:
+    disciplina-test:
+      <<: *test-common
+
+      build-tools:
+        - tasty-discover
+
+      dependencies:
+        - containers
+        - cryptonite
+        - data-default
+        - disciplina-core
+        - disciplina-witness
+        - disciplina-educator
+        - directory
+        - fmt
+        - generic-arbitrary
+        - hspec
+        - interpolatedstring-perl6
+        - lens
+        - loot-base
+        - loot-log
+        - safe-exceptions >= 0.1.4
+        - sqlite-simple
+        - stm
+        - tasty
+        - tasty-hspec
+        - text-format
+        - time
+        - QuickCheck
+        - unliftio
+
+executables:
+  dscp-multi-educator:
+    <<: *exec-common
+    source-dirs: exec
+    dependencies:
+      - disciplina-core
+      - disciplina-witness
+      - disciplina-educator
+      - disciplina-multi-educator
+      - loot-log
+      - optparse-applicative
