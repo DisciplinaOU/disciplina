@@ -23,13 +23,14 @@ module Dscp.MultiEducator.Launcher.Mode
 
 import Control.Lens (makeLenses)
 import qualified Data.Map as M
-import Loot.Base.HasLens (HasLens', lensOf)
+import Loot.Base.HasLens (HasLens, HasLens', lensOf)
 import Loot.Config (option, sub)
 import System.Directory (canonicalizePath, createDirectoryIfMissing)
 import System.FilePath.Posix ((</>))
 
 import Dscp.Config
 import Dscp.Crypto (mkPassPhrase)
+import Dscp.DB.CanProvideDB as DB
 import Dscp.DB.SQLite
 import qualified Dscp.Educator.Config as E
 import Dscp.Educator.Launcher.Marker (EducatorNode)
@@ -99,6 +100,10 @@ deriveHasLens 'mecResources ''MultiEducatorContext ''MultiEducatorResources
 deriveHasLens 'mecWitnessCtx ''MultiEducatorContext ''W.WitnessResources
 deriveHasLens 'mecWitnessCtx ''MultiEducatorContext ''W.WitnessVariables
 deriveHasLens 'mecWitnessCtx ''MultiEducatorContext ''NetServResources
+
+-- GHC does not understand 'deriveHasLens' for 'DB.Plugin' for some reason
+instance HasLens DB.Plugin MultiEducatorContext DB.Plugin where
+    lensOf = (lensOf @W.WitnessContext) . (lensOf @DB.Plugin)
 
 ----------------------------------------------------------------------------
 -- (Almost) Natural Transformation
