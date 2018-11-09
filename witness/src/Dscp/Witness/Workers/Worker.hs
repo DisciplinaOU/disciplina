@@ -87,7 +87,7 @@ blockUpdateWorker =
 
     processNewBlock nId btq block = do
         let header = bHeader block
-        tip <- runSdMRead getTipHeader
+        tip <- runSdMLocked getTipHeader
         let tipHash = headerHash tip
         if | hPrevHash header == tipHash -> applyNewBlock block
            | hDifficulty header > hDifficulty tip -> do
@@ -109,10 +109,11 @@ blockUpdateWorker =
             logInfo $ "Normalizing mempool by the way, lost transactions: "
                       +| listF (onlyLostTxs rejectedTxs (one $ bBody block)) |+ ""
 
-    applyManyBlocks blocks = do
-        tip <- runSdMRead getTipBlock
-        if (NE.head (unOldestFirst blocks) == tip)
-        then writingSDLock "apply many blocks" $ do
+    applyManyBlocks blocks =
+        writingSDLock "apply many blocks" $ do
+            tip <- runSdM getTipBlock
+            if (NE.head (unOldestFirst blocks) == tip)
+            then do
                 let blocks' = NE.tail $ unOldestFirst blocks
                 logDebug $ "Will attempt to apply blocks: " +|
                           listF' hashF (map headerHash blocks) |+ ""
@@ -121,7 +122,7 @@ blockUpdateWorker =
                 rejectedTxs <- normalizeMempool
                 logInfo $ "Normalized mempool, lost transactions: "
                           +| listF (onlyLostTxs rejectedTxs (map bBody blocks')) |+ ""
-        else logWarning "blockUpdateWorker: received sequence of blocks can't be applied"
+            else logWarning "blockUpdateWorker: received sequence of blocks can't be applied"
 
 ----------------------------------------------------------------------------
 -- Retranslator, input part

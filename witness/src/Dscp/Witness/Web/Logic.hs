@@ -21,16 +21,16 @@ import Fmt ((+|), (|+))
 
 import Dscp.Core
 import Dscp.Snowdrop
-import Dscp.Util (fromHex, nothingToThrow)
 import Dscp.Util
 import Dscp.Util.Concurrent.NotifyWait
 import Dscp.Witness.Config
 import Dscp.Witness.Launcher.Context (WitnessWorkMode)
 import Dscp.Witness.Logic
+import Dscp.Witness.Mempool
 import qualified Dscp.Witness.Relay as Relay
 import Dscp.Witness.SDLock
-import Dscp.Witness.Web.Error
 import Dscp.Witness.Web.Types
+import qualified Snowdrop.Util as SD
 
 ----------------------------------------------------------------------------
 -- Logic
@@ -49,7 +49,9 @@ submitUserTxAsync :: WitnessWorkMode ctx m => TxWitnessed -> m ()
 submitUserTxAsync tw =
     void . Relay.relayTx $ GMoneyTxWitnessed tw
 
-toBlockInfo :: HasWitnessConfig => Bool -> Block -> SdM BlockInfo
+toBlockInfo
+    :: HasWitnessConfig
+    => Bool -> Block -> SdM_ chgacc BlockInfo
 toBlockInfo includeTxs block = do
     nextHash <- resolveNext hh
     pure BlockInfo
@@ -75,12 +77,12 @@ toBlockInfo includeTxs block = do
     txTotalOutput (GPublicationTx _) = Coin 0
 
 toAccountInfo
-    :: WitnessWorkMode ctx m
+    :: HasWitnessConfig
     => BlocksOrMempool Account
     -> Maybe [WithBlock GTxWitnessed]
-    -> m AccountInfo
+    -> SdM_ chgacc AccountInfo
 toAccountInfo account txs = do
-    transactions <- runSdMRead $ mapM (mapM (fetchBlockInfo . fmap @WithBlock unGTxWitnessed)) txs
+    transactions <- mapM (mapM (fetchBlockInfo . fmap @WithBlock unGTxWitnessed)) txs
     pure AccountInfo
         { aiBalances = Coin . fromIntegral . aBalance <$> account
         , aiCurrentNonce = nonce
@@ -90,7 +92,9 @@ toAccountInfo account txs = do
   where
     nonce = aNonce $ bmTotal account
 
-fetchBlockInfo :: HasWitnessConfig => WithBlock a -> SdM (WithBlockInfo a)
+fetchBlockInfo
+    :: HasWitnessConfig
+    => WithBlock a -> SdM_ chgacc (WithBlockInfo a)
 fetchBlockInfo txWithBlock = do
     blockInfo <- mapM (toBlockInfo False) $ wbBlock txWithBlock
     pure WithBlockInfo
@@ -99,35 +103,37 @@ fetchBlockInfo txWithBlock = do
         }
 
 getBlocks :: WitnessWorkMode ctx m => Maybe Word64 -> Maybe Int -> m BlockList
-getBlocks mSkip mCount = do
-    (eBlocks, totalCount) <- runSdMRead $ do
-        eBlocks <- getBlocksFrom skip count
-        totalCount <- (+ 1) . unDifficulty . hDifficulty <$> getTipHeader
-        return (eBlocks, totalCount)
-    either (throwM . InternalError) (toBlockList totalCount <=< mapM (runSdMRead . toBlockInfo False) . reverse . toList) eBlocks
+getBlocks mSkip mCount = runSdMLocked $ do
+    blocks <- either (SD.throwLocalError . LEBlockAbsent) pure =<<
+               getBlocksFrom skip count
+    totalCount <- (+ 1) . unDifficulty . hDifficulty <$> getTipHeader
+    toBlockList totalCount =<< mapM (toBlockInfo False) (reverse $ toList blocks)
   where
     count = min 100 $ fromMaybe 100 mCount
     skip = fromMaybe 0 mSkip
     toBlockList blTotalCount blBlocks = pure BlockList{..}
 
-getBlockInfo :: WitnessWorkMode ctx m => HeaderHash -> m BlockInfo
-getBlockInfo hh =
-    runSdMRead (getBlockMaybe hh) >>=
-    nothingToThrow (LogicError $ LEBlockAbsent $ "Block " +| hh |+ " not found") >>=
-    runSdMRead . toBlockInfo True
+getBlockInfo
+    :: WitnessWorkMode ctx m
+    => HeaderHash -> m BlockInfo
+getBlockInfo hh = runSdMLocked $
+    getBlockMaybe hh >>=
+    nothingToLocalError (LEBlockAbsent $ "Block " +| hh |+ " not found") >>=
+    toBlockInfo True
 
 getAccountInfo :: WitnessWorkMode ctx m => Address -> Bool -> m AccountInfo
 getAccountInfo address includeTxs = do
     account <- readingSDLock $ do
-        blockAccount <- fromMaybe def <$> getAccountMaybe address
-        poolAccount  <- fromMaybe def <$> getMempoolAccountMaybe address
+        blockAccount <- runSdReadM $ fromMaybe def <$> getAccountMaybe address
+        poolAccount  <- runSdReadM $ fromMaybe def <$> getMempoolAccountMaybe address
         return BlocksOrMempool
               { bmConfirmed = blockAccount
               , bmTotal     = poolAccount }
+    -- TODO: remove this, same info can be found in an another place
     txs <- if includeTxs
-        then Just <$> getAccountTxs address
+        then runSdMLocked $ Just <$> getAccountTxs address
         else return Nothing
-    toAccountInfo account txs
+    runSdMLocked $ toAccountInfo account txs
 
 toPaginatedList :: (Show a, Show (Id a)) => HasId a => Int -> [a] -> PaginatedList d a
 toPaginatedList count allItems =
@@ -146,32 +152,29 @@ getTransactions
     :: (WitnessWorkMode ctx m)
     => Maybe Int -> Maybe TxId -> Maybe Address -> m TxList
 getTransactions mCount mFrom mAddress = do
-    runSdMRead . C.runConduit $
-        ourTxsSource
+    runSdReadMLocked $ C.runConduit $
+        maybe txsSource accountTxsSource mAddress (coerce mFrom)
             .| C.concatMap (mapM @WithBlock $ preview (_GMoneyTxWitnessed . twTxL))
-            .| C.mapM fetchBlockInfo
+            .| C.mapM (liftSdM . fetchBlockInfo)
             .| sinkTruncate count
   where
-    ourTxsSource = maybe txsSource accountTxsSource mAddress (coerce mFrom)
     count = min 100 $ fromMaybe 100 mCount
 
 getTransactionInfo :: WitnessWorkMode ctx m => GTxId -> m GTxInfo
-getTransactionInfo txId =
-    runSdMRead (getTxMaybe txId) >>=
-    nothingToThrow (LogicError . LETxAbsent $ "Transaction not found " +| txId |+ "") >>=
-    runSdMRead . fetchBlockInfo . fmap @WithBlock unGTxWitnessed
+getTransactionInfo txId = runSdMempoolLocked $
+    getTxWithBlock txId >>=
+    fetchBlockInfo . fmap @WithBlock unGTxWitnessed
 
 getPublications
     :: WitnessWorkMode ctx m
     => Maybe Int -> Maybe PublicationTxId -> Maybe Address -> m PublicationList
 getPublications mCount mFrom mEducator = do
-    runSdMRead . C.runConduit $
-        pubsSource
-            .| C.mapM fetchBlockInfo
+    runSdReadMLocked $ C.runConduit $
+        maybe publicationsSource educatorPublicationsSource mEducator mFrom
+            .| C.mapM (liftSdM . fetchBlockInfo)
             .| sinkTruncate count
   where
     count = min 100 $ fromMaybe 100 mCount
-    pubsSource = maybe publicationsSource educatorPublicationsSource mEducator mFrom
 
 -- | As we can't distinguish between different hashes, we have to check whether an entity exists.
 getHashType :: WitnessWorkMode ctx m => Text -> m HashIs
@@ -186,18 +189,15 @@ getHashType someHash = fmap (fromMaybe HashIsUnknown) . runMaybeT . asum $
     isBlock = is
         (const HashIsBlock)
         (fromHex @HeaderHash)
-        (runSdMRead . getBlockMaybe)
-
+        (runSdMempoolLocked . getBlockMaybe)
     isAddress = is
         (const HashIsAddress)
         addrFromText
-        getAccountMaybe
-
+        (runSdReadMLocked @'ChainAndMempool . getMempoolAccountMaybe)
     isTx = is
-        (distinguishTx . unGTxWitnessed . wbItem)
+        (distinguishTx . unGTxWitnessed)
         fromHex
-        (runSdMRead . getTxMaybe . GTxId)
-
+        (runSdMempoolLocked . getTxMaybe . GTxId)
     distinguishTx = \case
         GMoneyTx _ -> HashIsMoneyTx
         GPublicationTx _ -> HashIsPublicationTx

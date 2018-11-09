@@ -11,7 +11,9 @@ module Dscp.Witness.Logic.Traversals
     , getBlocksBefore
 
     , txsSource
+    , chainTxsSource
     , accountTxsSource
+    , chainPublicationsSource
     , publicationsSource
     , educatorPublicationsSource
     ) where
@@ -24,14 +26,16 @@ import qualified Data.Conduit.Combinators as C
 import qualified Data.List.NonEmpty as NE
 import Fmt ((+|), (|+))
 import qualified Snowdrop.Core as SD
-import qualified Snowdrop.Util as SD
 
 import Dscp.Core
 import Dscp.Snowdrop
 import Dscp.Util
 import Dscp.Witness.Config
+import Dscp.Witness.Launcher.Context
 import Dscp.Witness.Logic.Exceptions
 import Dscp.Witness.Logic.Getters
+import Dscp.Witness.Mempool
+import Dscp.Witness.SDLock
 
 ----------------------------------------------------------------------------
 -- One-direction traversals
@@ -199,18 +203,16 @@ getBlocksBefore depthDiff (headerHash -> newerH) = runExceptT $ do
     pure blocks
 
 -- | Retrieves transactions starting with the given one down the chain.
--- If no transaction is provided, transactions are retrieved starting from the
--- most recent ones.
-txsSource ::
-       HasWitnessConfig
-    => Maybe GTxId
-    -> C.ConduitT () (WithBlock GTxWitnessed) SdM ()
-txsSource = \case
-    Nothing -> lift getTipBlock >>= loadTxs Nothing
+-- If no transaction is provided, transactions are retrieved starting from the tip.
+chainTxsSource
+    :: (WitnessWorkMode ctx m, KnownSdReadMode mode, WithinReadSDLock)
+    => Maybe GTxId -> C.ConduitT () (WithBlock GTxWitnessed) (SdReadM mode m) ()
+chainTxsSource = \case
+    Nothing -> lift2xSdM getTipBlock >>= loadTxs Nothing
     Just gTxId -> do
-        (block, txIdx) <- lift $ do
-            TxBlockRef{..} <- gTxId `assertExists` LETxAbsent ("Can't get block ref for tx " <> show gTxId)
-            block <- nothingToError (SD.inj . LEMalformed $ "Can't get block " <> show tbrBlockRef)
+        (block, txIdx) <- lift2xSdM $ do
+            TxBlockRef{..} <- (TxBlockRefId gTxId) `assertExists` LETxAbsent ("Can't get block ref for tx " <> show gTxId)
+            block <- nothingToLocalError (LEMalformed $ "Can't get block " <> show tbrBlockRef)
                 =<< getBlockMaybe tbrBlockRef
             return (block, tbrTxIdx)
         loadTxs (Just txIdx) block
@@ -219,7 +221,7 @@ txsSource = \case
         -- last txs in the block go first
         C.yieldMany (reverse $ maybe id (take . succ) mIdx txs)
 
-        nextBlock <- lift . runMaybeT $
+        nextBlock <- lift2xSdM . runMaybeT $
             MaybeT (resolvePrevious block) >>= MaybeT . getBlockMaybe
         whenJust nextBlock (loadTxs Nothing)
       where
@@ -228,14 +230,16 @@ txsSource = \case
 
 -- | Get a list of all transactions for a given account.
 accountTxsSource
-    :: HasWitnessConfig
-    => Address -> Maybe GTxId -> C.ConduitT () (WithBlock GTxWitnessed) SdM ()
+    :: (WitnessWorkMode ctx m, KnownSdReadMode mode, WithinReadSDLock)
+    => Address
+    -> Maybe GTxId
+    -> C.ConduitT () (WithBlock GTxWitnessed) (SdReadM mode m) ()
 accountTxsSource address mStart =
-    loadTxs .| C.mapM getTx
+    loadTxs .| C.mapM (liftSdM . getTxWithBlock)
   where
     loadTxs = case mStart of
         Nothing ->
-            lift (SD.queryOne (TxsOf address)) >>=
+            lift2xSdM (SD.queryOne (TxsOf address)) >>=
             loadNextTx . map unLastTx
         Just start ->
             loadNextTx (Just start)
@@ -243,16 +247,55 @@ accountTxsSource address mStart =
         Nothing -> pass
         Just gTxId -> do
             C.yield gTxId
-            lift (SD.queryOne (TxHead address gTxId)) >>=
+            lift2xSdM (SD.queryOne (TxHead address gTxId)) >>=
                 loadNextTx . map unTxNext
 
--- | Retrieves private blocks starting with the given one down the chain.
--- If no transaction is provided, blocks are retrieved starting from the most
--- recent one.
-publicationsSource
-    :: HasWitnessConfig
+-- | Get all mempool transactions.
+mempoolTxsSource
+    :: (WitnessWorkMode ctx m, WithinReadSDLock)
+    => C.ConduitT () GTxWitnessed (SdReadM 'ChainAndMempool m) ()
+mempoolTxsSource = lift (lift $ readTxsMempool) >>= C.yieldMany . reverse
+
+-- | Get all transactions, from both chain and mempool, starting from the given one.
+txsSource
+    :: (WitnessWorkMode ctx m, WithinReadSDLock)
+    => Maybe GTxId
+    -> C.ConduitT () (WithBlock GTxWitnessed) (SdReadM 'ChainAndMempool m) ()
+txsSource Nothing = do
+    mempoolTxsSource .| C.map (WithBlock Nothing)
+    chainTxsSource Nothing
+txsSource (Just start) = do
+    lift2xSdM (SD.queryOne $ TxBlockRefId start) >>= \case
+        Just TxBlockRef{} ->
+            chainTxsSource (Just start)
+        Nothing -> do
+            mempoolTxsSource
+                .| do C.dropWhile ((/= start) . toGTxwId)
+                      ensureHasAtLeastOneTx
+                      C.map (WithBlock Nothing)
+            chainTxsSource Nothing
+  where
+    ensureHasAtLeastOneTx =
+        whenM C.null $
+            throwM (LogicError . LETxAbsent $ "Transaction not found: " <> show start)
+
+-- | Retrieves publication transaction starting with the given one down the chain.
+-- If no transaction is provided, blocks are retrieved starting from the tip.
+chainPublicationsSource
+    :: (WitnessWorkMode ctx m, KnownSdReadMode mode, WithinReadSDLock)
     => Maybe PublicationTxId
-    -> C.ConduitT () (WithBlock PublicationTx) SdM ()
+    -> C.ConduitT () (WithBlock PublicationTx) (SdReadM mode m) ()
+chainPublicationsSource mStart' = do
+    let mStart = coerce @(Maybe PublicationTxId) @(Maybe GTxId) mStart'
+    chainTxsSource mStart
+        .| C.concatMap (mapM @WithBlock $ preview (_GPublicationTxWitnessed . ptwTxL))
+
+-- | Retrieves publication transaction, both from chain and mempool, starting from the
+-- given one.
+publicationsSource
+    :: (WitnessWorkMode ctx m, WithinReadSDLock)
+    => Maybe PublicationTxId
+    -> C.ConduitT () (WithBlock PublicationTx) (SdReadM 'ChainAndMempool m) ()
 publicationsSource mStart' = do
     let mStart = coerce @(Maybe PublicationTxId) @(Maybe GTxId) mStart'
     txsSource mStart
@@ -263,29 +306,28 @@ publicationsSource mStart' = do
 -- If no transaction is provided, blocks are retrieved starting from the most
 -- recent one.
 educatorPublicationsSource
-    :: HasWitnessConfig
+    :: (WitnessWorkMode ctx m, KnownSdReadMode mode, WithinReadSDLock)
     => Address
     -> Maybe PublicationTxId
-    -> C.ConduitT () (WithBlock PublicationTx) SdM ()
+    -> C.ConduitT () (WithBlock PublicationTx) (SdReadM mode m) ()
 educatorPublicationsSource educator = \case
     Nothing -> do
-        mheader <- lift $ SD.queryOne (PublicationsOf educator)
+        mheader <- lift2xSdM $ SD.queryOne (PublicationsOf educator)
         whenJust mheader $ \(LastPublication header) -> do
-            ptxId <- lift $ header `assertExists` noPrivHeader header
+            ptxId <- lift2xSdM $ header `assertExists` noPrivHeader header
             loadChain ptxId
     Just ptxId -> loadChain ptxId
   where
     loadChain ptxId = do
-        PublicationData{ pdTx = ptx } <-
-            lift $ ptxId `assertExists` noPubTxId ptxId
-        mblock <- lift $ do
-            mBlockHash <- SD.queryOne (PublicationBlock ptxId)
-            mapM (getBlock . unPublicationBlockRef) mBlockHash
+        ptx <- lift2xSdM . fmap piTx $ ptxId `assertExists` noPubTxId ptxId
+        mblock <- lift2xSdM $ do
+            mBlockHash <- SD.queryOne (TxBlockRefId $ coerce ptxId)
+            mapM (getBlock . tbrBlockRef) mBlockHash
         C.yield $ WithBlock mblock ptx
 
         let prevHash = _pbhPrevBlock (ptHeader ptx)
         unless (prevHash == genesisHeaderHash) $
-            lift (prevHash `assertExists` noPrivHeader prevHash)
+            lift2xSdM (prevHash `assertExists` noPrivHeader prevHash)
             >>= loadChain
 
     noPrivHeader (h :: PrivateHeaderHash) =

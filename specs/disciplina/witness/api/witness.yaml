@@ -610,6 +610,7 @@ components:
             - InvalidFormat
             - MTxNoOutputs
             - MTxDuplicatedOutputs
+            - TransactionAlreadyExists
             - InsuffucientFees
             - AuthorDoesNotExist
             - SignatureIsCorrupted
@@ -625,6 +626,7 @@ components:
               * `InvalidFormat` - Failed to deserialise one of parameters.
               * `MTxNoOutputs` - Transaction has no outputs.
               * `MTxDuplicatedOutputs` - Transaction has duplicated outputs.
+              * `TransactionAlreadyExists` - Exactly the same transaction has been registered. Rarely this error may be transient, i.e. backend may fail to apply the transaction.
               * `InsufficientFees` - Input of transaction is too small to provide appropriate fees amount.
               * `SignatureIsCorrupted` - Bad signature provided.
               * `NotASingletonSelfUpdate` - Cannot send money to yourself more than once in transaction.

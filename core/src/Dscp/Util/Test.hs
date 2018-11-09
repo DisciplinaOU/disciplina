@@ -33,8 +33,9 @@ import Test.Hspec as T
 import Test.Hspec.QuickCheck as T (modifyMaxSuccess)
 import Test.QuickCheck as T (Arbitrary (..), Fixed (..), Gen, Property, Testable (..), conjoin,
                              cover, elements, expectFailure, forAll, frequency, infiniteList,
-                             infiniteListOf, ioProperty, label, listOf, listOf1, oneof, property,
-                             sublistOf, suchThat, suchThatMap, vectorOf, (.&&.), (===), (==>))
+                             infiniteListOf, ioProperty, label, listOf, listOf1, once, oneof,
+                             property, sublistOf, suchThat, suchThatMap, vectorOf, (.&&.), (===),
+                             (==>))
 import Test.QuickCheck (shuffle, sized)
 import qualified Test.QuickCheck as Q
 import Test.QuickCheck.Arbitrary.Generic as T (genericArbitrary, genericShrink)
@@ -187,6 +188,10 @@ counterexample desc prop = Q.counterexample (toString desc) prop
 -- | Generate smaller amounts of data.
 pickSmall :: (Monad m, Show a) => Gen a -> PropertyM m a
 pickSmall = pick . Q.resize 5
+
+-- | Decrease required number of successful runs of the test case.
+divideMaxSuccessBy :: Int -> SpecWith a -> SpecWith a
+divideMaxSuccessBy times = modifyMaxSuccess $ max 1 . (`div` times)
 
 ----------------------------------------------------------------------------
 -- CLI interface testing

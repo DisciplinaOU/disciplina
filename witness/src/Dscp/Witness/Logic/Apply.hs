@@ -18,7 +18,6 @@ import qualified Snowdrop.Execution as SD
 import qualified Snowdrop.Util as SD
 
 import Dscp.Core
-import Dscp.Crypto
 import Dscp.DB.CanProvideDB (providePlugin)
 import Dscp.Snowdrop
 import qualified Dscp.Snowdrop.Storage.Avlp as Avlp
@@ -66,15 +65,9 @@ applyBlockRaw applyFees toVerify block = do
 
             addTx (idx, gTx) = SD.modifyRwCompChgAccum $ SD.CAMChange $ SD.ChangeSet $
                 M.fromList $
-                    [ ( SD.inj . toGTxId . unGTxWitnessed $ gTx
-                      , SD.New . TxVal $ TxBlockRef (headerHash block) idx
+                    [ ( SD.inj . TxBlockRefId . toGTxId . unGTxWitnessed $ gTx
+                      , SD.New . TxBlockVal $ TxBlockRef (headerHash block) idx
                       )
-                    ] ++
-                    [ ( SD.inj . PublicationBlock $ hash pubTx
-                      , SD.New . SD.inj $ PublicationBlockRef (headerHash block)
-                      )
-                    | GPublicationTxWitnessed pubTxw <- pure gTx
-                    , let pubTx = ptwTx pubTxw
                     ]
           in do
               Avlp.initAVLStorage @AvlHash plugin initAccounts

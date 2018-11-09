@@ -17,6 +17,7 @@ module Dscp.Snowdrop.Types
     , AccountException(..)
     , _MTxNoOutputs
     , _MTxDuplicateOutputs
+    , _TransactionAlreadyExists
     , _InsufficientFees
     , _SignatureIsMissing
     , _SignatureIsCorrupted
@@ -38,8 +39,7 @@ import Data.Text.Buildable (Buildable (..))
 import Fmt (build, (+|), (|+))
 import qualified Text.Show
 
-import Dscp.Core (unsafeMkCoin)
-import Dscp.Core.Foundation (Address, Nonce)
+import Dscp.Core
 
 -- | Transaction type for publication.
 data PublicationTxTypeId
@@ -85,6 +85,8 @@ data AccountTxTypeId = AccountTxTypeId deriving (Eq, Ord, Show, Generic)
 data AccountException
     = MTxNoOutputs
     | MTxDuplicateOutputs
+    | TransactionAlreadyExists
+      { taeTxId :: Text }
     | InsufficientFees
       { aeExpectedFees :: Integer, aeActualFees :: Integer }
     | SignatureIsMissing
@@ -116,6 +118,8 @@ instance Buildable AccountException where
             "Transaction has no outputs"
         MTxDuplicateOutputs ->
             "Duplicated transaction outputs"
+        TransactionAlreadyExists{..} ->
+            "Transaction " +| taeTxId |+ " has already been registered"
         InsufficientFees{..} ->
             "Amount of money left for fees in transaction is not enough, \
              \expected " +| unsafeMkCoin aeExpectedFees |+ ", got " +| unsafeMkCoin aeActualFees |+ ""
@@ -133,7 +137,7 @@ instance Buildable AccountException where
         PaymentMustBePositive ->
             "Spent amount of money must be positive"
         ReceiverOnlyGetsMoney ->
-            "Improper changes of receiver account (its is only possible to add \
+            "Improper changes of receiver account (it is only possible to add \
             \tokens)"
         ReceiverMustIncreaseBalance ->
             "One of receivers' balance decreased or didn't change"

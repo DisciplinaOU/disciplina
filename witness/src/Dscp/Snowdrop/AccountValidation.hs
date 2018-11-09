@@ -12,6 +12,7 @@ module Dscp.Snowdrop.AccountValidation
        , requirePart
        , assertSigned
        , assertExists
+       , nothingToLocalError
        , check
        ) where
 
@@ -169,6 +170,11 @@ assertExists ::
     -> ERoComp e id value ctx a
 assertExists thing message =
     maybe (throwLocalError message) pure =<< queryOne thing
+
+nothingToLocalError
+    :: HasReview e e1
+    => e1 -> Maybe a -> ERoComp e id value ctx a
+nothingToLocalError err mThing = maybe (throwLocalError err) pure mThing
 
 validateSaneDeparture
   :: forall ctx

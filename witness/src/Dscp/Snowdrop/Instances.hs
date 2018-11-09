@@ -28,6 +28,7 @@ instance ToServantErr AccountException where
     toServantErrNoBody = \case
         MTxNoOutputs{}                -> err400
         MTxDuplicateOutputs{}         -> err400
+        TransactionAlreadyExists{}    -> err403
         InsufficientFees{}            -> err400
         SignatureIsMissing{}          -> err500
         SignatureIsCorrupted{}        -> err400

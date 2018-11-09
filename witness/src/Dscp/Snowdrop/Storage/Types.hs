@@ -1,7 +1,9 @@
 module Dscp.Snowdrop.Storage.Types
-    ( TxBlockRef (..)
-    , PublicationBlockRef (..)
+    ( TxBlockRefId (..)
+    , TxBlockRef (..)
 
+    , TxItself (..)
+    , tiTx
     , TxsOf (..)
     , LastTx (..)
     , TxHead (..)
@@ -12,7 +14,8 @@ module Dscp.Snowdrop.Storage.Types
     , PublicationBlock (..)
     , PublicationHead (..)
     , PublicationNext (..)
-    , PublicationData (..)
+    , PublicationItself (..)
+    , piTx
 
     , NextBlockOf (..)
     , NextBlock (..)
@@ -24,6 +27,12 @@ import Fmt ((+|), (|+))
 
 import Dscp.Core.Foundation
 
+newtype TxBlockRefId = TxBlockRefId GTxId
+    deriving (Eq, Ord, Show, Generic)
+
+instance Buildable TxBlockRefId where
+    build (TxBlockRefId txId) = "TxBlockRefId { " +| txId |+ " }"
+
 -- | Transaction position in blockchain
 data TxBlockRef = TxBlockRef
     { tbrBlockRef :: HeaderHash
@@ -31,14 +40,15 @@ data TxBlockRef = TxBlockRef
     }
     deriving (Eq, Ord, Show, Generic)
 
--- | Points to public block which contains given publication.
-newtype PublicationBlockRef = PublicationBlockRef
-    { unPublicationBlockRef :: HeaderHash
+newtype TxItself = TxItself
+    { tiTw :: TxWitnessed
     } deriving (Eq, Ord, Show, Generic)
 
-instance Buildable PublicationBlockRef where
-    build (PublicationBlockRef h) =
-        "PublicationBlockRef { " +| h |+ " }"
+tiTx :: TxItself -> Tx
+tiTx = twTx . tiTw
+
+instance Buildable TxItself where
+    build (TxItself tx) = "TxItself { " +| twTx tx |+ " }"
 
 -- | Account transaction linked-list storage structure.
 -- |
@@ -111,14 +121,16 @@ data PublicationNext
     deriving (Eq, Ord, Show, Generic)
 
 -- | Publication taken by id.
-data PublicationData = PublicationData
-    { pdTx   :: PublicationTx
-    , pdTxId :: PublicationTxId
+newtype PublicationItself = PublicationItself
+    { piTw   :: PublicationTxWitnessed
     } deriving (Eq, Ord, Show, Generic)
 
-instance Buildable PublicationData where
-    build PublicationData{..} =
-        "PublicationData {" +| pdTxId |+ " }"
+piTx :: PublicationItself -> PublicationTx
+piTx = ptwTx . piTw
+
+instance Buildable PublicationItself where
+    build pd =
+        "PublicationItself {" +| piTx pd |+ " }"
 
 -- | Key/value types for nextBlock chain storage
 newtype NextBlockOf = NextBlockOf { unNextBlockOf :: HeaderHash }
@@ -131,8 +143,9 @@ newtype NextBlock = NextBlock { unNextBlock :: HeaderHash }
 -- Instances
 ----------------------------------------------------------------------------
 
+instance Serialise TxBlockRefId
 instance Serialise TxBlockRef
-instance Serialise PublicationBlockRef
+instance Serialise TxItself
 instance Serialise LastTx
 instance Serialise TxsOf
 instance Serialise TxNext
@@ -142,6 +155,6 @@ instance Serialise PublicationsOf
 instance Serialise PublicationNext
 instance Serialise PublicationHead
 instance Serialise PublicationBlock
-instance Serialise PublicationData
+instance Serialise PublicationItself
 instance Serialise NextBlockOf
 instance Serialise NextBlock
