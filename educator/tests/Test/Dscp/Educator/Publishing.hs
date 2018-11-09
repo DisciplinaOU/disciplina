@@ -31,7 +31,7 @@ spec_Publishing = describe "Private blocks publishing" $ do
                 >>= bool pass (error "Extra mempool update")
             return block
 
-        tip <- lift . runSdMempoolRead $ getPrivateTipHash (skAddress sk)
+        tip <- lift . runSdMempoolLocked $ getPrivateTipHash (skAddress sk)
         return $ tip === hash block
 
     it "Several blocks are successfully published by worker" $ educatorPropertyM $ do
@@ -48,5 +48,5 @@ spec_Publishing = describe "Private blocks publishing" $ do
             return blocks
 
         -- we have tests on publication separately, so just comparing tips
-        tip <- lift . runSdMempoolRead $ getPrivateTipHash (skAddress sk)
+        tip <- lift . runSdMempoolLocked $ getPrivateTipHash (skAddress sk)
         return $ tip === hash (last blocks)

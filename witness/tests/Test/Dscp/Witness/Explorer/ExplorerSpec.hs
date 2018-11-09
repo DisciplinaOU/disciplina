@@ -34,7 +34,7 @@ createAndSubmitPub
 createAndSubmitPub genSecret = do
     sk <- pick $ mkSecretKeyData <$> genSecret
     sig <- pick arbitrary
-    lastHeaderHash <- lift . runSdMempol $ getPrivateTipHash (skAddress sk)
+    lastHeaderHash <- lift . runSdMempool $ getPrivateTipHash (skAddress sk)
     let ptHeader = PrivateBlockHeader
             { _pbhPrevBlock = lastHeaderHash
             , _pbhBodyProof = sig
