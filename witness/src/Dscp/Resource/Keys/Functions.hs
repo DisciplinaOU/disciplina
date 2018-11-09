@@ -5,7 +5,6 @@
 module Dscp.Resource.Keys.Functions
     ( toKeyfileContent
     , fromKeyfileContent
-    , mkStore
     , genStore
     , readStore
     , linkStore
@@ -26,7 +25,7 @@ import Dscp.Resource.AppDir
 import Dscp.Resource.Keys.Error (KeyInitError (..), rewrapKeyIOErrors)
 import Dscp.Resource.Keys.Types (BaseKeyParams (..), CommitteeParams (..), KeyJson (..),
                                  KeyResources (..), KeyfileContent)
-import Dscp.System (mode600, setMode, whenPosix, checkFileMode)
+import Dscp.System (checkFileMode, mode600, setMode, whenPosix)
 import Dscp.Util (leftToThrow)
 import Dscp.Util.Aeson (CustomEncoding (..), Versioned (..))
 
@@ -65,10 +64,6 @@ storePath BaseKeyParams{..} appDir nodeNameP =
   where
     defPath = appDir </> (nodeNameP |+ ".key")
 
--- | Make store from secret key.
-mkStore :: SecretKey -> KeyResources n
-mkStore sk = KeyResources sk (toPublic sk)
-
 -- | Generate key resources with respect to given committe parameters if
 -- specified, otherwise randomly.
 genStore ::
@@ -76,11 +71,11 @@ genStore ::
     => Maybe CommitteeParams
     -> m (KeyResources n)
 genStore comParamsM = do
-    (_krSecretKey, _krPublicKey) <-
+    _krSecretKeyData <-
         case comParamsM of
           Nothing -> do
               logInfo "Generating random key"
-              runSecureRandom keyGen
+              secretKeyDataFromPair <$> runSecureRandom keyGen
           Just (CommitteeParamsOpen i) -> do
               logInfo "Creating open committee key"
               sec <- case gcGovernance (giveL @CoreConfig @GenesisConfig) of
@@ -93,7 +88,7 @@ genStore comParamsM = do
                                        "Params were passed for open committee, but " <>
                                        "config specifies: " <> show x
               let sk = committeeDerive sec i
-              pure (sk, toPublic sk)
+              pure (mkSecretKeyData sk)
           Just (CommitteeParamsClosed {..}) -> do
               logInfo "Creating closed committee key"
               let addrs = case gcGovernance (giveL @CoreConfig @GenesisConfig) of
@@ -107,7 +102,7 @@ genStore comParamsM = do
               when (mkAddr pk `notElem` addrs) $
                   throwM $ SecretConfMismatch $ "Provided secret and index doesn't " <>
                                                 "belong to the list of addrs"
-              pure (sk,pk)
+              pure $ secretKeyDataFromPair (sk,pk)
     return KeyResources{..}
 
 -- | Read store under given path.
@@ -122,7 +117,7 @@ readStore path pp = do
         liftIO $ LBS.readFile path
     Versioned mid <- eitherDecode' @KeyfileContent content
         & leftToThrow (SecretParseError . toText)
-    mkStore <$> fromSecretJson pp mid
+    KeyResources . mkSecretKeyData <$> fromSecretJson pp mid
 
 -- | Write given secret to store.
 writeStoreDumb
@@ -130,7 +125,7 @@ writeStoreDumb
 writeStoreDumb path pp store =
     LBS.writeFile path $
     encode @KeyfileContent $
-    Versioned $ toSecretJson pp (_krSecretKey store)
+    Versioned $ toSecretJson pp (skSecret $ _krSecretKeyData store)
 
 -- | Write given secret to store, setting appropriate access mode.
 writeStore

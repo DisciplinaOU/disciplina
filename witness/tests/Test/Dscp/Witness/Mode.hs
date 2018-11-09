@@ -26,6 +26,8 @@ import Loot.Log (Level (Warning), Logging (..))
 
 import Dscp.Core
 import Dscp.Crypto
+import Dscp.DB.CanProvideDB as DB
+import Dscp.DB.CanProvideDB.Pure as Pure
 import Dscp.Resource.Keys
 import Dscp.Rio
 import Dscp.Snowdrop
@@ -33,8 +35,6 @@ import Dscp.Util
 import Dscp.Util.Test
 import Dscp.Web.Metrics
 import Dscp.Witness
-import Dscp.DB.CanProvideDB as DB
-import Dscp.DB.CanProvideDB.Pure as Pure
 
 ----------------------------------------------------------------------------
 -- Test witness mode
@@ -145,8 +145,7 @@ runWitnessTestMode action =
         _twcSDLock     <- newSDLock
         _twcRelayState <- newRelayState
         _twcKeys       <- genStore (Just $ CommitteeParamsOpen 0)
-        _twcMempoolVar <- newMempoolVar (_krPublicKey _twcKeys)
-
+        _twcMempoolVar <- newMempoolVar (_twcKeys ^. krPublicKey)
         let ctx = TestWitnessCtx{..}
 
         runRIO ctx $ do

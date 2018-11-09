@@ -121,7 +121,7 @@ spec = describe "Block validation + application" $ do
     it "Block slot only increases over time" $ witnessProperty $ do
         _ <- stop $ pendingWith "To be resolved in [DSCP-261]"
 
-        issuer <- lift $ getSecretKey @WitnessNode
+        issuer <- lift $ ourSecretKey @WitnessNode
         n <- pick $ choose (2, 5)
         -- going to modify block before the last one with too high slotId
         let issuerAddr = mkAddr $ toPublic issuer

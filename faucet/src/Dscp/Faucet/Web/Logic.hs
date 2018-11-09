@@ -39,7 +39,7 @@ faucetTransferMoneyTo :: FaucetWorkMode ctx m => Address -> m TransferMoneyRespo
 faucetTransferMoneyTo dest = do
     ensureFirstGift dest
 
-    sk <- getSecretKeyData @FaucetApp
+    sk <- ourSecretKeyData @FaucetApp
     let source = skAddress sk
 
     wc <- views (lensOf @WitnessClient) (hoistWitnessClient liftIO)

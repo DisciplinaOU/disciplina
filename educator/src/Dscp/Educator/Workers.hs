@@ -34,7 +34,7 @@ makePublicationTx
     :: CombinedWorkMode ctx m
     => PrivateBlockHeader -> m PublicationTxWitnessed
 makePublicationTx header = do
-    sk <- getSecretKeyData @EducatorNode
+    sk <- ourSecretKeyData @EducatorNode
     let tx = PublicationTx
             { ptAuthor = skAddress sk
             , ptFeesAmount = unFees $ calcFeePub (fcPublication feeConfig) header
