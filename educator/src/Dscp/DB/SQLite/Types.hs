@@ -10,14 +10,10 @@ module Dscp.DB.SQLite.Types
        , SQLiteDB (..)
        , SQLiteParams (..)
        , sdpModeL
-
-         -- * Educator schema
-       , TxBlockIdx (..)
-       , intTxBlockIdx
        ) where
 
 import Control.Concurrent.Chan (Chan)
-import Control.Lens (Prism', makeLensesWith, makePrisms, prism)
+import Control.Lens (makeLensesWith, makePrisms)
 import Data.Aeson (FromJSON (..))
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveFromJSON)
@@ -79,25 +75,3 @@ instance FromJSON SQLiteDBMode where
     parseJSON = fmap maybeToSQLiteDBLoc . parseJSON
 
 deriveFromJSON defaultOptions ''SQLiteParams
-
-----------------------------------------------------------
--- Educator schema
-----------------------------------------------------------
-
--- | Schema internal: idx of transaction within block.
-data TxBlockIdx
-    = TxBlockIdx Word32
-    | TxInMempool
-    deriving (Eq, Show)
-
--- | Convert between 'TxBlockIdx' and true index which can be used in database.
-intTxBlockIdx :: Prism' Int TxBlockIdx
-intTxBlockIdx = prism toInt fromInt
-  where
-    toInt = \case
-        TxBlockIdx idx -> fromIntegral idx
-        TxInMempool    -> -1
-    fromInt idx
-        | idx >= 0 = Right $ TxBlockIdx (fromIntegral idx)
-        | idx == -1 = Right $ TxInMempool
-        | otherwise = Left idx

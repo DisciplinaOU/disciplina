@@ -18,6 +18,7 @@ module Dscp.Educator.Web.Student.Types
     , studentLiftAssignment
     , studentLiftSubmission
     , signedSubmissionToRequest
+    , studentSubmissionInfoFromRow
     ) where
 
 import Data.Aeson.Options (defaultOptions)
@@ -26,6 +27,8 @@ import Fmt (blockListF, build, (+|), (|+))
 
 import Dscp.Core
 import Dscp.Crypto
+import Dscp.DB.SQLite.Schema
+import Dscp.DB.SQLite.Util
 import Dscp.Educator.Web.Types
 import Dscp.Util
 import Dscp.Util.Servant (ForResponseLog (..), buildShortResponseList)
@@ -67,14 +70,6 @@ saDocumentType :: AssignmentStudentInfo -> DocumentType
 saDocumentType = documentType . aiContentsHash
 
 ---------------------------------------------------------------------------
--- ResponseCase instances
----------------------------------------------------------------------------
-
-type instance ResponseCase 'StudentTag Course     = CourseStudentInfo
-type instance ResponseCase 'StudentTag Assignment = AssignmentStudentInfo
-type instance ResponseCase 'StudentTag Submission = SubmissionStudentInfo
-
----------------------------------------------------------------------------
 -- Simple conversions
 ---------------------------------------------------------------------------
 
@@ -107,6 +102,15 @@ signedSubmissionToRequest sigSub =
         , nsContentsHash = _sContentsHash submission
         , nsWitness = _ssWitness sigSub
         }
+
+studentSubmissionInfoFromRow :: (SubmissionRow, Maybe TransactionRow) -> SubmissionStudentInfo
+studentSubmissionInfoFromRow (SubmissionRow{..}, mtx) =
+    SubmissionStudentInfo
+    { siHash = srHash
+    , siContentsHash = srContentsHash
+    , siAssignmentHash = unpackPk srAssignment
+    , siGrade = fmap gradeInfoFromRow mtx
+    }
 
 ---------------------------------------------------------------------------
 -- Buildable instances

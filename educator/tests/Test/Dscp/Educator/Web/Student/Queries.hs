@@ -323,7 +323,7 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
                 _ <- createAssignment assignment1
                 _ <- enrollStudentToCourse student1 course
                 _ <- setStudentAssignment student1 (hash assignment1)
-                assignments <- studentGetAllAssignments student1
+                assignments <- studentGetAssignments student1 def
                 return $ all (isNothing . aiLastSubmission) assignments
 
         it "Returns existing assignment properly and only related to student" $
@@ -339,7 +339,7 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
                 _ <- createAssignment needlessAssignment
                 _ <- setStudentAssignment student1 assignmentH
 
-                res <- studentGetAllAssignments student1
+                res <- studentGetAssignments student1 def
                 return $ res === one AssignmentStudentInfo
                     { aiHash = hash assignment
                     , aiCourseId = _aCourseId assignment
@@ -367,8 +367,8 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
                     let assignH = hash assignment
                     void $ setStudentAssignment student1 assignH
 
-                assignments <- commonGetAssignments StudentCase
-                        def{ afCourse = courseF, afStudent = Just student1, afDocType = docTypeF, afIsFinal = isFinalF }
+                assignments <- studentGetAssignments student1
+                        def{ afCourse = courseF, afDocType = docTypeF, afIsFinal = isFinalF }
 
                 let assignments' =
                         applyFilterOn aiCourseId courseF $
@@ -412,7 +412,7 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
 
                 lift $ prepareAndCreateSubmissions env
 
-                assignments <- lift $ studentGetAllAssignments student
+                assignments <- lift $ studentGetAssignments student def
                 let lastSubs = map aiLastSubmission assignments
                     expectedSubmissions =
                         map hash $
@@ -468,7 +468,7 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
 
                 lift $ prepareAndCreateSubmission env
 
-                res <- lift $ studentGetAllSubmissions owner1
+                res <- lift $ studentGetSubmissions owner1 def
                 return $ res === one SubmissionStudentInfo
                     { siHash = hash someSubmission
                     , siContentsHash = _sContentsHash someSubmission
@@ -491,12 +491,12 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
                       subToDel = tiOne $ cteSignedSubmissions env
 
                   prepareAndCreateSubmission env
-                  subBefore <- studentGetAllSubmissions student
+                  subBefore <- studentGetSubmissions student def
 
                   let submissionToDel = _ssSubmission subToDel
                   let submissionToDelH = hash submissionToDel
                   commonDeleteSubmission submissionToDelH (Just student)
-                  subAfter <- studentGetAllSubmissions student
+                  subAfter <- studentGetSubmissions student def
                   let expected =
                           filter (\s -> siHash s /= submissionToDelH) subBefore
 
@@ -513,7 +513,7 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
                 _ <- createTransaction $
                      PrivateTx sigSub gA someTime
 
-                throwsPrism (_SemanticError . _DeletingGradedSubmission) $ do
+                throwsPrism (_SemanticError . _DeletingGradedSubmission) $
                      commonDeleteSubmission (hash sub) (Just student)
 
         it "Can not delete other student's submission" $
@@ -555,7 +555,7 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
                 transactW $ prepareForSubmissions env
                 void $ studentMakeSubmissionVerified student submissionReq
 
-                res <- invoke $ studentGetAllSubmissions student
+                res <- invoke $ studentGetSubmissions student def
                 let submission = _ssSubmission sigSub
                 return $ res === [studentLiftSubmission submission Nothing]
 
@@ -589,3 +589,20 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
                 transactW $ prepareForSubmissions env
                 fmap property $ throwsPrism (_BadSubmissionSignature . _SubmissionSignatureInvalid) $
                     studentMakeSubmissionVerified student newSubmission
+
+
+    describe "misc" $ do
+        it "isPositiveGrade ~ isPositiveGradeQ" $ educatorPropertyM $ do
+            env <- pick $ genCoreTestEnv simpleCoreTestParams
+            let txs = tiList $ ctePrivateTxs env
+
+            lift . transactW $ prepareAndCreateTransactions env
+
+            positiveGrades <- lift . invoke $ runSelect . select $ do
+                privateTx <- all_ (esTransactions educatorSchema)
+                let grade = trGrade privateTx
+                guard_ (isPositiveGradeQ grade)
+                return grade
+            let positiveGrades' = filter isPositiveGrade $ map _ptGrade txs
+
+            return $ sort positiveGrades === sort positiveGrades'

@@ -11,9 +11,9 @@
 
 begin transaction;
 
--- Creating 'Courses' table.
+-- Creating 'courses' table.
 --
-create table if not exists Courses (
+create table if not exists courses (
 
     -- Sqlite3 will force ascending primary key to be non-null, replacing
     --  null with autoincremented key (while sqlite2 won't).
@@ -22,22 +22,22 @@ create table if not exists Courses (
     desc  TEXT     not null
 );
 
--- Creating 'Subjects' table.
+-- Creating 'subjects' table.
 --
-create table if not exists Subjects (
-    id         INTEGER  not null,
-    course_id  INTEGER  not null,
-    desc       TEXT     not null,
+create table if not exists subjects (
+    id          INTEGER  not null,
+    course__id  INTEGER  not null,
+    desc        TEXT     not null,
 
-    primary key (id, course_id),
-    foreign key (course_id) references Courses (id)
+    primary key (id, course__id),
+    foreign key (course__id) references courses (id)
 );
 
-create index if not exists Subject_course_ids on Subjects (course_id);
+create index if not exists subject_course_ids on subjects (course__id);
 
--- Creating 'Students' table.
+-- Creating 'students' table.
 --
-create table if not exists Students (
+create table if not exists students (
     -- The "primary key" doesn't make field non null in sqlite.
     --
     addr  BLOB  not null,
@@ -46,127 +46,127 @@ create table if not exists Students (
 
 ) without rowid;
 
--- Creating 'StudentCourses' table.
+-- Creating 'student_courses' table.
 --
--- [Appears to be] many-to-many ref between Students and Courses.
+-- [Appears to be] many-to-many ref between students and courses.
 --
-create table if not exists StudentCourses (
-    student_addr  BLOB     not null,
-    course_id     INTEGER  not null,
+create table if not exists student_courses (
+    __addr  BLOB     not null,
+    __id    INTEGER  not null,
 
     -- Composite primary.
     --
-    primary key (student_addr, course_id),
+    primary key (__addr, __id),
 
-    foreign key (student_addr) references Students (addr),
-    foreign key (course_id)    references Courses  (id)
+    foreign key (__addr) references students (addr),
+    foreign key (__id)   references courses  (id)
 
 ) without rowid;
 
-create index if not exists StudentCourses_student_addr on StudentCourses (student_addr);
-create index if not exists StudentCourses_course_id    on StudentCourses (course_id);
+create index if not exists student_courses_student_addr on student_courses (__addr);
+create index if not exists student_courses_course_id    on student_courses (__id);
 
--- Creating 'Assignments' table.
+-- Creating 'assignments' table.
 --
-create table if not exists Assignments (
+create table if not exists assignments (
     hash           BLOB     not null,
-    course_id      INTEGER  not null,
+    course__id     INTEGER  not null,
     contents_hash  BLOB     not null,
     type           INTEGER  not null,
     desc           TEXT     not null,
 
     primary key (hash),
-    foreign key (course_id) references Courses(id)
+    foreign key (course__id) references courses(id)
 
 ) without rowid;
 
-create index if not exists Assigments_course_id on Assignments (course_id);
+create index if not exists assigments_course_id on assignments (course__id);
 
--- Creating 'StudentAssignments' table.
+-- Creating 'student_assignments' table.
 --
--- [Appears to be] many-to-many ref between Students and Assigments.
+-- [Appears to be] many-to-many ref between students and Assigments.
 --
-create table if not exists StudentAssignments (
-    student_addr     BLOB  not null,
-    assignment_hash  BLOB  not null,
+create table if not exists student_assignments (
+    __addr     BLOB  not null,
+    __hash  BLOB  not null,
 
-    primary key (student_addr, assignment_hash),
+    primary key (__addr, __hash),
 
-    foreign key (student_addr)    references Students    (addr)
-    foreign key (assignment_hash) references Assignments (hash)
+    foreign key (__addr) references students    (addr)
+    foreign key (__hash) references assignments (hash)
 
 ) without rowid;
 
-create index if not exists StudentAssigments_student_addr    on StudentAssignments (student_addr);
-create index if not exists StudentAssigments_assignment_hash on StudentAssignments (assignment_hash);
+create index if not exists student_assigments_student_addr    on student_assignments (__addr);
+create index if not exists student_assigments_assignment_hash on student_assignments (__hash);
 
--- Creating 'Submissions' table.
+-- Creating 'submissions' table.
 --
-create table if not exists Submissions (
-    hash             BLOB     not null,
-    student_addr     BLOB     not null,
-    assignment_hash  BLOB     not null,
-    contents_hash    BLOB     not null,
-    signature        BLOB     not null,
-    creation_time    NUMERIC  not null,
+create table if not exists submissions (
+    hash             BLOB      not null,
+    student__addr    BLOB      not null,
+    assignment__hash BLOB      not null,
+    contents_hash    BLOB      not null,
+    signature        BLOB      not null,
+    creation_time    TIMESTAMP not null,
 
     primary key (hash),
 
-    foreign key (student_addr)    references Students    (addr)
-    foreign key (assignment_hash) references Assignments (hash)
+    foreign key (student__addr)    references students    (addr)
+    foreign key (assignment__hash) references assignments (hash)
 
 ) without rowid;
 
-create index if not exists Submissions_student_addr    on Submissions (student_addr);
-create index if not exists Submissions_assignment_hash on Submissions (assignment_hash);
+create index if not exists submissions_student_addr    on submissions (student__addr);
+create index if not exists submissions_assignment_hash on submissions (assignment__hash);
 
--- Creating 'Transactions' table.
+-- Creating 'transactions' table.
 --
-create table if not exists Transactions (
-    hash             BLOB     not null,
-    submission_hash  BLOB     not null,
-    grade            INTEGER  not null,
-    time             TIME     not null,
-    idx              INTEGER  not null,    -- Index inside a block. -1 for every mempool transaction.
+create table if not exists transactions (
+    hash             BLOB      not null,
+    submission__hash BLOB      not null,
+    grade            INTEGER   not null,
+    creation_time    TIMESTAMP not null,
+    idx              INTEGER   not null,    -- Index inside a block. -1 for every mempool transaction.
 
     primary key (hash),
-    foreign key (submission_hash) references Submissions(hash) on delete restrict
+    foreign key (submission__hash) references submissions(hash) on delete restrict
 
 ) without rowid;
 
-create index if not exists Transactions_submission_hash on Transactions (submission_hash);
+create index if not exists transactions_submission_hash on transactions (submission__hash);
 
--- Creating 'Blocks' table.
+-- Creating 'blocks' table.
 -- We need `idx` field to be able to perform queries like "get N last blocks" efficiently.
-create table if not exists Blocks (
-    idx        INTEGER          ,
-    hash       BLOB     not null,
-    time       TIME     not null,
-    prev_hash  BLOB     null,
-    atg_delta  BLOB     not null,
-    mroot      BLOB     not null,
-    mtree      BLOB     not null,
+create table if not exists blocks (
+    idx           INTEGER          ,
+    hash          BLOB      not null,
+    creation_time TIMESTAMP not null,
+    prev_hash     BLOB      null,
+    atg_delta     BLOB      not null,
+    merkle_root   BLOB      not null,
+    merkle_tree   BLOB      not null,
 
     primary key (idx)
 
 ) without rowid;
 
-create index if not exists Blocks_hash on Blocks (hash);
-create index if not exists Blocks_prev_hash on Blocks (prev_hash);
+create index if not exists blocks_hash on blocks (hash);
+create index if not exists blocks_prev_hash on blocks (prev_hash);
 
--- Creating 'BlocksTxs' table.
+-- Creating 'blocks_txs' table.
 --
-create table if not exists BlockTxs (
-    blk_idx  INTEGER  not null,
-    tx_hash  BLOB     not null,
+create table if not exists block_txs (
+    __idx  INTEGER  not null,
+    __hash  BLOB    not null,
 
-    primary key (tx_hash),  -- A transaction can belong only to one block
+    primary key (__hash),  -- A transaction can belong only to one block
 
-    foreign key (blk_idx) references Blocks      (idx),
-    foreign key (tx_hash) references Transactions(hash)
+    foreign key (__idx) references  blocks      (idx),
+    foreign key (__hash) references transactions(hash)
 
 ) without rowid;
 
-create index if not exists BlockTxs_blk_idx on BlockTxs (blk_idx);
+create index if not exists block_txs_blk_idx on block_txs (__idx);
 
 commit;

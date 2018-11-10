@@ -10,11 +10,10 @@ import Test.QuickCheck.Monadic (pick, pre)
 
 import Dscp.Educator.Web.Educator
 import Dscp.Educator.Web.Logic
-import Dscp.Educator.Web.Queries
 import Dscp.Educator.Web.Types
 import Dscp.Util
 import Test.Dscp.Educator.Mode
-import Test.Dscp.Educator.Web.Instances ()
+import Test.Dscp.Educator.Web.Instances
 import Test.Dscp.Educator.Web.Scenarios
 
 applyFilterOn :: Eq f => (a -> f) -> (Maybe f) -> [a] -> [a]
@@ -50,7 +49,8 @@ spec_EducatorApiQueries = describe "Basic database operations" $ do
   describe "Courses" $ do
     describe "getCourses" $ do
         it "Returns previously added courses" $ sqlitePropertyM $ do
-            coursesDetails <- nubBy ((==) `on` cdCourseId) <$> pickSmall arbitrary
+            coursesDetails <- nubBy ((==) `on` cdCourseId) <$>
+                              pickSmall (listOf genCourseNoSubjects)
             lift $ forM_ coursesDetails createCourse
 
             courses' <- lift $ educatorGetCourses Nothing
@@ -100,7 +100,7 @@ spec_EducatorApiQueries = describe "Basic database operations" $ do
                 }
 
     describe "getAssignments" $ do
-        -- This endpoint is fully covered by tests for Student API,
+        -- Similar endpoint is fully covered by tests for Student API,
         -- so just checking it at least works.
 
         it "Returns existing assignment properly" $ sqlitePropertyM $ do
@@ -113,7 +113,7 @@ spec_EducatorApiQueries = describe "Basic database operations" $ do
                 void $ createAssignment assignment
                 setStudentAssignment student (hash assignment)
 
-            res <- lift $ commonGetAssignments EducatorCase def{ afStudent = Just student }
+            res <- lift $ educatorGetAssignments def{ afStudent = Just student }
             return $ res === one AssignmentEducatorInfo
                 { aiHash = hash assignment
                 , aiCourseId = _aCourseId assignment
@@ -158,7 +158,7 @@ spec_EducatorApiQueries = describe "Basic database operations" $ do
             lift $ prepareForAssignments env
             -- even after this ^ there should be no submissions
 
-            submissions <- lift educatorGetAllSubmissions
+            submissions <- lift $ educatorGetSubmissions def
             return $ submissions === []
 
         it "Returns existing submission properly" $
@@ -169,7 +169,7 @@ spec_EducatorApiQueries = describe "Basic database operations" $ do
 
             lift $ prepareAndCreateSubmission env
 
-            res <- lift educatorGetAllSubmissions
+            res <- lift $ educatorGetSubmissions def
             return $ res === one SubmissionEducatorInfo
                 { siHash = hash submission
                 , siContentsHash = _sContentsHash submission
@@ -190,7 +190,7 @@ spec_EducatorApiQueries = describe "Basic database operations" $ do
                 mapM_ createSignedSubmission sigSubs
                 mapM_ createTransaction txs
 
-            submissions' <- lift educatorGetAllSubmissions
+            submissions' <- lift $ educatorGetSubmissions def
             let submissionsAndGrades' =
                     map (siHash &&& fmap giGrade . siGrade) submissions'
             let submissionsAndGrades = txs <&> \tx ->
@@ -215,7 +215,7 @@ spec_EducatorApiQueries = describe "Basic database operations" $ do
             lift $ prepareForSubmissions env
             lift $ mapM_ createSignedSubmission sigSubs
 
-            submissions <- lift $ commonGetSubmissions EducatorCase
+            submissions <- lift $ educatorGetSubmissions
                 def{ sfStudent = Just student, sfCourse = courseIdF
                     , sfAssignmentHash = assignHF, sfDocType = docTypeF }
 

@@ -1,75 +1,147 @@
+{-# LANGUAGE CPP         #-}
 {-# LANGUAGE QuasiQuotes #-}
 
 module Dscp.DB.SQLite.Instances () where
 
-import Codec.Serialise as Codec (Serialise, deserialise, serialise)
-import Control.Lens (matching, review)
-
+import Codec.Serialise as Codec (deserialise)
+import qualified Data.ByteArray as BA
+import Database.Beam.Backend (FromBackendRow (..))
+import Database.Beam.Backend.SQL.SQL92 (HasSqlValueSyntax (..), IsSql92ExpressionSyntax,
+                                        Sql92ExpressionValueSyntax)
+import Database.Beam.Query (HasSqlEqualityCheck (..))
+import Database.Beam.Sqlite (Sqlite)
+import Database.Beam.Sqlite.Syntax (SqliteValueSyntax)
 import Database.SQLite.Simple.FromField (FromField (..))
-import Database.SQLite.Simple.FromRow (FromRow (..), field)
-import Database.SQLite.Simple.ToField (ToField (..))
-import Database.SQLite.Simple.ToRow (ToRow (..))
 
-import Dscp.Core (ATGDelta, Address (..), Assignment (..), AssignmentType, Course (..),
-                  DocumentType, Grade (..), PrivateBlockHeader (..), PrivateTx (..),
-                  SignedSubmission (..), Subject (..), Submission (..), SubmissionWitness (..))
-import Dscp.Crypto (EmptyMerkleTree, Hash, MerkleSignature, PublicKey, Signature, hash)
-import Dscp.DB.SQLite.BlockData (BlockData (..), TxInBlock (..), TxWithIdx (..))
-import Dscp.DB.SQLite.Types (TxBlockIdx, intTxBlockIdx)
-import Dscp.Util (leftToPanic)
+import Dscp.Core
+import Dscp.Crypto
+import Dscp.DB.SQLite.BlockData
+import Dscp.Util
+import Dscp.Util.Serialise
 
-instance FromField (Hash a)            where fromField f = Codec.deserialise <$> fromField f
-instance FromField (Signature a)       where fromField f = Codec.deserialise <$> fromField f
-instance FromField (MerkleSignature a) where fromField f = Codec.deserialise <$> fromField f
-instance Serialise a =>
-         FromField (EmptyMerkleTree a) where fromField f = Codec.deserialise <$> fromField f
+----------------------------------------------------------------------------
+-- SQL serialisation instances
+----------------------------------------------------------------------------
 
--- TODO(kir): use #define to generate macros
-instance FromField Address           where fromField f = Codec.deserialise <$> fromField f
-instance FromField PublicKey         where fromField f = Codec.deserialise <$> fromField f
-instance FromField Subject           where fromField f = Subject           <$> fromField f
-instance FromField Course            where fromField f = Course            <$> fromField f
-instance FromField Grade             where fromField f = UnsafeGrade       <$> fromField f
-instance FromField AssignmentType    where fromField f = Codec.deserialise <$> fromField f
-instance FromField SubmissionWitness where fromField f = Codec.deserialise <$> fromField f
-instance FromField DocumentType      where fromField f = toEnum <$> fromField f
-instance FromField ATGDelta          where fromField f = Codec.deserialise <$> fromField f
-instance FromField TxBlockIdx        where
-    fromField f = leftToPanic . first mkError . matching intTxBlockIdx <$> fromField f
-      where
-        mkError idx = "Bad transaction index within block: " <> pretty idx
+{- Instance templates
 
-instance ToField   (Hash a)          where toField = toField . Codec.serialise
-instance ToField   (Signature a)     where toField = toField . Codec.serialise
-instance ToField (MerkleSignature a) where toField = toField . Codec.serialise
-instance Serialise a =>
-         ToField (EmptyMerkleTree a) where toField = toField . Codec.serialise
+CPP does not allow multi-line output, so writing one macros per instance.
+TH would play better, but supposedly would also work slightly slower.
+-}
 
-instance ToField   Address           where toField = toField . Codec.serialise
-instance ToField   Course            where toField = toField . getCourseId
-instance ToField   Subject           where toField = toField . getSubjectId
-instance ToField   AssignmentType    where toField = toField . Codec.serialise
-instance ToField   Grade             where toField = toField . getGrade
-instance ToField   SubmissionWitness where toField = toField . Codec.serialise
-instance ToField   DocumentType      where toField = toField . fromEnum
-instance ToField   TxBlockIdx        where toField = toField . review intTxBlockIdx
-instance ToField   ATGDelta          where toField = toField . Codec.serialise
+#define IsSqliteValue HasSqlValueSyntax SqliteValueSyntax
 
-instance FromRow   Course            where fromRow = field
-instance FromRow   Grade             where fromRow = field
+#define CodecInstanceEnc(TYPE) \
+instance IsSqliteValue (TYPE) where \
+    sqlValueSyntax = sqlValueSyntax . serialise'
 
-instance FromRow   Assignment        where fromRow = Assignment       <$> field   <*> field <*> field <*> field
-instance FromRow   Submission        where fromRow = Submission       <$> field   <*> field <*> field
-instance FromRow   SignedSubmission  where fromRow = SignedSubmission <$> fromRow <*> field
-instance FromRow   PrivateTx         where fromRow = PrivateTx        <$> fromRow <*> field <*> field
+#define CodecInstanceDec(TYPE) \
+instance FromField (TYPE) where \
+    fromField f = Codec.deserialise <$> fromField f
 
-instance FromRow   TxInBlock         where fromRow = TxInBlock        <$> fromRow <*> field
-instance FromRow   TxWithIdx         where fromRow = TxWithIdx        <$> fromRow <*> field
-instance FromRow   PrivateBlockHeader where fromRow = PrivateBlockHeader <$> field <*> field <*> field
+#define ByteArrayInstanceEnc(TYPE) \
+instance IsSqliteValue (TYPE) where \
+    sqlValueSyntax = sqlValueSyntax . BA.convert @_ @ByteString
 
-instance ToRow Assignment where
-    toRow task@ (Assignment course contentsHash ty text) =
-        [toField (hash task), toField course, toField contentsHash, toField ty, toField text]
+#define ByteArrayInstanceDec(TYPE) \
+instance FromField (TYPE) where \
+    fromField f = leftToPanic . fromByteArray @(TYPE) @ByteString <$> fromField f
 
-instance FromRow BlockData where
-    fromRow = BlockData <$> field <*> field <*> field <*> field <*> field <*> field <*> field
+#define EnumInstanceEnc(TYPE) \
+instance IsSqliteValue (TYPE) where \
+    sqlValueSyntax = sqlValueSyntax . fromEnum
+
+#define EnumInstanceDec(TYPE) \
+instance FromField (TYPE) where \
+    fromField f = toEnum <$> fromField f
+
+{- Instances via Enum -}
+
+EnumInstanceEnc(AssignmentType)
+EnumInstanceDec(AssignmentType)
+
+EnumInstanceEnc(DocumentType)
+EnumInstanceDec(DocumentType)
+
+{- Instances via FromByteArray -}
+
+ByteArrayInstanceEnc(Hash a)
+ByteArrayInstanceDec(Hash a)
+
+ByteArrayInstanceEnc(Signature a)
+ByteArrayInstanceDec(Signature a)
+
+{- Instances via Serialise -}
+
+CodecInstanceEnc(Address)
+CodecInstanceDec(Address)
+
+CodecInstanceEnc(ATGDelta)
+CodecInstanceDec(ATGDelta)
+
+CodecInstanceEnc(SubmissionWitness)
+CodecInstanceDec(SubmissionWitness)
+
+CodecInstanceEnc(MerkleSignature a)
+CodecInstanceDec(MerkleSignature a)
+
+CodecInstanceEnc(EmptyMerkleTree a)
+CodecInstanceDec(EmptyMerkleTree a)
+
+{- Newtype-derived instances -}
+
+deriving instance FromField Subject
+deriving instance IsSqliteValue Subject
+
+deriving instance FromField Course
+deriving instance IsSqliteValue Course
+
+deriving instance FromField Grade
+deriving instance IsSqliteValue Grade
+
+deriving instance FromField BlockIdx
+deriving instance IsSqliteValue BlockIdx
+
+{- Custom instances -}
+
+instance FromField TxBlockIdx where
+    fromField f = leftToPanic . txBlockIdxFromInt <$> fromField f
+
+instance HasSqlValueSyntax SqliteValueSyntax TxBlockIdx where
+    sqlValueSyntax = sqlValueSyntax . txBlockIdxToInt
+
+----------------------------------------------------------------------------
+-- 'FromBackendRow' instances
+----------------------------------------------------------------------------
+
+-- For SQLite they all refer to 'FromField' instances
+instance FromBackendRow Sqlite (Hash a)
+instance FromBackendRow Sqlite Address
+instance FromBackendRow Sqlite Course
+instance FromBackendRow Sqlite AssignmentType
+instance FromBackendRow Sqlite Subject
+instance FromBackendRow Sqlite Grade
+instance FromBackendRow Sqlite BlockIdx
+instance FromBackendRow Sqlite TxBlockIdx where
+instance FromBackendRow Sqlite SubmissionWitness where
+instance FromBackendRow Sqlite (MerkleSignature a) where
+instance FromBackendRow Sqlite (EmptyMerkleTree a) where
+instance FromBackendRow Sqlite ATGDelta where
+
+----------------------------------------------------------------------------
+-- Other instances
+----------------------------------------------------------------------------
+
+#define GenHasSqlEqualityCheck(TYPE) \
+instance (HasSqlValueSyntax (Sql92ExpressionValueSyntax syntax) (TYPE), \
+          IsSql92ExpressionSyntax syntax) => \
+         HasSqlEqualityCheck syntax (TYPE)
+
+GenHasSqlEqualityCheck(Address)
+GenHasSqlEqualityCheck(Course)
+GenHasSqlEqualityCheck(Subject)
+GenHasSqlEqualityCheck(Grade)
+GenHasSqlEqualityCheck(TxBlockIdx)
+GenHasSqlEqualityCheck(BlockIdx)
+GenHasSqlEqualityCheck(Hash a)
+GenHasSqlEqualityCheck(AssignmentType)

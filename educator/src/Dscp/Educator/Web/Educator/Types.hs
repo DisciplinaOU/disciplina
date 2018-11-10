@@ -23,6 +23,8 @@ module Dscp.Educator.Web.Educator.Types
     , educatorLiftAssignment
     , educatorLiftSubmission
     , requestToAssignment
+    , educatorAssignmentInfoFromRow
+    , educatorSubmissionInfoFromRow
     ) where
 
 import Control.Lens (from)
@@ -32,6 +34,8 @@ import Fmt (build, listF, (+|), (|+))
 
 import Dscp.Core
 import Dscp.Crypto
+import Dscp.DB.SQLite.Schema
+import Dscp.DB.SQLite.Util
 import Dscp.Educator.Web.Types
 import Dscp.Util.Servant (ForResponseLog (..), buildLongResponseList, buildShortResponseList)
 import Dscp.Witness.Web.Types
@@ -97,14 +101,6 @@ eaDocumentType :: AssignmentEducatorInfo -> DocumentType
 eaDocumentType = documentType . aiContentsHash
 
 ---------------------------------------------------------------------------
--- ResponseCase instances
----------------------------------------------------------------------------
-
-type instance ResponseCase 'EducatorTag Course     = CourseEducatorInfo
-type instance ResponseCase 'EducatorTag Assignment = AssignmentEducatorInfo
-type instance ResponseCase 'EducatorTag Submission = SubmissionEducatorInfo
-
----------------------------------------------------------------------------
 -- Simple conversions
 ---------------------------------------------------------------------------
 
@@ -137,6 +133,26 @@ requestToAssignment NewAssignment{..} =
     , _aContentsHash = naContentsHash
     , _aType = naIsFinal ^. from assignmentTypeRaw
     , _aDesc = naDesc
+    }
+
+educatorAssignmentInfoFromRow :: AssignmentRow -> AssignmentEducatorInfo
+educatorAssignmentInfoFromRow AssignmentRow{..} =
+    AssignmentEducatorInfo
+    { aiHash = arHash
+    , aiContentsHash = arContentsHash
+    , aiDesc = arDesc
+    , aiCourseId = case arCourse of CourseRowId cId -> cId
+    , aiIsFinal = arType ^. assignmentTypeRaw
+    }
+
+educatorSubmissionInfoFromRow :: (SubmissionRow, Maybe TransactionRow) -> SubmissionEducatorInfo
+educatorSubmissionInfoFromRow (SubmissionRow{..}, tx) =
+    SubmissionEducatorInfo
+    { siHash = srHash
+    , siContentsHash = srContentsHash
+    , siAssignmentHash = unpackPk srAssignment
+    , siGrade = fmap gradeInfoFromRow tx
+    , siWitness = srSignature
     }
 
 ---------------------------------------------------------------------------

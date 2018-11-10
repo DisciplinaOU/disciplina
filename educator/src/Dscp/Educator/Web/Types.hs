@@ -9,12 +9,6 @@ module Dscp.Educator.Web.Types
          MonadEducatorWebQuery
        , MonadEducatorWeb
 
-         -- * Multi API types
-       , ApiTag (..)
-       , ApiCase (..)
-       , ResponseCase
-       , DistinctTag
-
          -- * Flags
        , IsEnrolled (..)
        , IsGraded (..)
@@ -29,64 +23,39 @@ module Dscp.Educator.Web.Types
 
          -- * Conversions
        , assignmentTypeRaw
+       , gradeInfoFromRow
        ) where
 
 import Control.Lens (Iso', from, iso, makePrisms)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
-import Data.Singletons.Bool (SBoolI)
 import Data.Time.Clock (UTCTime)
-import Database.SQLite.Simple (FromRow (..), field)
 import Fmt (build, (+|), (+||), (|+), (||+))
 import Loot.Base.HasLens (HasCtx)
-import Loot.Log (MonadLogging)
+import Loot.Log (ModifyLogName, MonadLogging)
 import Servant (FromHttpApiData (..))
 
 import Dscp.Core
 import Dscp.Crypto
-import Dscp.DB.SQLite.Instances ()
-import Dscp.DB.SQLite.Types
+import Dscp.DB.SQLite
 import Dscp.Educator.Launcher.Marker
 import Dscp.Resource.Keys
 import Dscp.Util.Aeson (CustomEncoding, HexEncoded)
 import Dscp.Util.Servant (ForResponseLog (..), buildForResponse, buildLongResponseList,
                           buildShortResponseList)
-import Dscp.Util.Type (type (==))
 import Dscp.Witness.Launcher.Context
 
 type MonadEducatorWebQuery m =
     ( MonadIO m
     , MonadCatch m
     , MonadLogging m
+    , ModifyLogName m
     )
 
 type MonadEducatorWeb ctx m =
     ( WitnessWorkMode ctx m
     , HasCtx ctx m '[SQLiteDB, KeyResources EducatorNode]
-    )
-
----------------------------------------------------------------------------
--- API's distinction
----------------------------------------------------------------------------
-
--- | Tag indicating an API.
-data ApiTag = StudentTag | EducatorTag
-
--- | Various functions are going to serve student and educator cases
--- simultaniously thus returning slightly different types.
-type family ResponseCase (apiTag :: ApiTag) baseType
-
--- | Defines which case (student or educator) a function should handle,
--- returning appropriate 'ResponseCase'.
-data ApiCase a where
-    StudentCase  :: ApiCase 'StudentTag
-    EducatorCase :: ApiCase 'EducatorTag
-
--- | Declares that we can compare this tag against other 'ApiTag's.
-type DistinctTag tag =
-    ( SBoolI (tag == 'StudentTag)
-    , SBoolI (tag == 'EducatorTag)
     )
 
 ---------------------------------------------------------------------------
@@ -207,6 +176,15 @@ assignmentTypeRaw = iso forth back . from _IsFinal
         Regular     -> False
         CourseFinal -> True
 
+gradeInfoFromRow :: TransactionRow -> GradeInfo
+gradeInfoFromRow TransactionRow{..} =
+    GradeInfo
+    { giSubmissionHash = unpackPk trSubmission
+    , giGrade = trGrade
+    , giTimestamp = trCreationTime
+    , giHasProof = trIdx /= TxInMempool
+    }
+
 ---------------------------------------------------------------------------
 -- JSON instances
 ---------------------------------------------------------------------------
@@ -234,15 +212,3 @@ deriveJSON defaultOptions ''BlkProofInfo
 deriving instance FromHttpApiData IsEnrolled
 deriving instance FromHttpApiData IsFinal
 deriving instance FromHttpApiData IsGraded
-
----------------------------------------------------------------------------
--- SQLite instances
----------------------------------------------------------------------------
-
-instance FromRow GradeInfo where
-    fromRow = GradeInfo <$> field <*> field <*> field
-                        <*> ((/= TxInMempool) <$> field)
-instance FromRow (Maybe GradeInfo) where
-    fromRow =
-        liftM4 GradeInfo <$> field <*> field <*> field
-                         <*> (fmap (/= TxInMempool) <$> field)

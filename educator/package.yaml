@@ -12,6 +12,9 @@ library:
   dependencies:
     - aeson
     - aeson-options
+    - ansi-terminal
+    - beam-core
+    - beam-sqlite >= 0.3.2.3
     - bytestring
     - containers
     - data-default
@@ -30,6 +33,7 @@ library:
     - loot-config
     - loot-log
     - loot-network
+    - memory
     - mtl
     - optparse-applicative
     - o-clock
@@ -39,7 +43,6 @@ library:
     - servant-auth-server
     - servant-generic
     - servant-server
-    - singleton-bool
     - snowdrop-util
     - sqlite-simple
     - template-haskell

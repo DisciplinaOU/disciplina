@@ -12,7 +12,6 @@ import UnliftIO (UnliftIO (..))
 import Dscp.DB.SQLite
 import Dscp.Educator.Web.Educator.API
 import Dscp.Educator.Web.Educator.Error
-import Dscp.Educator.Web.Educator.Logic
 import Dscp.Educator.Web.Educator.Queries
 import Dscp.Educator.Web.Educator.Types
 import Dscp.Educator.Web.Logic
@@ -67,7 +66,7 @@ educatorApiHandlers =
       -- Assignments
 
     , eGetAssignments = \afCourse afStudent afIsFinal _afSince _afOnlyCount ->
-        transactR $ commonGetAssignments EducatorCase
+        invoke $ educatorGetAssignments
             def{ afCourse, afStudent, afIsFinal }
 
     , eAddAssignment = \_autoAssign na -> do
@@ -77,7 +76,7 @@ educatorApiHandlers =
       -- Submissions
 
     , eGetSubmissions = \sfCourse sfStudent sfAssignmentHash _sfIsGraded _sfSince _sfOnlyCount ->
-        invoke $ commonGetSubmissions EducatorCase
+        invoke $ educatorGetSubmissions
             def{ sfCourse, sfStudent, sfAssignmentHash }
 
     , eGetSubmission =

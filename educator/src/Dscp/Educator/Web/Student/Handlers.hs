@@ -38,8 +38,8 @@ studentApiHandlers student =
 
     , sGetAssignments = \afCourse afDocType afIsFinal _onlyCount ->
         transactR $
-            commonGetAssignments StudentCase
-                def{ afCourse, afStudent = Just student, afDocType, afIsFinal }
+            studentGetAssignments student
+                def{ afCourse, afDocType, afIsFinal }
 
     , sGetAssignment = \assignH ->
         transactR $ studentGetAssignment student assignH
@@ -48,8 +48,8 @@ studentApiHandlers student =
 
     , sGetSubmissions = \sfCourse sfAssignmentHash sfDocType _onlyCount ->
         invoke $
-        commonGetSubmissions StudentCase
-            def{ sfStudent = Just student, sfCourse, sfAssignmentHash, sfDocType }
+        studentGetSubmissions student
+            def{ sfCourse, sfAssignmentHash, sfDocType }
 
     , sAddSubmission = \newSub ->
         studentMakeSubmissionVerified student newSub

@@ -1,22 +1,64 @@
-{-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE QuasiQuotes    #-}
 
 module Dscp.Educator.Web.Educator.Queries
-    ( module Dscp.Educator.Web.Educator.Queries
+    ( EducatorGetAssignmentsFilters (..)
+    , EducatorGetSubmissionsFilters (..)
+    , educatorRemoveStudent
+    , educatorGetStudents
+    , educatorGetCourses
+    , educatorGetCourse
+    , educatorUnassignFromStudent
+    , educatorGetAssignment
+    , educatorGetAssignments
+    , educatorGetSubmission
+    , educatorGetSubmissions
+    , educatorGetGrades
+    , educatorPostGrade
     ) where
 
 import Control.Lens (from, mapping, traversed, _Just)
+import Data.Default (Default)
 import Data.List (groupBy)
 import Data.Time.Clock (getCurrentTime)
-import Database.SQLite.Simple (Only (..), Query)
 import Servant (err501)
-import Text.InterpolatedString.Perl6 (q)
 
 import Dscp.Core
 import Dscp.Crypto
 import Dscp.DB.SQLite
 import Dscp.Educator.Web.Educator.Types
+import Dscp.Educator.Web.Queries
 import Dscp.Educator.Web.Types
 import Dscp.Util
+
+----------------------------------------------------------------------------
+-- Filters for endpoints
+----------------------------------------------------------------------------
+
+data EducatorGetAssignmentsFilters = EducatorGetAssignmentsFilters
+    { afCourse  :: Maybe Course
+    , afStudent :: Maybe Student
+    , afDocType :: Maybe DocumentType
+    , afIsFinal :: Maybe IsFinal
+    } deriving (Show, Generic)
+
+deriving instance Default EducatorGetAssignmentsFilters
+
+data EducatorGetSubmissionsFilters = EducatorGetSubmissionsFilters
+    { sfCourse         :: Maybe Course
+    , sfStudent        :: Maybe Student
+    , sfDocType        :: Maybe DocumentType
+    , sfAssignmentHash :: Maybe $ Hash Assignment
+    } deriving (Show, Generic)
+
+deriving instance Default EducatorGetSubmissionsFilters
+
+----------------------------------------------------------------------------
+-- DB endpoints
+----------------------------------------------------------------------------
+
+es :: DatabaseSettings be EducatorSchema
+es = educatorSchema
 
 educatorRemoveStudent
     :: MonadEducatorWebQuery m
@@ -26,77 +68,48 @@ educatorRemoveStudent student = do
     -- fundemental rethinking of our database scheme and rewriting many code.
     -- Should be done soon though.
     _ <- throwM err501
-    execute queryText (Only student)
-  where
-    queryText :: Query
-    queryText = [q|
-        delete
-        from      Students
-        where     addr = ?
-    |]
+    deleteByPk (esStudents es) student
 
 educatorGetStudents
     :: MonadEducatorWebQuery m
     => Maybe Course -> DBT t w m [StudentInfo]
 educatorGetStudents courseF = do
-    map (StudentInfo . fromOnly) <$> query queryText paramF
-  where
-    (clauseF, paramF) = mkFilter "course_id = ?" courseF
-
-    queryText = [q|
-        select    addr
-        from      Students
-        left join StudentCourses
-               on Students.addr = StudentCourses.student_addr
-        where     1 = 1
-    |]
-      `filterClauses` [clauseF]
+    runSelectMap StudentInfo . select $ do
+        student <- all_ (esStudents es)
+        whenJust courseF $ \course ->
+            link_ (esStudentCourses es) (pk_ student :-: valPk_ course)
+        return (srAddr student)
 
 educatorGetCourses
     :: DBM m
     => Maybe Student -> DBT t w m [CourseEducatorInfo]
 educatorGetCourses studentF = do
-    res :: [(Course, Text, Maybe Subject)] <- query queryText paramF
-    return $
+    res :: [(Course, Text, Maybe Subject)] <- runSelect $ select query
+    return
         -- group "subject" fields for the same courses
         [ CourseEducatorInfo{ ciId, ciDesc, ciSubjects }
         | course@((ciId, ciDesc, _) : _) <- groupBy ((==) `on` view _1) res
         , let ciSubjects = course ^.. traversed . _3 . _Just
         ]
   where
-    (clauseF, paramF) = mkFilter "student_addr = ?" studentF
+    query = do
+        course <- all_ (esCourses es)
 
-    queryText = [q|
-        select    Courses.id, Courses.desc, Subjects.id
-        from      Courses
-        left join Subjects
-               on Courses.id = Subjects.course_id
-        left join StudentCourses
-               on StudentCourses.course_id = Courses.id
-        where     1 = 1
-    |]
-      `filterClauses` [clauseF]
+        whenJust studentF $ \student ->
+            link_ (esStudentCourses es) (valPk_ student :-: pk_ course)
+
+        subject <- leftJoin_ (all_ $ esSubjects es)
+                              ((`references_` course) . srCourse)
+        return (crId course, crDesc course, srId subject)
 
 educatorGetCourse
     :: MonadEducatorWebQuery m
     => Course -> DBT t w m CourseEducatorInfo
 educatorGetCourse courseId = do
-    mcourse <-
-        query queryText (Only courseId)
-        >>= listToMaybeWarn "courses"
-    Only mdesc <-
-        pure mcourse `assertJust` AbsentError (CourseDomain courseId)
-
+    ciDesc <- selectByPk crDesc (esCourses es) courseId
+                `assertJust` AbsentError (CourseDomain courseId)
     ciSubjects <- getCourseSubjects courseId
-    let ciDesc = fromMaybe "" mdesc
     return CourseEducatorInfo{ ciId = courseId, .. }
-  where
-    queryText :: Query
-    queryText = [q|
-        select    desc
-        from      Courses
-        where     id = ?
-    |]
 
 educatorUnassignFromStudent
     :: MonadEducatorWebQuery m
@@ -104,30 +117,74 @@ educatorUnassignFromStudent
     -> Hash Assignment
     -> DBT t 'Writing m ()
 educatorUnassignFromStudent student assignH = do
-    -- we are not deleting other info since educator may want it to be preserved
-    -- in case if he wants to assign as assignment again
-    execute queryText (student, assignH)
-  where
-    queryText :: Query
-    queryText = [q|
-        delete
-        from      StudentsAssignments
-        where     student_addr = ?
-              and assignment_hash = ?
-    |]
+    runDelete $ delete (esStudentAssignments es) (val_ (student <:-:> assignH) ==.)
+    -- we are not deleting any other info since educator may want it to be preserved
+    -- in case if he wants to assign an assignment again
 
-isGradedSubmission
+-- | Get exactly one assignment.
+educatorGetAssignment
     :: MonadEducatorWebQuery m
-    => Hash Submission -> DBT t w m Bool
-isGradedSubmission submissionH = do
-    checkExists queryText (Only submissionH)
+    => Hash Assignment
+    -> DBT t w m AssignmentEducatorInfo
+educatorGetAssignment assignH =
+    selectByPk educatorAssignmentInfoFromRow (esAssignments es) assignH
+        >>= nothingToThrow (AbsentError $ AssignmentDomain assignH)
+
+-- | Get educator assignments.
+educatorGetAssignments
+    :: MonadEducatorWebQuery m
+    => EducatorGetAssignmentsFilters
+    -> DBT t w m [AssignmentEducatorInfo]
+educatorGetAssignments filters = do
+    runSelectMap educatorAssignmentInfoFromRow . select $ do
+        assignment <- all_ (esAssignments es)
+
+        guard_ $ filterMatchesPk_ (afCourse filters) (arCourse assignment)
+        guard_ $ filterMatches_ assignTypeF (arType assignment)
+        whenJust (afDocType filters) $ \docType ->
+            guard_ (eqDocTypeQ docType (arContentsHash assignment))
+        whenJust (afStudent filters) $ \student -> do
+            link_ (esStudentAssignments es) (valPk_ student :-: pk_ assignment)
+
+        return assignment
   where
-    queryText :: Query
-    queryText = [q|
-        select    count(*)
-        from      Transactions
-        where     submission_hash = ?
-    |]
+    assignTypeF = afIsFinal filters ^. mapping (from assignmentTypeRaw)
+
+-- | Get exactly one submission.
+educatorGetSubmission
+    :: MonadEducatorWebQuery m
+    => Hash Submission
+    -> DBT t w m SubmissionEducatorInfo
+educatorGetSubmission subH = do
+    submissions <- runSelectMap educatorSubmissionInfoFromRow . select $ do
+        submission <- related_ (esSubmissions es) (valPk_ subH)
+        mPrivateTx <- leftJoin_ (all_ $ esTransactions es)
+                                ((`references_` submission) . trSubmission)
+        return (submission, mPrivateTx)
+    listToMaybeWarn submissions
+        >>= nothingToThrow (AbsentError $ SubmissionDomain subH)
+
+-- | Get all registered submissions.
+educatorGetSubmissions
+    :: MonadEducatorWebQuery m
+    => EducatorGetSubmissionsFilters
+    -> DBT t w m [SubmissionEducatorInfo]
+educatorGetSubmissions filters = do
+    runSelectMap educatorSubmissionInfoFromRow . select $ do
+        submission <- all_ (esSubmissions es)
+        assignment <- related_ (esAssignments es) (srAssignment submission)
+
+        guard_ $ filterMatchesPk_ (sfCourse filters) (arCourse assignment)
+        guard_ $ filterMatchesPk_ (sfAssignmentHash filters) (srAssignment submission)
+        whenJust (sfDocType filters) $ \docType ->
+            guard_ (eqDocTypeQ docType (arContentsHash assignment))
+        whenJust (sfStudent filters) $ \student -> do
+            link_ (esStudentAssignments es) (valPk_ student :-: pk_ assignment)
+
+        mPrivateTx <- leftJoin_ (all_ $ esTransactions es)
+                                ((`references_` submission) . trSubmission)
+
+        return (submission, mPrivateTx)
 
 educatorGetGrades
     :: MonadEducatorWebQuery m
@@ -136,25 +193,20 @@ educatorGetGrades
     -> Maybe (Hash Assignment)
     -> Maybe IsFinal
     -> DBT t w m [GradeInfo]
-educatorGetGrades courseIdF studentF assignmentF isFinalF = do
-    query queryText (mconcat paramsF)
-  where
-    (clausesF, paramsF) = unzip
-        [ mkFilter "S.student_addr = ?" studentF
-        , mkFilter "course_id = ?" courseIdF
-        , mkFilter "A.hash = ?" assignmentF
-        , let assignTypeF = isFinalF ^. mapping (from assignmentTypeRaw)
-          in mkFilter "A.type = ?" assignTypeF
-        ]
+educatorGetGrades courseIdF studentF assignmentF isFinalF =
+    runSelectMap gradeInfoFromRow . select $ do
+        privateTx <- all_ (esTransactions es)
+        submission <- related_ (esSubmissions es) (trSubmission privateTx)
+        assignment <- related_ (esAssignments es) (srAssignment submission)
 
-    queryText = [q|
-        select    T.grade, T.time, T.submission_hash, T.idx
-        from      Submissions as S
-        left join Assignments as A
-               on A.hash = S.assignment_hash
-        where     1 = 1
-    |]
-      `filterClauses` clausesF
+        guard_ $ filterMatchesPk_ courseIdF (arCourse assignment)
+        guard_ $ filterMatchesPk_ studentF (srStudent submission)
+        guard_ $ filterMatchesPk_ assignmentF (pk_ assignment)
+        whenJust isFinalF $ \isFinal -> do
+            let assignTypeF = isFinal ^. from assignmentTypeRaw
+            guard_ (arType assignment ==. val_ assignTypeF)
+
+        return privateTx
 
 educatorPostGrade
     :: MonadEducatorWebQuery m
@@ -171,17 +223,12 @@ educatorPostGrade subH grade = do
             }
         txId = getId ptx
 
-    execute queryText
-        ( txId
-        , subH
-        , grade
-        , time
-        , TxInMempool
-        )
-        `ifAlreadyExistsThrow` TransactionDomain txId
-  where
-    queryText :: Query
-    queryText = [q|
-        insert into  Transactions
-        values       (?, ?, ?, ?, ?)
-    |]
+    rewrapAlreadyExists (TransactionDomain txId) $
+        runInsert . insert (esTransactions es) . insertValue $
+            TransactionRow
+            { trHash = txId
+            , trGrade = grade
+            , trCreationTime = time
+            , trIdx = TxInMempool
+            , trSubmission = packPk subH
+            }

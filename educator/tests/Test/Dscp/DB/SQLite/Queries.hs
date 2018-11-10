@@ -321,4 +321,4 @@ spec_Instances = do
                     return $ conjoin $ transPacksSince <&> \(proof, txSet) ->
                         conjoin $ txSet <&> \(idx, tx) ->
                             counterexample ("Tx not present in tree: " <> show tx) $
-                            MerkleTree.validateElementExistAt idx tx proof
+                            MerkleTree.validateElementExistAt (fromIntegral idx) tx proof
