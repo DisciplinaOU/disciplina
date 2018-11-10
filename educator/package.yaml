@@ -12,6 +12,8 @@ library:
   dependencies:
     - aeson
     - aeson-options
+    - beam-core
+    - beam-sqlite
     - bytestring
     - containers
     - data-default
