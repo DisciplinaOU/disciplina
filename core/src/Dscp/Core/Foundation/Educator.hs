@@ -81,6 +81,7 @@ module Dscp.Core.Foundation.Educator
     ) where
 
 import Control.Lens (Getter, makeLenses, to)
+import qualified Data.ByteArray as BA
 import Data.Time.Clock (UTCTime)
 import Fmt (build, genericF, mapF, (+|), (|+))
 
@@ -336,16 +337,18 @@ instance Buildable PrivateBlockHeader where
         "; atg:" +| _pbhAtgDelta |+ " }"
 
 -- | Genesis hash, serves as previous block reference for the first block.
+-- Different for each educator.
 -- TODO: move to 'Genesis' module when it is formed somehow. Also, should
 -- private genesis hash actually make some sense?
-genesisHeaderHash :: PrivateHeaderHash
-genesisHeaderHash = unsafeHash ("pvaforever" :: ByteString)
+genesisHeaderHash :: Address -> PrivateHeaderHash
+genesisHeaderHash (Address addr) =
+    unsafeHash ("pvaforever" <> BA.convert addr :: ByteString)
 
 -- | Get previous block header, if previous block exists,
 -- 'Nothing' otherwise.
-getPrevBlockRefMaybe :: PrivateBlockHeader -> Maybe PrivateHeaderHash
-getPrevBlockRefMaybe PrivateBlockHeader {..} =
-    if _pbhPrevBlock == genesisHeaderHash
+getPrevBlockRefMaybe :: PrivateBlockHeader -> Address -> Maybe PrivateHeaderHash
+getPrevBlockRefMaybe PrivateBlockHeader {..} address =
+    if _pbhPrevBlock == genesisHeaderHash address
     then Nothing
     else Just _pbhPrevBlock
 

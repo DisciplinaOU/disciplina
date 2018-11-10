@@ -193,5 +193,5 @@ getPrivateTipHash
     :: HasWitnessConfig
     => Address -> SdM_ chgacc PrivateHeaderHash
 getPrivateTipHash educator =
-    maybe genesisHeaderHash unLastPublication <$>
+    maybe (genesisHeaderHash educator) unLastPublication <$>
     SD.queryOne (PublicationsOf educator)

@@ -326,7 +326,7 @@ educatorPublicationsSource educator = \case
         C.yield $ WithBlock mblock ptx
 
         let prevHash = _pbhPrevBlock (ptHeader ptx)
-        unless (prevHash == genesisHeaderHash) $
+        unless (prevHash == genesisHeaderHash educator) $
             lift2xSdM (prevHash `assertExists` noPrivHeader prevHash)
             >>= loadChain
 

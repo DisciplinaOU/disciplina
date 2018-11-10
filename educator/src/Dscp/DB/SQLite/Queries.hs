@@ -78,6 +78,7 @@ import Data.Time.Clock (UTCTime, getCurrentTime)
 import Database.SQLite.Simple (Only (..), Query)
 import Database.SQLite.Simple.ToField (ToField)
 import Database.SQLite.Simple.ToRow (ToRow (..))
+import Loot.Base.HasLens (HasCtx)
 import Snowdrop.Util (OldestFirst (..))
 import Text.InterpolatedString.Perl6 (q)
 
@@ -90,6 +91,8 @@ import Dscp.DB.SQLite.Functions
 import Dscp.DB.SQLite.Instances ()
 import Dscp.DB.SQLite.Types (TxBlockIdx (TxInMempool))
 import Dscp.DB.SQLite.Util
+import Dscp.Educator.Launcher.Marker
+import Dscp.Resource.Keys
 import Dscp.Util (HasId (..), idOf)
 
 data DomainError
@@ -403,13 +406,14 @@ getAllNonChainedTransactions = do
     |]
 
 genesisBlockIdx :: Word32
-genesisBlockIdx = 1
+genesisBlockIdx = 0
 
 getLastBlockIdAndIdx
-    :: MonadIO m
+    :: (MonadIO m, HasCtx ctx m '[KeyResources EducatorNode])
     => DBT t w m (Hash PrivateBlockHeader, Word32)
 getLastBlockIdAndIdx = do
-    fromMaybe (genesisHeaderHash, genesisBlockIdx) . listToMaybe <$> query [q|
+    author <- ourAddress @EducatorNode
+    fromMaybe (genesisHeaderHash author, genesisBlockIdx) . listToMaybe <$> query [q|
         -- getLastBlockIdAndIdx
         select    hash,
                   idx
@@ -432,13 +436,15 @@ getPrivateBlock idx = do
     |]
 
 getPrivateBlockIdxByHash
-    :: MonadIO m
+    :: (MonadIO m, HasCtx ctx m '[KeyResources EducatorNode])
     => PrivateHeaderHash -> DBT t w m (Maybe Word32)
-getPrivateBlockIdxByHash phHash
-    | phHash == genesisHeaderHash = pure $ Just genesisBlockIdx
-    | otherwise =
-        fmap fromOnly . listToMaybe <$>
-        query getPrivateBlockByHashQuery (Only phHash)
+getPrivateBlockIdxByHash phHash = do
+    author <- ourAddress @EducatorNode
+    if phHash == genesisHeaderHash author
+       then pure $ Just genesisBlockIdx
+       else
+            fmap fromOnly . listToMaybe <$>
+            query getPrivateBlockByHashQuery (Only phHash)
   where
     getPrivateBlockByHashQuery = [q|
         -- getPrivateBlockByHashQuery
@@ -463,14 +469,14 @@ getPrivateBlocksAfter idx =
     |]
 
 getPrivateBlocksAfterHash
-    :: MonadIO m
+    :: (MonadIO m, HasCtx ctx m '[KeyResources EducatorNode])
     => PrivateHeaderHash -> DBT t w m (Maybe $ OldestFirst [] PrivateBlockHeader)
 getPrivateBlocksAfterHash phHash = do
     midx <- getPrivateBlockIdxByHash phHash
     forM midx getPrivateBlocksAfter
 
 createPrivateBlock
-    :: DBM m
+    :: (DBM m, HasCtx ctx m '[KeyResources EducatorNode])
     => Maybe ATGDelta -> DBT 'WithinTx 'Writing m (Maybe PrivateBlockHeader)
 createPrivateBlock delta = runMaybeT $ do
     (prev, idx) <- lift getLastBlockIdAndIdx

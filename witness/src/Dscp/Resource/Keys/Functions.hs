@@ -5,6 +5,7 @@
 module Dscp.Resource.Keys.Functions
     ( toKeyfileContent
     , fromKeyfileContent
+    , genRandomStore
     , genStore
     , readStore
     , linkStore
@@ -63,6 +64,11 @@ storePath BaseKeyParams{..} appDir nodeNameP =
     fromMaybe defPath bkpPath
   where
     defPath = appDir </> (nodeNameP |+ ".key")
+
+-- | Generate key resources randomly.
+genRandomStore :: MonadIO m => m (KeyResources n)
+genRandomStore =
+    KeyResources . secretKeyDataFromPair <$> runSecureRandom keyGen
 
 -- | Generate key resources with respect to given committe parameters if
 -- specified, otherwise randomly.
@@ -146,14 +152,13 @@ createStore ::
        , MonadCatch m
        , MonadLogging m
        , Buildable (Proxy n)
-       , HasCoreConfig
        )
     => FilePath
     -> PassPhrase
     -> m (KeyResources n)
 createStore path pp = do
      logInfo $ "Creating new "+|nodeNameP|+" secret key under "+||path||+""
-     store <- genStore Nothing
+     store <- genRandomStore
      writeStore path pp store
      return store
   where
