@@ -25,7 +25,6 @@ module Dscp.DB.SQLite.Queries
        , DBM
 
          -- * Utils
-       , checkExists
        , ifAlreadyExistsThrow
        , onReferenceInvalidThrow
 
@@ -75,6 +74,9 @@ import Data.Coerce (coerce)
 import Data.Default (Default (..))
 import qualified Data.Map as Map (empty, fromList, insertWith, toList)
 import Data.Time.Clock (UTCTime, getCurrentTime)
+import Database.Beam.Query (aggregate_, all_, countAll_, desc_, exists_, filter_, guard_, insert,
+                            insertValues, limit_, orderBy_, references_, related_, select, val_,
+                            (==.))
 import Database.SQLite.Simple (Only (..), Query)
 import Database.SQLite.Simple.ToField (ToField)
 import Database.SQLite.Simple.ToRow (ToRow (..))
@@ -88,9 +90,10 @@ import Dscp.DB.SQLite.BlockData (BlockData (..), TxInBlock (..), TxWithIdx (..))
 import Dscp.DB.SQLite.Error (asAlreadyExistsError, asReferenceInvalidError)
 import Dscp.DB.SQLite.Functions
 import Dscp.DB.SQLite.Instances ()
+import Dscp.DB.SQLite.Schema
 import Dscp.DB.SQLite.Types (TxBlockIdx (TxInMempool))
 import Dscp.DB.SQLite.Util
-import Dscp.Util (HasId (..), idOf)
+import Dscp.Util
 
 data DomainError
     = AbsentError DomainErrorItem
@@ -141,16 +144,16 @@ makePrisms ''DatabaseSemanticError
 
 instance Exception DomainError
 
--- | When query starts with @select(*)@, checks that non empty set of rows is
--- returned.
-checkExists :: (ToRow a, MonadIO m) => Query -> a -> DBT t w m Bool
-checkExists theQuery args = ((/= [[0]]) :: [[Int]] -> Bool) <$> query theQuery args
+es = educatorSchema
 
 -- | Catch "unique" constraint violation and rethrow specific error.
 ifAlreadyExistsThrow :: MonadCatch m => m a -> DomainErrorItem -> m a
 ifAlreadyExistsThrow action err =
     catchJust asAlreadyExistsError action
         (\_ -> throwM $ AlreadyPresentError err)
+
+rewrapAlreadyExists :: MonadCatch m => DomainErrorItem -> m a -> m a
+rewrapAlreadyExists = flip ifAlreadyExistsThrow
 
 assertExists :: MonadCatch m => m Bool -> DomainErrorItem -> m ()
 assertExists action = assertJustPresent (bool Nothing (Just ()) <$> action)
@@ -159,6 +162,7 @@ assertJustPresent :: MonadCatch m => m (Maybe a) -> DomainErrorItem -> m a
 assertJustPresent action err =
     action >>= maybe (throwM $ AbsentError err) pure
 
+-- | Catch "foreign" constraint violation and rethrow specific error.
 onReferenceInvalidThrow :: (MonadCatch m, Exception e) => m a -> e -> m a
 onReferenceInvalidThrow action err =
     catchJust asReferenceInvalidError action (\_ -> throwM err)
@@ -167,50 +171,30 @@ type DBM m = (MonadIO m, MonadCatch m)
 
 -- | How can a student get a list of courses?
 getStudentCourses :: MonadIO m => Id Student -> DBT t w m [Id Course]
-getStudentCourses student =
-    query getStudentCoursesQuery (Only student)
-  where
-    getStudentCoursesQuery :: Query
-    getStudentCoursesQuery = [q|
-        -- getStudentCourses
-        select  course_id
-        from    StudentCourses
-        where   student_addr = ?
-    |]
+getStudentCourses student' =
+    runSelect . select $ do
+        student :-: course <- all_ (es ^. esStudentCourses)
+        guard_ (student ==. val_ student')
+        return course
 
 -- | How can a student enroll to a course?
-enrollStudentToCourse :: DBM m => Id Student -> Id Course -> DBT 'WithinTx 'Writing m ()
+enrollStudentToCourse :: DBM m => Id Student -> Id Course -> DBT t 'Writing m ()
 enrollStudentToCourse student course = do
-    existsCourse  course  `assertExists` CourseDomain  course
-    existsStudent student `assertExists` StudentDomain student
-
-    execute enrollStudentToCourseRequest (student, course)
-        `ifAlreadyExistsThrow` StudentCourseEnrollmentDomain student course
-  where
-    enrollStudentToCourseRequest :: Query
-    enrollStudentToCourseRequest = [q|
-        -- enrollStudentToCourse
-        insert into  StudentCourses
-        values       (?, ?)
-    |]
+    -- TODO: ensure foreign constraints check will play for us
+    runInsert . insert (es ^. esStudentCourses) $
+        insertValues [student :-: course]
 
 -- | How can a student get a list of his current course assignments?
 getStudentAssignments
     :: MonadIO m
     => Id Student -> Id Course -> DBT t w m [Assignment]
-getStudentAssignments student course = do
-    query getStudentAssignmentsQuery (student, course)
-  where
-    getStudentAssignmentsQuery :: Query
-    getStudentAssignmentsQuery = [q|
-        -- getStudentAssignments
-        select     course_id, contents_hash, type, desc
-        from       StudentAssignments
-        left join  Assignments
-               on  assignment_hash = Assignments.hash
-        where      student_addr    = ?
-               and course_id       = ?
-    |]
+getStudentAssignments student' course' = do
+    fromRowTypesM . runSelect . select $ do
+        student :-: assignmentId <- all_ (es ^. esStudentAssignments)
+        assignment <- related_ (es ^. esAssignments) (AssignmentRowId assignmentId)
+        guard_ (student ==. val_ student')
+        guard_ (assignment ^. arCourse ==. val_ course')
+        return assignment
 
 -- | How can a student submit a submission for assignment?
 submitAssignment
@@ -222,32 +206,14 @@ submitAssignment = createSignedSubmission
 getGradesForCourseAssignments
     :: MonadIO m
     => Id Student -> Id Course -> DBT t w m [PrivateTx]
-getGradesForCourseAssignments student course = do
-    query getGradesForCourseAssignmentsQuery (student, course)
-  where
-    getGradesForCourseAssignmentsQuery :: Query
-    getGradesForCourseAssignmentsQuery = [q|
-        -- getGradesForCourseAssignments
-
-        select     Submissions.student_addr,
-                   Submissions.contents_hash,
-                   Assignments.hash,
-
-                   Submissions.signature,
-                   grade,
-                   time
-
-        from       Transactions
-
-        left join  Submissions
-               on  submission_hash = Submissions.hash
-
-        left join  Assignments
-               on  assignment_hash = Assignments.hash
-
-        where      student_addr = ?
-              and  Assignments.course_id = ?
-    |]
+getGradesForCourseAssignments student' course' = do
+    fromRowTypesM . runSelect . select $ do
+        privateTx <- all_ (es ^. esTransactions)
+        submission <- related_ (es ^. esSubmissions) (SubmissionRowId $ privateTx ^. trSubmissionHash)
+        assignment <- related_ (es ^. esAssignments) (AssignmentRowId $ submission ^. srAssignmentHash)
+        guard_ (submission ^. srStudent ==. val_ student')
+        guard_ (assignment ^. arCourse ==. val_ course')
+        return privateTx
 
 -- | How can a student receive transactions with Merkle proofs which contain info about his grades and assignments?
 getStudentTransactions :: MonadIO m => Id Student -> DBT t w m [PrivateTx]
@@ -409,14 +375,14 @@ getLastBlockIdAndIdx
     :: MonadIO m
     => DBT t w m (Hash PrivateBlockHeader, Word32)
 getLastBlockIdAndIdx = do
-    fromMaybe (genesisHeaderHash, genesisBlockIdx) . listToMaybe <$> query [q|
-        -- getLastBlockIdAndIdx
-        select    hash,
-                  idx
-        from      Blocks
-        order by  idx desc
-        limit     1
-    |] ()
+    res <- runSelect . select $
+        limit_ 1 $
+        orderBy_ (desc_ . snd) $ do
+            block <- all_ (es ^. esBlocks)
+            return (_brHash block, _brIdx block)
+    if null res
+       then return (genesisHeaderHash, genesisBlockIdx)
+       else return (oneOrError res)
 
 getPrivateBlock
     :: MonadIO m
@@ -550,15 +516,16 @@ createSignedSubmission sigSub = do
 
     currentTime <- liftIO getCurrentTime
 
-    execute generateSubmissionRequest
-        ( submissionHash
-        , student
-        , assignmentId
-        , submissionCont
-        , submissionSig
-        , currentTime
-        )
-        `ifAlreadyExistsThrow` SubmissionDomain submissionHash
+    rewrapAlreadyExists (SubmissionDomain submissionHash) $
+        runInsert . insert (es ^. esSubmissions) . insertValue $
+            SubmissionRow
+            { _srHash = submissionHash
+            , _srStudent = submission^.sStudentId
+            , _srAssignmentHash = submission^.sAssignmentHash
+            , _srContentsHash = submission^.sContentsHash
+            , _srSignature = sigSub^.ssWitness
+            , _srCreationTime = currentTime
+            }
 
     return submissionHash
   where
@@ -669,15 +636,10 @@ getCourseSubjects course = do
     |]
 
 existsCourse :: MonadIO m => Id Course -> DBT t w m Bool
-existsCourse course = do
-    checkExists existsCourseQuery (Only course)
-  where
-    existsCourseQuery = [q|
-        -- existsCourse
-        select  count(*)
-        from    Courses
-        where   id = ?
-    |]
+existsCourse course' =
+    checkExists $
+        filter_ (\course -> course ^. crId ==. val_ course')
+                (all_ $ es ^. esCourses)
 
 existsStudent :: MonadIO m => Id Student -> DBT t w m Bool
 existsStudent student = do
@@ -716,20 +678,18 @@ createAssignment assignment = do
 
     _ <- existsCourse courseId `assertExists` CourseDomain courseId
 
-    execute createAssignmentRequest
-        ( assignmentId
-        , assignment^.aCourseId
-        , assignment^.aContentsHash
-        , assignment^.aType
-        , assignment^.aDesc
-        )
-        `ifAlreadyExistsThrow` AssignmentDomain assignmentId
+    rewrapAlreadyExists (AssignmentDomain assignmentId) $
+        runInsert . insert (es ^. esAssignments) . insertValue $
+            AssignmentRow
+            { _arHash = assignmentId
+            , _arCourse = courseId
+            , _arContentsHash = assignment^.aContentsHash
+            , _arType = assignment^.aType
+            , _arDesc = assignment^.aDesc
+            }
+
     return assignmentId
   where
-    createAssignmentRequest = [q|
-        insert into  Assignments
-        values       (?,?,?,?,?)
-    |]
     assignmentId = assignment^.idOf
 
 getAssignment

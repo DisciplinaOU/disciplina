@@ -13,11 +13,12 @@ module Dscp.DB.SQLite.Types
 
          -- * Educator schema
        , TxBlockIdx (..)
-       , intTxBlockIdx
+       , txBlockIdxToInt
+       , txBlockIdxFromInt
        ) where
 
 import Control.Concurrent.Chan (Chan)
-import Control.Lens (Prism', makeLensesWith, makePrisms, prism)
+import Control.Lens (makeLensesWith, makePrisms)
 import Data.Aeson (FromJSON (..))
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveFromJSON)
@@ -90,14 +91,13 @@ data TxBlockIdx
     | TxInMempool
     deriving (Eq, Show)
 
--- | Convert between 'TxBlockIdx' and true index which can be used in database.
-intTxBlockIdx :: Prism' Int TxBlockIdx
-intTxBlockIdx = prism toInt fromInt
-  where
-    toInt = \case
-        TxBlockIdx idx -> fromIntegral idx
-        TxInMempool    -> -1
-    fromInt idx
-        | idx >= 0 = Right $ TxBlockIdx (fromIntegral idx)
-        | idx == -1 = Right $ TxInMempool
-        | otherwise = Left idx
+txBlockIdxToInt :: TxBlockIdx -> Int
+txBlockIdxToInt = \case
+    TxBlockIdx idx -> fromIntegral idx
+    TxInMempool    -> -1
+
+txBlockIdxFromInt :: Int -> Either Text TxBlockIdx
+txBlockIdxFromInt idx
+    | idx >= 0 = Right $ TxBlockIdx (fromIntegral idx)
+    | idx == -1 = Right $ TxInMempool
+    | otherwise = Left $ "Bad transaction index within block: " <> pretty idx

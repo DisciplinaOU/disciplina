@@ -34,6 +34,9 @@ module Dscp.Util
        , eitherToMaybe
        , mappendLefts
 
+         -- * Unsafe conversions
+       , oneOrError
+
          -- * Formatting
        , Base (..)
        , toBase
@@ -70,6 +73,7 @@ import Control.Monad.Except (MonadError (..))
 import Data.ByteArray (ByteArrayAccess)
 import Data.ByteArray.Encoding (Base (..), convertFromBase, convertToBase)
 import qualified Data.ByteString.Lazy as BSL
+import Data.Typeable (typeRep)
 import Fmt ((+|), (|+))
 import GHC.TypeLits (KnownSymbol, symbolVal)
 import UnliftIO (MonadUnliftIO)
@@ -216,6 +220,20 @@ mappendLefts :: Monoid m => Either m () -> Either m () -> Either m ()
 mappendLefts (Left a) (Left b) = Left (mappend a b)
 mappendLefts (Right _) x       = x
 mappendLefts x (Right _)       = x
+
+-----------------------------------------------------------
+-- Unsafe conversions
+-----------------------------------------------------------
+
+-- | Expects the list to contain only one entry, panics otherwise.
+oneOrError :: forall a. (Typeable a, HasCallStack) => [a] -> a
+oneOrError = \case
+    []  -> error $ "No items " <> tyName
+    [x] -> x
+    l   -> error $ "Too many items: " <> show (length l) <> " " <> tyName
+  where
+    tyRep = typeRep (Proxy @a)
+    tyName = "(" <> show tyRep <> ")"
 
 -----------------------------------------------------------
 -- ByteArray-based types formatting/parsing

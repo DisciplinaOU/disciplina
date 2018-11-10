@@ -1,4 +1,6 @@
 {-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE PartialTypeSignatures     #-}
+{-# OPTIONS_GHC -Wno-partial-type-signatures #-}
 
 -- | Utilities for writing SQLite queries.
 
@@ -14,11 +16,21 @@ module Dscp.DB.SQLite.Util
        -- * Conditional fields extraction
      , FetchIf
      , positiveFetch
+
+       -- * Query helpers
+     , checkExists
+     , insertValue
      ) where
 
 import Data.Singletons.Bool (SBoolI, fromSBool, sbool)
+import qualified Database.Beam.Query as Beam
+import qualified Database.Beam.Query.Internal as Beam
+import qualified Database.Beam.Sqlite.Syntax as Beam
 import Database.SQLite.Simple ((:.) (..), FromRow (..), Only (..), Query, ToRow (..))
 import Database.SQLite.Simple.ToField (ToField)
+
+import Dscp.DB.SQLite.Functions
+import Dscp.Util
 
 ---------------------------------------------------------------------
 -- Filtering
@@ -77,3 +89,20 @@ instance (FromRow a, SBoolI required) => FromRow (FetchIf required a) where
     fromRow
         | fromSBool (sbool @required) = FetchIf . Just <$> fromRow
         | otherwise                   = pure (FetchIf Nothing)
+
+---------------------------------------------------------------------
+-- Query helpers
+---------------------------------------------------------------------
+
+-- | Check whether the query returns any row.
+checkExists
+    :: (MonadIO m
+       ,Beam.ProjectibleWithPredicate Beam.AnyType Beam.SqliteExpressionSyntax r)
+    => Beam.Q Beam.SqliteSelectSyntax db (Beam.QNested _) r -> DBT t w m Bool
+checkExists query =
+    fmap ((> 0) . oneOrError) $
+    runSelect . Beam.select $
+    Beam.aggregate_ (\_ -> Beam.countAll_) query
+
+insertValue :: _ => table Identity -> Beam.SqlInsertValues syntax (table (Beam.QExpr _ s))
+insertValue = Beam.insertValues . one

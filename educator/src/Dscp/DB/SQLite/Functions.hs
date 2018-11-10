@@ -16,8 +16,7 @@ module Dscp.DB.SQLite.Functions
        , OperationType (Writing)
 
          -- * SQLite queries building
-       , runSelectReturningList
-       , runSelectReturningOne
+       , runSelect
        , runInsert
        , runUpdate
        , runDelete
@@ -234,19 +233,10 @@ data OperationType = Writing | Reading
 -}
 
 -- | Run 'SqlSelect' and get results in a list.
-runSelectReturningList
+runSelect
     :: (MonadIO m, FromBackendRow Sqlite a)
     => SqlSelect (Sql92SelectSyntax SqliteCommandSyntax) a -> DBT t w m [a]
-runSelectReturningList cmd = sqliteMToDbt $ Backend.runSelectReturningList cmd
-
--- | Run 'SqlSelect' and get the unique result, if there is one.
--- Both no results as well as more than one result cause this to return Nothing.
--- TODO @martoon: looks like useless method, even to throw an error we would prefer
--- to know how many results were returned.
-runSelectReturningOne
-    :: (MonadIO m, FromBackendRow Sqlite a)
-    => SqlSelect (Sql92SelectSyntax SqliteCommandSyntax) a -> DBT t w m (Maybe a)
-runSelectReturningOne cmd = sqliteMToDbt $ Backend.runSelectReturningOne cmd
+runSelect cmd = sqliteMToDbt $ Backend.runSelectReturningList cmd
 
 runInsert
     :: MonadIO m

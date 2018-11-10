@@ -1,10 +1,15 @@
+{-# LANGUAGE CPP         #-}
 {-# LANGUAGE QuasiQuotes #-}
 
 module Dscp.DB.SQLite.Instances () where
 
 import Codec.Serialise as Codec (Serialise, deserialise, serialise)
-import Control.Lens (matching, review)
-
+import qualified Data.ByteArray as BA
+import Database.Beam.Backend ( FromBackendRow (..))
+import Database.Beam.Backend.SQL.SQL92 (HasSqlValueSyntax (..))
+import Database.Beam.Query (HasSqlEqualityCheck (..))
+import Database.Beam.Sqlite (Sqlite)
+import Database.Beam.Sqlite.Syntax (SqliteExpressionSyntax, SqliteValueSyntax)
 import Database.SQLite.Simple.FromField (FromField (..))
 import Database.SQLite.Simple.FromRow (FromRow (..), field)
 import Database.SQLite.Simple.ToField (ToField (..))
@@ -15,8 +20,12 @@ import Dscp.Core (ATGDelta, Address (..), Assignment (..), AssignmentType, Cours
                   SignedSubmission (..), Subject (..), Submission (..), SubmissionWitness (..))
 import Dscp.Crypto (EmptyMerkleTree, Hash, MerkleSignature, PublicKey, Signature, hash)
 import Dscp.DB.SQLite.BlockData (BlockData (..), TxInBlock (..), TxWithIdx (..))
-import Dscp.DB.SQLite.Types (TxBlockIdx, intTxBlockIdx)
+import Dscp.DB.SQLite.Types
 import Dscp.Util (leftToPanic)
+
+----------------------------------------------------------------------------
+-- Instances to remove
+----------------------------------------------------------------------------
 
 instance FromField (Hash a)            where fromField f = Codec.deserialise <$> fromField f
 instance FromField (Signature a)       where fromField f = Codec.deserialise <$> fromField f
@@ -35,9 +44,7 @@ instance FromField SubmissionWitness where fromField f = Codec.deserialise <$> f
 instance FromField DocumentType      where fromField f = toEnum <$> fromField f
 instance FromField ATGDelta          where fromField f = Codec.deserialise <$> fromField f
 instance FromField TxBlockIdx        where
-    fromField f = leftToPanic . first mkError . matching intTxBlockIdx <$> fromField f
-      where
-        mkError idx = "Bad transaction index within block: " <> pretty idx
+    fromField f = leftToPanic . txBlockIdxFromInt <$> fromField f
 
 instance ToField   (Hash a)          where toField = toField . Codec.serialise
 instance ToField   (Signature a)     where toField = toField . Codec.serialise
@@ -52,7 +59,7 @@ instance ToField   AssignmentType    where toField = toField . Codec.serialise
 instance ToField   Grade             where toField = toField . getGrade
 instance ToField   SubmissionWitness where toField = toField . Codec.serialise
 instance ToField   DocumentType      where toField = toField . fromEnum
-instance ToField   TxBlockIdx        where toField = toField . review intTxBlockIdx
+instance ToField   TxBlockIdx        where toField = toField . txBlockIdxToInt
 instance ToField   ATGDelta          where toField = toField . Codec.serialise
 
 instance FromRow   Course            where fromRow = field
@@ -73,3 +80,36 @@ instance ToRow Assignment where
 
 instance FromRow BlockData where
     fromRow = BlockData <$> field <*> field <*> field <*> field <*> field <*> field <*> field
+
+----------------------------------------------------------------------------
+-- 'FromBackendRow' instances
+----------------------------------------------------------------------------
+
+#define GenFromBackendRow(TYPE) \
+instance FromBackendRow Sqlite (TYPE)
+
+GenFromBackendRow(Hash a)
+GenFromBackendRow(Course)
+GenFromBackendRow(AssignmentType)
+GenFromBackendRow(Grade)
+GenFromBackendRow(TxBlockIdx) where
+    fromBackendRow = leftToPanic . txBlockIdxFromInt <$> fromBackendRow
+
+
+-- 'HasSqlValueSyntax' instances
+----------------------------------------------------------------------------
+
+instance HasSqlValueSyntax SqliteValueSyntax (Hash a) where
+    sqlValueSyntax = sqlValueSyntax . BA.convert @_ @ByteString
+instance HasSqlValueSyntax SqliteValueSyntax Address where
+    sqlValueSyntax (Address addr) = sqlValueSyntax $ BA.convert @_ @ByteString addr
+
+deriving instance HasSqlValueSyntax SqliteValueSyntax Course
+
+----------------------------------------------------------------------------
+-- Other instances
+----------------------------------------------------------------------------
+
+instance HasSqlEqualityCheck SqliteExpressionSyntax (Hash a)
+instance HasSqlEqualityCheck SqliteExpressionSyntax Address
+instance HasSqlEqualityCheck SqliteExpressionSyntax Course
