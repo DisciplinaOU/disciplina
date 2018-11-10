@@ -24,8 +24,7 @@ createAndSubmitTx genSecret = do
     account <- lift . runSdReadM $ fromMaybe def <$> getMempoolAccountMaybe (skAddress sk)
 
     let txw = createTxw (fcMoney feeConfig) sk (aNonce account) outs
-    isNew <- lift $ addTxToMempool (GMoneyTxWitnessed txw)
-    unless isNew $ error "Duplicated transaction???"
+    lift $ addTxToMempool (GMoneyTxWitnessed txw)
     return $ twTx txw
 
 -- | Generate valid publication and put it into mempool.
@@ -48,8 +47,7 @@ createAndSubmitPub genSecret = do
             , ptHeader
             }
     let txw = signPubTx sk tx
-    isNew <- lift $ addTxToMempool (GPublicationTxWitnessed txw)
-    unless isNew $ error "Duplicated transaction???"
+    lift $ addTxToMempool (GPublicationTxWitnessed txw)
     return tx
 
 -- | Dump all mempool transactions into a new block.

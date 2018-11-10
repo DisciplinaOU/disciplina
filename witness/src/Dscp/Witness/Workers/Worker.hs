@@ -164,12 +164,11 @@ makeRelay (RelayState input pipe failedTxs) =
         whenJust hasFailed $ \(_, e) ->
             throwM e
 
-        isNew <- writingSDLock "add to mempool" $
-                     addTxToMempool @ctx tx
-                        `onAnException` \e -> addFailedTx (tx, e)
+        writingSDLock "add to mempool" $
+            addTxToMempool @ctx tx
+                `onAnException` \e -> addFailedTx (tx, e)
 
-        when isNew $
-            atomically $ STM.writeTBQueue pipe tx
+        atomically $ STM.writeTBQueue pipe tx
 
     addFailedTx entry@(tx, _) =
         atomically $ STM.modifyTVar failedTxs $ HashMap.insert (hash tx) entry

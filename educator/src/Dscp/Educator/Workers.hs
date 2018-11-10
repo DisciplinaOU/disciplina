@@ -65,7 +65,5 @@ privateBlockPublishingWorker =
                 txw <- makePublicationTx block
                 logInfo $ fmt $ nameF "Created new private block" (build txw)
                 -- TODO [DSCP-299] Be more insistent
-                isNew <- writingSDLock "add pub to mempool" $
-                          addTxToMempool (GPublicationTxWitnessed txw)
-                unless isNew $
-                    logWarning "Private block was already present"
+                writingSDLock "add pub to mempool" $
+                    addTxToMempool (GPublicationTxWitnessed txw)
