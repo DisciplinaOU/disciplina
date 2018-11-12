@@ -21,7 +21,8 @@ testMakeBotHandlers
 testMakeBotHandlers seed =
     initializeBot
         EducatorBotParams
-        { ebpSeed = seed
+        { ebpEnabled = True
+        , ebpSeed = seed
         , ebpOperationsDelay = 0
         } $ pure $ addBotHandlers student (studentApiHandlers student)
 

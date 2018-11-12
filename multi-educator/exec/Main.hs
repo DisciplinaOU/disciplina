@@ -18,8 +18,9 @@ main = do
 getEducatorConfig :: IO MultiEducatorConfigRec
 getEducatorConfig = do
     let parser = (,) <$> configParamsParser <*> multiEducatorConfigParser
-    (configParams, cliConfig) <- execParser $
+    (configParams, cliConfigMod) <- execParser $
         info (helper <*> versionOption <*> parser) $
         fullDesc <> progDesc "Disciplina educator node."
+    let wrapConfig cfg = cliConfigMod $ defaultMultiEducatorConfig <> cfg
     buildConfig configParams $
-        fmap (<> cliConfig) . fillMultiEducatorConfig
+        fmap wrapConfig . fillMultiEducatorConfig

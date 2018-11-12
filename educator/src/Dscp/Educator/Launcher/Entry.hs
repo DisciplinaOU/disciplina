@@ -14,7 +14,6 @@ import UnliftIO.Async (async, cancel)
 
 import Dscp.Educator.Config
 import Dscp.Educator.Launcher.Mode
-import Dscp.Educator.Web.Params
 import Dscp.Educator.Web.Server
 import Dscp.Educator.Workers
 import Dscp.Network
@@ -37,10 +36,9 @@ withEducatorBackground cont = do
 serveAPIs :: CombinedWorkMode ctx m => m ()
 serveAPIs = do
     let witnessApiParams = witnessConfig ^. sub #witness . option #api
-        educatorApiParams = educatorConfig ^. sub #educator . option #api
-        separateWitnessServer =
-            witnessApiParams /=
-            Just (ewpServerParams educatorApiParams)
+        educatorApiParams = educatorConfig ^. sub #educator . sub #api . option #serverParams
+        separateWitnessServer = witnessApiParams /= Just educatorApiParams
+
     whenJust witnessApiParams $ \serverParams ->
         when separateWitnessServer $ do
             logInfo "Forking witness API server"
@@ -50,7 +48,6 @@ serveAPIs = do
     logInfo "Forking student API"
     void . async $ serveEducatorAPIsReal
         (not separateWitnessServer)
-        educatorApiParams
 
 -- | Entry point of educator node.
 educatorEntry :: CombinedWorkMode ctx m => m ()

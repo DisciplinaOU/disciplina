@@ -12,15 +12,14 @@ module Dscp.Witness.CLI
     , witnessConfigParser
     ) where
 
-import Loot.Config (OptParser, (.::), (.:<), (.<>))
+import Loot.Config (ModParser, OptModParser, modifying, (%::), (..:), (.::), (.:<), (<*<))
 import Loot.Network.ZMQ.Common (ZTNodeId (..), parseZTNodeId)
-import Options.Applicative (Parser, ReadM, auto, eitherReader, help, long, maybeReader, metavar,
-                            option, strOption, switch)
+import Options.Applicative (Parser, ReadM, auto, eitherReader, flag', help, long, maybeReader,
+                            metavar, option, strOption)
 
-import Dscp.CommonCLI (appDirParamParser, baseKeyParamsParser,
-                       networkAddressParser, serverParamsParser)
+import Dscp.CommonCLI
 import Dscp.Core.Governance
-import Dscp.DB.Rocks.Real.Types (RocksDBParams (..))
+import Dscp.DB.Rocks.Real.Types
 import Dscp.Resource.Keys
 import Dscp.Resource.Network (NetCliParams (..), NetServParams (..))
 import Dscp.Util (eitherToMaybe)
@@ -32,16 +31,18 @@ import Dscp.Witness.Keys
 -- DB
 ----------------------------------------------------------------------------
 
-rocksParamsParser :: Parser RocksDBParams
-rocksParamsParser = do
-    rdpPath <- strOption $
+rocksParamsParser :: ModParser RocksDBParams
+rocksParamsParser =
+    rdpPathL  ..: pathParser <*<
+    rdpCleanL ..: cleanParser
+  where
+    pathParser =  strOption $
         long "db-path" <>
         metavar "FILEPATH" <>
         help "Path to database directory for witness node."
-    rdpClean <- switch $
+    cleanParser = flag' True $
         long "db-clean" <>
         help "Clean db on every app start"
-    pure RocksDBParams{..}
 
 ----------------------------------------------------------------------------
 -- ZMQ TCP
@@ -103,10 +104,14 @@ committeeParamsParser =
          help "Committee secret key. Common key for the core nodes \
               \which serves as root key in generation of participants' secrets.")
 
-witnessKeyParamsParser :: Parser WitnessKeyParams
+-- | CLI parser for witness key params.
+-- Note [DSCP-347]: there is a bug -- one cannot redefine committee secret keys
+-- with basic key params in CLI. Such usecase is not very likely, but
+-- this is still counterintuitive.
+witnessKeyParamsParser :: ModParser WitnessKeyParams
 witnessKeyParamsParser =
-    Committee <$> committeeParamsParser <|>
-    Basic <$> baseKeyParamsParser "witness"
+    modifying (Committee <$> committeeParamsParser) <|>
+    over _Basic <$> baseKeyParamsParser "witness"
 
 ---------------------------------------------------------------------------
 -- Readers
@@ -120,11 +125,11 @@ committeeSecretReadM =
 -- Partial CLI parser for config
 ---------------------------------------------------------------------------
 
-witnessConfigParser :: OptParser WitnessConfig
+witnessConfigParser :: OptModParser WitnessConfig
 witnessConfigParser = #witness .:<
-    (#db .:: rocksParamsParser .<>
-     #network .:: netServParamsParser .<>
-     #keys .:: witnessKeyParamsParser .<>
-     #api .:: (Just <$> serverParamsParser "Witness") .<>
-     #appDir .:: appDirParamParser .<>
+    (#db %:: rocksParamsParser <*<
+     #network .:: netServParamsParser <*<
+     #keys %:: witnessKeyParamsParser <*<
+     #api .:: (Just <$> serverParamsParser "Witness") <*<
+     #appDir .:: appDirParamParser <*<
      #metricsEndpoint .:: metricsServerParser)
