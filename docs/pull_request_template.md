@@ -2,10 +2,6 @@
 
 <!-- PR description goes here -->
 
-### YT issue
-
-https://issues.serokell.io/issue/DSCP-
-
 ### Checklist
 
 Hint: a perfect PR has all the checkmarks set.
