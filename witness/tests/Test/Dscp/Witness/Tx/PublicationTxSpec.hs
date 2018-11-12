@@ -44,9 +44,7 @@ selectAuthor = fmap mkSecretKeyData $ elements (testGenesisSecrets <> testCommit
 submitPub
     :: (MempoolCtx ctx m, WithinWriteSDLock)
     => PublicationTxWitnessed -> m ()
-submitPub tx = do
-    new <- addTxToMempool (GPublicationTxWitnessed tx)
-    unless new $ error "Duplicated transaction in test scenario"
+submitPub = addTxToMempool . GPublicationTxWitnessed
 
 spec :: Spec
 spec = describe "Publication tx expansion + validation" $ do
@@ -122,10 +120,21 @@ spec = describe "Publication tx expansion + validation" $ do
 
         lift $ do
             mapM_ submitPub (init badTws)
-            -- 'addTxToMempool' kicks duplicated transactions, so we have to
-            -- dump them into block
-            void . applyBlock =<< createBlock runSdM 0
-            throwsSome $ submitPub (last badTws)
+            throwsPrism (_PublicationError . _PublicationLocalLoop) $
+                submitPub (last badTws)
+
+    it "Duplicated tx causes failure" $ witnessProperty $ do
+        -- this is mostly a special case of the previous test,
+        -- but for clarity let's do this check
+        author <- pick selectAuthor
+        pub :| [] <- pick $ genPublicationChain 1 author
+        let tw = signPubTx author pub
+
+        lift $ submitPub tw
+        whenM (pick arbitrary) $
+            lift $ void . applyBlock =<< createBlock runSdM 0
+        lift . throwsPrism (_PublicationError . _PublicationLocalLoop) $
+            submitPub tw
 
     it "Wrong signature is not fine" $ witnessProperty $ do
         author <- pick selectAuthor

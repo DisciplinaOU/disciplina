@@ -57,15 +57,11 @@ addTxToMempool
     :: forall ctx m
     .  (MempoolCtx ctx m, WithinWriteSDLock)
     => GTxWitnessed
-    -> m Bool
+    -> m ()
 addTxToMempool tx = do
     Mempool pool conf <- view (lensOf @MempoolVar)
-    writeToMempool @ctx pool $ do
-        txsWithUndos <- gets Pool.msTxs
-        let isNew = tx `notElem` map fst txsWithUndos
-        when isNew $
-            Pool.processTxAndInsertToMempool conf tx
-        return isNew
+    writeToMempool @ctx pool $
+        Pool.processTxAndInsertToMempool conf tx
 
 -- | See all mempool transactions.
 readTxsMempool :: (MempoolCtx ctx m, WithinReadSDLock) => m [GTxWitnessed]
