@@ -36,11 +36,6 @@ demo: &demo
           - # Test key #2, secret: fOhZOFr6SSnYv1/xfKPPMHdWLdQDboysJ4Q794Gezmw=
             - 3BAyX5pSiFerJgLsJZ9XyoBDMHPtq3NLqm5AGPcBpba6W644zSiSWy3vVr
             - 1000
-  witness:
-    db:
-      path: "/var/db/dscp-witness"
-      clean: false
-
     logging:
       defaultName: "witness"
       config:
@@ -69,6 +64,11 @@ demo: &demo
             init:
               log:
                 severity: Debug+
+
+  witness:
+    db:
+      path: "/var/db/dscp-witness"
+      clean: false
 
   educator:
     logging:
