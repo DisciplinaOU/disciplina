@@ -8,10 +8,10 @@ module Dscp.MultiEducator.CLI
     , multiEducatorConfigParser
     ) where
 
-import Loot.Config (OptParser, upcast, (.::), (.:<), (.<>))
+import Loot.Config (OptModParser, uplift, (%::), (.::), (.:<), (<*<))
 import Options.Applicative (Parser, help, long, metavar, strOption)
 
-import Dscp.Educator.CLI (educatorWebParamsParser, publishingPeriodParser, sqliteParamsParser)
+import Dscp.Educator.CLI (educatorWebConfigParser, publishingPeriodParser, sqliteParamsParser)
 import Dscp.MultiEducator.Config (MultiEducatorConfig)
 import Dscp.MultiEducator.Launcher.Params (MultiEducatorKeyParams (..))
 import Dscp.Witness.CLI (witnessConfigParser)
@@ -22,13 +22,13 @@ multiEducatorKeyParamsParser = MultiEducatorKeyParams <$>
                metavar "PATH" <>
                help "Path to the directory with educator keys")
 
-multiEducatorConfigParser :: OptParser MultiEducatorConfig
+multiEducatorConfigParser :: OptModParser MultiEducatorConfig
 multiEducatorConfigParser =
-    fmap upcast witnessConfigParser .<>
+    uplift witnessConfigParser <*<
     #educator .:<
-        (#db .:: sqliteParamsParser .<>
-         #keys .:: multiEducatorKeyParamsParser .<>
-         #api .:: educatorWebParamsParser .<>
+        (#db %:: sqliteParamsParser <*<
+         #keys .:: multiEducatorKeyParamsParser <*<
+         #api .:< educatorWebConfigParser <*<
          #publishing .:<
              (#period .:: publishingPeriodParser
              )

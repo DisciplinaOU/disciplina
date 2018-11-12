@@ -23,12 +23,12 @@ import Servant.Generic (toServant)
 import UnliftIO (askUnliftIO)
 
 import Dscp.Educator.Web.Auth
-import Dscp.Educator.Web.Bot (EducatorBotSwitch (..))
+import Dscp.Educator.Web.Bot
 import Dscp.Educator.Web.Educator (EducatorAPI, convertEducatorApiHandler, educatorAPI,
                                    educatorApiHandlers)
-import Dscp.Educator.Web.Params (EducatorWebParams (..))
 import Dscp.Educator.Web.Student (ProtectedStudentAPI, StudentCheckAction (..),
                                   convertStudentApiHandler, studentAPI, studentApiHandlers)
+import Dscp.MultiEducator.Config
 import Dscp.MultiEducator.Launcher.Mode (MultiCombinedWorkMode, MultiEducatorWorkMode,
                                          lookupEducator, normalToMulti)
 import Dscp.MultiEducator.Launcher.Resource (EducatorCtxWithCfg (..))
@@ -37,7 +37,6 @@ import Dscp.MultiEducator.Web.Educator (MultiEducatorAPI, MultiStudentAPI, multi
 import Dscp.MultiEducator.Web.Educator.Auth
 import Dscp.Web (ServerParams (..), serveWeb)
 import Dscp.Web.Metrics (responseTimeMetric)
-import Dscp.Witness.Config
 import Dscp.Witness.Web
 
 type EducatorWebAPI =
@@ -81,10 +80,10 @@ mkMultiEducatorApiServer jwtSet cookieSet nat =
 mkStudentApiServer'
     :: forall ctx m. MultiEducatorWorkMode ctx m
     => (forall x. m x -> Handler x)
-    -> EducatorBotSwitch
+    -> EducatorBotParams
     -> m (Text -> Server ProtectedStudentAPI)
-mkStudentApiServer' nat botSwitch = do
-    case botSwitch of
+mkStudentApiServer' nat botParams = do
+    case ebpEnabled botParams of
       _ {-EducatorBotOff-} -> return $ \login -> getServer login . studentApiHandlers
       -- To initilialize the bot we need a database, how do we choose a database?
       {-EducatorBotOn params -> initializeBot params $ do
@@ -102,10 +101,10 @@ mkStudentApiServer' nat botSwitch = do
 mkStudentApiServer
     :: forall ctx m. MultiEducatorWorkMode ctx m
     => (forall x. m x -> Handler x)
-    -> EducatorBotSwitch
+    -> EducatorBotParams
     -> m (Server MultiStudentAPI)
-mkStudentApiServer nat botSwitch = do
-    studApi <- mkStudentApiServer' nat botSwitch
+mkStudentApiServer nat botParams = do
+    studApi <- mkStudentApiServer' nat botParams
     return $ hoistServerWithContext
         multiStudentAPI
         (Proxy :: Proxy '[StudentCheckAction, NoAuthContext "student"])
@@ -117,7 +116,7 @@ mkStudentApiServer nat botSwitch = do
 -- If bot is enabled, all students are allowed to use API.
 createStudentCheckAction
     :: forall ctx m. MultiEducatorWorkMode ctx m
-    => EducatorBotSwitch
+    => EducatorBotParams
     -> m StudentCheckAction
 createStudentCheckAction _ =
     return . StudentCheckAction . const $ pure True
@@ -140,21 +139,25 @@ educatorCors = cors $ const $ Just $
     , corsMethods = ["GET", "POST", "DELETE"]
     }
 
-serveEducatorAPIsReal :: MultiCombinedWorkMode ctx m => Bool -> EducatorWebParams -> m ()
-serveEducatorAPIsReal withWitnessApi EducatorWebParams{..} = do
-    let ServerParams{..} = ewpServerParams
-    studentCheckAction <- createStudentCheckAction ewpBotParams
+serveEducatorAPIsReal :: MultiCombinedWorkMode ctx m => Bool -> m ()
+serveEducatorAPIsReal withWitnessApi = do
+    let webCfg = multiEducatorConfig ^. sub #educator . sub #api
+        ServerParams{..}  = webCfg ^. option #serverParams
+        botParams         = webCfg ^. option #botParams
+        studentAPINoAuth  = webCfg ^. option #studentAPINoAuth
+
+    studentCheckAction <- createStudentCheckAction botParams
     jwtKey <- liftIO $ generateKey
     let jwtSettings = defaultJWTSettings jwtKey
         cookieSettings = defaultCookieSettings
     let srvCtx = cookieSettings :. jwtSettings :.
-                 studentCheckAction :. ewpStudentAPINoAuth :.
+                 studentCheckAction :. studentAPINoAuth :.
                  EmptyContext
 
     logInfo $ "Serving Student API on "+|spAddr|+""
     unliftIO <- askUnliftIO
     let educatorApiServer = mkMultiEducatorApiServer jwtSettings cookieSettings (convertEducatorApiHandler unliftIO)
-    studentApiServer <- mkStudentApiServer (convertStudentApiHandler unliftIO) ewpBotParams
+    studentApiServer <- mkStudentApiServer (convertStudentApiHandler unliftIO) botParams
     let witnessApiServer = if withWitnessApi
           then mkWitnessAPIServer (convertWitnessHandler unliftIO)
           else throwAll err405{ errBody = "Witness API disabled at this port" }

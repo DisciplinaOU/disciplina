@@ -5,8 +5,8 @@
 
 module Dscp.Educator.CLI
     ( sqliteParamsParser
+    , educatorWebConfigParser
     , educatorConfigParser
-    , educatorWebParamsParser
     , publishingPeriodParser
     ) where
 
@@ -21,6 +21,7 @@ import Dscp.Educator.Config
 import Dscp.Educator.Launcher.Params (EducatorKeyParams (..))
 import Dscp.Educator.Web.Auth
 import Dscp.Educator.Web.Bot.Params
+import Dscp.Educator.Web.Config
 import Dscp.Witness.CLI (witnessConfigParser)
 
 sqliteParamsParser :: ModParser SQLiteParams
@@ -96,18 +97,20 @@ publishingPeriodParser = option timeReadM $
          \changes, in this case node will wait for a whole cycle before trying \
          \to create a block next time."
 
+educatorWebConfigParser :: OptModParser EducatorWebConfig
+educatorWebConfigParser =
+    #serverParams .:: serverParamsParser "Educator" <*<
+    #botParams %:: educatorBotParamsParser <*<
+    #educatorAPINoAuth .:: educatorApiNoAuthParser <*<
+    #studentAPINoAuth .:: studentApiNoAuthParser
+
 educatorConfigParser :: OptModParser EducatorConfig
 educatorConfigParser =
     uplift witnessConfigParser <*<
     #educator .:<
         (#db %:: sqliteParamsParser <*<
          #keys %:: educatorKeyParamsParser <*<
-         #api .:<
-             (#serverParams .:: serverParamsParser "Educator" <*<
-              #botParams %:: educatorBotParamsParser <*<
-              #educatorAPINoAuth .:: educatorApiNoAuthParser <*<
-              #studentAPINoAuth .:: studentApiNoAuthParser
-             ) <*<
+         #api .:< educatorWebConfigParser <*<
          #publishing .:<
             (#period .:: publishingPeriodParser)
         )
