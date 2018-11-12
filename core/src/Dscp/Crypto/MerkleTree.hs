@@ -17,6 +17,7 @@ module Dscp.Crypto.MerkleTree
        , drawProofNode
        , mkMerkleProof
        , mkMerkleProofSingle
+       , computeMerkleRoot
        , validateMerkleProof
        , getMerkleProofRoot
        , lookup
@@ -200,7 +201,7 @@ mkMerkleProof (MerkleTree rootNode) n =
       x             -> Just x
   where
     constructProof :: MerkleNode a -> MerkleProof a
-    constructProof (MerkleLeaf {..})
+    constructProof MerkleLeaf {..}
       | Set.member mIndex n = ProofLeaf mRoot mVal
       | otherwise = ProofPruned mRoot
     constructProof (MerkleBranch mRoot' mLeft' mRight') =
@@ -227,22 +228,24 @@ validateElementExistAt :: Eq a => LeafIndex -> a -> MerkleProof a -> Bool
 validateElementExistAt index value proof = lookup index proof == Just value
 
 -- | Validate a merkle tree proof.
-validateMerkleProof :: forall a. HasHash a => MerkleProof a -> MerkleSignature a -> Bool
+validateMerkleProof :: HasHash a => MerkleProof a -> MerkleSignature a -> Bool
 validateMerkleProof proof treeRoot =
     computeMerkleRoot proof == Just treeRoot
-  where
-    computeMerkleRoot :: MerkleProof a -> Maybe (MerkleSignature a)
-    computeMerkleRoot (ProofLeaf {..}) = do
-      case MerkleSignature (unsafeHash pnVal) 1 == pnSig of
-        True  -> Just pnSig
-        False -> Nothing
-    computeMerkleRoot (ProofPruned {..}) = Just pnSig
-    computeMerkleRoot (ProofBranch pnRoot' pnLeft' pnRight') = do
-      pnSigL <- computeMerkleRoot pnLeft'
-      pnSigR <- computeMerkleRoot pnRight'
-      case mkBranchRootHash pnSigL pnSigR == pnRoot' of
-        True  -> Just pnRoot'
-        False -> Nothing
+
+-- | Recalculate signatures of every node in the proof tree and
+-- return root signature if every inner node passed validation.
+computeMerkleRoot :: HasHash a => MerkleProof a -> Maybe (MerkleSignature a)
+computeMerkleRoot ProofLeaf {..} =
+    if MerkleSignature (unsafeHash pnVal) 1 == pnSig
+    then Just pnSig
+    else Nothing
+computeMerkleRoot ProofPruned {..} = Just pnSig
+computeMerkleRoot (ProofBranch pnRoot' pnLeft' pnRight') = do
+    pnSigL <- computeMerkleRoot pnLeft'
+    pnSigR <- computeMerkleRoot pnRight'
+    if mkBranchRootHash pnSigL pnSigR == pnRoot'
+        then Just pnRoot'
+        else Nothing
 
 -- | Debug print of tree.
 drawMerkleTree :: (Show a) => MerkleTree a -> String
@@ -250,8 +253,8 @@ drawMerkleTree MerkleEmpty = "empty tree"
 drawMerkleTree (MerkleTree n) = Tree.drawTree (asTree n)
   where
     asTree :: (Show a) => MerkleNode a -> Tree.Tree String
-    asTree (MerkleBranch {..}) = Tree.Node (show mRoot) [asTree mLeft, asTree mRight]
-    asTree  leaf               = Tree.Node (show leaf) []
+    asTree MerkleBranch {..} = Tree.Node (show mRoot) [asTree mLeft, asTree mRight]
+    asTree leaf              = Tree.Node (show leaf) []
 
 -- | Debug print of proof tree.
 drawProofNode :: (Show a) => Maybe (MerkleProof a) -> String
@@ -259,9 +262,9 @@ drawProofNode Nothing = "empty proof"
 drawProofNode (Just p) = Tree.drawTree (asTree p)
   where
     asTree :: (Show a) => MerkleProof a -> Tree.Tree String
-    asTree (ProofLeaf   {..}) = Tree.Node ("leaf, "   <> show pnSig) []
-    asTree (ProofBranch {..}) = Tree.Node ("branch, " <> show pnSig) [asTree pnLeft, asTree pnRight]
-    asTree (ProofPruned {..}) = Tree.Node ("pruned, " <> show pnSig) []
+    asTree ProofLeaf {..}   = Tree.Node ("leaf, "   <> show pnSig) []
+    asTree ProofBranch {..} = Tree.Node ("branch, " <> show pnSig) [asTree pnLeft, asTree pnRight]
+    asTree ProofPruned {..} = Tree.Node ("pruned, " <> show pnSig) []
 
 -- | Not a `newtype`, because DeriveAnyClass and GeneralizedNewtypeDeriving
 --   are in conflict here.
