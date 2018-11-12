@@ -97,6 +97,7 @@ sample:
     db:
       # Path to the database folder
       path: "/var/db/dscp-witness"
+      clean: False
 
     # ZeroMQ interface parameters
     network:
