@@ -62,8 +62,11 @@ import qualified Loot.Network.Class as L
 import Loot.Network.Message (CallbackWrapper, Message (..), getMsgTag, handlerDecoded,
                              handlerDecoded, runCallbacksInt)
 import Loot.Network.ZMQ.Common (ZmqTcp)
+import Time (sec)
 import UnliftIO (MonadUnliftIO)
 import UnliftIO.Async (withAsync)
+
+import Dscp.Util.Timing
 
 ----------------------------------------------------------------------------
 -- Common
@@ -114,8 +117,8 @@ data Listener m = Listener
       -- ^ Listener id, should be unique.
     , lMsgTypes :: !(Set MsgType)
       -- ^ Message types listener is supposed to receive.
-    , lAction   :: !(ListenerEnv NetTag -> m ())
-      -- ^ Listener's action.
+    , lAction   :: !(ListenerEnv NetTag -> m Void)
+      -- ^ Listener's action. Should never terminate.
     }
 
 runListener ::
@@ -126,7 +129,9 @@ runListener ::
 runListener nat Listener{..} = do
     logDebug $ "Launching listner " +|| lId ||+ ""
     (lEnv :: ListenerEnv NetTag) <- registerListener @NetTag lId lMsgTypes
-    nat (lAction lEnv) `finally` (logDebug $ "Listener " +|| lId ||+ " has exited")
+    void (nat $ lAction lEnv)
+        `catchAny` (\e -> logError $ "Listener " +|| lId ||+ " stopped due to error: " +|| e ||+ "")
+        `finally` (logDebug $ "Listener " +|| lId ||+ " has exited")
 
 servSend :: forall d. Message MsgK d => ListenerEnv NetTag -> CliId NetTag -> d -> STM ()
 servSend btq cliId msg =
@@ -137,7 +142,7 @@ servPub btq msg =
     sendBtq btq $ L.Publish (subType @d) [BSL.toStrict $ serialise msg]
 
 simpleListener ::
-       forall m. (MonadIO m, MonadCatch m, MonadLogging m)
+       forall m. (MonadIO m, MonadMask m, MonadLogging m)
     => ListenerId
     -> Set MsgType
     -> (ListenerEnv NetTag -> [CallbackWrapper (CliId NetTag) m ()])
@@ -148,7 +153,8 @@ simpleListener lId lMsgTypes getCallbacks =
     -- todo use 'fmt' or something similar
     lAction btq = do
         logDebug $ "Listener " +|| lId ||+ " has started."
-        forever $ action btq `catchAny` handler
+        forever $
+            recoverAll ("Listener " +|| lId ||+ "") (constDelay (sec 2)) (action btq)
     action btq = do
         let callbacks = getCallbacks btq
         (cliId,msgT,content) <- atomically $ recvBtq btq
@@ -158,11 +164,6 @@ simpleListener lId lMsgTypes getCallbacks =
                     logWarning $ "Listener " +|| lId ||+ "couldn't match on type (runCallbacksInt)"
                 _       -> pass
             _            -> pass
-    handler e = do
-        logError $
-            "Listener " +|| lId ||+ " has failed with an error: " +||
-            e ||+ ". Recovering (in 2sec)."
-        liftIO $ threadDelay $ 2000000
 
 -- for server, we just skip the message if we can't decode it, since
 -- we have only one dispatcher.
@@ -183,8 +184,8 @@ data Worker m = Worker
       -- ^ Message types worker is supposed to receive.
     , wSubs     :: !(Set Subscription)
       -- ^ Worker's subscriptions.
-    , wAction   :: !(ClientEnv NetTag -> m ())
-      -- ^ Worker's action.
+    , wAction   :: !(ClientEnv NetTag -> m Void)
+      -- ^ Worker's action. Should never end.
     }
 
 runWorker ::
@@ -195,7 +196,9 @@ runWorker ::
 runWorker nat Worker{..} = do
     logDebug $ "Launching worker " +|| wId ||+ ""
     (cEnv :: ClientEnv NetTag) <- registerClient @NetTag wId wMsgTypes wSubs
-    nat (wAction cEnv) `finally` (logDebug $ "Worker " +|| wId ||+ " has exited")
+    void (nat $ wAction cEnv)
+        `catchAny` (\e -> logError $ "Worker " +|| wId ||+ " stopped due to error: " +|| e ||+ "")
+        `finally` (logDebug $ "Worker " +|| wId ||+ " has exited")
 
 cliSend ::
        forall d m. (Message MsgK d, NetworkingCli NetTag m, MonadIO m)

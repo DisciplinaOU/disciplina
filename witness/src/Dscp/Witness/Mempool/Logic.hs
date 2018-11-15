@@ -110,7 +110,7 @@ type SdMemWriteM =
             ChgAccum
             GTxWitnessed)
 
--- | We expect that some actions can be run with both 'runSdM' and 'runSdMempoolRead'
+-- | We expect that some actions can be run with both 'runSdM' and 'runSdMempoolLocked'
 _sdMGeneralizationCheck :: ()
 _sdMGeneralizationCheck =
     let _ = action :: SdMemReadM ()

@@ -15,7 +15,7 @@ module Dscp.MultiEducator.Launcher.Mode
       -- * Implementations
     , MultiEducatorContext (..)
     , MultiEducatorRealMode
-    , mecWitnessCtx
+    , mecWitnessVars
     , lookupEducator
     , loadEducator
     , normalToMulti
@@ -23,14 +23,13 @@ module Dscp.MultiEducator.Launcher.Mode
 
 import Control.Lens (makeLenses)
 import qualified Data.Map as M
-import Loot.Base.HasLens (HasLens, HasLens', lensOf)
+import Loot.Base.HasLens (HasLens', lensOf)
 import Loot.Config (option, sub)
 import System.Directory (canonicalizePath, createDirectoryIfMissing)
 import System.FilePath.Posix ((</>))
 
 import Dscp.Config
 import Dscp.Crypto (mkPassPhrase)
-import Dscp.DB.CanProvideDB as DB
 import Dscp.DB.SQLite
 import qualified Dscp.Educator.Config as E
 import Dscp.Educator.Launcher.Marker (EducatorNode)
@@ -66,7 +65,7 @@ type MultiEducatorWorkMode ctx m =
     -- It's easier to just have these two lenses instead of reconstructing
     -- the full educator context in multiToNormal from other lenses
     , HasLens' ctx MultiEducatorResources
-    , HasLens' ctx W.WitnessContext
+    , HasLens' ctx W.WitnessVariables
 
     , MonadThrow m
     )
@@ -82,9 +81,9 @@ type MultiCombinedWorkMode ctx m =
 ---------------------------------------------------------------------
 
 data MultiEducatorContext = MultiEducatorContext
-    { _mecResources  :: !MultiEducatorResources
+    { _mecResources   :: !MultiEducatorResources
       -- ^ Resources, allocated from params.
-    , _mecWitnessCtx :: !W.WitnessContext
+    , _mecWitnessVars :: !W.WitnessVariables
     }
 
 makeLenses ''MultiEducatorContext
@@ -97,13 +96,9 @@ type MultiEducatorRealMode = RIO MultiEducatorContext
 ---------------------------------------------------------------------
 
 deriveHasLens 'mecResources ''MultiEducatorContext ''MultiEducatorResources
-deriveHasLens 'mecWitnessCtx ''MultiEducatorContext ''W.WitnessResources
-deriveHasLens 'mecWitnessCtx ''MultiEducatorContext ''W.WitnessVariables
-deriveHasLens 'mecWitnessCtx ''MultiEducatorContext ''NetServResources
-
--- GHC does not understand 'deriveHasLens' for 'DB.Plugin' for some reason
-instance HasLens DB.Plugin MultiEducatorContext DB.Plugin where
-    lensOf = (lensOf @W.WitnessContext) . (lensOf @DB.Plugin)
+deriveHasLens 'mecResources ''MultiEducatorContext ''W.WitnessResources
+deriveHasLens 'mecResources ''MultiEducatorContext ''NetServResources
+deriveHasLens 'mecWitnessVars ''MultiEducatorContext ''W.WitnessVariables
 
 ----------------------------------------------------------------------------
 -- (Almost) Natural Transformation
@@ -153,7 +148,7 @@ loadEducator _new login passphrase = do
             }
         educatorContext = E.EducatorContext
             { _ecResources = educatorResources
-            , _ecWitnessCtx = ctx ^. lensOf @W.WitnessContext
+            , _ecWitnessVars = ctx ^. lensOf @W.WitnessVariables
             }
         --newCfg' = E.defaultEducatorConfig
         --    & (sub #educator . option #db ?~ dbParam)

@@ -18,6 +18,7 @@ module Dscp.Core.Arbitrary
     , oneTestItem
     , variousItems
     , tiList
+    , tiListNE
     , tiOne
     , genCoreTestEnv
     , cteSubmissions

@@ -5,46 +5,34 @@ module Dscp.Educator.Workers
        ( educatorWorkers
        ) where
 
-import Fmt (build, fmt, nameF)
 import Fmt ((+||), (||+))
 import Loot.Config (option, sub)
-import Loot.Log (logInfo, logWarning)
-import Time (ms, toUnit)
+import Loot.Log (logWarning)
+import Time (minute, ms, sec, toUnit)
 
 import Dscp.Core
-import Dscp.DB.SQLite
 import Dscp.Educator.Config
 import Dscp.Educator.Launcher.Mode
+import Dscp.Educator.Logic
 import Dscp.Network
-import Dscp.Resource.Keys
 import Dscp.Util.Timing
-import Dscp.Witness
 
 educatorWorkers
-    :: CombinedWorkMode ctx m
+    :: EducatorWorkMode ctx m
     => [Worker m]
 educatorWorkers =
-    [privateBlockPublishingWorker]
+    [ privateBlockCreatorWorker
+    , publicationTxSubmitter
+    ]
 
 ----------------------------------------------------------------------------
 -- Private blocks publishing
 ----------------------------------------------------------------------------
 
-makePublicationTx
-    :: CombinedWorkMode ctx m
-    => PrivateBlockHeader -> m PublicationTxWitnessed
-makePublicationTx header = do
-    sk <- ourSecretKeyData @EducatorNode
-    let tx = PublicationTx
-            { ptAuthor = skAddress sk
-            , ptFeesAmount = unFees $ calcFeePub (fcPublication feeConfig) header
-            , ptHeader = header
-            }
-    return $ signPubTx sk tx
-
-privateBlockPublishingWorker :: CombinedWorkMode ctx m => Worker m
-privateBlockPublishingWorker =
-    Worker "privateBlockPublishingWorker" [] [] $ \_ -> bootstrap >> work
+-- | Periodically take hanging private transactions and form a new private block.
+privateBlockCreatorWorker :: EducatorWorkMode ctx m => Worker m
+privateBlockCreatorWorker =
+    Worker "privateBlockCreatorWorker" [] [] $ \_ -> bootstrap >> work
   where
     period = educatorConfig ^. sub #educator . sub #publishing . option #period
     slotDuration =
@@ -56,14 +44,23 @@ privateBlockPublishingWorker =
                          \witness slot duration ("
                          +|| period ||+ " <= " +|| slotDuration ||+ ")"
 
-    work = periodically "Private block publisher" period $ do
-        mblock <- transactW $ runMaybeT (createPrivateBlock Nothing)
-        case mblock of
-            Nothing -> logInfo "No private chain updates, skipping private \
-                                \block creation"
-            Just block -> do
-                txw <- makePublicationTx block
-                logInfo $ fmt $ nameF "Created new private block" (build txw)
-                -- TODO [DSCP-299] Be more insistent
-                writingSDLock "add pub to mempool" $
-                    addTxToMempool (GPublicationTxWitnessed txw)
+    withRecovery action =
+        recoverAll "Private block publisher"
+                   (capDelay (minute 5) $ expBackoff (sec 1)) $
+                   action
+    work =
+        forever $
+        withRecovery $
+        notFasterThan period $
+            void dumpPrivateBlock
+
+-- | Publish all hanging private blocks to public chain.
+publicationTxSubmitter :: forall m ctx. EducatorWorkMode ctx m => Worker m
+publicationTxSubmitter =
+    Worker "publicationTxSubmitter" [] [] $ \_ ->
+        forever $
+        recoverAll actionName (capDelay (minute 5) $ expBackoff (sec 1)) $
+        notFasterThan (sec 1) $
+            void updateMempoolWithPublications
+  where
+    actionName = "Publication tx submitter"

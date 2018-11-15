@@ -17,7 +17,7 @@ import Dscp.Educator.Launcher.Resource (EducatorResources (..))
 import Dscp.Resource.Class (AllocResource (..), InitParams (..))
 import Dscp.Resource.Functions
 import Dscp.Rio (runRIO)
-import Dscp.Witness.Launcher (formWitnessContext)
+import Dscp.Witness.Launcher
 
 -- | Make up Educator context from dedicated pack of allocated resources.
 formEducatorContext
@@ -26,8 +26,8 @@ formEducatorContext
     -> m EducatorContext
 formEducatorContext _ecResources = do
     let wConfig = rcast educatorConfig
-    _ecWitnessCtx <- withWitnessConfig wConfig $
-        formWitnessContext (_erWitnessResources _ecResources)
+    _ecWitnessVars <- withWitnessConfig wConfig $
+        mkWitnessVariables (_erWitnessResources _ecResources)
     pure EducatorContext{..}
 
 -- | Given params, allocate resources, construct node context and run

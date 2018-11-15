@@ -7,8 +7,7 @@ module Test.Dscp.Witness.Common
 import Dscp.Core
 import Dscp.Crypto
 import Dscp.Util.Test
-
-import Test.Dscp.Witness.Mode
+import Dscp.Witness.TestConfig
 
 -- | Arbitrarly choose genesis secret.
 selectGenesisSecret :: Gen SecretKey

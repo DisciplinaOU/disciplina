@@ -11,8 +11,8 @@ import Database.SQLite.Simple.ToField (ToField (..))
 import Database.SQLite.Simple.ToRow (ToRow (..))
 
 import Dscp.Core (ATGDelta, Address (..), Assignment (..), AssignmentType, Course (..),
-                  DocumentType, Grade (..), PrivateTx (..), SignedSubmission (..), Subject (..),
-                  Submission (..), SubmissionWitness (..))
+                  DocumentType, Grade (..), PrivateBlockHeader (..), PrivateTx (..),
+                  SignedSubmission (..), Subject (..), Submission (..), SubmissionWitness (..))
 import Dscp.Crypto (EmptyMerkleTree, Hash, MerkleSignature, PublicKey, Signature, hash)
 import Dscp.DB.SQLite.BlockData (BlockData (..), TxInBlock (..), TxWithIdx (..))
 import Dscp.DB.SQLite.Types (TxBlockIdx, intTxBlockIdx)
@@ -65,6 +65,7 @@ instance FromRow   PrivateTx         where fromRow = PrivateTx        <$> fromRo
 
 instance FromRow   TxInBlock         where fromRow = TxInBlock        <$> fromRow <*> field
 instance FromRow   TxWithIdx         where fromRow = TxWithIdx        <$> fromRow <*> field
+instance FromRow   PrivateBlockHeader where fromRow = PrivateBlockHeader <$> field <*> field <*> field
 
 instance ToRow Assignment where
     toRow task@ (Assignment course contentsHash ty text) =

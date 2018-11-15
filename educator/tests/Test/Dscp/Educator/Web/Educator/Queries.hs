@@ -13,7 +13,7 @@ import Dscp.Educator.Web.Logic
 import Dscp.Educator.Web.Queries
 import Dscp.Educator.Web.Types
 import Dscp.Util
-import Test.Dscp.DB.SQLite.Common
+import Test.Dscp.Educator.Mode
 import Test.Dscp.Educator.Web.Instances ()
 import Test.Dscp.Educator.Web.Scenarios
 
@@ -254,7 +254,7 @@ spec_EducatorApiQueries = describe "Basic database operations" $ do
             lift $ do
                 prepareAndCreateSubmissions env
                 void $ createTransaction ptx
-                mblock <- runMaybeT $ createPrivateBlock Nothing
+                mblock <- createPrivateBlock Nothing
                 let !_ = mblock ?: error "No private block created"
                 return ()
 
@@ -275,9 +275,9 @@ spec_EducatorApiQueries = describe "Basic database operations" $ do
                 prepareAndCreateSubmissions env
                 void $ createTransaction ptx1
                 void $ createTransaction ptx2
-                mblock1 <- runMaybeT $ createPrivateBlock Nothing
+                mblock1 <- createPrivateBlock Nothing
                 void $ createTransaction ptx3
-                mblock2 <- runMaybeT $ createPrivateBlock Nothing
+                mblock2 <- createPrivateBlock Nothing
                 let !_ = (mblock1 >> mblock2) ?: error "No private blocks created"
                 return ()
 

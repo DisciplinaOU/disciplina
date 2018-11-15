@@ -7,6 +7,7 @@ module Dscp.Witness.Logic.Tx
 
       -- * Publication tx
     , signPubTx
+    , createPublicationTxw
     ) where
 
 import Codec.Serialise (Serialise)
@@ -67,3 +68,17 @@ signPubTx sk tx =
         { pwSig = sign (skSecret sk) (toPtxId tx, pk, ptHeader tx)
         , pwPk = pk
         }
+
+-- | Wrap private block header into publication transaction.
+createPublicationTxw
+    :: FeePolicy PublicationTx
+    -> SecretKeyData
+    -> PrivateBlockHeader
+    -> PublicationTxWitnessed
+createPublicationTxw feePolicy sk header =
+    let tx = PublicationTx
+            { ptAuthor = skAddress sk
+            , ptFeesAmount = unFees $ calcFeePub feePolicy header
+            , ptHeader = header
+            }
+    in signPubTx sk tx

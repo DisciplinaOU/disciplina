@@ -22,7 +22,7 @@ import Dscp.Witness.Launcher
 import Dscp.Witness.Web.Server
 
 -- | Listeners, workers and no interaction with user.
-withEducatorBackground :: CombinedWorkMode ctx m => m () -> m ()
+withEducatorBackground :: FullEducatorWorkMode ctx m => m () -> m ()
 withEducatorBackground cont = do
     mask $ \unmask -> do
         logInfo "Forking educator workers"
@@ -33,7 +33,7 @@ withEducatorBackground cont = do
         logWarningWaitInf (sec 1) "Educator worker shutdown" . cancel
 
 -- | Launch witness and educator servers.
-serveAPIs :: CombinedWorkMode ctx m => m ()
+serveAPIs :: EducatorWorkMode ctx m => m ()
 serveAPIs = do
     let witnessApiParams = witnessConfig ^. sub #witness . option #api
         educatorApiParams = educatorConfig ^. sub #educator . sub #api . option #serverParams
@@ -50,7 +50,7 @@ serveAPIs = do
         (not separateWitnessServer)
 
 -- | Entry point of educator node.
-educatorEntry :: CombinedWorkMode ctx m => m ()
+educatorEntry :: FullEducatorWorkMode ctx m => m ()
 educatorEntry =
     withServer $
     withWitnessBackground $

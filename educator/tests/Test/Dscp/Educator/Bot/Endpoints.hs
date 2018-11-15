@@ -7,7 +7,7 @@ import Dscp.Educator.Web.Student
 import Dscp.Util.Test
 import Test.QuickCheck.Monadic (pick)
 
-import Test.Dscp.DB.SQLite.Common
+import Test.Dscp.Educator.Mode
 
 student :: Student
 student = studentEx
@@ -16,7 +16,7 @@ studentSK :: SecretKey
 studentSK = studentSKEx
 
 testMakeBotHandlers
-    :: TestSQLiteM ~ m
+    :: TestEducatorM ~ m
     => Text -> m (StudentApiHandlers m)
 testMakeBotHandlers seed =
     initializeBot

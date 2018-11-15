@@ -3,25 +3,35 @@
 -- | Helpers for starting an Witness node
 
 module Dscp.Witness.Launcher.Runner
-    ( formWitnessContext
+    ( mkWitnessVariables
+    , formWitnessContext
     , launchWitnessRealMode
     ) where
 
 import Loot.Config (option, sub)
 import Loot.Log (MonadLogging)
 
-import Dscp.DB.CanProvideDB.Rocks as Rocks
 import Dscp.Resource.Class (AllocResource (..), InitParams (..))
 import Dscp.Resource.Functions
 import Dscp.Resource.Keys (krPublicKey)
 import Dscp.Rio (runRIO)
 import Dscp.Snowdrop.Actions (initSDActions)
 import Dscp.Witness.Config
-import Dscp.Witness.Launcher.Context (WitnessContext (..), WitnessRealMode)
-import Dscp.Witness.Launcher.Resource (WitnessResources (..), wrKey)
+import Dscp.Witness.Launcher.Context
+import Dscp.Witness.Launcher.Resource
 import Dscp.Witness.Mempool (newMempoolVar)
 import qualified Dscp.Witness.Relay as Relay
 import qualified Dscp.Witness.SDLock as Lock
+
+mkWitnessVariables
+    :: (MonadIO m, MonadCatch m, MonadLogging m, HasWitnessConfig)
+    => WitnessResources -> m WitnessVariables
+mkWitnessVariables resources = do
+    _wvMempool    <- newMempoolVar (resources^.wrKey.krPublicKey)
+    _wvSDActions  <- liftIO $ runReaderT initSDActions (_wrDB resources)
+    _wvRelayState <- Relay.newRelayState
+    _wvSDLock     <- Lock.newSDLock
+    return WitnessVariables{..}
 
 -- | Make up Witness context from dedicated pack of allocated resources.
 formWitnessContext
@@ -29,18 +39,10 @@ formWitnessContext
     => WitnessResources
     -> m WitnessContext
 formWitnessContext _wcResources = do
-    _wcMempool     <- newMempoolVar $ _wcResources^.wrKey.krPublicKey
-    let _wcDBPlugin = Rocks.plugin $ _wrDB _wcResources
-    _wcSDActions   <- liftIO $ runReaderT initSDActions _wcDBPlugin
-    _wcRelayState  <- Relay.newRelayState
-    _wcSDLock      <- Lock.newSDLock
+    _wcVars <- mkWitnessVariables _wcResources
     pure $ WitnessContext
         { _wcResources
-        , _wcMempool
-        , _wcSDActions
-        , _wcRelayState
-        , _wcSDLock
-        , _wcDBPlugin
+        , _wcVars
         }
 
 -- | Given params, allocate resources, construct node context and run

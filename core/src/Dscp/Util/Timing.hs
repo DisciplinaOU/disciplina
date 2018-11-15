@@ -1,17 +1,20 @@
 module Dscp.Util.Timing
        ( countingTime
-       , foreverAlive
-       , periodically
+       , notFasterThan
+       , recoverAll
+       , retryOnSpot
+       , constDelay
+       , expBackoff
+       , capDelay
        ) where
 
 import qualified Control.Concurrent as C
+import Control.Exception.Safe (Handler (..))
+import qualified Control.Retry as R
 import Data.Time.Clock.POSIX (getPOSIXTime)
-import Fmt ((+|), (+||), (|+), (||+))
+import Fmt (ordinalF, (+|), (+||), (|+), (||+))
 import Loot.Log (MonadLogging, logError)
-import Time (KnownRat, KnownRatName, Second, Time, threadDelay, toNum)
-import UnliftIO (MonadUnliftIO)
-
-import Dscp.Util.TimeLimit (logWarningWaitOnce)
+import Time (KnownRat, Microsecond, Second, Time, toNum)
 
 -- | Evaluate how much time did action take.
 countingTime :: MonadIO m => m a -> m (Double, a)
@@ -23,37 +26,45 @@ countingTime m = do
         diff = fromRational . toRational $ t' - t
     return (diff, a)
 
--- | Continuously execute the action, recovering from failures.
-foreverAlive
-    :: (MonadIO m, MonadCatch m, MonadLogging m,
-        KnownRat unit, KnownRatName unit)
-    => Text -> Time unit -> m () -> m a
-foreverAlive name recovery action =
-    forever action `catchAny` \e -> do
-        printNecrologue e
-        threadDelay recovery
-        foreverAlive name recovery action
-  where
-    printNecrologue e =
-        logError $ name |+ " died (" +|| e ||+ "); \
-                   \ressurecting in " +|| recovery ||+ ""
+-- | Execute an action, finishing not faster than in given amount of time.
+-- Useful in pair with 'foreverAlive' to get periodically invoked actions.
+notFasterThan
+    :: (MonadIO m, KnownRat unit)
+    => Time unit -> m () -> m ()
+notFasterThan minTime action = do
+    (takenTime, ()) <- countingTime action
+    let remaining = toNum @Second minTime - takenTime
+    liftIO $ C.threadDelay (round $ remaining * 1000000)
 
--- | Execute an action periodically till the end of node's days.
-periodically
-    :: (MonadUnliftIO m, MonadCatch m, MonadLogging m, KnownRat unit)
-    => Text -> Time unit -> m () -> m a
-periodically desc period action = loop
+-- | Like 'R.recoverAll' retries on any synchronous error, and also does logging.
+recoverAll
+    :: forall m a. (MonadIO m, MonadMask m, MonadLogging m)
+    => Text -> R.RetryPolicyM m -> m a -> m a
+recoverAll name p action = R.recovering p handlers (const action)
   where
-    periodSec = toNum @Second period
-    loop = do
-        start <- liftIO getPOSIXTime
-        safeAction
-        end <- liftIO getPOSIXTime
-        let remaining = periodSec - (end - start)
-        liftIO $ C.threadDelay (round $ remaining * 1000000)
-        loop
-    safeAction =
-        logWarningWaitOnce period desc $
-        action `catchAny` reportFailure
-    reportFailure e =
-        logError $ "Periodic action '" +| desc |+ "' failed: " +|| e ||+ ""
+    handlers =
+        R.skipAsyncExceptions <>
+        [\status -> Handler $ \(SomeException e) -> reportFailure status e $> True]
+    reportFailure :: Exception e => R.RetryStatus -> e -> m ()
+    reportFailure st e =
+        logError $ name |+ " failed [" +| ordinalF (R.rsIterNumber st + 1)
+                        |+ " time / retrying for " +| (R.rsCumulativeDelay st `div` 1000000)
+                        |+ "s in total]: " +|| e ||+ ""
+
+-- | No delay before next retry.
+retryOnSpot :: R.RetryPolicy
+retryOnSpot = mempty
+
+-- | Like 'R.constantDelay', but with a prettier way to specify time.
+constDelay :: KnownRat unit => Time unit -> R.RetryPolicy
+constDelay = R.constantDelay . toNum @Microsecond
+
+-- | Like 'R.exponentialBackoff', but with a prettier way to specify time.
+expBackoff :: KnownRat unit => Time unit -> R.RetryPolicy
+expBackoff = R.exponentialBackoff . toNum @Microsecond
+
+-- | Like 'R.capDelay', but with a prettier way to specify time.
+capDelay
+    :: (Monad m, KnownRat unit)
+    => Time unit -> R.RetryPolicyM m -> R.RetryPolicyM m
+capDelay = R.capDelay . toNum @Microsecond

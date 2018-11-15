@@ -26,7 +26,8 @@ import Loot.Log.Rio (LoggingIO)
 import Loot.Network.Class (NetworkingCli, NetworkingServ)
 import Loot.Network.ZMQ as Z
 
-import Dscp.DB.CanProvideDB (ProvidesPlugin, Plugin)
+import Dscp.DB.CanProvideDB (Plugin)
+import qualified Dscp.Launcher.Mode as Basic
 import Dscp.Network ()
 import Dscp.Resource.Keys (KeyResources)
 import Dscp.Resource.Network
@@ -39,7 +40,6 @@ import Dscp.Witness.Launcher.Resource
 import Dscp.Witness.Mempool.Type (MempoolVar)
 import Dscp.Witness.Relay (RelayState)
 import Dscp.Witness.SDLock (SDLock)
-import qualified Dscp.Launcher.Mode as Basic
 
 ---------------------------------------------------------------------
 -- WorkMode class
@@ -62,8 +62,6 @@ type WitnessWorkMode ctx m =
     , HasLens' ctx RelayState
     , HasLens' ctx SDLock
     , HasLens' ctx Plugin
-
-    , ProvidesPlugin m
     )
 
 type NetworkMode ctx m =
@@ -97,12 +95,8 @@ deriveHasLensDirect ''WitnessVariables
 
 -- | Context is resources plus some runtime variables.
 data WitnessContext = WitnessContext
-    { _wcResources  :: !WitnessResources  -- ^ Resources, allocated from params.
-    , _wcMempool    :: !MempoolVar
-    , _wcSDActions  :: !SDVars
-    , _wcRelayState :: !RelayState
-    , _wcSDLock     :: !SDLock
-    , _wcDBPlugin   :: !Plugin
+    { _wcResources :: !WitnessResources  -- ^ Resources, allocated from params.
+    , _wcVars      :: !WitnessVariables  -- ^ In-memory variables.
     }
 
 makeLenses ''WitnessContext
@@ -116,6 +110,7 @@ type WitnessRealMode = RIO WitnessContext
 
 deriveHasLens 'wcResources ''WitnessContext ''WitnessResources
 deriveHasLens 'wcResources ''WitnessContext ''NetServResources
+deriveHasLens 'wcVars ''WitnessContext ''WitnessVariables
 
 ----------------------------------------------------------------------------
 -- Sanity check

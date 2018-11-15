@@ -45,6 +45,7 @@ library:
     - quickcheck-instances
     - random
     - reflection
+    - retry
     - safe-exceptions >= 0.1.4
     - scientific
     - serialise

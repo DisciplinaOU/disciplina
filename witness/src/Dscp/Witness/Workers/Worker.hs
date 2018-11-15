@@ -13,7 +13,7 @@ import qualified Data.List.NonEmpty as NE
 import Fmt (listF, listF', (+|), (+||), (|+), (||+))
 import Loot.Base.HasLens (lensOf)
 import Loot.Config (option, sub)
-import Loot.Log (logDebug, logError, logInfo, logWarning)
+import Loot.Log (logDebug, logInfo, logWarning)
 import Time (ms, sec, threadDelay)
 
 import Dscp.Core
@@ -48,10 +48,8 @@ witnessWorkers = do
 blockUpdateWorker :: forall ctx m. FullWitnessWorkMode ctx m => Worker m
 blockUpdateWorker =
     Worker "blockUpdateWorker" [msgType @TipMsg, msgType @BlocksMsg] [subType @PubBlock]
-    (\btq -> (bootstrap btq >> action btq) `catchAny` handler)
+    (\btq -> bootstrap btq >> action btq)
   where
-    handler e = logError $ fromString $ "Exception in blockReceivalWorker " <> show e
-
     -- We ask for a tip on startup to synchronise.
     bootstrap :: ClientEnv NetTag -> m ()
     bootstrap btq = do
@@ -62,7 +60,7 @@ blockUpdateWorker =
         logDebug "Bootstrapped, asking for a tip"
         cliSend btq Nothing GetTipMsg
 
-    action :: ClientEnv NetTag -> m ()
+    action :: ClientEnv NetTag -> m Void
     action btq = do
         logDebug "Started block update worker"
 
@@ -78,7 +76,7 @@ blockUpdateWorker =
                 logDebug $ "Processing blocks"
                 applyManyBlocks blocks
 
-        foreverAlive "Block update worker" (sec 5) $ do
+        forever . recoverAll "Block update worker" (constDelay (sec 5)) $ do
             logDebug "blockUpdateWorker: receiving"
             cliRecv btq (-1) [ ccallback processPubBlock
                              , ccallback processTipMsg
@@ -140,7 +138,7 @@ makeRelay (RelayState input pipe failedTxs) =
         "txRetranslationInitialiser"
         []
         [] $ \_btq ->
-            foreverAlive "Tx retranslation initializer" (sec 1) $ do
+            forever . recoverAll "Tx retranslation initializer" retryOnSpot $ do
                 (tx, inMempoolNotifier) <- atomically $ STM.readTBQueue input
                 checkThenRepublish tx
                     `finallyNotify` inMempoolNotifier
@@ -150,7 +148,7 @@ makeRelay (RelayState input pipe failedTxs) =
         "txRetranslationRepeater"
         []
         [subType @PubTx] $ \btq -> do
-            foreverAlive "Tx retranslation repeater" (sec 1) $ forever $ do
+            recoverAll "Tx retranslation repeater" (constDelay (sec 1)) $ forever $ do
                 (_, PubTx tx) <- cliRecvUpdate btq (-1)
                 checkThenRepublish tx
                     `catchAny` \e -> logWarning $
