@@ -10,10 +10,9 @@ import Ariadne.Knit.Face
 import Ariadne.TaskManager.Backend
 import Ariadne.TaskManager.Face
 import Ariadne.UI.Cli
-import Dscp.Config
-import Dscp.Core
 import Dscp.Wallet.Backend
 import Dscp.Wallet.CLI
+import Dscp.Wallet.Config
 
 import qualified Ariadne.TaskManager.Knit as Knit
 import qualified Dscp.Wallet.Knit as Knit
@@ -25,15 +24,14 @@ type UiComponents = '[Knit.Core, Knit.TaskManager, Knit.Wallet]
 
 main :: IO ()
 main = do
-    params <- getWalletCLIParams
-    config <- buildConfig (wpConfigParams params) fillCoreConfig
-    withCoreConfig config $
-        runComponentM "ariadne" (initializeEverything params) id
+    (wConfig, knitCommand) <- getCLIWalletConfig
+    withWalletConfig wConfig $
+        runComponentM "ariadne" (initializeEverything knitCommand) id
 
-initializeEverything :: HasCoreConfig => WalletCLIParams -> ComponentM (IO ())
-initializeEverything WalletCLIParams{..} = do
+initializeEverything :: HasWalletConfig => (Maybe Text) -> ComponentM (IO ())
+initializeEverything knitCommand = do
     taskManagerFace <- createTaskManagerFace
-    walletFace <- createWalletFace wpWitness (void . return)
+    walletFace <- createWalletFace witnessUrl (void . return)
     (uiFace, mkUiAction) <- createAriadneUI
 
     let knitExecContext :: (Doc -> IO ()) -> Knit.ExecContext IO UiComponents
@@ -46,10 +44,10 @@ initializeEverything WalletCLIParams{..} = do
             a &: b = Step (a, b)
             infixr &:
 
-        uiAction :: HasCoreConfig => IO ()
+        uiAction :: HasWalletConfig => IO ()
         uiAction =
           let knitFace = createKnitBackend knitExecContext taskManagerFace
-          in case wpKnitCommand of
+          in case knitCommand of
             Nothing -> mkUiAction (knitFaceToUI uiFace knitFace)
             Just cmd -> case Knit.parse @UiComponents cmd of
                 Right expr -> do

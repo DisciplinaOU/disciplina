@@ -98,6 +98,15 @@ demo: &demo
             faucet:
               withPERROR: true
               min-level: Debug
+  wallet:
+    logging:
+      defaultName: "wallet"
+      config:
+        warper:
+          <<: *demo-witness-warper
+          filePrefix: "run/tmp/wallet/logs"
+        syslog:
+          <<: *demo-witness-syslog
 
 singleton:
   <<: *demo

@@ -6,15 +6,17 @@ import Control.Monad.Component (ComponentM, runComponentM)
 import NType (N (..))
 import System.Random (randomRIO)
 import Text.PrettyPrint.ANSI.Leijen (Doc)
+import Dscp.Resource.Logging (allocLogging)
+--import Loot.Log (Logging (..), Name, NameSelector (CallstackName, GivenName),
+--                 logInfo, modifyLogName, Level(Debug))
 
 import Ariadne.Knit.Backend
 import Ariadne.TaskManager.Backend
 import Ariadne.UI.Vty
 import Ariadne.UI.Vty.Face
-import Dscp.Config
-import Dscp.Core
 import Dscp.Wallet.Backend
 import Dscp.Wallet.CLI
+import Dscp.Wallet.Config
 
 import qualified Ariadne.TaskManager.Knit as Knit
 import qualified Ariadne.UI.Vty.Knit as Knit
@@ -27,14 +29,15 @@ type UiComponents = '[Knit.Core, Knit.Wallet, Knit.TaskManager, Knit.UI]
 
 main :: IO ()
 main = do
-    params <- getWalletCLIParams
-    config <- buildConfig (wpConfigParams params) fillCoreConfig
-    withCoreConfig config $
-        runComponentM "ariadne" (initializeEverything params) id
+    wConfig <- getWalletConfig
+    withWalletConfig wConfig $
+        runComponentM "ariadne" initializeEverything id
 
+initializeEverything :: HasWalletConfig => ComponentM (IO ())
+initializeEverything = do
+    let logParams = giveL @WalletConfig @LoggingParams
+    _ <- allocLogging logParams
 
-initializeEverything :: HasCoreConfig => WalletCLIParams -> ComponentM (IO ())
-initializeEverything WalletCLIParams{..} = do
     uiWalletState <- createWalletState
 
     let features = UiFeatures
@@ -47,7 +50,7 @@ initializeEverything WalletCLIParams{..} = do
             }
     (uiFace, mkUiAction) <- createAriadneUI features historyToUI
     taskManagerFace <- createTaskManagerFace
-    walletFace <- createWalletFace wpWitness (putWalletEventToUI uiWalletState uiFace)
+    walletFace <- createWalletFace witnessUrl (putWalletEventToUI uiWalletState uiFace)
 
     let knitExecContext :: (Doc -> IO ()) -> Knit.ExecContext IO UiComponents
         knitExecContext putCommandOutput =
