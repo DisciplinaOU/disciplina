@@ -6,6 +6,7 @@ module Dscp.Resource.SQLite
     ) where
 
 import Dscp.DB.SQLite
+import Dscp.Educator.DB.Queries
 import Dscp.Resource.Class (AllocResource (..), buildComponentR)
 import Dscp.Rio
 
