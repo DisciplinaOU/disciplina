@@ -24,7 +24,7 @@ import Dscp.DB.CanProvideDB as Rocks
 import Dscp.DB.CanProvideDB.Rocks as RealRocks
 import Dscp.Resource.AppDir
 import Dscp.Resource.Class (AllocResource (..), buildComponentR)
-import Dscp.Resource.Keys (KeyResources (..), genStore, linkStore)
+import Dscp.Resource.Keys
 import Dscp.Resource.Network (NetLogging (..), NetServResources, withNetLogging)
 import Dscp.Resource.Rocks ()
 import Dscp.Util.HasLens
@@ -55,7 +55,7 @@ getWitnessKeyResources
     -> AppDir
     -> m (KeyResources WitnessNode)
 getWitnessKeyResources (Basic bkp) appDir = linkStore bkp appDir
-getWitnessKeyResources (Committee cp) _   = genStore (Just cp)
+getWitnessKeyResources (Committee cp) _   = mkCommitteeStore cp
 
 instance AllocResource (KeyResources WitnessNode) where
     type Deps (KeyResources WitnessNode) = (WitnessConfigRec, AppDir)

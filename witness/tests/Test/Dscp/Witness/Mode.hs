@@ -40,7 +40,7 @@ type WitnessTestMode' = RIO TestWitnessCtx
 runWitnessTestMode :: WitnessTestMode' a -> IO a
 runWitnessTestMode action =
     withWitnessConfig testWitnessConfig $ runRIO testLogging $ do
-        _twcKeys <- genStore (Just $ CommitteeParamsOpen 0)
+        _twcKeys <- mkCommitteeStore (CommitteeParamsOpen 0)
         _twcDb   <- PureDB.plugin <$> liftIO PureDB.newCtxVar
         _twcVars <- mkTestWitnessVariables (_twcKeys ^. krPublicKey) _twcDb
         let _twcLogging = testLogging

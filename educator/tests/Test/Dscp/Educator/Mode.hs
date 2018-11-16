@@ -55,7 +55,7 @@ runTestSQLiteM action =
     withEducatorConfig testEducatorConfig $
     withWitnessConfig (rcast testEducatorConfig) $
     runRIO _tecLogging $ do
-        _tecWitnessKeys <- genStore (Just $ CommitteeParamsOpen 0)
+        _tecWitnessKeys <- mkCommitteeStore (CommitteeParamsOpen 0)
         _tecWitnessDb <- PureDB.plugin <$> liftIO PureDB.newCtxVar
         _tecWitnessVariables <- mkTestWitnessVariables (_tecWitnessKeys ^. krPublicKey)
                                                        _tecWitnessDb
