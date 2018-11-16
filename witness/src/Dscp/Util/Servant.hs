@@ -39,7 +39,7 @@ import Data.Time.Clock.POSIX (getPOSIXTime)
 import Fmt (blockListF, (+|), (|+), Builder)
 import GHC.IO.Unsafe (unsafePerformIO)
 import GHC.TypeLits (KnownSymbol, symbolVal)
-import Loot.Log (Level (Info))
+import Loot.Log (Severity (Info))
 import Serokell.Util ()
 import Serokell.Util.ANSI (Color (..), colorizeDull)
 import Servant.API ((:<|>) (..), (:>), Capture, Description, JSON, NoContent, QueryFlag, QueryParam,
@@ -131,7 +131,7 @@ data LoggingApi config api
 data LoggingApiRec config api
 
 newtype ServantLogConfig = ServantLogConfig
-    { clcLog :: Level -> Text -> IO ()
+    { clcLog :: Severity -> Text -> IO ()
     }
 
 -- | Used to incrementally collect info about passed parameters.
@@ -349,7 +349,7 @@ applyServantLogging configP methodP paramsInfo showResponse action = do
         return $ do
             endTime <- liftIO getPOSIXTime
             return . show $ endTime - startTime
-    log :: Level -> Text -> Handler ()
+    log :: Severity -> Text -> Handler ()
     log = liftIO ... clcLog $ reflect configP
     eParamLogs :: Either Text Text
     eParamLogs = case paramsInfo of

@@ -10,7 +10,7 @@ module Dscp.Web.Server
 
 import Control.Lens (views)
 import Loot.Base.HasLens (HasLens', lensOf)
-import Loot.Log (Logging, MonadLogging, Name, NameSelector (..))
+import Loot.Log (Logging, Message (..), MonadLogging, Name, NameSelector (..))
 import qualified Loot.Log.Internal as Log
 import Network.HTTP.Client.TLS (newTlsManager)
 import qualified Network.Wai.Handler.Warp as Warp
@@ -46,7 +46,7 @@ buildServantLogConfig modifyName = do
                        _           -> mempty
         name = modifyName origName
     return ServantLogConfig
-        { clcLog = \level text -> logger level name text
+        { clcLog = \severity text -> logger $ Message severity name text
         }
 
 ----------------------------------------------------------------------------
