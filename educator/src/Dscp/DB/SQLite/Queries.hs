@@ -173,7 +173,7 @@ type DBM m = (MonadIO m, MonadCatch m)
 getStudentCourses :: MonadIO m => Id Student -> DBT t w m [Id Course]
 getStudentCourses student' =
     runSelect . select $ do
-        student :-: course <- all_ (es ^. esStudentCourses)
+        student :-: course <- all_ (esStudentCourses es)
         guard_ (student ==. val_ student')
         return course
 
@@ -181,7 +181,7 @@ getStudentCourses student' =
 enrollStudentToCourse :: DBM m => Id Student -> Id Course -> DBT t 'Writing m ()
 enrollStudentToCourse student course = do
     -- TODO: ensure foreign constraints check will play for us
-    runInsert . insert (es ^. esStudentCourses) $
+    runInsert . insert (esStudentCourses es) $
         insertValues [student :-: course]
 
 -- | How can a student get a list of his current course assignments?
@@ -190,10 +190,10 @@ getStudentAssignments
     => Id Student -> Id Course -> DBT t w m [Assignment]
 getStudentAssignments student' course' = do
     fromRowTypesM . runSelect . select $ do
-        student :-: assignmentId <- all_ (es ^. esStudentAssignments)
-        assignment <- related_ (es ^. esAssignments) (AssignmentRowId assignmentId)
+        student :-: assignmentId <- all_ (esStudentAssignments es)
+        assignment <- related_ (esAssignments es) (AssignmentRowId assignmentId)
         guard_ (student ==. val_ student')
-        guard_ (assignment ^. arCourse ==. val_ course')
+        guard_ (arCourse assignment ==. val_ course')
         return assignment
 
 -- | How can a student submit a submission for assignment?
@@ -208,11 +208,11 @@ getGradesForCourseAssignments
     => Id Student -> Id Course -> DBT t w m [PrivateTx]
 getGradesForCourseAssignments student' course' = do
     fromRowTypesM . runSelect . select $ do
-        privateTx <- all_ (es ^. esTransactions)
-        submission <- related_ (es ^. esSubmissions) (SubmissionRowId $ privateTx ^. trSubmissionHash)
-        assignment <- related_ (es ^. esAssignments) (AssignmentRowId $ submission ^. srAssignmentHash)
-        guard_ (submission ^. srStudent ==. val_ student')
-        guard_ (assignment ^. arCourse ==. val_ course')
+        privateTx <- all_ (esTransactions es)
+        submission <- related_ (esSubmissions es) (SubmissionRowId $ trSubmissionHash privateTx)
+        assignment <- related_ (esAssignments es) (AssignmentRowId $ srAssignmentHash submission)
+        guard_ (srStudent submission ==. val_ student')
+        guard_ (arCourse assignment ==. val_ course')
         return privateTx
 
 -- | How can a student receive transactions with Merkle proofs which contain info about his grades and assignments?
@@ -378,8 +378,8 @@ getLastBlockIdAndIdx = do
     res <- runSelect . select $
         limit_ 1 $
         orderBy_ (desc_ . snd) $ do
-            block <- all_ (es ^. esBlocks)
-            return (_brHash block, _brIdx block)
+            block <- all_ (esBlocks es)
+            return (brHash block, brIdx block)
     if null res
        then return (genesisHeaderHash, genesisBlockIdx)
        else return (oneOrError res)
@@ -517,14 +517,14 @@ createSignedSubmission sigSub = do
     currentTime <- liftIO getCurrentTime
 
     rewrapAlreadyExists (SubmissionDomain submissionHash) $
-        runInsert . insert (es ^. esSubmissions) . insertValue $
+        runInsert . insert (esSubmissions es) . insertValue $
             SubmissionRow
-            { _srHash = submissionHash
-            , _srStudent = submission^.sStudentId
-            , _srAssignmentHash = submission^.sAssignmentHash
-            , _srContentsHash = submission^.sContentsHash
-            , _srSignature = sigSub^.ssWitness
-            , _srCreationTime = currentTime
+            { srHash = submissionHash
+            , srStudent = submission^.sStudentId
+            , srAssignmentHash = submission^.sAssignmentHash
+            , srContentsHash = submission^.sContentsHash
+            , srSignature = sigSub^.ssWitness
+            , srCreationTime = currentTime
             }
 
     return submissionHash
@@ -638,8 +638,8 @@ getCourseSubjects course = do
 existsCourse :: MonadIO m => Id Course -> DBT t w m Bool
 existsCourse course' =
     checkExists $
-        filter_ (\course -> course ^. crId ==. val_ course')
-                (all_ $ es ^. esCourses)
+        filter_ (\course -> crId course ==. val_ course')
+                (all_ $ esCourses es)
 
 existsStudent :: MonadIO m => Id Student -> DBT t w m Bool
 existsStudent student = do
@@ -679,13 +679,13 @@ createAssignment assignment = do
     _ <- existsCourse courseId `assertExists` CourseDomain courseId
 
     rewrapAlreadyExists (AssignmentDomain assignmentId) $
-        runInsert . insert (es ^. esAssignments) . insertValue $
+        runInsert . insert (esAssignments es) . insertValue $
             AssignmentRow
-            { _arHash = assignmentId
-            , _arCourse = courseId
-            , _arContentsHash = assignment^.aContentsHash
-            , _arType = assignment^.aType
-            , _arDesc = assignment^.aDesc
+            { arHash = assignmentId
+            , arCourse = courseId
+            , arContentsHash = assignment^.aContentsHash
+            , arType = assignment^.aType
+            , arDesc = assignment^.aDesc
             }
 
     return assignmentId

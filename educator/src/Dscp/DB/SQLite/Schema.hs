@@ -9,7 +9,7 @@ module Dscp.DB.SQLite.Schema
 
 import Prelude hiding (_1, _2)
 
-import Control.Lens (Field1 (..), Field2 (..), lens, makeLenses)
+import Control.Lens (Field1 (..), Field2 (..))
 import Data.Time.Clock (UTCTime)
 import Database.Beam.Schema.Tables (Beamable, C, Columnar, Database, DatabaseSettings, Table (..),
                                     TableEntity, defaultDbSettings)
@@ -53,82 +53,74 @@ data RelationT (t :: RelationType) a b f = Columnar f a :-: Columnar f b
     deriving (Generic)
 
 instance (rel ~ RelationT t a b f, ca ~ Columnar f a) => Field1 rel rel ca ca where
-    _1 = lens (\(a :-: _) -> a) (\(_ :-: b) a -> (a :-: b))
+    _1 f (a :-: b) = (:-: b) <$> f a
 instance (rel ~ RelationT t a b f, cb ~ Columnar f b) => Field2 rel rel cb cb where
-    _2 = lens (\(_ :-: b) -> b) (\(a :-: _) b -> (a :-: b))
+    _2 f (a :-: b) = (a :-:) <$> f b
 
 
 data CourseRowT f = CourseRow
-    { _crId   :: C f Course
-    , _crDesc :: C f Text
+    { crId   :: C f Course
+    , crDesc :: C f Text
     } deriving (Generic)
-makeLenses ''CourseRowT
 
 data SubjectRowT f = SubjectRow
-    { _srId     :: C f Subject
-    , _srCourse :: C f Course
-    , _srDesc   :: C f Text
+    { srId     :: C f Subject
+    , srCourse :: C f Course
+    , srDesc   :: C f Text
     } deriving (Generic)
-makeLenses ''SubjectRowT
 
 data StudentRowT f = StudentRow
-    { _srAddr     :: C f Address
+    { srAddr     :: C f Address
     } deriving (Generic)
-makeLenses ''StudentRowT
 
 data AssignmentRowT f = AssignmentRow
-    { _arHash         :: C f (Hash Assignment)
-    , _arCourse       :: C f (Id Course)
-    , _arContentsHash :: C f (Hash Raw)
-    , _arType         :: C f AssignmentType
-    , _arDesc         :: C f Text
+    { arHash         :: C f (Hash Assignment)
+    , arCourse       :: C f (Id Course)
+    , arContentsHash :: C f (Hash Raw)
+    , arType         :: C f AssignmentType
+    , arDesc         :: C f Text
     } deriving (Generic)
-makeLenses ''AssignmentRowT
 
 data SubmissionRowT f = SubmissionRow
-    { _srHash           :: C f (Hash Submission)
-    , _srStudent        :: C f Student
-    , _srAssignmentHash :: C f (Hash Assignment)
-    , _srContentsHash   :: C f (Hash Raw)
-    , _srSignature      :: C f SubmissionWitness
-    , _srCreationTime   :: C f UTCTime
+    { srHash           :: C f (Hash Submission)
+    , srStudent        :: C f Student
+    , srAssignmentHash :: C f (Hash Assignment)
+    , srContentsHash   :: C f (Hash Raw)
+    , srSignature      :: C f SubmissionWitness
+    , srCreationTime   :: C f UTCTime
     } deriving (Generic)
-makeLenses ''SubmissionRowT
 
 data TransactionRowT f = TransactionRow
-    { _trHash           :: C f (Hash PrivateTx)
-    , _trSubmissionHash :: C f (Hash Submission)
-    , _trGrade          :: C f Grade
-    , _trCreationTime   :: C f UTCTime
-    , _trIdx            :: C f TxBlockIdx
+    { trHash           :: C f (Hash PrivateTx)
+    , trSubmissionHash :: C f (Hash Submission)
+    , trGrade          :: C f Grade
+    , trCreationTime   :: C f UTCTime
+    , trIdx            :: C f TxBlockIdx
     } deriving (Generic)
-makeLenses ''TransactionRowT
 
 -- We need `idx` field to be able to perform queries like "get N last blocks" efficiently.
 data BlockRowT f = BlockRow
-    { _brIdx          :: C f Word32
-    , _brHash         :: C f PrivateHeaderHash
-    , _brCreationTime :: C f UTCTime
-    , _brPrevHash     :: C f PrivateHeaderHash
-    , _brAtgDelta     :: C f ATGDelta
-    , _brMerkleRoot   :: C f (MerkleSignature PrivateTx)
-    , _brMerkleTree   :: C f (MerkleTree PrivateTx)
+    { brIdx          :: C f Word32
+    , brHash         :: C f PrivateHeaderHash
+    , brCreationTime :: C f UTCTime
+    , brPrevHash     :: C f PrivateHeaderHash
+    , brAtgDelta     :: C f ATGDelta
+    , brMerkleRoot   :: C f (MerkleSignature PrivateTx)
+    , brMerkleTree   :: C f (MerkleTree PrivateTx)
     } deriving (Generic)
-makeLenses ''BlockRowT
 
 data EducatorSchema f = EducatorSchema
-    { _esCourses            :: f (TableEntity CourseRowT)
-    , _esSubjects           :: f (TableEntity SubjectRowT)
-    , _esStudents           :: f (TableEntity StudentRowT)
-    , _esStudentCourses     :: f (TableEntity $ RelationT 'MxM (Id Student) (Id Course))
-    , _esAssignments        :: f (TableEntity AssignmentRowT)
-    , _esStudentAssignments :: f (TableEntity $ RelationT 'MxM (Id Student) (Id Assignment))
-    , _esSubmissions        :: f (TableEntity SubmissionRowT)
-    , _esTransactions       :: f (TableEntity TransactionRowT)
-    , _esBlocks             :: f (TableEntity BlockRowT)
-    , _esBlockTxs           :: f (TableEntity $ RelationT 'Mx1 (Id PrivateTx) Word32)
+    { esCourses            :: f (TableEntity CourseRowT)
+    , esSubjects           :: f (TableEntity SubjectRowT)
+    , esStudents           :: f (TableEntity StudentRowT)
+    , esStudentCourses     :: f (TableEntity $ RelationT 'MxM (Id Student) (Id Course))
+    , esAssignments        :: f (TableEntity AssignmentRowT)
+    , esStudentAssignments :: f (TableEntity $ RelationT 'MxM (Id Student) (Id Assignment))
+    , esSubmissions        :: f (TableEntity SubmissionRowT)
+    , esTransactions       :: f (TableEntity TransactionRowT)
+    , esBlocks             :: f (TableEntity BlockRowT)
+    , esBlockTxs           :: f (TableEntity $ RelationT 'Mx1 (Id PrivateTx) Word32)
     } deriving (Generic)
-makeLenses ''EducatorSchema
 
 ----------------------------------------------------------------------------
 -- Connection with core types
@@ -150,18 +142,18 @@ instance RowIso Assignment where
     type RowType Assignment = AssignmentRowT
     fromRowType AssignmentRow{..} =
         Assignment
-        { _aCourseId = _arCourse
-        , _aContentsHash = _arContentsHash
-        , _aType = _arType
-        , _aDesc = _arDesc
+        { _aCourseId = arCourse
+        , _aContentsHash = arContentsHash
+        , _aType = arType
+        , _aDesc = arDesc
         }
     toRowType () assignment@Assignment{..} =
         AssignmentRow
-        { _arHash = hash assignment
-        , _arCourse = _aCourseId
-        , _arContentsHash = _aContentsHash
-        , _arType = _aType
-        , _arDesc = _aDesc
+        { arHash = hash assignment
+        , arCourse = _aCourseId
+        , arContentsHash = _aContentsHash
+        , arType = _aType
+        , arDesc = _aDesc
         }
 
 instance RowIso PrivateTx where
@@ -197,37 +189,37 @@ instance (Typeable a, Typeable b) => Table (RelationT 'MxM a b) where
 instance Table CourseRowT where
     data PrimaryKey CourseRowT f = CourseRowId (C f (Id Course))
         deriving (Generic)
-    primaryKey = CourseRowId . _crId
+    primaryKey = CourseRowId . crId
 
 instance Table SubjectRowT where
     data PrimaryKey SubjectRowT f = SubjectRowId (C f (Id Subject))
         deriving (Generic)
-    primaryKey = SubjectRowId . _srId
+    primaryKey = SubjectRowId . srId
 
 instance Table StudentRowT where
     data PrimaryKey StudentRowT f = StudentRowId (C f (Id Student))
         deriving (Generic)
-    primaryKey = StudentRowId . _srAddr
+    primaryKey = StudentRowId . srAddr
 
 instance Table AssignmentRowT where
     data PrimaryKey AssignmentRowT f = AssignmentRowId (C f (Id Assignment))
         deriving (Generic)
-    primaryKey = AssignmentRowId . _arHash
+    primaryKey = AssignmentRowId . arHash
 
 instance Table SubmissionRowT where
     data PrimaryKey SubmissionRowT f = SubmissionRowId (C f (Id Submission))
         deriving (Generic)
-    primaryKey = SubmissionRowId . _srHash
+    primaryKey = SubmissionRowId . srHash
 
 instance Table TransactionRowT where
     data PrimaryKey TransactionRowT f = TransactionRowId (C f (Id PrivateTx))
         deriving (Generic)
-    primaryKey = TransactionRowId . _trHash
+    primaryKey = TransactionRowId . trHash
 
 instance Table BlockRowT where
     data PrimaryKey BlockRowT f = BlockRowId (C f Word32)
         deriving (Generic)
-    primaryKey = BlockRowId . _brIdx
+    primaryKey = BlockRowId . brIdx
 
 ----------------------------------------------------------------------------
 -- 'Beamable' instances
