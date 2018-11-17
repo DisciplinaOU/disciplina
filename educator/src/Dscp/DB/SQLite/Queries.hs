@@ -189,7 +189,7 @@ getStudentAssignments
     :: MonadIO m
     => Id Student -> Id Course -> DBT t w m [Assignment]
 getStudentAssignments student' course' = do
-    fromRowTypesM . runSelect . select $ do
+    runSelectMap assignmentFromRow . select $ do
         student :-: assignmentId <- all_ (esStudentAssignments es)
         assignment <- related_ (esAssignments es) (AssignmentRowId assignmentId)
         guard_ (student ==. val_ student')
@@ -207,13 +207,13 @@ getGradesForCourseAssignments
     :: MonadIO m
     => Id Student -> Id Course -> DBT t w m [PrivateTx]
 getGradesForCourseAssignments student' course' = do
-    fromRowTypesM . runSelect . select $ do
+    runSelectMap (uncurry privateTxFromRow) . select $ do
         privateTx <- all_ (esTransactions es)
         submission <- related_ (esSubmissions es) (SubmissionRowId $ trSubmissionHash privateTx)
         assignment <- related_ (esAssignments es) (AssignmentRowId $ srAssignmentHash submission)
         guard_ (srStudent submission ==. val_ student')
         guard_ (arCourse assignment ==. val_ course')
-        return privateTx
+        return (privateTx, submission)
 
 -- | How can a student receive transactions with Merkle proofs which contain info about his grades and assignments?
 getStudentTransactions :: MonadIO m => Id Student -> DBT t w m [PrivateTx]

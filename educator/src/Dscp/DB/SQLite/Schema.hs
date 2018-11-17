@@ -123,46 +123,44 @@ data EducatorSchema f = EducatorSchema
     } deriving (Generic)
 
 ----------------------------------------------------------------------------
+-- Aliases
+----------------------------------------------------------------------------
+
+type AssignmentRow = AssignmentRowT Identity
+type SubmissionRow = SubmissionRowT Identity
+type TransactionRow = TransactionRowT Identity
+
+----------------------------------------------------------------------------
 -- Connection with core types
 ----------------------------------------------------------------------------
 
-class RowIso ty where
-    type RowType ty = (rowTy :: (* -> *) -> *) | rowTy -> ty
+assignmentFromRow :: AssignmentRow -> Assignment
+assignmentFromRow AssignmentRow{..} =
+    Assignment
+    { _aCourseId = arCourse
+    , _aContentsHash = arContentsHash
+    , _aType = arType
+    , _aDesc = arDesc
+    }
 
-    type RowExtras ty :: *
-    type RowExtras ty = ()
-
-    fromRowType :: RowType ty Identity -> ty
-    toRowType :: RowExtras ty -> ty -> RowType ty Identity
-
-fromRowTypesM :: (RowIso ty, Functor m) => m [RowType ty Identity] -> m [ty]
-fromRowTypesM = fmap (map fromRowType)
-
-instance RowIso Assignment where
-    type RowType Assignment = AssignmentRowT
-    fromRowType AssignmentRow{..} =
-        Assignment
-        { _aCourseId = arCourse
-        , _aContentsHash = arContentsHash
-        , _aType = arType
-        , _aDesc = arDesc
+submissionFromRow :: SubmissionRow -> SignedSubmission
+submissionFromRow SubmissionRow{..} =
+    SignedSubmission
+    { _ssSubmission = Submission
+        { _sStudentId = srStudent
+        , _sContentsHash = srContentsHash
+        , _sAssignmentHash = srAssignmentHash
         }
-    toRowType () assignment@Assignment{..} =
-        AssignmentRow
-        { arHash = hash assignment
-        , arCourse = _aCourseId
-        , arContentsHash = _aContentsHash
-        , arType = _aType
-        , arDesc = _aDesc
-        }
+    , _ssWitness = srSignature
+    }
 
-instance RowIso PrivateTx where
-    type RowType PrivateTx = TransactionRowT
-    fromRowType TransactionRow{..} =
-        error "PrivateTx requires submission itself, not its id"
-
-    toRowType () PrivateTx{..} =
-        error "Mememe"
+privateTxFromRow :: TransactionRow -> SubmissionRow -> PrivateTx
+privateTxFromRow TransactionRow{..} sub =
+    PrivateTx
+    { _ptSignedSubmission = submissionFromRow sub
+    , _ptGrade = trGrade
+    , _ptTime = trCreationTime
+    }
 
 ----------------------------------------------------------------------------
 -- Aliases

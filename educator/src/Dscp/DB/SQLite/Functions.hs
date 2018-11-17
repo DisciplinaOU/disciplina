@@ -17,6 +17,7 @@ module Dscp.DB.SQLite.Functions
 
          -- * SQLite queries building
        , runSelect
+       , runSelectMap
        , runInsert
        , runUpdate
        , runDelete
@@ -232,11 +233,16 @@ data OperationType = Writing | Reading
 {- We rewrite runners as soon as it allows requiring write or transaction context.
 -}
 
--- | Run 'SqlSelect' and get results in a list.
 runSelect
     :: (MonadIO m, FromBackendRow Sqlite a)
     => SqlSelect (Sql92SelectSyntax SqliteCommandSyntax) a -> DBT t w m [a]
 runSelect cmd = sqliteMToDbt $ Backend.runSelectReturningList cmd
+
+-- | Run select query and map fetched results.
+runSelectMap
+    :: (MonadIO m, FromBackendRow Sqlite a)
+    => (a -> b) -> SqlSelect (Sql92SelectSyntax SqliteCommandSyntax) a -> DBT t w m [b]
+runSelectMap f cmd = fmap (map f) $ runSelect cmd
 
 runInsert
     :: MonadIO m
