@@ -175,7 +175,7 @@ getStudentCourses :: MonadIO m => Id Student -> DBT t w m [Id Course]
 getStudentCourses student' =
     runSelect . select $ do
         student :-: course <- all_ (esStudentCourses es)
-        guard_ (student ==. val_ student')
+        guard_ (student ==. valPk_ student')
         return course
 
 -- | How can a student enroll to a course?
@@ -183,7 +183,7 @@ enrollStudentToCourse :: DBM m => Id Student -> Id Course -> DBT t 'Writing m ()
 enrollStudentToCourse student course = do
     -- TODO: ensure foreign constraints check will play for us
     runInsert . insert (esStudentCourses es) $
-        insertValues [student :-: course]
+        insertValues [student <:-:> course]
 
 -- | How can a student get a list of his current course assignments?
 getStudentAssignments
@@ -192,8 +192,8 @@ getStudentAssignments
 getStudentAssignments student' course' = do
     runSelectMap assignmentFromRow . select $ do
         student :-: assignmentId <- all_ (esStudentAssignments es)
-        assignment <- related_ (esAssignments es) (AssignmentRowId assignmentId)
-        guard_ (student ==. val_ student')
+        assignment <- related_ (esAssignments es) assignmentId
+        guard_ (student ==. valPk_ student')
         guard_ (arCourse assignment ==. val_ (CourseRowId course'))
         return assignment
 
@@ -639,7 +639,7 @@ getCourseSubjects course = do
 existsCourse :: MonadIO m => Id Course -> DBT t w m Bool
 existsCourse course' =
     checkExists $
-        filter_ (\course -> crId course ==. val_ course')
+        filter_ (\course -> pk course ==. valPk_ course')
                 (all_ $ esCourses es)
 
 existsStudent :: MonadIO m => Id Student -> DBT t w m Bool
@@ -760,5 +760,5 @@ getTransaction ptid = do
         privateTx <- all_ (esTransactions es)
         submission <- related_ (esSubmissions es) (trSubmissionHash privateTx)
         assignment <- related_ (esAssignments es) (srAssignmentHash submission)
-        guard_ (trHash privateTx ==. val_ ptid)
+        guard_ (pk privateTx ==. valPk_ ptid)
         return (privateTx, submission)

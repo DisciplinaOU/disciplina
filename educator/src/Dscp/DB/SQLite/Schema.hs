@@ -1,4 +1,6 @@
 {-# LANGUAGE GADTs                  #-}
+{-# LANGUAGE PartialTypeSignatures  #-}
+{-# OPTIONS_GHC -Wno-partial-type-signatures #-}
 {-# LANGUAGE QuasiQuotes            #-}
 {-# LANGUAGE StrictData             #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
@@ -11,7 +13,7 @@ import Prelude hiding (_1, _2)
 
 import Control.Lens (Field1 (..), Field2 (..))
 import Data.Time.Clock (UTCTime)
-import Database.Beam.Schema.Tables (Beamable, C, Columnar, Database, DatabaseSettings, Table (..),
+import Database.Beam.Schema.Tables (Beamable, C, Database, DatabaseSettings, Table (..),
                                     TableEntity, defaultDbSettings)
 import Database.SQLite.Simple.Internal (Connection (..))
 import Database.SQLite3 (exec)
@@ -20,6 +22,7 @@ import Dscp.Core
 import Dscp.Crypto
 import Dscp.DB.SQLite.FileQuoter (qFile)
 import Dscp.DB.SQLite.Types
+import Dscp.DB.SQLite.Util
 import Dscp.Util
 
 -- | Create tables if absent.
@@ -49,14 +52,17 @@ data RelationType
 
 -- | Table which stores a relation between two tables.
 -- TODO does beam really not provide something like this?
-data RelationT (t :: RelationType) a b f = Columnar f a :-: Columnar f b
+data RelationT (t :: RelationType) a b f = PrimaryKey a f :-: PrimaryKey b f
     deriving (Generic)
 
-instance (rel ~ RelationT t a b f, ca ~ Columnar f a) => Field1 rel rel ca ca where
+instance (rel ~ RelationT t a b f, ca ~ PrimaryKey a f) => Field1 rel rel ca ca where
     _1 f (a :-: b) = (:-: b) <$> f a
-instance (rel ~ RelationT t a b f, cb ~ Columnar f b) => Field2 rel rel cb cb where
+instance (rel ~ RelationT t a b f, cb ~ PrimaryKey b f) => Field2 rel rel cb cb where
     _2 f (a :-: b) = (a :-:) <$> f b
 
+-- | Make a relation from raw ids.
+(<:-:>) :: _ => ia -> ib -> RelationT t a b Identity
+a <:-:> b = packPk a :-: packPk b
 
 data CourseRowT f = CourseRow
     { crId   :: C f Course
@@ -115,13 +121,13 @@ data EducatorSchema f = EducatorSchema
     { esCourses            :: f (TableEntity CourseRowT)
     , esSubjects           :: f (TableEntity SubjectRowT)
     , esStudents           :: f (TableEntity StudentRowT)
-    , esStudentCourses     :: f (TableEntity $ RelationT 'MxM (Id Student) (Id Course))
+    , esStudentCourses     :: f (TableEntity $ RelationT 'MxM StudentRowT CourseRowT)
     , esAssignments        :: f (TableEntity AssignmentRowT)
-    , esStudentAssignments :: f (TableEntity $ RelationT 'MxM (Id Student) (Id Assignment))
+    , esStudentAssignments :: f (TableEntity $ RelationT 'MxM StudentRowT AssignmentRowT)
     , esSubmissions        :: f (TableEntity SubmissionRowT)
     , esTransactions       :: f (TableEntity TransactionRowT)
     , esBlocks             :: f (TableEntity BlockRowT)
-    , esBlockTxs           :: f (TableEntity $ RelationT 'Mx1 (Id PrivateTx) Word32)
+    , esBlockTxs           :: f (TableEntity $ RelationT 'Mx1 TransactionRowT BlockRowT)
     } deriving (Generic)
 
 ----------------------------------------------------------------------------
@@ -176,13 +182,15 @@ type RelationRow t a b = RelationT t a b Identity
 -- 'Table' instances
 ----------------------------------------------------------------------------
 
-instance (Typeable a, Typeable b) => Table (RelationT 'Mx1 a b) where
-    data PrimaryKey (RelationT 'Mx1 a b) f = Mx1RelationRowId (Columnar f a)
+instance (Typeable a, Typeable b, Beamable (PrimaryKey a), Beamable (PrimaryKey b)) =>
+         Table (RelationT 'Mx1 a b) where
+    data PrimaryKey (RelationT 'Mx1 a b) f = Mx1RelationRowId (PrimaryKey a f)
         deriving (Generic)
     primaryKey (a :-: _) = Mx1RelationRowId a
 
-instance (Typeable a, Typeable b) => Table (RelationT 'MxM a b) where
-    data PrimaryKey (RelationT 'MxM a b) f = MxMRelationRowId (Columnar f a) (Columnar f b)
+instance (Typeable a, Typeable b, Beamable (PrimaryKey a), Beamable (PrimaryKey b)) =>
+         Table (RelationT 'MxM a b) where
+    data PrimaryKey (RelationT 'MxM a b) f = MxMRelationRowId (PrimaryKey a f) (PrimaryKey b f)
         deriving (Generic)
     primaryKey (a :-: b) = MxMRelationRowId a b
 
@@ -225,9 +233,14 @@ instance Table BlockRowT where
 -- 'Beamable' instances
 ----------------------------------------------------------------------------
 
-instance Beamable (RelationT t a b)
-instance Beamable (PrimaryKey $ RelationT 'Mx1 a b)
-instance Beamable (PrimaryKey $ RelationT 'MxM a b)
+instance (Beamable (PrimaryKey a), Beamable (PrimaryKey b)) =>
+         Beamable (RelationT t a b)
+
+instance (Beamable (PrimaryKey a)) =>
+         Beamable (PrimaryKey $ RelationT 'Mx1 a b)
+
+instance (Beamable (PrimaryKey a), Beamable (PrimaryKey b)) =>
+         Beamable (PrimaryKey $ RelationT 'MxM a b)
 
 instance Beamable CourseRowT
 instance Beamable (PrimaryKey CourseRowT)
