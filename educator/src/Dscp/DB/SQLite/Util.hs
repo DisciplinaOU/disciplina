@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP                       #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE PartialTypeSignatures     #-}
 {-# OPTIONS_GHC -Wno-partial-type-signatures #-}
@@ -20,14 +21,19 @@ module Dscp.DB.SQLite.Util
        -- * Query helpers
      , checkExists
      , insertValue
+     , packPk
+     , valPk_
      ) where
 
+import Data.Coerce (coerce)
 import Data.Singletons.Bool (SBoolI, fromSBool, sbool)
 import qualified Database.Beam.Query as Beam
 import qualified Database.Beam.Query.Internal as Beam
+import Database.Beam.Schema (PrimaryKey)
 import qualified Database.Beam.Sqlite.Syntax as Beam
 import Database.SQLite.Simple ((:.) (..), FromRow (..), Only (..), Query, ToRow (..))
 import Database.SQLite.Simple.ToField (ToField)
+import qualified GHC.Generics as G
 
 import Dscp.DB.SQLite.Functions
 import Dscp.Util
@@ -104,5 +110,22 @@ checkExists query =
     runSelect . Beam.select $
     Beam.aggregate_ (\_ -> Beam.countAll_) query
 
+-- | Build a 'SqlInsertValues' from concrete table value.
 insertValue :: _ => table Identity -> Beam.SqlInsertValues syntax (table (Beam.QExpr _ s))
 insertValue = Beam.insertValues . one
+
+#define PrimaryKeyWrapper(pk, inner) \
+    ( Generic (pk) \
+    , (pk) ~ PrimaryKey row Identity \
+    , G.D1 d' (G.C1 c' (G.S1 s' (G.Rec0 (inner)))) ~ G.Rep (pk)) \
+
+-- | Lift an entity to primary key, effectively just wrappes it into 'PrimaryKey' constructor.
+-- Works only for primary keys which consists of one item.
+packPk
+    :: PrimaryKeyWrapper(pk, inner)
+    => inner -> pk
+packPk = G.to . coerce
+
+-- | Wrap an entiry into a primary key sql value.
+valPk_ :: (Beam.SqlValable pk, PrimaryKeyWrapper(Beam.HaskellLiteralForQExpr pk, inner)) => inner -> pk
+valPk_ = Beam.val_ . packPk

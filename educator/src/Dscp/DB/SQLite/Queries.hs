@@ -77,6 +77,7 @@ import Data.Time.Clock (UTCTime, getCurrentTime)
 import Database.Beam.Query (aggregate_, all_, countAll_, desc_, exists_, filter_, guard_, insert,
                             insertValues, limit_, orderBy_, references_, related_, select, val_,
                             (==.))
+import Database.Beam.Schema (pk)
 import Database.SQLite.Simple (Only (..), Query)
 import Database.SQLite.Simple.ToField (ToField)
 import Database.SQLite.Simple.ToRow (ToRow (..))
@@ -193,7 +194,7 @@ getStudentAssignments student' course' = do
         student :-: assignmentId <- all_ (esStudentAssignments es)
         assignment <- related_ (esAssignments es) (AssignmentRowId assignmentId)
         guard_ (student ==. val_ student')
-        guard_ (arCourse assignment ==. val_ course')
+        guard_ (arCourse assignment ==. val_ (CourseRowId course'))
         return assignment
 
 -- | How can a student submit a submission for assignment?
@@ -209,10 +210,10 @@ getGradesForCourseAssignments
 getGradesForCourseAssignments student' course' = do
     runSelectMap (uncurry privateTxFromRow) . select $ do
         privateTx <- all_ (esTransactions es)
-        submission <- related_ (esSubmissions es) (SubmissionRowId $ trSubmissionHash privateTx)
-        assignment <- related_ (esAssignments es) (AssignmentRowId $ srAssignmentHash submission)
-        guard_ (srStudent submission ==. val_ student')
-        guard_ (arCourse assignment ==. val_ course')
+        submission <- related_ (esSubmissions es) (trSubmissionHash privateTx)
+        assignment <- related_ (esAssignments es) (srAssignmentHash submission)
+        guard_ (srStudent submission ==. valPk_ student')
+        guard_ (arCourse assignment ==. valPk_ course')
         return (privateTx, submission)
 
 -- | How can a student receive transactions with Merkle proofs which contain info about his grades and assignments?
@@ -520,8 +521,8 @@ createSignedSubmission sigSub = do
         runInsert . insert (esSubmissions es) . insertValue $
             SubmissionRow
             { srHash = submissionHash
-            , srStudent = submission^.sStudentId
-            , srAssignmentHash = submission^.sAssignmentHash
+            , srStudent = packPk $ submission^.sStudentId
+            , srAssignmentHash = packPk $ submission^.sAssignmentHash
             , srContentsHash = submission^.sContentsHash
             , srSignature = sigSub^.ssWitness
             , srCreationTime = currentTime
@@ -682,7 +683,7 @@ createAssignment assignment = do
         runInsert . insert (esAssignments es) . insertValue $
             AssignmentRow
             { arHash = assignmentId
-            , arCourse = courseId
+            , arCourse = packPk courseId
             , arContentsHash = assignment^.aContentsHash
             , arType = assignment^.aType
             , arDesc = assignment^.aDesc
@@ -739,7 +740,7 @@ createTransaction trans = do
         runInsert . insert (esTransactions es) . insertValue $
             TransactionRow
             { trHash = ptid
-            , trSubmissionHash = subHash
+            , trSubmissionHash = packPk subHash
             , trGrade = trans^.ptGrade
             , trCreationTime = trans^.ptTime
             , trIdx = TxInMempool
@@ -757,7 +758,7 @@ getTransaction :: DBM m => Id PrivateTx -> DBT t w m (Maybe PrivateTx)
 getTransaction ptid = do
     fmap listToMaybe . runSelectMap (uncurry privateTxFromRow) . select $ do
         privateTx <- all_ (esTransactions es)
-        submission <- related_ (esSubmissions es) (SubmissionRowId $ trSubmissionHash privateTx)
-        assignment <- related_ (esAssignments es) (AssignmentRowId $ srAssignmentHash submission)
+        submission <- related_ (esSubmissions es) (trSubmissionHash privateTx)
+        assignment <- related_ (esAssignments es) (srAssignmentHash submission)
         guard_ (trHash privateTx ==. val_ ptid)
         return (privateTx, submission)

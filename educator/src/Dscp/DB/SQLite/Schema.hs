@@ -65,8 +65,10 @@ data CourseRowT f = CourseRow
 
 data SubjectRowT f = SubjectRow
     { srId     :: C f Subject
-    , srCourse :: C f Course
     , srDesc   :: C f Text
+    , srCourse :: PrimaryKey CourseRowT f
+      -- TODO: Should it be "srCourse" or "srCourseId"?
+      -- same question for all reference-fields below
     } deriving (Generic)
 
 data StudentRowT f = StudentRow
@@ -75,27 +77,27 @@ data StudentRowT f = StudentRow
 
 data AssignmentRowT f = AssignmentRow
     { arHash         :: C f (Hash Assignment)
-    , arCourse       :: C f (Id Course)
     , arContentsHash :: C f (Hash Raw)
     , arType         :: C f AssignmentType
     , arDesc         :: C f Text
+    , arCourse       :: PrimaryKey CourseRowT f
     } deriving (Generic)
 
 data SubmissionRowT f = SubmissionRow
     { srHash           :: C f (Hash Submission)
-    , srStudent        :: C f Student
-    , srAssignmentHash :: C f (Hash Assignment)
     , srContentsHash   :: C f (Hash Raw)
     , srSignature      :: C f SubmissionWitness
     , srCreationTime   :: C f UTCTime
+    , srStudent        :: PrimaryKey StudentRowT f
+    , srAssignmentHash :: PrimaryKey AssignmentRowT f
     } deriving (Generic)
 
 data TransactionRowT f = TransactionRow
     { trHash           :: C f (Hash PrivateTx)
-    , trSubmissionHash :: C f (Hash Submission)
     , trGrade          :: C f Grade
     , trCreationTime   :: C f UTCTime
     , trIdx            :: C f TxBlockIdx
+    , trSubmissionHash :: PrimaryKey SubmissionRowT f
     } deriving (Generic)
 
 -- We need `idx` field to be able to perform queries like "get N last blocks" efficiently.
@@ -137,7 +139,7 @@ type TransactionRow = TransactionRowT Identity
 assignmentFromRow :: AssignmentRow -> Assignment
 assignmentFromRow AssignmentRow{..} =
     Assignment
-    { _aCourseId = arCourse
+    { _aCourseId = case arCourse of CourseRowId c -> c
     , _aContentsHash = arContentsHash
     , _aType = arType
     , _aDesc = arDesc
@@ -147,9 +149,9 @@ submissionFromRow :: SubmissionRow -> SignedSubmission
 submissionFromRow SubmissionRow{..} =
     SignedSubmission
     { _ssSubmission = Submission
-        { _sStudentId = srStudent
+        { _sStudentId = case srStudent of StudentRowId c -> c
         , _sContentsHash = srContentsHash
-        , _sAssignmentHash = srAssignmentHash
+        , _sAssignmentHash = case srAssignmentHash of AssignmentRowId c -> c
         }
     , _ssWitness = srSignature
     }
@@ -185,37 +187,37 @@ instance (Typeable a, Typeable b) => Table (RelationT 'MxM a b) where
     primaryKey (a :-: b) = MxMRelationRowId a b
 
 instance Table CourseRowT where
-    data PrimaryKey CourseRowT f = CourseRowId (C f (Id Course))
+    newtype PrimaryKey CourseRowT f = CourseRowId (C f (Id Course))
         deriving (Generic)
     primaryKey = CourseRowId . crId
 
 instance Table SubjectRowT where
-    data PrimaryKey SubjectRowT f = SubjectRowId (C f (Id Subject))
+    newtype PrimaryKey SubjectRowT f = SubjectRowId (C f (Id Subject))
         deriving (Generic)
     primaryKey = SubjectRowId . srId
 
 instance Table StudentRowT where
-    data PrimaryKey StudentRowT f = StudentRowId (C f (Id Student))
+    newtype PrimaryKey StudentRowT f = StudentRowId (C f (Id Student))
         deriving (Generic)
     primaryKey = StudentRowId . srAddr
 
 instance Table AssignmentRowT where
-    data PrimaryKey AssignmentRowT f = AssignmentRowId (C f (Id Assignment))
+    newtype PrimaryKey AssignmentRowT f = AssignmentRowId (C f (Id Assignment))
         deriving (Generic)
     primaryKey = AssignmentRowId . arHash
 
 instance Table SubmissionRowT where
-    data PrimaryKey SubmissionRowT f = SubmissionRowId (C f (Id Submission))
+    newtype PrimaryKey SubmissionRowT f = SubmissionRowId (C f (Id Submission))
         deriving (Generic)
     primaryKey = SubmissionRowId . srHash
 
 instance Table TransactionRowT where
-    data PrimaryKey TransactionRowT f = TransactionRowId (C f (Id PrivateTx))
+    newtype PrimaryKey TransactionRowT f = TransactionRowId (C f (Id PrivateTx))
         deriving (Generic)
     primaryKey = TransactionRowId . trHash
 
 instance Table BlockRowT where
-    data PrimaryKey BlockRowT f = BlockRowId (C f Word32)
+    newtype PrimaryKey BlockRowT f = BlockRowId (C f Word32)
         deriving (Generic)
     primaryKey = BlockRowId . brIdx
 
