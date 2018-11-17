@@ -233,12 +233,15 @@ data OperationType = Writing | Reading
 {- We rewrite runners as soon as it allows requiring write or transaction context.
 -}
 
+-- | Run select query.
+-- We abandon different 'runSelectReturningOne' and 'runSelectReturningList' versions
+-- for the sake of better unexpected behavior processing.
 runSelect
     :: (MonadIO m, FromBackendRow Sqlite a)
     => SqlSelect (Sql92SelectSyntax SqliteCommandSyntax) a -> DBT t w m [a]
 runSelect cmd = sqliteMToDbt $ Backend.runSelectReturningList cmd
 
--- | Run select query and map fetched results.
+-- | Run select query and modify fetched results.
 runSelectMap
     :: (MonadIO m, FromBackendRow Sqlite a)
     => (a -> b) -> SqlSelect (Sql92SelectSyntax SqliteCommandSyntax) a -> DBT t w m [b]

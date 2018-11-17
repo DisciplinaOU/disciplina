@@ -10,11 +10,6 @@ module Dscp.DB.SQLite.Types
        , SQLiteDB (..)
        , SQLiteParams (..)
        , sdpModeL
-
-         -- * Educator schema
-       , TxBlockIdx (..)
-       , txBlockIdxToInt
-       , txBlockIdxFromInt
        ) where
 
 import Control.Concurrent.Chan (Chan)
@@ -80,24 +75,3 @@ instance FromJSON SQLiteDBMode where
     parseJSON = fmap maybeToSQLiteDBLoc . parseJSON
 
 deriveFromJSON defaultOptions ''SQLiteParams
-
-----------------------------------------------------------
--- Educator schema
-----------------------------------------------------------
-
--- | Schema internal: idx of transaction within block.
-data TxBlockIdx
-    = TxBlockIdx Word32
-    | TxInMempool
-    deriving (Eq, Show)
-
-txBlockIdxToInt :: TxBlockIdx -> Int
-txBlockIdxToInt = \case
-    TxBlockIdx idx -> fromIntegral idx
-    TxInMempool    -> -1
-
-txBlockIdxFromInt :: Int -> Either Text TxBlockIdx
-txBlockIdxFromInt idx
-    | idx >= 0 = Right $ TxBlockIdx (fromIntegral idx)
-    | idx == -1 = Right $ TxInMempool
-    | otherwise = Left $ "Bad transaction index within block: " <> pretty idx

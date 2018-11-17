@@ -20,8 +20,8 @@ import Database.SQLite3 (exec)
 
 import Dscp.Core
 import Dscp.Crypto
+import Dscp.DB.SQLite.BlockData
 import Dscp.DB.SQLite.FileQuoter (qFile)
-import Dscp.DB.SQLite.Types
 import Dscp.DB.SQLite.Util
 import Dscp.Util
 
@@ -51,7 +51,7 @@ data RelationType
     | MxM  -- ^ Many-to-many
 
 -- | Table which stores a relation between two tables.
--- TODO does beam really not provide something like this?
+-- TODO does beam really not provide something like this? A: It does, but in not that funny way :/
 data RelationT (t :: RelationType) a b f = PrimaryKey a f :-: PrimaryKey b f
     deriving (Generic)
 
@@ -108,7 +108,7 @@ data TransactionRowT f = TransactionRow
 
 -- We need `idx` field to be able to perform queries like "get N last blocks" efficiently.
 data BlockRowT f = BlockRow
-    { brIdx          :: C f Word32
+    { brIdx          :: C f BlockIdx
     , brHash         :: C f PrivateHeaderHash
     , brCreationTime :: C f UTCTime
     , brPrevHash     :: C f PrivateHeaderHash
@@ -234,7 +234,7 @@ instance Table TransactionRowT where
     primaryKey = TransactionRowId . trHash
 
 instance Table BlockRowT where
-    newtype PrimaryKey BlockRowT f = BlockRowId (C f Word32)
+    newtype PrimaryKey BlockRowT f = BlockRowId (C f BlockIdx)
         deriving (Generic)
     primaryKey = BlockRowId . brIdx
 

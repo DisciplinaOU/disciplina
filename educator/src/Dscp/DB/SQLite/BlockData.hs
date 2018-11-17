@@ -1,42 +1,32 @@
-{-# LANGUAGE DeriveAnyClass #-}
-
 module Dscp.DB.SQLite.BlockData
-    ( BlockData(..)
-    , TxInBlock(..)
-    , TxWithIdx(..)
+    ( BlockIdx (..)
+    , TxWithinBlockIdx (..)
+    , TxBlockIdx (..)
+    , txBlockIdxToInt
+    , txBlockIdxFromInt
     ) where
 
-import Codec.Serialise (Serialise)
-import Data.Time.Clock (UTCTime)
+-- | Index of block (difficulty).
+newtype BlockIdx = BlockIdx { unBlockIdx :: Word32 }
+    deriving (Show, Eq, Ord, Num, Generic)
 
-import Dscp.Core
-import Dscp.Crypto (EmptyMerkleTree, Hash, MerkleSignature)
-import Dscp.Util (HasId (..))
+-- | Index of transaction within block, if any block contains it.
+newtype TxWithinBlockIdx = TxWithinBlockIdx { unTxWithinBlockIdx :: Word32 }
+    deriving (Show, Eq, Ord, Enum, Num, Real, Integral, Generic)
 
-data BlockData = BlockData
-    { _bdIndex    :: ! Word32
-    , _bdHash     :: !(Hash PrivateBlock)
-    , _bdTime     :: ! UTCTime
-    , _bdPrevHash :: !(Hash PrivateBlock)
-    , _bdAtgDelta :: ! ATGDelta
-    , _bdRoot     :: !(MerkleSignature PrivateTx)
-    , _bdTree     :: !(EmptyMerkleTree PrivateTx)
-    }
-    deriving (Eq, Show, Generic, Serialise)
+-- | Index of transaction within block.
+data TxBlockIdx
+    = TxBlockIdx TxWithinBlockIdx
+    | TxInMempool
+    deriving (Eq, Show)
 
-data TxInBlock = TxInBlock
-    { _tibTx      :: TxWithIdx
-    , _tibBlockId :: Word32
-    }
-    deriving (Eq, Show, Generic, Serialise)
+txBlockIdxToInt :: TxBlockIdx -> Int
+txBlockIdxToInt = \case
+    TxBlockIdx idx -> fromIntegral idx
+    TxInMempool    -> -1
 
-data TxWithIdx = TxWithIdx
-    { _twiTx    :: PrivateTx
-    , _twiTxIdx :: Word32
-    }
-    deriving (Eq, Show, Generic, Serialise)
-
-instance HasId BlockData where
-    type Id BlockData = Word32
-
-    getId = _bdIndex
+txBlockIdxFromInt :: Int -> Either Text TxBlockIdx
+txBlockIdxFromInt idx
+    | idx >= 0 = Right $ TxBlockIdx (fromIntegral idx)
+    | idx == -1 = Right $ TxInMempool
+    | otherwise = Left $ "Bad transaction index within block: " <> pretty idx

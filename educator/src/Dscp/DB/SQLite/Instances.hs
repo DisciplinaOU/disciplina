@@ -19,8 +19,7 @@ import Dscp.Core (ATGDelta, Address (..), Assignment (..), AssignmentType, Cours
                   DocumentType, Grade (..), PrivateBlockHeader (..), PrivateTx (..),
                   SignedSubmission (..), Subject (..), Submission (..), SubmissionWitness (..))
 import Dscp.Crypto (EmptyMerkleTree, Hash, MerkleSignature, PublicKey, Signature, hash)
-import Dscp.DB.SQLite.BlockData (BlockData (..), TxInBlock (..), TxWithIdx (..))
-import Dscp.DB.SQLite.Types
+import Dscp.DB.SQLite.BlockData
 import Dscp.Util (leftToPanic)
 
 ----------------------------------------------------------------------------
@@ -70,16 +69,11 @@ instance FromRow   Submission        where fromRow = Submission       <$> field 
 instance FromRow   SignedSubmission  where fromRow = SignedSubmission <$> fromRow <*> field
 instance FromRow   PrivateTx         where fromRow = PrivateTx        <$> fromRow <*> field <*> field
 
-instance FromRow   TxInBlock         where fromRow = TxInBlock        <$> fromRow <*> field
-instance FromRow   TxWithIdx         where fromRow = TxWithIdx        <$> fromRow <*> field
 instance FromRow   PrivateBlockHeader where fromRow = PrivateBlockHeader <$> field <*> field <*> field
 
 instance ToRow Assignment where
     toRow task@ (Assignment course contentsHash ty text) =
         [toField (hash task), toField course, toField contentsHash, toField ty, toField text]
-
-instance FromRow BlockData where
-    fromRow = BlockData <$> field <*> field <*> field <*> field <*> field <*> field <*> field
 
 ----------------------------------------------------------------------------
 -- 'FromBackendRow' instances
@@ -108,6 +102,7 @@ instance HasSqlValueSyntax SqliteValueSyntax TxBlockIdx where
     sqlValueSyntax = sqlValueSyntax . txBlockIdxToInt
 
 deriving instance HasSqlValueSyntax SqliteValueSyntax Course
+deriving instance HasSqlValueSyntax SqliteValueSyntax BlockIdx
 
 ----------------------------------------------------------------------------
 -- Other instances
@@ -116,3 +111,5 @@ deriving instance HasSqlValueSyntax SqliteValueSyntax Course
 instance HasSqlEqualityCheck SqliteExpressionSyntax (Hash a)
 instance HasSqlEqualityCheck SqliteExpressionSyntax Address
 instance HasSqlEqualityCheck SqliteExpressionSyntax Course
+instance HasSqlEqualityCheck SqliteExpressionSyntax TxBlockIdx
+instance HasSqlEqualityCheck SqliteExpressionSyntax BlockIdx

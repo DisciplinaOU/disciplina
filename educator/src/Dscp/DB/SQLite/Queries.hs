@@ -76,7 +76,8 @@ import qualified Data.Map as Map (empty, fromList, insertWith, toList)
 import Data.Time.Clock (UTCTime, getCurrentTime)
 import Database.Beam.Query (aggregate_, all_, asc_, countAll_, default_, desc_, exists_, filter_,
                             guard_, insert, insertExpressions, insertValues, limit_, orderBy_,
-                            references_, related_, select, update, val_, (<-.), (==.), (>.))
+                            references_, related_, select, update, val_, (/=.), (<-.), (==.), (>.),
+                            (>=.))
 import Database.Beam.Schema (pk)
 import Database.SQLite.Simple (Only (..), Query)
 import Database.SQLite.Simple.ToField (ToField)
@@ -85,14 +86,14 @@ import Snowdrop.Util (OldestFirst (..))
 import Text.InterpolatedString.Perl6 (q)
 
 import Dscp.Core
-import Dscp.Crypto (Hash, MerkleProof, fillEmptyMerkleTree, getEmptyMerkleTree, getMerkleRoot, hash)
+import Dscp.Crypto (EmptyMerkleTree, Hash, MerkleProof, fillEmptyMerkleTree, getEmptyMerkleTree,
+                    getMerkleRoot, hash)
 import qualified Dscp.Crypto.MerkleTree as MerkleTree (fromList)
-import Dscp.DB.SQLite.BlockData (BlockData (..), TxInBlock (..), TxWithIdx (..))
+import Dscp.DB.SQLite.BlockData
 import Dscp.DB.SQLite.Error (asAlreadyExistsError, asReferenceInvalidError)
 import Dscp.DB.SQLite.Functions
 import Dscp.DB.SQLite.Instances ()
 import Dscp.DB.SQLite.Schema
-import Dscp.DB.SQLite.Types (TxBlockIdx (TxBlockIdx, TxInMempool))
 import Dscp.DB.SQLite.Util
 import Dscp.Util
 
@@ -127,7 +128,7 @@ data DomainErrorItem
         { deTransactionId :: Id PrivateTx }
 
     | BlockWithIndexDomain
-        { deBlockIdx :: Word32 }
+        { deBlockIdx :: BlockIdx }
 
     deriving (Show, Typeable, Eq)
 
@@ -262,124 +263,80 @@ getProvenStudentTransactions
     :: forall m w.
        DBM m
     => GetProvenStudentTransactionsFilters
-    -> DBT 'WithinTx w m [(MerkleProof PrivateTx, [(Word32, PrivateTx)])]
+    -> DBT 'WithinTx w m [(MerkleProof PrivateTx, [(TxWithinBlockIdx, PrivateTx)])]
 getProvenStudentTransactions filters = do
     -- Contains `(tx, idx, blockId)` map.
     txsBlockList <- getTxsBlockMap
 
     -- Bake `blockId -> [(tx, idx)]` map.
-    let txsBlockMap = groupToAssocWith (_tibBlockId, _tibTx) txsBlockList
+    let txsBlockMap = groupToAssocWith txsBlockList
                   -- TODO: remove if transaction order is not needed to be preserved
                   <&> (<&> reverse)
 
     results <- forM txsBlockMap $ \(blockId, transactions) -> do
-        blockData <- getBlockData blockId
+        tree <- getMerkleTree blockId
 
-        let tree    = _bdTree blockData
-            indiced = [(idx, tx) | TxWithIdx tx idx <- transactions]
-            mapping = Map.fromList indiced
+        let mapping = Map.fromList $ map (first unTxWithinBlockIdx) transactions
             pruned  = fillEmptyMerkleTree mapping tree
 
-        return (pruned, indiced)
+        return (pruned, transactions)
 
     return [(proof, txs) | (Just proof, txs) <- results]
   where
-    groupToAssocWith :: Ord k => Ord k => (a -> k, a -> v) -> [a] -> [(k, [v])]
-    groupToAssocWith (key, value) =
+    groupToAssocWith :: Ord k => [(k, v)] -> [(k, [v])]
+    groupToAssocWith =
         Map.toList . foldr' push Map.empty
       where
-        push a = Map.insertWith (flip (++)) (key a) [value a]
+        push a = Map.insertWith (flip (++)) (fst a) [snd a]
 
-    -- Returns, effectively, `[(tx, idx, blockId)]`.
-    getTxsBlockMap :: DBT t w m [TxInBlock]
-    getTxsBlockMap = do
-        query getTxsBlockMapQuery $ mconcat filteringParams
+    getTxsBlockMap :: DBT t w m [(BlockIdx, (TxWithinBlockIdx, PrivateTx))]
+    getTxsBlockMap =
+        runSelectMap rearrange . select $ do
+            txId :-: BlockRowId blockIdx <- all_ (esBlockTxs es)
+            privateTx <- related_ (esTransactions es) txId
+            submission <- related_ (esSubmissions es) (trSubmissionHash privateTx)
+
+            guard_ (trIdx privateTx /=. val_ TxInMempool)
+
+            whenJust (pfSince filters) $ \since ->
+                guard_ (trCreationTime privateTx >=. val_ since)
+
+            whenJust (pfCourse filters) $ \course -> do
+                assignment <- related_ (esAssignments es) (srAssignmentHash submission)
+                guard_ (arCourse assignment ==. valPk_ course)
+
+            whenJust (pfStudent filters) $ \student ->
+                guard_ (srStudent submission ==. valPk_ student)
+
+            whenJust (pfAssignment filters) $ \assignmentHash ->
+                guard_ (srAssignmentHash submission ==. valPk_ assignmentHash)
+
+            return (blockIdx, (privateTx, submission))
       where
-        (filteringClauses, filteringParams) = unzip
-            [ mkFilter "time >= ?"     $ pfSince filters
-            , mkFilter "course_id = ?" $ pfCourse filters
-            , mkFilter "StudentAssignments.student_addr = ?" $ pfStudent filters
-            , mkFilter "Assignments.hash = ?" $ pfAssignment filters
-            ]
+        rearrange (bi, (tx, sub)) =
+            let TxBlockIdx txIdx = trIdx tx
+            in (bi, (txIdx, privateTxFromRow (tx, sub)))
 
-        getTxsBlockMapQuery = [q|
-            -- getTxsBlockMapQuery
-
-            select     Submissions.student_addr,
-                       Submissions.contents_hash,
-                       Assignments.hash,
-                       Submissions.signature,
-                       Transactions.grade,
-                       Transactions.time,
-                       Transactions.idx,
-                       BlockTxs.blk_idx
-
-            from       BlockTxs
-            left join  Transactions
-                   on  tx_hash = Transactions.hash
-
-            left join  Submissions
-                   on  Transactions.submission_hash = Submissions.hash
-
-            left join  StudentAssignments
-                   on  StudentAssignments.assignment_hash = Submissions.assignment_hash
-
-            left join  Assignments
-                   on  StudentAssignments.assignment_hash = Assignments.hash
-
-            where      Transactions.idx                <> -1
-        |]
-          `filterClauses` filteringClauses
-
-    -- Returns `PrivateBlock` in normalized format, with metadata.
-    getBlockData :: Word32 -> DBT t w m BlockData
-    getBlockData blockIdx = do
-        (listToMaybe <$> query getBlockDataQuery (Only blockIdx))
-            `assertJustPresent` BlockWithIndexDomain blockIdx
-      where
-        getBlockDataQuery = [q|
-            -- getBlockData
-            select  idx,
-                    hash,
-                    time,
-                    prev_hash,
-                    atg_delta,
-                    mroot,
-                    mtree
-            from    Blocks
-            where   idx = ?
-        |]
+    getMerkleTree :: BlockIdx -> DBT t w m (EmptyMerkleTree PrivateTx)
+    getMerkleTree blockIdx =
+        nothingToThrow (AbsentError $ BlockWithIndexDomain blockIdx) =<<
+        selectByPk brMerkleTree (esBlocks es) blockIdx
 
 getAllNonChainedTransactions :: MonadIO m => DBT t w m [PrivateTx]
-getAllNonChainedTransactions = do
-    query getAllNonChainedTransactionsQuery ()
-  where
-    getAllNonChainedTransactionsQuery = [q|
-        -- getAllNonChainedTransactions
-        select     Submissions.student_addr,
-                   Submissions.contents_hash,
-                   Assignments.hash,
-                   Submissions.signature,
-                   grade,
-                   time
+getAllNonChainedTransactions =
+    runSelectMap privateTxFromRow . select $ do
+        privateTx <- all_ (esTransactions es)
+        submission <- related_ (esSubmissions es) (trSubmissionHash privateTx)
+        assignment <- related_ (esAssignments es) (srAssignmentHash submission)
+        guard_ (trIdx privateTx ==. val_ TxInMempool)
+        return (privateTx, submission)
 
-        from       Transactions
-
-        left join  Submissions
-               on  submission_hash = Submissions.hash
-
-        left join  Assignments
-               on  assignment_hash = Assignments.hash
-
-        where  idx = -1
-    |]
-
-genesisBlockIdx :: Word32
+genesisBlockIdx :: BlockIdx
 genesisBlockIdx = 1
 
 getLastBlockIdAndIdx
     :: MonadIO m
-    => DBT t w m (Hash PrivateBlockHeader, Word32)
+    => DBT t w m (Hash PrivateBlockHeader, BlockIdx)
 getLastBlockIdAndIdx = do
     res <- runSelect . select $
         limit_ 1 $
@@ -395,29 +352,24 @@ getPrivateBlock
     => Word32 -> DBT t w m (Maybe PrivateBlockHeader)
 getPrivateBlock = selectByPk pbHeaderFromRow (esBlocks es)
 
+-- TODO: requires index on Blocks.hash
 getPrivateBlockIdxByHash
     :: MonadIO m
-    => PrivateHeaderHash -> DBT t w m (Maybe Word32)
+    => PrivateHeaderHash -> DBT t w m (Maybe BlockIdx)
 getPrivateBlockIdxByHash phHash
-    -- TODO getting not all fields somehow?
     | phHash == genesisHeaderHash = pure $ Just genesisBlockIdx
     | otherwise =
-        fmap fromOnly . listToMaybe <$>
-        query getPrivateBlockByHashQuery (Only phHash)
-  where
-    getPrivateBlockByHashQuery = [q|
-        -- getPrivateBlockByHashQuery
-        select    idx
-        from      Blocks
-        where     hash = ?
-    |]
+        runSelectMap id . select $ do
+            block <- all_ (esBlocks es)
+            guard_ (brHash block ==. val_ phHash)
+            return (brIdx block)
 
 -- | Returns blocks starting from given one (including) up to the tip.
 getPrivateBlocksAfter
     :: MonadIO m
-    => Word32 -> DBT t w m (OldestFirst [] PrivateBlockHeader)
+    => BlockIdx -> DBT t w m (OldestFirst [] PrivateBlockHeader)
 getPrivateBlocksAfter idx =
-    runSelectMap pbHeaderFromRow . select $
+    fmap OldestFirst . runSelectMap pbHeaderFromRow . select $
         orderBy_ (asc_ . brIdx) $
         filter_ (\block -> brIdx block >. val_ idx) $
         all_ (esBlocks es)
@@ -427,7 +379,7 @@ getPrivateBlocksAfterHash
     => PrivateHeaderHash -> DBT t w m (Maybe $ OldestFirst [] PrivateBlockHeader)
 getPrivateBlocksAfterHash phHash = do
     midx <- getPrivateBlockIdxByHash phHash
-    forM midx getPrivateBlocksAfter
+    forM @Maybe midx getPrivateBlocksAfter
 
 createPrivateBlock
     :: DBM m
@@ -521,13 +473,6 @@ createSignedSubmission sigSub = do
             }
 
     return submissionHash
-  where
-    generateSubmissionRequest :: Query
-    generateSubmissionRequest = [q|
-        -- generateSubmission
-        insert into  Submissions
-        values       (?, ?, ?, ?, ?, julianday(?))
-    |]
 
 setStudentAssignment :: DBM m => Id Student -> Id Assignment -> DBT 'WithinTx 'Writing m ()
 setStudentAssignment studentId assignmentId = do
@@ -598,18 +543,6 @@ createCourse params = do
             }
 
     return course
-  where
-    createCourseRequest = [q|
-        -- createCourse
-        insert into  Courses
-        values       (?, ?)
-    |]
-
-    attachSubjectToCourseRequest = [q|
-        -- attachSubjectToCourse
-        insert into  Subjects
-        values       (?, ?, "")
-    |]
 
 getCourseSubjects :: MonadIO m => Course -> DBT t w m [Subject]
 getCourseSubjects course' =
