@@ -3,9 +3,8 @@
 
 module Dscp.DB.SQLite.Instances () where
 
-import Codec.Serialise as Codec (Serialise, deserialise, serialise)
-import qualified Data.ByteArray as BA
-import Database.Beam.Backend ( FromBackendRow (..))
+import Codec.Serialise as Codec (deserialise, serialise)
+import Database.Beam.Backend (FromBackendRow (..))
 import Database.Beam.Backend.SQL.SQL92 (HasSqlValueSyntax (..))
 import Database.Beam.Query (HasSqlEqualityCheck (..))
 import Database.Beam.Sqlite (Sqlite)
@@ -21,16 +20,16 @@ import Dscp.Core (ATGDelta, Address (..), Assignment (..), AssignmentType, Cours
 import Dscp.Crypto (EmptyMerkleTree, Hash, MerkleSignature, PublicKey, Signature, hash)
 import Dscp.DB.SQLite.BlockData
 import Dscp.Util (leftToPanic)
+import Dscp.Util.Serialise
 
 ----------------------------------------------------------------------------
--- Instances to remove
+-- 'FormField' and 'ToField' instances
 ----------------------------------------------------------------------------
 
 instance FromField (Hash a)            where fromField f = Codec.deserialise <$> fromField f
 instance FromField (Signature a)       where fromField f = Codec.deserialise <$> fromField f
 instance FromField (MerkleSignature a) where fromField f = Codec.deserialise <$> fromField f
-instance Serialise a =>
-         FromField (EmptyMerkleTree a) where fromField f = Codec.deserialise <$> fromField f
+instance FromField (EmptyMerkleTree a) where fromField f = Codec.deserialise <$> fromField f
 
 -- TODO(kir): use #define to generate macros
 instance FromField Address           where fromField f = Codec.deserialise <$> fromField f
@@ -42,14 +41,14 @@ instance FromField AssignmentType    where fromField f = Codec.deserialise <$> f
 instance FromField SubmissionWitness where fromField f = Codec.deserialise <$> fromField f
 instance FromField DocumentType      where fromField f = toEnum <$> fromField f
 instance FromField ATGDelta          where fromField f = Codec.deserialise <$> fromField f
+instance FromField BlockIdx          where fromField f = BlockIdx          <$> fromField f
 instance FromField TxBlockIdx        where
     fromField f = leftToPanic . txBlockIdxFromInt <$> fromField f
 
 instance ToField   (Hash a)          where toField = toField . Codec.serialise
 instance ToField   (Signature a)     where toField = toField . Codec.serialise
 instance ToField (MerkleSignature a) where toField = toField . Codec.serialise
-instance Serialise a =>
-         ToField (EmptyMerkleTree a) where toField = toField . Codec.serialise
+instance ToField (EmptyMerkleTree a) where toField = toField . Codec.serialise
 
 instance ToField   Address           where toField = toField . Codec.serialise
 instance ToField   Course            where toField = toField . getCourseId
@@ -61,6 +60,7 @@ instance ToField   DocumentType      where toField = toField . fromEnum
 instance ToField   TxBlockIdx        where toField = toField . txBlockIdxToInt
 instance ToField   ATGDelta          where toField = toField . Codec.serialise
 
+-- TODO: remove?
 instance FromRow   Course            where fromRow = field
 instance FromRow   Grade             where fromRow = field
 
@@ -79,27 +79,41 @@ instance ToRow Assignment where
 -- 'FromBackendRow' instances
 ----------------------------------------------------------------------------
 
-#define GenFromBackendRow(TYPE) \
-instance FromBackendRow Sqlite (TYPE)
-
-GenFromBackendRow(Hash a)
-GenFromBackendRow(Course)
-GenFromBackendRow(AssignmentType)
-GenFromBackendRow(Grade)
-GenFromBackendRow(TxBlockIdx) where
-    fromBackendRow = leftToPanic . txBlockIdxFromInt <$> fromBackendRow
-
+instance FromBackendRow Sqlite (Hash a)
+instance FromBackendRow Sqlite Address
+instance FromBackendRow Sqlite Course
+instance FromBackendRow Sqlite AssignmentType
+instance FromBackendRow Sqlite Subject
+instance FromBackendRow Sqlite Grade
+instance FromBackendRow Sqlite BlockIdx
+instance FromBackendRow Sqlite TxBlockIdx where
+instance FromBackendRow Sqlite SubmissionWitness where
+instance FromBackendRow Sqlite (MerkleSignature a) where
+instance FromBackendRow Sqlite (EmptyMerkleTree a) where
+instance FromBackendRow Sqlite ATGDelta where
 
 ----------------------------------------------------------------------------
 -- 'HasSqlValueSyntax' instances
 ----------------------------------------------------------------------------
 
 instance HasSqlValueSyntax SqliteValueSyntax (Hash a) where
-    sqlValueSyntax = sqlValueSyntax . BA.convert @_ @ByteString
+    sqlValueSyntax = sqlValueSyntax . serialise'
 instance HasSqlValueSyntax SqliteValueSyntax Address where
-    sqlValueSyntax (Address addr) = sqlValueSyntax $ BA.convert @_ @ByteString addr
+    sqlValueSyntax = sqlValueSyntax . serialise'
 instance HasSqlValueSyntax SqliteValueSyntax TxBlockIdx where
     sqlValueSyntax = sqlValueSyntax . txBlockIdxToInt
+instance HasSqlValueSyntax SqliteValueSyntax (MerkleSignature a) where
+    sqlValueSyntax = sqlValueSyntax . serialise'
+instance HasSqlValueSyntax SqliteValueSyntax (EmptyMerkleTree a) where
+    sqlValueSyntax = sqlValueSyntax . serialise'
+instance HasSqlValueSyntax SqliteValueSyntax SubmissionWitness where
+    sqlValueSyntax = sqlValueSyntax . serialise'
+instance HasSqlValueSyntax SqliteValueSyntax AssignmentType where
+    sqlValueSyntax = sqlValueSyntax . serialise'
+instance HasSqlValueSyntax SqliteValueSyntax Grade where
+    sqlValueSyntax = sqlValueSyntax . getGrade
+-- instance HasSqlValueSyntax SqliteValueSyntax ATGDelta where
+--     sqlValueSyntax = sqlValueSyntax . serialise'
 
 deriving instance HasSqlValueSyntax SqliteValueSyntax Course
 deriving instance HasSqlValueSyntax SqliteValueSyntax BlockIdx

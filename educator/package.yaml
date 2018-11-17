@@ -13,7 +13,7 @@ library:
     - aeson
     - aeson-options
     - beam-core
-    - beam-sqlite
+    - beam-sqlite >= 0.3.2.3
     - bytestring
     - containers
     - data-default

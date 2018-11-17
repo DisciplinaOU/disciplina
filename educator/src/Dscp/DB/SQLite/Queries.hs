@@ -175,7 +175,7 @@ type DBM m = (MonadIO m, MonadCatch m)
 getStudentCourses :: MonadIO m => Id Student -> DBT t w m [Id Course]
 getStudentCourses student' =
     runSelect . select $ do
-        student :-: course <- all_ (esStudentCourses es)
+        student :-: CourseRowId course <- all_ (esStudentCourses es)
         guard_ (student ==. valPk_ student')
         return course
 
@@ -349,7 +349,7 @@ getLastBlockIdAndIdx = do
 
 getPrivateBlock
     :: MonadIO m
-    => Word32 -> DBT t w m (Maybe PrivateBlockHeader)
+    => BlockIdx -> DBT t w m (Maybe PrivateBlockHeader)
 getPrivateBlock = selectByPk pbHeaderFromRow (esBlocks es)
 
 -- TODO: requires index on Blocks.hash
