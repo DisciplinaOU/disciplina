@@ -735,14 +735,15 @@ createTransaction trans = do
     _ <- getSignedSubmission subHash `assertJustPresent`
         SubmissionDomain subHash
 
-    execute createTransactionRequest
-        ( ptid
-        , subHash
-        , trans^.ptGrade
-        , trans^.ptTime
-        , TxInMempool
-        )
-        `ifAlreadyExistsThrow` TransactionDomain ptid
+    rewrapAlreadyExists (TransactionDomain ptid) $
+        runInsert . insert (esTransactions es) . insertValue $
+            TransactionRow
+            { trHash = ptid
+            , trSubmissionHash = subHash
+            , trGrade = trans^.ptGrade
+            , trCreationTime = trans^.ptTime
+            , trIdx = TxInMempool
+            }
 
     return ptid
   where
@@ -754,25 +755,9 @@ createTransaction trans = do
 
 getTransaction :: DBM m => Id PrivateTx -> DBT t w m (Maybe PrivateTx)
 getTransaction ptid = do
-    listToMaybe <$> query getTransactionQuery (Only ptid)
-  where
-    getTransactionQuery = [q|
-        -- from 'getTransaction'
-
-        select     Submissions.student_addr,
-                   Submissions.contents_hash,
-                   Assignments.hash,
-                   Submissions.signature,
-                   grade,
-                   time
-
-        from       Transactions
-
-        left join  Submissions
-               on  submission_hash = Submissions.hash
-
-        left join  Assignments
-               on  assignment_hash = Assignments.hash
-
-        where      Transactions.hash = ?
-    |]
+    fmap listToMaybe . runSelectMap (uncurry privateTxFromRow) . select $ do
+        privateTx <- all_ (esTransactions es)
+        submission <- related_ (esSubmissions es) (SubmissionRowId $ trSubmissionHash privateTx)
+        assignment <- related_ (esAssignments es) (AssignmentRowId $ srAssignmentHash submission)
+        guard_ (trHash privateTx ==. val_ ptid)
+        return (privateTx, submission)
