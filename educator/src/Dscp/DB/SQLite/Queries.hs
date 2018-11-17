@@ -74,9 +74,9 @@ import Data.Coerce (coerce)
 import Data.Default (Default (..))
 import qualified Data.Map as Map (empty, fromList, insertWith, toList)
 import Data.Time.Clock (UTCTime, getCurrentTime)
-import Database.Beam.Query (aggregate_, all_, countAll_, desc_, exists_, filter_, guard_, insert,
-                            insertValues, limit_, orderBy_, references_, related_, select, val_,
-                            (==.))
+import Database.Beam.Query (aggregate_, all_, asc_, countAll_, default_, desc_, exists_, filter_,
+                            guard_, insert, insertExpressions, insertValues, limit_, orderBy_,
+                            references_, related_, select, update, val_, (<-.), (==.), (>.))
 import Database.Beam.Schema (pk)
 import Database.SQLite.Simple (Only (..), Query)
 import Database.SQLite.Simple.ToField (ToField)
@@ -92,7 +92,7 @@ import Dscp.DB.SQLite.Error (asAlreadyExistsError, asReferenceInvalidError)
 import Dscp.DB.SQLite.Functions
 import Dscp.DB.SQLite.Instances ()
 import Dscp.DB.SQLite.Schema
-import Dscp.DB.SQLite.Types (TxBlockIdx (TxInMempool))
+import Dscp.DB.SQLite.Types (TxBlockIdx (TxBlockIdx, TxInMempool))
 import Dscp.DB.SQLite.Util
 import Dscp.Util
 
@@ -208,7 +208,7 @@ getGradesForCourseAssignments
     :: MonadIO m
     => Id Student -> Id Course -> DBT t w m [PrivateTx]
 getGradesForCourseAssignments student' course' = do
-    runSelectMap (uncurry privateTxFromRow) . select $ do
+    runSelectMap privateTxFromRow . select $ do
         privateTx <- all_ (esTransactions es)
         submission <- related_ (esSubmissions es) (trSubmissionHash privateTx)
         assignment <- related_ (esAssignments es) (srAssignmentHash submission)
@@ -218,8 +218,13 @@ getGradesForCourseAssignments student' course' = do
 
 -- | How can a student receive transactions with Merkle proofs which contain info about his grades and assignments?
 getStudentTransactions :: MonadIO m => Id Student -> DBT t w m [PrivateTx]
-getStudentTransactions student = do
-    query getStudentTransactionsQuery (Only student)
+getStudentTransactions student' = do
+    runSelectMap privateTxFromRow . select $ do
+        privateTx <- all_ (esTransactions es)
+        submission <- related_ (esSubmissions es) (trSubmissionHash privateTx)
+        assignment <- related_ (esAssignments es) (srAssignmentHash submission)
+        guard_ (srStudent submission ==. valPk_ student')
+        return (privateTx, submission)
   where
     getStudentTransactionsQuery :: Query
     getStudentTransactionsQuery = [q|
@@ -388,20 +393,13 @@ getLastBlockIdAndIdx = do
 getPrivateBlock
     :: MonadIO m
     => Word32 -> DBT t w m (Maybe PrivateBlockHeader)
-getPrivateBlock idx = do
-    listToMaybe <$> query getPrivateBlockQuery (Only idx)
-  where
-    getPrivateBlockQuery = [q|
-        -- getPrivateBlockQuery
-        select    prev_hash, mroot, atg_delta
-        from      Blocks
-        where     idx = ?
-    |]
+getPrivateBlock = selectByPk pbHeaderFromRow (esBlocks es)
 
 getPrivateBlockIdxByHash
     :: MonadIO m
     => PrivateHeaderHash -> DBT t w m (Maybe Word32)
 getPrivateBlockIdxByHash phHash
+    -- TODO getting not all fields somehow?
     | phHash == genesisHeaderHash = pure $ Just genesisBlockIdx
     | otherwise =
         fmap fromOnly . listToMaybe <$>
@@ -419,15 +417,10 @@ getPrivateBlocksAfter
     :: MonadIO m
     => Word32 -> DBT t w m (OldestFirst [] PrivateBlockHeader)
 getPrivateBlocksAfter idx =
-    OldestFirst <$> query getPrivateBlocksAfterQuery (Only idx)
-  where
-    getPrivateBlocksAfterQuery = [q|
-        -- getPrivateBlockAfterQuery
-        select    prev_hash, mroot, atg_delta
-        from      Blocks
-        where     idx > ?
-        order by  idx asc
-    |]
+    runSelectMap pbHeaderFromRow . select $
+        orderBy_ (asc_ . brIdx) $
+        filter_ (\block -> brIdx block >. val_ idx) $
+        all_ (esBlocks es)
 
 getPrivateBlocksAfterHash
     :: MonadIO m
@@ -461,29 +454,28 @@ createPrivateBlock delta = runMaybeT $ do
 
     time <- liftIO getCurrentTime
 
-    _ <- lift $ execute createBlockRequest
-        ( bid
-        , hash hdr
-        , time
-        , prev
-        , trueDelta
-        , root
-        , getEmptyMerkleTree tree
-        )
-        `ifAlreadyExistsThrow` BlockWithIndexDomain bid
+    lift . rewrapAlreadyExists (BlockWithIndexDomain bid) $
+        runInsert . insert (esBlocks es) . insertValue $
+            BlockRow
+            { brIdx = bid
+            , brHash = hash hdr
+            , brCreationTime = time
+            , brPrevHash = prev
+            , brAtgDelta = trueDelta
+            , brMerkleRoot = root
+            , brMerkleTree = getEmptyMerkleTree tree
+            }
 
     for_ txs' $ \(txIdx, txId) -> lift $ do
-        execute setTxIndexRequest    (txIdx :: Word32, txId)
-        execute assignToBlockRequest (bid, txId)
+        runUpdate $ update
+            (esTransactions es)
+            (\tx -> [ trIdx tx <-. val_ (TxBlockIdx txIdx) ])
+            (\tx -> pk tx ==. valPk_ txId)
+        runInsert . insert (esBlockTxs es) . insertValue $
+            txId <:-:> bid
 
     return hdr
   where
-    createBlockRequest = [q|
-        -- createPrivateBlock
-        insert into Blocks
-        values      (?, ?, ?, ?, ?, ?, ?)
-    |]
-
     setTxIndexRequest = [q|
         -- setTxIndex
         update  Transactions
@@ -547,42 +539,27 @@ setStudentAssignment studentId assignmentId = do
     _ <- existsCourse            courseId `assertExists` CourseDomain                         courseId
     _ <- isEnrolledTo  studentId courseId `assertExists` StudentCourseEnrollmentDomain studentId courseId
 
-    execute setStudentAssignmentRequest (studentId, assignmentId)
-        `ifAlreadyExistsThrow` StudentAssignmentSubscriptionDomain studentId assignmentId
-  where
-    setStudentAssignmentRequest :: Query
-    setStudentAssignmentRequest = [q|
-        -- setStudentAssignment
-        insert into  StudentAssignments
-        values      (?, ?)
-    |]
+    rewrapAlreadyExists (StudentAssignmentSubscriptionDomain studentId assignmentId) $
+        runInsert . insert (esStudentAssignments es) . insertValue $
+            studentId <:-:> assignmentId
 
 isEnrolledTo :: MonadIO m => Id Student -> Id Course -> DBT t w m Bool
-isEnrolledTo studentId courseId = do
-    checkExists enrollmentQuery (studentId, courseId)
-  where
-    enrollmentQuery = [q|
-        -- isEnrolledTo
-        select  count(*)
-        from    StudentCourses
-        where   student_addr = ?
-           and  course_id    = ?
-    |]
+isEnrolledTo studentId' courseId' =
+    checkExists $ do
+        studentId :-: courseId <- all_ (esStudentCourses es)
+        guard_ (studentId ==. valPk_ studentId')
+        guard_ (courseId ==. valPk_ courseId')
+        return studentId
 
 isAssignedToStudent
     :: MonadIO m
     => Id Student -> Id Assignment -> DBT t w m Bool
-isAssignedToStudent student assignment = do
-    checkExists getStudentAssignmentQuery (student, assignment)
-  where
-    getStudentAssignmentQuery :: Query
-    getStudentAssignmentQuery = [q|
-        -- isAssignedToStudent
-        select  count(*)
-        from    StudentAssignments
-        where   student_addr = ?
-           and  assignment_hash = ?
-    |]
+isAssignedToStudent student' assignment' =
+    checkExists $ do
+        student :-: assignment <- all_ (esStudentAssignments es)
+        guard_ (student ==. valPk_ student')
+        guard_ (assignment ==. valPk_ assignment')
+        return student
 
 data CourseDetails = CourseDetails
     { cdCourseId :: Maybe Course
@@ -603,14 +580,23 @@ createCourse :: DBM m => CourseDetails -> DBT 'WithinTx 'Writing m (Id Course)
 createCourse params = do
     course <- case cdCourseId params of
         Nothing -> do
-            execute createCourseRequest (cdCourseId params, cdDesc params)
-            Course . fromIntegral @Word64 @Word32 <$> sqlCall LastInsertRowId
-        Just course -> do
-            execute createCourseRequest (cdCourseId params, cdDesc params)
-                `ifAlreadyExistsThrow` CourseDomain course
-            return course
-    for_ (cdSubjects params) $ \subject -> do
-        execute attachSubjectToCourseRequest (subject, course)
+            runInsert . insert (esCourses es) $ insertExpression $
+                CourseRow{ crId = default_, crDesc = val_ $ cdDesc params }
+            return undefined
+        Just courseId -> do
+            rewrapAlreadyExists (CourseDomain courseId) $
+                runInsert . insert (esCourses es) . insertValue $
+                    CourseRow{ crId = courseId, crDesc = cdDesc params }
+            return courseId
+
+    runInsert . insert (esSubjects es) $ insertExpressions $
+        cdSubjects params <&> \subj ->
+            SubjectRow
+            { srId = default_
+            , srDesc = val_ ""
+            , srCourse = valPk_ course
+            }
+
     return course
   where
     createCourseRequest = [q|
@@ -626,52 +612,29 @@ createCourse params = do
     |]
 
 getCourseSubjects :: MonadIO m => Course -> DBT t w m [Subject]
-getCourseSubjects course = do
-    subjects :: [Only Subject] <- query getCourceSubjectsQuery (Only course)
-    return (coerce subjects)
-  where
-    getCourceSubjectsQuery = [q|
-        select id
-        from   Subjects
-        where  course_id = ?
-    |]
+getCourseSubjects course' =
+    runSelect . select $ do
+        subject <- all_ (esSubjects es)
+        guard_ (srCourse subject ==. valPk_ course')
+        return (srId subject)
 
 existsCourse :: MonadIO m => Id Course -> DBT t w m Bool
-existsCourse course' =
-    checkExists $
-        filter_ (\course -> pk course ==. valPk_ course')
-                (all_ $ esCourses es)
+existsCourse = existsWithPk (esCourses es)
 
 existsStudent :: MonadIO m => Id Student -> DBT t w m Bool
-existsStudent student = do
-    checkExists existsCourseQuery (Only student)
-  where
-    existsCourseQuery = [q|
-        select  count(*)
-        from    Students
-        where   addr = ?
-    |]
+existsStudent = existsWithPk (esStudents es)
 
 existsSubmission :: MonadIO m => Id Submission -> DBT t w m Bool
-existsSubmission submission = do
-    checkExists existsSubmissionQuery (Only submission)
-  where
-    existsSubmissionQuery = [q|
-        select  count(*)
-        from    Submissions
-        where   hash = ?
-    |]
+existsSubmission = existsWithPk (esSubmissions es)
 
 createStudent :: DBM m => Student -> DBT t 'Writing m (Id Student)
 createStudent student = do
-    execute createStudentRequest (Only student)
-        `ifAlreadyExistsThrow` StudentDomain student
+    rewrapAlreadyExists (StudentDomain student) $
+        runInsert . insert (esStudents es) . insertValue $
+            StudentRow
+            { srAddr = student
+            }
     return student
-  where
-    createStudentRequest = [q|
-        insert into  Students
-        values       (?)
-    |]
 
 createAssignment :: DBM m => Assignment -> DBT 'WithinTx 'Writing m (Id Assignment)
 createAssignment assignment = do
@@ -696,35 +659,12 @@ createAssignment assignment = do
 getAssignment
     :: MonadIO m
     => Id Assignment -> DBT t w m (Maybe Assignment)
-getAssignment assignmentId = do
-    listToMaybe <$> query getAssignmentQuery (Only assignmentId)
-  where
-    getAssignmentQuery = [q|
-        select  course_id, contents_hash, type, desc
-        from    Assignments
-        where   hash = ?
-    |]
+getAssignment = selectByPk assignmentFromRow (esAssignments es)
 
 getSignedSubmission
     :: MonadIO m
     => Id SignedSubmission -> DBT t w m (Maybe SignedSubmission)
-getSignedSubmission submissionHash = do
-    listToMaybe <$> query getSignedSubmissionQuery (Only submissionHash)
-  where
-    getSignedSubmissionQuery = [q|
-        -- from 'getSignedSubmission'
-        select     student_addr,
-                   Submissions.contents_hash,
-                   Assignments.hash,
-                   Submissions.signature
-
-        from       Submissions
-
-        left join  Assignments
-               on  Assignments.hash = assignment_hash
-
-        where      Submissions.hash = ?
-    |]
+getSignedSubmission = selectByPk submissionFromRow (esSubmissions es)
 
 createTransaction
     :: (DBM m, ToField TxBlockIdx)
@@ -756,9 +696,8 @@ createTransaction trans = do
 
 getTransaction :: DBM m => Id PrivateTx -> DBT t w m (Maybe PrivateTx)
 getTransaction ptid = do
-    fmap listToMaybe . runSelectMap (uncurry privateTxFromRow) . select $ do
-        privateTx <- all_ (esTransactions es)
+    fmap listToMaybe . runSelectMap privateTxFromRow . select $ do
+        privateTx <- related_ (esTransactions es) (valPk_ ptid)
         submission <- related_ (esSubmissions es) (trSubmissionHash privateTx)
         assignment <- related_ (esAssignments es) (srAssignmentHash submission)
-        guard_ (pk privateTx ==. valPk_ ptid)
         return (privateTx, submission)

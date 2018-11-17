@@ -21,15 +21,20 @@ module Dscp.DB.SQLite.Util
        -- * Query helpers
      , checkExists
      , insertValue
+     , insertExpression
      , packPk
      , valPk_
+     , selectByPk
+     , existsWithPk
      ) where
 
 import Data.Coerce (coerce)
 import Data.Singletons.Bool (SBoolI, fromSBool, sbool)
+import Database.Beam.Query ((==.))
 import qualified Database.Beam.Query as Beam
 import qualified Database.Beam.Query.Internal as Beam
-import Database.Beam.Schema (PrimaryKey)
+import Database.Beam.Schema (PrimaryKey, TableEntity)
+import qualified Database.Beam.Schema as Beam
 import qualified Database.Beam.Sqlite.Syntax as Beam
 import Database.SQLite.Simple ((:.) (..), FromRow (..), Only (..), Query, ToRow (..))
 import Database.SQLite.Simple.ToField (ToField)
@@ -114,6 +119,13 @@ checkExists query =
 insertValue :: _ => table Identity -> Beam.SqlInsertValues syntax (table (Beam.QExpr _ s))
 insertValue = Beam.insertValues . one
 
+-- | Build a 'SqlInsertValues' from concrete table value.
+insertExpression
+    :: _
+    => (forall s'. table (Beam.QExpr _ s'))
+    -> Beam.SqlInsertValues syntax (table (Beam.QExpr _ s))
+insertExpression expr = Beam.insertExpressions (one expr)
+
 #define PrimaryKeyWrapper(pk, inner) \
     ( Generic (pk) \
     , (pk) ~ PrimaryKey row Identity \
@@ -127,5 +139,31 @@ packPk
 packPk = G.to . coerce
 
 -- | Wrap an entiry into a primary key sql value.
-valPk_ :: (Beam.SqlValable pk, PrimaryKeyWrapper(Beam.HaskellLiteralForQExpr pk, inner)) => inner -> pk
+valPk_
+    :: (Beam.SqlValable pk, PrimaryKeyWrapper (Beam.HaskellLiteralForQExpr pk, inner))
+    => inner -> pk
 valPk_ = Beam.val_ . packPk
+
+-- | Quick way to fetch a single entiry refered by the given primary key.
+selectByPk
+    :: (HasCallStack, _)
+    => (row Identity -> res)
+    -> Beam.DatabaseEntity be db (TableEntity table)
+    -> pk
+    -> DBT t w m (Maybe res)
+selectByPk mapper tbl key =
+    fmap fetchOne $
+    runSelect . Beam.select $
+    Beam.filter_ (\row -> Beam.pk row ==. valPk_ key) $
+    Beam.all_ tbl
+  where
+    fetchOne [] = Nothing
+    fetchOne l  = Just (mapper $ oneOrError l)
+
+-- | Quick way to check whether an entiry refered by the given primary key exists.
+existsWithPk
+    :: _
+    => Beam.DatabaseEntity be db (TableEntity table) -> pk -> DBT t w m Bool
+existsWithPk tbl key =
+    checkExists $ Beam.filter_ (\row -> Beam.pk row ==. valPk_ key)
+                               (Beam.all_ tbl)

@@ -114,7 +114,7 @@ data BlockRowT f = BlockRow
     , brPrevHash     :: C f PrivateHeaderHash
     , brAtgDelta     :: C f ATGDelta
     , brMerkleRoot   :: C f (MerkleSignature PrivateTx)
-    , brMerkleTree   :: C f (MerkleTree PrivateTx)
+    , brMerkleTree   :: C f (EmptyMerkleTree PrivateTx)
     } deriving (Generic)
 
 data EducatorSchema f = EducatorSchema
@@ -137,6 +137,7 @@ data EducatorSchema f = EducatorSchema
 type AssignmentRow = AssignmentRowT Identity
 type SubmissionRow = SubmissionRowT Identity
 type TransactionRow = TransactionRowT Identity
+type BlockRow = BlockRowT Identity
 
 ----------------------------------------------------------------------------
 -- Connection with core types
@@ -162,12 +163,20 @@ submissionFromRow SubmissionRow{..} =
     , _ssWitness = srSignature
     }
 
-privateTxFromRow :: TransactionRow -> SubmissionRow -> PrivateTx
-privateTxFromRow TransactionRow{..} sub =
+privateTxFromRow :: (TransactionRow, SubmissionRow) -> PrivateTx
+privateTxFromRow (TransactionRow{..}, sub) =
     PrivateTx
     { _ptSignedSubmission = submissionFromRow sub
     , _ptGrade = trGrade
     , _ptTime = trCreationTime
+    }
+
+pbHeaderFromRow :: BlockRow -> PrivateBlockHeader
+pbHeaderFromRow BlockRow{..} =
+    PrivateBlockHeader
+    { _pbhPrevBlock = brHash
+    , _pbhBodyProof = brMerkleRoot
+    , _pbhAtgDelta = brAtgDelta
     }
 
 ----------------------------------------------------------------------------
@@ -184,7 +193,7 @@ type RelationRow t a b = RelationT t a b Identity
 
 instance (Typeable a, Typeable b, Beamable (PrimaryKey a), Beamable (PrimaryKey b)) =>
          Table (RelationT 'Mx1 a b) where
-    data PrimaryKey (RelationT 'Mx1 a b) f = Mx1RelationRowId (PrimaryKey a f)
+    newtype PrimaryKey (RelationT 'Mx1 a b) f = Mx1RelationRowId (PrimaryKey a f)
         deriving (Generic)
     primaryKey (a :-: _) = Mx1RelationRowId a
 

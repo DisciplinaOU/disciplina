@@ -96,6 +96,7 @@ GenFromBackendRow(TxBlockIdx) where
     fromBackendRow = leftToPanic . txBlockIdxFromInt <$> fromBackendRow
 
 
+----------------------------------------------------------------------------
 -- 'HasSqlValueSyntax' instances
 ----------------------------------------------------------------------------
 
@@ -103,6 +104,8 @@ instance HasSqlValueSyntax SqliteValueSyntax (Hash a) where
     sqlValueSyntax = sqlValueSyntax . BA.convert @_ @ByteString
 instance HasSqlValueSyntax SqliteValueSyntax Address where
     sqlValueSyntax (Address addr) = sqlValueSyntax $ BA.convert @_ @ByteString addr
+instance HasSqlValueSyntax SqliteValueSyntax TxBlockIdx where
+    sqlValueSyntax = sqlValueSyntax . txBlockIdxToInt
 
 deriving instance HasSqlValueSyntax SqliteValueSyntax Course
 
