@@ -36,6 +36,7 @@ module Dscp.Util
 
          -- * Unsafe conversions
        , oneOrError
+       , maybeOneOrError
 
          -- * Formatting
        , Base (..)
@@ -230,6 +231,16 @@ oneOrError :: forall a. (Typeable a, HasCallStack) => [a] -> a
 oneOrError = \case
     []  -> error $ "No items " <> tyName
     [x] -> x
+    l   -> error $ "Too many items: " <> show (length l) <> " " <> tyName
+  where
+    tyRep = typeRep (Proxy @a)
+    tyName = "(" <> show tyRep <> ")"
+
+-- | Expects the list to contain zero or one entry, panics otherwise.
+maybeOneOrError :: forall a. (Typeable a, HasCallStack) => [a] -> Maybe a
+maybeOneOrError = \case
+    []  -> Nothing
+    [x] -> Just x
     l   -> error $ "Too many items: " <> show (length l) <> " " <> tyName
   where
     tyRep = typeRep (Proxy @a)

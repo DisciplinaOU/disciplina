@@ -70,20 +70,15 @@ module Dscp.DB.SQLite.Queries
 
 import Control.Exception.Safe (catchJust)
 import Control.Lens (makePrisms, to)
-import Data.Coerce (coerce)
 import Data.Default (Default (..))
 import qualified Data.Map as Map (empty, fromList, insertWith, toList)
 import Data.Time.Clock (UTCTime)
-import Database.Beam.Query (aggregate_, all_, asc_, countAll_, currentTimestamp_, default_, desc_,
-                            exists_, filter_, guard_, insert, insertExpressions, insertValues,
-                            limit_, orderBy_, references_, related_, select, update, val_, (/=.),
-                            (<-.), (==.), (>.), (>=.))
-import Database.Beam.Schema (pk)
-import Database.SQLite.Simple (Only (..), Query)
+import Database.Beam.Query (all_, asc_, default_, desc_, filter_, guard_, insert, insertValues,
+                            limit_, orderBy_, related_, select, update, val_, (/=.), (<-.), (==.),
+                            (>.), (>=.))
+import Database.Beam.Schema (DatabaseSettings, pk)
 import Database.SQLite.Simple.ToField (ToField)
-import Database.SQLite.Simple.ToRow (ToRow (..))
 import Snowdrop.Util (OldestFirst (..))
-import Text.InterpolatedString.Perl6 (q)
 
 import Dscp.Core
 import Dscp.Crypto (EmptyMerkleTree, Hash, MerkleProof, fillEmptyMerkleTree, getEmptyMerkleTree,
@@ -146,6 +141,7 @@ makePrisms ''DatabaseSemanticError
 
 instance Exception DomainError
 
+es :: DatabaseSettings be EducatorSchema
 es = educatorSchema
 
 -- | Catch "unique" constraint violation and rethrow specific error.
@@ -223,31 +219,8 @@ getStudentTransactions student' = do
     runSelectMap privateTxFromRow . select $ do
         privateTx <- all_ (esTransactions es)
         submission <- related_ (esSubmissions es) (trSubmissionHash privateTx)
-        assignment <- related_ (esAssignments es) (srAssignmentHash submission)
         guard_ (srStudent submission ==. valPk_ student')
         return (privateTx, submission)
-  where
-    getStudentTransactionsQuery :: Query
-    getStudentTransactionsQuery = [q|
-        -- getStudentTransactions
-
-        select     Submissions.student_addr,
-                   Submissions.contents_hash,
-                   Assignments.hash,
-                   Submissions.signature,
-                   grade,
-                   time
-
-        from       Transactions
-
-        left join  Submissions
-               on  submission_hash = Submissions.hash
-
-        left join  Assignments
-               on  assignment_hash = Assignments.hash
-
-        where      student_addr = ?
-    |]
 
 data GetProvenStudentTransactionsFilters = GetProvenStudentTransactionsFilters
     { pfCourse     :: Maybe Course
@@ -327,7 +300,6 @@ getAllNonChainedTransactions =
     runSelectMap privateTxFromRow . select $ do
         privateTx <- all_ (esTransactions es)
         submission <- related_ (esSubmissions es) (trSubmissionHash privateTx)
-        assignment <- related_ (esAssignments es) (srAssignmentHash submission)
         guard_ (trIdx privateTx ==. val_ TxInMempool)
         return (privateTx, submission)
 
@@ -359,7 +331,7 @@ getPrivateBlockIdxByHash
 getPrivateBlockIdxByHash phHash
     | phHash == genesisHeaderHash = pure $ Just genesisBlockIdx
     | otherwise =
-        runSelectMap id . select $ do
+        fmap maybeOneOrError . runSelectMap id . select $ do
             block <- all_ (esBlocks es)
             guard_ (brHash block ==. val_ phHash)
             return (brIdx block)
@@ -425,19 +397,6 @@ createPrivateBlock delta = runMaybeT $ do
             txId <:-:> bid
 
     return hdr
-  where
-    setTxIndexRequest = [q|
-        -- setTxIndex
-        update  Transactions
-        set     idx  = ?
-        where   hash = ?
-    |]
-
-    assignToBlockRequest = [q|
-        -- assignToBlock
-        insert into BlockTxs
-        values      (?, ?)
-    |]
 
 createSignedSubmission
     :: DBM m
@@ -445,11 +404,9 @@ createSignedSubmission
 createSignedSubmission sigSub = do
     let
         submission     = sigSub^.ssSubmission
-        submissionSig  = sigSub^.ssWitness
 
         student        = submission^.sStudentId
         submissionHash = submission^.idOf
-        submissionCont = submission^.sContentsHash
         assignmentId   = submission^.sAssignmentHash
 
     _ <- existsStudent student      `assertExists`      StudentDomain   student
@@ -521,21 +478,23 @@ createCourse :: DBM m => CourseDetails -> DBT 'WithinTx 'Writing m (Id Course)
 createCourse params = do
     course <- case cdCourseId params of
         Nothing -> do
-            runInsert . insert (esCourses es) $ insertExpression $
+            courses <- runInsertReturning (esCourses es) $ insertExpression $
+                -- TODO: 'default_' does not work for SQLite, right?
+                -- Instead use https://tathougies.github.io/beam/user-guide/manipulation/insert/#choosing-a-subset-of-columns
                 CourseRow{ crId = default_, crDesc = val_ $ cdDesc params }
-            return undefined
+            return (crId $ oneOrError courses)
         Just courseId -> do
             rewrapAlreadyExists (CourseDomain courseId) $
                 runInsert . insert (esCourses es) . insertValue $
                     CourseRow{ crId = courseId, crDesc = cdDesc params }
             return courseId
 
-    runInsert . insert (esSubjects es) $ insertExpressions $
+    runInsert . insert (esSubjects es) $ insertValues $
         cdSubjects params <&> \subj ->
             SubjectRow
-            { srId = default_
-            , srDesc = val_ ""
-            , srCourse = valPk_ course
+            { srId = subj
+            , srDesc = ""
+            , srCourse = packPk course
             }
 
     return course
@@ -616,17 +575,10 @@ createTransaction trans = do
             }
 
     return ptid
-  where
-    createTransactionRequest :: Query
-    createTransactionRequest = [q|
-        insert into  Transactions
-        values       (?, ?, ?, ?, ?)
-    |]
 
 getTransaction :: DBM m => Id PrivateTx -> DBT t w m (Maybe PrivateTx)
 getTransaction ptid = do
     fmap listToMaybe . runSelectMap privateTxFromRow . select $ do
         privateTx <- related_ (esTransactions es) (valPk_ ptid)
         submission <- related_ (esSubmissions es) (trSubmissionHash privateTx)
-        assignment <- related_ (esAssignments es) (srAssignmentHash submission)
         return (privateTx, submission)

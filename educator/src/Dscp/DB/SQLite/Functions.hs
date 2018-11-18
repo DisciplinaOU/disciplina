@@ -1,5 +1,7 @@
 {-# LANGUAGE GADTs            #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE PartialTypeSignatures #-}
+{-# OPTIONS_GHC -Wno-partial-type-signatures #-}
 
 module Dscp.DB.SQLite.Functions
        ( -- * Closing/opening
@@ -19,6 +21,7 @@ module Dscp.DB.SQLite.Functions
        , runSelect
        , runSelectMap
        , runInsert
+       , runInsertReturning
        , runUpdate
        , runDelete
        , SQLiteFunctionCall
@@ -38,8 +41,10 @@ import qualified Data.List as L
 import Database.Beam.Backend (FromBackendRow, MonadBeam (..))
 import Database.Beam.Backend.SQL.SQL92 (Sql92DeleteSyntax, Sql92InsertSyntax, Sql92SelectSyntax,
                                         Sql92UpdateSyntax)
-import Database.Beam.Query (SqlDelete, SqlInsert, SqlSelect, SqlUpdate)
+import Database.Beam.Query (QExpr, SqlInsertValues, SqlDelete, SqlInsert, SqlSelect, SqlUpdate)
+import Database.Beam.Schema (TableEntity, DatabaseEntity)
 import qualified Database.Beam.Query as Backend
+import qualified Database.Beam.Backend.SQL.BeamExtensions as Backend
 import Database.Beam.Sqlite (Sqlite, SqliteCommandSyntax, SqliteM (..))
 import Database.SQLite.Simple (Connection, Only (..))
 import qualified Database.SQLite.Simple as Backend
@@ -251,6 +256,13 @@ runInsert
     :: MonadIO m
     => SqlInsert (Sql92InsertSyntax SqliteCommandSyntax) -> DBT t 'Writing m ()
 runInsert cmd = sqliteMToDbt $ Backend.runInsert cmd
+
+runInsertReturning
+    :: (MonadIO m, _)
+    => DatabaseEntity be db (TableEntity table)
+    -> SqlInsertValues _ (table (QExpr _ _))
+    -> DBT t 'Writing m [table Identity]
+runInsertReturning db cmd = sqliteMToDbt $ Backend.runInsertReturningList db cmd
 
 runUpdate
     :: MonadIO m
