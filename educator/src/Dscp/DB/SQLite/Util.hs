@@ -20,10 +20,10 @@ module Dscp.DB.SQLite.Util
 import Data.Coerce (coerce)
 import Data.Time.Clock (UTCTime)
 import qualified Database.Beam.Backend.SQL as Beam
-import Database.Beam.Query ((==.))
-import Database.Beam.Query as BeamReexport (all_, asc_, default_, desc_, filter_, guard_, insert,
-                                            insertValues, limit_, orderBy_, related_, select,
-                                            update, val_, (/=.), (<-.), (==.), (>.), (>=.))
+import Database.Beam.Query as BeamReexport (aggregate_, all_, asc_, countAll_, default_, desc_,
+                                            filter_, guard_, insert, insertValues, limit_, orderBy_,
+                                            related_, select, update, val_, (/=.), (<-.), (==.),
+                                            (>.), (>=.))
 import qualified Database.Beam.Query as Beam
 import qualified Database.Beam.Query.Internal as Beam
 import Database.Beam.Schema (PrimaryKey, TableEntity)
@@ -36,17 +36,18 @@ import Dscp.Util
 
 -- | Check whether the query returns any row.
 checkExists
-    :: (MonadIO m
-       ,Beam.ProjectibleWithPredicate Beam.AnyType Beam.SqliteExpressionSyntax r)
-    => Beam.Q Beam.SqliteSelectSyntax db (Beam.QNested _) r -> DBT t w m Bool
+    :: (MonadIO m)
+    => Beam.Q Beam.SqliteSelectSyntax db (Beam.QNested _) () -> DBT t w m Bool
 checkExists query =
     fmap ((> 0) . oneOrError) $
-    runSelect . Beam.select $
-    Beam.aggregate_ (\_ -> Beam.countAll_) query
+    runSelect . select $
+    aggregate_ (\_ -> countAll_) (query $> pseudoRow)
+  where
+    pseudoRow = 1 :: Beam.QGenExpr _ _ _ Int
 
 -- | Build a 'SqlInsertValues' from concrete table value.
 insertValue :: _ => table Identity -> Beam.SqlInsertValues syntax (table (Beam.QExpr _ s))
-insertValue = Beam.insertValues . one
+insertValue = insertValues . one
 
 -- | Build a 'SqlInsertValues' from concrete table value.
 insertExpression
@@ -71,7 +72,7 @@ packPk = G.to . coerce
 valPk_
     :: (Beam.SqlValable pk, PrimaryKeyWrapper (Beam.HaskellLiteralForQExpr pk, inner))
     => inner -> pk
-valPk_ = Beam.val_ . packPk
+valPk_ = val_ . packPk
 
 -- | Quick way to fetch a single entiry refered by the given primary key.
 selectByPk
@@ -83,8 +84,8 @@ selectByPk
 selectByPk mapper tbl key =
     fmap fetchOne $
     runSelect . Beam.select $
-    Beam.filter_ (\row -> Beam.pk row ==. valPk_ key) $
-    Beam.all_ tbl
+    filter_ (\row -> Beam.pk row ==. valPk_ key) $
+    all_ tbl
   where
     fetchOne [] = Nothing
     fetchOne l  = Just (mapper $ oneOrError l)
@@ -94,8 +95,9 @@ existsWithPk
     :: _
     => Beam.DatabaseEntity be db (TableEntity table) -> pk -> DBT t w m Bool
 existsWithPk tbl key =
-    checkExists $ Beam.filter_ (\row -> Beam.pk row ==. valPk_ key)
-                               (Beam.all_ tbl)
+    checkExists $ do
+        row <- all_ tbl
+        guard_ (Beam.pk row ==. valPk_ key)
 
 -- | SQL CURRENT_TIMESTAMP function.
 -- TODO: check it really works (returns UTC time rather than local).

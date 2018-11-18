@@ -444,7 +444,6 @@ isEnrolledTo studentId' courseId' =
         studentId :-: courseId <- all_ (esStudentCourses es)
         guard_ (studentId ==. valPk_ studentId')
         guard_ (courseId ==. valPk_ courseId')
-        return studentId
 
 isAssignedToStudent
     :: MonadIO m
@@ -454,7 +453,6 @@ isAssignedToStudent student' assignment' =
         student :-: assignment <- all_ (esStudentAssignments es)
         guard_ (student ==. valPk_ student')
         guard_ (assignment ==. valPk_ assignment')
-        return student
 
 data CourseDetails = CourseDetails
     { cdCourseId :: Maybe Course
