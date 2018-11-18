@@ -26,10 +26,13 @@ module Dscp.DB.SQLite.Util
      , valPk_
      , selectByPk
      , existsWithPk
+     , currentTimestampUtc_
      ) where
 
 import Data.Coerce (coerce)
 import Data.Singletons.Bool (SBoolI, fromSBool, sbool)
+import Data.Time.Clock (UTCTime)
+import qualified Database.Beam.Backend.SQL as Beam
 import Database.Beam.Query ((==.))
 import qualified Database.Beam.Query as Beam
 import qualified Database.Beam.Query.Internal as Beam
@@ -167,3 +170,10 @@ existsWithPk
 existsWithPk tbl key =
     checkExists $ Beam.filter_ (\row -> Beam.pk row ==. valPk_ key)
                                (Beam.all_ tbl)
+
+-- | SQL CURRENT_TIMESTAMP function.
+-- TODO: check it really works (returns UTC time rather than local).
+-- If it does not, follow implementation of "currentTimestampE" here
+-- http://hackage.haskell.org/package/beam-sqlite-0.3.2.3/docs/src/Database.Beam.Sqlite.Syntax.html#line-780
+currentTimestampUtc_ :: Beam.IsSql92ExpressionSyntax syntax => Beam.QGenExpr ctxt syntax s UTCTime
+currentTimestampUtc_ = Beam.QExpr (pure Beam.currentTimestampE)

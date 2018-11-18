@@ -103,12 +103,12 @@ create index if not exists StudentAssigments_assignment_hash on StudentAssignmen
 -- Creating 'Submissions' table.
 --
 create table if not exists Submissions (
-    hash             BLOB     not null,
-    student_addr     BLOB     not null,
-    assignment_hash  BLOB     not null,
-    contents_hash    BLOB     not null,
-    signature        BLOB     not null,
-    creation_time    NUMERIC  not null,
+    hash             BLOB      not null,
+    student_addr     BLOB      not null,
+    assignment_hash  BLOB      not null,
+    contents_hash    BLOB      not null,
+    signature        BLOB      not null,
+    creation_time    TIMESTAMP not null,
 
     primary key (hash),
 
@@ -123,11 +123,11 @@ create index if not exists Submissions_assignment_hash on Submissions (assignmen
 -- Creating 'Transactions' table.
 --
 create table if not exists Transactions (
-    hash             BLOB     not null,
-    submission_hash  BLOB     not null,
-    grade            INTEGER  not null,
-    time             TIME     not null,
-    idx              INTEGER  not null,    -- Index inside a block. -1 for every mempool transaction.
+    hash             BLOB      not null,
+    submission_hash  BLOB      not null,
+    grade            INTEGER   not null,
+    time             TIMESTAMP not null,
+    idx              INTEGER   not null,    -- Index inside a block. -1 for every mempool transaction.
 
     primary key (hash),
     foreign key (submission_hash) references Submissions(hash) on delete restrict
@@ -140,12 +140,12 @@ create index if not exists Transactions_submission_hash on Transactions (submiss
 -- We need `idx` field to be able to perform queries like "get N last blocks" efficiently.
 create table if not exists Blocks (
     idx        INTEGER          ,
-    hash       BLOB     not null,
-    time       TIME     not null,
-    prev_hash  BLOB     null,
-    atg_delta  BLOB     not null,
-    mroot      BLOB     not null,
-    mtree      BLOB     not null,
+    hash       BLOB      not null,
+    time       TIMESTAMP not null,
+    prev_hash  BLOB      null,
+    atg_delta  BLOB      not null,
+    mroot      BLOB      not null,
+    mtree      BLOB      not null,
 
     primary key (idx)
 

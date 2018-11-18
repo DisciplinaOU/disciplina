@@ -69,15 +69,15 @@ module Dscp.DB.SQLite.Queries
 
 
 import Control.Exception.Safe (catchJust)
-import Control.Lens (makePrisms)
+import Control.Lens (makePrisms, to)
 import Data.Coerce (coerce)
 import Data.Default (Default (..))
 import qualified Data.Map as Map (empty, fromList, insertWith, toList)
-import Data.Time.Clock (UTCTime, getCurrentTime)
-import Database.Beam.Query (aggregate_, all_, asc_, countAll_, default_, desc_, exists_, filter_,
-                            guard_, insert, insertExpressions, insertValues, limit_, orderBy_,
-                            references_, related_, select, update, val_, (/=.), (<-.), (==.), (>.),
-                            (>=.))
+import Data.Time.Clock (UTCTime)
+import Database.Beam.Query (aggregate_, all_, asc_, countAll_, currentTimestamp_, default_, desc_,
+                            exists_, filter_, guard_, insert, insertExpressions, insertValues,
+                            limit_, orderBy_, references_, related_, select, update, val_, (/=.),
+                            (<-.), (==.), (>.), (>=.))
 import Database.Beam.Schema (pk)
 import Database.SQLite.Simple (Only (..), Query)
 import Database.SQLite.Simple.ToField (ToField)
@@ -404,18 +404,16 @@ createPrivateBlock delta = runMaybeT $ do
             ]
     guard (not isNullBlock)
 
-    time <- liftIO getCurrentTime
-
     lift . rewrapAlreadyExists (BlockWithIndexDomain bid) $
-        runInsert . insert (esBlocks es) . insertValue $
+        runInsert . insert (esBlocks es) $ insertExpression $
             BlockRow
-            { brIdx = bid
-            , brHash = hash hdr
-            , brCreationTime = time
-            , brPrevHash = prev
-            , brAtgDelta = trueDelta
-            , brMerkleRoot = root
-            , brMerkleTree = getEmptyMerkleTree tree
+            { brIdx = val_ bid
+            , brHash = val_ $ hash hdr
+            , brCreationTime = currentTimestampUtc_
+            , brPrevHash = val_ prev
+            , brAtgDelta = val_ trueDelta
+            , brMerkleRoot = val_ root
+            , brMerkleTree = val_ $ getEmptyMerkleTree tree
             }
 
     for_ txs' $ \(txIdx, txId) -> lift $ do
@@ -459,17 +457,15 @@ createSignedSubmission sigSub = do
     _ <- isAssignedToStudent student assignmentId
         `assertExists` StudentAssignmentSubscriptionDomain student assignmentId
 
-    currentTime <- liftIO getCurrentTime
-
     rewrapAlreadyExists (SubmissionDomain submissionHash) $
-        runInsert . insert (esSubmissions es) . insertValue $
+        runInsert . insert (esSubmissions es) $ insertExpression $
             SubmissionRow
-            { srHash = submissionHash
-            , srStudent = packPk $ submission^.sStudentId
-            , srAssignmentHash = packPk $ submission^.sAssignmentHash
-            , srContentsHash = submission^.sContentsHash
-            , srSignature = sigSub^.ssWitness
-            , srCreationTime = currentTime
+            { srHash = val_ submissionHash
+            , srContentsHash = submission^.sContentsHash.to val_
+            , srSignature = sigSub^.ssWitness.to val_
+            , srCreationTime = currentTimestampUtc_
+            , srStudent = valPk_ $ submission^.sStudentId
+            , srAssignmentHash = valPk_ $ submission^.sAssignmentHash
             }
 
     return submissionHash
