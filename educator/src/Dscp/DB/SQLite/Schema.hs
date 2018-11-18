@@ -50,10 +50,19 @@ data RelationType
     = Mx1  -- ^ Many-to-one
     | MxM  -- ^ Many-to-many
 
--- | Table which stores a relation between two tables.
--- TODO does beam really not provide something like this? A: It does, but in not that funny way :/
+-- | Table which stores just a relation between two tables.
 data RelationT (t :: RelationType) a b f = PrimaryKey a f :-: PrimaryKey b f
     deriving (Generic)
+{-
+Somehow Beam seem not to provide this functionality ^ for purpose. Quoting the manual:
+
+> This is the extent of beam's support for defining models. Although similar packages in other languages provide support for declaring one-to-many, many-to-one, and many-to-many relationships, beam's focused is providing a direct mapping of relational database concepts to Haskell, not on abstracting away the complexities of database querying. Thus, beam does not use 'lazy-loading' or other tricks that obfuscate performance. Because of this, the bulk of the functionality dealing with different types of relations is found in the querying support, rather than in the model declarations.
+
+Instead, beam provides 'oneToMany' and 'manyToMany' functions which work in queries.
+
+But having a generalized 'Relation' schema _is_ convenient, isn't it?
+
+-}
 
 instance (rel ~ RelationT t a b f, ca ~ PrimaryKey a f) => Field1 rel rel ca ca where
     _1 f (a :-: b) = (:-: b) <$> f a
@@ -134,6 +143,10 @@ data EducatorSchema f = EducatorSchema
 -- Aliases
 ----------------------------------------------------------------------------
 
+type RelationRow t a b = RelationT t a b Identity
+type CourseRow = CourseRowT Identity
+type SubjectRow = SubjectRowT Identity
+type StudentRow = StudentRowT Identity
 type AssignmentRow = AssignmentRowT Identity
 type SubmissionRow = SubmissionRowT Identity
 type TransactionRow = TransactionRowT Identity
@@ -178,14 +191,6 @@ pbHeaderFromRow BlockRow{..} =
     , _pbhBodyProof = brMerkleRoot
     , _pbhAtgDelta = brAtgDelta
     }
-
-----------------------------------------------------------------------------
--- Aliases
-----------------------------------------------------------------------------
-
--- TODO remove?
-type CourseRow = CourseRowT Identity
-type RelationRow t a b = RelationT t a b Identity
 
 ----------------------------------------------------------------------------
 -- 'Table' instances
@@ -278,6 +283,8 @@ instance Beamable (PrimaryKey BlockRowT)
 
 instance Database be EducatorSchema
 
--- TODO: do we care about table and field names in resulting schema?
+-- TODO: Seems to be easy to improve tables' and fields' names in resulting schema.
+-- Currently we should get fields' names like "a_course_id", "es_subjects".
+-- Same for tables.
 educatorSchema :: DatabaseSettings be EducatorSchema
 educatorSchema = defaultDbSettings
