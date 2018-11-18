@@ -18,7 +18,8 @@ module Dscp.DB.SQLite.Util
      , FetchIf
      , positiveFetch
 
-       -- * Query helpers
+       -- * Base queries
+     , module BeamReexport
      , checkExists
      , insertValue
      , insertExpression
@@ -34,6 +35,9 @@ import Data.Singletons.Bool (SBoolI, fromSBool, sbool)
 import Data.Time.Clock (UTCTime)
 import qualified Database.Beam.Backend.SQL as Beam
 import Database.Beam.Query ((==.))
+import Database.Beam.Query as BeamReexport (all_, asc_, default_, desc_, filter_, guard_, insert,
+                                            insertValues, limit_, orderBy_, related_, select,
+                                            update, val_, (/=.), (<-.), (==.), (>.), (>=.))
 import qualified Database.Beam.Query as Beam
 import qualified Database.Beam.Query.Internal as Beam
 import Database.Beam.Schema (PrimaryKey, TableEntity)

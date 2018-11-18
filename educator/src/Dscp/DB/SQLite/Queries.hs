@@ -73,9 +73,6 @@ import Control.Lens (makePrisms, to)
 import Data.Default (Default (..))
 import qualified Data.Map as Map (empty, fromList, insertWith, toList)
 import Data.Time.Clock (UTCTime)
-import Database.Beam.Query (all_, asc_, default_, desc_, filter_, guard_, insert, insertValues,
-                            limit_, orderBy_, related_, select, update, val_, (/=.), (<-.), (==.),
-                            (>.), (>=.))
 import Database.Beam.Schema (DatabaseSettings, pk)
 import Database.SQLite.Simple.ToField (ToField)
 import Snowdrop.Util (OldestFirst (..))
