@@ -42,7 +42,6 @@ library:
     - servant-auth-server
     - servant-generic
     - servant-server
-    - singleton-bool
     - snowdrop-util
     - sqlite-simple
     - template-haskell
