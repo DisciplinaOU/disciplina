@@ -136,3 +136,4 @@ instance HasSqlEqualityCheck SqliteExpressionSyntax Course
 instance HasSqlEqualityCheck SqliteExpressionSyntax TxBlockIdx
 instance HasSqlEqualityCheck SqliteExpressionSyntax BlockIdx
 instance HasSqlEqualityCheck SqliteExpressionSyntax (Hash a)
+instance HasSqlEqualityCheck SqliteExpressionSyntax AssignmentType

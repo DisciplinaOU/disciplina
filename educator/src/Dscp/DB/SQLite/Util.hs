@@ -20,13 +20,14 @@ module Dscp.DB.SQLite.Util
 import Data.Coerce (coerce)
 import Data.Time.Clock (UTCTime)
 import qualified Database.Beam.Backend.SQL as Beam
-import Database.Beam.Query as BeamReexport (aggregate_, all_, asc_, countAll_, default_, desc_,
-                                            filter_, guard_, insert, insertValues, limit_, orderBy_,
-                                            related_, select, update, val_, (/=.), (<-.), (==.),
-                                            (>.), (>=.))
+import Database.Beam.Query as BeamReexport (QGenExpr, aggregate_, all_, asc_, countAll_, default_,
+                                            desc_, exists_, filter_, guard_, insert, insertValues,
+                                            limit_, orderBy_, related_, select, update, val_, (/=.),
+                                            (<-.), (==.), (>.), (>=.))
 import qualified Database.Beam.Query as Beam
 import qualified Database.Beam.Query.Internal as Beam
 import Database.Beam.Schema (PrimaryKey, TableEntity)
+import Database.Beam.Schema as BeamReexport (DatabaseSettings, pk)
 import qualified Database.Beam.Schema as Beam
 import qualified Database.Beam.Sqlite.Syntax as Beam
 import qualified GHC.Generics as G

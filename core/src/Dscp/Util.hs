@@ -3,6 +3,7 @@
 module Dscp.Util
        ( anyMapM
        , listToMaybeWarn
+       , listToMaybeWarnM
        , allUniqueOrd
        , Size (..)
        , sizeSerialised
@@ -75,12 +76,12 @@ import Data.ByteArray (ByteArrayAccess)
 import Data.ByteArray.Encoding (Base (..), convertFromBase, convertToBase)
 import qualified Data.ByteString.Lazy as BSL
 import Data.Typeable (typeRep)
-import Fmt ((+|), (|+))
 import GHC.TypeLits (KnownSymbol, symbolVal)
 import UnliftIO (MonadUnliftIO)
 import qualified UnliftIO.Async as UIO
 
-import Loot.Log (MonadLogging, logError, logWarning)
+import Loot.Log (ModifyLogName (..), MonadLogging, NameSelector (CallstackName), logError,
+                 logWarning)
 
 import Snowdrop.Util (NewestFirst (..), OldestFirst (..))
 
@@ -104,13 +105,21 @@ anyMapM f (a:as) = f a >>= \case
 prefixed :: Semigroup a => a -> a -> a
 prefixed text prefix = prefix <> text
 
-listToMaybeWarn :: (Monad m, MonadLogging m) => Text -> [a] -> m (Maybe a)
-listToMaybeWarn msg = \case
+listToMaybeWarn
+    :: (Monad m, MonadLogging m, ModifyLogName m)
+    => [a] -> m (Maybe a)
+listToMaybeWarn = \case
     [] -> pure Nothing
     [x] -> pure (Just x)
     (x:_) -> do
-        logWarning $ "listToMaybeWarn: too many entries ("+|msg|+")"
+        modifyLogNameSel (const CallstackName) $
+            logWarning $ "listToMaybeWarn: too many entries"
         return (Just x)
+
+listToMaybeWarnM
+    :: (Monad m, MonadLogging m, ModifyLogName m)
+    => m [a] -> m (Maybe a)
+listToMaybeWarnM action = action >>= listToMaybeWarn
 
 allUniqueOrd :: Ord a => [a] -> Bool
 allUniqueOrd = all (null . drop 1) . group . sort

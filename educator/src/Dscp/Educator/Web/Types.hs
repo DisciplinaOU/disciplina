@@ -40,7 +40,7 @@ import Data.Time.Clock (UTCTime)
 import Database.SQLite.Simple (FromRow (..), field)
 import Fmt (build, (+|), (+||), (|+), (||+))
 import Loot.Base.HasLens (HasCtx)
-import Loot.Log (MonadLogging)
+import Loot.Log (ModifyLogName, MonadLogging)
 import Servant (FromHttpApiData (..))
 import UnliftIO (MonadUnliftIO)
 
@@ -57,12 +57,14 @@ type MonadEducatorWebQuery m =
     ( MonadIO m
     , MonadCatch m
     , MonadLogging m
+    , ModifyLogName m
     )
 
 type MonadEducatorWeb ctx m =
     ( MonadUnliftIO m
     , MonadCatch m
     , MonadLogging m
+    , ModifyLogName m
     , HasCtx ctx m '[SQLiteDB]
     )
 

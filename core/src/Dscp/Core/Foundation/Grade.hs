@@ -22,5 +22,6 @@ gE = UnsafeGrade 20
 gF = UnsafeGrade 0
 
 -- | Whether assignment with this grade should be considered passed.
+-- Note: there is "isPositiveGradeQuery" function which *must* work in the same way.
 isPositiveGrade :: Grade -> Bool
 isPositiveGrade _ = True  -- most easy scenario to work with, fine for alpha ver
