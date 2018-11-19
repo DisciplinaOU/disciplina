@@ -1,8 +1,9 @@
-{-# LANGUAGE DeriveAnyClass    #-}
-{-# LANGUAGE DeriveFoldable    #-}
-{-# LANGUAGE DeriveFunctor     #-}
-{-# LANGUAGE DeriveTraversable #-}
-{-# LANGUAGE NamedFieldPuns    #-}
+{-# LANGUAGE DeriveAnyClass     #-}
+{-# LANGUAGE DeriveFoldable     #-}
+{-# LANGUAGE DeriveFunctor      #-}
+{-# LANGUAGE DeriveTraversable  #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE NamedFieldPuns     #-}
 
 -- | Sized Merkle tree implementation.
 module Dscp.Crypto.MerkleTree
@@ -31,6 +32,10 @@ module Dscp.Crypto.MerkleTree
        , EmptyMerkleTree
        , getEmptyMerkleTree
        , fillEmptyMerkleTree
+
+       , EmptyMerkleProof
+       , separateProofAndData
+       , mergeProofAndData
        ) where
 
 import Codec.Serialise (Serialise (..))
@@ -48,7 +53,6 @@ import qualified Text.Show
 import Dscp.Crypto.Hash.Class (AbstractHash (..))
 import Dscp.Crypto.Impl (HasHash, Hash, hash, unsafeHash)
 import Dscp.Crypto.Serialise (Raw)
-
 
 -- | Data type for root of sized merkle tree.
 data MerkleSignature a = MerkleSignature
@@ -183,6 +187,9 @@ data MerkleProof a
 
 instance Serialise a => Serialise (MerkleProof a)
 
+pnSize :: MerkleProof a -> Word32
+pnSize = mrSize . pnSig
+
 getMerkleProofRoot :: MerkleProof a -> MerkleSignature a
 getMerkleProofRoot = pnSig
 
@@ -266,17 +273,22 @@ drawProofNode (Just p) = Tree.drawTree (asTree p)
     asTree ProofBranch {..} = Tree.Node ("branch, " <> show pnSig) [asTree pnLeft, asTree pnRight]
     asTree ProofPruned {..} = Tree.Node ("pruned, " <> show pnSig) []
 
--- | Not a `newtype`, because DeriveAnyClass and GeneralizedNewtypeDeriving
---   are in conflict here.
-data EmptyMerkleTree a = Empty (MerkleTree ())
-    deriving (Eq, Show, Generic, Serialise)
+-- | Merkle tree with values removed. Used for storing Merkle trees
+-- in the Educator database.
+newtype EmptyMerkleTree a = EmptyTree (MerkleTree ())
+    deriving newtype (Eq, Show, Generic, Serialise)
 
--- | Replaces all values in the tree with '()'.
+-- | Helper function which arbitrarily changes the type tag for
+-- @'MerkleSignature'@.
+coerceSig :: MerkleSignature a -> MerkleSignature b
+coerceSig = fmap $ error "coerceSig: 'MerkleSignature a' has 'a' inside!"
+
+-- | Empties out the Merkle tree. Leaves only 'Pruned' nodes.
 getEmptyMerkleTree :: MerkleTree a -> EmptyMerkleTree a
-getEmptyMerkleTree = Empty . (() <$)
+getEmptyMerkleTree = EmptyTree . (() <$)
 
 fillEmptyMerkleTree :: Map LeafIndex a -> EmptyMerkleTree a -> Maybe (MerkleProof a)
-fillEmptyMerkleTree plugs (Empty sieve) =
+fillEmptyMerkleTree plugs (EmptyTree sieve) =
     let
         keySet = Set.fromList (keys plugs)
         proof  = mkMerkleProof sieve keySet
@@ -288,15 +300,66 @@ fillEmptyMerkleTree plugs (Empty sieve) =
       where
         aux = \case
           ProofBranch sig left right ->
-              ProofBranch (coerseSig sig) <$> aux left <*> aux right
+              ProofBranch (coerceSig sig) <$> aux left <*> aux right
 
           ProofLeaf sig () ->
-              ProofLeaf (coerseSig sig) . (plugs Map.!) <$> next
+              ProofLeaf (coerceSig sig) . (plugs Map.!) <$> next
 
           ProofPruned sig ->
-              ProofPruned (coerseSig sig) <$ skip (mrSize sig)
+              ProofPruned (coerceSig sig) <$ skip (mrSize sig)
 
         next   = state $ \i -> (i,  i + 1)
         skip n = state $ \i -> ((), i + n)
 
-    coerseSig sig = error "coerseSig: 'MerkleSignature a' has 'a' inside!" <$> sig
+-- | Merkle proof with values at leaves removed and replaced via @Pruned@
+-- nodes.
+newtype EmptyMerkleProof a = EmptyProof (MerkleProof Void)
+    deriving newtype (Eq, Show, Generic, Serialise)
+
+-- | Absurd instance to derive 'Serialise' for 'EmptyMerkleProof' automatically.
+instance Serialise Void where
+    encode = absurd
+
+-- | List of indexed elements. Invariant: indices always go in ascending
+-- order.
+newtype IndexedList a = IndexedList [(LeafIndex, a)]
+    deriving newtype (Eq, Show, Generic)
+
+-- | Splits Merkle proof into signatures and data.
+separateProofAndData :: MerkleProof a -> (EmptyMerkleProof a, IndexedList a)
+separateProofAndData =
+    bimap EmptyProof (IndexedList . reverse . snd) .
+    flip runState (0, []) . go
+  where
+    go (ProofBranch s l r) = ProofBranch (coerceSig s) <$>
+        go l <*>
+        (modify' (first (+ pnSize l)) *> go r)
+    go (ProofPruned s)     = pure $ ProofPruned (coerceSig s)
+    go (ProofLeaf s a)     = pickLeaf a $> ProofPruned (coerceSig s)
+
+    pickLeaf a = do
+        ix <- gets fst
+        modify' $ second ((ix, a) :)
+
+-- | Merges empty proof and list of data elements into one Merkle proof.
+mergeProofAndData :: forall a. EmptyMerkleProof a -> IndexedList a -> Maybe (MerkleProof a)
+mergeProofAndData (EmptyProof proof) (IndexedList leaves) =
+    let (fullProof, (_, left)) = runState (go proof) (0, leaves)
+    in if not $ null left
+       then Nothing
+       else Just fullProof
+  where
+    go (ProofBranch s l r) = ProofBranch (coerceSig s) <$>
+        go l <*>
+        (modify' (first (+ pnSize l)) *> go r)
+    go (ProofLeaf _ a)     = absurd a
+    go (ProofPruned s)     = let s' = coerceSig s in
+        if mrSize s' > 1
+        then pure $ ProofPruned s'
+        else maybe (ProofPruned s') (ProofLeaf s') <$> shiftLeaf
+
+    shiftLeaf = do
+        (i, lvs) <- get
+        traverse (\a -> modify' (second $ drop 1) $> a) $
+            ixedHead i lvs
+    ixedHead i = safeHead >=> \(j, a) -> guard (i == j) >> return a

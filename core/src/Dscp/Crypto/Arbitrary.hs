@@ -2,7 +2,7 @@
 
 module Dscp.Crypto.Arbitrary () where
 
-import Test.QuickCheck.Arbitrary.Generic (genericArbitrary, genericShrink)
+import Test.QuickCheck.Arbitrary.Generic (genericShrink)
 
 import Dscp.Util.Test
 
@@ -49,8 +49,4 @@ instance (Arbitrary ba, FromByteArray ba) =>
 
 instance Arbitrary a => Arbitrary (MerkleSignature a) where
     arbitrary = MerkleSignature <$> arbitrary <*> choose (0, 100)
-    shrink = genericShrink
-
-instance Arbitrary a => Arbitrary (MerkleProof a) where
-    arbitrary = genericArbitrary
     shrink = genericShrink
