@@ -10,6 +10,7 @@ module Dscp.DB.SQLite.Util
      , checkExists
      , insertValue
      , insertExpression
+     , pk_
      , packPk
      , valPk_
      , selectByPk
@@ -32,7 +33,7 @@ import Database.Beam.Query as BeamReexport (QGenExpr, aggregate_, all_, asc_, co
 import qualified Database.Beam.Query as Beam
 import qualified Database.Beam.Query.Internal as Beam
 import Database.Beam.Schema (PrimaryKey, TableEntity)
-import Database.Beam.Schema as BeamReexport (DatabaseSettings, pk)
+import Database.Beam.Schema as BeamReexport (DatabaseSettings)
 import qualified Database.Beam.Schema as Beam
 import qualified Database.Beam.Sqlite.Syntax as Beam
 import qualified GHC.Generics as G
@@ -66,6 +67,11 @@ insertExpression expr = Beam.insertExpressions (one expr)
     ( Generic (pk) \
     , (pk) ~ PrimaryKey row Identity \
     , G.D1 d' (G.C1 c' (G.S1 s' (G.Rec0 (inner)))) ~ G.Rep (pk)) \
+
+-- | Lift a value to primary key.
+-- @martoon: I prefer remaining "pk" for variable name, thus reexporting this way.
+pk_ :: Beam.Table table => table a -> PrimaryKey table a
+pk_ = Beam.pk
 
 -- | Lift an entity to primary key, effectively just wrappes it into 'PrimaryKey' constructor.
 -- Works only for primary keys which consists of one item.

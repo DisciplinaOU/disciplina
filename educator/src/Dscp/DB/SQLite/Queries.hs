@@ -384,7 +384,7 @@ createPrivateBlock delta = runMaybeT $ do
         runUpdate $ update
             (esTransactions es)
             (\tx -> [ trIdx tx <-. val_ (TxBlockIdx txIdx) ])
-            (\tx -> pk tx ==. valPk_ txId)
+            (\tx -> pk_ tx ==. valPk_ txId)
         runInsert . insert (esBlockTxs es) . insertValue $
             txId <:-:> bid
 
