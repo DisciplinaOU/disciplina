@@ -14,6 +14,7 @@ module Dscp.Resource.Keys.Types
 
     , ourSecretKey
     , ourPublicKey
+    , ourAddress
     , ourSecretKeyData
     ) where
 
@@ -24,6 +25,7 @@ import Data.Aeson.TH (deriveJSON)
 import Loot.Base.HasLens (HasLens', lensOf)
 
 import Dscp.Core.Aeson ()
+import Dscp.Core.Foundation.Address
 import Dscp.Core.Foundation.Witness
 import Dscp.Core.Governance (CommitteeSecret (..))
 import Dscp.Crypto (Encrypted, PassPhrase, PublicKey, SecretKey)
@@ -132,6 +134,12 @@ ourPublicKey
        (HasLens' ctx (KeyResources node), MonadReader ctx m)
     => m PublicKey
 ourPublicKey = view $ lensOf @(KeyResources node) . krSecretKeyData . to skPublic
+
+ourAddress
+    :: forall node ctx m.
+       (HasLens' ctx (KeyResources node), MonadReader ctx m)
+    => m Address
+ourAddress = view $ lensOf @(KeyResources node) . krSecretKeyData . to skAddress
 
 ourSecretKeyData
     :: forall node ctx m.

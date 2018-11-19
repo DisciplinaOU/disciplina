@@ -121,7 +121,7 @@ seqExpandersPublicationTx feesReceiverAddr (Fees minFee) =
             let phHash = hash ptHeader
             let prevHash = ptHeader ^. pbhPrevBlock
             let (prevHashM :: Maybe PrivateHeaderHash) =
-                    prevHash <$ guard (prevHash /= genesisHeaderHash)
+                    prevHash <$ guard (prevHash /= genesisHeaderHash ptAuthor)
 
             headerWasEarlier <- queryOneExists (PublicationHead phHash)
             let headerIsLast = prevHash == phHash

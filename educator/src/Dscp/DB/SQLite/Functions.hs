@@ -28,6 +28,7 @@ module Dscp.DB.SQLite.Functions
 
 import Control.Concurrent (getNumCapabilities)
 import Control.Concurrent.Chan (newChan, readChan, writeChan)
+import Control.Monad.Reader (mapReaderT)
 import qualified Data.List as L
 import Database.SQLite.Simple (Connection, FromRow, Only (..), Query, ToRow)
 import qualified Database.SQLite.Simple as Backend
@@ -164,6 +165,9 @@ closeSQLiteDB sd =
 -- Phantom type parameter @ w @ should be either a type variable or 'Writing'
 -- and means whether given actions should be performed in writing transaction,
 -- if performed within a transaction at all.
+--
+-- Notice that for the sake of isolation we do not provide 'MonadTrans' instance,
+-- though fetching info from context of the inner monad is allowed.
 newtype DBT (t :: TransactionalContext) (w :: OperationType) m a = DBT
     { runDBT :: ReaderT Connection m a
     } deriving (Functor, Applicative, Monad, MonadIO, MonadThrow, MonadCatch)
@@ -172,6 +176,11 @@ instance MonadUnliftIO m => MonadUnliftIO (DBT t w m) where
     askUnliftIO = do
         UnliftIO unlift <- DBT askUnliftIO
         return $ UnliftIO $ unlift . runDBT
+
+instance MonadReader r m => MonadReader r (DBT t w m) where
+    ask = DBT $ lift ask
+    reader = DBT . lift . reader
+    local doModify = DBT . mapReaderT (local doModify) . runDBT
 
 instance (Log.MonadLogging m, Monad m) => Log.MonadLogging (DBT t w m) where
     log = DBT . lift ... Log.log

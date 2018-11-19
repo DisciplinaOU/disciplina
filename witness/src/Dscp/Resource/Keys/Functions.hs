@@ -6,6 +6,7 @@ module Dscp.Resource.Keys.Functions
     ( toKeyfileContent
     , fromKeyfileContent
     , genStore
+    , mkCommitteeStore
     , readStore
     , linkStore
     , toSecretJson
@@ -64,19 +65,19 @@ storePath BaseKeyParams{..} appDir nodeNameP =
   where
     defPath = appDir </> (nodeNameP |+ ".key")
 
--- | Generate key resources with respect to given committe parameters if
--- specified, otherwise randomly.
-genStore ::
-       (HasCoreConfig, MonadThrow m, MonadIO m, MonadLogging m)
-    => Maybe CommitteeParams
+-- | Generate key resources randomly.
+genStore :: MonadIO m => m (KeyResources n)
+genStore = KeyResources . secretKeyDataFromPair <$> runSecureRandom keyGen
+
+-- | Generate key resources with respect to given committe parameters.
+mkCommitteeStore ::
+       (HasCoreConfig, MonadThrow m, MonadLogging m)
+    => CommitteeParams
     -> m (KeyResources n)
-genStore comParamsM = do
+mkCommitteeStore comParams = do
     _krSecretKeyData <-
-        case comParamsM of
-          Nothing -> do
-              logInfo "Generating random key"
-              secretKeyDataFromPair <$> runSecureRandom keyGen
-          Just (CommitteeParamsOpen i) -> do
+        case comParams of
+          CommitteeParamsOpen i -> do
               logInfo "Creating open committee key"
               sec <- case gcGovernance (giveL @CoreConfig @GenesisConfig) of
                          GovCommittee (CommitteeOpen{..}) -> do
@@ -89,7 +90,7 @@ genStore comParamsM = do
                                        "config specifies: " <> show x
               let sk = committeeDerive sec i
               pure (mkSecretKeyData sk)
-          Just (CommitteeParamsClosed {..}) -> do
+          CommitteeParamsClosed {..} -> do
               logInfo "Creating closed committee key"
               let addrs = case gcGovernance (giveL @CoreConfig @GenesisConfig) of
                               GovCommittee (CommitteeClosed a) -> a
@@ -146,14 +147,13 @@ createStore ::
        , MonadCatch m
        , MonadLogging m
        , Buildable (Proxy n)
-       , HasCoreConfig
        )
     => FilePath
     -> PassPhrase
     -> m (KeyResources n)
 createStore path pp = do
      logInfo $ "Creating new "+|nodeNameP|+" secret key under "+||path||+""
-     store <- genStore Nothing
+     store <- genStore
      writeStore path pp store
      return store
   where

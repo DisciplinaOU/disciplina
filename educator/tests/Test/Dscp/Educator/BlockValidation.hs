@@ -6,10 +6,7 @@ import qualified Data.Map.Strict as M
 import System.IO.Unsafe (unsafePerformIO)
 import Test.Hspec
 
-import Dscp.Core (ATGDelta (..), Course (..), gB, ssSubmission, ssWitness, swKey, swSig)
-import Dscp.Core.Foundation.Educator (PrivateBlock (..), PrivateBlockBody (..),
-                                      PrivateBlockHeader (..), PrivateTx (..), genesisHeaderHash,
-                                      ptSignedSubmission)
+import Dscp.Core
 import Dscp.Crypto (AbstractPK (..), AbstractSK (..), PublicKey, SecretKey, fromFoldable,
                     getMerkleRoot, hash)
 import Dscp.Educator.BlockValidation (BlockValidationFailure (..), SubmissionValidationFailure (..),
@@ -86,6 +83,7 @@ spec_ValidateBlock = describe "Validate private block" $ do
                                         , bvfActualMerkleSig = _pbhBodyProof (_pbHeader block)
                                         }]
   where
+    educatorAddr = mkAddr $ mkPubKey 'z'
     getTxKey tx = tx^.ptSignedSubmission.ssWitness.swKey
     getTxSig tx = tx^.ptSignedSubmission.ssWitness.swSig
     hashTxSub tx = tx^.ptSignedSubmission.ssSubmission.to hash
@@ -94,7 +92,7 @@ spec_ValidateBlock = describe "Validate private block" $ do
         , _pbBody = mkBlockBody txs
         }
     mkBlockHeader txs = PrivateBlockHeader
-        { _pbhPrevBlock = genesisHeaderHash
+        { _pbhPrevBlock = genesisHeaderHash educatorAddr
         , _pbhBodyProof = mkBodyProof txs
         , _pbhAtgDelta = mkATGDelta
         }

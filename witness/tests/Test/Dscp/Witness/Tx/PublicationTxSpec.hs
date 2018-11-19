@@ -25,7 +25,7 @@ genPublicationChain n secret
         let addr = mkAddr (skPublic secret)
         sigs <- vectorUniqueOf (fromIntegral n) arbitrary
         return . Exts.fromList . fix $ \pubTxs ->
-            zip sigs (genesisHeaderHash : map (hash . ptHeader) pubTxs) <&>
+            zip sigs (genesisHeaderHash addr : map (hash . ptHeader) pubTxs) <&>
               \(sig, prevHeaderHash) ->
                 let ptHeader = PrivateBlockHeader
                         { _pbhPrevBlock = prevHeaderHash
