@@ -53,6 +53,7 @@ data RelationType
 -- | Table which stores just a relation between two tables.
 data RelationT (t :: RelationType) a b f = PrimaryKey a f :-: PrimaryKey b f
     deriving (Generic)
+infix 9 :-:
 {-
 Somehow Beam seem not to provide this functionality ^ for purpose. Quoting the manual:
 
@@ -72,6 +73,7 @@ instance (rel ~ RelationT t a b f, cb ~ PrimaryKey b f) => Field2 rel rel cb cb 
 -- | Make a relation from raw ids.
 (<:-:>) :: _ => ia -> ib -> RelationT t a b Identity
 a <:-:> b = packPk a :-: packPk b
+infix 9 <:-:>
 
 data CourseRowT f = CourseRow
     { crId   :: C f Course

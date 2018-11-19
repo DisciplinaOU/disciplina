@@ -27,6 +27,7 @@ module Dscp.DB.SQLite.Queries
          -- * Utils
        , ifAlreadyExistsThrow
        , onReferenceInvalidThrow
+       , rewrapAlreadyExists
 
          -- * Readonly actions
        , GetProvenStudentTransactionsFilters (..)

@@ -1,15 +1,20 @@
 {-# LANGUAGE QuasiQuotes #-}
 
 module Dscp.Educator.Web.Educator.Queries
-    ( module Dscp.Educator.Web.Educator.Queries
+    ( educatorRemoveStudent
+    , educatorGetStudents
+    , educatorGetCourses
+    , educatorGetCourse
+    , educatorUnassignFromStudent
+    , isGradedSubmission
+    , educatorGetGrades
+    , educatorPostGrade
     ) where
 
-import Control.Lens (from, mapping, traversed, _Just)
+import Control.Lens (from, traversed)
 import Data.List (groupBy)
 import Data.Time.Clock (getCurrentTime)
-import Database.SQLite.Simple (Only (..), Query)
 import Servant (err501)
-import Text.InterpolatedString.Perl6 (q)
 
 import Dscp.Core
 import Dscp.Crypto
@@ -17,6 +22,9 @@ import Dscp.DB.SQLite
 import Dscp.Educator.Web.Educator.Types
 import Dscp.Educator.Web.Types
 import Dscp.Util
+
+es :: DatabaseSettings be EducatorSchema
+es = educatorSchema
 
 educatorRemoveStudent
     :: MonadEducatorWebQuery m
@@ -26,77 +34,50 @@ educatorRemoveStudent student = do
     -- fundemental rethinking of our database scheme and rewriting many code.
     -- Should be done soon though.
     _ <- throwM err501
-    execute queryText (Only student)
-  where
-    queryText :: Query
-    queryText = [q|
-        delete
-        from      Students
-        where     addr = ?
-    |]
+    deleteByPk (esStudents es) student
 
 educatorGetStudents
     :: MonadEducatorWebQuery m
     => Maybe Course -> DBT t w m [StudentInfo]
 educatorGetStudents courseF = do
-    map (StudentInfo . fromOnly) <$> query queryText paramF
-  where
-    (clauseF, paramF) = mkFilter "course_id = ?" courseF
-
-    queryText = [q|
-        select    addr
-        from      Students
-        left join StudentCourses
-               on Students.addr = StudentCourses.student_addr
-        where     1 = 1
-    |]
-      `filterClauses` [clauseF]
+    runSelectMap StudentInfo . select $ do
+        student <- all_ (esStudents es)
+        whenJust courseF $ \course -> do
+            studentId :-: courseId <- all_ (esStudentCourses es)
+            guard_ (studentId ==. pk student)
+            guard_ (courseId ==. valPk_ course)
+        return (srAddr student)
 
 educatorGetCourses
     :: DBM m
     => Maybe Student -> DBT t w m [CourseEducatorInfo]
 educatorGetCourses studentF = do
-    res :: [(Course, Text, Maybe Subject)] <- query queryText paramF
-    return $
+    res :: [(Course, Text, Subject)] <-
+        runSelect . select $ do
+            subject <- all_ (esSubjects es)
+            course <- related_ (esCourses es) (srCourse subject)
+
+            whenJust studentF $ \student -> do
+                studentId :-: courseId <- all_ (esStudentCourses es)
+                guard_ (courseId `references_` course)
+                guard_ (studentId ==. valPk_ student)
+
+            return (crId course, crDesc course, srId subject)
+    return
         -- group "subject" fields for the same courses
         [ CourseEducatorInfo{ ciId, ciDesc, ciSubjects }
         | course@((ciId, ciDesc, _) : _) <- groupBy ((==) `on` view _1) res
-        , let ciSubjects = course ^.. traversed . _3 . _Just
+        , let ciSubjects = course ^.. traversed . _3
         ]
-  where
-    (clauseF, paramF) = mkFilter "student_addr = ?" studentF
-
-    queryText = [q|
-        select    Courses.id, Courses.desc, Subjects.id
-        from      Courses
-        left join Subjects
-               on Courses.id = Subjects.course_id
-        left join StudentCourses
-               on StudentCourses.course_id = Courses.id
-        where     1 = 1
-    |]
-      `filterClauses` [clauseF]
 
 educatorGetCourse
     :: MonadEducatorWebQuery m
     => Course -> DBT t w m CourseEducatorInfo
 educatorGetCourse courseId = do
-    mcourse <-
-        query queryText (Only courseId)
-        >>= listToMaybeWarn "courses"
-    Only mdesc <-
-        pure mcourse `assertJust` AbsentError (CourseDomain courseId)
-
+    ciDesc <- selectByPk crDesc (esCourses es) courseId
+                `assertJust` AbsentError (CourseDomain courseId)
     ciSubjects <- getCourseSubjects courseId
-    let ciDesc = fromMaybe "" mdesc
     return CourseEducatorInfo{ ciId = courseId, .. }
-  where
-    queryText :: Query
-    queryText = [q|
-        select    desc
-        from      Courses
-        where     id = ?
-    |]
 
 educatorUnassignFromStudent
     :: MonadEducatorWebQuery m
@@ -104,30 +85,18 @@ educatorUnassignFromStudent
     -> Hash Assignment
     -> DBT t 'Writing m ()
 educatorUnassignFromStudent student assignH = do
-    -- we are not deleting other info since educator may want it to be preserved
-    -- in case if he wants to assign as assignment again
-    execute queryText (student, assignH)
-  where
-    queryText :: Query
-    queryText = [q|
-        delete
-        from      StudentsAssignments
-        where     student_addr = ?
-              and assignment_hash = ?
-    |]
+    runDelete $ delete (esStudentAssignments es) (val_ (student <:-:> assignH) ==.)
+    -- we are not deleting any other info since educator may want it to be preserved
+    -- in case if he wants to assign an assignment again
 
+-- TODO: Move to common?
 isGradedSubmission
     :: MonadEducatorWebQuery m
     => Hash Submission -> DBT t w m Bool
-isGradedSubmission submissionH = do
-    checkExists queryText (Only submissionH)
-  where
-    queryText :: Query
-    queryText = [q|
-        select    count(*)
-        from      Transactions
-        where     submission_hash = ?
-    |]
+isGradedSubmission submissionH =
+    checkExists $ do
+        privateTx <- all_ (esTransactions es)
+        guard_ (trSubmissionHash privateTx ==. valPk_ submissionH)
 
 educatorGetGrades
     :: MonadEducatorWebQuery m
@@ -136,25 +105,25 @@ educatorGetGrades
     -> Maybe (Hash Assignment)
     -> Maybe IsFinal
     -> DBT t w m [GradeInfo]
-educatorGetGrades courseIdF studentF assignmentF isFinalF = do
-    query queryText (mconcat paramsF)
-  where
-    (clausesF, paramsF) = unzip
-        [ mkFilter "S.student_addr = ?" studentF
-        , mkFilter "course_id = ?" courseIdF
-        , mkFilter "A.hash = ?" assignmentF
-        , let assignTypeF = isFinalF ^. mapping (from assignmentTypeRaw)
-          in mkFilter "A.type = ?" assignTypeF
-        ]
+educatorGetGrades courseIdF studentF assignmentF isFinalF =
+    runSelectMap gradeInfoFromRow . select $ do
+        privateTx <- all_ (esTransactions es)
+        submission <- related_ (esSubmissions es) (trSubmissionHash privateTx)
+        assignment <- related_ (esAssignments es) (srAssignmentHash submission)
 
-    queryText = [q|
-        select    T.grade, T.time, T.submission_hash, T.idx
-        from      Submissions as S
-        left join Assignments as A
-               on A.hash = S.assignment_hash
-        where     1 = 1
-    |]
-      `filterClauses` clausesF
+        whenJust courseIdF $ \courseId ->
+            guard_ (arCourse assignment ==. valPk_ courseId)
+        whenJust studentF $ \student ->
+            guard_ (srStudent submission ==. valPk_ student)
+        whenJust assignmentF $ \assignmentHash ->
+            guard_ (valPk_ assignmentHash `references_` assignment)
+        whenJust isFinalF $ \isFinal -> do
+            let assignTypeF = isFinal ^. from assignmentTypeRaw
+            guard_ (arType assignment ==. val_ assignTypeF)
+
+        let TransactionRow{..} = privateTx
+        let SubmissionRowId subHash = trSubmissionHash
+        return (trGrade, trCreationTime, subHash, trIdx)
 
 educatorPostGrade
     :: MonadEducatorWebQuery m
@@ -171,17 +140,12 @@ educatorPostGrade subH grade = do
             }
         txId = getId ptx
 
-    execute queryText
-        ( txId
-        , subH
-        , grade
-        , time
-        , TxInMempool
-        )
-        `ifAlreadyExistsThrow` TransactionDomain txId
-  where
-    queryText :: Query
-    queryText = [q|
-        insert into  Transactions
-        values       (?, ?, ?, ?, ?)
-    |]
+    rewrapAlreadyExists (TransactionDomain txId) $
+        runInsert . insert (esTransactions es) . insertValue $
+            TransactionRow
+            { trHash = txId
+            , trGrade = grade
+            , trCreationTime = time
+            , trIdx = TxInMempool
+            , trSubmissionHash = packPk subH
+            }

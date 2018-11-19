@@ -27,12 +27,12 @@ module Dscp.Educator.Web.Educator.Types
 import Control.Lens (from)
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
-import Fmt (build, (+|), (|+), listF)
+import Fmt (build, listF, (+|), (|+))
 
 import Dscp.Core
 import Dscp.Crypto
 import Dscp.Educator.Web.Types
-import Dscp.Util.Servant (ForResponseLog (..), buildShortResponseList, buildLongResponseList)
+import Dscp.Util.Servant (ForResponseLog (..), buildLongResponseList, buildShortResponseList)
 
 data NewStudent = NewStudent
     { nsAddr :: Student
@@ -88,14 +88,6 @@ data SubmissionEducatorInfo = SubmissionEducatorInfo
 
 eaDocumentType :: AssignmentEducatorInfo -> DocumentType
 eaDocumentType = documentType . aiContentsHash
-
----------------------------------------------------------------------------
--- ResponseCase instances
----------------------------------------------------------------------------
-
-type instance ResponseCase 'EducatorTag Course     = CourseEducatorInfo
-type instance ResponseCase 'EducatorTag Assignment = AssignmentEducatorInfo
-type instance ResponseCase 'EducatorTag Submission = SubmissionEducatorInfo
 
 ---------------------------------------------------------------------------
 -- Simple conversions

@@ -14,6 +14,7 @@ module Dscp.DB.SQLite.Util
      , valPk_
      , selectByPk
      , existsWithPk
+     , deleteByPk
      , currentTimestampUtc_
      ) where
 
@@ -21,9 +22,9 @@ import Data.Coerce (coerce)
 import Data.Time.Clock (UTCTime)
 import qualified Database.Beam.Backend.SQL as Beam
 import Database.Beam.Query as BeamReexport (QGenExpr, aggregate_, all_, asc_, countAll_, default_,
-                                            desc_, exists_, filter_, guard_, insert, insertValues,
-                                            limit_, orderBy_, related_, select, update, val_, (/=.),
-                                            (<-.), (==.), (>.), (>=.))
+                                            delete, desc_, exists_, filter_, guard_, insert,
+                                            insertValues, limit_, orderBy_, references_, related_,
+                                            select, update, val_, (/=.), (<-.), (==.), (>.), (>=.))
 import qualified Database.Beam.Query as Beam
 import qualified Database.Beam.Query.Internal as Beam
 import Database.Beam.Schema (PrimaryKey, TableEntity)
@@ -77,7 +78,7 @@ valPk_ = val_ . packPk
 
 -- | Quick way to fetch a single entiry refered by the given primary key.
 selectByPk
-    :: (HasCallStack, _)
+    :: (MonadIO m, HasCallStack, _)
     => (row Identity -> res)
     -> Beam.DatabaseEntity be db (TableEntity table)
     -> pk
@@ -85,7 +86,7 @@ selectByPk
 selectByPk mapper tbl key =
     fmap fetchOne $
     runSelect . Beam.select $
-    filter_ (\row -> Beam.pk row ==. valPk_ key) $
+    filter_ (valPk_ key `references_`) $
     all_ tbl
   where
     fetchOne [] = Nothing
@@ -99,6 +100,14 @@ existsWithPk tbl key =
     checkExists $ do
         row <- all_ tbl
         guard_ (Beam.pk row ==. valPk_ key)
+
+-- | Quick way to delete a single entiry refered by the given primary key.
+deleteByPk
+    :: (MonadIO m, _)
+    => Beam.DatabaseEntity be db (TableEntity table)
+    -> pk
+    -> DBT t 'Writing m ()
+deleteByPk tbl key = runDelete $ delete tbl (valPk_ key `references_`)
 
 -- | SQL CURRENT_TIMESTAMP function.
 -- TODO: check it really works (returns UTC time rather than local).
