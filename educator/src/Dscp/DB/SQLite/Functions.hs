@@ -49,6 +49,7 @@ import Database.Beam.Sqlite (Sqlite, SqliteCommandSyntax, SqliteM (..))
 import Database.SQLite.Simple (Connection, Only (..))
 import qualified Database.SQLite.Simple as Backend
 import Database.SQLite.Simple.FromField (FromField)
+import Control.Monad.Reader (mapReaderT)
 import Loot.Base.HasLens (HasCtx, HasLens (..))
 import qualified Loot.Log as Log
 import Time (Millisecond, sec, toNum, toUnit)
@@ -194,6 +195,9 @@ instance MonadUnliftIO m => MonadUnliftIO (DBT t w m) where
 instance (Log.MonadLogging m, Monad m) => Log.MonadLogging (DBT t w m) where
     log = DBT . lift ... Log.log
     logName = DBT $ lift Log.logName
+
+instance (Log.ModifyLogName m, Monad m) => Log.ModifyLogName (DBT t w m) where
+    modifyLogNameSel how = DBT . mapReaderT (Log.modifyLogNameSel how) . unDBT
 
 dbtToSqliteM :: MonadUnliftIO m => DBT t w m (DBT t w m a -> SqliteM a)
 dbtToSqliteM = do

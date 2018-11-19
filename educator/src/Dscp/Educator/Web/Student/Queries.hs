@@ -14,8 +14,6 @@ module Dscp.Educator.Web.Student.Queries
     ) where
 
 import Data.Coerce (coerce)
-import Database.SQLite.Simple (Only (..), Query)
-import Text.InterpolatedString.Perl6 (q)
 
 import Dscp.Core
 import Dscp.Crypto (Hash)
@@ -94,13 +92,6 @@ studentGetGrade submissionH = do
     forM mgrade $ \(giGrade, giTimestamp, giSubmissionHash, blkIdx) -> do
         let giHasProof = blkIdx /= TxInMempool
         return GradeInfo{..}
-  where
-    queryText :: Query
-    queryText = [q|
-        select    grade, time, submission_hash, idx
-        from      Transactions
-        where     submission_hash = ?
-    |]
 
 studentGetLastAssignmentSubmission
     :: MonadEducatorWebQuery m

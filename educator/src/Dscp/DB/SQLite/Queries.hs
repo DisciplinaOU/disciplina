@@ -74,7 +74,6 @@ import Control.Lens (makePrisms, to)
 import Data.Default (Default (..))
 import qualified Data.Map as Map (empty, fromList, insertWith, toList)
 import Data.Time.Clock (UTCTime)
-import Database.SQLite.Simple.ToField (ToField)
 import Snowdrop.Util (OldestFirst (..))
 
 import Dscp.Core
@@ -173,9 +172,12 @@ getStudentCourses student' =
         return course
 
 -- | How can a student enroll to a course?
-enrollStudentToCourse :: DBM m => Id Student -> Id Course -> DBT t 'Writing m ()
+enrollStudentToCourse :: DBM m => Id Student -> Id Course -> DBT 'WithinTx 'Writing m ()
 enrollStudentToCourse student course = do
-    -- TODO: ensure foreign constraints check will play for us
+    -- TODO: try foreign constraints check
+    existsCourse  course  `assertExists` CourseDomain  course
+    existsStudent student `assertExists` StudentDomain student
+
     runInsert . insert (esStudentCourses es) $
         insertValues [student <:-:> course]
 
@@ -550,7 +552,7 @@ getSignedSubmission
 getSignedSubmission = selectByPk submissionFromRow (esSubmissions es)
 
 createTransaction
-    :: (DBM m, ToField TxBlockIdx)
+    :: DBM m
     => PrivateTx -> DBT 'WithinTx 'Writing m (Id PrivateTx)
 createTransaction trans = do
     let ptid    = trans^.idOf

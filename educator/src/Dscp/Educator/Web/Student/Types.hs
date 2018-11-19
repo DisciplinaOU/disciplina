@@ -67,14 +67,6 @@ saDocumentType :: AssignmentStudentInfo -> DocumentType
 saDocumentType = documentType . aiContentsHash
 
 ---------------------------------------------------------------------------
--- ResponseCase instances
----------------------------------------------------------------------------
-
-type instance ResponseCase 'StudentTag Course     = CourseStudentInfo
-type instance ResponseCase 'StudentTag Assignment = AssignmentStudentInfo
-type instance ResponseCase 'StudentTag Submission = SubmissionStudentInfo
-
----------------------------------------------------------------------------
 -- Simple conversions
 ---------------------------------------------------------------------------
 
