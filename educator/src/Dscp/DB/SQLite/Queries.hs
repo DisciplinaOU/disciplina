@@ -25,9 +25,8 @@ module Dscp.DB.SQLite.Queries
        , DBM
 
          -- * Utils
-       , ifAlreadyExistsThrow
-       , onReferenceInvalidThrow
        , rewrapAlreadyExists
+       , rewrapReferenceGotInvalid
 
          -- * Readonly actions
        , GetProvenStudentTransactionsFilters (..)
@@ -141,13 +140,10 @@ es :: DatabaseSettings be EducatorSchema
 es = educatorSchema
 
 -- | Catch "unique" constraint violation and rethrow specific error.
-ifAlreadyExistsThrow :: MonadCatch m => m a -> DomainErrorItem -> m a
-ifAlreadyExistsThrow action err =
+rewrapAlreadyExists :: MonadCatch m => DomainErrorItem -> m a -> m a
+rewrapAlreadyExists err action =
     catchJust asAlreadyExistsError action
         (\_ -> throwM $ AlreadyPresentError err)
-
-rewrapAlreadyExists :: MonadCatch m => DomainErrorItem -> m a -> m a
-rewrapAlreadyExists = flip ifAlreadyExistsThrow
 
 assertExists :: MonadCatch m => m Bool -> DomainErrorItem -> m ()
 assertExists action = assertJustPresent (bool Nothing (Just ()) <$> action)
@@ -157,8 +153,8 @@ assertJustPresent action err =
     action >>= maybe (throwM $ AbsentError err) pure
 
 -- | Catch "foreign" constraint violation and rethrow specific error.
-onReferenceInvalidThrow :: (MonadCatch m, Exception e) => m a -> e -> m a
-onReferenceInvalidThrow action err =
+rewrapReferenceGotInvalid :: (MonadCatch m, Exception e) => e -> m a -> m a
+rewrapReferenceGotInvalid err action =
     catchJust asReferenceInvalidError action (\_ -> throwM err)
 
 type DBM m = (MonadIO m, MonadCatch m)
@@ -277,11 +273,8 @@ getProvenStudentTransactions filters = do
                 assignment <- related_ (esAssignments es) (srAssignmentHash submission)
                 guard_ (arCourse assignment ==. valPk_ course)
 
-            whenJust (pfStudent filters) $ \student ->
-                guard_ (srStudent submission ==. valPk_ student)
-
-            whenJust (pfAssignment filters) $ \assignmentHash ->
-                guard_ (srAssignmentHash submission ==. valPk_ assignmentHash)
+            guardMatchesPk_ (pfStudent filters) (srStudent submission)
+            guardMatchesPk_ (pfAssignment filters) (srAssignmentHash submission)
 
             return (blockIdx, (privateTx, submission))
       where

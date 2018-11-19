@@ -111,12 +111,9 @@ educatorGetGrades courseIdF studentF assignmentF isFinalF =
         submission <- related_ (esSubmissions es) (trSubmissionHash privateTx)
         assignment <- related_ (esAssignments es) (srAssignmentHash submission)
 
-        whenJust courseIdF $ \courseId ->
-            guard_ (arCourse assignment ==. valPk_ courseId)
-        whenJust studentF $ \student ->
-            guard_ (srStudent submission ==. valPk_ student)
-        whenJust assignmentF $ \assignmentHash ->
-            guard_ (valPk_ assignmentHash `references_` assignment)
+        guardMatchesPk_ courseIdF (arCourse assignment)
+        guardMatchesPk_ studentF (srStudent submission)
+        guardMatchesPk_ assignmentF (pk assignment)
         whenJust isFinalF $ \isFinal -> do
             let assignTypeF = isFinal ^. from assignmentTypeRaw
             guard_ (arType assignment ==. val_ assignTypeF)

@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE QuasiQuotes    #-}
+{-# LANGUAGE TypeOperators  #-}
 
 -- | Common queries for student and educator APIs.
 
@@ -9,9 +9,9 @@ module Dscp.Educator.Web.Queries
     ) where
 
 import Control.Lens (from, mapping)
-import Database.SQLite.Simple (Only (..), (:.) (..))
-import Loot.Log (MonadLogging)
 import Data.Default (Default (..))
+import Database.SQLite.Simple ((:.) (..), Only (..))
+import Loot.Log (MonadLogging)
 import Text.InterpolatedString.Perl6 (q, qc)
 import qualified Universum.Unsafe as Unsafe (fromJust)
 
@@ -19,8 +19,8 @@ import Dscp.Core
 import Dscp.Crypto
 import Dscp.DB.SQLite
 import Dscp.Educator.Web.Educator.Types
+import Dscp.Educator.Web.Student.Queries
 import Dscp.Educator.Web.Student.Types
-import Dscp.Educator.Web.Student.Queries -- remove
 import Dscp.Educator.Web.Types
 import Dscp.Util
 import Dscp.Util.Type (type (==))
@@ -180,28 +180,19 @@ commonDeleteSubmission
 commonDeleteSubmission submissionH studentF = do
     commonExistsSubmission submissionH studentF
         `assert` AbsentError (SubmissionDomain submissionH)
-    execute queryText (oneParam submissionH <> paramF)
-        `onReferenceInvalidThrow`
-        (SemanticError $ DeletingGradedSubmission submissionH)
-  where
-    (clauseF, paramF) = mkFilter "student_addr = ?" studentF
-    queryText = [q|
-       delete
-       from     Submissions
-       where    hash = ?
-    |]
-      `filterClauses` one clauseF
+    rewrapReferenceGotInvalid (SemanticError $ DeletingGradedSubmission submissionH) $
+        runDelete . delete (esSubmissions es)
+            (\submission -> valPk_ submissionH `references_` submission
+                        &&. filterMatches_ studentF (srStudent submission))
 
 ----------------------------------------------------------------------------
 -- Filters
 ----------------------------------------------------------------------------
 
--- | Create filter for 'DocumentType'.
-mkDocTypeFilter :: String -> Maybe DocumentType -> (FilterClause, SomeParams)
-mkDocTypeFilter fieldName = \case
-    Nothing ->
-        ("", mempty)
-    Just Offline ->
-        (FilterClause $ "and " <> fieldName <> " = ?", oneParam offlineHash)
-    Just Online  ->
-        (FilterClause $ "and " <> fieldName <> " <> ?", oneParam offlineHash)
+eqDocType
+    :: DocumentType
+    -> QGenExpr syntax ctx s (Hash Assignment)
+    -> QGenExpr syntax ctx s Bool
+eqDocType docType assignH = case docType of
+    Offline -> assignH ==. val_ offlineHash
+    Online  -> assignH /=. val_ offlineHash

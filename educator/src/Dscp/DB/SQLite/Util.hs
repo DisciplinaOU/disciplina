@@ -16,6 +16,9 @@ module Dscp.DB.SQLite.Util
      , existsWithPk
      , deleteByPk
      , currentTimestampUtc_
+     , filterMatches_
+     , guardMatches_
+     , guardMatchesPk_
      ) where
 
 import Data.Coerce (coerce)
@@ -116,3 +119,31 @@ deleteByPk tbl key = runDelete $ delete tbl (valPk_ key `references_`)
 -- http://hackage.haskell.org/package/beam-sqlite-0.3.2.3/docs/src/Database.Beam.Sqlite.Syntax.html#line-780
 currentTimestampUtc_ :: Beam.IsSql92ExpressionSyntax syntax => Beam.QGenExpr ctxt syntax s UTCTime
 currentTimestampUtc_ = Beam.QExpr (pure Beam.currentTimestampE)
+
+-- | Make a filtering predicate checking for values match.
+filterMatches_
+    :: _
+    => Maybe a -> QGenExpr syntax ctx s a -> QGenExpr syntax ctx s Bool
+filterMatches_ = \case
+    Nothing -> \_ -> val_ True
+    Just x  -> (==. val_ x)
+
+-- | Make a filtering guard checking for values match.
+guardMatches_
+    :: _
+    => Maybe a
+    -> QGenExpr syntax ctx s a
+    -> Beam.Q select db s ()
+guardMatches_ = \case
+    Nothing -> \_ -> pass
+    Just x  -> guard_ . (==. val_ x)
+
+-- | Make a filtering guard checking for primary keys match.
+guardMatchesPk_
+    :: _
+    => Maybe a
+    -> PrimaryKey row (QGenExpr syntax ctx s)
+    -> Beam.Q select db s ()
+guardMatchesPk_ = \case
+    Nothing -> \_ -> pass
+    Just x  -> guard_ . (==. valPk_ x)
