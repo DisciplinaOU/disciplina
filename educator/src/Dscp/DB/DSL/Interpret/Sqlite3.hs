@@ -1,12 +1,13 @@
-{-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE PartialTypeSignatures #-}
+{-# LANGUAGE QuasiQuotes           #-}
+{-# OPTIONS_GHC -Wno-partial-type-signatures #-}
 
 module Dscp.DB.DSL.Interpret.Sqlite3 () where
 
-import qualified Data.Set as Set (Set, empty, member, singleton)
+import qualified Data.Set as Set (Set, empty, singleton)
+import Database.Beam.Query (all_, related_, select)
 
-import Text.InterpolatedString.Perl6 (qc, qq)
-
-import Dscp.Core.Foundation (PrivateTx (..))
+import qualified Dscp.Core.Foundation as Core
 import Dscp.DB.DSL.Class
 import Dscp.DB.SQLite
 
@@ -29,58 +30,36 @@ instance
 
 getPrivateTxsByFilter
     :: MonadIO m
-    => TxsFilterExpr -> DBT t w m [PrivateTx]
+    => TxsFilterExpr -> DBT t w m [Core.PrivateTx]
 getPrivateTxsByFilter filterExpr = do
-    let
-      tables = requiredTables filterExpr
+    runSelectMap privateTxFromRow . select $ do
+        privateTx <- all_ (esTransactions educatorSchema)
+        submission <- related_ (esSubmissions educatorSchema) (trSubmissionHash privateTx)
+        -- some of rows below may be extra
+        assignment <- related_ (esAssignments educatorSchema) (srAssignmentHash submission)
+        course <- related_ (esCourses educatorSchema) (arCourse assignment)
+        subject <- all_ (esSubjects educatorSchema)
+        guard_ (srCourse subject `references_` course)
 
-      -- The [qc||] cannot occur inside its {}-interpolator :(
-      -- Expression [qc| {[qc||]} |] gives an error.
-      additionalJoins :: Text
-      additionalJoins =
-        if Subject `Set.member` tables
-        then [qc|
+        guard_ $ buildWhereStatement
+            (srId subject, trGrade privateTx)
+            filterExpr
+        return (privateTx, submission)
 
-            left join Courses     on  Assignment.course_id       = Courses.id
-            left join Subjects    on    Subjects.course_id       = Courses.id
-
-             |]
-        else [qc||]
-
-    query
-        [qc|
-            select    Submissions.student_addr,
-                      Submissions.contents_hash,
-
-                      Assignments.hash,
-
-                      Submissions.signature,
-
-                      Transactions.grade,
-                      Transactions.time
-
-            from      Transactions
-
-            left join Submissions on             submission_hash = Submissions.hash
-            left join Assignments on Submissions.assignment_hash = Assignments.hash
-            {
-                additionalJoins
-            }
-            where {buildWhereStatement filterExpr}
-            ;
-        |]
-        ()
-
-buildWhereStatement :: TxsFilterExpr -> Text
-buildWhereStatement = go
+buildWhereStatement
+    :: _
+    => (QGenExpr syntax ctx s Core.Subject, QGenExpr syntax ctx s Core.Grade)
+    -> TxsFilterExpr
+    -> QGenExpr syntax ctx s Bool
+buildWhereStatement (subjExpr, gradeExpr) = go
   where
     go = \case
-        TxHasSubjectId sid   -> [qq| Subjects.id = $sid   |]
-        TxGrade :==    grade -> [qq| grade       = $grade |]
-        TxGrade :>=    grade -> [qq| grade      >= $grade |]
+        TxHasSubjectId sid   -> subjExpr ==. val_ sid
+        TxGrade :==    grade -> gradeExpr ==. val_ grade
+        TxGrade :>=    grade -> gradeExpr >=. val_ grade
 
-        left :&  right       -> [qq| ({go left}) and ({go right}) |]
-        left :|| right       -> [qq| ({go left}) or  ({go right}) |]
+        left :&  right       -> go left &&. go right
+        left :|| right       -> go left ||. go right
 
         TxHasDescendantOfSubjectId _sid ->
             error "buildWhereStatement: TxHasDescendantOfSubjectId: not supported yet"
@@ -89,10 +68,10 @@ data RequiredTables
     = Subject
     deriving (Eq, Ord)
 
-requiredTables :: TxsFilterExpr -> Set.Set RequiredTables
-requiredTables = \case
+_requiredTables :: TxsFilterExpr -> Set.Set RequiredTables
+_requiredTables = \case
     TxHasSubjectId             _ -> Set.singleton Subject
     TxHasDescendantOfSubjectId _ -> Set.singleton Subject
-    (:||) a b                    -> requiredTables a <> requiredTables b
-    (:&)  a b                    -> requiredTables a <> requiredTables b
+    (:||) a b                    -> _requiredTables a <> _requiredTables b
+    (:&)  a b                    -> _requiredTables a <> _requiredTables b
     _other                       -> Set.empty

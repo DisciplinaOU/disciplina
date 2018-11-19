@@ -24,7 +24,8 @@ import qualified Database.Beam.Backend.SQL as Beam
 import Database.Beam.Query as BeamReexport (QGenExpr, aggregate_, all_, asc_, countAll_, default_,
                                             delete, desc_, exists_, filter_, guard_, insert,
                                             insertValues, limit_, orderBy_, references_, related_,
-                                            select, update, val_, (/=.), (<-.), (==.), (>.), (>=.))
+                                            select, update, val_, (&&.), (/=.), (<-.), (==.), (>.),
+                                            (>=.), (||.))
 import qualified Database.Beam.Query as Beam
 import qualified Database.Beam.Query.Internal as Beam
 import Database.Beam.Schema (PrimaryKey, TableEntity)

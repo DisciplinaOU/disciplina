@@ -133,6 +133,8 @@ instance FromBackendRow Sqlite ATGDelta where
 
 instance HasSqlEqualityCheck SqliteExpressionSyntax Address
 instance HasSqlEqualityCheck SqliteExpressionSyntax Course
+instance HasSqlEqualityCheck SqliteExpressionSyntax Subject
+instance HasSqlEqualityCheck SqliteExpressionSyntax Grade
 instance HasSqlEqualityCheck SqliteExpressionSyntax TxBlockIdx
 instance HasSqlEqualityCheck SqliteExpressionSyntax BlockIdx
 instance HasSqlEqualityCheck SqliteExpressionSyntax (Hash a)
