@@ -1,37 +1,59 @@
 
 module Dscp.Snowdrop.Contracts.Stages.Creation where
 
-import Dscp.Snowdrop.Contracts.Account
+import Dscp.Crypto as Crypto
+import Dscp.Snowdrop.Contracts.Contract
+import Dscp.Snowdrop.Contracts.Entities
 import Dscp.Snowdrop.Contracts.Util
 
-data ContractCreationRequest = ContractCreationRequest
+data ContractCreationTxId = ContractCreationTxId
+    deriving (Eq, Ord, Show, Generic)
+
+data ContractCreation = ContractCreation
     { _acContractID       :: ContractID
-    , _acContractBody     :: ContractAccount
+    , _acContractBody     :: Contract
     , _acMoneyTransmitted :: Coin
     }
+    deriving (Eq, Show, Generic)
 
-makeLenses ''ContractCreationRequest
+instance Serialise ContractCreationTxId
+instance Serialise ContractCreation
 
-checkCreation :: () => PreValidate ctx
+makeLenses ''ContractCreation
+
+checkCreation
+    ::  ( HasPrism Proofs (PersonalisedProof ContractCreationTxId ContractCreation)
+        , HasPrism Proofs  ContractCreationTxId
+        , HasGetter Crypto.PublicKey Address
+        )
+    => PreValidator Exceptions Ids Proofs Values ctx
 checkCreation =
     PreValidator $ \StateTx { txProof } -> do
-        Authenticated buyer _ ContractCreationRequest
+        Authenticated buyer _ ContractCreation
             { _acContractID       = cid
             , _acContractBody     = body
             , _acMoneyTransmitted = money
-            } fees
-            <- authenticate @_ txProof
+            } _fees
+            <- authenticate @ContractCreationTxId txProof
 
         seller <- getPublicationAuthor (body^.caPublication)
 
-        ()     <- assertAbsence cid AddressIsAlreadyTaken
+        ()     <- assertAbsence cid (AddressIsAlreadyTaken cid)
 
-        ()     <- check (seller                      /= buyer)   SelfContractsUnallowed
-        ()     <- check (body^.caSeller              == seller)  WrongSeller
-        ()     <- check (body^.caBuyer               == buyer)   WrongBuyer
-        ()     <- check (body^.caCost + body^.caFees <= money)   ThisCostsMore
-        ()     <- check (body^.caStage               == Created) WrongIntialStage
-        ()     <- check (body^.caInheritor           == buyer)   WrongInheritor
+        ()     <- check (seller                      /= buyer)   (SelfContractsUnallowed cid buyer)
+        ()     <- check (body^.caSeller              == seller)  (WrongSeller cid seller)
+        ()     <- check (body^.caBuyer               == buyer)   (WrongBuyer  cid buyer)
+        ()     <- check (body^.caStage               == Created) (WrongInitialStage cid)
+        ()     <- check (body^.caInheritor           == buyer)   (WrongInheritor cid (body^.caInheritor))
+
+        requiredSum <- case (body^.caCost) `addCoins` (body^.caFees) of
+            Left reason ->
+                throwLocalError (CannotSumCostAndFees cid reason)
+
+            Right reqSum ->
+                return reqSum
+
+        ()     <- check (requiredSum <= money) (ThisCostsMore cid requiredSum money)
 
         ()     <- assertCorrectCostAndFees body
         ()     <- assertSlotIsInFuture (body^.caEndSlot)

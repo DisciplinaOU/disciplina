@@ -32,7 +32,8 @@ requirePart whole message = maybe (throwLocalError message) pure $ proj whole
 
 -- | Require that id exists in a database or throw error.
 assertExists ::
-       ( HasExceptions e '[ e1, StatePException]
+       forall id id' value a ctx e e1
+    .  ( HasExceptions e '[ e1, StatePException]
        , Ord id
        , Ord id'
        , HasKeyValue id value id' a
@@ -50,10 +51,11 @@ nothingToLocalError err mThing = maybe (throwLocalError err) pure mThing
 
 -- | Require that id does not exists in a database or throw error.
 assertAbsence ::
-       ( HasExceptions e '[e1, StatePException]
+       forall id id' value value' a ctx e e1
+    .  ( HasExceptions e '[ e1, StatePException]
        , Ord id
        , Ord id'
-       , HasKeyValue id value id' a
+       , HasKeyValue id value id' value'
        , Monoid a
        )
     => id'

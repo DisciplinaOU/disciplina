@@ -1,20 +1,12 @@
 module Dscp.Snowdrop.Contracts.Stages.DupedChunk where
 
-import Control.Lens (makeLenses)
-import qualified Data.Map as Map
-import Fmt ((+||), (||+))
+import Dscp.Crypto as Crypto
+import Dscp.Snowdrop.Contracts.Contract
+import Dscp.Snowdrop.Contracts.Entities
+import Dscp.Snowdrop.Contracts.Util
 
-import Snowdrop.Core (PreValidator (..), StateTx (..), StateTxType (..), Validator, ValueOp (..),
-                      changeSet, mkValidator, queryOne, SValue (..), ERoComp)
-import Snowdrop.Util
-
-import Dscp.Core
-import Dscp.Crypto
-import qualified Dscp.Crypto as DC (PublicKey)
-import Dscp.Snowdrop.AccountValidation
-import Dscp.Snowdrop.Configuration
-import Dscp.Snowdrop.Storage.Types
-import Dscp.Snowdrop.Types
+data ContractDupedChunkTxId = ContractDupedChunkTxId
+    deriving (Eq, Ord, Show, Generic)
 
 data ContractDupedChunk = ContractDupedChunk
     { _cdcContractID :: ContractID
@@ -22,23 +14,30 @@ data ContractDupedChunk = ContractDupedChunk
     , _cdcIndexI     :: Int
     , _cdcIndexJ     :: Int
     }
+    deriving (Eq, Show, Generic)
 
-makeLenses ''ContractBrokenChunk
+instance Serialise ContractDupedChunkTxId
+instance Serialise ContractDupedChunk
+
 makeLenses ''ContractDupedChunk
 
+checkBuyerFoundDupedChunk
+    ::  ( HasPrism Proofs (PersonalisedProof ContractDupedChunkTxId ContractDupedChunk)
+        , HasPrism Proofs ContractDupedChunkTxId
+        , HasGetter Crypto.PublicKey Address
+        )
+    =>  PreValidator Exceptions Ids Proofs Values ctx
 checkBuyerFoundDupedChunk =
     PreValidator $ \StateTx { txProof } -> do
         Authenticated buyer _ ContractDupedChunk
             { _cdcContractID = cid
-            , _cdcMerklePath = ipath
-            , _cdcIndexI     = i
-            , _cdcIndexJ     = j
-            } txFees
-            <- authenticate @_ txProof
+            , _cdcMerklePath = _ipath
+            , _cdcIndexI     = _i
+            , _cdcIndexJ     = _j
+            } _txFees
+            <- authenticate @ContractDupedChunkTxId txProof
 
-        contract <- getContract cid
-
-        () <- check (buyer == contract^.caBuyer) WrongBuyer
+        _ <- accessContractAsBuyer buyer cid
 
         -- All the work here goes inside the expander, too.
 

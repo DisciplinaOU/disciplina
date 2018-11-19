@@ -16,17 +16,17 @@ module Dscp.Snowdrop.AccountValidation
        , check
        ) where
 
-import Control.Monad.Error.Class (MonadError)
-import Data.Default (def)
 import qualified Data.List as List
 import qualified Data.Map as Map
-import Snowdrop.Core (ERoComp, HasKeyValue, PreValidator (..), StatePException, StateTx (..),
+import Snowdrop.Core (ERoComp, PreValidator (..), StateTx (..),
                       StateTxType (..), TxValidationException (..), Validator, ValueOp (..),
-                      changeSet, idSumPrefix, mkValidator, queryOne, validateIff)
+                      changeSet, idSumPrefix, mkValidator, queryOne)
 import Snowdrop.Util
 
 import Dscp.Core
 import qualified Dscp.Crypto as DC (PublicKey)
+import Dscp.Snowdrop.Authentication
+import Dscp.Snowdrop.Assertions
 import Dscp.Snowdrop.Configuration (CanVerifyPayload, Exceptions, Ids, PersonalisedProof (..),
                                     Proofs, TxIds, Values, accountPrefix)
 import Dscp.Snowdrop.Types

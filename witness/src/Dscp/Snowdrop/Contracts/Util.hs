@@ -11,9 +11,12 @@ module Dscp.Snowdrop.Contracts.Util
        , module Storage.Types
        , module Auth
        , module Asserts
+       , module Account
+       , module Serialise
        ) where
 
 import Control.Lens as Lenses (makeLenses)
+import Codec.Serialise as Serialise (Serialise)
 
 import Snowdrop.Core as SD.Core (
     PreValidator (..), StateTx (..), StateTxType (..), Validator, ValueOp (..),
@@ -21,6 +24,7 @@ import Snowdrop.Core as SD.Core (
 import Snowdrop.Util as SD.Util
 
 import Dscp.Core                      as Core hiding (PublicationTxWitness)
+import Dscp.Snowdrop.Account          as Account
 import Dscp.Snowdrop.Assertions       as Asserts
 import Dscp.Snowdrop.Configuration    as Config
 import Dscp.Snowdrop.Contracts.Errors as Errors

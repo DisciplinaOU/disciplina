@@ -1,30 +1,47 @@
 
 module Dscp.Snowdrop.Contracts.Stages.Checksum where
 
-import Dscp.Snowdrop.Contracts.Account
+import Dscp.Crypto as Crypto
+import Dscp.Snowdrop.Contracts.Contract
+import Dscp.Snowdrop.Contracts.PublicationSignature
+import Dscp.Snowdrop.Contracts.Entities
+import Dscp.Snowdrop.Contracts.Util
+
+data ContractChecksumTxId = ContractChecksumTxId
+    deriving (Eq, Ord, Show, Generic)
 
 data ContractChecksum = ContractChecksum
     { _ccContractID :: ContractID
-    , _ccChecksum   :: MerkleSignature ByteString
+    , _ccChecksum   :: PublicationSignature
     , _ccStage      :: Stage
     }
+    deriving (Eq, Show, Generic)
+
+instance Serialise ContractChecksumTxId
+instance Serialise ContractChecksum
 
 makeLenses ''ContractChecksum
 
+checkBuyerCalculatedChecksum
+    ::  ( HasPrism Proofs (PersonalisedProof ContractChecksumTxId ContractChecksum)
+        , HasPrism Proofs ContractChecksumTxId
+        , HasGetter Crypto.PublicKey Address
+        )
+    =>  PreValidator Exceptions Ids Proofs Values ctx
 checkBuyerCalculatedChecksum =
     PreValidator $ \StateTx { txProof } -> do
         Authenticated buyer _ ContractChecksum
             { _ccContractID = cid
             , _ccChecksum   = signature
             , _ccStage      = stage
-            } txFees
-            <- authenticate @_ txProof
+            } _txFees
+            <- authenticate @ContractChecksumTxId txProof
 
-        contract     <- getContract cid
+        contract     <- accessContractAsBuyer buyer cid
         theSignature <- getSignatureOfPublication (contract^.caPublication)
 
-        () <- check (signature /= theSignature && stage == Cancelled)   CancellingOnCorrectSig
-        () <- check (signature == theSignature && stage == Transmitted) NotCancellingOnInCorrectSig
+        () <- check (signature /= theSignature && stage == Transmitted)
+            (NotCancellingOnIncorrectSig cid)
 
         return ()
 

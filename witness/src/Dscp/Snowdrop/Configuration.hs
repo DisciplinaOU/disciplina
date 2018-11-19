@@ -66,6 +66,8 @@ import Dscp.Core (Fees, HeaderHash)
 import qualified Dscp.Core.Foundation as T
 import Dscp.Crypto (HasAbstractSignature, Hash, PublicKey, SigScheme, Signature, hashF, verify)
 import Dscp.Snowdrop.Storage.Types
+import Dscp.Snowdrop.Contracts.Errors (ContractException)
+import Dscp.Snowdrop.Contracts.Contract (ContractID, Contract)
 import Dscp.Snowdrop.Types (Account, AccountException, AccountId (..), AccountTxTypeId (..),
                             BlockException (..), BlockMetaTxTypeId (..), PublicationException,
                             PublicationTxTypeId (..))
@@ -157,6 +159,9 @@ txBlockPrefix = Prefix 12
 privateBlockTxPrefix :: Prefix
 privateBlockTxPrefix = Prefix 13
 
+contractIDPrefix :: Prefix
+contractIDPrefix = Prefix 14
+
 -- | Prefixes stored in block storage
 blockPrefixes :: Set Prefix
 blockPrefixes = S.fromList
@@ -172,6 +177,7 @@ blockPrefixes = S.fromList
     , txHeadPrefix
     , nextBlockPrefix
     , blockIdxPrefix
+    , contractIDPrefix
     ]
 
 -- | Sum-type for all ids used within the application.
@@ -189,6 +195,7 @@ data Ids
     | PublicationHeadIds  PublicationHead
     | NextBlockOfIds      NextBlockOf
     | BlockIdxIds         T.Difficulty
+    | ContractIDs         ContractID
     deriving (Eq, Ord, Show, Generic)
 
 instance Buildable Ids where
@@ -206,6 +213,7 @@ instance Buildable Ids where
         PublicationHeadIds  ph           -> build ph
         NextBlockOfIds      hh           -> build hh
         BlockIdxIds         d            -> build d
+        ContractIDs         cid          -> build cid
 
 instance IdSumPrefixed Ids where
     idSumPrefix (TipKeyIds           _) = tipPrefix
@@ -221,6 +229,7 @@ instance IdSumPrefixed Ids where
     idSumPrefix (PublicationHeadIds  _) = publicationHeadPrefix
     idSumPrefix (NextBlockOfIds      _) = nextBlockPrefix
     idSumPrefix (BlockIdxIds         _) = blockIdxPrefix
+    idSumPrefix (ContractIDs         _) = contractIDPrefix
 
 instance HasReview Ids (BlockRef (CurrentBlockRef HeaderHash)) where
     inj (BlockRef (CurrentBlockRef h)) = BlockRefIds (BlockRef h)
@@ -243,6 +252,7 @@ data Values
     | PublicationHeadVal  PublicationNext
     | NextBlockOfVal      NextBlock
     | BlockIdxVal         HeaderHash
+    | ContractVal         Contract
     deriving (Eq, Show, Generic)
 
 type instance SValue  TipKey               = TipValue HeaderHash
@@ -258,12 +268,13 @@ type instance SValue  PublicationsOf       = LastPublication
 type instance SValue  PublicationHead      = PublicationNext
 type instance SValue  NextBlockOf          = NextBlock
 type instance SValue  T.Difficulty         = HeaderHash
+type instance SValue  ContractID           = Contract
 
 ----------------------------------------------------------------------------
 -- Proofs
 ----------------------------------------------------------------------------
 
-deriving instance (Eq (SD.Signature sigScheme a), Eq (SD.PublicKey sigScheme), Eq a) => Eq (WithSignature sigScheme a)
+deriving instance (Eq   (SD.Signature sigScheme a), Eq   (SD.PublicKey sigScheme), Eq   a) => Eq   (WithSignature sigScheme a)
 deriving instance (Show (SD.Signature sigScheme a), Show (SD.PublicKey sigScheme), Show a) => Show (WithSignature sigScheme a)
 
 type CanVerifyPayload txid payload =
@@ -321,11 +332,12 @@ instance Buildable InternalExceptions where
         TxValidationError err -> B.build err
 
 data Exceptions
-    = BlockError       BlockException
-    | AccountError     AccountException
-    | PublicationError PublicationException
-    | LogicError       LogicException
-    | SdInternalError  InternalExceptions
+    = BlockError        BlockException
+    | AccountError      AccountException
+    | PublicationError  PublicationException
+    | LogicError        LogicException
+    | SdInternalError   InternalExceptions
+    | ContractException ContractException
 
 makePrisms ''Exceptions
 
@@ -341,6 +353,7 @@ instance Buildable Exceptions where
         PublicationError err -> B.build err
         LogicError err -> B.build err
         SdInternalError err -> B.build err
+        ContractException err -> B.build err
 
 ----------------------------------------------------------------------------
 -- TxIds
