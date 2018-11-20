@@ -207,7 +207,7 @@ runCliArgs p = getParseResult . execParserPure defaultPrefs (info p mempty)
 
 -- | When warning or error are logged, this exception is thrown.
 data TestLoggedError = TestLoggedError
-    { tleLvl :: Log.Level
+    { tleLvl :: Log.Severity
     , tleMsg :: Text
     }
 
@@ -226,7 +226,7 @@ instance Buildable TestLoggedError where
 testLogging :: Log.Logging IO
 testLogging =
     Log.Logging
-    { Log._log = \lvl _ msg ->
+    { Log._log = \(Log.Message lvl _ msg) ->
         when (lvl >= Log.Warning) $
             throwM $ TestLoggedError lvl msg
     , Log._logName = return $ error "Logger name requested in test"

@@ -15,6 +15,7 @@ library:
     - bytestring
     - bytestring
     - base58-bytestring
+    - co-log-sys
     - containers
     - componentm
     - crypto-api
@@ -29,7 +30,6 @@ library:
     - hashable
     - hspec
     - jose
-    - log-warper
     - loot-base
     - loot-config
     - loot-log
