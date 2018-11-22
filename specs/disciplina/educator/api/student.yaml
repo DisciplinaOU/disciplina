@@ -212,6 +212,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrResponse'
+        409:
+          description: Exactly the same submission already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrResponse'
       requestBody:
         content:
           application/json:

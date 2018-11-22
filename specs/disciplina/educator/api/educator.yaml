@@ -122,6 +122,12 @@ paths:
                 $ref: '#/components/schemas/ErrResponse'
         401:
           $ref: '#/components/responses/Unauthorized'
+        409:
+          description: Student with given address already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrResponse'
       requestBody:
         content:
           application/json:
@@ -436,6 +442,12 @@ paths:
                 $ref: '#/components/schemas/ErrResponse'
         401:
           $ref: '#/components/responses/Unauthorized'
+        409:
+          description: Exactly the same assignment already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrResponse'
       requestBody:
         content:
           application/json:
@@ -965,11 +977,12 @@ components:
             - CourseNotFound
             - AssignmentNotFound
             - StudentAlreadyExists
-            - CourseAlreadyExists
             - AssignmentAlreadyExists
             - StudentDoesNotAttendCourse
-            - StudentIsActive
+            - StudentAlreadyAttendsCourse
+            - StudentAlreadyHasAssignments
             - StudentHasNoAssignment
+            - StudentIsActive
           description: |-
             Error type:
               * `InvalidFormat` - Failed to deserialise one of parameters.
@@ -979,7 +992,6 @@ components:
               * `AssignmentNotFound` - Specified assignment does not exist.
 
               * `StudentAlreadyExists` - Student being added already exists.
-              * `CourseAlreadyExists` - Course with such id already exists.
               * `AssignmentAlreadyExists` - Exactly the same assignment already exists.
               * `StudentDoesNotAttendCourse` - Student does not attend the course.
 
