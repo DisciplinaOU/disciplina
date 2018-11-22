@@ -753,6 +753,10 @@ components:
       type: string
       format: date-time
       description: Time in ISO format
+    Count:
+      type: integer
+      format: int32
+      description: Count of items returned
 
     # Entities
     Student:
