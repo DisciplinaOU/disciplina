@@ -4,7 +4,7 @@ module Dscp.Core.FairCV
          TaggedProof
        , Unchecked
        , Valid
-       , mkTagged
+       , mkTaggedProof
        , unTaggedProof
 
        , validateTaggedProof
@@ -13,8 +13,12 @@ module Dscp.Core.FairCV
          -- * Fair CV
        , FairCV (..)
        , validateFairCV
+       , singletonFCV
        , mergeFairCVs
        , addProof
+
+         -- * Fair CV check result
+       , FairCVCheckResult (..)
        ) where
 
 import qualified Data.Map.Merge.Strict as M
@@ -43,8 +47,8 @@ newtype TaggedProof v a = TaggedProof
 
 -- | Safe constructor for 'TaggedProof', which can yield only 'Unckecked'
 -- proof.
-mkTagged :: MerkleProof a -> TaggedProof Unchecked a
-mkTagged = TaggedProof
+mkTaggedProof :: MerkleProof a -> TaggedProof Unchecked a
+mkTaggedProof = TaggedProof
 
 -- | If 'Unchecked' proof is valid, make it 'Valid', otherwise return an
 -- error.
@@ -92,7 +96,7 @@ mergeProofs (TaggedProof a) (TaggedProof b)
 -- 'FairCV' and 'FairCV' not validated yet.
 newtype FairCV v = FairCV
     { unFairCV :: Map Address (Map PrivateHeaderHash (TaggedProof v PrivateTx))
-    } deriving (Show, Eq)
+    } deriving (Show, Eq, Generic)
 
 -- | If 'Unchecked' FairCV is valid, make it 'Valid', otherwise return an
 -- error.
@@ -128,3 +132,11 @@ addProof
     -> Either Text (FairCV Valid)
 addProof educatorAddr blkHash proof =
     mergeFairCVs $ singletonFCV educatorAddr blkHash proof
+
+---------------------------------------------------------------------------
+-- Fair CV check result
+---------------------------------------------------------------------------
+
+newtype FairCVCheckResult = FairCVCheckResult
+    { unFairCVCheckResult :: Map Address (Map PrivateHeaderHash Bool)
+    } deriving (Show, Eq, Generic)

@@ -34,6 +34,9 @@ module Dscp.Crypto.MerkleTree
        , fillEmptyMerkleTree
 
        , EmptyMerkleProof
+       , IndexedList
+       , unIndexedList
+       , mkIndexedList
        , separateProofAndData
        , mergeProofAndData
        ) where
@@ -322,8 +325,14 @@ instance Serialise Void where
 
 -- | List of indexed elements. Invariant: indices always go in ascending
 -- order.
-newtype IndexedList a = IndexedList [(LeafIndex, a)]
-    deriving newtype (Eq, Show, Generic)
+newtype IndexedList a = IndexedList
+    { unIndexedList :: [(LeafIndex, a)]
+    } deriving newtype (Eq, Show, Generic)
+
+-- | Safe constructor for an indexed list. Makes sure the invariant of ascending
+-- order is held.
+mkIndexedList :: [(LeafIndex, a)] -> IndexedList a
+mkIndexedList = IndexedList . sortBy (compare `on` fst)
 
 -- | Splits Merkle proof into signatures and data.
 separateProofAndData :: MerkleProof a -> (EmptyMerkleProof a, IndexedList a)

@@ -6,26 +6,6 @@ import qualified Data.Set as Set
 import Dscp.Crypto
 import Dscp.Util.Test
 
-longerThan :: Container f => Int -> f -> Bool
-longerThan n x = length x > n
-
-instance (HasHash a, Arbitrary a) => Arbitrary (MerkleTree a) where
-    arbitrary = fromList <$> arbitrary
-
-instance (HasHash a, Arbitrary a) => Arbitrary (MerkleNode a) where
-    arbitrary = arbitrary `suchThat` longerThan 0 >>= \case
-        MerkleTree node -> pure node
-        _ -> error "impossible"
-
-instance (HasHash a, Arbitrary a) => Arbitrary (MerkleProof a) where
-    arbitrary = do
-        tree <- MerkleTree <$> arbitrary
-        let n = length tree
-        idxs <- sublistOf [(0 :: Word32) .. fromIntegral n - 1]
-                `suchThat` longerThan 0
-        maybe (error "impossible") pure $
-            mkMerkleProof tree $ Set.fromList idxs
-
 spec_merkleTree :: Spec
 spec_merkleTree = describe "Merkle Tree Tests" $ do
     it "should preserve leaf order when constructed from Foldable" $ property $

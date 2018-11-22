@@ -7,9 +7,10 @@ module Dscp.Crypto.Aeson () where
 import Prelude hiding (toStrict)
 
 import Codec.Serialise (Serialise)
-import Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.:), (.=))
-import Data.ByteArray (ByteArrayAccess)
-import Data.ByteArray (convert)
+import Data.Aeson (FromJSON (..), FromJSONKey (..), FromJSONKeyFunction (..), ToJSON (..),
+                   ToJSONKey (..), object, withObject, (.:), (.=))
+import Data.Aeson.Types (toJSONKeyText)
+import Data.ByteArray (ByteArrayAccess, convert)
 import Data.Reflection (Reifies (..))
 
 import Dscp.Crypto.ByteArray (FromByteArray)
@@ -17,6 +18,7 @@ import Dscp.Crypto.Encrypt (Encrypted, PassPhrase)
 import Dscp.Crypto.Hash (AbstractHash)
 import Dscp.Crypto.MerkleTree
 import Dscp.Crypto.Signing (AbstractPK, AbstractSig)
+import Dscp.Util (fromHex, leftToFail, toHex)
 import Dscp.Util.Aeson (AsByteString (..), CustomEncoding (..), HexEncoded, IsEncoding,
                         parseJSONSerialise, toJSONSerialise)
 
@@ -31,6 +33,13 @@ instance ByteArrayAccess (AbstractHash hf a) => ToJSON (AbstractHash hf a) where
     toJSON = toJSON . AsByteString @HexEncoded
 instance FromByteArray (AbstractHash hf a) => FromJSON (AbstractHash hf a) where
     parseJSON = fmap (getAsByteString @HexEncoded) . parseJSON
+
+instance ByteArrayAccess (AbstractHash hf a) =>
+         ToJSONKey (AbstractHash hf a) where
+    toJSONKey = toJSONKeyText toHex
+instance FromByteArray (AbstractHash hf a) =>
+         FromJSONKey (AbstractHash hf a) where
+    fromJSONKey = FromJSONKeyTextParser $ leftToFail . fromHex
 
 instance ByteArrayAccess (AbstractPK ss) => ToJSON (AbstractPK ss) where
     toJSON = toJSON . AsByteString @HexEncoded
