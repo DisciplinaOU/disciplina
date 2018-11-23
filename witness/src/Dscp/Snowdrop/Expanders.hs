@@ -248,7 +248,7 @@ seqExpandersBalanceTx feesReceiverAddr (Fees minimalFees) =
         -- before we can add next changeset entry, we have to check our transaction is new
         txAlreadyExists <- queryOneExists txId
         when txAlreadyExists $
-            throwLocalError $ TransactionAlreadyExists (pretty txId)
+            throwLocalError $ TransactionAlreadyExists txId
 
         let miscChanges = txId ==> New (TxItself tw)
 
