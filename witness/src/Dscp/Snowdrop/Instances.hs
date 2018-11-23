@@ -2,7 +2,6 @@ module Dscp.Snowdrop.Instances () where
 
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
-import Data.Data (toConstr)
 import Servant (err400, err403, err404, err500)
 
 import Dscp.Core.Aeson ()
@@ -21,8 +20,28 @@ deriveJSON defaultOptions ''LogicException
 -- Instances for exceptions
 ----------------------------------------------------------------------------
 
+{- NOTE: everything in this module directly affects the witness API, keep 'witness.yaml'
+document updated.
+-}
+
 instance HasErrorTag AccountException where
-    errorTag = show . toConstr
+    errorTag = \case
+        MTxNoOutputs{}                -> "NoOutputs"
+        MTxDuplicateOutputs{}         -> "DuplicatedOutputs"
+        TransactionAlreadyExists{}    -> "TransactionAlreadyExists"
+        InsufficientFees{}            -> "InsufficientFees"
+        SignatureIsMissing{}          -> "SignatureIsMissing"
+        SignatureIsCorrupted{}        -> "SignatureIsCorrupted"
+        TransactionIsCorrupted{}      -> "TransactionIsCorrupted"
+        NotASingletonSelfUpdate{}     -> "NotASingletonSelfUpdate"
+        NonceMustBeIncremented{}      -> "NonceMustBeIncremented"
+        PaymentMustBePositive{}       -> "PaymentMustBePositive"
+        ReceiverOnlyGetsMoney{}       -> "ReceiverOnlyGetsMoney"
+        ReceiverMustIncreaseBalance{} -> "ReceiverMustIncreaseBalance"
+        SumMustBeNonNegative{}        -> "SumMustBeNonNegative"
+        CannotAffordFees{}            -> "CannotAffordFees"
+        BalanceCannotBecomeNegative{} -> "InsufficientBalance"
+        AccountInternalError{}        -> "InternalError"
 
 instance ToServantErr AccountException where
     toServantErrNoBody = \case

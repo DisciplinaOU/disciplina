@@ -33,7 +33,6 @@ module Dscp.Snowdrop.Types
     ) where
 
 import Control.Lens (makePrisms)
-import Data.Data (Data)
 import Data.Default (Default (..))
 import Data.Text.Buildable (Buildable (..))
 import Fmt (build, (+|), (|+))
@@ -85,14 +84,11 @@ instance Buildable PublicationException where
 data AccountTxTypeId = AccountTxTypeId deriving (Eq, Ord, Show, Generic)
 
 -- | Type for possible failures during transaction validation.
---
--- NOTE: this exception is thrown by witness API, keep 'witness.yaml' doc
--- updated.
 data AccountException
     = MTxNoOutputs
     | MTxDuplicateOutputs
     | TransactionAlreadyExists
-      { taeTxId :: Text }
+      { taeTxId :: TxId }
     | InsufficientFees
       { aeExpectedFees :: Integer, aeActualFees :: Integer }
     | SignatureIsMissing
@@ -114,7 +110,7 @@ data AccountException
     | BalanceCannotBecomeNegative
       { aeSpent :: Integer, aeBalance :: Integer }
     | AccountInternalError String
-    deriving (Eq, Ord, Data)
+    deriving (Eq, Ord)
 
 makePrisms ''AccountException
 
