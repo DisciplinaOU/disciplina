@@ -8,6 +8,7 @@ module Dscp.Witness.Web.Logic
        , getTransactionInfo
        , getPublications
        , getHashType
+       , checkFairCV
        ) where
 
 import Codec.Serialise (serialise)
@@ -17,9 +18,11 @@ import Data.Conduit ((.|))
 import qualified Data.Conduit as C
 import qualified Data.Conduit.Combinators as C
 import Data.Default (def)
+import qualified Data.Map.Strict as M
 import Fmt ((+|), (|+))
 
 import Dscp.Core
+import Dscp.Crypto
 import Dscp.Snowdrop
 import Dscp.Util
 import Dscp.Util.Concurrent.NotifyWait
@@ -201,3 +204,19 @@ getHashType someHash = fmap (fromMaybe HashIsUnknown) . runMaybeT . asum $
     distinguishTx = \case
         GMoneyTx _ -> HashIsMoneyTx
         GPublicationTx _ -> HashIsPublicationTx
+
+-- | Check @'FairCV'@ against records in the public chain.
+checkFairCV :: forall ctx m. WitnessWorkMode ctx m => FairCV Unchecked -> m FairCVCheckResult
+checkFairCV =
+    either pure checkAgainstDB . validateFairCV
+  where
+    checkAgainstDB (FairCV cv) = FairCVCheckResult <$>
+        M.traverseWithKey (M.traverseWithKey . checkProofAgainstDB) cv
+    checkProofAgainstDB addr h proof =
+        maybe False (checkProofPure addr proof) <$>
+        runSdMempoolLocked (getPublicationByHeaderHash h)
+    checkProofPure addr proof ptw =
+        let root = ptw ^. ptwTxL.ptHeaderL.pbhBodyProof
+        in verifyPubTxWitnessed addr ptw &&
+           root == getMerkleProofRoot (unTaggedProof proof)
+

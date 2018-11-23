@@ -190,6 +190,10 @@ data MerkleProof a
 
 instance Serialise a => Serialise (MerkleProof a)
 
+-- TODO: provide a useful instance
+instance Buildable (MerkleProof a) where
+    build _ = "<merkle proof>"
+
 pnSize :: MerkleProof a -> Word32
 pnSize = mrSize . pnSig
 

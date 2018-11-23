@@ -161,6 +161,9 @@ deriving instance FromJSON GenesisDistribution
 deriving instance Serialise (MerkleProof PrivateTx) => ToJSON (FairCV v)
 deriving instance Serialise (MerkleProof PrivateTx) => FromJSON (FairCV Unchecked)
 
+deriving instance ToJSON FairCVCheckResult
+deriving instance FromJSON FairCVCheckResult
+
 ---------------------------------------------------------------------------
 -- TH derivations for data
 ---------------------------------------------------------------------------

@@ -22,6 +22,7 @@ module Dscp.Witness.Logic.Getters
     , getTxWithBlock
 
     , getPrivateTipHash
+    , getPublicationByHeaderHash
     ) where
 
 import Data.Coerce (coerce)
@@ -195,3 +196,9 @@ getPrivateTipHash
 getPrivateTipHash educator =
     maybe (genesisHeaderHash educator) unLastPublication <$>
     SD.queryOne (PublicationsOf educator)
+
+getPublicationByHeaderHash
+    :: PrivateHeaderHash
+    -> SdM_ chgacc (Maybe PublicationTxWitnessed)
+getPublicationByHeaderHash = runMaybeT . fmap piTw .
+    (MaybeT . SD.queryOne >=> MaybeT . SD.queryOne)

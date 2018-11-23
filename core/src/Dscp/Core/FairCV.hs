@@ -24,6 +24,7 @@ module Dscp.Core.FairCV
 import qualified Data.Map.Merge.Strict as M
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
+import Fmt (build, mapF, (+|), (|+))
 
 import Dscp.Core.Foundation
 import Dscp.Crypto
@@ -43,7 +44,7 @@ data Valid
 -- doing a validity check.
 newtype TaggedProof v a = TaggedProof
     { unTaggedProof :: MerkleProof a
-    } deriving (Show, Eq, Generic)
+    } deriving (Show, Eq, Generic, Buildable)
 
 -- | Safe constructor for 'TaggedProof', which can yield only 'Unckecked'
 -- proof.
@@ -98,11 +99,17 @@ newtype FairCV v = FairCV
     { unFairCV :: Map Address (Map PrivateHeaderHash (TaggedProof v PrivateTx))
     } deriving (Show, Eq, Generic)
 
+instance Buildable (FairCV v) where
+    build (FairCV cv) = "FairCV { "+|mapF (mapF <$> cv)|+" }"
+
 -- | If 'Unchecked' FairCV is valid, make it 'Valid', otherwise return an
 -- error.
-validateFairCV :: FairCV Unchecked -> Either Text (FairCV Valid)
+validateFairCV :: FairCV Unchecked -> Either FairCVCheckResult (FairCV Valid)
 validateFairCV (FairCV cv) =
-    FairCV <$> traverse (traverse validateTaggedProof) cv
+    let checked = fmap validateTaggedProof <$> cv
+    in fmap FairCV $
+       first (const . FairCVCheckResult $ fmap isRight <$> checked) $
+       traverse (traverse id) checked
 
 -- | Make a FairCV from one proof.
 singletonFCV
@@ -140,3 +147,7 @@ addProof educatorAddr blkHash proof =
 newtype FairCVCheckResult = FairCVCheckResult
     { unFairCVCheckResult :: Map Address (Map PrivateHeaderHash Bool)
     } deriving (Show, Eq, Generic)
+
+instance Buildable FairCVCheckResult where
+    build (FairCVCheckResult res) =
+        "Fair CV check result { "+|mapF (mapF <$> res)|+" }"

@@ -32,4 +32,5 @@ witnessServantHandlers =
     , wGetTransaction = getTransactionInfo
     , wGetPublications = getPublications
     , wGetHashType = getHashType
+    , wCheckFairCV = checkFairCV
     }

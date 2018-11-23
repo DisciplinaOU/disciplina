@@ -72,6 +72,11 @@ data WitnessEndpoints route = WitnessEndpoints
     , wGetHashType :: route
         :- "hash" :> Capture "hash" Text
         :> Verb 'GET 200 '[DSON] HashIs
+
+    , wCheckFairCV :: route
+        :- "checkcv"
+        :> ReqBody '[JSON] (FairCV Unchecked)
+        :> Verb 'POST 200 '[DSON] FairCVCheckResult
     } deriving (Generic)
 
 type WitnessAPI =
