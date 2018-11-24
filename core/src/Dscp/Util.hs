@@ -60,6 +60,9 @@ module Dscp.Util
          -- * Catch errors and report to logs
        , dieGracefully
 
+         -- * Type-level stuff
+       , Refuted
+
          -- * Re-exports
        , module Snowdrop.Util
        ) where
@@ -297,3 +300,11 @@ dieGracefully :: (MonadLogging m, MonadCatch m) => Text -> m () -> m ()
 dieGracefully desc action =
     action `catchAny` \e -> do
         logError $ fromString $ "Exception in " <> toString desc <> ": " <> show e
+
+-----------------------------------------------------------
+-- Type-level stuff
+-----------------------------------------------------------
+
+-- | Logical "not". Proves @a@ is inhabitant.
+-- Taken from "singleton" package.
+type Refuted a = a -> Void

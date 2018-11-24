@@ -6,6 +6,7 @@ module Dscp.Witness.Launcher.Context
       WitnessNode
 
       -- * Constraints
+    , WitnessWorkModeG
     , WitnessWorkMode
     , FullWitnessWorkMode
 
@@ -21,12 +22,14 @@ module Dscp.Witness.Launcher.Context
 
 import Control.Lens (makeLenses)
 
-import Loot.Base.HasLens (HasLens')
+import Loot.Base.HasLens (HasCtx, HasLens')
 import Loot.Log.Rio (LoggingIO)
 import Loot.Network.Class (NetworkingCli, NetworkingServ)
 import Loot.Network.ZMQ as Z
 
+import Dscp.Core.Slotting (SlottingActions)
 import Dscp.DB.CanProvideDB (Plugin)
+import Dscp.Launcher.Mode
 import qualified Dscp.Launcher.Mode as Basic
 import Dscp.Network ()
 import Dscp.Resource.Keys (KeyResources)
@@ -49,19 +52,20 @@ import Dscp.Witness.SDLock (SDLock)
 -- most part of logic.
 -- This excludes networking because emulating networking for tests is unpleasant
 -- and actally only listeners/workers require it.
-type WitnessWorkMode ctx m =
+type WitnessWorkModeG (e :: ModeEnv) ctx m =
     ( Basic.BasicWorkMode m
     , HasWitnessConfig
 
-    , MonadReader ctx m
-
-    , HasLens' ctx LoggingIO
-    , HasLens' ctx MempoolVar
-    , HasLens' ctx SDVars
-    , HasLens' ctx (KeyResources WitnessNode)
-    , HasLens' ctx RelayState
-    , HasLens' ctx SDLock
-    , HasLens' ctx Plugin
+    , HasCtx ctx m
+        [ LoggingIO
+        , MempoolVar
+        , SDVars
+        , KeyResources WitnessNode
+        , RelayState
+        , SDLock
+        , Plugin
+        , SlottingActions e
+        ]
     )
 
 type NetworkMode ctx m =
@@ -73,6 +77,9 @@ type NetworkMode ctx m =
     , HasLens' ctx Z.ZTNetServEnv
     )
 
+-- | Witness real work mode.
+type WitnessWorkMode ctx m = WitnessWorkModeG 'RealMode ctx m
+
 -- | Full set of typeclasses which define capabilities of Witness node.
 type FullWitnessWorkMode ctx m =
     ( WitnessWorkMode ctx m
@@ -83,11 +90,12 @@ type FullWitnessWorkMode ctx m =
 -- WorkMode implementation
 ---------------------------------------------------------------------
 
-data WitnessVariables = WitnessVariables
+data WitnessVariables (e :: ModeEnv) = WitnessVariables
     { _wvMempool    :: !MempoolVar
     , _wvSDActions  :: !SDVars
     , _wvRelayState :: !RelayState
     , _wvSDLock     :: !SDLock
+    , _wvSlotting   :: !(SlottingActions e)
     }
 
 makeLenses ''WitnessVariables

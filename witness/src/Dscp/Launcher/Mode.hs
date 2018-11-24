@@ -22,10 +22,17 @@ module Dscp.Launcher.Mode
        (
          -- * Constraints
          BasicWorkMode
+
+       , ModeEnv (..)
+       , RealModeProof
+       , TestModeProof
        ) where
 
+import Data.Type.Equality ((:~:))
 import Loot.Log (WithLogging)
 import UnliftIO (MonadUnliftIO)
+
+import Dscp.Util
 
 ---------------------------------------------------------------------
 -- WorkMode classes
@@ -38,3 +45,9 @@ type BasicWorkMode m =
     , MonadUnliftIO m  -- allows to use lifted-async
     , MonadMask m
     )
+
+-- | Parameter for distinguishing producation and test constraints.
+data ModeEnv = RealMode | TestMode
+
+type RealModeProof e = (e :~: 'RealMode, Refuted (e :~: 'TestMode))
+type TestModeProof e = (e :~: 'TestMode, Refuted (e :~: 'RealMode))
