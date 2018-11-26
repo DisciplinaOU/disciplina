@@ -13,6 +13,7 @@ import Dscp.Witness.Logic.Exceptions
 -- JSON instances
 ----------------------------------------------------------------------------
 
+deriveJSON defaultOptions ''AccountId
 deriveJSON defaultOptions ''AccountException
 deriveJSON defaultOptions ''LogicException
 
@@ -42,6 +43,7 @@ instance HasErrorTag AccountException where
         CannotAffordFees{}            -> "CannotAffordFees"
         BalanceCannotBecomeNegative{} -> "InsufficientBalance"
         AccountInternalError{}        -> "InternalError"
+        AccountDoesNotExist{}         -> "AccountDoesNotExist"
 
 instance ToServantErr AccountException where
     toServantErrNoBody = \case

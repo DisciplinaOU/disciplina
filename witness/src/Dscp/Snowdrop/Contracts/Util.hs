@@ -14,11 +14,12 @@ module Dscp.Snowdrop.Contracts.Util
        , module Account
        , module Serialise
        , module Util
+       , module Default
        ) where
 
 import Control.Lens as Lenses (makeLenses)
 import Codec.Serialise as Serialise (Serialise)
-import Data.Default (def)
+import Data.Default as Default (def)
 import qualified Data.Map as Map
 
 import Snowdrop.Core as SD.Core (

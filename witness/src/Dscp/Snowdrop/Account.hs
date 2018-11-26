@@ -37,6 +37,7 @@ data AccountException
     | BalanceCannotBecomeNegative
       { aeSpent :: Integer, aeBalance :: Integer }
     | AccountInternalError String
+    | AccountDoesNotExist { aeAccount :: AccountId }
     deriving (Eq, Ord)
 
 instance Buildable AccountException where

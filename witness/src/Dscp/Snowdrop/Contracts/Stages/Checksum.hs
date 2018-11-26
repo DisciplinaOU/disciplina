@@ -20,10 +20,12 @@ data ContractChecksum = ContractChecksum
 instance Serialise ContractChecksumTxId
 instance Serialise ContractChecksum
 
+type ContractChecksumWitness = PersonalisedProof ContractChecksumTxId ContractChecksum
+
 makeLenses ''ContractChecksum
 
 checkBuyerCalculatedChecksum
-    ::  ( HasPrism Proofs (PersonalisedProof ContractChecksumTxId ContractChecksum)
+    ::  ( HasPrism Proofs ContractChecksumWitness
         , HasPrism Proofs ContractChecksumTxId
         , HasGetter Crypto.PublicKey Address
         )
@@ -44,4 +46,23 @@ checkBuyerCalculatedChecksum =
             (NotCancellingOnIncorrectSig cid)
 
         return ()
+
+expandChecksum
+    ::  ( HasPrism Proofs ContractChecksumWitness
+        , HasPrism Proofs ContractChecksumTxId
+        , HasGetter Crypto.PublicKey Address
+        )
+    => AccountId
+    -> Expand ctx ContractChecksumWitness
+expandChecksum _miner =
+    SeqExpanders $ one $ Expander
+        (error "TODO: add read prefices")
+        (error "TODO: add write prefices")
+        $ \txProof -> do
+            Authenticated _buyer _ ContractChecksum
+                { _ccContractID = cid
+                } _fees
+                    <- authenticate @ContractChecksumTxId (inj txProof)
+
+            setStage cid Transmitted
 

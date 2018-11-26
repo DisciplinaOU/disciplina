@@ -48,8 +48,42 @@ accessContractAsSellerAtStage :: AccountId -> ContractID -> Stage -> SDActionM c
 accessContractAsSellerAtStage seller cid stage = do
     contract <- getContract cid
     ()       <- check (seller == contract^.caSeller) (WrongSeller cid seller)
-    ()       <- check (stage   == contract^.caStage) (WrongStage  cid stage)
+    ()       <- check (stage  == contract^.caStage)  (WrongStage  cid stage)
     return contract
 
 assertSlotIsInFuture :: SlotId -> SDActionM ctx ()
 assertSlotIsInFuture = error "TODO"
+
+pay :: AccountId -> Integer -> AccountId -> SDActionM ctx Delta
+pay who howMuch whom = merge
+    [ changeBalance who  (- howMuch)
+    , changeBalance whom (  howMuch)
+    ]
+
+changeBalance :: AccountId -> Integer -> SDActionM ctx Delta
+changeBalance aid change = do
+    old <- retrieve aid (AccountDoesNotExist aid)
+    let new = old { aBalance = aBalance old + change }
+
+    () <- check (aBalance new >= 0) $
+        BalanceCannotBecomeNegative change (aBalance old)
+
+    return $ delta [ aid ==> Upd new ]
+
+createContract :: ContractID -> Contract -> SDActionM ctx Delta
+createContract cid body = return $ delta
+    [  cid           ==> New body
+    , (body^.caSelf) ==> New (def :: Account)
+    ]
+
+createAccount :: AccountId -> Account -> SDActionM ctx Delta
+createAccount aid body = return $ delta
+    [ aid ==> New body
+    ]
+
+setStage :: ContractID -> Stage -> SDActionM ctx Delta
+setStage cid stage = do
+    contract <- getContract cid
+    return $ delta
+        [ cid ==> Upd (contract & caStage .~ stage)
+        ]

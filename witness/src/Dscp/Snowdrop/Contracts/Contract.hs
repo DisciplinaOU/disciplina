@@ -16,8 +16,10 @@ data Stage
     | Cancelled
     | Transmitted
     | KeySent
-    | Arbitration
-    | Agreed
+    | BuyerCheated
+    | SellerCheated
+    | SellerDuped
+    | Accepted
     deriving (Eq, Show, Generic)
 
 -- TODO (kirill.andreev): Find a place for these.
@@ -27,6 +29,7 @@ data Contract = Contract
     , _caBuyer         :: AccountId
     , _caCost          :: Coin
     , _caFees          :: Coin
+    , _caMoney         :: Integer
     , _caPublication   :: PublicationHead
     , _caEndSlot       :: SlotId
     , _caInheritor     :: AccountId
