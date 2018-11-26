@@ -20,7 +20,7 @@ import Dscp.Witness
 ----------------------------------------------------------------------------
 
 data TestWitnessCtx = TestWitnessCtx
-    { _twcVars    :: WitnessVariables
+    { _twcVars    :: TestWitnessVariables
     , _twcLogging :: Logging IO
     , _twcKeys    :: KeyResources WitnessNode
     , _twcDb      :: DB.Plugin
@@ -30,8 +30,15 @@ makeLenses ''TestWitnessCtx
 deriveHasLensDirect ''TestWitnessCtx
 
 deriveHasLens 'twcVars ''TestWitnessCtx ''WitnessVariables
+deriveHasLens 'twcVars ''TestWitnessCtx ''TestWitnessVariables
 
 type WitnessTestMode' = RIO TestWitnessCtx
+
+_sanity :: WitnessTestMode' ()
+_sanity = withWitnessConfig (error "") _sanityCallee
+  where
+    _sanityCallee :: TestWitnessWorkMode ctx m => m ()
+    _sanityCallee = pass
 
 ----------------------------------------------------------------------------
 -- Runner

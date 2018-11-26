@@ -16,6 +16,7 @@ import Dscp.Resource.Functions
 import Dscp.Resource.Keys (krPublicKey)
 import Dscp.Rio (runRIO)
 import Dscp.Snowdrop.Actions (initSDActions)
+import Dscp.Util.Time
 import Dscp.Witness.Config
 import Dscp.Witness.Launcher.Context
 import Dscp.Witness.Launcher.Resource
@@ -31,6 +32,7 @@ mkWitnessVariables resources = do
     _wvSDActions  <- liftIO $ runReaderT initSDActions (_wrDB resources)
     _wvRelayState <- Relay.newRelayState
     _wvSDLock     <- Lock.newSDLock
+    let _wvTime = realTimeActions
     return WitnessVariables{..}
 
 -- | Make up Witness context from dedicated pack of allocated resources.

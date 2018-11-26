@@ -40,13 +40,14 @@ data TestEducatorCtx = TestEducatorCtx
     , _tecWitnessDb        :: DB.Plugin
     , _tecKeys             :: KeyResources EducatorNode
     , _tecWitnessKeys      :: KeyResources WitnessNode
-    , _tecWitnessVariables :: WitnessVariables
+    , _tecWitnessVariables :: TestWitnessVariables
     , _tecLogging          :: Log.Logging IO
     }
 makeLenses ''TestEducatorCtx
 deriveHasLensDirect ''TestEducatorCtx
 
 deriveHasLens 'tecWitnessVariables ''TestEducatorCtx ''WitnessVariables
+deriveHasLens 'tecWitnessVariables ''TestEducatorCtx ''TestWitnessVariables
 
 type TestEducatorM = RIO TestEducatorCtx
 
