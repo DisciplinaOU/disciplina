@@ -40,13 +40,10 @@ module Dscp.Snowdrop.Configuration
     , _LogicError
 
     , TxIds (..)
-
-    , BlockPlusAVLComposition
     ) where
 
 
 import Control.Lens (makePrisms)
-import Data.Reflection (Reifies (..))
 import qualified Data.Set as S
 import qualified Data.Text.Buildable as B
 import Fmt (build, (+|))
@@ -366,14 +363,6 @@ instance Enum TxIds where
 instance IdStorage TxIds AccountTxTypeId
 instance IdStorage TxIds PublicationTxTypeId
 instance IdStorage TxIds BlockMetaTxTypeId
-
-----------------------------------------------------------------------------
--- Misc
-----------------------------------------------------------------------------
-
-data BlockPlusAVLComposition
-instance Reifies BlockPlusAVLComposition (Set Prefix) where
-    reflect _ = blockPrefixes
 
 ----------------------------------------------------------------------------
 -- HasReview and lenses

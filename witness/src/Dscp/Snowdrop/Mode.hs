@@ -36,9 +36,9 @@ type SdM_ chgacc = SD.ERoComp Exceptions Ids Values (IOCtx chgacc)
 
 type ChgAccum =
     SD.CompositeChgAccum
-        (SD.SumChangeSet Ids Values)
         (AVLChgAccum AvlHash Ids Values)
-        BlockPlusAVLComposition
+        (SD.SumChangeSet Ids Values)
+        AVLPlusBlockComposition
 
 -- | Monad representing actions in snowdrop BaseM, related to rocksdb storage.
 type SdM = SdM_ ChgAccum

@@ -39,7 +39,7 @@ applyBlockRaw applyFees block = do
     let blockDBM = nsBlockDBActions sdActions
     let stateDBM = nsStateDBActions sdActions
 
-    (blockCS, stateCS) <-
+    (stateCS, blockCS) <-
         let actions = sdActionsComposition sdActions
             rwComp = do
               sblock <- SD.liftERoComp $ expandBlock applyFees block
@@ -50,8 +50,8 @@ applyBlockRaw applyFees block = do
               Avlp.initAVLStorage @AvlHash plugin initAccounts
 
               res <- unwrapSDBaseRethrow $
-                  SD.runERwCompIO actions def rwComp <&>
-                  \((), (SD.CompositeChgAccum blockCS_ stateCS_)) -> (blockCS_, stateCS_)
+                     SD.runERwCompIO actions def rwComp <&>
+                  \((), (SD.CompositeChgAccum stateCS_ blockCS_)) -> (stateCS_, blockCS_)
 
               return res
 
