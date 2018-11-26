@@ -37,7 +37,7 @@ checkBuyerCalculatedChecksum =
             } _txFees
             <- authenticate @ContractChecksumTxId txProof
 
-        contract     <- accessContractAsBuyer buyer cid
+        contract     <- accessContractAsBuyerAtStage buyer cid Started
         theSignature <- getSignatureOfPublication (contract^.caPublication)
 
         () <- check (signature /= theSignature && stage == Transmitted)

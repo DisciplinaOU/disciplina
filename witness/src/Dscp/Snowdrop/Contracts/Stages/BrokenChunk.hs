@@ -40,7 +40,7 @@ checkBuyerFoundBrokenChunk =
             } _txFees
             <- authenticate @ContractBrokenChunkTxId txProof
 
-        _ <- accessContractAsBuyer buyer cid
+        _ <- accessContractAsBuyerAtStage buyer cid Transmitted
 
         -- All the work here goes inside the expander, where the choice
         -- of money destination is made.

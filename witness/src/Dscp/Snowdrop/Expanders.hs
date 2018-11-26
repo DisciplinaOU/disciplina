@@ -26,6 +26,7 @@ import Dscp.Snowdrop.Configuration
 import qualified Dscp.Snowdrop.Configuration as Conf (Proofs (..))
 import Dscp.Snowdrop.Storage.Types
 import Dscp.Snowdrop.Types
+import Dscp.Snowdrop.Util
 
 ----------------------------------------------------------------------------
 -- Top-level expanders
@@ -304,6 +305,7 @@ seqExpandersBalanceTx feesReceiverAddr (Fees minimalFees) =
 
         let changes :: Map Ids (ValueOp Values)
             changes = Map.fromList changesList
+
         let changesWithFees
                 | feeAmount == 0 = changes
                 | otherwise =
@@ -412,16 +414,3 @@ seqExpandersBlockMetaTx =
 
     noPrevBlock (h :: HeaderHash) =
         BlockMetaInternalError $ "Can't resolve previous block " +| h |+ ""
-
---------------------------------------------------------------------------
--- Utils
---------------------------------------------------------------------------
-
-(==>)
-    :: forall id value k v
-    .  HasReview k id
-    => HasReview v value
-    => id
-    -> value
-    -> (k, v)
-k ==> v = (inj k, inj v)

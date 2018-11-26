@@ -37,10 +37,18 @@ getSignatureOfPublication = error "TODO"
 assertCorrectCostAndFees :: Contract -> SDActionM ctx ()
 assertCorrectCostAndFees = error "TODO"
 
-accessContractAsBuyer :: AccountId -> ContractID -> SDActionM ctx Contract
-accessContractAsBuyer buyer cid = do
+accessContractAsBuyerAtStage :: AccountId -> ContractID -> Stage -> SDActionM ctx Contract
+accessContractAsBuyerAtStage buyer cid stage = do
     contract <- getContract cid
     ()       <- check (buyer == contract^.caBuyer) (WrongBuyer cid buyer)
+    ()       <- check (stage == contract^.caStage) (WrongStage cid stage)
+    return contract
+
+accessContractAsSellerAtStage :: AccountId -> ContractID -> Stage -> SDActionM ctx Contract
+accessContractAsSellerAtStage seller cid stage = do
+    contract <- getContract cid
+    ()       <- check (seller == contract^.caSeller) (WrongSeller cid seller)
+    ()       <- check (stage   == contract^.caStage) (WrongStage  cid stage)
     return contract
 
 assertSlotIsInFuture :: SlotId -> SDActionM ctx ()

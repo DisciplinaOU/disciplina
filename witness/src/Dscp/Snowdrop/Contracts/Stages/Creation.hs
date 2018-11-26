@@ -43,7 +43,7 @@ checkCreation =
         ()     <- check (seller                      /= buyer)   (SelfContractsUnallowed cid buyer)
         ()     <- check (body^.caSeller              == seller)  (WrongSeller cid seller)
         ()     <- check (body^.caBuyer               == buyer)   (WrongBuyer  cid buyer)
-        ()     <- check (body^.caStage               == Created) (WrongInitialStage cid)
+        ()     <- check (body^.caStage               == Created) (WrongStage  cid (body^.caStage))
         ()     <- check (body^.caInheritor           == buyer)   (WrongInheritor cid (body^.caInheritor))
 
         requiredSum <- case (body^.caCost) `addCoins` (body^.caFees) of

@@ -5,7 +5,7 @@ import Codec.Serialise (Serialise)
 import Control.Lens (makePrisms)
 import Data.Default (Default (..))
 import Data.Text.Buildable (Buildable (..))
-import Fmt (build, (+|), (|+))
+import Fmt (build, (+|), (|+), (+||), (||+))
 import qualified Text.Show
 
 import Dscp.Core
@@ -38,8 +38,6 @@ data AccountException
       { aeSpent :: Integer, aeBalance :: Integer }
     | AccountInternalError String
     deriving (Eq, Ord)
-
-makePrisms ''AccountException
 
 instance Buildable AccountException where
     build = \case
@@ -81,6 +79,8 @@ instance Buildable AccountException where
             \while balance is " +| unsafeMkCoin aeBalance |+ ""
         AccountInternalError s ->
             fromString $ "Expander failed internally: " <> s
+        AccountDoesNotExist acc ->
+            "Account " +|| acc ||+ " does not exist"
 
 instance Show AccountException where
     show = toString . pretty
@@ -151,3 +151,5 @@ instance Buildable Account where
 
 instance Serialise Account
 instance Serialise AccountId
+
+makePrisms ''AccountException

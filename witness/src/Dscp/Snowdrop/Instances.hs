@@ -61,6 +61,7 @@ instance ToServantErr AccountException where
         CannotAffordFees{}            -> err403
         BalanceCannotBecomeNegative{} -> err403
         AccountInternalError{}        -> err500
+        AccountDoesNotExist{}         -> err500
 
 instance HasErrorTag LogicException where
     errorTag = \case

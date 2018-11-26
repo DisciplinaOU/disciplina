@@ -13,7 +13,7 @@ data ContractException
     | WrongSeller                   ContractID AccountId
     | WrongBuyer                    ContractID AccountId
     | ThisCostsMore                 ContractID Coin Coin
-    | WrongInitialStage             ContractID
+    | WrongStage                    ContractID Stage
     | WrongInheritor                ContractID AccountId
     | SellerUnderpaidTheFees        ContractID Coin
     | NotCancellingOnIncorrectSig   ContractID
@@ -21,6 +21,7 @@ data ContractException
     | ContractDoesNotExist          ContractID
     | SelfContractsUnallowed        ContractID AccountId
     | CannotSumCostAndFees          ContractID Text
+    | NoLinkedAccount               ContractID AccountId
     deriving (Generic)
 
 instance Buildable ContractException where
@@ -40,8 +41,8 @@ instance Buildable ContractException where
         ThisCostsMore cid costs paid ->
             onContract cid $ "This costs " +|| costs ||+ ", attempted to pay " +|| paid ||+ ""
 
-        WrongInitialStage cid ->
-            onContract cid $ "Must have stage set to 'Created'"
+        WrongStage cid stage ->
+            onContract cid $ "This contract is not in stage `" +|| stage ||+ ""
 
         WrongInheritor cid inheritor ->
             onContract cid $ "" +|| inheritor ||+ " cannot inherit funds"
@@ -64,5 +65,7 @@ instance Buildable ContractException where
         CannotSumCostAndFees cid msg ->
             onContract cid $ "Error while adding cost and fees" +| msg |+ ""
 
+        NoLinkedAccount cid aid ->
+            onContract cid $ "Account " +|| aid ||+ ", liked to contract does not exist"
       where
         onContract cid msg = "Contract " +|| cid ||+ ": " <> msg

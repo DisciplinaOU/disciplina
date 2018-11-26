@@ -37,7 +37,7 @@ checkBuyerFoundDupedChunk =
             } _txFees
             <- authenticate @ContractDupedChunkTxId txProof
 
-        _ <- accessContractAsBuyer buyer cid
+        _ <- accessContractAsBuyerAtStage buyer cid Transmitted
 
         -- All the work here goes inside the expander, too.
 

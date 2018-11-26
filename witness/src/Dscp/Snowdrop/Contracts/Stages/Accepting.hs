@@ -32,6 +32,6 @@ checkBuyerAccepts =
             } _txFees
             <- authenticate @ContractAcceptingTxId txProof
 
-        _ <- accessContractAsBuyer buyer cid
+        _ <- accessContractAsBuyerAtStage buyer cid Transmitted
 
         return ()

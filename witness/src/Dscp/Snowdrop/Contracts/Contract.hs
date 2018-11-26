@@ -12,6 +12,7 @@ import Dscp.Snowdrop.Storage.Types
 
 data Stage
     = Created
+    | Started
     | Cancelled
     | Transmitted
     | KeySent
