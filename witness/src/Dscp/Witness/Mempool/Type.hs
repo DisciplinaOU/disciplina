@@ -14,14 +14,7 @@ import qualified Snowdrop.Execution as Pool
 import Dscp.Core.Foundation (GTxWitnessed)
 import Dscp.Snowdrop.Configuration
 import qualified Dscp.Snowdrop.IOCtx as SD
-import Dscp.Snowdrop.Storage.Avlp as Avlp
-import Dscp.Witness.AVL (AvlHash)
-
-type ChgAccum =
-    Pool.CompositeChgAccum
-        (Pool.SumChangeSet Ids Values)
-        (Avlp.AVLChgAccum AvlHash Ids Values)
-        BlockPlusAVLComposition
+import Dscp.Snowdrop.Mode
 
 type MempoolVar = Mempool (SD.IOCtx ChgAccum)
 

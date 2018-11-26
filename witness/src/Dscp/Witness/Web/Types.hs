@@ -1,5 +1,6 @@
-{-# LANGUAGE DeriveFunctor #-}
-{-# LANGUAGE StrictData    #-}
+{-# LANGUAGE DeriveFunctor     #-}
+{-# LANGUAGE DeriveTraversable #-}
+{-# LANGUAGE StrictData        #-}
 
 module Dscp.Witness.Web.Types
     ( BlocksOrMempool (..)
@@ -34,7 +35,7 @@ data BlocksOrMempool a = BlocksOrMempool
       -- ^ Only looking at blocks
     , bmTotal     :: a
       -- ^ From blocks + mempool
-    } deriving (Eq, Ord, Show, Functor, Generic)
+    } deriving (Eq, Ord, Show, Functor, Foldable, Traversable, Generic)
 
 -- | Paginated list of something.
 -- Parameter @d@ is required to tell name of entities for JSON encoding,

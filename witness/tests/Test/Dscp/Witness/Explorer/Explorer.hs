@@ -10,7 +10,7 @@ import Test.QuickCheck.Monadic (pre)
 import Dscp.Core
 import Dscp.Crypto
 import Dscp.Snowdrop.Configuration
-import Dscp.Snowdrop.Mode
+import Dscp.Snowdrop.ReadMode
 import Dscp.Snowdrop.Types
 import Dscp.Util
 import Dscp.Util.Test
@@ -25,8 +25,8 @@ createAndSubmitTx
     :: (WitnessWorkMode ctx m, WithinWriteSDLock)
     => SecretKeyData -> [TxOut] -> m Tx
 createAndSubmitTx sk outs = do
-    account <- runSdReadM $
-        fromMaybe def <$> getMempoolAccountMaybe (skAddress sk)
+    account <- runSdReadM @'ChainAndMempool $
+        fromMaybe def <$> getAccountMaybe (skAddress sk)
     let txw = createTxw (fcMoney feeConfig) sk (aNonce account) outs
     addTxToMempool (GMoneyTxWitnessed txw)
     return $ twTx txw

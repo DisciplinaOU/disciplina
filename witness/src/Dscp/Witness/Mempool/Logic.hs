@@ -32,6 +32,7 @@ import qualified Dscp.Snowdrop as SD
 import Dscp.Snowdrop.Actions (sdActionsComposition)
 import Dscp.Snowdrop.Configuration (Exceptions, Ids, Values)
 import Dscp.Snowdrop.Mode
+import Dscp.Snowdrop.ReadMode
 import Dscp.Witness.Mempool.Type
 import Dscp.Witness.SDLock
 
@@ -95,7 +96,7 @@ normalizeMempool = do
 ----------------------------------------------------------------------------
 
 -- | Read-only action with mempool.
-type SdMemReadM = SdM_ ChgAccum
+type SdMemReadM = SdM
 
 -- | Read-write action with mempool.
 type SdMemWriteM =
@@ -118,7 +119,7 @@ _sdMGeneralizationCheck =
         _ = action :: SdM ()
     in ()
   where
-    action :: SdM_ chgacc ()
+    action :: SdM ()
     action = pass
 
 ----------------------------------------------------------------------------
@@ -173,7 +174,6 @@ runSdMempoolLocked
 runSdMempoolLocked action = readingSDLock $ runSdMempool action
 
 instance KnownSdReadMode 'ChainAndMempool where
-    type SdReadModeChgAcc 'ChainAndMempool = ChgAccum
     liftSdM = lift . runSdMempool
 
 ----------------------------------------------------------------------------
