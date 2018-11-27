@@ -19,6 +19,7 @@ module Dscp.Core.FairCV
 
          -- * Fair CV check result
        , FairCVCheckResult (..)
+       , fullyValid
        ) where
 
 import qualified Data.Map.Merge.Strict as M
@@ -151,3 +152,6 @@ newtype FairCVCheckResult = FairCVCheckResult
 instance Buildable FairCVCheckResult where
     build (FairCVCheckResult res) =
         "Fair CV check result { "+|mapF (mapF <$> res)|+" }"
+
+fullyValid :: FairCVCheckResult -> Bool
+fullyValid = all and . unFairCVCheckResult

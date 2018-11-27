@@ -53,7 +53,7 @@ instance (Arbitrary ba, FromByteArray ba) =>
 longerThan :: Container f => Int -> f -> Bool
 longerThan n x = length x > n
 
-instance Arbitrary a => Arbitrary (MerkleSignature a) where
+instance Arbitrary (MerkleSignature a) where
     arbitrary = MerkleSignature <$> arbitrary <*> choose (0, 100)
     shrink = genericShrink
 
