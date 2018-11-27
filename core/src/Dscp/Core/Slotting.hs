@@ -5,33 +5,43 @@ module Dscp.Core.Slotting
        , getCurrentSlot
        , getSlotSince
        , waitUntilNextSlot
+       , rewindToNextSlot
        ) where
 
-import Control.Concurrent (threadDelay)
-import Data.Time.Clock.POSIX (getPOSIXTime)
+import Time (Microsecond)
 
 import Dscp.Core.Config
 import Dscp.Core.Foundation (SlotId (..))
+import Dscp.Util.Time
 
 -- In microseconds.
 slotLength :: HasCoreConfig => Word64
 slotLength = (*1000) $ unSlotDuration $ giveL @CoreConfig
 
-getTimeMcs :: MonadIO m => m Word64
-getTimeMcs = floor . (*1000000) . toRational <$> liftIO getPOSIXTime
-
 -- Yes. This is enough.
-getCurrentSlot :: (HasCoreConfig, MonadIO m) => m SlotId
+getCurrentSlot :: (HasCoreConfig, HasTime ctx m) => m SlotId
 getCurrentSlot = do
-    curTime <- getTimeMcs
+    curTime <- getCurTimeMcs
     pure $ SlotId $ curTime `div` slotLength
 
 -- Time of slot start, in microseconds
 getSlotSince :: HasCoreConfig => SlotId -> Word64
 getSlotSince (SlotId i) = i * slotLength
 
-waitUntilNextSlot :: (HasCoreConfig, MonadIO m) => m SlotId
+-- | How much time till next slot start, in microseconds.
+remainingTillNextSlot :: (HasCoreConfig, HasTime ctx m) => m Word64
+remainingTillNextSlot = do
+    curTime <- getCurTimeMcs
+    return $ fromIntegral $ slotLength - (curTime `mod` slotLength)
+
+waitUntilNextSlot :: (HasCoreConfig, HasTime ctx m) => m SlotId
 waitUntilNextSlot = do
-    curTime <- getTimeMcs
-    liftIO $ threadDelay $ fromIntegral $ slotLength - (curTime `mod` slotLength)
-    pure $ SlotId $ 1 + (curTime `div` slotLength)
+    sleep @Microsecond . fromIntegral =<< remainingTillNextSlot
+    getCurrentSlot
+
+-- | Rewind emulated time to the start of the next slot.
+-- Returns id of just arrived slot.
+rewindToNextSlot :: (HasCoreConfig, HasTestTime ctx m) => m SlotId
+rewindToNextSlot = do
+    rewindTime @Microsecond . fromIntegral =<< remainingTillNextSlot
+    getCurrentSlot

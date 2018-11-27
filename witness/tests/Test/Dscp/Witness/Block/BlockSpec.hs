@@ -12,13 +12,6 @@ import Dscp.Util.Test
 import Dscp.Witness
 import Test.Dscp.Witness.Mode
 
--- | Find who should sign block at given slot.
-findSlotOwner :: SlotId -> SecretKey
-findSlotOwner slot =
-    fromMaybe (error "Failed to find slot owner") $
-    find (\sk -> committeeOwnsSlot testCommittee (mkAddr $ toPublic sk) slot)
-        testCommitteeSecrets
-
 -- | Update block signature to catch up change of content.
 resignBlockAs :: SecretKey -> Block -> Block
 resignBlockAs issuer block@Block{..} =
@@ -30,7 +23,7 @@ resignBlockAs issuer block@Block{..} =
 -- | Update block signature to catch up change of content.
 resignBlock :: Block -> Block
 resignBlock block =
-    resignBlockAs (findSlotOwner $ hSlotId $ bHeader block) block
+    resignBlockAs (testFindSlotOwner $ hSlotId $ bHeader block) block
 
 -- | Submit block to validation.
 submitBlock
@@ -51,7 +44,7 @@ makeBlocksChain n
         <&> \(i, prevBlock) ->
             let hSlotId = fromIntegral i
                 hDifficulty = fromIntegral i
-                issuer = findSlotOwner hSlotId
+                issuer = testFindSlotOwner hSlotId
                 hPrevHash = hash (bHeader prevBlock)
                 bBody = BlockBody []
                 toSign = BlockToSign hDifficulty hSlotId hPrevHash (hash bBody)

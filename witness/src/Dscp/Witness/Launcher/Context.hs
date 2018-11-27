@@ -21,7 +21,7 @@ module Dscp.Witness.Launcher.Context
 
 import Control.Lens (makeLenses)
 
-import Loot.Base.HasLens (HasLens')
+import Loot.Base.HasLens (HasCtx, HasLens')
 import Loot.Log.Rio (LoggingIO)
 import Loot.Network.Class (NetworkingCli, NetworkingServ)
 import Loot.Network.ZMQ as Z
@@ -34,6 +34,7 @@ import Dscp.Resource.Network
 import Dscp.Rio (RIO)
 import Dscp.Snowdrop.Actions (SDVars)
 import Dscp.Util.HasLens
+import Dscp.Util.Time
 import Dscp.Witness.Config (HasWitnessConfig, withWitnessConfig)
 import Dscp.Witness.Launcher.Marker (WitnessNode)
 import Dscp.Witness.Launcher.Resource
@@ -53,15 +54,16 @@ type WitnessWorkMode ctx m =
     ( Basic.BasicWorkMode m
     , HasWitnessConfig
 
-    , MonadReader ctx m
-
-    , HasLens' ctx LoggingIO
-    , HasLens' ctx MempoolVar
-    , HasLens' ctx SDVars
-    , HasLens' ctx (KeyResources WitnessNode)
-    , HasLens' ctx RelayState
-    , HasLens' ctx SDLock
-    , HasLens' ctx Plugin
+    , HasCtx ctx m
+        [ LoggingIO
+        , MempoolVar
+        , SDVars
+        , KeyResources WitnessNode
+        , RelayState
+        , SDLock
+        , Plugin
+        , TimeActions
+        ]
     )
 
 type NetworkMode ctx m =
@@ -88,6 +90,7 @@ data WitnessVariables = WitnessVariables
     , _wvSDActions  :: !SDVars
     , _wvRelayState :: !RelayState
     , _wvSDLock     :: !SDLock
+    , _wvTime       :: !TimeActions
     }
 
 makeLenses ''WitnessVariables

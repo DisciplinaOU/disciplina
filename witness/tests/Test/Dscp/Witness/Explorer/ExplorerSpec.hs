@@ -1,9 +1,11 @@
 module Test.Dscp.Witness.Explorer.ExplorerSpec where
 
 import Data.Default (def)
+import Loot.Base.HasLens (lensOf)
 
 import Dscp.Core
 import Dscp.Crypto
+import Dscp.Resource.Keys
 import Dscp.Snowdrop.Configuration
 import Dscp.Snowdrop.Mode
 import Dscp.Snowdrop.Types
@@ -51,12 +53,16 @@ createAndSubmitPub genSecret = do
 
 -- | Dump all mempool transactions into a new block.
 dumpBlock
-    :: (WitnessWorkMode ctx m, WithinWriteSDLock)
-    => SlotId -> m HeaderHash
-dumpBlock slotId = do
-    block <- createBlock runSdM slotId
-    void $ applyBlock block
-    return (headerHash block)
+    :: (TestWitnessWorkMode ctx m, WithinWriteSDLock)
+    => m HeaderHash
+dumpBlock = do
+    slotId <- rewindToNextSlot
+    let issuerKey = KeyResources . mkSecretKeyData $ testFindSlotOwner slotId
+
+    local (lensOf @(KeyResources WitnessNode) .~ issuerKey) $ do
+        block <- createBlock runSdM slotId
+        void $ applyBlock block
+        return (headerHash block)
 
 -- | Run 'getTransactions' with pagination page by page until all transactions
 -- are fetched.
@@ -77,7 +83,7 @@ spec = describe "Explorer" $ do
   describe "getTransaction" $ do
     it "Returns existing tx fine" . once $ witnessProperty $ do
         tx <- createAndSubmitTx selectGenesisSecret
-        _ <- lift $ dumpBlock 0
+        _ <- lift dumpBlock
         res <- lift $ getTransactionInfo (toGTxId $ GMoneyTx tx)
         return $ wbiItem res === GMoneyTx tx
 
@@ -88,7 +94,7 @@ spec = describe "Explorer" $ do
 
     it "Errors on absent tx correctly" . once $ witnessProperty $ do
         gTxId <- pick arbitrary
-        _ <- lift $ dumpBlock 0
+        _ <- lift dumpBlock
         lift $ throwsPrism (_LogicError . _LETxAbsent) $
             getTransactionInfo gTxId
 
@@ -96,7 +102,7 @@ spec = describe "Explorer" $ do
     it "Returns all transactions at once just fine" . once $ witnessProperty $ do
         n <- pick $ choose (1, 3)
         txs <- replicateM n $ createAndSubmitTx selectGenesisSecret
-        _ <- lift $ dumpBlock 0
+        _ <- lift dumpBlock
 
         res <- lift $ getTransactions Nothing Nothing Nothing
         -- return from recent-first order, discarding genesis transactions
@@ -110,7 +116,7 @@ spec = describe "Explorer" $ do
         txsNum <- pick $ choose (1, 5)
         chunkSize <- pick $ choose (1, 3)
         txs <- replicateM txsNum $ createAndSubmitTx selectGenesisSecret
-        _ <- lift $ dumpBlock 0
+        _ <- lift dumpBlock
 
         res <- lift $ getTransactionsPaged chunkSize Nothing
         return $ conjoin
@@ -126,7 +132,7 @@ spec = describe "Explorer" $ do
     it "Skipping transactions works fine with mempool" $ witnessProperty $ do
         chainTxsNum <- pick $ choose (1, 3)
         chainTxs <- replicateM chainTxsNum $ createAndSubmitTx selectGenesisSecret
-        _ <- lift $ dumpBlock 0
+        _ <- lift dumpBlock
         memTxsNum <- pick $ choose (0, 3)
         memTxs <- replicateM memTxsNum $ createAndSubmitTx selectGenesisSecret
 
@@ -144,7 +150,7 @@ spec = describe "Explorer" $ do
     it "Errors nicely when 'since' transaction is absent" $ witnessProperty $ do
         chainTxsNum <- pick $ choose (1, 5)
         replicateM_ chainTxsNum $ createAndSubmitTx selectGenesisSecret
-        _ <- lift $ dumpBlock 0
+        _ <- lift dumpBlock
         memTxsNum <- pick $ choose (0, 3)
         replicateM_ memTxsNum $ createAndSubmitTx selectGenesisSecret
 
@@ -155,7 +161,7 @@ spec = describe "Explorer" $ do
 
     it "Blocks info is present" . once $ witnessProperty $ do
         _ <- createAndSubmitTx selectGenesisSecret
-        blockHash <- lift $ dumpBlock 0
+        blockHash <- lift dumpBlock
         _ <- createAndSubmitTx selectGenesisSecret
 
         res <- lift $ getTransactions Nothing Nothing Nothing
@@ -170,7 +176,7 @@ spec = describe "Explorer" $ do
             interestingAddress = mkAddr $ toPublic testSomeGenesisSecret
         n <- pick $ choose (1, 5)
         txs <- replicateM n $ createAndSubmitTx selectSecret
-        _ <- lift $ dumpBlock 0
+        _ <- lift dumpBlock
 
         let expected = filter (\tx -> interestingAddress `elem` txRelatedAddrs tx) txs
         res <- lift $ getTransactions Nothing Nothing (Just interestingAddress)
@@ -183,7 +189,7 @@ spec = describe "Explorer" $ do
     it "Returns all transactions at once just fine" $ once $ witnessProperty $ do
         n <- pick $ choose (1, 3)
         txs <- replicateM n $ createAndSubmitPub (pure testSomeGenesisSecret)
-        _ <- lift $ dumpBlock 0
+        _ <- lift dumpBlock
 
         res <- lift $ getPublications Nothing Nothing Nothing
         let resTop = reverse $ plItems res
@@ -196,7 +202,7 @@ spec = describe "Explorer" $ do
             interestingAddress = mkAddr $ toPublic testSomeGenesisSecret
         n <- pick $ choose (1, 5)
         txs <- replicateM n $ createAndSubmitPub selectSecret
-        _ <- lift $ dumpBlock 0
+        _ <- lift dumpBlock
 
         let expected = filter (\tx -> interestingAddress == ptAuthor tx) txs
         res <- lift $ getPublications Nothing Nothing (Just interestingAddress)
@@ -207,7 +213,7 @@ spec = describe "Explorer" $ do
 
     it "Blocks info is present" . once $ witnessProperty $ do
         _ <- createAndSubmitPub selectGenesisSecret
-        blockHash <- lift $ dumpBlock 0
+        blockHash <- lift dumpBlock
         _ <- createAndSubmitPub selectGenesisSecret
 
         res <- lift $ getPublications Nothing Nothing Nothing
