@@ -671,7 +671,7 @@ components:
                 type: object
                 required:
                   - idx
-                  - tx
+                  - val
                 properties:
                   idx:
                     type: integer
