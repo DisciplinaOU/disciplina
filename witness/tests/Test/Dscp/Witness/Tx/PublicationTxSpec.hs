@@ -82,6 +82,17 @@ spec = describe "Publication tx expansion + validation" $ do
             mapM_ submitPub (init badTws)
             throwsSome $ submitPub (last badTws)
 
+    it "Signing by another author is blatantly" $ witnessProperty $ do
+        -- this is not sufficient check for this case, because at present the error is
+        -- thrown at "previous block matches check", but depending on the previous portion
+        -- of chain this check may not safe us.
+        author <- pick selectAuthor
+        signer <- pick selectAuthor
+        pre (author /= signer)
+        pub :| [] <- pick $ genPublicationChain 1 author
+        let tw = signPubTx signer pub
+        lift . throwsSome $ submitPub tw
+
     it "Not enough fees is not fine" $ witnessProperty $ do
         author <- pick selectAuthor
         issuingWitness <- lift $ ourSecretKeyData @WitnessNode
