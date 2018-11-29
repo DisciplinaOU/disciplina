@@ -21,6 +21,8 @@ servers:
 security:
   - EducatorAuth: []
 tags:
+  - name: General
+    description: General information about the educator
   - name: Students
     description: Methods for working with students and their data
   - name: Courses
@@ -34,6 +36,40 @@ tags:
   - name: Proofs
     description: Methods for working with proofs
 paths:
+  /status:
+    get:
+      tags:
+        - General
+      summary: Get information about the educator.
+      operationId: getStudents
+      responses:
+        200:
+          description: Returns educator status.
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - address
+                  - balances
+                properties:
+                  address:
+                    $ref: '#/components/schemas/Address'
+                  balances:
+                    type: object
+                    properties:
+                      confirmed:
+                        type: integer
+                        format: int32
+                        description: Balance according to current chain.
+                      total:
+                        type: integer
+                        format: int32
+                        description: >-
+                          Balance derived from both chain and transactions which are not
+                          yet in blocks.
+        401:
+          $ref: '#/components/responses/Unauthorized'
   /students:
     get:
       tags:

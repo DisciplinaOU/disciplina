@@ -34,7 +34,7 @@ data BlocksOrMempool a = BlocksOrMempool
       -- ^ Only looking at blocks
     , bmTotal     :: a
       -- ^ From blocks + mempool
-    } deriving (Eq, Show, Functor, Generic)
+    } deriving (Eq, Ord, Show, Functor, Generic)
 
 -- | Paginated list of something.
 -- Parameter @d@ is required to tell name of entities for JSON encoding,

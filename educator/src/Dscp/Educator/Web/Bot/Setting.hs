@@ -24,10 +24,8 @@ import qualified Data.Set as S
 import Data.Time.Clock (getCurrentTime)
 import Fmt ((+|), (+||), (|+), (||+))
 import qualified GHC.Exts as Exts
-import Loot.Base.HasLens (HasCtx)
-import Loot.Log (ModifyLogName, MonadLogging, logError, logInfo, modifyLogName)
+import Loot.Log (ModifyLogName, logError, logInfo, modifyLogName)
 import Time.Units (Microsecond, Time, threadDelay)
-import UnliftIO (MonadUnliftIO)
 import UnliftIO.Async (async)
 
 import Dscp.Core
@@ -35,6 +33,7 @@ import Dscp.Crypto.Impl
 import Dscp.DB.SQLite
 import Dscp.Educator.Web.Bot.Params
 import Dscp.Educator.Web.Student.Types
+import Dscp.Educator.Web.Types
 import Dscp.Util
 import Dscp.Util.Test
 
@@ -109,7 +108,6 @@ mkBotSetting params =
   botGen = detGenG (ebpSeed params)
 
   bsCourses =
-    -- using 'courseEx' here helps to keep examples in swagger doc working
     [ (Course 0  , "Patakology", [])
     , (Course 1  , "Learning!", [])
     -- [Note: examples-in-bot]
@@ -178,12 +176,7 @@ botSetting = given
 ---------------------------------------------------------------------
 
 type BotWorkMode ctx m =
-    ( MonadIO m
-    , MonadCatch m
-    , MonadUnliftIO m
-    , MonadLogging m
-    , ModifyLogName m
-    , HasCtx ctx m '[SQLiteDB]
+    ( MonadEducatorWeb ctx m
     )
 
 botLog :: ModifyLogName m => m a -> m a

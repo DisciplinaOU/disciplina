@@ -42,16 +42,18 @@ import Fmt (build, (+|), (+||), (|+), (||+))
 import Loot.Base.HasLens (HasCtx)
 import Loot.Log (MonadLogging)
 import Servant (FromHttpApiData (..))
-import UnliftIO (MonadUnliftIO)
 
 import Dscp.Core
 import Dscp.Crypto
 import Dscp.DB.SQLite.Instances ()
 import Dscp.DB.SQLite.Types
+import Dscp.Educator.Launcher.Marker
+import Dscp.Resource.Keys
 import Dscp.Util.Aeson (CustomEncoding, HexEncoded)
 import Dscp.Util.Servant (ForResponseLog (..), buildForResponse, buildLongResponseList,
                           buildShortResponseList)
 import Dscp.Util.Type (type (==))
+import Dscp.Witness.Launcher.Context
 
 type MonadEducatorWebQuery m =
     ( MonadIO m
@@ -60,10 +62,8 @@ type MonadEducatorWebQuery m =
     )
 
 type MonadEducatorWeb ctx m =
-    ( MonadUnliftIO m
-    , MonadCatch m
-    , MonadLogging m
-    , HasCtx ctx m '[SQLiteDB]
+    ( WitnessWorkMode ctx m
+    , HasCtx ctx m '[SQLiteDB, KeyResources EducatorNode]
     )
 
 ---------------------------------------------------------------------------
