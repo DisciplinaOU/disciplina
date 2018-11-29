@@ -36,6 +36,7 @@ spec_coreAeson = describe "Core datatypes JSON serialisation" $ do
     aesonRoundtripProp @Tx
     aesonRoundtripProp @PublicationTx
     aesonRoundtripProp @GTx
+    aesonRoundtripProp @(FairCV Unchecked)
 
 spec_coreHttpApi :: Spec
 spec_coreHttpApi = describe "Core datatypes HttpApiData serialisation" $ do

@@ -25,6 +25,7 @@ paths:
       responses:
         200:
           description: Successful operation.
+
   /hash/{hash}:
     get:
       summary: Get type of entity identified by given hash
@@ -56,6 +57,7 @@ paths:
                   - money-transaction
                   - publication-transaction
                   - unknown
+
   /blocks:
     get:
       summary: Get list of blocks.
@@ -174,6 +176,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrResponse'
+
   /transactions:
     get:
       summary: Get list of recent transactions.
@@ -249,6 +252,7 @@ paths:
                 $ref: '#/components/schemas/TxValidationError'
       requestBody:
         $ref: '#/components/requestBodies/TxWitnessed'
+
   /transactions/{transactionHash}:
     get:
       summary: Get information about a transaction.
@@ -286,6 +290,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrResponse'
+
   /transactions/async:
     post:
       summary: Submit a formed transaction asynchronously.
@@ -347,6 +352,22 @@ paths:
                   nextId:
                     $ref: '#/components/schemas/Hash'
 
+  /checkcv:
+    put:
+      summary: Check the validity of FairCV.
+      operationId: checkFairCV
+      responses:
+        200:
+          description: >-
+            FairCV was well-formed and has been successfully checked. The
+            result of checking is returned in a response.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FairCVCheckResult'
+      requestBody:
+        $ref: '#/components/requestBodies/FairCV'
+
 components:
   requestBodies:
     TxWitnessed:
@@ -354,11 +375,21 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/TxWitnessed'
+    FairCV:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/FairCV'
+
   schemas:
     Hash:
       type: string
       format: byte
       description: Hex-encoded hash value.
+    Time:
+      type: string
+      format: date-time
+      description: Time in ISO format
     Address:
       type: string
       format: byte
@@ -580,6 +611,80 @@ components:
               format: int32
         atgDelta:
           $ref: "#/components/schemas/AtgDelta"
+    PrivateTx:
+      type: object
+      required:
+        - submission
+        - grade
+        - timestamp
+      properties:
+        submission:
+          $ref: '#/components/schemas/Submission'
+        grade:
+          type: integer
+          format: int32
+        timestamp:
+          $ref: '#/components/schemas/Time'
+    Submission:
+      type: object
+      required:
+        - hash
+        - timestamp
+        - contentsHash
+        - assignmentHash
+        - studentAddr
+        - witness
+      properties:
+        hash:
+          allOf:
+            - readOnly: true
+            - $ref: '#/components/schemas/Hash'
+        timestamp:
+          allOf:
+            - $ref: '#/components/schemas/Time'
+            - readOnly: true
+        contentsHash:
+          $ref: '#/components/schemas/Hash'
+        assignmentHash:
+          $ref: '#/components/schemas/Hash'
+        studentAddr:
+          $ref: '#/components/schemas/Address'
+        witness:
+          type: string
+          format: binary
+    FairCV:
+      type: object            # addresses as keys
+      additionalProperties:
+        type: object          # private header hashes as keys
+        additionalProperties:
+          type: object
+          required:
+            - proof
+            - txs
+          properties:
+            proof:
+              type: string
+              format: byte
+            txs:
+              type: array
+              items:
+                type: object
+                required:
+                  - idx
+                  - val
+                properties:
+                  idx:
+                    type: integer
+                    format: int32
+                  tx:
+                    $ref: '#/components/schemas/PrivateTx'
+    FairCVCheckResult:
+      type: object
+      additionalProperties:
+        type: object
+        additionalProperties:
+          type: boolean
+
     ErrResponse:
       type: object
       required:
@@ -595,7 +700,6 @@ components:
           description: |-
             Error type:
               * `InvalidFormat` - Failed to deserialise one of parameters.
-
               * `BlockNotFound` - Specified block does not exist.
               * `TransactionNotFound` - Specified transaction does not exist.
               * `PrivateBlockNotFound` - Specified private block does not exist.

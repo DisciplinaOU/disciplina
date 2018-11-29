@@ -2,20 +2,24 @@
 
 module Dscp.Core.Aeson () where
 
-import Data.Aeson (FromJSON (..), FromJSONKey (..), ToJSON (..), ToJSONKey, Value (..), withObject,
-                   withScientific, withText, (.:))
+import Codec.Serialise (Serialise)
+import Data.Aeson (FromJSON (..), FromJSONKey (..), FromJSONKeyFunction (..), ToJSON (..),
+                   ToJSONKey (..), Value (..), object, withArray, withObject, withScientific,
+                   withText, (.:), (.=))
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveFromJSON, deriveJSON)
-import Data.Typeable (gcast)
+import Data.Aeson.Types (toJSONKeyText)
 import Data.Scientific (scientific, toBoundedInteger)
+import Data.Typeable (gcast)
 
 import Dscp.Core.Config
+import Dscp.Core.FairCV
 import Dscp.Core.Fees
 import Dscp.Core.Foundation
 import Dscp.Core.Genesis
 import Dscp.Core.Governance
 import Dscp.Crypto
-import Dscp.Util (Base (Base16), leftToFail, nothingToFail)
+import Dscp.Util (Base (Base16, Base64), leftToFail, nothingToFail)
 import Dscp.Util.Aeson (parseJSONSerialise, toJSONSerialise)
 
 ---------------------------------------------------------------------------
@@ -45,6 +49,7 @@ instance ToJSON Address where
     toJSON = String . toText
 instance FromJSON Address where
     parseJSON = withText "Address" $ leftToFail . addrFromText
+
 
 instance ToJSON Grade where
     toJSON = Number . fromIntegral . getGrade
@@ -88,8 +93,43 @@ instance ToJSON Coin where
 
 instance FromJSON Coin where
     parseJSON = withScientific "Coin" $
-        maybe (fail "Coin is in invalid format") pure .
-        (fmap Coin) . toBoundedInteger . (*1000000)
+        nothingToFail "Coin is in invalid format" .
+        fmap Coin . toBoundedInteger . (*1000000)
+
+instance ToJSON a => ToJSON (IndexedList a) where
+    toJSON = toJSON . map encIdx . unIndexedList
+        where
+          encIdx (idx, val) = object
+              [ "idx" .= idx
+              , "val" .= val
+              ]
+
+instance FromJSON a => FromJSON (IndexedList a) where
+    parseJSON = withArray "IndexedList" $
+        fmap mkIndexedList . mapM decIdx . toList
+      where
+        decIdx = withObject "IndexedList item" $ \o -> do
+            idx <- o .: "idx"
+            val <- o .: "val"
+            return (idx, val)
+
+instance (ToJSON a, Serialise (MerkleProof a)) =>
+         ToJSON (TaggedProof v a) where
+    toJSON tProof = object
+        [ "proof" .= toJSONSerialise Base64 emptyProof
+        , "txs" .= indexedTxs
+        ]
+      where
+        (emptyProof, indexedTxs) =
+            separateProofAndData $ unTaggedProof tProof
+
+instance (FromJSON a, Serialise (MerkleProof a)) =>
+         FromJSON (TaggedProof Unchecked a) where
+    parseJSON = withObject "TaggedProof" $ \o -> do
+        emptyProof <- parseJSONSerialise Base64 =<< o .: "proof"
+        indexedTxs <- o .: "txs"
+        nothingToFail "Merkle proof and data do not match" $
+            mkTaggedProof <$> mergeProofAndData emptyProof indexedTxs
 
 ---------------------------------------------------------------------------
 -- Standalone derivations for newtypes
@@ -116,14 +156,16 @@ deriving instance FromJSON SlotId
 deriving instance ToJSON Difficulty
 deriving instance FromJSON Difficulty
 
-instance FromJSONKey Subject
-instance ToJSONKey Subject
+deriving instance ToJSONKey Subject
+deriving instance FromJSONKey Subject
 
 deriving instance ToJSON ATGDelta
 deriving instance FromJSON ATGDelta
 
-instance FromJSONKey Address
-instance ToJSONKey Address
+instance ToJSONKey Address where
+    toJSONKey = toJSONKeyText addrToText
+instance FromJSONKey Address where
+    fromJSONKey = FromJSONKeyTextParser $ leftToFail . addrFromText
 
 deriving instance FromJSON GenAddressMap
 deriving instance ToJSON GenAddressMap
@@ -132,6 +174,12 @@ instance FromJSON CommitteeSecret where
 
 deriving instance ToJSON GenesisDistribution
 deriving instance FromJSON GenesisDistribution
+
+deriving instance Serialise (MerkleProof PrivateTx) => ToJSON (FairCV v)
+deriving instance Serialise (MerkleProof PrivateTx) => FromJSON (FairCV Unchecked)
+
+deriving instance ToJSON FairCVCheckResult
+deriving instance FromJSON FairCVCheckResult
 
 ---------------------------------------------------------------------------
 -- TH derivations for data

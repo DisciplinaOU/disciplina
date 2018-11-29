@@ -107,9 +107,9 @@ parseJSONSerialise base v =
     >>= leftToFail . fromBase base
     >>= leftToFail . first (show @Text) . deserialiseOrFail . LBS.fromStrict
 
----------------------------------------------------------------------
+---------------------------------------------------------------------------
 -- Helpers
----------------------------------------------------------------------
+---------------------------------------------------------------------------
 
 -- | Assuming given arguments are 'Object's, merges their content.
 mergeObjects :: Value -> Value -> Value
@@ -118,9 +118,9 @@ mergeObjects (Object a) (Object b) = Object $ HM.unionWithKey mergeUnique a b
     mergeUnique k _ _ = error $ "mergeObjects: duplicated values for key " <> show k
 mergeObjects _ _ = error "mergeObjects: one of arguments is not an object"
 
----------------------------------------------------------------------
+---------------------------------------------------------------------------
 -- Instances
----------------------------------------------------------------------
+---------------------------------------------------------------------------
 
 instance ToJSON SemVer.Version where
     toJSON = String . SemVer.toText

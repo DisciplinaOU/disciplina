@@ -44,9 +44,11 @@ import Data.Time.Clock (UTCTime, getCurrentTime)
 import Fmt ((+||), (||+))
 import qualified GHC.Exts as Exts
 import GHC.IO.Unsafe (unsafePerformIO)
+import Test.QuickCheck (resize)
 import Test.QuickCheck.Arbitrary.Generic (genericArbitrary, genericShrink)
 import qualified Text.Show
 
+import Dscp.Core.FairCV
 import Dscp.Core.Foundation
 import Dscp.Crypto
 import Dscp.Util.Test
@@ -188,6 +190,17 @@ instance Arbitrary BlockBody where
 instance Arbitrary Block where
     arbitrary = genericArbitrary
     shrink    = genericShrink
+
+-- | Not newtype deriving, because @'TaggedProof'@ constructor is hidden.
+instance (HasHash a, Arbitrary a) =>
+         Arbitrary (TaggedProof Unchecked a) where
+    arbitrary = mkTaggedProof <$> arbitrary
+    shrink = map mkTaggedProof . shrink . unTaggedProof
+
+-- | TODO: resolve the weird problem with _very_ long generation
+-- and produce larger FairCVs.
+instance Arbitrary (FairCV Unchecked) where
+    arbitrary = resize 5 $ FairCV <$> arbitrary
 
 instance ArbitraryMixture (AbstractSK ss) where
     arbitraryMixture = primitiveArbitraryMixture

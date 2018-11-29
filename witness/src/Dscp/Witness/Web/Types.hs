@@ -152,6 +152,9 @@ instance Buildable (ForResponseLog HashIs) where
 instance Buildable (ForResponseLog TxId) where
     build = buildForResponse
 
+instance Buildable (ForResponseLog FairCVCheckResult) where
+    build (ForResponseLog res) = build res
+
 ---------------------------------------------------------------------------
 -- JSON instances
 ---------------------------------------------------------------------------

@@ -41,6 +41,7 @@ module Dscp.Core.Foundation.Witness
     , ptHeaderL
     , PublicationTxId
     , toPtxId
+    , verifyPubTxWitnessed
     , GTx (..)
     , _GMoneyTx
     , _GPublicationTx
@@ -268,6 +269,15 @@ makeLensesWith postfixLFields ''PublicationTxWitnessed
 instance Buildable PublicationTxWitnessed where
     build PublicationTxWitnessed {..} =
         "PublicationTxWitnessed { " +| ptwTx |+ ", " +| ptwWitness |+  " }"
+
+-- | Verify a publication coupled with witness against an address of Educator.
+verifyPubTxWitnessed
+    :: (Serialise PrivateBlockHeader, Serialise PublicationTx)
+    => Address -> PublicationTxWitnessed -> Bool
+verifyPubTxWitnessed addr PublicationTxWitnessed {..} =
+    let pk = pwPk ptwWitness
+    in mkAddr pk == addr &&
+       verify pk (getId ptwTx, pk, ptHeader ptwTx) (pwSig ptwWitness)
 
 ----------------------------------------------------------------------------
 -- Transactions (united)
