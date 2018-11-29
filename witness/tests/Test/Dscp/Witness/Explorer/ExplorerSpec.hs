@@ -1,11 +1,11 @@
 module Test.Dscp.Witness.Explorer.ExplorerSpec where
 
-import Control.Lens (at, _Just)
 import Data.Default (def)
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
 import Loot.Base.HasLens (lensOf)
 import Test.QuickCheck (arbitraryBoundedEnum, shuffle)
+import Test.QuickCheck.Monadic (pre)
 
 import Dscp.Core
 import Dscp.Crypto
@@ -109,46 +109,38 @@ data SpoilVariant
 -- | Spoils a @'MerkleProof'@ by changing some of its internal nodes
 -- TODO: spoil better.
 spoilMerkleProof
-    :: Monad m
-    => MerkleProof a
-    -> PropertyM m (MerkleProof a)
+    :: MerkleProof a
+    -> Gen (MerkleProof a)
 spoilMerkleProof mproof = do
-    newSig <- pick arbitrary
+    newSig <- arbitrary
     pure $ mproof { pnSig = newSig }
 
+-- | Helper function to change arbitrary key-value pair in the map.
+-- Assumes that the map is not empty.
+editSomeKV :: Ord k => Map k v -> (k -> v -> Gen (k, v)) -> Gen (Map k v)
+editSomeKV mp action = do
+    (k, v) <- elements $ M.toList mp
+    (k', v') <- action k v
+    pure $ M.insert k' v' $ M.delete k mp
+
 -- | Spoils a @'FairCV'@ by changing some of its parts to random parts.
--- TODO: remove copy-paste
 spoilFairCV
-    :: Monad m
-    => FairCV Unchecked
-    -> PropertyM m (FairCV Unchecked)
-spoilFairCV (FairCV cv) = pick arbitraryBoundedEnum >>= \case
-    WrongAddr -> do
-        oldAddr <- pick . elements $ M.keys cv
-        newAddr <- pick arbitrary
-        let subCv = fromMaybe (error "impossible") $
-                    M.lookup oldAddr cv
-        return $ FairCV $ M.insert newAddr subCv $ M.delete oldAddr cv
-    WrongHeaderHash -> do
-        addr <- pick . elements $ M.keys cv
-        let subCv = fromMaybe (error "impossible") $
-                    M.lookup addr cv
-        oldHhash <- pick . elements $ M.keys subCv
-        newHhash <- pick arbitrary
-        let proof = fromMaybe (error "impossible") $
-                    M.lookup oldHhash subCv
-        return $ FairCV $
-            M.adjust (M.insert newHhash proof . M.delete oldHhash) addr cv
-    WrongProof -> do
-        addr <- pick . elements $ M.keys cv
-        let subCv = fromMaybe (error "impossible") $
-                    M.lookup addr cv
-        hhash <- pick . elements $ M.keys subCv
-        let proof = fromMaybe (error "impossible") $
-                    M.lookup hhash subCv
-        newProof <- mkTaggedProof <$> spoilMerkleProof (unTaggedProof proof)
-        return $ FairCV $
-            cv & at addr . _Just . at hhash . _Just .~ newProof
+    :: FairCV Unchecked
+    -> Gen (FairCV Unchecked)
+spoilFairCV (FairCV cv) = do
+    var <- arbitraryBoundedEnum
+    fmap FairCV $ editSomeKV cv $ case var of
+        WrongAddr -> \oldAddr subCv ->
+            (,subCv) <$> arbitrary `suchThat` (/= oldAddr)
+        WrongHeaderHash -> \addr subCv -> do
+            subCv' <- editSomeKV subCv $ \oldHash proof ->
+                (,proof) <$> arbitrary `suchThat` (/= oldHash)
+            return (addr, subCv')
+        WrongProof -> \addr subCv -> do
+            subCv' <- editSomeKV subCv $ \hhash proof -> do
+                proof' <- mkTaggedProof <$> spoilMerkleProof (unTaggedProof proof)
+                return (hhash, proof')
+            return (addr, subCv')
 
 spec :: Spec
 spec = describe "Explorer" $ do
@@ -314,7 +306,7 @@ spec = describe "Explorer" $ do
 
             -- create a bunch of private blocks and according publications
             -- for every educator, picking FairCV randomly from those,
-            cvPairs <- forM sks $ \sk -> do
+            cvPairsMs <- forM sks $ \sk -> do
                 pChainLen <- pick $ choose (1, 5)
                 edCvs <- replicateM pChainLen $ do
                     ptxs <- pick $ listOf1 arbitrary
@@ -334,13 +326,21 @@ spec = describe "Explorer" $ do
                          then Nothing
                          else Just (skAddress sk, edCvMap)
 
-            let fairCv = FairCV . M.fromList $ catMaybes cvPairs
-            fairCvInvalid <- spoilFairCV fairCv
+            let cvPairs = catMaybes cvPairsMs
+            pre $ not (null cvPairs)
+
+            let fairCv = FairCV $ M.fromList cvPairs
+            fairCvInvalid <- pick $ spoilFairCV fairCv
 
             -- Do positive and negative case in one `it` to reduce test
             -- running time
             checkResGood <- lift $ checkFairCV fairCv
             checkResBad <- lift $ checkFairCV fairCvInvalid
-            return $
-                fullyValid checkResGood &&
-                not (fullyValid checkResBad)
+            let goodCheck =
+                    counterexample "Valid FairCV is not checked correctly" $
+                    fullyValid checkResGood
+                badCheck =
+                    counterexample "Invalid FairCV is not rejected" $
+                    not $ fullyValid checkResBad
+
+            return $ goodCheck .&&. badCheck

@@ -219,4 +219,3 @@ checkFairCV =
         let root = ptw ^. ptwTxL.ptHeaderL.pbhBodyProof
         in verifyPubTxWitnessed addr ptw &&
            root == getMerkleProofRoot (unTaggedProof proof)
-

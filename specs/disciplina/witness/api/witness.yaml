@@ -353,7 +353,7 @@ paths:
                     $ref: '#/components/schemas/Hash'
 
   /checkcv:
-    post:
+    put:
       summary: Check the validity of FairCV.
       operationId: checkFairCV
       responses:

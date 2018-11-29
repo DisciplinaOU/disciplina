@@ -25,6 +25,7 @@ module Dscp.Witness.Logic.Getters
     , getPublicationByHeaderHash
     ) where
 
+import Control.Monad.Except (MonadError)
 import Data.Coerce (coerce)
 import qualified Snowdrop.Block as SD
 import qualified Snowdrop.Core as SD
@@ -38,17 +39,22 @@ import Dscp.Witness.Logic.Exceptions
 import Dscp.Witness.Mempool ()
 import Dscp.Witness.SDLock
 
+-- | Util function similar to `nothingToThrow`, but SD-specific
+nothingToThrowSD
+    :: forall e1 e m a. (SD.HasReview e e1, MonadError e m)
+    => e1 -> Maybe a -> m a
+nothingToThrowSD e = maybe (SD.throwLocalError e) pure
+
 ----------------------------------------------------------------------------
 -- Block/Header/Tip getters
 ----------------------------------------------------------------------------
 
 -- | Retrieves current tip.
 getTipHash :: HasWitnessConfig => SdM_ chgacc HeaderHash
-getTipHash = do
-    x <- SD.unTipValue <$>
-        (SD.queryOne SD.TipKey >>=
-         maybe (SD.throwLocalError @(SD.BlockStateException Ids) SD.TipNotFound) pure)
-    pure $ fromMaybe genesisHash x
+getTipHash =
+    fmap (fromMaybe genesisHash . SD.unTipValue) $
+    SD.queryOne SD.TipKey >>=
+    nothingToThrowSD @(SD.BlockStateException Ids) SD.TipNotFound
 
 -- | Retrieves current tip block.
 getTipBlock :: HasWitnessConfig => SdM_ chgacc Block
@@ -57,7 +63,7 @@ getTipBlock = do
     if tipHash == genesisHash
     then pure genesisBlock
     else sBlockReconstruct <$>
-         (maybe (SD.throwLocalError $ LEMalformed "Tip block is absent") pure =<<
+         (nothingToThrowSD (LEMalformed "Tip block is absent") =<<
           SD.queryOne (SD.BlockRef tipHash))
 
 -- | Retrieves current tip header.
@@ -82,10 +88,9 @@ getBlock
     => x -> SdM_ chgacc Block
 getBlock o = do
     bM <- getBlockMaybe o
-    maybe (SD.throwLocalError $ LEBlockAbsent $
-              "Can't get block with hash " <> pretty (headerHash o))
-          pure
-          bM
+    nothingToThrowSD
+        (LEBlockAbsent $ "Can't get block with hash " <> pretty (headerHash o))
+        bM
 
 -- | Safely resolve header.
 getHeaderMaybe
@@ -176,10 +181,9 @@ getTx
     => GTxId -> SdM_ chgacc GTxWitnessed
 getTx gTxId = do
     tM <- getTxMaybe gTxId
-    maybe (SD.throwLocalError $ LETxAbsent $
-              "Can't get transaction with id " <> pretty gTxId)
-          pure
-          tM
+    nothingToThrowSD
+        (LETxAbsent $ "Can't get transaction with id " <> pretty gTxId)
+        tM
 
 -- | Get a transaction with block it is contained in, throw an error if that transaction
 -- is not found.
@@ -200,5 +204,9 @@ getPrivateTipHash educator =
 getPublicationByHeaderHash
     :: PrivateHeaderHash
     -> SdM_ chgacc (Maybe PublicationTxWitnessed)
-getPublicationByHeaderHash = runMaybeT . fmap piTw .
-    (MaybeT . SD.queryOne >=> MaybeT . SD.queryOne)
+getPublicationByHeaderHash hhash = runMaybeT . fmap piTw $ do
+    pTxId <- MaybeT $ SD.queryOne hhash
+    mPubW <- lift $ SD.queryOne pTxId
+    nothingToThrowSD
+        (LEMalformed "Private header hash and publication indices are inconsistent")
+        mPubW
