@@ -2,12 +2,16 @@ module Test.Dscp.Witness.Common
     ( selectGenesisSecret
     , genSafeOutAddr
     , genSafeTxOuts
+    , dumpBlock
     ) where
+
+import Loot.Base.HasLens (lensOf)
 
 import Dscp.Core
 import Dscp.Crypto
+import Dscp.Resource.Keys
 import Dscp.Util.Test
-import Dscp.Witness.TestConfig
+import Dscp.Witness
 
 -- | Arbitrarly choose genesis secret.
 selectGenesisSecret :: Gen SecretKey
@@ -24,3 +28,16 @@ genSafeTxOuts maxVal genN = do
     txOutAddrs <- vectorUniqueOf n genSafeOutAddr
     txOutValues <- vectorOf n $ Coin <$> choose (1, maxVal)
     return $ zipWith TxOut txOutAddrs txOutValues
+
+-- | Dump all mempool transactions into a new block.
+dumpBlock
+    :: (TestWitnessWorkMode ctx m, WithinWriteSDLock)
+    => m HeaderHash
+dumpBlock = do
+    slotId <- rewindToNextSlot
+    let issuerKey = KeyResources . mkSecretKeyData $ testFindSlotOwner slotId
+
+    local (lensOf @(KeyResources WitnessNode) .~ issuerKey) $ do
+        block <- createBlock slotId
+        void $ applyBlock block
+        return (headerHash block)

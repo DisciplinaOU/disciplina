@@ -16,7 +16,7 @@ module Dscp.Util.Test
 
 import Codec.Serialise (Serialise, deserialise, serialise)
 import Control.Exception.Safe (catchJust)
-import Control.Lens (LensLike')
+import Control.Lens (LensLike', has)
 import "cryptonite" Crypto.Random (ChaChaDRG, MonadPseudoRandom)
 import Data.Aeson (FromJSON, ToJSON, eitherDecode, encode)
 import qualified Data.Hashable as H
@@ -161,16 +161,23 @@ noThrow action = property <$> do
     (action $> succeeded)
         `catchAny` \e -> pure failed{ reason = "Exception thrown: " <> show e }
 
+-- | Checks whether exception is thrown and matches given predicate.
+throwsMatching
+    :: forall e m b.
+      (MonadCatch m, Exception e)
+    => (e -> Bool) -> m b -> m Property
+throwsMatching matches action =
+    catchJust (guard . matches) (action $> property False) (\_ -> pure (property True))
+        `catchAny`
+        \e -> pure $ property failed{ reason = "Exception thrown: " <> show e }
+
 -- | Checks whether exception is thrown and matches given prism.
 -- Very specific lens is consumed to allow mappend of several lenses.
 throwsPrism
     :: forall e m a b.
       (MonadCatch m, Exception e)
-    => LensLike' (Const (First a)) e a -> m b -> m Property
-throwsPrism excL action =
-    catchJust (^? excL) (action $> property False) (\_ -> pure (property True))
-        `catchAny`
-        \e -> pure $ property failed{ reason = "Exception thrown: " <> show e }
+    => LensLike' (Const Any) e a -> m b -> m Property
+throwsPrism excL = throwsMatching (has excL)
 
 expectOne :: Text -> [a] -> a
 expectOne _    [x] = x

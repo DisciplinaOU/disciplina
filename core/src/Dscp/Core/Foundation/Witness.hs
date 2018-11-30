@@ -42,6 +42,7 @@ module Dscp.Core.Foundation.Witness
     , PublicationTxId
     , toPtxId
     , verifyPubTxWitnessed
+    , BlockMetaTx (..)
     , GTx (..)
     , _GMoneyTx
     , _GPublicationTx
@@ -61,10 +62,10 @@ module Dscp.Core.Foundation.Witness
     , BlockToSign (..)
     , Header (..)
     , hIssuerL
-    , hDifficultyL
-    , hSlotIdL
-    , hPrevHashL
     , hSignatureL
+    , hSlotIdL
+    , hDifficultyL
+    , hPrevHashL
     , Block (..)
     , bHeaderL
     , bBodyL
@@ -77,6 +78,7 @@ import Codec.Serialise (Serialise)
 import Control.Lens (makeLensesWith)
 import Control.Lens (makePrisms)
 import Data.Data (Data)
+import System.Random (Random)
 
 import Fmt (blockListF, build, indentF, listF, nameF, whenF, (+|), (+||), (|+), (||+))
 
@@ -147,8 +149,6 @@ data TxInAcc = TxInAcc
     , tiaNonce :: !Nonce
     } deriving (Eq, Ord, Generic, Show)
 
-makeLensesWith postfixLFields ''TxInAcc
-
 instance Buildable TxInAcc where
     build TxInAcc{..} = "TxInnAcc {" +| tiaAddr |+ " nonce " +|| tiaNonce ||+ "}"
 
@@ -157,8 +157,6 @@ data TxOut = TxOut
     { txOutAddr  :: !Address
     , txOutValue :: !Coin
     } deriving (Eq, Ord, Generic, Show)
-
-makeLensesWith postfixLFields ''TxOut
 
 instance Buildable TxOut where
     build TxOut{..} = "<" +| txOutAddr |+ ", " +| txOutValue |+ ">"
@@ -169,8 +167,6 @@ data Tx = Tx
     , txInValue :: !Coin
     , txOuts    :: ![TxOut]
     } deriving (Eq, Ord, Generic, Show)
-
-makeLensesWith postfixLFields ''Tx
 
 instance Buildable Tx where
     build Tx{..} =
@@ -195,8 +191,6 @@ data TxWitness = TxWitness
     , txwPk  :: !PublicKey
     } deriving (Eq, Ord, Show, Generic)
 
-makeLensesWith postfixLFields ''TxWitness
-
 instance Buildable TxWitness where
     build TxWitness {..} =
         "TxWitness { " +| txwSig |+ ", pk: " +| txwPk |+ " }"
@@ -206,8 +200,6 @@ data TxWitnessed = TxWitnessed
     { twTx      :: !Tx
     , twWitness :: !TxWitness
     } deriving (Eq, Ord, Show, Generic)
-
-makeLensesWith postfixLFields ''TxWitnessed
 
 instance Buildable TxWitnessed where
     build TxWitnessed {..} =
@@ -226,8 +218,6 @@ data PublicationTx = PublicationTx
     , ptHeader     :: PrivateBlockHeader
       -- ^ Private block header to publish.
     } deriving (Eq, Ord, Generic, Show)
-
-makeLensesWith postfixLFields ''PublicationTx
 
 instance Buildable PublicationTx where
     build PublicationTx { ptAuthor, ptFeesAmount, ptHeader } =
@@ -264,8 +254,6 @@ data PublicationTxWitnessed = PublicationTxWitnessed
     , ptwWitness :: PublicationTxWitness
     } deriving (Eq, Ord, Show, Generic)
 
-makeLensesWith postfixLFields ''PublicationTxWitnessed
-
 instance Buildable PublicationTxWitnessed where
     build PublicationTxWitnessed {..} =
         "PublicationTxWitnessed { " +| ptwTx |+ ", " +| ptwWitness |+  " }"
@@ -280,6 +268,24 @@ verifyPubTxWitnessed addr PublicationTxWitnessed {..} =
        verify pk (getId ptwTx, pk, ptHeader ptwTx) (pwSig ptwWitness)
 
 ----------------------------------------------------------------------------
+-- Block meta
+----------------------------------------------------------------------------
+
+-- | Transaction which changes block-level data.
+-- It works like separate transaction type because this is the only way to
+-- validate, e.g. difficulty change.
+--
+-- Note, that this is just a helper in computation, it is neither stored nor submitted
+-- over network. Nevertheless it is treated like transaction, being passed through
+-- expansion and validation.
+newtype BlockMetaTx = BlockMetaTx
+    { bmtBlock :: Block
+    } deriving (Eq, Ord, Show, Generic)
+
+instance Buildable Header => Buildable BlockMetaTx where
+    build (BlockMetaTx{..}) = "BlockMetaTx { " +| bHeader bmtBlock |+ " }"
+
+----------------------------------------------------------------------------
 -- Transactions (united)
 ----------------------------------------------------------------------------
 
@@ -290,9 +296,7 @@ data GTx
     | GPublicationTx PublicationTx
     deriving (Generic, Eq, Show)
 
-makePrisms ''GTx
-
-instance Buildable GTx where
+instance Buildable Header => Buildable GTx where
     build (GMoneyTx       tw) = "GMoneyTx: "       +| tw |+ ""
     build (GPublicationTx pw) = "GPublciationTx: " +| pw |+ ""
 
@@ -314,8 +318,6 @@ data GTxWitnessed
     = GMoneyTxWitnessed TxWitnessed
     | GPublicationTxWitnessed PublicationTxWitnessed
     deriving (Generic, Eq, Ord, Show)
-
-makePrisms ''GTxWitnessed
 
 instance Buildable GTxWitnessed where
     build (GMoneyTxWitnessed       tw) = "GMoneyTxWitnessed: " +| tw |+ ""
@@ -349,7 +351,7 @@ data WithBlock a = WithBlock
 
 -- | Slot id.
 newtype SlotId = SlotId Word64
-    deriving (Eq, Ord, Num, Enum, Show, Generic, Buildable)
+    deriving (Eq, Ord, Num, Enum, Show, Generic, Buildable, Random)
 
 -- | Chain difficulty.
 newtype Difficulty = Difficulty { unDifficulty :: Word64 }
@@ -369,7 +371,7 @@ data Header = Header
     , hDifficulty :: !Difficulty
     , hSlotId     :: !SlotId
     , hPrevHash   :: !HeaderHash
-    } deriving (Eq, Show, Generic)
+    } deriving (Eq, Ord, Show, Generic)
 
 instance HasHash Header => Buildable Header where
     build h@Header{..} =
@@ -385,7 +387,7 @@ instance HasHash Header => Buildable Header where
 -- | Body of the block.
 data BlockBody = BlockBody
     { bbTxs :: ![GTxWitnessed]
-    } deriving (Eq, Show, Generic)
+    } deriving (Eq, Ord, Show, Generic)
 
 instance Buildable BlockBody where
     build (BlockBody txs) =
@@ -401,7 +403,7 @@ instance Buildable BlockBody where
 data Block = Block
     { bHeader :: !Header
     , bBody   :: !BlockBody
-    } deriving (Eq, Show, Generic)
+    } deriving (Eq, Ord, Show, Generic)
 
 instance HasHash Header => Buildable Block where
     build Block{..} =
@@ -410,6 +412,17 @@ instance HasHash Header => Buildable Block where
 ----------------------------------------------------------------------------
 -- Lens and classes
 ----------------------------------------------------------------------------
+
+
+makeLensesWith postfixLFields ''TxInAcc
+makeLensesWith postfixLFields ''TxOut
+makeLensesWith postfixLFields ''Tx
+makeLensesWith postfixLFields ''TxWitness
+makeLensesWith postfixLFields ''TxWitnessed
+makeLensesWith postfixLFields ''PublicationTx
+makeLensesWith postfixLFields ''PublicationTxWitnessed
+makePrisms ''GTx
+makePrisms ''GTxWitnessed
 
 makeLensesWith postfixLFields ''Block
 makeLensesWith postfixLFields ''Header

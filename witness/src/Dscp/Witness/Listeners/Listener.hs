@@ -58,7 +58,7 @@ blockIssuingListener =
         issueBlock slotId = do
             (block, proof) <-
                 writingSDLock "create & apply block" $ do
-                    block <- createBlock runSdM slotId
+                    block <- createBlock slotId
                     logInfo $ "Created a new block: \n" +| block |+ ""
                     proof <- applyBlock block
                     return (block, proof)

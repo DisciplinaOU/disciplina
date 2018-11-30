@@ -134,6 +134,7 @@ instance Arbitrary Coin where
 deriving instance Arbitrary Nonce
 deriving instance Arbitrary Difficulty
 deriving instance Arbitrary SlotId
+deriving instance Arbitrary BlockMetaTx
 
 instance Arbitrary TxInAcc where
     arbitrary = genericArbitrary

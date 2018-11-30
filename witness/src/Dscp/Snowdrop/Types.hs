@@ -1,8 +1,11 @@
+{-# LANGUAGE StrictData #-}
+
 -- | Snowdrop-related types.
 
 module Dscp.Snowdrop.Types
     ( PublicationTxTypeId(..)
     , AccountTxTypeId(..)
+    , BlockMetaTxTypeId(..)
     , AccountId(..)
     , Account(..)
     , Author(..)
@@ -30,12 +33,19 @@ module Dscp.Snowdrop.Types
     , _SumMustBeNonNegative
     , _BalanceCannotBecomeNegative
     , _CannotAffordFees
+    , BlockException(..)
+    , _DuplicatedDifficulty
+    , _DifficultyIsTooLarge
+    , _PrevBlockIsIncorrect
+    , _SlotIdIsNotIncreased
     ) where
 
 import Control.Lens (makePrisms)
 import Data.Default (Default (..))
 import Data.Text.Buildable (Buildable (..))
 import Fmt (build, (+|), (|+))
+import Snowdrop.Block (BlockApplicationException)
+import Snowdrop.Util (HasReview (..))
 import qualified Text.Show
 
 import Dscp.Core
@@ -157,6 +167,53 @@ instance Buildable AccountException where
 
 instance Show AccountException where
     show = toString . pretty
+
+-- | Transaction type for block metas.
+data BlockMetaTxTypeId = BlockMetaTxTypeId deriving (Eq, Ord, Show, Generic)
+
+data BlockException
+    = DuplicatedDifficulty
+      { bmeProvidedHeader :: Header, bmeExistingHeaderHash :: HeaderHash }
+    | DifficultyIsTooLarge
+      { bmeDifficulty :: Difficulty }
+    | PrevBlockIsIncorrect
+      { bmeProvidedHash :: HeaderHash, bmeTipHash :: HeaderHash }
+    | SlotIdIsNotIncreased
+      { bmeProvidedSlotId :: SlotId, bmeTipSlotId :: SlotId }
+    | InvalidBlockSignature
+    | IssuerDoesNotOwnSlot
+      { bmrSlotId :: SlotId, bmrIssuer :: Address }
+    | BlockApplicationError (BlockApplicationException HeaderHash)
+    | BlockMetaInternalError Text
+
+makePrisms ''BlockException
+
+instance Buildable BlockException where
+    build = \case
+        DuplicatedDifficulty{..} ->
+            "Block with this difficulty already exists: provided " +| bmeProvidedHeader |+
+            ", but another block " +| bmeExistingHeaderHash |+ " already exists in chain."
+        DifficultyIsTooLarge{..} ->
+            "Difficulty should've been incremented by one, but is larger: "
+            +| bmeDifficulty |+ ""
+        PrevBlockIsIncorrect{..} ->
+            "Previous block is incorrect: expected " +| bmeTipHash |+
+            ", given " +| bmeProvidedHash |+ ""
+        SlotIdIsNotIncreased{..} ->
+            "Slot id should've been increased: provided " +| bmeProvidedSlotId |+
+            ", current tip was created at " +| bmeTipSlotId |+ ""
+        InvalidBlockSignature ->
+            "Block signature is invalid"
+        IssuerDoesNotOwnSlot{..} ->
+            "Node " +| bmrIssuer |+ " does not own slot " +| bmrSlotId |+ ""
+        BlockApplicationError err ->
+            build err
+        BlockMetaInternalError msg ->
+            "Internal error: " +| msg |+ ""
+
+instance HasReview BlockException (BlockApplicationException HeaderHash) where
+    inj = BlockApplicationError
+
 
 -- | Wrapper for address.
 newtype AccountId = AccountId { unAccountId :: Address }

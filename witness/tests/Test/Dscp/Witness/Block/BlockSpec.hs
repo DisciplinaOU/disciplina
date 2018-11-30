@@ -1,13 +1,14 @@
 module Test.Dscp.Witness.Block.BlockSpec where
 
-import Control.Lens (ix, to)
+import Control.Lens (has)
 import qualified Data.List as L
 import qualified GHC.Exts as Exts
 import Test.QuickCheck.Monadic (pre)
 
 import Dscp.Core
 import Dscp.Crypto
-import Dscp.Resource.Keys
+import Dscp.Snowdrop.Configuration
+import Dscp.Snowdrop.Types
 import Dscp.Util.Test
 import Dscp.Witness
 import Test.Dscp.Witness.Mode
@@ -42,7 +43,7 @@ makeBlocksChain n
         fix $ \blocks ->
         zip [1..n] (genesisBlock : blocks)
         <&> \(i, prevBlock) ->
-            let hSlotId = fromIntegral i
+            let hSlotId = mkSlotId i
                 hDifficulty = fromIntegral i
                 issuer = testFindSlotOwner hSlotId
                 hPrevHash = hash (bHeader prevBlock)
@@ -56,21 +57,24 @@ makeBlocksChain n
               , hDifficulty, hSlotId, hPrevHash, hSignature
               }
             }
+  where
+    mkSlotId blockNo = fromIntegral $ blockNo * 3 + ((blockNo * 231) `mod` 3)
 
 -- | Given correct chain, and spoiling function, modifies one of blocks
 -- in a chain and checks that its application fails.
 submitSpoiledChain
-    :: (HasWitnessConfig, WithinWriteSDLock)
-    => NonEmpty Block
+    :: (HasWitnessConfig, WithinWriteSDLock, Exception e)
+    => (e -> Bool)
+    -> NonEmpty Block
     -> (Block -> Gen Block)
-    -> PropertyM WitnessTestMode' Bool
-submitSpoiledChain chain spoilBlock = do
+    -> PropertyM WitnessTestMode' Property
+submitSpoiledChain isExpectedError chain spoilBlock = do
     let lastBlock = last chain
     badLastBlock <- pick $ spoilBlock lastBlock
     pre (badLastBlock /= lastBlock)
     lift $ do
         mapM_ submitBlock (init chain)
-        throwsSome $ submitBlock badLastBlock
+        throwsMatching isExpectedError $ submitBlock badLastBlock
 
 spec :: Spec
 spec = describe "Block validation + application" $ do
@@ -91,7 +95,7 @@ spec = describe "Block validation + application" $ do
                 badPrevHash <- arbitrary
                 return $ block & bHeaderL . hPrevHashL .~ badPrevHash
                                & resignBlock
-        submitSpoiledChain blocks spoilBlock
+        submitSpoiledChain (\SomeException{} -> True) blocks spoilBlock
 
     it "Applying block not by committee member is not fine" $ witnessProperty $ do
         issuer <- pick arbitrary
@@ -101,34 +105,29 @@ spec = describe "Block validation + application" $ do
         lift . throwsSome $ submitBlock badBlock
 
     it "Wrong difficulty is fatal" $ witnessProperty $ do
-        _ <- stop $ pendingWith "To be resolved in [DSCP-261]"
-
         n <- pick $ choose (1, 5)
         let blocks = makeBlocksChain n
         let spoilBlock block = do
                 badDiff <- arbitrary
                 return $ block & bHeaderL . hDifficultyL .~ badDiff
                                & resignBlock
-        submitSpoiledChain blocks spoilBlock
+        let isExpectedError = or . sequence
+                              [ has (_BlockError . _DuplicatedDifficulty)
+                              , has (_BlockError . _DifficultyIsTooLarge)
+                              ]
+        submitSpoiledChain isExpectedError blocks spoilBlock
 
     it "Block slot only increases over time" $ witnessProperty $ do
-        _ <- stop $ pendingWith "To be resolved in [DSCP-261]"
-
-        issuer <- lift $ ourSecretKey @WitnessNode
         n <- pick $ choose (2, 5)
         -- going to modify block before the last one with too high slotId
-        let issuerAddr = mkAddr $ toPublic issuer
-            blocks = makeBlocksChain n
-            ownedSlot = committeeOwnsSlot testCommittee issuerAddr
-            lastSlot = blocks ^. to last . bHeaderL . hSlotIdL
-            futureSlot = L.head $ filter ownedSlot [99999..]
-        oddSlot <- pick $ elements [lastSlot, futureSlot]
-        let badBlocks = blocks & ix (n - 2) %~
-                          \block -> block & bHeaderL . hSlotIdL .~ oddSlot
-                                          & resignBlock
-        lift $ do
-            mapM_ submitBlock (init badBlocks)
-            throwsSome $ submitBlock (last badBlocks)
+        let blocks = makeBlocksChain n
+            preLastBlock = L.last $ init blocks
+        let spoilBlock block = do
+                oddSlot <- choose (0, hSlotId (bHeader preLastBlock) - 1)
+                return $ block & bHeaderL . hSlotIdL .~ oddSlot
+                               & resignBlock
+        submitSpoiledChain (has $ _BlockError . _SlotIdIsNotIncreased)
+                           blocks spoilBlock
 
     it "Wrong signature is not fine" $ witnessProperty $ do
         let block1 :| [] = makeBlocksChain 1

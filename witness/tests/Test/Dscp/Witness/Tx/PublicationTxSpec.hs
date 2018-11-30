@@ -14,6 +14,8 @@ import Dscp.Snowdrop
 import Dscp.Util
 import Dscp.Util.Test
 import Dscp.Witness
+
+import Test.Dscp.Witness.Common
 import Test.Dscp.Witness.Mode
 
 genPublicationChain
@@ -143,7 +145,7 @@ spec = describe "Publication tx expansion + validation" $ do
 
         lift $ submitPub tw
         whenM (pick arbitrary) $
-            lift $ void . applyBlock =<< createBlock runSdM 0
+            void $ lift dumpBlock
         lift . throwsPrism (_PublicationError . _PublicationLocalLoop) $
             submitPub tw
 
