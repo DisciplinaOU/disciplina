@@ -78,67 +78,67 @@ submitSpoiledChain isExpectedError chain spoilBlock = do
 
 spec_Block_validation_with_application :: Spec
 spec_Block_validation_with_application = do
-  describe "Block header" $ do
-    it "Good block is fine" $ witnessProperty $ do
-        let blocks = makeBlocksChain 1
-        lift . noThrow $ mapM_ submitBlock blocks
+    describe "Block header" $ do
+        it "Good block is fine" $ witnessProperty $ do
+            let blocks = makeBlocksChain 1
+            lift . noThrow $ mapM_ submitBlock blocks
 
-    it "Several good blocks are is fine" $ witnessProperty $ do
-        n <- pick $ choose (1, 5)
-        let blocks = makeBlocksChain n
-        lift . noThrow $ mapM_ submitBlock blocks
+        it "Several good blocks are is fine" $ witnessProperty $ do
+            n <- pick $ choose (1, 5)
+            let blocks = makeBlocksChain n
+            lift . noThrow $ mapM_ submitBlock blocks
 
-    it "Wrong previous block hash is not fine" $ witnessProperty $ do
-        n <- pick $ choose (1, 5)
-        let blocks = makeBlocksChain n
-        let spoilBlock block = do
-                badPrevHash <- arbitrary
-                return $ block & bHeaderL . hPrevHashL .~ badPrevHash
-                               & resignBlock
-        submitSpoiledChain (\SomeException{} -> True) blocks spoilBlock
+        it "Wrong previous block hash is not fine" $ witnessProperty $ do
+            n <- pick $ choose (1, 5)
+            let blocks = makeBlocksChain n
+            let spoilBlock block = do
+                    badPrevHash <- arbitrary
+                    return $ block & bHeaderL . hPrevHashL .~ badPrevHash
+                                   & resignBlock
+            submitSpoiledChain (\SomeException{} -> True) blocks spoilBlock
 
-    it "Applying block not by committee member is not fine" $ witnessProperty $ do
-        issuer <- pick arbitrary
-        let block :| [] = makeBlocksChain 1
-            badBlock = block & resignBlockAs issuer
-        pre (badBlock /= block)
-        lift . throwsSome $ submitBlock badBlock
+        it "Applying block not by committee member is not fine" $ witnessProperty $ do
+            issuer <- pick arbitrary
+            let block :| [] = makeBlocksChain 1
+                badBlock = block & resignBlockAs issuer
+            pre (badBlock /= block)
+            lift . throwsSome $ submitBlock badBlock
 
-    it "Wrong difficulty is fatal" $ witnessProperty $ do
-        n <- pick $ choose (1, 5)
-        let blocks = makeBlocksChain n
-        let spoilBlock block = do
-                badDiff <- arbitrary
-                return $ block & bHeaderL . hDifficultyL .~ badDiff
-                               & resignBlock
-        let isExpectedError = or . sequence
-                              [ has (_BlockError . _DuplicatedDifficulty)
-                              , has (_BlockError . _DifficultyIsTooLarge)
-                              ]
-        submitSpoiledChain isExpectedError blocks spoilBlock
+        it "Wrong difficulty is fatal" $ witnessProperty $ do
+            n <- pick $ choose (1, 5)
+            let blocks = makeBlocksChain n
+            let spoilBlock block = do
+                    badDiff <- arbitrary
+                    return $ block & bHeaderL . hDifficultyL .~ badDiff
+                                   & resignBlock
+            let isExpectedError = or . sequence
+                                  [ has (_BlockError . _DuplicatedDifficulty)
+                                  , has (_BlockError . _DifficultyIsTooLarge)
+                                  ]
+            submitSpoiledChain isExpectedError blocks spoilBlock
 
-    it "Block slot only increases over time" $ witnessProperty $ do
-        n <- pick $ choose (2, 5)
-        -- going to modify block before the last one with too high slotId
-        let blocks = makeBlocksChain n
-            preLastBlock = L.last $ init blocks
-        let spoilBlock block = do
-                oddSlot <- choose (0, hSlotId (bHeader preLastBlock) - 1)
-                return $ block & bHeaderL . hSlotIdL .~ oddSlot
-                               & resignBlock
-        submitSpoiledChain (has $ _BlockError . _SlotIdIsNotIncreased)
-                           blocks spoilBlock
+        it "Block slot only increases over time" $ witnessProperty $ do
+            n <- pick $ choose (2, 5)
+            -- going to modify block before the last one with too high slotId
+            let blocks = makeBlocksChain n
+                preLastBlock = L.last $ init blocks
+            let spoilBlock block = do
+                    oddSlot <- choose (0, hSlotId (bHeader preLastBlock) - 1)
+                    return $ block & bHeaderL . hSlotIdL .~ oddSlot
+                                   & resignBlock
+            submitSpoiledChain (has $ _BlockError . _SlotIdIsNotIncreased)
+                blocks spoilBlock
 
-    it "Wrong signature is not fine" $ witnessProperty $ do
-        let block1 :| [] = makeBlocksChain 1
-        block2 <- pick arbitrary
-        mixBlock <- pick $ arbitraryUniqueMixture block1 block2
-        lift . throwsSome $ submitBlock mixBlock
+        it "Wrong signature is not fine" $ witnessProperty $ do
+            let block1 :| [] = makeBlocksChain 1
+            block2 <- pick arbitrary
+            mixBlock <- pick $ arbitraryUniqueMixture block1 block2
+            lift . throwsSome $ submitBlock mixBlock
 
-  describe "Block content" $ do
-    it "Content is verified" $ witnessProperty $ do
-        let block :| [] = makeBlocksChain 1
-        tx <- pick arbitrary
-        let badTx = tx & twTxL . txInAccL . tiaNonceL .~ 999
-        let badBlock = block & bBodyL . bbTxsL .~ one (GMoneyTxWitnessed badTx)
-        lift . throwsSome $ submitBlock badBlock
+    describe "Block content" $
+        it "Content is verified" $ witnessProperty $ do
+            let block :| [] = makeBlocksChain 1
+            tx <- pick arbitrary
+            let badTx = tx & twTxL . txInAccL . tiaNonceL .~ 999
+            let badBlock = block & bBodyL . bbTxsL .~ one (GMoneyTxWitnessed badTx)
+            lift . throwsSome $ submitBlock badBlock

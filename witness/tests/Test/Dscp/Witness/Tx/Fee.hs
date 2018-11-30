@@ -12,9 +12,9 @@ testFeeCoefficients =
     FeeCoefficients{fcMinimal = Coin 10, fcMultiplier = 0.1}
 
 spec_Transaction_fees :: Spec
-spec_Transaction_fees = do
+spec_Transaction_fees =
     it "fixFees always converges for money tx and linear coefs" . property $
-      \outs sk ->
-        let tw = fixFees (LinearFeePolicy testFeeCoefficients) $ \fees ->
-                   signTx sk $ createTx sk 0 outs fees
-        in tw `seq` ()
+        \outs sk ->
+            let tw = fixFees (LinearFeePolicy testFeeCoefficients) $ \fees ->
+                    signTx sk $ createTx sk 0 outs fees
+            in tw `seq` ()
