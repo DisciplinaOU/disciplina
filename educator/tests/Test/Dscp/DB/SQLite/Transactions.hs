@@ -8,7 +8,7 @@ module Test.Dscp.DB.SQLite.Transactions where
 
 import qualified Control.Concurrent.STM as STM
 import qualified Data.List as L
-import Database.SQLite.Simple (Only (..))
+import Database.SQLite.Simple (Only (..), execute, query)
 import Loot.Base.HasLens (HasCtx)
 import System.Directory (removeFile)
 import Text.InterpolatedString.Perl6 (q)
@@ -26,7 +26,7 @@ type Money = Int
 prepareSchema :: (MonadIO m) => DBT t 'Writing m ()
 prepareSchema =
     forM_ [createTableQuery, addAccountQuery] $
-        \que -> execute que ()
+        \que -> withConnection $ \conn -> execute conn que ()
   where
     createTableQuery = [q|
         create table if not exists Accounts (
@@ -38,14 +38,15 @@ prepareSchema =
         |]
 
 getMoney :: MonadIO m => DBT t w m Money
-getMoney = fromOnly . L.head <$> query queryText ()
+getMoney = withConnection $ \conn ->
+           fromOnly . L.head <$> query conn queryText ()
   where
     queryText = [q|
         select amount from Accounts
     |]
 
 setMoney :: MonadIO m => Money -> DBT t 'Writing m ()
-setMoney val = execute queryText (Only val)
+setMoney val = withConnection $ \conn -> execute conn queryText (Only val)
   where
     queryText = [q|
         update Accounts set amount = ?

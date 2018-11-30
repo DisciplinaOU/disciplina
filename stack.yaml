@@ -26,6 +26,7 @@ extra-deps:
 - servant-auth-server-0.4.0.0
 - cborg-0.2.1.0
 - serialise-0.2.1.0
+- beam-sqlite-0.3.2.3
 
 - git: https://github.com/serokell/auth-data-structures.git
   commit: 4a95f4dd32a82195f49ceb0113c9f05bc260ca7d

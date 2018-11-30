@@ -19,6 +19,7 @@ _definitions:
         - DefaultSignatures
         - DeriveDataTypeable
         - DeriveGeneric
+        - EmptyCase
         - FlexibleContexts
         - FlexibleInstances
         - FunctionalDependencies

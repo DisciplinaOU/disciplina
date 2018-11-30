@@ -140,7 +140,7 @@ instance HasId Course
 
 -- | Assignment can be either regular of final
 data AssignmentType = Regular | CourseFinal
-    deriving (Eq, Ord, Show, Generic)
+    deriving (Eq, Ord, Show, Enum, Generic)
 
 -- | Assignment doesn't contain actual assignment contents - only hash of them.
 data Assignment = Assignment

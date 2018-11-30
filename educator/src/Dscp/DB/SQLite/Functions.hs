@@ -1,5 +1,7 @@
-{-# LANGUAGE GADTs            #-}
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE GADTs                 #-}
+{-# LANGUAGE PartialTypeSignatures #-}
+{-# LANGUAGE TypeApplications      #-}
+{-# OPTIONS_GHC -Wno-partial-type-signatures #-}
 
 module Dscp.DB.SQLite.Functions
        ( -- * Closing/opening
@@ -14,34 +16,54 @@ module Dscp.DB.SQLite.Functions
        , DBT
        , TransactionalContext (WithinTx)
        , OperationType (Writing)
-       , query
-       , execute
-       , modifyingQuery
-       , traced
+
+         -- * SQLite queries building
+       , runSelect
+       , runSelectMap
+       , runInsert
+       , runInsertReturning
+       , runUpdate
+       , runDelete
+       , withConnection
+
+         -- * Runners
        , invoke
+       , invokeUnsafe
        , transactR
        , transactW
-       , invokeUnsafe
-       , SQLiteFunctionCall(..)
-       , sqlCall
+
+         -- * Misc
+       , traced
+
+         -- * Internal
+       , sqliteMToDbt
+       , dbtToSqliteM
        ) where
 
 import Control.Concurrent (getNumCapabilities)
 import Control.Concurrent.Chan (newChan, readChan, writeChan)
 import Control.Monad.Reader (mapReaderT)
 import qualified Data.List as L
-import Database.SQLite.Simple (Connection, FromRow, Only (..), Query, ToRow)
+import Database.Beam.Backend (FromBackendRow, MonadBeam (..))
+import qualified Database.Beam.Backend.SQL.BeamExtensions as Backend
+import Database.Beam.Backend.SQL.SQL92 (Sql92DeleteSyntax, Sql92InsertSyntax, Sql92SelectSyntax,
+                                        Sql92UpdateSyntax)
+import Database.Beam.Query (QExpr, SqlDelete, SqlInsert, SqlInsertValues, SqlSelect, SqlUpdate)
+import qualified Database.Beam.Query as Backend
+import Database.Beam.Schema (DatabaseEntity, TableEntity)
+import Database.Beam.Sqlite (Sqlite, SqliteCommandSyntax, SqliteM (..))
+import Database.SQLite.Simple (Connection)
 import qualified Database.SQLite.Simple as Backend
-import Database.SQLite.Simple.FromField (FromField)
 import Loot.Base.HasLens (HasCtx, HasLens (..))
 import qualified Loot.Log as Log
+import qualified System.Console.ANSI as ANSI
 import Time (Millisecond, sec, toNum, toUnit)
 import UnliftIO (MonadUnliftIO (..), UnliftIO (..), askUnliftIO)
 import qualified UnliftIO as UIO
 
 import Dscp.DB.SQLite.Error
 import Dscp.DB.SQLite.Types
-import Dscp.Util (wrapRethrowIO)
+import Dscp.Util
 
 -----------------------------------------------------------
 -- Operations with plain connections
@@ -81,7 +103,8 @@ borrowConnection action = do
                 (liftIO . writeChan connPool)
                 action
 
--- | Execute a given action for every connection in pool.
+-- | Execute a given action for every connection in pool, in parallel with no any other
+-- action.
 -- Pool will be emptied for a while.
 forEachConnection
     :: MonadIO m => SQLiteDB -> (Connection -> m ()) -> m ()
@@ -186,6 +209,31 @@ instance (Log.MonadLogging m, Monad m) => Log.MonadLogging (DBT t w m) where
     log = DBT . lift ... Log.log
     logName = DBT $ lift Log.logName
 
+instance (Log.ModifyLogName m, Monad m) => Log.ModifyLogName (DBT t w m) where
+    modifyLogNameSel how = DBT . mapReaderT (Log.modifyLogNameSel how) . runDBT
+
+dbtToSqliteM :: MonadUnliftIO m => DBT t w m (DBT t w m a -> SqliteM a)
+dbtToSqliteM = do
+    UnliftIO unliftIO <- DBT $ lift askUnliftIO
+    return $ \(DBT action) ->
+        SqliteM . ReaderT $ \(_logger, conn) -> unliftIO (runReaderT action conn)
+
+sqliteMToDbt :: MonadIO m => SqliteM a -> DBT t w m a
+sqliteMToDbt (SqliteM action) =
+    DBT . ReaderT $ \conn -> liftIO $ runReaderT action (logger, conn)
+  where
+    logger _ = pass
+    -- logger = sqlDebugLogger
+
+instance MonadUnliftIO m =>
+         MonadBeam SqliteCommandSyntax Sqlite Connection (DBT t w m) where
+    -- We omit implementation of the following methods as soon as they work in IO only,
+    -- use dedicated 'DBT' runners instead ('runInsert' and others).
+    withDatabaseDebug = error "DBT.withDatabaseDebug: not implemented"
+    withDatabase = error "DBT.withDatabase: not implemented"
+    runNoReturn = error "DBT.runNoReturn: not implemented"
+    runReturningMany = error "DBT.runReturningMany: not implemented"
+
 -- | Declares whether given 'DBT' actions should be performed within
 -- transaction.
 data TransactionalContext = WithinTx | OutsideOfTransaction
@@ -198,43 +246,56 @@ data TransactionalContext = WithinTx | OutsideOfTransaction
 -- for details.
 data OperationType = Writing | Reading
 
--- | Make an SQL query which returns some result.
---
--- Note: performing WRITING operations is PROHIBITED within this function,
--- use 'modifyingQuery' for such purpose.
-query
-    :: (MonadIO m, FromRow row, ToRow params)
-    => Query -> params -> DBT t w m [row]
-query q params = do
-    conn <- DBT ask
-    liftIO $ Backend.query conn q params
+------------------------------------------------------------
+-- SQLite queries building
+------------------------------------------------------------
 
--- | Perform an SQL query which does not return any result.
-execute
-    :: (MonadIO m, ToRow params)
-    => Query -> params -> DBT t 'Writing m ()
-execute q params = do
-    conn <- DBT ask
-    liftIO $ Backend.execute conn q params
+{- We rewrite runners as soon as it allows requiring write or transaction context.
+-}
 
--- | Make an SQL query which does some changes and returns some result.
-modifyingQuery
-    :: (MonadIO m, FromRow row, ToRow params)
-    => Query -> params -> DBT t 'Writing m [row]
-modifyingQuery q params = do
-    conn <- DBT ask
-    liftIO $ Backend.query conn q params
+-- | Run select query.
+-- We abandon different 'runSelectReturningOne' and 'runSelectReturningList' versions
+-- for the sake of better unexpected behavior processing.
+runSelect
+    :: (MonadIO m, FromBackendRow Sqlite a)
+    => SqlSelect (Sql92SelectSyntax SqliteCommandSyntax) a -> DBT t w m [a]
+runSelect = sqliteMToDbt . Backend.runSelectReturningList
 
--- | Enables SQLite tracing locally. For debug purposes.
---
--- Note: if any trace handler was set globally, it will be lost after that.
-traced :: MonadUnliftIO m => DBT t w m a -> DBT t w m a
-traced action = do
-    conn <- DBT ask
-    UIO.bracket_
-        (liftIO $ Backend.setTrace conn (Just print))
-        (liftIO $ Backend.setTrace conn Nothing)
-        action
+-- | Run select query and modify fetched results.
+runSelectMap
+    :: (MonadIO m, FromBackendRow Sqlite a)
+    => (a -> b) -> SqlSelect (Sql92SelectSyntax SqliteCommandSyntax) a -> DBT t w m [b]
+runSelectMap f = fmap (map f) . runSelect
+
+runInsert
+    :: MonadIO m
+    => SqlInsert (Sql92InsertSyntax SqliteCommandSyntax) -> DBT t 'Writing m ()
+runInsert = sqliteMToDbt . Backend.runInsert
+
+runInsertReturning
+    :: (MonadIO m, _)
+    => DatabaseEntity be db (TableEntity table)
+    -> SqlInsertValues _ (table (QExpr _ _))
+    -> DBT t 'Writing m [table Identity]
+runInsertReturning db = sqliteMToDbt . Backend.runInsertReturningList db
+
+runUpdate
+    :: MonadIO m
+    => SqlUpdate (Sql92UpdateSyntax SqliteCommandSyntax) tbl -> DBT t 'Writing m ()
+runUpdate = sqliteMToDbt . Backend.runUpdate
+
+runDelete
+    :: MonadIO m
+    => SqlDelete (Sql92DeleteSyntax SqliteCommandSyntax) tbl -> DBT t 'Writing m ()
+runDelete = sqliteMToDbt . Backend.runDelete
+
+-- | For low-level operations.
+withConnection :: MonadIO m => (Connection -> IO a) -> DBT t w m a
+withConnection f = DBT $ ReaderT (liftIO . f)
+
+------------------------------------------------------------
+-- DBT runners
+------------------------------------------------------------
 
 -- | Run 'DBT' without carying about whether it assumes to be run in transaction
 -- or not.
@@ -286,21 +347,28 @@ instance RequiresTransaction 'WithinTx
 class RequiresWriting (w :: OperationType)
 instance RequiresWriting 'Writing
 
--- | Various sqlite functions or pragmas you may want to call or read.
-data SQLiteFunctionCall res where
-    LastInsertRowId :: SQLiteFunctionCall Word64
+------------------------------------------------------------
+-- Misc
+------------------------------------------------------------
 
--- | Call an sqlite function.
-sqlCall
-    :: (MonadIO m, FromField res)
-    => SQLiteFunctionCall res -> DBT t w m res
-sqlCall fun = do
+-- | Used for debug logging.
+sqlDebugLogger :: String -> IO ()
+sqlDebugLogger msg =
+    putStrLn $ mconcat
+    [ ANSI.setSGRCode [ANSI.SetColor ANSI.Background ANSI.Vivid ANSI.Magenta]
+    , "SQL>"
+    , ANSI.setSGRCode [ANSI.Reset]
+    , " "
+    , msg
+    ]
+
+-- | Enables SQLite tracing locally. For debug purposes.
+--
+-- Note: if any trace handler was set globally, it will be lost after that.
+traced :: MonadUnliftIO m => DBT t w m a -> DBT t w m a
+traced action = do
     conn <- DBT ask
-    res <- liftIO $ Backend.query conn funString ()
-    return $ case res of
-        [Only r] -> r
-        l   -> error $ "sqlCall: returned weird amount of entries: "
-            <> show (length l)
-  where
-    funString = case fun of
-        LastInsertRowId -> "select last_insert_rowid()"
+    UIO.bracket_
+        (liftIO $ Backend.setTrace conn (Just $ sqlDebugLogger . toString))
+        (liftIO $ Backend.setTrace conn Nothing)
+        action

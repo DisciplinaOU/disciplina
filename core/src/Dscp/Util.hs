@@ -3,6 +3,7 @@
 module Dscp.Util
        ( anyMapM
        , listToMaybeWarn
+       , listToMaybeWarnM
        , allUniqueOrd
        , Size (..)
        , sizeSerialised
@@ -32,6 +33,10 @@ module Dscp.Util
        , leftToPanicWith
        , eitherToMaybe
        , mappendLefts
+
+         -- * Unsafe conversions
+       , oneOrError
+       , maybeOneOrError
 
          -- * Formatting
        , Base (..)
@@ -69,12 +74,13 @@ import Control.Monad.Except (MonadError (..))
 import Data.ByteArray (ByteArrayAccess)
 import Data.ByteArray.Encoding (Base (..), convertFromBase, convertToBase)
 import qualified Data.ByteString.Lazy as BSL
-import Fmt ((+|), (|+))
+import Data.Typeable (typeRep)
 import GHC.TypeLits (KnownSymbol, symbolVal)
 import UnliftIO (MonadUnliftIO)
 import qualified UnliftIO.Async as UIO
 
-import Loot.Log (MonadLogging, logError, logWarning)
+import Loot.Log (ModifyLogName (..), MonadLogging, NameSelector (CallstackName), logError,
+                 logWarning)
 
 import Snowdrop.Util (NewestFirst (..), OldestFirst (..))
 
@@ -98,13 +104,21 @@ anyMapM f (a:as) = f a >>= \case
 prefixed :: Semigroup a => a -> a -> a
 prefixed text prefix = prefix <> text
 
-listToMaybeWarn :: (Monad m, MonadLogging m) => Text -> [a] -> m (Maybe a)
-listToMaybeWarn msg = \case
+listToMaybeWarn
+    :: (Monad m, MonadLogging m, ModifyLogName m)
+    => [a] -> m (Maybe a)
+listToMaybeWarn = \case
     [] -> pure Nothing
     [x] -> pure (Just x)
     (x:_) -> do
-        logWarning $ "listToMaybeWarn: too many entries ("+|msg|+")"
+        modifyLogNameSel (const CallstackName) $
+            logWarning $ "listToMaybeWarn: too many entries"
         return (Just x)
+
+listToMaybeWarnM
+    :: (Monad m, MonadLogging m, ModifyLogName m)
+    => m [a] -> m (Maybe a)
+listToMaybeWarnM action = action >>= listToMaybeWarn
 
 allUniqueOrd :: Ord a => [a] -> Bool
 allUniqueOrd = all (null . drop 1) . group . sort
@@ -167,7 +181,7 @@ nothingToError e = maybe (throwError e) pure
 nothingToFail :: MonadFail m => Text -> Maybe a -> m a
 nothingToFail e = maybe (fail $ toString e) pure
 
-nothingToPanic :: Text -> Maybe a -> a
+nothingToPanic :: HasCallStack => Text -> Maybe a -> a
 nothingToPanic e = fromMaybe (error e)
 
 -- | Like '?:' from Universum, for monads.
@@ -211,6 +225,30 @@ mappendLefts :: Monoid m => Either m () -> Either m () -> Either m ()
 mappendLefts (Left a) (Left b) = Left (mappend a b)
 mappendLefts (Right _) x       = x
 mappendLefts x (Right _)       = x
+
+-----------------------------------------------------------
+-- Unsafe conversions
+-----------------------------------------------------------
+
+-- | Expects the list to contain only one entry, panics otherwise.
+oneOrError :: forall a. (Typeable a, HasCallStack) => [a] -> a
+oneOrError = \case
+    []  -> error $ "No items " <> tyName
+    [x] -> x
+    l   -> error $ "Too many items: " <> show (length l) <> " " <> tyName
+  where
+    tyRep = typeRep (Proxy @a)
+    tyName = "(" <> show tyRep <> ")"
+
+-- | Expects the list to contain zero or one entry, panics otherwise.
+maybeOneOrError :: forall a. (Typeable a, HasCallStack) => [a] -> Maybe a
+maybeOneOrError = \case
+    []  -> Nothing
+    [x] -> Just x
+    l   -> error $ "Too many items: " <> show (length l) <> " " <> tyName
+  where
+    tyRep = typeRep (Proxy @a)
+    tyName = "(" <> show tyRep <> ")"
 
 -----------------------------------------------------------
 -- ByteArray-based types formatting/parsing

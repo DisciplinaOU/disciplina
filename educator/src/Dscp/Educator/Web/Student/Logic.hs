@@ -3,19 +3,13 @@
 module Dscp.Educator.Web.Student.Logic
     ( requestToSignedSubmission
     , studentMakeSubmissionVerified
-    , studentGetAssignment
-    , studentGetAllAssignments
-    , studentGetSubmission
-    , studentGetAllSubmissions
     ) where
-
-import Data.Default (def)
 
 import Dscp.Core
 import Dscp.Crypto
 import Dscp.DB.SQLite
-import Dscp.Educator.Web.Queries
 import Dscp.Educator.Web.Student.Error (APIError (..))
+import Dscp.Educator.Web.Student.Queries
 import Dscp.Educator.Web.Student.Types
 import Dscp.Educator.Web.Student.Util (verifyStudentSubmission)
 import Dscp.Educator.Web.Types
@@ -48,42 +42,3 @@ studentMakeSubmissionVerified student newSubmission = do
     transactW $ do
         submissionId <- submitAssignment signedSubmission
         studentGetSubmission student submissionId
-
--- | Get exactly one assignment.
-studentGetAssignment
-    :: MonadEducatorWebQuery m
-    => Student
-    -> Hash Assignment
-    -> DBT 'WithinTx w m AssignmentStudentInfo
-studentGetAssignment student assignH =
-    commonGetAssignments StudentCase def
-        { afAssignmentHash = Just assignH, afStudent = Just student }
-        >>= listToMaybeWarn "assignment"
-        >>= nothingToThrow (AbsentError $ AssignmentDomain assignH)
-
--- | Get all student assignments.
-studentGetAllAssignments
-    :: MonadEducatorWebQuery m
-    => Student
-    -> DBT 'WithinTx w m [AssignmentStudentInfo]
-studentGetAllAssignments student =
-    commonGetAssignments StudentCase def{ afStudent = Just student }
-
-studentGetSubmission
-    :: MonadEducatorWebQuery m
-    => Student
-    -> Hash Submission
-    -> DBT t w m SubmissionStudentInfo
-studentGetSubmission student submissionH = do
-    commonGetSubmissions StudentCase def
-        { sfStudent = Just student, sfSubmissionHash = Just submissionH }
-        >>= listToMaybeWarn "submission"
-        >>= nothingToThrow (AbsentError $ SubmissionDomain submissionH)
-
--- | Get all student submissions.
-studentGetAllSubmissions
-    :: MonadEducatorWebQuery m
-    => Student
-    -> DBT t w m [SubmissionStudentInfo]
-studentGetAllSubmissions student =
-    commonGetSubmissions StudentCase def{ sfStudent = Just student }
