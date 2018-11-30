@@ -76,7 +76,7 @@ tests:
 
     build-tools:
       - tasty-discover
-      - hspec-discover
+
     dependencies:
       - AVL
       - containers
@@ -90,6 +90,8 @@ tests:
       - loot-config
       - loot-log
       - memory
+      - tasty
+      - tasty-hspec
       - text-format
       - QuickCheck
 
