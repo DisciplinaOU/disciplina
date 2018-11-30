@@ -75,13 +75,13 @@ import Control.Lens (makePrisms, to)
 import Data.Default (Default (..))
 import qualified Data.Map as Map (empty, fromList, insertWith, toList)
 import Data.Time.Clock (UTCTime)
+import GHC.Exts (fromList)
 import Loot.Base.HasLens (HasCtx)
 import Snowdrop.Util (OldestFirst (..))
 
 import Dscp.Core
 import Dscp.Crypto (EmptyMerkleTree, Hash, MerkleProof, fillEmptyMerkleTree, getEmptyMerkleTree,
                     getMerkleRoot, hash)
-import qualified Dscp.Crypto.MerkleTree as MerkleTree (fromList)
 import Dscp.DB.SQLite.BlockData
 import Dscp.DB.SQLite.Error (asAlreadyExistsError, asReferenceInvalidError)
 import Dscp.DB.SQLite.Functions
@@ -362,7 +362,7 @@ createPrivateBlock delta = runMaybeT $ do
     (prev, idx) <- lift getLastBlockIdAndIdx
     txs         <- lift getAllNonChainedTransactions
 
-    let tree = MerkleTree.fromList txs
+    let tree = fromList txs
         root = getMerkleRoot tree
 
         txs' = zip [0..] (getId <$> txs)

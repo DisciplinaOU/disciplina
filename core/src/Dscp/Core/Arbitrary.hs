@@ -192,15 +192,9 @@ instance Arbitrary Block where
     arbitrary = genericArbitrary
     shrink    = genericShrink
 
--- | Not newtype deriving, because @'TaggedProof'@ constructor is hidden.
-instance (HasHash a, Arbitrary a) =>
-         Arbitrary (TaggedProof Unchecked a) where
-    arbitrary = mkTaggedProof <$> arbitrary
-    shrink = map mkTaggedProof . shrink . unTaggedProof
-
 -- | TODO: resolve the weird problem with _very_ long generation
 -- and produce larger FairCVs.
-instance Arbitrary (FairCV Unchecked) where
+instance Arbitrary FairCV where
     arbitrary = resize 5 $ FairCV <$> arbitrary
 
 instance ArbitraryMixture (AbstractSK ss) where

@@ -1,18 +1,11 @@
+-- | Datatypes and functions related to FairCV functionality.
 module Dscp.Core.FairCV
        (
-         -- * Tagged proofs
-         TaggedProof
-       , Unchecked
-       , Valid
-       , mkTaggedProof
-       , unTaggedProof
-
-       , validateTaggedProof
-       , mergeProofs
-
          -- * Fair CV
-       , FairCV (..)
-       , validateFairCV
+         FairCV (..)
+       , FairCVReady (..)
+       , readyFairCV
+       , unReadyFairCV
        , singletonFCV
        , mergeFairCVs
        , addProof
@@ -30,101 +23,49 @@ import Fmt (build, mapF, (+|), (|+))
 import Dscp.Core.Foundation
 import Dscp.Crypto
 
----------------------------------------------------------------------------
--- Tagged Merkle proofs
----------------------------------------------------------------------------
-
--- | Type tag for proofs/CVs not checked yet.
-data Unchecked
-
--- | Type tag for validated proofs/CVs.
-data Valid
-
--- | 'MerkleProof' tagged by validation tag. When using this module,
--- it is impossible to obtain a value of 'TaggedProof Valid a' without
--- doing a validity check.
-newtype TaggedProof v a = TaggedProof
-    { unTaggedProof :: MerkleProof a
-    } deriving (Show, Eq, Generic, Buildable)
-
--- | Safe constructor for 'TaggedProof', which can yield only 'Unckecked'
--- proof.
-mkTaggedProof :: MerkleProof a -> TaggedProof Unchecked a
-mkTaggedProof = TaggedProof
-
--- | If 'Unchecked' proof is valid, make it 'Valid', otherwise return an
--- error.
-validateTaggedProof
-    :: HasHash a
-    => TaggedProof Unchecked a
-    -> Either Text (TaggedProof Valid a)
-validateTaggedProof (TaggedProof unchecked) =
-    if isJust (computeMerkleRoot unchecked)
-    then Right $ TaggedProof unchecked
-    else Left "Proof validation has failed"
-
--- | Merges two already validated Merkle proofs, checking that all common
--- inner nodes match.
-mergeProofs
-    :: TaggedProof Valid a
-    -> TaggedProof Valid a
-    -> Either Text (TaggedProof Valid a)
-mergeProofs (TaggedProof a) (TaggedProof b)
-    | pnSig a /= pnSig b = Left "Node signatures mismatch"
-    | otherwise = TaggedProof <$> merge a b
-  where
-    merge (ProofBranch s l r) (ProofBranch _ l' r') =
-        let mergeUntag t t' =
-                unTaggedProof <$>
-                mergeProofs (TaggedProof t) (TaggedProof t')
-        in ProofBranch s <$> mergeUntag l l' <*> mergeUntag r r'
-    merge ProofBranch{} ProofLeaf{} =
-        Left "Inner node on the left is mismatched with leaf on the right"
-    merge ProofLeaf{} ProofBranch{} =
-        Left "Leaf on the left is mismatched with inner node on the right"
-    -- No need to compare values in leaves, because proofs are 'Valid',
-    -- and hash function should be collision-resistnant.
-    merge a'@ProofLeaf{} ProofLeaf{} = pure a'
-    merge a' ProofPruned{} = pure a'
-    merge ProofPruned{} b' = pure b'
-
----------------------------------------------------------------------------
--- FairCV
----------------------------------------------------------------------------
+-- | Two-level map which represents common structure for all `FairCV*`
+-- types
+type GenericFairCV a = Map Address (Map PrivateHeaderHash a)
 
 -- | FairCV datatype. Proofs are divided by educators (designated by their
 -- addresses) and blocks (designated by their hashes).
--- Phantom type parameter @v@ distinguishes between already validated
--- 'FairCV' and 'FairCV' not validated yet.
-newtype FairCV v = FairCV
-    { unFairCV :: Map Address (Map PrivateHeaderHash (TaggedProof v PrivateTx))
+newtype FairCV = FairCV
+    { unFairCV :: GenericFairCV (MerkleProof PrivateTx)
     } deriving (Show, Eq, Generic)
 
-instance Buildable (FairCV v) where
+instance Buildable FairCV where
     build (FairCV cv) = "FairCV { "+|mapF (mapF <$> cv)|+" }"
 
--- | If 'Unchecked' FairCV is valid, make it 'Valid', otherwise return an
--- error.
-validateFairCV :: FairCV Unchecked -> Either FairCVCheckResult (FairCV Valid)
-validateFairCV (FairCV cv) =
-    let checked = fmap validateTaggedProof <$> cv
-    in fmap FairCV $
-       first (const . FairCVCheckResult $ fmap isRight <$> checked) $
-       traverse (traverse id) checked
+-- | @'FairCV'@ with pre-processed proofs (all the proofs have their Merkle
+-- roots pre-calculated).
+newtype FairCVReady = FairCVReady
+    { unFairCVReady :: GenericFairCV (MerkleProofReady PrivateTx)
+    } deriving (Show, Eq, Generic)
+
+instance Buildable FairCVReady where
+    build (FairCVReady cv) = "FairCVReady { "+|mapF (mapF <$> cv)|+" }"
+
+-- | Pre-process all the proofs in @'FairCV'@
+readyFairCV :: FairCV -> FairCVReady
+readyFairCV = FairCVReady . fmap (fmap readyProof) . unFairCV
+
+-- | Strip roots from all the proofs in @'FairCVReady'@
+unReadyFairCV :: FairCVReady -> FairCV
+unReadyFairCV = FairCV . fmap (fmap mprProof) . unFairCVReady
 
 -- | Make a FairCV from one proof.
 singletonFCV
     :: Address
     -> PrivateHeaderHash
-    -> TaggedProof v PrivateTx
-    -> FairCV v
-singletonFCV educatorAddr blkHash proof = FairCV $
+    -> MerkleProofReady PrivateTx
+    -> FairCVReady
+singletonFCV educatorAddr blkHash proof = FairCVReady $
     M.singleton educatorAddr $
     M.singleton blkHash proof
 
--- | Merge two FairCVs, checking if their common parts match.
-mergeFairCVs :: FairCV Valid -> FairCV Valid -> Either Text (FairCV Valid)
-mergeFairCVs (FairCV a) (FairCV b) = FairCV <$>
+-- | Merge two pre-processed FairCVs, checking if their common parts match.
+mergeFairCVs :: FairCVReady -> FairCVReady -> Either Text FairCVReady
+mergeFairCVs (FairCVReady a) (FairCVReady b) = FairCVReady <$>
     unionWithA (unionWithA mergeProofs) a b
   where
     unionWithA f =
@@ -135,9 +76,9 @@ mergeFairCVs (FairCV a) (FairCV b) = FairCV <$>
 addProof
     :: Address
     -> PrivateHeaderHash
-    -> TaggedProof Valid PrivateTx
-    -> FairCV Valid
-    -> Either Text (FairCV Valid)
+    -> MerkleProofReady PrivateTx
+    -> FairCVReady
+    -> Either Text FairCVReady
 addProof educatorAddr blkHash proof =
     mergeFairCVs $ singletonFCV educatorAddr blkHash proof
 
@@ -146,7 +87,7 @@ addProof educatorAddr blkHash proof =
 ---------------------------------------------------------------------------
 
 newtype FairCVCheckResult = FairCVCheckResult
-    { unFairCVCheckResult :: Map Address (Map PrivateHeaderHash Bool)
+    { unFairCVCheckResult :: GenericFairCV Bool
     } deriving (Show, Eq, Generic)
 
 instance Buildable FairCVCheckResult where

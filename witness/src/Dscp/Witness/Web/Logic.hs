@@ -206,11 +206,11 @@ getHashType someHash = fmap (fromMaybe HashIsUnknown) . runMaybeT . asum $
         GPublicationTx _ -> HashIsPublicationTx
 
 -- | Check @'FairCV'@ against records in the public chain.
-checkFairCV :: forall ctx m. WitnessWorkMode ctx m => FairCV Unchecked -> m FairCVCheckResult
+checkFairCV :: forall ctx m. WitnessWorkMode ctx m => FairCV -> m FairCVCheckResult
 checkFairCV =
-    either pure checkAgainstDB . validateFairCV
+    checkAgainstDB . readyFairCV
   where
-    checkAgainstDB (FairCV cv) = FairCVCheckResult <$>
+    checkAgainstDB (FairCVReady cv) = FairCVCheckResult <$>
         M.traverseWithKey (M.traverseWithKey . checkProofAgainstDB) cv
     checkProofAgainstDB addr h proof =
         maybe False (checkProofPure addr proof) <$>
@@ -218,4 +218,4 @@ checkFairCV =
     checkProofPure addr proof ptw =
         let root = ptw ^. ptwTxL.ptHeaderL.pbhBodyProof
         in verifyPubTxWitnessed addr ptw &&
-           root == getMerkleProofRoot (unTaggedProof proof)
+           root == mprRoot proof

@@ -668,16 +668,7 @@ components:
             txs:
               type: array
               items:
-                type: object
-                required:
-                  - idx
-                  - val
-                properties:
-                  idx:
-                    type: integer
-                    format: int32
-                  tx:
-                    $ref: '#/components/schemas/PrivateTx'
+                $ref: '#/components/schemas/PrivateTx'
     FairCVCheckResult:
       type: object
       additionalProperties:

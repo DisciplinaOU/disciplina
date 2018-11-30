@@ -4,8 +4,8 @@ module Dscp.Core.Aeson () where
 
 import Codec.Serialise (Serialise)
 import Data.Aeson (FromJSON (..), FromJSONKey (..), FromJSONKeyFunction (..), ToJSON (..),
-                   ToJSONKey (..), Value (..), object, withArray, withObject, withScientific,
-                   withText, (.:), (.=))
+                   ToJSONKey (..), Value (..), object, withObject, withScientific, withText, (.:),
+                   (.=))
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveFromJSON, deriveJSON)
 import Data.Aeson.Types (toJSONKeyText)
@@ -96,40 +96,22 @@ instance FromJSON Coin where
         nothingToFail "Coin is in invalid format" .
         fmap Coin . toBoundedInteger . (*1000000)
 
-instance ToJSON a => ToJSON (IndexedList a) where
-    toJSON = toJSON . map encIdx . unIndexedList
-        where
-          encIdx (idx, val) = object
-              [ "idx" .= idx
-              , "val" .= val
-              ]
-
-instance FromJSON a => FromJSON (IndexedList a) where
-    parseJSON = withArray "IndexedList" $
-        fmap mkIndexedList . mapM decIdx . toList
-      where
-        decIdx = withObject "IndexedList item" $ \o -> do
-            idx <- o .: "idx"
-            val <- o .: "val"
-            return (idx, val)
-
-instance (ToJSON a, Serialise (MerkleProof a)) =>
-         ToJSON (TaggedProof v a) where
-    toJSON tProof = object
+instance (ToJSON a, Serialise (EmptyMerkleProof a)) =>
+         ToJSON (MerkleProof a) where
+    toJSON proof = object
         [ "proof" .= toJSONSerialise Base64 emptyProof
-        , "txs" .= indexedTxs
+        , "txs" .= txs
         ]
       where
-        (emptyProof, indexedTxs) =
-            separateProofAndData $ unTaggedProof tProof
+        (emptyProof, txs) = separateProofAndData proof
 
-instance (FromJSON a, Serialise (MerkleProof a)) =>
-         FromJSON (TaggedProof Unchecked a) where
+instance (FromJSON a, Serialise (EmptyMerkleProof a)) =>
+         FromJSON (MerkleProof a) where
     parseJSON = withObject "TaggedProof" $ \o -> do
         emptyProof <- parseJSONSerialise Base64 =<< o .: "proof"
-        indexedTxs <- o .: "txs"
+        txs <- o .: "txs"
         nothingToFail "Merkle proof and data do not match" $
-            mkTaggedProof <$> mergeProofAndData emptyProof indexedTxs
+            mergeProofAndData emptyProof txs
 
 ---------------------------------------------------------------------------
 -- Standalone derivations for newtypes
@@ -175,8 +157,8 @@ instance FromJSON CommitteeSecret where
 deriving instance ToJSON GenesisDistribution
 deriving instance FromJSON GenesisDistribution
 
-deriving instance Serialise (MerkleProof PrivateTx) => ToJSON (FairCV v)
-deriving instance Serialise (MerkleProof PrivateTx) => FromJSON (FairCV Unchecked)
+deriving instance Serialise (MerkleProof PrivateTx) => ToJSON FairCV
+deriving instance Serialise (MerkleProof PrivateTx) => FromJSON FairCV
 
 deriving instance ToJSON FairCVCheckResult
 deriving instance FromJSON FairCVCheckResult

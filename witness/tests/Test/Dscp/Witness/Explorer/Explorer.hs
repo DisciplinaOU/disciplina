@@ -3,6 +3,7 @@ module Test.Dscp.Witness.Explorer.Explorer where
 import Data.Default (def)
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
+import GHC.Exts (fromList)
 import Test.QuickCheck (arbitraryBoundedEnum, shuffle)
 import Test.QuickCheck.Monadic (pre)
 
@@ -92,13 +93,19 @@ data SpoilVariant
     deriving (Show, Eq, Generic, Enum, Bounded)
 
 -- | Spoils a @'MerkleProof'@ by changing some of its internal nodes
--- TODO: spoil better.
 spoilMerkleProof
-    :: MerkleProof a
+    :: (Eq a, Arbitrary a)
+    => MerkleProof a
     -> Gen (MerkleProof a)
-spoilMerkleProof mproof = do
-    newSig <- arbitrary
-    pure $ mproof { pnSig = newSig }
+spoilMerkleProof (ProofBranch l r) = do
+    spoilLeft <- arbitrary
+    if spoilLeft
+        then ProofBranch <$> spoilMerkleProof l <*> pure r
+        else ProofBranch l <$> spoilMerkleProof r
+spoilMerkleProof (ProofLeaf v) =
+    ProofLeaf <$> (arbitrary `suchThat` (/= v))
+spoilMerkleProof (ProofPruned sig) =
+    ProofPruned <$> (arbitrary `suchThat` (/= sig))
 
 -- | Helper function to change arbitrary key-value pair in the map.
 -- Assumes that the map is not empty.
@@ -110,8 +117,8 @@ editSomeKV mp action = do
 
 -- | Spoils a @'FairCV'@ by changing some of its parts to random parts.
 spoilFairCV
-    :: FairCV Unchecked
-    -> Gen (FairCV Unchecked)
+    :: FairCV
+    -> Gen FairCV
 spoilFairCV (FairCV cv) = do
     var <- arbitraryBoundedEnum
     fmap FairCV $ editSomeKV cv $ case var of
@@ -123,7 +130,7 @@ spoilFairCV (FairCV cv) = do
             return (addr, subCv')
         WrongProof -> \addr subCv -> do
             subCv' <- editSomeKV subCv $ \hhash proof -> do
-                proof' <- mkTaggedProof <$> spoilMerkleProof (unTaggedProof proof)
+                proof' <- spoilMerkleProof proof
                 return (hhash, proof')
             return (addr, subCv')
 
@@ -300,7 +307,7 @@ spec_Explorer = describe "Explorer" $ do
 
                     let mtree = fromList ptxs
                         msig = getMerkleRoot mtree
-                        mProof = mkTaggedProof <$> mkMerkleProof mtree proofIdxs
+                        mProof = mkMerkleProof mtree proofIdxs
                     pub <- lift $ createAndSubmitPub sk msig
 
                     let hhash = hash $ pub ^. ptHeaderL
