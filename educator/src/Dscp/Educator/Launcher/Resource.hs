@@ -11,7 +11,7 @@ import Control.Lens (makeLenses)
 import Loot.Config (option, sub)
 
 import Dscp.Config
-import Dscp.DB.SQLite (SQLiteDB)
+import Dscp.DB.SQLite
 import Dscp.Educator.Config
 import Dscp.Educator.Launcher.Marker (EducatorNode)
 import Dscp.Educator.Launcher.Params (EducatorKeyParams (..))
@@ -28,7 +28,8 @@ import qualified Dscp.Witness.Launcher.Resource as Witness
 -- to start working.
 data EducatorResources = EducatorResources
     { _erWitnessResources :: !Witness.WitnessResources
-    , _erDB               :: !SQLiteDB
+    , _erDB               :: !SQLiteDB  -- TODO [DSCP-405]: remove
+    , _erDBBackend        :: !SomeSQLBackend
     , _erKeys             :: !(KeyResources EducatorNode)
     }
 
@@ -56,6 +57,7 @@ instance AllocResource EducatorResources where
         _erWitnessResources <- withWitnessConfig witnessCfg $
                                allocResource witnessCfg
         _erDB <- allocResource $ cfg ^. option #db
+        let _erDBBackend = SomeSQLBackend SQLiteBackend
         let appDir = Witness._wrAppDir _erWitnessResources
         _erKeys <- allocResource (educatorCfg, appDir)
         return EducatorResources {..}

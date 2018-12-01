@@ -20,9 +20,9 @@ import Dscp.Witness.SDLock
 import Dscp.Witness.Web.Types
 
 commonGetProofs
-    :: MonadEducatorWebQuery m
+    :: (MonadEducatorWebQuery cmd be hdl m, WithinTx)
     => GetProvenStudentTransactionsFilters
-    -> DBT 'WithinTx w m [BlkProofInfo]
+    -> m [BlkProofInfo]
 commonGetProofs filters = do
     rawProofs <- getProvenStudentTransactions filters
     return

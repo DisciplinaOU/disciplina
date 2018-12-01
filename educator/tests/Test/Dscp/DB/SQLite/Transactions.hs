@@ -23,7 +23,7 @@ type MonadMoney m = (MonadIO m, MonadCatch m, MonadUnliftIO m)
 
 type Money = Int
 
-prepareSchema :: (MonadIO m) => DBT t 'Writing m ()
+prepareSchema :: (MonadIO m) => m ()
 prepareSchema =
     forM_ [createTableQuery, addAccountQuery] $
         \que -> withConnection $ \conn -> execute conn que ()
@@ -37,7 +37,7 @@ prepareSchema =
         insert into Accounts values (0);
         |]
 
-getMoney :: MonadIO m => DBT t w m Money
+getMoney :: MonadIO m => m Money
 getMoney = withConnection $ \conn ->
            fromOnly . L.head <$> query conn queryText ()
   where
@@ -45,7 +45,7 @@ getMoney = withConnection $ \conn ->
         select amount from Accounts
     |]
 
-setMoney :: MonadIO m => Money -> DBT t 'Writing m ()
+setMoney :: MonadIO m => Money -> m ()
 setMoney val = withConnection $ \conn -> execute conn queryText (Only val)
   where
     queryText = [q|
@@ -54,7 +54,7 @@ setMoney val = withConnection $ \conn -> execute conn queryText (Only val)
 
 addMoney :: (MonadUnliftIO m, HasCtx ctx m '[SQLiteDB]) => m ()
 addMoney =
-    transactW @'WithinTx $ do
+    transactW $ do
         money <- getMoney
         setMoney (money + 1)
 

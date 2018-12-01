@@ -5,6 +5,8 @@
 
 module Dscp.DB.SQLite.Util
      ( module BeamReexport
+     , Beam.MonadBeam
+
      , RelationType (..)
      , RelationT (..)
      , (<:-:>)
@@ -39,11 +41,10 @@ import Database.Beam.Query as BeamReexport (QGenExpr (..), aggregate_, all_, as_
                                             (/=.), (<-.), (==.), (>.), (>=.), (||.))
 import qualified Database.Beam.Query as Beam
 import qualified Database.Beam.Query.Internal as Beam
-import Database.Beam.Schema (DatabaseEntity, PrimaryKey, TableEntity)
 import Database.Beam.Schema as BeamReexport (DatabaseSettings)
 import qualified Database.Beam.Schema as Beam
-import Database.Beam.Sqlite.Connection (Sqlite)
-import qualified Database.Beam.Sqlite.Syntax as Beam
+import Database.Beam.Schema.Tables (DatabaseEntity, FieldsFulfillConstraint, PrimaryKey,
+                                    TableEntity)
 import qualified GHC.Generics as G
 import GHC.TypeLits (ErrorMessage (Text), TypeError)
 
@@ -88,7 +89,7 @@ link_
     :: (table ~ RelationT t a b, _)
     => DatabaseEntity be db (TableEntity table)
     -> table (QGenExpr _ _ _)
-    -> Beam.Q Beam.SqliteSelectSyntax db _ ()
+    -> Beam.Q _ db _ ()
 link_ relation (pk1 :-: pk2) = do
     id1 :-: id2 <- all_ relation
     guard_ (id1 ==. pk1)
@@ -96,8 +97,8 @@ link_ relation (pk1 :-: pk2) = do
 
 -- | Check whether the query returns any row.
 checkExists
-    :: (MonadIO m)
-    => Beam.Q Beam.SqliteSelectSyntax db (Beam.QNested _) () -> DBT t w m Bool
+    :: (Beam.MonadBeam cmd be hdl m, _)
+    => Beam.Q (Beam.Sql92SelectSyntax cmd) db (Beam.QNested _) () -> m Bool
 checkExists query =
     fmap ((> 0) . oneOrError) $
     runSelect . select $
@@ -163,7 +164,7 @@ selectByPk
     => (row Identity -> res)
     -> Beam.DatabaseEntity be db (TableEntity table)
     -> pk
-    -> DBT t w m (Maybe res)
+    -> m (Maybe res)
 selectByPk mapper tbl key =
     fmap fetchOne $
     runSelect . Beam.select $
@@ -176,7 +177,7 @@ selectByPk mapper tbl key =
 -- | Quick way to check whether an entiry refered by the given primary key exists.
 existsWithPk
     :: _
-    => Beam.DatabaseEntity be db (TableEntity table) -> pk -> DBT t w m Bool
+    => Beam.DatabaseEntity be db (TableEntity table) -> pk -> m Bool
 existsWithPk tbl key =
     checkExists $ do
         row <- all_ tbl
@@ -184,10 +185,22 @@ existsWithPk tbl key =
 
 -- | Quick way to delete a single entiry refered by the given primary key.
 deleteByPk
-    :: (MonadIO m, _)
+    :: (Beam.MonadBeam cmd be hdl m, Beam.IsSql92Syntax cmd, Beam.Table table, WithinWrite,
+        PrimaryKeyWrapper (PrimaryKey table Identity) pk,
+        FieldsFulfillConstraint
+                    ((Beam.HasSqlValueSyntax
+                      (Beam.Sql92ExpressionValueSyntax
+                        (Beam.Sql92SelectTableExpressionSyntax
+                            (Beam.Sql92SelectSelectTableSyntax
+                              (Beam.Sql92SelectSyntax cmd)))))) (PrimaryKey table),
+        FieldsFulfillConstraint
+                    ((Beam.HasSqlEqualityCheck
+                      (Beam.Sql92DeleteExpressionSyntax
+                        (Beam.Sql92DeleteSyntax cmd)))) (PrimaryKey table)
+       )
     => Beam.DatabaseEntity be db (TableEntity table)
     -> pk
-    -> DBT t 'Writing m ()
+    -> m ()
 deleteByPk tbl key = runDelete $ delete tbl (valPk_ key `references_`)
 
 -- | SQL CURRENT_TIMESTAMP function.
@@ -223,15 +236,14 @@ filterMatchesPk_ = \case
 -- to do the similar thing.
 getNextPrimaryKey
     :: (PrimaryKeyWrapper (PrimaryKey table Identity) keyInner
-       ,MonadIO m
        ,Num keyInner
+       ,Beam.MonadBeam cmd be hdl m
        ,Beam.Table table
        ,Beam.Database be db
        ,Beam.FromBackendRow be keyInner
-       ,be ~ Sqlite
        ,_)
     => Beam.DatabaseEntity be db (TableEntity table)
-    -> DBT 'WithinTx 'Writing m keyInner
+    -> m keyInner
 getNextPrimaryKey tbl = do
     res <- runSelect . select $
         aggregate_ (Beam.max_ . unpackPk . pk_) (all_ tbl)

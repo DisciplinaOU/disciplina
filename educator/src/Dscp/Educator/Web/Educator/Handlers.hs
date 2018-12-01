@@ -34,10 +34,10 @@ educatorApiHandlers =
         invoke $ educatorGetStudents mCourse
 
     , eAddStudent = \(NewStudent student) ->
-        void . invoke $ createStudent student
+        invoke $ void $ createStudent student
 
-    , eDeleteStudent =
-        invoke ... educatorRemoveStudent
+    , eDeleteStudent = \studentId ->
+        invoke $ educatorRemoveStudent studentId
 
     , eAddStudentCourse = \student (NewStudentCourse course) ->
         transactW $ enrollStudentToCourse student course
@@ -45,8 +45,8 @@ educatorApiHandlers =
     , eAddStudentAssignment = \student (NewStudentAssignment assignmentHash) ->
         transactW $ setStudentAssignment student assignmentHash
 
-    , eDeleteStudentAssignment =
-        invoke ... educatorUnassignFromStudent
+    , eDeleteStudentAssignment = \student assignmentId ->
+        invoke $ educatorUnassignFromStudent student assignmentId
 
       -- Courses
 
@@ -60,8 +60,8 @@ educatorApiHandlers =
             , cdSubjects = subjects
             }
 
-    , eGetCourse =
-        invoke ... educatorGetCourse
+    , eGetCourse = \courseId ->
+        transactR $ educatorGetCourse courseId
 
       -- Assignments
 
@@ -70,7 +70,7 @@ educatorApiHandlers =
             def{ afCourse, afStudent, afIsFinal }
 
     , eAddAssignment = \_autoAssign na -> do
-        void . transactW $ createAssignment (requestToAssignment na)
+        transactW $ void $ createAssignment (requestToAssignment na)
         -- TODO [DSCP-176]: consider autoassign
 
       -- Submissions
@@ -79,8 +79,8 @@ educatorApiHandlers =
         invoke $ educatorGetSubmissions
             def{ sfCourse, sfStudent, sfAssignmentHash }
 
-    , eGetSubmission =
-        invoke ... educatorGetSubmission
+    , eGetSubmission = \submissionHash ->
+        invoke $ educatorGetSubmission submissionHash
 
     , eDeleteSubmission = \submissionH ->
         transactW $ commonDeleteSubmission submissionH Nothing
@@ -91,7 +91,7 @@ educatorApiHandlers =
         invoke $ educatorGetGrades course student assignment isFinalF
 
     , eAddGrade = \(NewGrade subH grade) ->
-        invoke $ educatorPostGrade subH grade
+        transactW $ educatorPostGrade subH grade
 
       -- Proofs
 

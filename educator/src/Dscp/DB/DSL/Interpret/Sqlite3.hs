@@ -11,9 +11,7 @@ import Dscp.DB.DSL.Class
 import Dscp.DB.SQLite
 
 instance
-    ( MonadIO n
-    , MonadCatch n
-    , m ~ DBT t w n
+    ( MonadQuery cmd be hdl m
     )
     => MonadSearchTxObj m
   where
@@ -28,8 +26,8 @@ instance
         getPrivateTxsByFilter txFilter
 
 getPrivateTxsByFilter
-    :: MonadIO m
-    => TxsFilterExpr -> DBT t w m [Core.PrivateTx]
+    :: MonadQuery cmd be hdl m
+    => TxsFilterExpr -> m [Core.PrivateTx]
 getPrivateTxsByFilter filterExpr = do
     runSelectMap privateTxFromRow . select $ do
         privateTx <- all_ (esTransactions educatorSchema)

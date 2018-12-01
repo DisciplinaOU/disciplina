@@ -33,7 +33,6 @@ import Data.Aeson.TH (deriveJSON)
 import Data.Time.Clock (UTCTime)
 import Fmt (build, (+|), (+||), (|+), (||+))
 import Loot.Base.HasLens (HasCtx)
-import Loot.Log (ModifyLogName, MonadLogging)
 import Servant (FromHttpApiData (..))
 
 import Dscp.Core
@@ -46,16 +45,14 @@ import Dscp.Util.Servant (ForResponseLog (..), buildForResponse, buildLongRespon
                           buildShortResponseList)
 import Dscp.Witness.Launcher.Context
 
-type MonadEducatorWebQuery m =
-    ( MonadIO m
+type MonadEducatorWebQuery cmd be hdl m =
+    ( MonadQuery cmd be hdl m
     , MonadCatch m
-    , MonadLogging m
-    , ModifyLogName m
     )
 
 type MonadEducatorWeb ctx m =
     ( WitnessWorkMode ctx m
-    , HasCtx ctx m '[SQLiteDB, KeyResources EducatorNode]
+    , HasCtx ctx m '[SQLiteDB, SomeSQLBackend, KeyResources EducatorNode]
     )
 
 ---------------------------------------------------------------------------

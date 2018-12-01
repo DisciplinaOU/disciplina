@@ -49,10 +49,10 @@ isPositiveGradeQ _ = val_ True
 -- | Whether a submission exists.
 -- If student is supplied, then submissions owned by other students won't be visible.
 commonExistsSubmission
-    :: MonadEducatorWebQuery m
+    :: MonadEducatorWebQuery cmd be hdl m
     => Hash Submission
     -> Maybe Student
-    -> DBT t w m Bool
+    -> m Bool
 commonExistsSubmission submissionH studentF =
     checkExists $ do
         submission <- all_ (esSubmissions es)
@@ -61,8 +61,8 @@ commonExistsSubmission submissionH studentF =
 
 -- | Whether a submission has taken any grade.
 isGradedSubmission
-    :: MonadEducatorWebQuery m
-    => Hash Submission -> DBT t w m Bool
+    :: MonadEducatorWebQuery cmd be hdl m
+    => Hash Submission -> m Bool
 isGradedSubmission submissionH =
     checkExists $ do
         privateTx <- all_ (esTransactions es)
@@ -76,10 +76,10 @@ isGradedSubmission submissionH =
 -- If student is supplied, then submissions owned by other students won't be
 -- visible/affected.
 commonDeleteSubmission
-    :: MonadEducatorWebQuery m
+    :: (MonadEducatorWebQuery cmd be hdl m, WithinWriteTx)
     => Hash Submission
     -> Maybe Student
-    -> DBT 'WithinTx 'Writing m ()
+    -> m ()
 commonDeleteSubmission submissionH studentF = do
     commonExistsSubmission submissionH studentF
         `assert` AbsentError (SubmissionDomain submissionH)
