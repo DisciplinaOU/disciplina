@@ -68,7 +68,7 @@ calcFee policy tx = case policy of
 calcFeePub :: FeePolicy PublicationTx -> PrivateBlockHeader -> Fees
 calcFeePub policy header = case policy of
     LinearFeePolicy coeffs ->
-        calcLinearFees coeffs $ mrSize $ header ^. pbhBodyProof
+        calcLinearFees coeffs $ msSize $ header ^. pbhBodyProof
 
 -- | Calculates fees of 'GTxWitnessed'.
 calcFeeG :: FeeConfig -> GTxWitnessed -> Fees

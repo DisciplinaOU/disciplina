@@ -13,14 +13,17 @@ import Data.Aeson.Types (toJSONKeyText)
 import Data.ByteArray (ByteArrayAccess, convert)
 import Data.Reflection (Reifies (..))
 
-import Dscp.Crypto.ByteArray (FromByteArray)
-import Dscp.Crypto.Encrypt (Encrypted, PassPhrase)
-import Dscp.Crypto.Hash (AbstractHash)
+import Dscp.Crypto.ByteArray
+import Dscp.Crypto.Encrypt
+import Dscp.Crypto.Hash
 import Dscp.Crypto.MerkleTree
-import Dscp.Crypto.Signing (AbstractPK, AbstractSig)
-import Dscp.Util (fromHex, leftToFail, toHex)
-import Dscp.Util.Aeson (AsByteString (..), CustomEncoding (..), HexEncoded, IsEncoding,
-                        parseJSONSerialise, toJSONSerialise)
+import Dscp.Crypto.Signing
+import Dscp.Util
+import Dscp.Util.Aeson
+
+---------------------------------------------------------------------------
+-- Encrypted data and passphrases
+---------------------------------------------------------------------------
 
 instance (FromByteArray a, IsEncoding enc) =>
          ToJSON (CustomEncoding enc $ Encrypted a) where
@@ -28,6 +31,15 @@ instance (FromByteArray a, IsEncoding enc) =>
 instance (FromByteArray a, IsEncoding enc) =>
          FromJSON (CustomEncoding enc $ Encrypted a) where
     parseJSON = fmap CustomEncoding . parseJSONSerialise (reflect (Proxy @enc))
+
+instance ToJSON PassPhrase where
+    toJSON = toJSON . decodeUtf8 @Text @ByteString . convert
+instance FromJSON PassPhrase where
+    parseJSON = fmap (convert . encodeUtf8 @Text @ByteString) . parseJSON
+
+---------------------------------------------------------------------------
+-- Hashes
+---------------------------------------------------------------------------
 
 instance ByteArrayAccess (AbstractHash hf a) => ToJSON (AbstractHash hf a) where
     toJSON = toJSON . AsByteString @HexEncoded
@@ -41,6 +53,10 @@ instance FromByteArray (AbstractHash hf a) =>
          FromJSONKey (AbstractHash hf a) where
     fromJSONKey = FromJSONKeyTextParser $ leftToFail . fromHex
 
+---------------------------------------------------------------------------
+-- Keys and signatures
+---------------------------------------------------------------------------
+
 instance ByteArrayAccess (AbstractPK ss) => ToJSON (AbstractPK ss) where
     toJSON = toJSON . AsByteString @HexEncoded
 instance FromByteArray (AbstractPK ss) => FromJSON (AbstractPK ss) where
@@ -51,33 +67,32 @@ instance ByteArrayAccess (AbstractSig ss a) => ToJSON (AbstractSig ss a) where
 instance FromByteArray (AbstractSig ss a) => FromJSON (AbstractSig ss a) where
     parseJSON = fmap (getAsByteString @HexEncoded) . parseJSON
 
-instance ToJSON PassPhrase where
-    toJSON = toJSON . decodeUtf8 @Text @ByteString . convert
-instance FromJSON PassPhrase where
-    parseJSON = fmap (convert . encodeUtf8 @Text @ByteString) . parseJSON
+---------------------------------------------------------------------------
+-- Merkle trees
+---------------------------------------------------------------------------
 
-instance (IsEncoding enc) =>
+instance (Serialise (MerkleSignature a), IsEncoding enc) =>
          ToJSON (CustomEncoding enc $ MerkleSignature a) where
     toJSON = toJSONSerialise (reflect (Proxy @enc)). unCustomEncoding
-instance (IsEncoding enc) =>
+instance (Serialise (MerkleSignature a), IsEncoding enc) =>
          FromJSON (CustomEncoding enc $ MerkleSignature a) where
     parseJSON = fmap CustomEncoding . parseJSONSerialise (reflect (Proxy @enc))
 
-instance (Serialise a, IsEncoding enc) =>
+instance (Serialise (MerkleProof a), IsEncoding enc) =>
          ToJSON (CustomEncoding enc $ MerkleProof a) where
     toJSON = toJSONSerialise (reflect (Proxy @enc)). unCustomEncoding
-instance (Serialise a, IsEncoding enc) =>
+instance (Serialise (MerkleProof a), IsEncoding enc) =>
          FromJSON (CustomEncoding enc $ MerkleProof a) where
     parseJSON = fmap CustomEncoding . parseJSONSerialise (reflect (Proxy @enc))
 
 instance ToJSON (MerkleSignature a) where
     toJSON MerkleSignature{..} = object
-        [ "root" .= mrHash
-        , "transactionsNum" .= mrSize
+        [ "root" .= msHash
+        , "transactionsNum" .= msSize
         ]
 
 instance FromJSON (MerkleSignature a) where
     parseJSON = withObject "merkle signature" $ \o -> do
-        mrHash <- o .: "root"
-        mrSize <- o .: "transactionsNum"
+        msHash <- o .: "root"
+        msSize <- o .: "transactionsNum"
         return MerkleSignature{..}

@@ -3,6 +3,7 @@
 module Dscp.Crypto.Arbitrary () where
 
 import qualified Data.Set as Set
+import GHC.Exts (fromList)
 import Test.QuickCheck.Arbitrary.Generic (genericShrink)
 
 import Dscp.Util.Test
@@ -54,7 +55,7 @@ longerThan :: Container f => Int -> f -> Bool
 longerThan n x = length x > n
 
 instance Arbitrary (MerkleSignature a) where
-    arbitrary = MerkleSignature <$> arbitrary <*> choose (0, 100)
+    arbitrary = MerkleSignature <$> choose (0, 100) <*> arbitrary
     shrink = genericShrink
 
 instance (HasHash a, Arbitrary a) => Arbitrary (MerkleTree a) where

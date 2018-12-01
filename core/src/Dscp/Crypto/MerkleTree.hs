@@ -1,7 +1,3 @@
-{-# LANGUAGE DeriveAnyClass     #-}
-{-# LANGUAGE DeriveFoldable     #-}
-{-# LANGUAGE DeriveFunctor      #-}
-{-# LANGUAGE DeriveTraversable  #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE NamedFieldPuns     #-}
 
@@ -12,70 +8,73 @@ module Dscp.Crypto.MerkleTree
        , getMerkleRoot
        , fromFoldable
        , fromContainer
-       , fromList
 
        , MerkleProof (..)
+       , mpSize
        , drawProofNode
        , mkMerkleProof
        , mkMerkleProofSingle
-       , computeMerkleRoot
        , validateMerkleProof
-       , getMerkleProofRoot
        , lookup
        , validateElementExistAt
+
+       , MerkleProofReady
+       , mprRoot
+       , mprProof
+       , mprSize
+       , reconstructRoot
+       , readyProof
+       , mergeProofs
 
        , MerkleNode (..)
        , drawMerkleTree
        , mkBranch
        , mkLeaf
 
-       , EmptyMerkleTree
+       , ElementStub (..)
+       , EmptyMerkleTree (..)
        , getEmptyMerkleTree
        , fillEmptyMerkleTree
 
-       , EmptyMerkleProof
-       , IndexedList
-       , unIndexedList
-       , mkIndexedList
+       , EmptyMerkleProof (..)
        , separateProofAndData
        , mergeProofAndData
        ) where
 
-import Codec.Serialise (Serialise (..))
 import Data.ByteArray (convert)
 import Data.ByteString.Builder (Builder, byteString, word32LE)
 import qualified Data.ByteString.Builder.Extra as Builder
 import qualified Data.ByteString.Lazy as LBS
+import Data.Coerce (coerce)
 import qualified Data.Foldable as F (Foldable (..))
 import qualified Data.Map as Map ((!))
 import qualified Data.Set as Set
 import Data.Tree as Tree (Tree (Node), drawTree)
 import Fmt (build, (+|), (|+))
+import qualified GHC.Exts as Exts (IsList (..))
 import qualified Text.Show
 
-import Dscp.Crypto.Hash.Class (AbstractHash (..))
-import Dscp.Crypto.Impl (HasHash, Hash, hash, unsafeHash)
-import Dscp.Crypto.Serialise (Raw)
+import Dscp.Crypto.Impl
 
 -- | Data type for root of sized merkle tree.
 data MerkleSignature a = MerkleSignature
-    { mrHash :: !(Hash Raw)  -- ^ returns root 'Hash' of Merkle Tree
-    , mrSize :: !Word32      -- ^ size of root node,
+    { msSize :: !Word32      -- ^ size of root node,
                              --   size is defined as number of leafs in this subtree
-    } deriving (Eq, Ord, Generic, Serialise, Functor, Foldable, Traversable, Typeable)
+    , msHash :: !(Hash Raw)  -- ^ returns root 'Hash' of Merkle Tree
+    } deriving (Eq, Ord, Generic, Typeable)
 
 instance Buildable (MerkleSignature a) where
     build MerkleSignature{..} =
-        "MerkleSignature { hash: " +| mrHash |+ "; size: " +| mrSize |+ " }"
+        "MerkleSignature { hash: "+|msHash|+"; size: "+|msSize|+" }"
 
 instance Show (MerkleSignature a) where
     show = toString . pretty
 
+-- | Merkle tree over an array of elements of type `a`. Might be empty.
 data MerkleTree a
     = MerkleEmpty
     | MerkleTree !(MerkleNode a)
-    deriving (Eq, Show, Functor, Generic, Serialise)
-
+    deriving (Show, Eq, Generic)
 
 instance Foldable MerkleTree where
     foldMap _ MerkleEmpty    = mempty
@@ -85,80 +84,109 @@ instance Foldable MerkleTree where
     null _           = False
 
     length MerkleEmpty    = 0
-    length (MerkleTree n) = fromIntegral (mrSize (mRoot n))
+    length (MerkleTree n) = fromIntegral $ msSize $ mnRoot n
 
-deriving instance Container (MerkleTree a)
+instance Container (MerkleTree a)
 
+-- | We use @'Word32'@ values for indexing leaves in the tree.
 type LeafIndex = Word32
 
+-- | Non-empty Merkle subtree.
 data MerkleNode a
     = MerkleBranch
-       { mRoot  :: !(MerkleSignature a)
-       , mLeft  :: !(MerkleNode a)
-       , mRight :: !(MerkleNode a) }
+       { mnRoot  :: !(MerkleSignature a)
+       , mnLeft  :: !(MerkleNode a)
+       , mnRight :: !(MerkleNode a) }
     | MerkleLeaf
-       { mRoot  :: !(MerkleSignature a)
-       , mIndex :: !LeafIndex
-       , mVal   :: !a }
-    deriving (Eq, Show, Functor, Generic, Serialise)
+       { mnRoot :: !(MerkleSignature a)
+       , mnVal  :: !a }
+    deriving (Show, Eq, Generic)
+
+-- | Helper function for fetching a size of @'MerkleNode'@ subtree.
+mnSize :: MerkleNode a -> Word32
+mnSize = msSize . mnRoot
 
 instance Foldable MerkleNode where
-    foldMap f x = case x of
-      MerkleLeaf {mVal}            -> f mVal
-      MerkleBranch {mLeft, mRight} -> F.foldMap f mLeft `mappend` F.foldMap f mRight
+    foldMap f MerkleLeaf {mnVal} = f mnVal
+    foldMap f MerkleBranch {mnLeft, mnRight} =
+        F.foldMap f mnLeft `mappend` F.foldMap f mnRight
 
-mkLeaf :: HasHash a => LeafIndex -> a -> MerkleNode a
-mkLeaf i a = MerkleLeaf
-    { mVal   = a
-    , mIndex = i
-    , mRoot  = MerkleSignature (unsafeHash a) -- unsafeHash since we need to hash to ByteString
-                                1 -- size of leaf node is 1
+    length = fromIntegral . mnSize
+
+-- | Constructs a @'MerkleSignature'@ for a hashable object.
+-- The signature always have size 1, since the single object
+-- is hashed.
+mkMerkleSig :: HasHash a => a -> MerkleSignature a
+mkMerkleSig a = MerkleSignature 1 (unsafeHash a)
+
+-- | Makes a leaf node of Merkle tree given the element of type `a`.
+mkLeaf :: HasHash a => a -> MerkleNode a
+mkLeaf a = MerkleLeaf
+    { mnVal   = a
+    , mnRoot  = mkMerkleSig a
     }
 
+-- | Given two Merkle subtrees, makes a tree which has them
+-- as children.
 mkBranch :: MerkleNode a -> MerkleNode a -> MerkleNode a
 mkBranch l r = MerkleBranch
-    { mLeft  = l
-    , mRight = r
-    , mRoot  = mkBranchRootHash (mRoot l) (mRoot r)
+    { mnLeft  = l
+    , mnRight = r
+    , mnRoot  = mkBranchRootHash (mnRoot l) (mnRoot r)
     }
 
-mkBranchRootHash :: MerkleSignature a -- ^ left merkle root
-                 -> MerkleSignature a -- ^ right merkle root
-                 -> MerkleSignature a
-mkBranchRootHash (MerkleSignature (AbstractHash hl) sl)
-                 (MerkleSignature (AbstractHash hr) sr)
-   = MerkleSignature
-   (hash $ toLazyByteString $ mconcat
-      [ word32LE sl
-      , word32LE sr
-      , byteString (convert hl)
-      , byteString (convert hr) ])
-   (sl + sr)
+-- | Concatenates two @'MerkleSignature'@s and calculates another
+-- @'MerkleSignature'@ on top of them.
+mkBranchRootHash
+    :: MerkleSignature a -- ^ left merkle root
+    -> MerkleSignature a -- ^ right merkle root
+    -> MerkleSignature a
+mkBranchRootHash (MerkleSignature sl hl) (MerkleSignature sr hr) =
+    MerkleSignature
+    (sl + sr)
+    (hash $ toLazyByteString $ mconcat
+        [ word32LE sl
+        , byteString (convert hl)
+        , word32LE sr
+        , byteString (convert hr) ])
   where
     toLazyByteString :: Builder -> LBS.ByteString
-    toLazyByteString = Builder.toLazyByteStringWith (Builder.safeStrategy 1024 4096) mempty
+    toLazyByteString = Builder.toLazyByteStringWith
+        -- This bytestring is build only to be hashed, and then it's
+        -- discarded. @'untrimmedStrategy'@ is a recommended strategy
+        -- for this case.
+        -- All the stuff to hash fits into 72 bytes, but let's allocate
+        -- 128 in the first buffer just in case (we don't know inner @'Builder'@)
+        -- machinery good enough.
+        (Builder.untrimmedStrategy 128 Builder.smallChunkSize)
+        mempty
 
--- | Smart constructor for MerkleTree.
+-- | Construct a @'MerkleTree'@ over a @'Foldable'@ container.
 fromFoldable :: (HasHash a, Foldable t) => t a -> MerkleTree a
-fromFoldable = fromList . F.toList
+fromFoldable = Exts.fromList . F.toList
 
--- | Smart constructor for MerkleTree.
+-- | Construct a @'MerkleTree'@ over a @'Container'@
 fromContainer :: (HasHash (Element t), Container t) => t -> MerkleTree (Element t)
-fromContainer = fromList . toList
+fromContainer = Exts.fromList . toList
 
-fromList :: HasHash a => [a] -> MerkleTree a
-fromList [] = MerkleEmpty
-fromList ls = MerkleTree (nodeFromList ls)
+-- Construct a @'MerkleTree'@ over a list.
+instance HasHash a => Exts.IsList (MerkleTree a) where
+    type Item (MerkleTree a) = a
+    fromList []       = MerkleEmpty
+    fromList (a : as) = MerkleTree $ nodeFromList (a :| as)
 
-nodeFromList :: HasHash a => [a] -> MerkleNode a
-nodeFromList lst = tree
+    toList = F.toList
+
+-- | Construct a @'MerkleNode'@ over a non-empty list
+nodeFromList :: HasHash a => NonEmpty a -> MerkleNode a
+nodeFromList lst@(a :| as) = tree
   where
-    (tree, []) = go (0, uLen - 1) `runState` lst
+    (tree, []) = go (0, uLen - 1) `runState` (a : as)
 
-    uLen = fromIntegral $ length lst
+    uLen = length lst
 
     go (lo, hi)
-        | lo == hi  = mkLeaf lo <$> pop
+        | lo == hi  = mkLeaf <$> pop
         | otherwise = mkBranch <$> go (lo, mid) <*> go (mid + 1, hi)
       where
         mid = (lo + hi) `div` 2
@@ -167,212 +195,260 @@ nodeFromList lst = tree
         []    -> error "nodeFromList: impossible"
         c : s -> (c, s)
 
--- | Returns root of merkle tree.
+-- | Returns root of merkle tree. Returns @'emptyHash'@, if tree is empty.
 getMerkleRoot :: MerkleTree a -> MerkleSignature a
 getMerkleRoot MerkleEmpty    = emptyHash
-getMerkleRoot (MerkleTree x) = mRoot x
+getMerkleRoot (MerkleTree x) = mnRoot x
 
+-- | Fixed signature, which is used as root of the @'MerkleTree'@
+-- if it's empty.
 emptyHash :: MerkleSignature a
-emptyHash = MerkleSignature (hash mempty) 0
+emptyHash = MerkleSignature 0 (hash mempty)
 
+-- | Merkle proof. Contains a subset of leaves of @'MerkleTree'@ and
+-- roots of pruned subtrees.
 data MerkleProof a
     = ProofBranch
-        { pnSig   :: !(MerkleSignature a)
-        , pnLeft  :: !(MerkleProof a)
-        , pnRight :: !(MerkleProof a) }
+        { mpLeft  :: !(MerkleProof a)
+        , mpRight :: !(MerkleProof a) }
     | ProofLeaf
-        { pnSig :: !(MerkleSignature a)
-        , pnVal :: !a
+        { mpVal :: !a
         }
     | ProofPruned
-        { pnSig :: !(MerkleSignature a) }
-    deriving (Eq, Show, Functor, Foldable, Traversable, Generic)
-
-instance Serialise a => Serialise (MerkleProof a)
+        { mpSig :: !(MerkleSignature a) }
+    deriving (Show, Eq, Generic)
 
 -- TODO: provide a useful instance
 instance Buildable (MerkleProof a) where
     build _ = "<merkle proof>"
 
-pnSize :: MerkleProof a -> Word32
-pnSize = mrSize . pnSig
+instance Foldable MerkleProof where
+    foldMap _ ProofPruned{} = mempty
+    foldMap f (ProofLeaf v) = f v
+    foldMap f (ProofBranch l r) =
+        F.foldMap f l `mappend` F.foldMap f r
 
-getMerkleProofRoot :: MerkleProof a -> MerkleSignature a
-getMerkleProofRoot = pnSig
+instance Container (MerkleProof a)
 
-mkMerkleProofSingle :: forall a. MerkleTree a -- ^ merkle tree we want to construct a proof from
-                              -> LeafIndex -- ^ leaf index used for proof
-                              -> Maybe (MerkleProof a)
-mkMerkleProofSingle t n = mkMerkleProof t (Set.fromList [n])
+-- | Calculates the size of Merkle subtree corresponding to
+-- given Merkle proof.
+mpSize :: MerkleProof a -> Word32
+mpSize (ProofPruned s)   = msSize s
+mpSize (ProofLeaf _)     = 1
+mpSize (ProofBranch l r) = mpSize l + mpSize r
 
-mkMerkleProof :: forall a. MerkleTree a -- ^ merkle tree we want to construct a proof from
-                        -> Set LeafIndex -- ^ leaf index used for proof
-                        -> Maybe (MerkleProof a)
-mkMerkleProof MerkleEmpty _ = Nothing
-mkMerkleProof (MerkleTree rootNode) n =
-    case constructProof rootNode of
-      ProofPruned _ -> Nothing
-      x             -> Just x
+-- | Datatype for a @'MerkleProof'@, root hash for which has
+-- already been pre-calculated and which is ready for validation.
+--
+-- Constructor for this datatype is not exported - it should be
+-- possible to get the value of this datatype only via
+-- calculating all the inner nodes of an existing @'MerkleProof'@
+data MerkleProofReady a = UnsafeMerkleProofReady
+    { mprRoot  :: !(MerkleSignature a)
+    , mprProof :: !(MerkleProof a)
+    } deriving (Show, Eq, Generic)
+
+instance Buildable (MerkleProofReady a) where
+    build proofR = "Merkle proof { root = "+|mprRoot proofR|+
+                   ", proof = "+|mprProof proofR|+" }"
+
+-- | Reconstructs the root of given @'MerkleProof'@.
+reconstructRoot :: HasHash a => MerkleProof a -> MerkleSignature a
+reconstructRoot (ProofBranch l r) =
+    mkBranchRootHash (reconstructRoot l) (reconstructRoot r)
+reconstructRoot (ProofPruned s) = s
+reconstructRoot (ProofLeaf a) = mkMerkleSig a
+
+-- | Reconstructs the root of given @'MerkleProof'@ and yields the
+-- @'MerkleProofReady'@ object.
+readyProof :: HasHash a => MerkleProof a -> MerkleProofReady a
+readyProof proof = UnsafeMerkleProofReady (reconstructRoot proof) proof
+
+-- | Helper function to fetch the size of the @'MerkleTree'@ from which
+-- the proof were fetched.
+mprSize :: MerkleProofReady a -> Word32
+mprSize = msSize . mprRoot
+
+-- | Merges two already validated Merkle proofs, checking that all common
+-- inner nodes match.
+mergeProofs
+    :: MerkleProofReady a
+    -> MerkleProofReady a
+    -> Either Text (MerkleProofReady a)
+mergeProofs a b
+    | mprRoot a /= mprRoot b = Left "Proof roots mismatch"
+    | otherwise = UnsafeMerkleProofReady (mprRoot a) <$>
+                  merge (mprProof a) (mprProof b)
   where
-    constructProof :: MerkleNode a -> MerkleProof a
-    constructProof MerkleLeaf {..}
-      | Set.member mIndex n = ProofLeaf mRoot mVal
-      | otherwise = ProofPruned mRoot
-    constructProof (MerkleBranch mRoot' mLeft' mRight') =
-      case (constructProof mLeft', constructProof mRight') of
-        (ProofPruned _, ProofPruned _) -> ProofPruned mRoot'
-        (pL, pR)                       -> ProofBranch mRoot' pL pR
+    merge (ProofBranch l r) (ProofBranch l' r') =
+        ProofBranch <$> merge l l' <*> merge r r'
+    merge ProofBranch{} ProofLeaf{} =
+        Left "Inner node on the left is mismatched with leaf on the right"
+    merge ProofLeaf{} ProofBranch{} =
+        Left "Leaf on the left is mismatched with inner node on the right"
+    -- No need to compare values in leaves, because proofs are 'Valid',
+    -- and hash function should be collision-resistnant.
+    merge a'@ProofLeaf{} ProofLeaf{} = pure a'
+    merge a' ProofPruned{} = pure a'
+    merge ProofPruned{} b' = pure b'
 
+-- | Picks an element of given @'MerkleTree'@ by index and constructs
+-- a @'MerkleProof'@ with this element as the only leaf.
+--
+-- Returns @'Nothing'@ if the index is outside the tree's bounds or if
+-- the tree is empty.
+mkMerkleProofSingle :: MerkleTree a -> LeafIndex -> Maybe (MerkleProof a)
+mkMerkleProofSingle t = mkMerkleProof t . one
+
+-- | Picks elements of given @'MerkleTree'@ by given indices and
+-- constructs a @'MerkleProof'@ with those elements as the only leaves.
+--
+-- Returns @'Nothing'@ if none of given indices is inside the tree's
+-- bounds or if the tree is empty.
+mkMerkleProof :: MerkleTree a -> Set LeafIndex -> Maybe (MerkleProof a)
+mkMerkleProof MerkleEmpty _ = Nothing
+mkMerkleProof (MerkleTree rootNode) idxs' =
+    case constructProof 0 rootNode idxs' of
+        ProofPruned _ -> Nothing
+        branch        -> Just branch
+  where
+    constructProof :: Word32 -> MerkleNode a -> Set LeafIndex -> MerkleProof a
+    constructProof padding node idxs
+        | Set.null idxs =
+              ProofPruned $ mnRoot node
+        | Set.findMax idxs < padding =
+              ProofPruned $ mnRoot node
+        | Set.findMin idxs >= padding + mnSize node =
+              ProofPruned $ mnRoot node
+        | otherwise = case node of
+              (MerkleLeaf _ v) -> ProofLeaf v
+              (MerkleBranch _ l r) ->
+                  let pivot = padding + mnSize l
+                      (idxsL, idxsR) = splitIdxs pivot idxs
+                  in ProofBranch
+                     (constructProof padding l idxsL)
+                     (constructProof pivot r idxsR)
+
+    splitIdxs idx idxs =
+        let (l, idxFound, r) = Set.splitMember idx idxs
+        in (l, if idxFound then Set.insert idx r else r)
+
+-- | Lookup an element in @'MerkleProof'@ by index.
+-- Returns @'Nothing'@ if a Merkle tree leaf with given index is
+-- not included into proof.
+--
+-- `O(k * h)`, where `k` is number of leaves in the proof and
+-- `h` is the height of the proof.
 lookup :: LeafIndex -> MerkleProof a -> Maybe a
-lookup index = \case
-    ProofPruned {}        -> Nothing
-    ProofLeaf   { pnVal } -> return pnVal
-
-    ProofBranch { pnSig, pnLeft, pnRight } -> do
-        let size = mrSize pnSig
-        let border
-              | odd size  = (size `div` 2) + 1
-              | otherwise =  size `div` 2
-
-        if   border > index
-        then lookup  index           pnLeft
-        else lookup (index - border) pnRight
+lookup _ ProofPruned{} = Nothing
+lookup _ (ProofLeaf v) = Just v
+lookup i (ProofBranch l r) = let lsize = mpSize l in
+    if i < lsize
+    then lookup i l
+    else lookup (i - lsize) r
 
 validateElementExistAt :: Eq a => LeafIndex -> a -> MerkleProof a -> Bool
 validateElementExistAt index value proof = lookup index proof == Just value
 
--- | Validate a merkle tree proof.
-validateMerkleProof :: HasHash a => MerkleProof a -> MerkleSignature a -> Bool
-validateMerkleProof proof treeRoot =
-    computeMerkleRoot proof == Just treeRoot
-
--- | Recalculate signatures of every node in the proof tree and
--- return root signature if every inner node passed validation.
-computeMerkleRoot :: HasHash a => MerkleProof a -> Maybe (MerkleSignature a)
-computeMerkleRoot ProofLeaf {..} =
-    if MerkleSignature (unsafeHash pnVal) 1 == pnSig
-    then Just pnSig
-    else Nothing
-computeMerkleRoot ProofPruned {..} = Just pnSig
-computeMerkleRoot (ProofBranch pnRoot' pnLeft' pnRight') = do
-    pnSigL <- computeMerkleRoot pnLeft'
-    pnSigR <- computeMerkleRoot pnRight'
-    if mkBranchRootHash pnSigL pnSigR == pnRoot'
-        then Just pnRoot'
-        else Nothing
+-- | Validate a pre-calculated Merkle proof against given Merkle root.
+validateMerkleProof
+    :: HasHash a
+    => MerkleProofReady a
+    -> MerkleSignature a
+    -> Bool
+validateMerkleProof proof root = mprRoot proof == root
 
 -- | Debug print of tree.
-drawMerkleTree :: (Show a) => MerkleTree a -> String
+drawMerkleTree :: Show a => MerkleTree a -> String
 drawMerkleTree MerkleEmpty = "empty tree"
-drawMerkleTree (MerkleTree n) = Tree.drawTree (asTree n)
+drawMerkleTree (MerkleTree n) = Tree.drawTree $ asTree n
   where
-    asTree :: (Show a) => MerkleNode a -> Tree.Tree String
-    asTree MerkleBranch {..} = Tree.Node (show mRoot) [asTree mLeft, asTree mRight]
-    asTree leaf              = Tree.Node (show leaf) []
+    asTree :: Show a => MerkleNode a -> Tree.Tree String
+    asTree MerkleBranch {..} =
+        Tree.Node (show mnRoot) [asTree mnLeft, asTree mnRight]
+    asTree MerkleLeaf {..} =
+        Tree.Node ("leaf (" <> show mnRoot <> ", " <> show mnVal <> ")") []
 
 -- | Debug print of proof tree.
-drawProofNode :: (Show a) => Maybe (MerkleProof a) -> String
-drawProofNode Nothing = "empty proof"
-drawProofNode (Just p) = Tree.drawTree (asTree p)
+drawProofNode :: Show a => MerkleProof a -> String
+drawProofNode = Tree.drawTree . asTree
   where
-    asTree :: (Show a) => MerkleProof a -> Tree.Tree String
-    asTree ProofLeaf {..}   = Tree.Node ("leaf, "   <> show pnSig) []
-    asTree ProofBranch {..} = Tree.Node ("branch, " <> show pnSig) [asTree pnLeft, asTree pnRight]
-    asTree ProofPruned {..} = Tree.Node ("pruned, " <> show pnSig) []
+    asTree :: Show a => MerkleProof a -> Tree.Tree String
+    asTree ProofLeaf {..}   = Tree.Node ("leaf, " <> show mpVal) []
+    asTree ProofBranch {..} = Tree.Node "branch" [asTree mpLeft, asTree mpRight]
+    asTree ProofPruned {..} = Tree.Node ("pruned, " <> show mpSig) []
+
+-- | A special unit-isomorphic type which acts as a placeholder for
+-- an element in Merkle structure.
+data ElementStub = ElementStub
+    deriving (Show, Eq)
 
 -- | Merkle tree with values removed. Used for storing Merkle trees
 -- in the Educator database.
-newtype EmptyMerkleTree a = EmptyTree (MerkleTree ())
-    deriving newtype (Eq, Show, Generic, Serialise)
+newtype EmptyMerkleTree a = EmptyTree (MerkleTree ElementStub)
+    deriving newtype (Show, Eq, Generic)
 
--- | Helper function which arbitrarily changes the type tag for
--- @'MerkleSignature'@.
-coerceSig :: MerkleSignature a -> MerkleSignature b
-coerceSig = fmap $ error "coerceSig: 'MerkleSignature a' has 'a' inside!"
-
--- | Empties out the Merkle tree. Leaves only 'Pruned' nodes.
+-- | Empties out the Merkle tree, putting @'ElementStub'@s in leaves.
 getEmptyMerkleTree :: MerkleTree a -> EmptyMerkleTree a
-getEmptyMerkleTree = EmptyTree . (() <$)
+getEmptyMerkleTree = EmptyTree . go
+    where
+      go MerkleEmpty       = MerkleEmpty
+      go (MerkleTree node) = MerkleTree $ goNode node
 
+      goNode (MerkleBranch s l r) =
+          MerkleBranch (coerce s) (goNode l) (goNode r)
+      goNode (MerkleLeaf s _)     =
+          MerkleLeaf (coerce s) ElementStub
+
+-- | Given a @'Map'@ from index to the element, fills @'EmptyMerkleTree'@,
+-- yielding a @'MerkleProof'@ which has provided elements placed to their
+-- corresponing indices as leaves.
 fillEmptyMerkleTree :: Map LeafIndex a -> EmptyMerkleTree a -> Maybe (MerkleProof a)
 fillEmptyMerkleTree plugs (EmptyTree sieve) =
-    let
-        keySet = Set.fromList (keys plugs)
+    let keySet = Set.fromList (keys plugs)
         proof  = mkMerkleProof sieve keySet
-        filled = fill <$> proof
-    in
-        filled
+    in fill <$> proof
   where
     fill it = evalState (aux it) 0
       where
-        aux = \case
-          ProofBranch sig left right ->
-              ProofBranch (coerceSig sig) <$> aux left <*> aux right
-
-          ProofLeaf sig () ->
-              ProofLeaf (coerceSig sig) . (plugs Map.!) <$> next
-
-          ProofPruned sig ->
-              ProofPruned (coerceSig sig) <$ skip (mrSize sig)
+        aux (ProofBranch left right) =
+            ProofBranch <$> aux left <*> aux right
+        aux (ProofLeaf ElementStub) =
+            ProofLeaf . (plugs Map.!) <$> next
+        aux (ProofPruned sig) =
+            ProofPruned (coerce sig) <$ skip (msSize sig)
 
         next   = state $ \i -> (i,  i + 1)
         skip n = state $ \i -> ((), i + n)
 
 -- | Merkle proof with values at leaves removed and replaced via @Pruned@
 -- nodes.
-newtype EmptyMerkleProof a = EmptyProof (MerkleProof Void)
-    deriving newtype (Eq, Show, Generic, Serialise)
+newtype EmptyMerkleProof a = EmptyProof (MerkleProof ElementStub)
+    deriving newtype (Eq, Show, Generic)
 
--- | Absurd instance to derive 'Serialise' for 'EmptyMerkleProof' automatically.
-instance Serialise Void where
-    encode = absurd
-
--- | List of indexed elements. Invariant: indices always go in ascending
--- order.
-newtype IndexedList a = IndexedList
-    { unIndexedList :: [(LeafIndex, a)]
-    } deriving newtype (Eq, Show, Generic)
-
--- | Safe constructor for an indexed list. Makes sure the invariant of ascending
--- order is held.
-mkIndexedList :: [(LeafIndex, a)] -> IndexedList a
-mkIndexedList = IndexedList . sortBy (compare `on` fst)
+-- | Empties out @'MerkleProof'@, putting @'ElementStub'@s in leaves.
+getEmptyMerkleProof :: MerkleProof a -> EmptyMerkleProof a
+getEmptyMerkleProof = EmptyProof . go
+    where
+      go (ProofBranch l r) = ProofBranch (go l) (go r)
+      go (ProofPruned s)   = ProofPruned $ coerce s
+      go (ProofLeaf _)     = ProofLeaf ElementStub
 
 -- | Splits Merkle proof into signatures and data.
-separateProofAndData :: MerkleProof a -> (EmptyMerkleProof a, IndexedList a)
-separateProofAndData =
-    bimap EmptyProof (IndexedList . reverse . snd) .
-    flip runState (0, []) . go
-  where
-    go (ProofBranch s l r) = ProofBranch (coerceSig s) <$>
-        go l <*>
-        (modify' (first (+ pnSize l)) *> go r)
-    go (ProofPruned s)     = pure $ ProofPruned (coerceSig s)
-    go (ProofLeaf s a)     = pickLeaf a $> ProofPruned (coerceSig s)
-
-    pickLeaf a = do
-        ix <- gets fst
-        modify' $ second ((ix, a) :)
+separateProofAndData :: MerkleProof a -> (EmptyMerkleProof a, [a])
+separateProofAndData proof = (getEmptyMerkleProof proof, toList proof)
 
 -- | Merges empty proof and list of data elements into one Merkle proof.
-mergeProofAndData :: forall a. EmptyMerkleProof a -> IndexedList a -> Maybe (MerkleProof a)
-mergeProofAndData (EmptyProof proof) (IndexedList leaves) =
-    let (fullProof, (_, left)) = runState (go proof) (0, leaves)
-    in if not $ null left
-       then Nothing
-       else Just fullProof
+-- Returns @'Nothing'@ if there's too few or too many data elements provided.
+mergeProofAndData :: forall a. EmptyMerkleProof a -> [a] -> Maybe (MerkleProof a)
+mergeProofAndData (EmptyProof proof) =
+    evalState (runMaybeT $ go proof)
   where
-    go (ProofBranch s l r) = ProofBranch (coerceSig s) <$>
-        go l <*>
-        (modify' (first (+ pnSize l)) *> go r)
-    go (ProofLeaf _ a)     = absurd a
-    go (ProofPruned s)     = let s' = coerceSig s in
-        if mrSize s' > 1
-        then pure $ ProofPruned s'
-        else maybe (ProofPruned s') (ProofLeaf s') <$> shiftLeaf
+    go :: MerkleProof ElementStub -> MaybeT (State [a]) (MerkleProof a)
+    go (ProofBranch l r) = ProofBranch <$> go l <*> go r
+    go (ProofPruned s)   = pure . ProofPruned $ coerce s
+    go (ProofLeaf _)     = ProofLeaf <$> MaybeT pickLeaf
 
-    shiftLeaf = do
-        (i, lvs) <- get
-        traverse (\a -> modify' (second $ drop 1) $> a) $
-            ixedHead i lvs
-    ixedHead i = safeHead >=> \(j, a) -> guard (i == j) >> return a
+    pickLeaf = state $ \case
+        []       -> (Nothing, [])
+        (a : as) -> (Just a, as)

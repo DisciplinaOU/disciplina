@@ -75,7 +75,7 @@ data WitnessEndpoints route = WitnessEndpoints
 
     , wCheckFairCV :: route
         :- "checkcv"
-        :> ReqBody '[JSON] (FairCV Unchecked)
+        :> ReqBody '[JSON] FairCV
         :> Verb 'PUT 200 '[DSON] FairCVCheckResult
     } deriving (Generic)
 

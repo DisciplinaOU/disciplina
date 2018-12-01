@@ -131,7 +131,7 @@ instance Buildable (GradeInfo) where
 instance Buildable (BlkProofInfo) where
     build (BlkProofInfo{..}) =
       "{ tree root hash = " +||
-          fmap getMerkleProofRoot bpiMtreeSerialized ||+
+          fmap reconstructRoot bpiMtreeSerialized ||+
       ", transactons num = " +| length bpiTxs |+
       "} "
 
@@ -147,7 +147,7 @@ instance Buildable (ForResponseLog GradeInfo) where
 instance Buildable (ForResponseLog BlkProofInfo) where
     build (ForResponseLog BlkProofInfo{..}) =
       "{ tree root hash = " +||
-          fmap getMerkleProofRoot bpiMtreeSerialized ||+
+          fmap reconstructRoot bpiMtreeSerialized ||+
       "} "
 
 instance Buildable (ForResponseLog Course) where

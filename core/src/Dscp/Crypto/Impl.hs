@@ -28,6 +28,9 @@ module Dscp.Crypto.Impl
        , verify
        , unsafeVerify
        , Signed (..)
+
+         -- * Other
+       , Raw
        ) where
 
 import Crypto.Error (CryptoFailable (..))
@@ -94,7 +97,7 @@ withSeed seed action = fst $ withDRG (drgNewSeed seed'') action
         0 -> error "withSeed: provided seed is an empty bytestring"
         _ | len > 40 -> BS.take 40 seed
         _ | len < 40 -> let (d,m) = 40 `divMod` len
-                        in BS.concat (replicate d seed) `BS.append` (BS.take m seed)
+                        in BS.concat (replicate d seed) `BS.append` BS.take m seed
         _ -> seed
     seed'' = case seedFromBinary seed' of
         CryptoPassed x -> x
@@ -133,3 +136,9 @@ data Signed msg = Signed
 instance Buildable msg => Buildable (Signed msg) where
     build Signed{..} = "Signed { sig: " +| build sgSignature |+
                        "; pk: " +| build sgPublicKey |+ " }"
+
+-- | Type alias for denoting raw bytes. Indended to be used with hashes
+-- and signatures, like in type `Hash Raw`, and not type-safe hashing and
+-- signing.
+-- TODO: probably it makes sense to make it a newtype, like in Cardano?
+type Raw = LByteString
