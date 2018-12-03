@@ -13,17 +13,16 @@ import Loot.Config (option, sub)
 import Dscp.Config
 import Dscp.DB.SQLite (SQLiteDB)
 import Dscp.Educator.Config
+import Dscp.Educator.DB.Resource ()
 import Dscp.Educator.Launcher.Marker (EducatorNode)
 import Dscp.Educator.Launcher.Params (EducatorKeyParams (..))
 import Dscp.Resource.AppDir
 import Dscp.Resource.Class (AllocResource (..), buildComponentR)
 import Dscp.Resource.Keys (KeyResources (..), linkStore)
 import Dscp.Resource.Network (NetServResources)
-import Dscp.Resource.SQLite ()
 import Dscp.Util.HasLens
 import qualified Dscp.Witness.Launcher.Resource as Witness
 
--- SQL resource should be here too (in the future).
 -- | Datatype which contains resources required by all Disciplina nodes
 -- to start working.
 data EducatorResources = EducatorResources

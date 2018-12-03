@@ -23,10 +23,10 @@ import Dscp.DB.CanProvideDB.Pure as PureDB
 import Dscp.DB.SQLite
 import Dscp.Educator.Arbitrary ()
 import Dscp.Educator.Config
+import Dscp.Educator.DB.Resource
 import Dscp.Educator.Launcher
 import Dscp.Educator.TestConfig
 import Dscp.Resource.Keys
-import Dscp.Resource.SQLite
 import Dscp.Rio
 import Dscp.Util
 import Dscp.Util.HasLens

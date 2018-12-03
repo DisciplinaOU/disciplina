@@ -1,12 +1,12 @@
 -- | "AllocResource" instances for things that already have parameters
 -- datatype and resource datatype.
 
-module Dscp.Resource.SQLite
+module Dscp.Educator.DB.Resource
     ( prepareEducatorSchema
     ) where
 
 import Dscp.DB.SQLite
-import Dscp.Educator.DB.Queries
+import Dscp.Educator.DB.Schema
 import Dscp.Resource.Class (AllocResource (..), buildComponentR)
 import Dscp.Rio
 

@@ -14,7 +14,8 @@ module Dscp.Educator.Web.Educator.Error
 import Control.Lens (makePrisms)
 import Data.Reflection (Reifies (..))
 import Data.Typeable (cast)
-import Dscp.DB.SQLite (DomainError, SQLRequestsNumberExceeded)
+import Dscp.DB.SQLite (SQLRequestsNumberExceeded)
+import Dscp.Educator.DB (DomainError)
 import Servant (ServantErr (..), err400, err503)
 
 import Dscp.Educator.Web.Util

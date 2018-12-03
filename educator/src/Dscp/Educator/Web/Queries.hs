@@ -17,6 +17,7 @@ module Dscp.Educator.Web.Queries
 import Dscp.Core
 import Dscp.Crypto
 import Dscp.DB.SQLite
+import Dscp.Educator.DB
 import Dscp.Educator.Web.Types
 import Dscp.Util
 

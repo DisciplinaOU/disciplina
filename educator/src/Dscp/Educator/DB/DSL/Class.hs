@@ -1,6 +1,6 @@
 {-# LANGUAGE TypeOperators #-}
 
-module Dscp.DB.DSL.Class
+module Dscp.Educator.DB.DSL.Class
        ( MonadSearchTxObj (..)
        , TxsFilterExpr (..)
        , TxGrade (..)

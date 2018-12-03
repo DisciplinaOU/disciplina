@@ -11,6 +11,7 @@ import Test.QuickCheck.Monadic (pick, pre)
 import Dscp.Core
 import Dscp.Crypto (hash, unsafeHash)
 import Dscp.DB.SQLite
+import Dscp.Educator.DB
 import Dscp.Educator.Web.Queries
 import Dscp.Educator.Web.Student
 import Dscp.Educator.Web.Types

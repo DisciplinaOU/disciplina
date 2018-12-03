@@ -9,7 +9,7 @@ module Dscp.Educator.Web.Util
 
 import Servant (ServantErr, err400, err403, err404, err409, err500)
 
-import Dscp.DB.SQLite (DatabaseSemanticError (..), DomainError (..), DomainErrorItem (..))
+import Dscp.Educator.DB (DatabaseSemanticError (..), DomainError (..), DomainErrorItem (..))
 
 -- | Mention only constructor name on JSON, used in errors representation.
 domainErrorToShortJSON :: DomainError -> Text

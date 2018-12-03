@@ -5,8 +5,8 @@
 {-# LANGUAGE StrictData             #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 
-module Dscp.DB.SQLite.Schema
-    ( module Dscp.DB.SQLite.Schema
+module Dscp.Educator.DB.Schema
+    ( module Dscp.Educator.DB.Schema
     ) where
 
 import Prelude hiding (_1, _2)
@@ -19,10 +19,10 @@ import Database.SQLite3 (exec)
 
 import Dscp.Core
 import Dscp.Crypto
-import Dscp.DB.SQLite.BlockData
-import Dscp.DB.SQLite.FileQuoter
-import Dscp.DB.SQLite.Instances ()
 import Dscp.DB.SQLite.Util
+import Dscp.Educator.DB.BlockData
+import Dscp.Educator.DB.FileQuoter
+import Dscp.Educator.DB.Instances ()
 import Dscp.Util
 
 ----------------------------------------------------------------------------
@@ -97,7 +97,6 @@ data EducatorSchema f = EducatorSchema
 -- Aliases
 ----------------------------------------------------------------------------
 
-type RelationRow t a b = RelationT t a b Identity
 type CourseRow = CourseRowT Identity
 type SubjectRow = SubjectRowT Identity
 type StudentRow = StudentRowT Identity

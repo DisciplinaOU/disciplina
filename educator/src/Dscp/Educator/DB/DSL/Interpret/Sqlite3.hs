@@ -2,13 +2,15 @@
 {-# LANGUAGE QuasiQuotes           #-}
 {-# OPTIONS_GHC -Wno-partial-type-signatures #-}
 
-module Dscp.DB.DSL.Interpret.Sqlite3 () where
+module Dscp.Educator.DB.DSL.Interpret.Sqlite3 () where
 
 import Database.Beam.Query (all_, related_, select)
 
 import qualified Dscp.Core.Foundation as Core
-import Dscp.DB.DSL.Class
 import Dscp.DB.SQLite
+import Dscp.Educator.DB.DSL.Class
+import Dscp.Educator.DB.Queries
+import Dscp.Educator.DB.Schema
 
 instance
     ( MonadIO n

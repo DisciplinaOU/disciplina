@@ -1,4 +1,4 @@
-module Dscp.DB.DSL.Interpret.SimpleTxDB
+module Dscp.Educator.DB.DSL.Interpret.SimpleTxDB
        ( runSimpleTxDBQuery
        ) where
 
@@ -10,8 +10,9 @@ import Dscp.Core (Assignment (..), Course (..), SignedSubmission (..), Subject,
                   activityTypeGraphIndexed, hasPathFromTo)
 import Dscp.Core.Foundation.Educator (PrivateTx (..))
 import Dscp.Crypto (hash)
-import Dscp.DB.DSL.Class (MonadSearchTxObj (..), Obj, ObjHashEq (..), QueryObj (..), QueryTx (..),
-                          QueryTxs (..), RunQuery (..), TxIdEq (..), TxsFilterExpr (..), WHERE (..))
+import Dscp.Educator.DB.DSL.Class (MonadSearchTxObj (..), Obj, ObjHashEq (..), QueryObj (..),
+                                   QueryTx (..), QueryTxs (..), RunQuery (..), TxIdEq (..),
+                                   TxsFilterExpr (..), WHERE (..))
 import Dscp.Util (HasId (Id))
 
 import qualified Data.Map.Strict as Map hiding (Map)

@@ -9,6 +9,7 @@ import Snowdrop.Util (OldestFirst (..))
 
 import Dscp.Core
 import Dscp.DB.SQLite
+import Dscp.Educator.DB
 import Dscp.Educator.Error
 import Dscp.Educator.Launcher.Mode
 import Dscp.Resource.Keys
