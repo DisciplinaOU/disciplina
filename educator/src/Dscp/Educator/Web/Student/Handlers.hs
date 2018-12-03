@@ -11,6 +11,7 @@ import UnliftIO (UnliftIO (..))
 
 import Dscp.Core (Student)
 import Dscp.DB.SQLite
+import Dscp.Educator.DB
 import Dscp.Educator.Web.Logic
 import Dscp.Educator.Web.Queries
 import Dscp.Educator.Web.Student.API

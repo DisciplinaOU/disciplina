@@ -1,4 +1,4 @@
-module Dscp.DB.SQLite.BlockData
+module Dscp.Educator.DB.BlockData
     ( BlockIdx (..)
     , TxWithinBlockIdx (..)
     , TxBlockIdx (..)

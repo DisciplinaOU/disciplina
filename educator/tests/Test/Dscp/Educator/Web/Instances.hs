@@ -4,7 +4,7 @@ module Test.Dscp.Educator.Web.Instances
 
 import Test.QuickCheck.Arbitrary.Generic (genericArbitrary, genericShrink)
 
-import Dscp.DB.SQLite
+import Dscp.Educator.DB
 import Dscp.Educator.Web.Educator.Queries
 import Dscp.Educator.Web.Student.Queries
 import Dscp.Educator.Web.Types (IsFinal (..))

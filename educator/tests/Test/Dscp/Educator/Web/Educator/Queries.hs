@@ -3,15 +3,16 @@ module Test.Dscp.Educator.Web.Educator.Queries where
 import Control.Lens (to)
 import Data.Default (def)
 import Data.List (nubBy)
-import Dscp.DB.SQLite
-import Dscp.Util.Test
 import Test.QuickCheck (cover)
 import Test.QuickCheck.Monadic (pick, pre)
 
+import Dscp.Educator.DB
 import Dscp.Educator.Web.Educator
 import Dscp.Educator.Web.Logic
 import Dscp.Educator.Web.Types
 import Dscp.Util
+import Dscp.Util.Test
+
 import Test.Dscp.Educator.Mode
 import Test.Dscp.Educator.Web.Instances
 import Test.Dscp.Educator.Web.Scenarios

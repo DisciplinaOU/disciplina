@@ -7,6 +7,7 @@ module Dscp.DB.SQLite.Util
      ( module BeamReexport
      , RelationType (..)
      , RelationT (..)
+     , Relation
      , (<:-:>)
      , link_
      , checkExists
@@ -69,6 +70,8 @@ Instead, beam provides 'oneToMany' and 'manyToMany' functions which work in quer
 But having a generalized 'Relation' schema _is_ convenient, isn't it?
 
 -}
+
+type Relation t a b = RelationT t a b Identity
 
 instance (rel ~ RelationT t a b f, ca ~ PrimaryKey a f) => Field1 rel rel ca ca where
     _1 f (a :-: b) = (:-: b) <$> f a

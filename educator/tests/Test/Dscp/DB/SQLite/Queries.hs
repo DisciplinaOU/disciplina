@@ -9,7 +9,7 @@ import Data.Default (Default (..))
 
 import Dscp.Core.Arbitrary
 import qualified Dscp.Crypto.MerkleTree as MerkleTree
-import Dscp.DB.SQLite as DB
+import Dscp.Educator.DB as DB
 import Dscp.Util
 
 import Test.Dscp.Educator.Mode

@@ -1,7 +1,7 @@
 {-# LANGUAGE CPP         #-}
 {-# LANGUAGE QuasiQuotes #-}
 
-module Dscp.DB.SQLite.Instances () where
+module Dscp.Educator.DB.Instances () where
 
 import Codec.Serialise as Codec (deserialise)
 import qualified Data.ByteArray as BA
@@ -15,7 +15,7 @@ import Database.SQLite.Simple.FromField (FromField (..))
 
 import Dscp.Core
 import Dscp.Crypto
-import Dscp.DB.SQLite.BlockData
+import Dscp.Educator.DB.BlockData
 import Dscp.Util
 import Dscp.Util.Serialise
 

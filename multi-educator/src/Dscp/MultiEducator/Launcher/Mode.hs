@@ -32,6 +32,7 @@ import Dscp.Config
 import Dscp.Crypto (mkPassPhrase)
 import Dscp.DB.SQLite
 import qualified Dscp.Educator.Config as E
+import Dscp.Educator.DB (prepareEducatorSchema)
 import Dscp.Educator.Launcher.Marker (EducatorNode)
 import qualified Dscp.Educator.Launcher.Mode as E
 import qualified Dscp.Educator.Launcher.Resource as E
@@ -43,7 +44,6 @@ import Dscp.MultiEducator.Launcher.Resource (EducatorContexts (..), EducatorCtxW
 import Dscp.Resource.AppDir (AppDirParam (..))
 import Dscp.Resource.Keys (BaseKeyParams (..), linkStore)
 import Dscp.Resource.Network
-import Dscp.Resource.SQLite (prepareEducatorSchema)
 import Dscp.Rio (RIO, runRIO)
 import Dscp.Util.HasLens
 import qualified Dscp.Witness as W

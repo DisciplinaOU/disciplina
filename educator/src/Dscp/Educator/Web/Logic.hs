@@ -8,6 +8,7 @@ module Dscp.Educator.Web.Logic
 import Data.Default (def)
 import Dscp.Core
 import Dscp.DB.SQLite
+import Dscp.Educator.DB
 import Dscp.Educator.Launcher.Mode
 import Dscp.Educator.Web.Educator.Types
 import Dscp.Educator.Web.Types

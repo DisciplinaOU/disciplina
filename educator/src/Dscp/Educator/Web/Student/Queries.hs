@@ -1,10 +1,4 @@
-{-# LANGUAGE DataKinds                 #-}
-{-# LANGUAGE DeriveAnyClass            #-}
-{-# LANGUAGE ExistentialQuantification #-}
-{-# LANGUAGE PartialTypeSignatures     #-}
-{-# LANGUAGE QuasiQuotes               #-}
-{-# LANGUAGE TypeOperators             #-}
-{-# OPTIONS_GHC -Wno-partial-type-signatures #-}
+{-# LANGUAGE DeriveAnyClass #-}
 
 module Dscp.Educator.Web.Student.Queries
     ( StudentGetAssignmentsFilters (..)
@@ -26,7 +20,8 @@ import Data.Default (Default)
 import Dscp.Core
 import Dscp.Crypto (Hash)
 import Dscp.DB.SQLite
-import qualified Dscp.DB.SQLite.Queries as Base
+import Dscp.Educator.DB
+import qualified Dscp.Educator.DB as Base
 import Dscp.Util
 
 import Dscp.Educator.Web.Queries

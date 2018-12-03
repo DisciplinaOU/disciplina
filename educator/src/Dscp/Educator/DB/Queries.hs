@@ -3,7 +3,7 @@
 {-# LANGUAGE QuasiQuotes           #-}
 {-# OPTIONS_GHC -Wno-partial-type-signatures #-}
 
-module Dscp.DB.SQLite.Queries
+module Dscp.Educator.DB.Queries
        ( -- * Domain-level database errors (missing entites, mostly)
          DomainError (..)
        , DomainErrorItem (..)
@@ -82,12 +82,12 @@ import Snowdrop.Util (OldestFirst (..))
 import Dscp.Core
 import Dscp.Crypto (EmptyMerkleTree, Hash, MerkleProof, fillEmptyMerkleTree, getEmptyMerkleTree,
                     getMerkleRoot, hash)
-import Dscp.DB.SQLite.BlockData
 import Dscp.DB.SQLite.Error (asAlreadyExistsError, asReferenceInvalidError)
 import Dscp.DB.SQLite.Functions
-import Dscp.DB.SQLite.Instances ()
-import Dscp.DB.SQLite.Schema
 import Dscp.DB.SQLite.Util
+import Dscp.Educator.DB.BlockData
+import Dscp.Educator.DB.Instances ()
+import Dscp.Educator.DB.Schema
 import Dscp.Educator.Launcher.Marker
 import Dscp.Resource.Keys
 import Dscp.Util (HasId (..), idOf)

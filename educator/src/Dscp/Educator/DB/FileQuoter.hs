@@ -1,6 +1,6 @@
-module Dscp.DB.SQLite.FileQuoter (qFile) where
+module Dscp.Educator.DB.FileQuoter (qFile) where
 
-import Language.Haskell.TH.Quote (quoteFile, QuasiQuoter)
+import Language.Haskell.TH.Quote (QuasiQuoter, quoteFile)
 
 import Text.InterpolatedString.Perl6 (q)
 

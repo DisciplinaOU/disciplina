@@ -23,8 +23,9 @@ import Servant.Generic (toServant)
 import UnliftIO (askUnliftIO)
 
 import Dscp.Core (mkAddr)
-import Dscp.DB.SQLite (SQLiteDB, existsStudent, invoke)
+import Dscp.DB.SQLite (SQLiteDB, invoke)
 import Dscp.Educator.Config
+import Dscp.Educator.DB (existsStudent)
 import Dscp.Educator.Launcher.Mode (EducatorNode, EducatorWorkMode)
 import Dscp.Educator.Web.Auth
 import Dscp.Educator.Web.Bot (EducatorBotParams (..), addBotHandlers, initializeBot)

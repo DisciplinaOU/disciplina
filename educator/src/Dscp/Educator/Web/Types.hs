@@ -39,6 +39,7 @@ import Servant (FromHttpApiData (..))
 import Dscp.Core
 import Dscp.Crypto
 import Dscp.DB.SQLite
+import Dscp.Educator.DB
 import Dscp.Educator.Launcher.Marker
 import Dscp.Resource.Keys
 import Dscp.Util.Aeson (CustomEncoding, HexEncoded)

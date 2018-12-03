@@ -12,12 +12,11 @@ module Dscp.MultiEducator.Launcher.Resource
 import Control.Lens (makeLenses)
 
 import Dscp.Config
-import Dscp.MultiEducator.Config
-import qualified Dscp.Educator.Launcher.Mode as E
 import qualified Dscp.Educator.Config as E
+import qualified Dscp.Educator.Launcher.Mode as E
+import Dscp.MultiEducator.Config
 import Dscp.Resource.Class (AllocResource (..))
 import Dscp.Resource.Network (NetServResources)
-import Dscp.Resource.SQLite ()
 import Dscp.Util.HasLens
 import qualified Dscp.Witness.Launcher.Resource as Witness
 

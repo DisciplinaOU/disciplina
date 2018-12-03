@@ -18,8 +18,9 @@ import Data.Reflection (Reifies (..))
 import Data.Typeable (cast)
 import Servant (ServantErr (..), err400, err403, err503)
 
-import Dscp.DB.SQLite (DomainError (..), SQLRequestsNumberExceeded)
+import Dscp.DB.SQLite (SQLRequestsNumberExceeded)
 import Dscp.Educator.BlockValidation (SubmissionValidationFailure)
+import Dscp.Educator.DB (DomainError (..))
 import Dscp.Educator.Web.Util
 import Dscp.Util.Servant
 import Dscp.Web.Class
