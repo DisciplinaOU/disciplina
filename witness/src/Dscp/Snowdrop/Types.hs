@@ -43,8 +43,6 @@ module Dscp.Snowdrop.Types
 import Control.Lens (makePrisms)
 import Data.Text.Buildable (Buildable (..))
 import Fmt (build, (+|), (|+))
-import Snowdrop.Block (BlockApplicationException)
-import Snowdrop.Util (HasReview (..))
 import qualified Text.Show
 
 import Dscp.Core

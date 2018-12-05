@@ -8,6 +8,9 @@ import Data.Text.Buildable (Buildable (..))
 import Fmt (build, (+|), (|+), (+||), (||+))
 import qualified Text.Show
 
+import Snowdrop.Block (BlockApplicationException)
+import Snowdrop.Util (HasReview (inj))
+
 import Dscp.Core
 
 -- | Type for possible failures during transaction validation.
@@ -104,8 +107,6 @@ data BlockException
     | BlockApplicationError (BlockApplicationException HeaderHash)
     | BlockMetaInternalError Text
 
-makePrisms ''BlockException
-
 instance Buildable BlockException where
     build = \case
         DuplicatedDifficulty{..} ->
@@ -154,3 +155,4 @@ instance Serialise Account
 instance Serialise AccountId
 
 makePrisms ''AccountException
+makePrisms ''BlockException

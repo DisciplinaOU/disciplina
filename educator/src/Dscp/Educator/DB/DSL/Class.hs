@@ -51,6 +51,7 @@ data ObjHashEq = ObjHashEq (Hash Obj)
 data QueryTx  = SELECTTx  WHERE TxIdEq
 data QueryObj = SELECTObj WHERE ObjHashEq
 data QueryTxs = SELECTTxs WHERE TxsFilterExpr
+    deriving (Eq, Show, Generic)
 
 class (Monad m) => MonadSearchTxObj m where
     runTxQuery  :: QueryTx  -> m (Maybe PrivateTx)

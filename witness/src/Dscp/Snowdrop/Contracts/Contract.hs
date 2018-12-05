@@ -7,6 +7,7 @@ import Control.Lens (makeLenses)
 import Fmt (build)
 
 import Dscp.Core
+import Dscp.Educator.DB.DSL.Class (QueryTxs)
 import Dscp.Snowdrop.Types
 import Dscp.Snowdrop.Storage.Types
 
@@ -30,12 +31,14 @@ data Contract = Contract
     , _caCost          :: Coin
     , _caFees          :: Coin
     , _caMoney         :: Integer
-    , _caPublication   :: PublicationHead
     , _caEndSlot       :: SlotId
-    , _caInheritor     :: AccountId
     , _caStage         :: Stage
+    , _caEncryptedKey  :: EncryptedKey
+    , _caQuery         :: QueryTxs
     }
     deriving (Eq, Show, Generic)
+
+type EncryptedKey = ByteString
 
 newtype ContractID = ContractID { getContractID :: Address }
     deriving (Eq, Ord, Show, Generic)

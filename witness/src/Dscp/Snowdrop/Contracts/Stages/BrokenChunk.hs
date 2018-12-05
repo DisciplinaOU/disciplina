@@ -72,3 +72,4 @@ expand _miner =
 
             contract <- accessContractAsBuyerAtStage buyer cid Transmitted
 
+
