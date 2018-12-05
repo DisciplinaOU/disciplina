@@ -71,7 +71,7 @@ educatorApiHandlers =
             def{ afCourse, afStudent, afIsFinal }
 
     , eAddAssignment = \_autoAssign na -> do
-        void . transactW $ createAssignment (requestToAssignment na)
+        transactW $ AssignmentCreated <$> createAssignment (requestToAssignment na)
         -- TODO [DSCP-176]: consider autoassign
 
       -- Submissions

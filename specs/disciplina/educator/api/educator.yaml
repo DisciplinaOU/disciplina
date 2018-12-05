@@ -433,7 +433,11 @@ paths:
             type: boolean
       responses:
         201:
-          description: Successful operation
+          description: Successful operation, returns hash of created assignment
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Hash'
         400:
           description: Request body is invalid
           content:

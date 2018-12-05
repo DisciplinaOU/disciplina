@@ -161,7 +161,7 @@ type AddAssignment
     :> Summary "Add assignment to a course"
     :> QueryFlag "autoAssign"
     :> ReqBody '[DSON] NewAssignment
-    :> PostCreated '[DSON] ()
+    :> PostCreated '[DSON] AssignmentCreated
 
 ---------------------------------------------------------------------------
 -- Submissions

@@ -12,12 +12,15 @@ module Dscp.Educator.Web.Educator.Types
     , NewStudentCourse (..)
     , NewStudentAssignment (..)
 
-      -- * Responses
+      -- * GET Responses
     , EducatorInfo (..)
     , CourseEducatorInfo (..)
     , AssignmentEducatorInfo (..)
     , SubmissionEducatorInfo (..)
     , eaDocumentType
+
+      -- * POST Responses
+    , AssignmentCreated (..)
 
       -- * Conversions
     , educatorLiftAssignment
@@ -99,6 +102,10 @@ data SubmissionEducatorInfo = SubmissionEducatorInfo
 
 eaDocumentType :: AssignmentEducatorInfo -> DocumentType
 eaDocumentType = documentType . aiContentsHash
+
+data AssignmentCreated = AssignmentCreated
+    { acAssignmentHash :: Hash Assignment
+    } deriving (Show, Eq, Generic)
 
 ---------------------------------------------------------------------------
 -- Simple conversions
@@ -232,8 +239,13 @@ instance Buildable (ForResponseLog AssignmentEducatorInfo) where
       " }"
 
 instance Buildable (ForResponseLog SubmissionEducatorInfo) where
-    build (ForResponseLog SubmissionEducatorInfo{..})=
+    build (ForResponseLog SubmissionEducatorInfo{..}) =
       "{ hash = " +| siHash |+
+      " }"
+
+instance Buildable (ForResponseLog AssignmentCreated) where
+    build (ForResponseLog AssignmentCreated{..}) =
+      "{ hash = " +| acAssignmentHash |+
       " }"
 
 instance Buildable (ForResponseLog [CourseEducatorInfo]) where
@@ -259,3 +271,4 @@ deriveJSON defaultOptions ''EducatorInfo
 deriveJSON defaultOptions ''CourseEducatorInfo
 deriveJSON defaultOptions ''AssignmentEducatorInfo
 deriveJSON defaultOptions ''SubmissionEducatorInfo
+deriveJSON defaultOptions ''AssignmentCreated
