@@ -23,6 +23,7 @@ gradeInfoEx =
 blkProofInfoEx :: BlkProofInfo
 blkProofInfoEx =
     BlkProofInfo
-    { bpiMtreeSerialized = EncodeSerialised $ detGen 123 arbitrary
+    { bpiBlockHash = detGen 123 arbitrary
+    , bpiMtreeSerialized = EncodeSerialised $ detGen 123 arbitrary
     , bpiTxs = one privateTxEx
     }

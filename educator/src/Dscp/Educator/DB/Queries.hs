@@ -190,11 +190,7 @@ getProvenStudentTransactions
     :: forall m.
        (MonadQuery m, WithinTx)
     => GetProvenStudentTransactionsFilters
-<<<<<<< HEAD
-    -> m [(MerkleProof PrivateTx, [(TxWithinBlockIdx, PrivateTx)])]
-=======
-    -> DBT 'WithinTx w m [(EmptyMerkleProof PrivateTx, [(TxWithinBlockIdx, PrivateTx)])]
->>>>>>> [DSCP-409] Change interface of `getProofs` method
+    -> m [(PrivateHeaderHash, MerkleProof PrivateTx, [(TxWithinBlockIdx, PrivateTx)])]
 getProvenStudentTransactions filters = do
     -- Contains `(tx, idx, blockId)` map.
     txsBlockList <- getTxsBlockMap
@@ -205,14 +201,14 @@ getProvenStudentTransactions filters = do
                   <&> (<&> reverse)
 
     results <- forM txsBlockMap $ \(blockId, transactions) -> do
-        tree <- getMerkleTree blockId
+        (blockHash, tree) <- getMerkleTreeAndHash blockId
 
         let indices = Set.fromList $ map (unTxWithinBlockIdx . fst) transactions
             pruned  = mkEmptyMerkleProof tree indices
 
-        return (pruned, transactions)
+        return (blockHash, pruned, transactions)
 
-    return [(proof, txs) | (Just proof, txs) <- results]
+    return [(blockHash, proof, txs) | (blockHash, Just proof, txs) <- results]
   where
     groupToAssocWith :: Ord k => [(k, v)] -> [(k, [v])]
     groupToAssocWith =
@@ -245,10 +241,12 @@ getProvenStudentTransactions filters = do
             let TxBlockIdx txIdx = trIdx tx
             in (bi, (txIdx, privateTxFromRow (tx, sub)))
 
-    getMerkleTree :: BlockIdx -> m (EmptyMerkleTree PrivateTx)
-    getMerkleTree blockIdx =
+    getMerkleTreeAndHash
+        :: BlockIdx
+        -> DBT t w m (PrivateHeaderHash, EmptyMerkleTree PrivateTx)
+    getMerkleTreeAndHash blockIdx =
         nothingToThrow (AbsentError $ BlockWithIndexDomain blockIdx) =<<
-        selectByPk brMerkleTree (esBlocks es) blockIdx
+        selectByPk (\row -> (brHash row, brMerkleTree row)) (esBlocks es) blockIdx
 
 getAllNonChainedTransactions :: MonadQuery m => m [PrivateTx]
 getAllNonChainedTransactions =

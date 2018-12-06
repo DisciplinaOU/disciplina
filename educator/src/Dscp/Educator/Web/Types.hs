@@ -93,7 +93,8 @@ data GradeInfo = GradeInfo
     } deriving (Show, Eq, Ord, Generic)
 
 data BlkProofInfo = BlkProofInfo
-    { bpiMtreeSerialized :: (EncodeSerialised Base64Encoded (EmptyMerkleProof PrivateTx))
+    { bpiBlockHash       :: PrivateHeaderHash
+    , bpiMtreeSerialized :: (EncodeSerialised Base64Encoded (EmptyMerkleProof PrivateTx))
     , bpiTxs             :: [PrivateTx]
     } deriving (Show, Eq, Generic)
 

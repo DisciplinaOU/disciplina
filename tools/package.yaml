@@ -42,3 +42,18 @@ executables:
       - serialise
       - text
       - word8
+  dscp-faircv:
+    <<: *exec-common
+    source-dirs: src/faircv
+    dependencies:
+      - aeson
+      - aeson-pretty
+      - bytestring
+      - disciplina-core
+      - disciplina-witness
+      - disciplina-educator
+      - lens
+      - optparse-applicative
+      - serialise
+      - servant-client
+      - time
