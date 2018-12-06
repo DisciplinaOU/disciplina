@@ -5,18 +5,15 @@ module Dscp.Witness.Web.Client.Logic
        , hoistWitnessClient
        ) where
 
-import Servant.Client (Client, ClientM, client, runClientM)
-import Servant.Generic ((:-), fromServant)
+import Servant.Client (ClientM, client, runClientM)
+import Servant.Generic (fromServant)
 
 import Dscp.Resource.Class
 import Dscp.Util
+import Dscp.Util.Servant
 import Dscp.Web
 import Dscp.Witness.Web.API
 import Dscp.Witness.Web.Client.Error
-
--- todo: not needed with servant-client-0.14 (lts-12)
-data AsClientT (m :: * -> *)
-type instance AsClientT m :- api = Client m api
 
 type WitnessClient = WitnessEndpoints (AsClientT IO)
 

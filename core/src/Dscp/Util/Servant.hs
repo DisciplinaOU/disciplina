@@ -24,6 +24,8 @@ module Dscp.Util.Servant
     , SimpleJSON
 
     , methodsCoveringAPI
+      -- * Utilities for clients
+    , AsClientT
     ) where
 
 import Prelude hiding (log)
@@ -48,6 +50,8 @@ import Serokell.Util.ANSI (Color (..), colorizeDull)
 import Servant.API ((:<|>) (..), (:>), Capture, Description, JSON, NoContent, QueryFlag, QueryParam,
                     ReflectMethod (..), ReqBody, Summary, Verb)
 import Servant.API.ContentTypes (Accept (..), MimeRender (..), MimeUnrender (..))
+import Servant.Client.Core (Client)
+import Servant.Generic ((:-))
 import Servant.Server (Handler (..), HasServer (..), ServantErr (..), Server)
 import qualified Servant.Server.Internal as SI
 
@@ -440,9 +444,9 @@ buildShortResponseList = blockListF . (take 4) . unForResponseLog
 buildLongResponseList :: Buildable a => ForResponseLog [a] -> Builder
 buildLongResponseList = blockListF . (take 8) . unForResponseLog
 
--------------------------------------------------------------------------
+---------------------------------------------------------------------------
 -- Deserialisation errors
--------------------------------------------------------------------------
+---------------------------------------------------------------------------
 
 -- | Custom json marker which sends no human-unreadable decoding errors
 -- but a given fixed one.
@@ -499,3 +503,11 @@ methodsCoveringAPI
        (ContainsOnlyMethods methods api, ReflectMethods methods)
     => [Method]
 methodsCoveringAPI = reflectMethods @methods Proxy
+
+---------------------------------------------------------------------------
+-- Client stuff
+---------------------------------------------------------------------------
+
+-- todo: not needed with servant-client-0.14 (lts-12)
+data AsClientT (m :: * -> *)
+type instance AsClientT m :- api = Client m api
