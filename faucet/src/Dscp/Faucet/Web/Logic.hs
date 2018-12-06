@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedLabels #-}
+
 -- | Faucet backend logic.
 
 module Dscp.Faucet.Web.Logic
@@ -64,7 +66,7 @@ faucetTransferMoneyTo dest = do
         when (balance < transfer) $
             throwM SourceAccountExhausted
 
-        let feePolicy = fcMoney $ giveL @FaucetConfig @FeeConfig
+        let feePolicy = faucetConfig ^. sub #core . sub #fee . option #money
             nonce = fromIntegral $ aiCurrentNonce sourceState
             outs = one (TxOut dest transfer)
             txWitnessed = createTxw feePolicy sk nonce outs

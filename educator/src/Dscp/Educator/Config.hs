@@ -24,15 +24,14 @@ import Time (Second, Time)
 import Dscp.Config
 import Dscp.DB.SQLite
 import Dscp.Educator.Launcher.Params
-import Dscp.Educator.Web.Bot.Params
 import Dscp.Educator.Web.Config
 import Dscp.Resource.Keys
 import Dscp.Witness.Config
 
 type EducatorConfig = WitnessConfig ++
     '[ "educator" ::<
-       '[ "db" ::: SQLiteParams
-        , "keys" ::: EducatorKeyParams
+       '[ "db" ::< SQLiteParams
+        , "keys" ::< EducatorKeyParams
         , "api" ::< EducatorWebConfig
         , "publishing" ::<
            '[ "period" ::: Time Second
@@ -47,17 +46,9 @@ type HasEducatorConfig = (Given EducatorConfigRec, HasWitnessConfig)
 
 defaultEducatorConfig :: EducatorConfigRecP
 defaultEducatorConfig = upcast defaultWitnessConfig
-    & sub #educator . option #db ?~ defSqliteParams
-    & sub #educator . option #keys ?~ defKeyParams
-    & sub #educator . sub #api . option #botParams ?~ defBotParams
-  where
-    defSqliteParams = SQLiteParams $ SQLiteReal $ SQLiteRealParams
-        { srpPath = "educator-db"
-        , srpConnNum = Nothing
-        , srpMaxPending = 200
-        }
-    defKeyParams = EducatorKeyParams $ BaseKeyParams Nothing False Nothing
-    defBotParams = EducatorBotParams False "Memes generator" 0
+    & sub #educator . sub #db .~ defaultSQLiteParams
+    & sub #educator . sub #keys . sub #keyParams .~ defaultBaseKeyParams
+    & sub #educator . sub #api . sub #botConfig . tree #params . selection ?~ "disabled"
 
 -- instance (HasEducatorConfig, cfg ~ WitnessConfigRec) => Given cfg where
 --     given = rcast (given @EducatorConfigRec)

@@ -39,15 +39,12 @@ sample:
       distribution:
         - equal: 1000
         - specific:
-          - # Faucet
-            - 3BAyX5pNrN2UzxPZhrFAocCti3nVRUZRk7CZtudT2iLhGH6T1eq5FzqEuk
-            - 1000
-          - # Test key #1, secret: ffRB5uhVEV24NXsYUuw1irt9HF5i5IRWJXHJzagXU8Y=
-            - 3BAyX5pPvmtsKAyDhtfeUZ1beJdFZzHLTHt6nHrzdGcpfagpgeysRNPyMe
-            - 1000
-          - # Test key #2, secret: fOhZOFr6SSnYv1/xfKPPMHdWLdQDboysJ4Q794Gezmw=
-            - 3BAyX5pSiFerJgLsJZ9XyoBDMHPtq3NLqm5AGPcBpba6W644zSiSWy3vVr
-            - 1000
+            # Faucet
+            3BAyX5pNrN2UzxPZhrFAocCti3nVRUZRk7CZtudT2iLhGH6T1eq5FzqEuk: 1000
+            # Test key #1, secret: ffRB5uhVEV24NXsYUuw1irt9HF5i5IRWJXHJzagXU8Y=
+            3BAyX5pPvmtsKAyDhtfeUZ1beJdFZzHLTHt6nHrzdGcpfagpgeysRNPyMe: 1000
+            # Test key #2, secret: fOhZOFr6SSnYv1/xfKPPMHdWLdQDboysJ4Q794Gezmw=
+            3BAyX5pSiFerJgLsJZ9XyoBDMHPtq3NLqm5AGPcBpba6W644zSiSWy3vVr: 1000
 
   # Witness node configuration
   witness:
@@ -57,46 +54,21 @@ sample:
       defaultName: "witness"
       # Logging configuration, specifies the logging settings
       config:
-        # The "use" selector, optional, specifies where to output the logs
-        # Available configuration are "syslog" and "warper"
-        # If "use" has one of these valid values, this config will be used
-        # If both config are defined but "use" is not, "syslog" will be used
-        # If only one of the configs is defined and "use" is not, this config will be used
-        use: syslog
-        # Syslog configuration
-        # See a complete explanation in (loot-log)[https://github.com/serokell/lootbox/blob/master/docs/example/syslog.yaml]
-        syslog:
-          loggers-tree:
-            witness:
-              withPERROR: true
-              min-level: Debug
-              sub-loggers:
-                network:
-                  min-level: Info
-                web:
-                  min-level: Info
-        # Warper configuration
-        # See a complete explanation in (log-warper)[https://github.com/serokell/log-warper/blob/master/logger-config-example.yaml]
-        warper:
-          filePrefix: "run/tmp/witness/logs"
-          loggerTree:
-            handlers:
-              - file: node.log
-            severity: Info+
-            witness:
-              severity: Debug+
-              network:
-                severity: Info+
-              web:
-                severity: Info+
-            init:
-              log:
-                severity: Debug+
+        # List of backends for logging output, available options are:
+        # stdout, stderr, file and syslog
+        backends:
+        - type: stderr
+        - type: syslog
+          app-name: "witness"
+        # Minimum severity, log messages with a lower level are filtered out
+        min-level: Debug
 
     # RocksDB parameters
     db:
       # Path to the database folder
       path: "/var/db/dscp-witness"
+      # Whether DB should be cleaned/removed on start
+      clean: false
 
     # ZeroMQ interface parameters
     network:
@@ -107,54 +79,65 @@ sample:
         - 127.0.0.1:8030:8031
       # Our own address, which is also our unique identifier in the network
       ourAddress: 127.0.0.1:8000:8001
-      # If this option is set, then this address listens for ZMQ connections
-      # instead, whereas `ourAddress` is still used as an unique identifier of node.
-      # Useful when node is behind NAT.
-      internalAddress: 192.168.0.3:8000:8001
 
     # Witness keyfile
     keys:
-      # Type of key parameters:
-      # - `basic`: used when providing a keyfile and related parameters
-      # - `committee`: used when generating secret key from a committee secret
-      type: "committee"
+      params:
+        # Type of choosable key parameters:
+        # - `basic`: used when providing a keyfile and related parameters
+        # - `committee`: used when generating secret key from a committee secret
+        paramsType: "committee"
 
-      # Parameters for type `basic`.
+        # Parameters for type `basic`.
+        basic:
+          # Path to keyfile. If not defined, <APP_DIR>/witness.key is used.
+          path: "witness.key"
+          # If 'true', generate new keyfile on given path, and fail if the
+          # keyfile already exists
+          genNew: false
+          # Keyfile passphrase (optional). If not given, key is encrypted with an
+          # empty passphrase.
+          passphrase: "qwerty123"
 
-      ## Path to keyfile. If not defined, <APP_DIR>/witness.key is used.
-      # path: "witness.key"
-      ## If 'true', generate new keyfile on given path, and fail if the
-      ## keyfile already exists
-      # genNew: false
-      ## Keyfile passphrase (optional). If not given, key is encrypted with an
-      ## empty passphrase.
-      #passphrase: "qwerty123"
-
-      # Parameters for type `committee`. Used together with committee governance params
-      # in order to generate committee keys from seed.
-
-      # Type of committee.
-      # - `open` - open committee, generation seed for committee
-      #    secret keys is known to everybody (given in `core` section of config)
-      # - `closed` - closed committee, only public keys of committee
-      #    members are publicly known.
-      committeeType: "closed"
-      # Index of this node among committee participants.
-      n: 2
-      # Used only when `type` is `committeeClosed`. Secret seed from which
-      # committee secret keys are derived.
-      secret: "UcA3FaXf="
+        # Parameters for type `committee`. Used together with committee governance params
+        # in order to generate committee keys from seed.
+        committee:
+          params:
+            # Type of committee.
+            # - `open` - open committee, generation seed for committee
+            #    secret keys is known to everybody (given in `core` section of config)
+            # - `closed` - closed committee, only public keys of committee
+            #    members are publicly known.
+            paramsType: "closed"
+            # Index of this node among committee participants. Required in both cases
+            participantN: 2
+            closed:
+              # Used only when `type` is `committeeClosed`. Secret seed from which
+              # committee secret keys are derived.
+              secret: "UcA3FaXf="
 
     # Witness (block explorer) HTTP API parameters.
-    # Optional. If not provided, Witness API is not served.
     api:
-      # Address to serve HTTP API from
-      addr: 127.0.0.1:3015
+      # Optional. If not provided, Witness API is not served.
+      maybe:
+        # Type of maybe.
+        # - `just` - to provide a value, in this case an address.
+        # - `nothing` - to provide no value.
+        maybeType: "just"
+        just:
+          # Address to serve HTTP API from
+          addr: 127.0.0.1:3015
 
     # Application directory for witness.
-    # Optional. If not provided, default application data directory
-    # for current OS will be used (e. g. `~/.local/share/disciplina`)
-    appDir: "/home/user/.disciplina"
+    appDir:
+      param:
+        # Type of choosable Application directories:
+        # - `os`: to use the default application data directory for current OS (e. g. `~/.local/share/disciplina`)
+        # - `specific`: to specify another directory
+        paramType: specific
+        specific:
+          # Path to a specific directory
+          path: "/home/user/.disciplina"
 
     # Metrics UDP endpoint.
     # Optional. If not provided, metrics collection is disabled.
@@ -164,36 +147,42 @@ sample:
   educator:
     # Logging config for educator node. See option `witness.logging`.
     logging:
-      defaultName: "educator"
-      config:
-        syslog:
-          loggers-tree:
-            witness:
-              withPERROR: true
-              min-level: Debug
+      default-name: "educator"
+      backends:
+      - type: stderr
+      - type: syslog
+        app-name: "educator"
+      min-level: Debug
 
     # SQLite DB params
     db:
       # DB usage mode. If `null`, in-memory SQLite db is used.
       # Otherwise, it is the object with params for on-disk SQLite connection.
       mode:
-        # Path to database file
-        path: "/var/db/educator.sqlite"
-        # Number of concurrent DB connections.
-        # Optional. If not provided, calculated automatically
-        # accordingly to the number of threads which can run truly
-        # simultaneously on a machine (e. g. number of CPU cores, or
-        # number of CPU cores x 2 when hyperthreading is enabled)
-        connNum: 4
-        # Number of maximum number of threads which wait for DB connection
-        # to be free. Default: 200
-        maxPending: 100
+        # Type of choosable SQLiteDB modes:
+        # - `real`: In given file using given number of connections
+        # - `inMemory`: In memory
+        modeType: real
+        # Parameters for "real" mode only
+        real:
+          # Path to database file
+          path: "/var/db/educator.sqlite"
+          # Number of concurrent DB connections.
+          # Optional. If not provided, calculated automatically
+          # accordingly to the number of threads which can run truly
+          # simultaneously on a machine (e. g. number of CPU cores, or
+          # number of CPU cores x 2 when hyperthreading is enabled)
+          connNum: 4
+          # Number of maximum number of threads which wait for DB connection
+          # to be free. Default: 200
+          maxPending: 100
 
-    # Educator key params. Similar to `witness.keys.base` config section.
+    # Educator key params. Similar to `witness.keys.params.basic` config section.
     keys:
-      path: "educator.key"
-      genNew: false
-      passphrase: "qwerty123"
+      keyParams:
+        path: "educator.key"
+        genNew: false
+        passphrase: "qwerty123"
 
     # Student API params
     api:
@@ -203,12 +192,18 @@ sample:
         addr: 127.0.0.1:4015
       # Educator Bot params.
       # Optional. If not provided, Educator Bot is disabled.
-      botParams:
-        # Random seed which determines bot's actions
-        seed: "GromakNaRechke"
-        # Delay between action trigger and action (e. g. time
-        # between receiving student's submission and posting a grade)
-        operationsDelay: "3s"
+      botConfig:
+        params:
+          # Type of botConfig.
+          # - `enabled` - to use a bot with the specified seed and delay. 
+          # - `closed` - to use no bot.
+          paramsType: "disabled"
+          enabled:
+            # Random seed which determines bot's actions
+            seed: "GromakNaRechke"
+            # Delay between action trigger and action (e. g. time
+            # between receiving student's submission and posting a grade)
+            operationsDelay: "3s"
       # Whether authentication in Student API should be optional
       studentAPINoAuth:
         # If enabled, primary JWT-based authentication becomes optional
@@ -228,20 +223,20 @@ sample:
   faucet:
     # Logging config for faucet node. See option `witness.logging`.
     logging:
-      defaultName: "faucet"
-      config:
-        warper:
-          filePrefix: "run/tmp/educator/logs"
-          loggerTree:
-            handlers:
-              - file: node.log
-            severity: Info+
+      default-name: "faucet"
+      backends:
+      - type: stderr
+      - type: syslog
+        app-name: "faucet"
+      min-level: Debug
 
-    # Faucet config params. See option `witness.keys.base`
+
+    # Faucet config params. See option `witness.keys.params.basic`
     keys:
-      path: "faucet.key"
-      genNew: false
-      passphrase: "qwerty123"
+      keyParams:
+        path: "faucet.key"
+        genNew: false
+        passphrase: "qwerty123"
 
     # Paramerers of Faucet HTTP API
     api:
@@ -259,4 +254,9 @@ sample:
     dryRun: false
 
     # Application directory for faucet. See option `witness.appDir`
-    appDir: "/home/user/.disciplina"
+    appDir:
+      param:
+        # Type of choosable Application directories:
+        # - `os`: to use the default application data directory for current OS (e. g. `~/.local/share/disciplina`)
+        # - `specific`: to specify another directory
+        paramType: os

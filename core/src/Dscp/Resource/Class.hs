@@ -17,12 +17,12 @@ import Control.Monad.Component (ComponentM, buildComponent)
 import Loot.Base.HasLens (HasLens (..))
 import Loot.Log.Rio (LoggingIO)
 
-import Dscp.Resource.Logging (LoggingParams)
+import Dscp.Resource.Logging (LoggingParamsRec)
 import Dscp.Rio (RIO, runRIO)
 
 -- | Contains parameters required for most of resources allocation.
 data InitParams = InitParams
-    { ipLoggingParams :: LoggingParams
+    { ipLoggingParams :: LoggingParamsRec
     }
 
 -- | Context used in most of resource allocations.

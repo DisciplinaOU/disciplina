@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedLabels #-}
+
 -- | Functions to serve wallet API.
 
 module Dscp.Witness.Web.Server
@@ -15,8 +17,9 @@ import Network.Wai.Middleware.Cors (CorsResourcePolicy (..), cors, simpleCorsRes
 import Servant (Handler, Server, StdMethod (..), hoistServer, serve, throwError)
 import UnliftIO (UnliftIO (..), askUnliftIO)
 
+import Dscp.Config (option)
 import Dscp.Util.Servant (LoggingApi, ServantLogConfig (..), methodsCoveringAPI)
-import Dscp.Web (ServerParams (..), buildServantLogConfig, serveWeb)
+import Dscp.Web (ServerParamsRec, buildServantLogConfig, serveWeb)
 import Dscp.Web.Class
 import Dscp.Witness.Launcher.Context
 import Dscp.Witness.Web.API (WitnessAPI, witnessAPI)
@@ -51,8 +54,9 @@ witnessCors = cors $ const $ Just $
     , corsRequestHeaders = [hContentType]
     }
 
-serveWitnessAPIReal :: WitnessWorkMode ctx m => ServerParams -> m ()
-serveWitnessAPIReal ServerParams{..} = do
+serveWitnessAPIReal :: WitnessWorkMode ctx m => ServerParamsRec -> m ()
+serveWitnessAPIReal serverParams = do
+    let spAddr = serverParams ^. option #addr
     logInfo $ "Serving wallet API on "+|spAddr|+""
     unliftIO <- askUnliftIO
     lc <- buildServantLogConfig (<> "web")

@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedLabels #-}
+
 module Test.Dscp.Educator.Mode
   ( module Test.Dscp.Educator.Mode
   , module Dscp.Core
@@ -9,7 +11,7 @@ module Test.Dscp.Educator.Mode
 
 import Prelude hiding (fold)
 
-import Control.Lens (makeLenses)
+import Control.Lens (makeLenses, (?~))
 import qualified Loot.Log as Log
 import Test.Hspec
 import Test.QuickCheck (ioProperty, resize)
@@ -56,7 +58,7 @@ runTestSQLiteM action =
     withEducatorConfig testEducatorConfig $
     withWitnessConfig (rcast testEducatorConfig) $
     runRIO _tecLogging $ do
-        _tecWitnessKeys <- mkCommitteeStore (CommitteeParamsOpen 0)
+        _tecWitnessKeys <- mkCommitteeStore committeeKeyParams
         _tecWitnessDb <- PureDB.plugin <$> liftIO PureDB.newCtxVar
         _tecWitnessVariables <- mkTestWitnessVariables (_tecWitnessKeys ^. krPublicKey)
                                                        _tecWitnessDb
@@ -67,12 +69,20 @@ runTestSQLiteM action =
                   markWithinWriteSDLockUnsafe applyGenesisBlock
                   action
   where
-    dbParams = SQLiteParams SQLiteInMemory
+    dbParams :: SQLiteParamsRec
+    dbParams = finaliseDeferredUnsafe $ mempty
+        & tree #mode . selection ?~ "inMemory"
+
     openDB = do
         db <- openSQLiteDB dbParams
         prepareEducatorSchema db
         return db
     _tecLogging = testLogging
+
+    committeeKeyParams :: CommitteeParamsRec
+    committeeKeyParams = finaliseDeferredUnsafe $ mempty
+        & tree #params . selection ?~ "open"
+        & tree #params . option #participantN ?~ 0
 
 educatorPropertyM
     :: Testable prop

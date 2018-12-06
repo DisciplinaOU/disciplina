@@ -197,11 +197,9 @@ deriveJSON defaultOptions ''PublicationTxWitness
 deriveJSON defaultOptions ''PublicationTxWitnessed
 deriveJSON defaultOptions ''PublicationTx
 deriveJSON defaultOptions ''FeeCoefficients
-deriveFromJSON defaultOptions ''FeeConfig
 
 deriveFromJSON defaultOptions ''Committee
 deriveJSON defaultOptions ''GenesisDistributionElem
-deriveFromJSON defaultOptions ''GenesisConfig
 
 instance FromJSON GenesisInfo where
     parseJSON = error "FromJSON GenesisInfo should never be called"

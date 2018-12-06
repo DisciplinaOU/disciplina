@@ -1,12 +1,17 @@
 module Dscp.Educator.Launcher.Params
-       ( EducatorKeyParams (..)
+       ( EducatorKeyParams
+       , EducatorKeyParamsRec
+       , EducatorKeyParamsRecP
        ) where
 
-import Data.Aeson (FromJSON (..))
+import Loot.Config ((::<), Config, PartialConfig)
 
 import Dscp.Resource.Keys (BaseKeyParams)
 
 -- | Educator key parameters.
-newtype EducatorKeyParams = EducatorKeyParams
-    { unEducatorKeyParams :: BaseKeyParams
-    } deriving (Show, Eq, FromJSON)
+type EducatorKeyParams =
+   '[ "keyParams" ::< BaseKeyParams
+    ]
+
+type EducatorKeyParamsRec = Config EducatorKeyParams
+type EducatorKeyParamsRecP = PartialConfig EducatorKeyParams

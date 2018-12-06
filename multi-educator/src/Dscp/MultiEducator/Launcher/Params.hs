@@ -8,4 +8,4 @@ import Data.Aeson (FromJSON (..))
 newtype MultiEducatorKeyParams = MultiEducatorKeyParams
     { unMultiEducatorKeyParams :: FilePath
       -- ^ Educator key folder
-    } deriving (Show, FromJSON)
+    } deriving (Eq, Show, FromJSON)

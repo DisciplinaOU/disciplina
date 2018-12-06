@@ -1,21 +1,18 @@
 module Dscp.DB.Rocks.Real.Types
        ( MonadRealDB
        , DB (..)
-       , RocksDBParams (..)
-       , rdpPathL
-       , rdpCleanL
+       , RocksDBParams
+       , RocksDBParamsRec
+       , RocksDBParamsRecP
        , RocksDB (..)
        , rdDatabase
        , Rocks.BatchOp (..)
        ) where
 
-import Control.Lens (makeLenses, makeLensesWith)
-import Data.Aeson.Options (defaultOptions)
-import Data.Aeson.TH (deriveFromJSON)
+import Control.Lens (makeLenses)
 import qualified Database.RocksDB as Rocks
 import Loot.Base.HasLens (HasLens')
-
-import Dscp.Util (postfixLFields)
+import Loot.Config ((:::), Config, PartialConfig)
 
 -- | Set of constraints necessary to operate on real DB.
 type MonadRealDB ctx m =
@@ -34,17 +31,19 @@ data DB = DB
     }
 
 -- | Set of parameters provided on opening connection.
-data RocksDBParams = RocksDBParams
-    { rdpPath  :: !FilePath
+type RocksDBParams =
+   '[ "path"  ::: FilePath
       -- ^ Path to the database
-    , rdpClean :: !Bool
+    , "clean" ::: Bool
       -- ^ Whether DB should be cleaned/removed on start.
-    } deriving (Show, Eq)
+    ]
+
+type RocksDBParamsRec = Config RocksDBParams
+type RocksDBParamsRecP = PartialConfig RocksDBParams
+
 
 data RocksDB = RocksDB
     { _rdDatabase :: !DB
     }
 
-makeLensesWith postfixLFields ''RocksDBParams
 makeLenses ''RocksDB
-deriveFromJSON defaultOptions ''RocksDBParams

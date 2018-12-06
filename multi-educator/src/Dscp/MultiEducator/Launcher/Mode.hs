@@ -21,10 +21,9 @@ module Dscp.MultiEducator.Launcher.Mode
     , normalToMulti
     ) where
 
-import Control.Lens (makeLenses)
+import Control.Lens ((?~), makeLenses)
 import qualified Data.Map as M
 import Loot.Base.HasLens (HasLens', lensOf)
-import Loot.Config (option, sub)
 import System.Directory (canonicalizePath, createDirectoryIfMissing)
 import System.FilePath.Posix ((</>))
 
@@ -41,8 +40,7 @@ import Dscp.MultiEducator.Config
 import Dscp.MultiEducator.Launcher.Params (MultiEducatorKeyParams (..))
 import Dscp.MultiEducator.Launcher.Resource (EducatorContexts (..), EducatorCtxWithCfg (..),
                                              MultiEducatorResources (..))
-import Dscp.Resource.AppDir (AppDirParam (..))
-import Dscp.Resource.Keys (BaseKeyParams (..), linkStore)
+import Dscp.Resource.Keys (linkStore)
 import Dscp.Resource.Network
 import Dscp.Rio (RIO, runRIO)
 import Dscp.Util.HasLens
@@ -116,18 +114,26 @@ loadEducator :: MultiEducatorWorkMode ctx m => Bool -> Text -> Text -> m Bool
 loadEducator _new login passphrase = do
     -- TODO: add hashing
     let loginFile = id (toString login)
-    let appDir = case multiEducatorConfig ^. sub #witness . option #appDir of
-          AppDirectoryOS         -> ""
-          AppDirectorySpecific x -> x
+    let appDirParam = multiEducatorConfig ^. sub #witness . sub #appDir
+        appDir = case appDirParam ^. tree #param . selection of
+            "os" -> ""
+            "specific" ->
+                appDirParam ^. tree #param . peekBranch #specific . option #path
+            sel -> error $ "unknown AppDir type: " <> fromString sel
     let (MultiEducatorKeyParams path) = multiEducatorConfig ^. sub #educator . option #keys
         prepareDb = do
-            p <- case multiEducatorConfig ^. sub #educator . option #db of
-                SQLiteParams (SQLiteReal (SQLiteRealParams fp con pen)) -> do
+            let dbp = multiEducatorConfig ^. sub #educator . sub #db
+            p <- case dbp ^. tree #mode . selection of
+                "real" -> do
+                    let realPar = dbp ^. tree #mode . peekBranch #real
+                        fp = realPar ^. option #path
                     dbsPath <- canonicalizePath $ appDir </> fp
                     createDirectoryIfMissing True $ dbsPath
                     print dbsPath
-                    pure $ SQLiteParams (SQLiteReal (SQLiteRealParams (dbsPath </> loginFile) con pen))
-                x -> pure x
+                    let newBranch = realPar & option #path .~ (dbsPath </> loginFile)
+                    pure $ dbp & tree #mode . branch #real ?~ newBranch
+                "inMemory" -> pure dbp
+                sel -> error $ "unknown SQLite mode type: " <> fromString sel
             db <- openSQLiteDB p
             prepareEducatorSchema db
             return (db, p)
@@ -136,7 +142,10 @@ loadEducator _new login passphrase = do
     let keyFile = path </> loginFile <> ".key"
         -- FIXME
         (Right p) = mkPassPhrase . encodeUtf8 $ passphrase
-    let keyParams = BaseKeyParams (Just keyFile) True (Just p)
+        keyParams = finaliseDeferredUnsafe $ mempty
+            & option #path       ?~ Just keyFile
+            & option #genNew     ?~ False
+            & option #passphrase ?~ Just p
     key <- withCoreConfig (rcast multiEducatorConfig) $ linkStore keyParams appDir
     -- FIXME: DB is not closed
     ctx <- ask

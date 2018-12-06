@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedLabels #-}
+
 module Test.Dscp.Witness.Tx.MoneyTx where
 
 import Control.Lens (makeLenses, makeLensesWith, traversed)
@@ -8,6 +10,7 @@ import qualified GHC.Exts as Exts
 import Test.QuickCheck.Monadic (pre)
 import qualified Text.Show
 
+import Dscp.Config (option)
 import Dscp.Core
 import Dscp.Crypto
 import Dscp.Snowdrop
@@ -40,7 +43,7 @@ properSteps = TxCreationSteps
     , _tcsTx = \txInAcc txInValue txOuts' ->
         Tx{ txInAcc, txInValue, txOuts = txOuts' }
     , _tcsWitness = TxWitness
-    , _tcsFixFees = fixFees (fcMoney feeConfig)
+    , _tcsFixFees = fixFees (feeConfig ^. option #money)
     }
 
 -- | Exact values for transaction.
@@ -207,7 +210,7 @@ spec_Money_tx_application = do
             txData <- pick genSafeTxData
             let Coin outSum = leftToPanic $ sumCoins $ map txOutValue $
                               toList (tdOuts txData)
-            Coin minFee <- case fcMoney feeConfig of
+            Coin minFee <- case feeConfig ^. option #money of
                 LinearFeePolicy FeeCoefficients{..} -> pure fcMinimal
             inVal <- pick $ choose (outSum, outSum + minFee - 1)
 

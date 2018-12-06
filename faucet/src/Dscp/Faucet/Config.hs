@@ -54,13 +54,13 @@ newtype DryRun = DryRun Bool
 --    [@appDir@] Application directory for witness.
 type FaucetConfig = CoreConfig ++
     '[ "faucet" ::<
-       '[ "logging" ::: LoggingParams
-        , "keys" ::: BaseKeyParams
-        , "api" ::: ServerParams
+       '[ "logging" ::< LoggingParams
+        , "keys" ::< BaseKeyParams
+        , "api" ::< ServerParams
         , "witnessBackend" ::: BaseUrl
         , "transferredAmount" ::: TransferredAmount
         , "dryRun" ::: DryRun
-        , "appDir" ::: AppDirParam
+        , "appDir" ::< AppDirParam
         ]
      ]
 
@@ -71,8 +71,8 @@ type HasFaucetConfig = Given FaucetConfigRec
 
 defaultFaucetConfig :: FaucetConfigRecP
 defaultFaucetConfig = mempty
-    & sub #faucet . option #logging ?~ basicLoggingParams "faucet" False
-    & sub #faucet . option #keys ?~ BaseKeyParams Nothing False Nothing
+    & sub #faucet . sub #logging .~ basicLoggingParams "faucet" False
+    & sub #faucet . sub #keys .~ defaultBaseKeyParams
     & sub #faucet . option #dryRun ?~ DryRun False
 
 faucetConfig :: HasFaucetConfig => FaucetConfigRec

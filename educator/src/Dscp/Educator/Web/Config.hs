@@ -6,7 +6,7 @@ module Dscp.Educator.Web.Config
     , EducatorWebConfigRec
     ) where
 
-import Loot.Config ((:::), ConfigKind (Final, Partial), ConfigRec)
+import Loot.Config ((:::), (::<), ConfigKind (Final, Partial), ConfigRec)
 
 import Dscp.Educator.Web.Auth
 import Dscp.Educator.Web.Bot.Params
@@ -15,8 +15,8 @@ import Dscp.Educator.Web.Student.Auth ()
 import Dscp.Web
 
 type EducatorWebConfig =
-    '[ "serverParams"      ::: ServerParams
-     , "botParams"         ::: EducatorBotParams
+    '[ "serverParams"      ::< ServerParams
+     , "botConfig"         ::< EducatorBotConfig
      , "educatorAPINoAuth" ::: NoAuthContext "educator"
      , "studentAPINoAuth"  ::: NoAuthContext "student"
      ]

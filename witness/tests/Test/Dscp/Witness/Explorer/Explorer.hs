@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedLabels #-}
 module Test.Dscp.Witness.Explorer.Explorer where
 
 import Data.Default (def)
@@ -7,6 +8,7 @@ import GHC.Exts (fromList)
 import Test.QuickCheck (arbitraryBoundedEnum, shuffle)
 import Test.QuickCheck.Monadic (pre)
 
+import Dscp.Config (option)
 import Dscp.Core
 import Dscp.Crypto
 import Dscp.Snowdrop.Configuration
@@ -27,7 +29,7 @@ createAndSubmitTx
 createAndSubmitTx sk outs = do
     account <- runSdReadM @'ChainAndMempool $
         fromMaybe def <$> getAccountMaybe (skAddress sk)
-    let txw = createTxw (fcMoney feeConfig) sk (aNonce account) outs
+    let txw = createTxw (feeConfig ^. option #money) sk (aNonce account) outs
     addTxToMempool (GMoneyTxWitnessed txw)
     return $ twTx txw
 
@@ -55,7 +57,7 @@ createAndSubmitPub sk sig = do
         tx = PublicationTx
             { ptAuthor = skAddress sk
             , ptFeesAmount = unFees $
-                calcFeePub (fcPublication feeConfig) ptHeader
+                calcFeePub (feeConfig ^. option #publication) ptHeader
             , ptHeader
             }
         txw = signPubTx sk tx

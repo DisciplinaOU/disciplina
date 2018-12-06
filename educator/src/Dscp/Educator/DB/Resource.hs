@@ -20,7 +20,7 @@ prepareEducatorSchema db = do
     runRIO db $ borrowConnection ensureSchemaIsSetUp
 
 instance AllocResource SQLiteDB where
-    type Deps SQLiteDB = SQLiteParams
+    type Deps SQLiteDB = SQLiteParamsRec
     allocResource p = buildComponentR "SQLite DB" (openSQLiteDB' p) closeSQLiteDB
       where
         openSQLiteDB' p' = do

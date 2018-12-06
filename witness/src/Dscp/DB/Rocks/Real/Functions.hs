@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Dscp.DB.Rocks.Real.Functions
@@ -38,7 +39,8 @@ import Loot.Base.HasLens (HasLens')
 import System.Directory (doesDirectoryExist, removeDirectoryRecursive)
 import UnliftIO (MonadUnliftIO)
 
-import Dscp.DB.Rocks.Real.Types (DB (..), RocksDB (..), RocksDBParams (..))
+import Dscp.Config
+import Dscp.DB.Rocks.Real.Types (DB (..), RocksDB (..), RocksDBParamsRec)
 import Dscp.Util
 import Dscp.Util.Serialise
 
@@ -72,8 +74,10 @@ openRocksDB path = do
 closeRocksDB :: MonadIO m => DB -> m ()
 closeRocksDB = Rocks.close . rocksDB
 
-openNodeDB :: MonadIO m => RocksDBParams -> m RocksDB
-openNodeDB RocksDBParams{..} = liftIO $ do
+openNodeDB :: MonadIO m => RocksDBParamsRec -> m RocksDB
+openNodeDB rocksDBParams = liftIO $ do
+    let rdpPath  = rocksDBParams ^. option #path
+        rdpClean = rocksDBParams ^. option #clean
     dirExists <- doesDirectoryExist rdpPath
 
     when (rdpClean && dirExists) $ do

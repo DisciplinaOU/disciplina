@@ -1,5 +1,7 @@
-{-# LANGUAGE GADTs      #-}
-{-# LANGUAGE StrictData #-}
+{-# LANGUAGE GADTs            #-}
+{-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE StrictData       #-}
+{-# LANGUAGE TypeOperators    #-}
 
 -- | Trnsaction fees processing and calculation.
 module Dscp.Core.Fees
@@ -7,7 +9,9 @@ module Dscp.Core.Fees
        , _Fees
        , FeeCoefficients (..)
        , FeePolicy (..)
-       , FeeConfig (..)
+       , FeeConfig
+       , FeeConfigRecP
+       , FeeConfigRec
        , calcLinearFees
        , calcFee
        , calcFeePub
@@ -19,7 +23,8 @@ module Dscp.Core.Fees
        ) where
 
 import Codec.Serialise (Serialise (..))
-import Control.Lens (makePrisms)
+import Control.Lens (makePrisms, (?~))
+import Loot.Config ((:::), Config, PartialConfig, finaliseDeferredUnsafe, option)
 
 import Dscp.Core.Foundation
 import Dscp.Crypto
@@ -48,10 +53,13 @@ deriving instance Eq (FeePolicy tx)
 deriving instance Show (FeePolicy tx)
 
 -- | All fee policies.
-data FeeConfig = FeeConfig
-    { fcMoney       :: FeePolicy Tx
-    , fcPublication :: FeePolicy PublicationTx
-    } deriving (Eq, Show)
+type FeeConfig =
+    '[ "money"       ::: FeePolicy Tx
+     , "publication" ::: FeePolicy PublicationTx
+     ]
+
+type FeeConfigRecP = PartialConfig FeeConfig
+type FeeConfigRec = Config FeeConfig
 
 -- | Calculate fees from tx size.
 calcLinearFees :: Integral i => FeeCoefficients -> i -> Fees
@@ -71,12 +79,12 @@ calcFeePub policy header = case policy of
         calcLinearFees coeffs $ msSize $ header ^. pbhBodyProof
 
 -- | Calculates fees of 'GTxWitnessed'.
-calcFeeG :: FeeConfig -> GTxWitnessed -> Fees
-calcFeeG FeeConfig{..} = \case
+calcFeeG :: FeeConfigRec -> GTxWitnessed -> Fees
+calcFeeG feeConfig = \case
     (GMoneyTxWitnessed tw) ->
-        calcFee fcMoney tw
+        calcFee (feeConfig ^. option #money) tw
     (GPublicationTxWitnessed PublicationTxWitnessed { ptwTx }) ->
-        calcFeePub fcPublication (ptHeader ptwTx)
+        calcFeePub (feeConfig ^. option #publication) (ptHeader ptwTx)
 
 -- | "No fee" setup.
 noFees :: FeePolicy tx
@@ -85,8 +93,10 @@ noFees = LinearFeePolicy FeeCoefficients
     , fcMultiplier    = 0
     }
 
-noFeesConfig :: FeeConfig
-noFeesConfig = FeeConfig noFees noFees
+noFeesConfig :: FeeConfigRec
+noFeesConfig = finaliseDeferredUnsafe $ mempty
+    & option #money       ?~ noFees
+    & option #publication ?~ noFees
 
 -- | Pick fees which would fit for given transaction. Fits only the
 -- case when transaction size grows monotonically with fees.
@@ -109,14 +119,14 @@ fixFees feePolicy = case feePolicy of
 
 -- | Estimate fees for given outputs.
 -- Only works for fixed nonce, key and signature sizes.
-estimateFees :: FeeConfig -> [TxOut] -> Fees
+estimateFees :: FeeConfigRec -> [TxOut] -> Fees
 estimateFees feeConfig outs = calcFeeG feeConfig gTx
   where
     publicKey = leftToPanic $ fromByteArray ("patakbardaq_skovoroda_pvaforever" :: ByteString)
     signature = leftToPanic $ fromByteArray ("patakbardaq_skovoroda_pvaforever_and_thirty_two_more_bytes_mkay?" :: ByteString)
     address = mkAddr publicKey
 
-    gTx = GMoneyTxWitnessed . fixFees (fcMoney feeConfig) $ \fees ->
+    gTx = GMoneyTxWitnessed . fixFees (feeConfig ^. option #money) $ \fees ->
         let inAcc = TxInAcc { tiaNonce = 0, tiaAddr = address }
             inValue = Coin (sum $ map (unCoin . txOutValue) outs) `unsafeAddCoin` unFees fees
             tx = Tx { txInAcc = inAcc, txInValue = inValue, txOuts = outs }

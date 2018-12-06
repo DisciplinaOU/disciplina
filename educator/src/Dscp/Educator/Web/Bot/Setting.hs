@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedLabels #-}
+
 -- | Bot data and aspects of behaviour.
 
 module Dscp.Educator.Web.Bot.Setting
@@ -28,6 +30,7 @@ import Loot.Log (ModifyLogName, logError, logInfo, modifyLogName)
 import Time.Units (Microsecond, Time, threadDelay)
 import UnliftIO.Async (async)
 
+import Dscp.Config
 import Dscp.Core
 import Dscp.Crypto.Impl
 import Dscp.DB.SQLite
@@ -101,12 +104,12 @@ data BotSetting = BotSetting
     }
 
 -- | Generate a bot setting.
-mkBotSetting :: EducatorBotParams -> BotSetting
+mkBotSetting :: EducatorBotParamsRec -> BotSetting
 mkBotSetting params =
-  BotSetting{ bsOperationsDelay = ebpOperationsDelay params, ..}
+  BotSetting{ bsOperationsDelay = params ^. option #operationsDelay, ..}
  where
   botGen :: Gen a -> a
-  botGen = detGenG (ebpSeed params)
+  botGen = detGenG (params ^. option #seed)
 
   bsCourses =
     [ (Course 0  , "Patakology", [])
@@ -268,8 +271,8 @@ botProvideAdvancedSetting student = do
 -- | Add a grade immediatelly after student submission.
 botGradeSubmission :: BotWorkMode ctx m => SignedSubmission -> m ()
 botGradeSubmission ssub = do
-    let sub = _ssSubmission ssub
-        contentsH = _sContentsHash sub
+    let subm = _ssSubmission ssub
+        contentsH = _sContentsHash subm
     time <- liftIO getCurrentTime
     let grade = detGenG contentsH genPleasantGrade
     let ptx = PrivateTx

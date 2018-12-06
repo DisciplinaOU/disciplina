@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedLabels #-}
+
 module Dscp.Wallet.Backend
        ( WalletFace(..)
        , createWalletFace
@@ -6,6 +8,7 @@ module Dscp.Wallet.Backend
 import Control.Exception (throwIO)
 import Control.Monad.Component (ComponentM, buildComponent_)
 
+import Dscp.Config (option)
 import Dscp.Core
 import Dscp.Crypto
 import Dscp.Wallet.Face
@@ -88,7 +91,7 @@ sendTx wc sendEvent eSecretKey mPassPhrase (toList -> outs) = do
     nonce <- fromIntegral . unNonce . aiCurrentNonce <$>
              wGetAccount wc (skAddress secretData) False
 
-    let txWitnessed = createTxw (fcMoney feeConfig) secretData nonce outs
+    let txWitnessed = createTxw (feeConfig ^. option #money) secretData nonce outs
 
     sendLogEvent sendEvent $
         "Sending transaction: {"

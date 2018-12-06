@@ -1,30 +1,44 @@
+{-# LANGUAGE OverloadedLabels #-}
+
 -- | Application folder which we carry in config.
 -- For now we create it strictly on application startup,
 -- which makes sense because logs go there anyway.
 
 module Dscp.Resource.AppDir
-       ( AppDirParam(..)
+       ( AppDirParam
+       , AppDirParamRec
+       , AppDirParamRecP
+
        , AppDir
        , getOSAppDir
        ) where
 
-import Data.Aeson (FromJSON (..), ToJSON (..))
 import Fmt ((+|), (|+))
 import Loot.Log (MonadLogging, logInfo)
+import Loot.Config ((:::), (::-), (::+), Config, PartialConfig)
 import System.Directory (XdgDirectory (XdgData), createDirectoryIfMissing, getXdgDirectory)
 import System.Environment (lookupEnv)
 import System.IO.Error (catchIOError, ioError, isDoesNotExistError)
 
+import Dscp.Config
 import Dscp.Resource.Class (AllocResource (..), buildComponentR)
 import Dscp.System (appName)
 
 -- | Which application directory to use.
-data AppDirParam
-    = AppDirectoryOS
-      -- ^ Dedicated folder inside OS directory for applications
-    | AppDirectorySpecific !FilePath
-      -- ^ Given path
-    deriving (Show, Eq)
+-- Note, there is a reason this contains the whole tree and not just its content
+-- see 'ConfigMaybe' for an explanation.
+type AppDirParam =
+   '[ "param" ::+
+       '[ "os" ::- '[]
+          -- ^ Dedicated folder inside OS directory for applications
+        , "specific" ::- '[ "path" ::: FilePath ]
+          -- ^ Given path
+        ]
+    ]
+
+type AppDirParamRec = Config AppDirParam
+type AppDirParamRecP = PartialConfig AppDirParam
+
 
 type AppDir = FilePath
 
@@ -42,31 +56,18 @@ getOSAppDir = liftIO $
 -- | Create application directory if absent.
 prepareAppDir
     :: (MonadIO m, MonadLogging m)
-    => AppDirParam -> m AppDir
-prepareAppDir param = do
-    appDir <- case param of
-        AppDirectoryOS            -> getOSAppDir
-        AppDirectorySpecific path -> pure path
+    => AppDirParamRec -> m AppDir
+prepareAppDir dirConfig = do
+    appDir <- case dirConfig ^. tree #param . selection of
+        "os"       -> getOSAppDir
+        "specific" -> pure $
+            dirConfig ^. tree #param . peekBranch #specific . option #path
+        sel -> error $ "unknown AppDir type: " <> fromString sel
     -- we would unlikely have logging context here
     logInfo $ "Application home directory will be at "+|appDir|+""
     liftIO $ createDirectoryIfMissing True appDir
     return appDir
 
 instance AllocResource AppDir where
-    type Deps AppDir = AppDirParam
+    type Deps AppDir = AppDirParamRec
     allocResource p = buildComponentR "AppDir" (prepareAppDir p) (\_ -> pass)
-
--- | Isomorphism between @Maybe FilePath@ and 'AppDirParam'
-maybeToAppDirParam :: Maybe FilePath -> AppDirParam
-maybeToAppDirParam Nothing   = AppDirectoryOS
-maybeToAppDirParam (Just fp) = AppDirectorySpecific fp
-
-appDirParamToMaybe :: AppDirParam -> Maybe FilePath
-appDirParamToMaybe AppDirectoryOS            = Nothing
-appDirParamToMaybe (AppDirectorySpecific fp) = Just fp
-
--- | JSON instances for 'AppDirParam'
-instance FromJSON AppDirParam where
-    parseJSON = fmap maybeToAppDirParam . parseJSON
-instance ToJSON AppDirParam where
-    toJSON = toJSON . appDirParamToMaybe

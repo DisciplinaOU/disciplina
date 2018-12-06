@@ -3,7 +3,6 @@ module Dscp.Educator.TestConfig
     ) where
 
 import Data.Default (def)
-import Loot.Config.Record (finaliseDeferredUnsafe)
 
 import Dscp.Config.Util
 import Dscp.Educator.Config

@@ -12,11 +12,11 @@ import qualified Data.HashMap.Strict as HashMap
 import qualified Data.List.NonEmpty as NE
 import Fmt (listF, listF', (+|), (+||), (|+), (||+))
 import Loot.Base.HasLens (lensOf)
-import Loot.Config (option, sub)
 import Loot.Log (logDebug, logInfo, logWarning)
 import Time (ms, sec, threadDelay)
 import UnliftIO.Exception (withException)
 
+import Dscp.Config (option, sub)
 import Dscp.Core
 import Dscp.Crypto
 import Dscp.Network.Wrapped

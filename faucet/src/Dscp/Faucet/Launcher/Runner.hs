@@ -39,5 +39,5 @@ launchFaucetRealMode config action =
   where
     appDesc = "Faucet (real mode)"
     initParams = InitParams
-        { ipLoggingParams = config ^. sub #faucet . option #logging
+        { ipLoggingParams = config ^. sub #faucet . sub #logging
         }

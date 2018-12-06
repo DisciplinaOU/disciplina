@@ -1,6 +1,7 @@
 {-# LANGUAGE ApplicativeDo         #-}
 {-# LANGUAGE DataKinds             #-}
 {-# LANGUAGE GADTs                 #-}
+{-# LANGUAGE OverloadedLabels      #-}
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE PolyKinds             #-}
 {-# LANGUAGE TypeOperators         #-}
@@ -19,6 +20,10 @@ module Dscp.Config.Util
       -- * Re-exports from 'Loot.Config'
     , sub
     , option
+    , tree
+    , branch
+    , selection
+    , finaliseDeferredUnsafe
 
       -- * Config parsing and building
     , ConfigParams (..)
@@ -27,19 +32,31 @@ module Dscp.Config.Util
     , buildConfig
     , fillExpandedConfig
 
+      -- * Utility config types and functions
+    , ConfigMaybe
+    , ConfigMaybeRec
+    , ConfigMaybeRecP
+    , whenConfigJust
+    , selectBranchParser
+
       -- * Helper lenses/classes
     , HasGiven
     , giveL
     , HasGivenC
     , giveLC
+
+      -- * Helper functions
+    , peekBranch
     ) where
 
 import Control.Applicative.Combinators.NonEmpty as NonEmpty (some)
+import Control.Lens (Contravariant, to)
 import Data.Aeson (Result (..), Value (Object), fromJSON)
 import qualified Data.HashMap.Strict as HM
 import Data.Reflection (reifySymbol)
 import Data.Reflection (Given (..))
 import qualified Data.Text.Buildable
+import Data.Vinyl.Derived (Label)
 import Data.Vinyl.Lens (type (<:), rcast, rreplace)
 import Data.Vinyl.TypeLevel (type (++))
 import Data.Yaml (FromJSON (..), ParseException (AesonException), decodeFileEither, withObject,
@@ -47,8 +64,10 @@ import Data.Yaml (FromJSON (..), ParseException (AesonException), decodeFileEith
 import Fmt (blockListF)
 import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
 import Loot.Base.HasLens (HasLens', lensOf)
-import Loot.Config (ConfigKind (Final, Partial), ConfigRec, HasLensC, finalise, lensOfC, option,
-                    sub)
+import Loot.Config ((::+), (::-), (.::), (<*<), OptModParser, ConfigKind (Final, Partial),
+                    ConfigRec, HasLensC, finalise, finaliseDeferredUnsafe,
+                    lensOfC, option, sub, tree, branch, selection)
+import Loot.Config.Record (HasBranch, HasOption)
 import qualified Options.Applicative as Opt
 import qualified Text.Show
 
@@ -163,6 +182,50 @@ configParamsParser = do
                  \configuration to use."
 
 ----------------------------------------------------------------------------
+-- Utility config types and functions
+----------------------------------------------------------------------------
+
+-- | Utility config type equivalent to 'Maybe'
+-- Note: the reason why this (and other) config tree types are defined including
+-- the tree itself and not just the group of branches it contains is that if we
+-- were to do that, the inner config type would not have access to the tree
+-- 'selection' and thus hardly be of any value by itself.
+type ConfigMaybe cfg =
+   '[ "maybe" ::+
+       '[ "nothing" ::- '[]
+        , "just"    ::- cfg
+        ]
+    ]
+
+type ConfigMaybeRec cfg = ConfigRec 'Final (ConfigMaybe cfg)
+type ConfigMaybeRecP cfg = ConfigRec 'Partial (ConfigMaybe cfg)
+
+whenConfigJust
+    :: Applicative m
+    => ConfigMaybeRec cfg -> (ConfigRec 'Final cfg -> m ()) -> m ()
+whenConfigJust configMaybe f = case configMaybe ^. tree #maybe . selection of
+    "nothing" -> pure ()
+    "just"    -> f $ configMaybe ^. tree #maybe . peekBranch #just
+    sel       -> error $ "unknown ConfigMaybe type: " <> fromString sel
+
+-- | Utility function for a common 'tree' content parsing pattern.
+-- When a tree has two branches, one of witch is empty, it is desirable to have
+-- a flag parser to select the empty branch and a parser for the non-empty branch
+-- content that also selects this branch (instead of having one more flag).
+-- Note that this function is made to allow this while avoiding to set a default
+-- selection, respecting the 'mempty' property that we check for in the tests.
+selectBranchParser
+    :: HasOption l is v
+    => Label l          -- ^ Label of the tree selector
+    -> Opt.Parser v     -- ^ Parser (usually flag) to select the empty branch
+    -> v                -- ^ Name of the non-empty branch
+    -> OptModParser is  -- ^ Parser for the non-empty branch
+    -> OptModParser is
+selectBranchParser treeType emptyBranchFlag fullBranchName fullBranchParser =
+    (treeType .:: emptyBranchFlag) <|>
+    (treeType .:: pure fullBranchName <*< fullBranchParser)
+
+----------------------------------------------------------------------------
 -- Accessing config with lens
 ----------------------------------------------------------------------------
 
@@ -177,3 +240,14 @@ type HasGivenC path is v =
 
 giveLC :: forall path is v . HasGivenC path is v => v
 giveLC = given ^. (lensOfC @path @is @v)
+
+-- | Helper function to read the content of a 'finalise'd 'branch' by unsafely
+-- traversing the Maybe. This should only be used on the selected 'branch', in
+-- which case no error will be thrown.
+peekBranch
+    :: (HasBranch l is us, Contravariant g, Functor g, a ~ ConfigRec 'Final us)
+    => Label l
+    -> (a -> g a)
+    -> ConfigRec 'Final is
+    -> g (ConfigRec 'Final is)
+peekBranch l = branch l . to (fromMaybe (error "accessed unselected branch"))

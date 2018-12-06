@@ -9,7 +9,6 @@ module Dscp.MultiEducator.Web.Server
 
 import Data.Proxy (Proxy (..))
 import Fmt ((+|), (|+))
-import Loot.Config (option, sub)
 import Loot.Log (logInfo)
 import Network.HTTP.Types.Header (hAuthorization, hContentType)
 import Network.Wai (Middleware)
@@ -22,6 +21,7 @@ import Servant.Auth.Server.Internal.ThrowAll (throwAll)
 import Servant.Generic (toServant)
 import UnliftIO (askUnliftIO)
 
+import Dscp.Config
 import Dscp.Educator.Web.Auth
 import Dscp.Educator.Web.Bot
 import Dscp.Educator.Web.Educator (EducatorAPI, convertEducatorApiHandler, educatorAPI,
@@ -36,7 +36,7 @@ import Dscp.MultiEducator.Web.Educator (MultiEducatorAPI, MultiStudentAPI, multi
                                         multiEducatorApiHandlers, multiStudentAPI)
 import Dscp.MultiEducator.Web.Educator.Auth
 import Dscp.Util.Servant (methodsCoveringAPI)
-import Dscp.Web (ServerParams (..), serveWeb)
+import Dscp.Web (serveWeb)
 import Dscp.Web.Metrics (responseTimeMetric)
 import Dscp.Witness.Web
 
@@ -81,10 +81,10 @@ mkMultiEducatorApiServer jwtSet cookieSet nat =
 mkStudentApiServer'
     :: forall ctx m. MultiEducatorWorkMode ctx m
     => (forall x. m x -> Handler x)
-    -> EducatorBotParams
+    -> EducatorBotConfigRec
     -> m (Text -> Server ProtectedStudentAPI)
-mkStudentApiServer' nat botParams = do
-    case ebpEnabled botParams of
+mkStudentApiServer' nat botConfig = do
+    case botConfig ^. tree #params . selection of
       _ {-EducatorBotOff-} -> return $ \login -> getServer login . studentApiHandlers
       -- To initilialize the bot we need a database, how do we choose a database?
       {-EducatorBotOn params -> initializeBot params $ do
@@ -102,7 +102,7 @@ mkStudentApiServer' nat botParams = do
 mkStudentApiServer
     :: forall ctx m. MultiEducatorWorkMode ctx m
     => (forall x. m x -> Handler x)
-    -> EducatorBotParams
+    -> EducatorBotConfigRec
     -> m (Server MultiStudentAPI)
 mkStudentApiServer nat botParams = do
     studApi <- mkStudentApiServer' nat botParams
@@ -117,7 +117,7 @@ mkStudentApiServer nat botParams = do
 -- If bot is enabled, all students are allowed to use API.
 createStudentCheckAction
     :: forall ctx m. MultiEducatorWorkMode ctx m
-    => EducatorBotParams
+    => EducatorBotConfigRec
     -> m StudentCheckAction
 createStudentCheckAction _ =
     return . StudentCheckAction . const $ pure True
@@ -143,11 +143,11 @@ educatorCors = cors $ const $ Just $
 serveEducatorAPIsReal :: MultiCombinedWorkMode ctx m => Bool -> m ()
 serveEducatorAPIsReal withWitnessApi = do
     let webCfg = multiEducatorConfig ^. sub #educator . sub #api
-        ServerParams{..}  = webCfg ^. option #serverParams
-        botParams         = webCfg ^. option #botParams
+        serverAddress     = webCfg ^. sub #serverParams . option #addr
+        botConfig         = webCfg ^. sub #botConfig
         studentAPINoAuth  = webCfg ^. option #studentAPINoAuth
 
-    studentCheckAction <- createStudentCheckAction botParams
+    studentCheckAction <- createStudentCheckAction botConfig
     jwtKey <- liftIO $ generateKey
     let jwtSettings = defaultJWTSettings jwtKey
         cookieSettings = defaultCookieSettings
@@ -155,15 +155,15 @@ serveEducatorAPIsReal withWitnessApi = do
                  studentCheckAction :. studentAPINoAuth :.
                  EmptyContext
 
-    logInfo $ "Serving Student API on "+|spAddr|+""
+    logInfo $ "Serving Student API on "+|serverAddress|+""
     unliftIO <- askUnliftIO
     let educatorApiServer = mkMultiEducatorApiServer jwtSettings cookieSettings (convertEducatorApiHandler unliftIO)
-    studentApiServer <- mkStudentApiServer (convertStudentApiHandler unliftIO) botParams
+    studentApiServer <- mkStudentApiServer (convertStudentApiHandler unliftIO) botConfig
     let witnessApiServer = if withWitnessApi
           then mkWitnessAPIServer (convertWitnessHandler unliftIO)
           else throwAll err405{ errBody = "Witness API disabled at this port" }
     let metricsEndpoint = witnessConfig ^. sub #witness . option #metricsEndpoint
-    serveWeb spAddr $
+    serveWeb serverAddress $
       responseTimeMetric metricsEndpoint $
       educatorCors $
       serveWithContext (Proxy @EducatorWebAPI) srvCtx $

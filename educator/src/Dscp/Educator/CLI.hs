@@ -10,26 +10,37 @@ module Dscp.Educator.CLI
     , publishingPeriodParser
     ) where
 
-import Control.Lens (iso)
-import Loot.Config (ModParser, OptModParser, uplift, (%::), (..:), (.::), (.:<), (<*<))
+import Loot.Config (OptModParser, uplift, (.::), (.:<), (.:+), (.:-), (<*<))
 import Options.Applicative (Parser, auto, flag', help, long, metavar, option, strOption)
 import Time (Second, Time)
 
 import Dscp.CommonCLI
 import Dscp.DB.SQLite
 import Dscp.Educator.Config
-import Dscp.Educator.Launcher.Params (EducatorKeyParams (..))
+import Dscp.Educator.Launcher.Params (EducatorKeyParams)
 import Dscp.Educator.Web.Auth
 import Dscp.Educator.Web.Bot.Params
 import Dscp.Educator.Web.Config
 import Dscp.Witness.CLI (witnessConfigParser)
 
-sqliteParamsParser :: ModParser SQLiteParams
-sqliteParamsParser = over (sdpModeL._SQLiteReal) <$>
-    srpPathL       ..: pathParser <*<
-    srpConnNumL    ..: connNumParser <*<
-    srpMaxPendingL ..: maxPendingParser
+sqliteParamsParser :: OptModParser SQLiteParams
+sqliteParamsParser = #mode .:+
+    (#modeType .:: (inMemoryP <|> realP) <*<
+     #real .:-
+        (#path       .:: pathParser <*<
+         #connNum    .:: connNumParser <*<
+         #maxPending .:: maxPendingParser
+        )
+    )
   where
+    inMemoryP = flag' "inMemory" $
+        long "sql-mode-in-memory" <>
+        help "Use in-memory SQLite mode. To use real SQLite mode instead, \
+             \provide `--sql-mode-real` flag."
+    realP = flag' "real" $
+        long "sql-mode-real" <>
+        help "Use SQLite with a file and a number of connections, for in-memory\
+             \ SQLite mode, provide `--sql-mode-in-memory` flag instead."
     pathParser = strOption $
         long "sql-path" <>
         metavar "FILEPATH" <>
@@ -47,15 +58,23 @@ sqliteParamsParser = over (sdpModeL._SQLiteReal) <$>
         metavar "INTEGER" <>
         help "Maximal number of threads waiting for free connection in pool."
 
-educatorBotParamsParser :: ModParser EducatorBotParams
-educatorBotParamsParser =
-    ebpEnabledL         ..: enabledParser <*<
-    ebpSeedL            ..: seedParser <*<
-    ebpOperationsDelayL ..: delayParser
+educatorBotConfigParser :: OptModParser EducatorBotConfig
+educatorBotConfigParser = #params .:+
+    (#paramsType .:: (enabledP <|> disabledP) <*<
+     #enabled .:-
+        (#seed            .:: seedParser <*<
+         #operationsDelay .:: delayParser
+        )
+    )
   where
-    enabledParser = flag' True $
+    enabledP = flag' "enabled" $
         long "educator-bot" <>
-        help "Enable bot which would automatically react on student actions."
+        help "Enable bot which would automatically react on student actions. \
+              \To disable it provide the flag `--educator-no-bot` instead."
+    disabledP = flag' "disabled" $
+        long "educator-no-bot" <>
+        help "Disable bot which would automatically react on student actions. \
+              \To enable it provide the flag `--educator-bot` instead."
     seedParser = strOption $
         long "educator-bot-seed" <>
         metavar "TEXT" <>
@@ -83,10 +102,8 @@ studentApiNoAuthParser = noAuthContextParser . option addressReadM $
          \author, if invalid data is passed authentication will \
          \automatically roll back to no-auth scheme."
 
-educatorKeyParamsParser :: ModParser EducatorKeyParams
-educatorKeyParamsParser =
-    over (iso unEducatorKeyParams EducatorKeyParams) <$>
-    baseKeyParamsParser "educator"
+educatorKeyParamsParser :: OptModParser EducatorKeyParams
+educatorKeyParamsParser = #keyParams .:< baseKeyParamsParser "educator"
 
 publishingPeriodParser :: Parser (Time Second)
 publishingPeriodParser = option timeReadM $
@@ -99,8 +116,8 @@ publishingPeriodParser = option timeReadM $
 
 educatorWebConfigParser :: OptModParser EducatorWebConfig
 educatorWebConfigParser =
-    #serverParams .:: serverParamsParser "Educator" <*<
-    #botParams %:: educatorBotParamsParser <*<
+    #serverParams .:< serverParamsParser "Educator" <*<
+    #botConfig .:< educatorBotConfigParser <*<
     #educatorAPINoAuth .:: educatorApiNoAuthParser <*<
     #studentAPINoAuth .:: studentApiNoAuthParser
 
@@ -108,8 +125,8 @@ educatorConfigParser :: OptModParser EducatorConfig
 educatorConfigParser =
     uplift witnessConfigParser <*<
     #educator .:<
-        (#db %:: sqliteParamsParser <*<
-         #keys %:: educatorKeyParamsParser <*<
+        (#db .:< sqliteParamsParser <*<
+         #keys .:< educatorKeyParamsParser <*<
          #api .:< educatorWebConfigParser <*<
          #publishing .:<
             (#period .:: publishingPeriodParser)

@@ -37,29 +37,32 @@ demo: &demo
       clean: false
     logging:
       default-name: "witness"
-      backends:
-      - type: stderr
-      - type: syslog
-        app-name: "witness"
-      min-level: Debug
+      config:
+        backends:
+        - type: stderr
+        - type: syslog
+          app-name: "witness"
+        min-level: Debug
 
   educator:
     logging:
       default-name: "educator"
-      backends:
-      - type: stderr
-      - type: syslog
-        app-name: "educator"
-      min-level: Debug
+      config:
+        backends:
+        - type: stderr
+        - type: syslog
+          app-name: "educator"
+        min-level: Debug
 
   faucet:
     logging:
       default-name: "faucet"
-      backends:
-      - type: stderr
-      - type: syslog
-        app-name: "faucet"
-      min-level: Debug
+      config:
+        backends:
+        - type: stderr
+        - type: syslog
+          app-name: "faucet"
+        min-level: Debug
 
 singleton:
   <<: *demo

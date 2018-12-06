@@ -18,26 +18,26 @@ module Dscp.Witness.Config
 
 import Control.Lens ((?~))
 import Data.Reflection (Given (..), give)
-import Loot.Config ((:::), (::<), ConfigKind (Final, Partial), ConfigRec, option, sub)
+import Loot.Config ((:::), (::<), ConfigKind (Final, Partial), ConfigRec)
 
 import Dscp.Config
 import Dscp.Core.Config
-import Dscp.DB.Rocks.Real.Types (RocksDBParams (..))
-import Dscp.Resource.AppDir (AppDirParam (..))
-import Dscp.Resource.Keys (BaseKeyParams (..))
-import Dscp.Resource.Logging (LoggingParams (..), basicLoggingParams)
+import Dscp.DB.Rocks.Real.Types
+import Dscp.Resource.AppDir (AppDirParam)
+import Dscp.Resource.Keys.Types (defaultBaseKeyParams)
+import Dscp.Resource.Logging (LoggingParams, basicLoggingParams)
 import Dscp.Resource.Network (NetServParams)
 import Dscp.Web (MetricsEndpoint (..), ServerParams)
-import Dscp.Witness.Keys (WitnessKeyParams (..))
+import Dscp.Witness.Keys
 
 type WitnessConfig = CoreConfig ++
     '[ "witness" ::<
-       '[ "logging" ::: LoggingParams
-        , "db" ::: RocksDBParams
-        , "network" ::: NetServParams
-        , "keys" ::: WitnessKeyParams
-        , "api" ::: Maybe ServerParams
-        , "appDir" ::: AppDirParam
+       '[ "logging" ::< LoggingParams
+        , "db" ::< RocksDBParams
+        , "network" ::< NetServParams
+        , "keys" ::< WitnessKeyParams
+        , "api" ::< ConfigMaybe ServerParams
+        , "appDir" ::< AppDirParam
         , "metricsEndpoint" ::: MetricsEndpoint
         ]
      ]
@@ -58,12 +58,21 @@ instance HasWitnessConfig => Given CoreConfigRec where
 
 defaultWitnessConfig :: WitnessConfigRecP
 defaultWitnessConfig = mempty
-    & sub #witness . option #logging ?~ basicLoggingParams "witness" False
-    & sub #witness . option #db ?~ RocksDBParams "witness-db" False
-    & sub #witness . option #keys ?~ Basic (BaseKeyParams Nothing False Nothing)
-    & sub #witness . option #api ?~ Nothing
-    & sub #witness . option #appDir ?~ AppDirectoryOS
+    & sub #witness . sub #logging .~ basicLoggingParams "witness" False
+    & sub #witness . sub #db .~ rocksDBParams
+    & sub #witness . sub #keys .~ keysParams
+    & sub #witness . sub #api . tree #maybe . selection ?~ "nothing"
+    & sub #witness . sub #appDir . tree #param . selection ?~ "os"
     & sub #witness . option #metricsEndpoint ?~ MetricsEndpoint Nothing
+  where
+    keysParams :: WitnessKeyParamsRecP
+    keysParams = mempty
+        & tree #params . selection ?~ "basic"
+        & tree #params . branch #basic .~ defaultBaseKeyParams
+    rocksDBParams :: RocksDBParamsRecP
+    rocksDBParams = mempty
+        & option #path  ?~ "witness-db"
+        & option #clean ?~ False
 
 witnessConfig :: HasWitnessConfig => WitnessConfigRec
 witnessConfig = given

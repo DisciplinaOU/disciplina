@@ -6,10 +6,10 @@ module Dscp.Educator.Workers
        ) where
 
 import Fmt ((+||), (||+))
-import Loot.Config (option, sub)
 import Loot.Log (logWarning)
 import Time (minute, ms, sec, toUnit)
 
+import Dscp.Config (option, sub)
 import Dscp.Core
 import Dscp.Educator.Config
 import Dscp.Educator.Launcher.Mode

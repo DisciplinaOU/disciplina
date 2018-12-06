@@ -18,7 +18,6 @@ import Dscp.Network.Wrapped
 import Dscp.Resource.Keys (ourPublicKey)
 import Dscp.Snowdrop
 import Dscp.Util.Timing
-import Dscp.Witness.Config
 import Dscp.Witness.Launcher.Context
 import Dscp.Witness.Logic
 import Dscp.Witness.Messages
@@ -47,7 +46,7 @@ blockIssuingListener =
   where
     action :: ListenerEnv NetTag -> m ()
     action btq = do
-        let GovCommittee committee = gcGovernance $ giveL @WitnessConfig @GenesisConfig
+        let GovCommittee committee = genesisGovernance
         slotId <- waitUntilNextSlot
         ourAddr <- mkAddr <$> ourPublicKey @WitnessNode
         logInfo $ "New slot has just started: " +| slotId |+ ""

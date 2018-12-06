@@ -62,7 +62,7 @@ extra-deps:
 - primitive-0.6.4.0
 
 - git: https://github.com/serokell/lootbox.git
-  commit: b66d53bf42e88d44184046f3450ab2f01bd9c8b6
+  commit: ec3caaedd6b41e783e3266c7f15e5598576f6aa5
   subdirs:
     - code/base
     - code/config

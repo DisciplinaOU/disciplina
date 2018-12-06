@@ -1,11 +1,14 @@
+{-# LANGUAGE OverloadedLabels #-}
+
 module Test.Dscp.Witness.Mode
     ( WitnessTestMode'
     , witnessProperty
     ) where
 
-import Control.Lens (makeLenses)
+import Control.Lens (makeLenses, (?~))
 import Loot.Log (Logging (..))
 
+import Dscp.Config
 import Dscp.DB.CanProvideDB as DB
 import Dscp.DB.CanProvideDB.Pure as PureDB
 import Dscp.Resource.Keys
@@ -47,7 +50,7 @@ _sanity = withWitnessConfig (error "") _sanityCallee
 runWitnessTestMode :: WitnessTestMode' a -> IO a
 runWitnessTestMode action =
     withWitnessConfig testWitnessConfig $ runRIO testLogging $ do
-        _twcKeys <- mkCommitteeStore (CommitteeParamsOpen 0)
+        _twcKeys <- mkCommitteeStore committeeKeyParams
         _twcDb   <- PureDB.plugin <$> liftIO PureDB.newCtxVar
         _twcVars <- mkTestWitnessVariables (_twcKeys ^. krPublicKey) _twcDb
         let _twcLogging = testLogging
@@ -56,6 +59,11 @@ runWitnessTestMode action =
         runRIO ctx $ do
             markWithinWriteSDLockUnsafe applyGenesisBlock
             action
+  where
+    committeeKeyParams :: CommitteeParamsRec
+    committeeKeyParams = finaliseDeferredUnsafe $ mempty
+        & tree #params . selection ?~ "open"
+        & tree #params . option #participantN ?~ 0
 
 witnessProperty
     :: Testable prop
