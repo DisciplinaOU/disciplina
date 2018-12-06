@@ -4,7 +4,7 @@
 
 module Dscp.Util.Aeson
     ( AsByteString (..)
-    , CustomEncoding (..)
+    , EncodeSerialised (..)
     , Base64Encoded
     , HexEncoded
     , IsEncoding
@@ -37,13 +37,15 @@ import Dscp.Util.Test
 -- | Often one wants to convert bytestring to JSON, but such convertion
 -- is encoding-dependent so we have no corresponding instance because it would
 -- be ambiguous.
-newtype AsByteString encoding a = AsByteString { getAsByteString :: a }
-    deriving (Eq, Ord, Show, Monoid, ByteArrayAccess, ByteArray, Functor)
+newtype AsByteString encoding a = AsByteString
+    { getAsByteString :: a
+    } deriving (Eq, Ord, Show, Monoid, ByteArrayAccess, ByteArray, Functor)
 
--- | This one for the case when need custom JSON instances.
-newtype CustomEncoding encoding a =
-    CustomEncoding { unCustomEncoding :: a }
-    deriving (Eq, Ord, Show, Monoid, ByteArrayAccess, ByteArray, Functor)
+-- | Wrapper for types which is encoded in JSON via serialising to
+-- bytestring and then applying some byte encoding.
+newtype EncodeSerialised encoding a = EncodeSerialised
+    { unEncodeSerialised :: a
+    } deriving (Eq, Ord, Show, Monoid, ByteArrayAccess, ByteArray, Functor)
 
 data Base64Encoded
 data HexEncoded
@@ -66,6 +68,15 @@ instance (BA.FromByteArray a, IsEncoding enc) =>
     parseJSON = withText "encoded text" $ \t ->
         let base = reflect (Proxy @enc)
         in fmap AsByteString . leftToFail $ fromBase base t
+
+instance (Serialise a, IsEncoding enc) =>
+         ToJSON (EncodeSerialised enc a) where
+    toJSON = toJSONSerialise (reflect (Proxy @enc)). unEncodeSerialised
+
+instance (Serialise a, IsEncoding enc) =>
+         FromJSON (EncodeSerialised enc a) where
+    parseJSON = fmap EncodeSerialised .
+        parseJSONSerialise (reflect (Proxy @enc))
 
 -- | Attaches version of JSON serialisation format.
 newtype Versioned a = Versioned a
@@ -92,7 +103,7 @@ instance FromJSON a => FromJSON (Versioned a) where
         return $ Versioned content
 
 deriving instance Arbitrary a => Arbitrary (AsByteString enc a)
-deriving instance Arbitrary a => Arbitrary (CustomEncoding enc a)
+deriving instance Arbitrary a => Arbitrary (EncodeSerialised enc a)
 
 instance Arbitrary a => Arbitrary (Versioned a) where
     arbitrary = Versioned <$> arbitrary

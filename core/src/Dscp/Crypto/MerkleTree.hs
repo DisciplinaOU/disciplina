@@ -37,6 +37,8 @@ module Dscp.Crypto.MerkleTree
        , fillEmptyMerkleTree
 
        , EmptyMerkleProof (..)
+       , getEmptyMerkleProof
+       , mkEmptyMerkleProof
        , separateProofAndData
        , mergeProofAndData
        ) where
@@ -381,12 +383,13 @@ drawProofNode = Tree.drawTree . asTree
 -- | A special unit-isomorphic type which acts as a placeholder for
 -- an element in Merkle structure.
 data ElementStub = ElementStub
-    deriving (Show, Eq)
+    deriving (Show, Eq, Generic)
 
 -- | Merkle tree with values removed. Used for storing Merkle trees
 -- in the Educator database.
-newtype EmptyMerkleTree a = EmptyTree (MerkleTree ElementStub)
-    deriving newtype (Show, Eq, Generic)
+newtype EmptyMerkleTree a = EmptyTree
+    { unEmptyTree :: MerkleTree ElementStub
+    } deriving newtype (Show, Eq, Generic)
 
 -- | Empties out the Merkle tree, putting @'ElementStub'@s in leaves.
 getEmptyMerkleTree :: MerkleTree a -> EmptyMerkleTree a
@@ -423,8 +426,9 @@ fillEmptyMerkleTree plugs (EmptyTree sieve) =
 
 -- | Merkle proof with values at leaves removed and replaced via @Pruned@
 -- nodes.
-newtype EmptyMerkleProof a = EmptyProof (MerkleProof ElementStub)
-    deriving newtype (Eq, Show, Generic)
+newtype EmptyMerkleProof a = EmptyProof
+    { unEmptyProof :: MerkleProof ElementStub
+    } deriving newtype (Eq, Show, Generic)
 
 -- | Empties out @'MerkleProof'@, putting @'ElementStub'@s in leaves.
 getEmptyMerkleProof :: MerkleProof a -> EmptyMerkleProof a
@@ -433,6 +437,14 @@ getEmptyMerkleProof = EmptyProof . go
       go (ProofBranch l r) = ProofBranch (go l) (go r)
       go (ProofPruned s)   = ProofPruned $ coerce s
       go (ProofLeaf _)     = ProofLeaf ElementStub
+
+-- | @'mkMerkleProof'@ for empty trees and proofs
+mkEmptyMerkleProof
+    :: EmptyMerkleTree a
+    -> Set LeafIndex
+    -> Maybe (EmptyMerkleProof a)
+mkEmptyMerkleProof (EmptyTree tree) idxs =
+    EmptyProof <$> mkMerkleProof tree idxs
 
 -- | Splits Merkle proof into signatures and data.
 separateProofAndData :: MerkleProof a -> (EmptyMerkleProof a, [a])

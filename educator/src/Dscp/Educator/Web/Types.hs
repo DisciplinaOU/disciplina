@@ -42,9 +42,8 @@ import Dscp.DB.SQLite
 import Dscp.Educator.DB
 import Dscp.Educator.Launcher.Marker
 import Dscp.Resource.Keys
-import Dscp.Util.Aeson (CustomEncoding, HexEncoded)
-import Dscp.Util.Servant (ForResponseLog (..), buildForResponse, buildLongResponseList,
-                          buildShortResponseList)
+import Dscp.Util.Aeson
+import Dscp.Util.Servant
 import Dscp.Witness.Launcher.Context
 
 type MonadEducatorWebQuery m =
@@ -94,7 +93,7 @@ data GradeInfo = GradeInfo
     } deriving (Show, Eq, Ord, Generic)
 
 data BlkProofInfo = BlkProofInfo
-    { bpiMtreeSerialized :: (CustomEncoding HexEncoded (MerkleProof PrivateTx))
+    { bpiMtreeSerialized :: (EncodeSerialised Base64Encoded (EmptyMerkleProof PrivateTx))
     , bpiTxs             :: [PrivateTx]
     } deriving (Show, Eq, Generic)
 
@@ -133,7 +132,7 @@ instance Buildable (GradeInfo) where
 instance Buildable (BlkProofInfo) where
     build (BlkProofInfo{..}) =
       "{ tree root hash = " +||
-          fmap reconstructRoot bpiMtreeSerialized ||+
+          fmap (reconstructRoot . unEmptyProof) bpiMtreeSerialized ||+
       ", transactons num = " +| length bpiTxs |+
       "} "
 
@@ -149,7 +148,7 @@ instance Buildable (ForResponseLog GradeInfo) where
 instance Buildable (ForResponseLog BlkProofInfo) where
     build (ForResponseLog BlkProofInfo{..}) =
       "{ tree root hash = " +||
-          fmap reconstructRoot bpiMtreeSerialized ||+
+          fmap (reconstructRoot . unEmptyProof) bpiMtreeSerialized ||+
       "} "
 
 instance Buildable (ForResponseLog Course) where

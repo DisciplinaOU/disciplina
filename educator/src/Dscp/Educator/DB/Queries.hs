@@ -73,15 +73,15 @@ module Dscp.Educator.DB.Queries
 import Control.Exception.Safe (catchJust)
 import Control.Lens (to)
 import Data.Default (Default (..))
-import qualified Data.Map as Map (empty, fromList, insertWith, toList)
+import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
 import Data.Time.Clock (UTCTime)
 import GHC.Exts (fromList)
 import Loot.Base.HasLens (HasLens')
 import Snowdrop.Util (OldestFirst (..))
 
 import Dscp.Core
-import Dscp.Crypto (EmptyMerkleTree, Hash, MerkleProof, fillEmptyMerkleTree, getEmptyMerkleTree,
-                    getMerkleRoot, hash)
+import Dscp.Crypto
 import Dscp.DB.SQLite.Error (asAlreadyExistsError, asReferenceInvalidError)
 import Dscp.DB.SQLite.Functions
 import Dscp.DB.SQLite.Util
@@ -91,11 +91,7 @@ import Dscp.Educator.DB.Instances ()
 import Dscp.Educator.DB.Schema
 import Dscp.Educator.Launcher.Marker
 import Dscp.Resource.Keys
-<<<<<<< HEAD
 import Dscp.Rio
-import Dscp.Util (HasId (..), idOf)
-=======
->>>>>>> [DSCP-409] Client interface for Student API
 import Dscp.Util
 
 -- | Short alias for @'educatorSchema'@ for convenience.
@@ -194,7 +190,11 @@ getProvenStudentTransactions
     :: forall m.
        (MonadQuery m, WithinTx)
     => GetProvenStudentTransactionsFilters
+<<<<<<< HEAD
     -> m [(MerkleProof PrivateTx, [(TxWithinBlockIdx, PrivateTx)])]
+=======
+    -> DBT 'WithinTx w m [(EmptyMerkleProof PrivateTx, [(TxWithinBlockIdx, PrivateTx)])]
+>>>>>>> [DSCP-409] Change interface of `getProofs` method
 getProvenStudentTransactions filters = do
     -- Contains `(tx, idx, blockId)` map.
     txsBlockList <- getTxsBlockMap
@@ -207,8 +207,8 @@ getProvenStudentTransactions filters = do
     results <- forM txsBlockMap $ \(blockId, transactions) -> do
         tree <- getMerkleTree blockId
 
-        let mapping = Map.fromList $ map (first unTxWithinBlockIdx) transactions
-            pruned  = fillEmptyMerkleTree mapping tree
+        let indices = Set.fromList $ map (unTxWithinBlockIdx . fst) transactions
+            pruned  = mkEmptyMerkleProof tree indices
 
         return (pruned, transactions)
 

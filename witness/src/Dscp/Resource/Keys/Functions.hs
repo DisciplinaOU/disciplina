@@ -28,7 +28,7 @@ import Dscp.Resource.Keys.Types (BaseKeyParams (..), CommitteeParams (..), KeyJs
                                  KeyResources (..), KeyfileContent)
 import Dscp.System (checkFileMode, mode600, setMode, whenPosix)
 import Dscp.Util (leftToThrow)
-import Dscp.Util.Aeson (CustomEncoding (..), Versioned (..))
+import Dscp.Util.Aeson (EncodeSerialised (..), Versioned (..))
 
 ---------------------------------------------------------------------
 -- Conversions
@@ -36,12 +36,12 @@ import Dscp.Util.Aeson (CustomEncoding (..), Versioned (..))
 
 toSecretJson :: PassPhrase -> SecretKey -> KeyJson
 toSecretJson pp secret =
-    let kjEncSecretKey = CustomEncoding $ encrypt pp secret
+    let kjEncSecretKey = EncodeSerialised $ encrypt pp secret
     in KeyJson{..}
 
 fromSecretJson :: MonadThrow m => PassPhrase -> KeyJson -> m SecretKey
 fromSecretJson pp KeyJson{..} = do
-    decrypt pp (unCustomEncoding kjEncSecretKey)
+    decrypt pp (unEncodeSerialised kjEncSecretKey)
         & leftToThrow SecretDecryptionError
 
 toKeyfileContent :: PassPhrase -> SecretKey -> KeyfileContent

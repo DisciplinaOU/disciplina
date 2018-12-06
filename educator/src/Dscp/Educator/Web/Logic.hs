@@ -27,7 +27,7 @@ commonGetProofs
 commonGetProofs filters = do
     rawProofs <- getProvenStudentTransactions filters
     return
-        [ BlkProofInfo{ bpiMtreeSerialized = CustomEncoding mtree, bpiTxs }
+        [ BlkProofInfo{ bpiMtreeSerialized = EncodeSerialised mtree, bpiTxs }
         | (mtree, indicedTxs) <- rawProofs
         , let bpiTxs = map snd indicedTxs
         ]
