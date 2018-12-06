@@ -33,7 +33,8 @@ import Data.Aeson.TH (deriveJSON)
 import Data.Time.Clock (UTCTime)
 import Fmt (build, (+|), (+||), (|+), (||+))
 import Loot.Base.HasLens (HasCtx)
-import Servant (FromHttpApiData (..))
+import Loot.Log (ModifyLogName, MonadLogging)
+import Servant (FromHttpApiData (..), ToHttpApiData)
 
 import Dscp.Core
 import Dscp.Crypto
@@ -61,18 +62,21 @@ type MonadEducatorWeb ctx m =
 ---------------------------------------------------------------------------
 
 -- | Whether student is enrolled into a course.
-newtype IsEnrolled = IsEnrolled { unIsEnrolled :: Bool }
-    deriving (Eq, Show)
+newtype IsEnrolled = IsEnrolled
+    { unIsEnrolled :: Bool
+    } deriving (Eq, Show)
 
 -- | Whether assignment is final in course.
-newtype IsFinal = IsFinal { unIsFinal :: Bool }
-    deriving (Eq, Show)
+newtype IsFinal = IsFinal
+    { unIsFinal :: Bool
+    } deriving (Eq, Show)
 
 makePrisms ''IsFinal
 
 -- | Whether submission is graded.
-newtype IsGraded = IsGraded { unIsGraded :: Bool }
-    deriving (Eq, Show)
+newtype IsGraded = IsGraded
+    { unIsGraded :: Bool
+    } deriving (Eq, Show)
 
 -- | Whether transaction has been published into public chain.
 newtype HasProof = HasProof { unHasProof :: Bool }
@@ -204,9 +208,13 @@ deriveJSON defaultOptions ''StudentInfo
 deriveJSON defaultOptions ''BlkProofInfo
 
 ---------------------------------------------------------------------------
--- FromHttpApiData instances
+-- To/FromHttpApiData instances
 ---------------------------------------------------------------------------
 
 deriving instance FromHttpApiData IsEnrolled
 deriving instance FromHttpApiData IsFinal
 deriving instance FromHttpApiData IsGraded
+
+deriving instance ToHttpApiData IsEnrolled
+deriving instance ToHttpApiData IsFinal
+deriving instance ToHttpApiData IsGraded

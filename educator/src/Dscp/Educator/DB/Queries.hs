@@ -71,7 +71,7 @@ module Dscp.Educator.DB.Queries
 
 
 import Control.Exception.Safe (catchJust)
-import Control.Lens (makePrisms, to)
+import Control.Lens (to)
 import Data.Default (Default (..))
 import qualified Data.Map as Map (empty, fromList, insertWith, toList)
 import Data.Time.Clock (UTCTime)
@@ -86,63 +86,19 @@ import Dscp.DB.SQLite.Error (asAlreadyExistsError, asReferenceInvalidError)
 import Dscp.DB.SQLite.Functions
 import Dscp.DB.SQLite.Util
 import Dscp.Educator.DB.BlockData
+import Dscp.Educator.DB.Error
 import Dscp.Educator.DB.Instances ()
 import Dscp.Educator.DB.Schema
 import Dscp.Educator.Launcher.Marker
 import Dscp.Resource.Keys
+<<<<<<< HEAD
 import Dscp.Rio
 import Dscp.Util (HasId (..), idOf)
+=======
+>>>>>>> [DSCP-409] Client interface for Student API
 import Dscp.Util
 
-data DomainError
-    = AbsentError DomainErrorItem
-    | AlreadyPresentError DomainErrorItem
-    | SemanticError DatabaseSemanticError
-    deriving (Show, Eq)
-
-data DomainErrorItem
-    = CourseDomain
-        { deCourseId :: Id Course }
-
-    | StudentDomain
-        { deStudentId :: Id Student }
-
-    | AssignmentDomain
-        { deAssignmentId :: Id Assignment }
-
-    | StudentCourseEnrollmentDomain
-        { deStudentId :: Id Student
-        , deCourseId  :: Id Course }
-
-    | StudentAssignmentSubscriptionDomain
-        { deStudentId    :: Id Student
-        , deAssignmentId :: Id Assignment }
-
-    | SubmissionDomain
-        { deSubmissionId :: Id Submission }
-
-    | TransactionDomain
-        { deTransactionId :: Id PrivateTx }
-
-    | BlockWithIndexDomain
-        { deBlockIdx :: BlockIdx }
-
-    deriving (Show, Typeable, Eq)
-
--- | Logical errors.
-data DatabaseSemanticError
-    = StudentIsActiveError     (Id Student)
-      -- ^ Student can't be deleted because it has activities.
-    | DeletingGradedSubmission (Id Submission)
-      -- ^ Submission has potentially published grade and thus can't be deleted.
-    deriving (Show, Eq)
-
-makePrisms ''DomainError
-makePrisms ''DomainErrorItem
-makePrisms ''DatabaseSemanticError
-
-instance Exception DomainError
-
+-- | Short alias for @'educatorSchema'@ for convenience.
 es :: DatabaseSettings be EducatorSchema
 es = educatorSchema
 

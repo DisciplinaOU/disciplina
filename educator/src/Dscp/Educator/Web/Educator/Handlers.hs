@@ -106,4 +106,4 @@ convertEducatorApiHandler
     -> m a
     -> Handler a
 convertEducatorApiHandler (UnliftIO unliftIO) handler =
-    processServerErrors @APIError (unliftIO handler)
+    processServerErrors @EducatorAPIError (unliftIO handler)

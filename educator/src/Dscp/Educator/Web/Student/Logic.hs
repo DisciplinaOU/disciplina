@@ -9,10 +9,10 @@ import Dscp.Core
 import Dscp.Crypto
 import Dscp.DB.SQLite
 import Dscp.Educator.DB
-import Dscp.Educator.Web.Student.Error (APIError (..))
+import Dscp.Educator.Web.Student.Error
 import Dscp.Educator.Web.Student.Queries
 import Dscp.Educator.Web.Student.Types
-import Dscp.Educator.Web.Student.Util (verifyStudentSubmission)
+import Dscp.Educator.Web.Student.Util
 import Dscp.Educator.Web.Types
 import Dscp.Util
 

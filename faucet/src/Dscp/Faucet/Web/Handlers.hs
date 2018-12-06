@@ -43,4 +43,4 @@ convertFaucetApiHandler
     -> FaucetRealMode a
     -> Handler a
 convertFaucetApiHandler ctx handler =
-    processServerErrors @APIError (runRIO ctx handler)
+    processServerErrors @FaucetAPIError (runRIO ctx handler)

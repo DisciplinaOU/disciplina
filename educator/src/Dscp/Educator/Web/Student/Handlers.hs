@@ -72,4 +72,4 @@ convertStudentApiHandler
     -> m a
     -> Handler a
 convertStudentApiHandler (UnliftIO unliftIO) handler =
-    processServerErrors @APIError (unliftIO handler)
+    processServerErrors @StudentAPIError (unliftIO handler)

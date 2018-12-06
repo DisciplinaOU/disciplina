@@ -1,7 +1,7 @@
 -- | Educator API errors
 
 module Dscp.Educator.Web.Educator.Error
-       ( APIError (..)
+       ( EducatorAPIError (..)
 
        , ErrResponse (..)
 
@@ -23,7 +23,7 @@ import Dscp.Util.Servant
 import Dscp.Web.Class
 
 -- | Any error backend may return.
-data APIError
+data EducatorAPIError
     = SomeDomainError DomainError
       -- ^ Something not found or already exists.
     | InvalidFormat
@@ -32,9 +32,9 @@ data APIError
       -- ^ Service is overloaded with requests.
     deriving (Show, Eq, Generic)
 
-makePrisms ''APIError
+makePrisms ''EducatorAPIError
 
-instance Exception APIError where
+instance Exception EducatorAPIError where
     fromException e@(SomeException e') =
         asum
         [ cast e'
@@ -46,7 +46,7 @@ instance Exception APIError where
 -- JSON instances
 ---------------------------------------------------------------------------
 
-instance HasErrorTag APIError where
+instance HasErrorTag EducatorAPIError where
     errorTag = \case
         InvalidFormat        -> "InvalidFormat"
         SomeDomainError err  -> domainErrorToShortJSON err
@@ -56,7 +56,7 @@ instance HasErrorTag APIError where
 -- Functions
 ---------------------------------------------------------------------------
 
-instance ToServantErr APIError where
+instance ToServantErr EducatorAPIError where
     toServantErrNoBody = \case
         InvalidFormat        -> err400
         ServiceUnavailable{} -> err503

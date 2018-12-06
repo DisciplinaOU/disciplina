@@ -59,7 +59,7 @@ class HasErrorTag e => FromServantErr e where
     fromServantError :: ServantError -> Maybe e
     default fromServantError :: FromJSON e => ServantError -> Maybe e
     fromServantError err = do
-        FailureResponse Response{..} <- pure err
+        let FailureResponse Response{..} = err
         errResponse <- decode @(ErrResponse e) responseBody
         return $ erContent errResponse
               ?: error "fromServantError: no error content"
