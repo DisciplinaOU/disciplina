@@ -2,7 +2,9 @@
 
 -- | Aeson instances for all types in Dscp.Crypto.
 
-module Dscp.Crypto.Aeson () where
+module Dscp.Crypto.Aeson
+    (
+    ) where
 
 import Prelude hiding (toStrict)
 

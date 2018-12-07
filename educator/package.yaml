@@ -62,6 +62,8 @@ tests:
       - tasty-discover
 
     dependencies:
+      - beam-core
+      - beam-migrate
       - containers
       - cryptonite
       - data-default

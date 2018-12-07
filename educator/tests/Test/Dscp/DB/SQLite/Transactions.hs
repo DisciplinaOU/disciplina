@@ -8,6 +8,9 @@ module Test.Dscp.DB.SQLite.Transactions where
 
 import qualified Control.Concurrent.STM as STM
 import qualified Data.List as L
+import Database.Beam.Migrate (CheckedDatabaseSettings, defaultMigratableDbSettings, unCheckDatabase)
+import Database.Beam.Migrate.Simple (createSchema)
+import Database.Beam.Schema (Beamable, C, Database, Table (..), TableEntity)
 import Database.SQLite.Simple (Only (..), execute, query)
 import Loot.Base.HasLens (HasCtx)
 import System.Directory (removeFile)
@@ -16,41 +19,61 @@ import UnliftIO (MonadUnliftIO)
 import qualified UnliftIO.Async as UIO
 
 import Dscp.DB.SQLite
+import Dscp.DB.SQLite.Util
 import Dscp.Rio
+import Dscp.Util
 import Dscp.Util.Test
 
 type MonadMoney m = (MonadIO m, MonadCatch m, MonadUnliftIO m)
 
 type Money = Int
 
-prepareSchema :: (MonadIO m) => m ()
-prepareSchema =
-    forM_ [createTableQuery, addAccountQuery] $
-        \que -> withConnection $ \conn -> execute conn que ()
-  where
-    createTableQuery = [q|
-        create table if not exists Accounts (
-            amount    INTEGER
-        );
-        |]
-    addAccountQuery = [q|
-        insert into Accounts values (0);
-        |]
+data AccountRowT f = AccountRowT
+    { arMoney :: C f Money
+    } deriving (Generic)
 
-getMoney :: MonadIO m => m Money
-getMoney = withConnection $ \conn ->
-           fromOnly . L.head <$> query conn queryText ()
-  where
-    queryText = [q|
-        select amount from Accounts
-    |]
+data AccountSchema f = AccountSchema
+    { asAccounts :: f (TableEntity AccountRowT)
+    } deriving (Generic)
 
-setMoney :: MonadIO m => Money -> m ()
-setMoney val = withConnection $ \conn -> execute conn queryText (Only val)
-  where
-    queryText = [q|
-        update Accounts set amount = ?
-    |]
+instance Table AccountRowT where
+    newtype PrimaryKey AccountRowT f = AccountRowId (C f Money)
+        deriving (Generic)
+
+instance Beamable AccountRowT
+instance Beamable (PrimaryKey AccountRowT)
+
+accountsCheckedSchema :: CheckedDatabaseSettings be AccountSchema
+accountsCheckedSchema = defaultMigratableDbSettings
+
+accountsSchema :: Database be AccountSchema => DatabaseSettings be AccountSchema
+accountsSchema = unCheckDatabase accountsCheckedSchema
+
+
+prepareSchema :: (MonadIO m, HasConnection m) => m ()
+prepareSchema = do
+    createSchema _ accountsCheckedSchema
+    runInsert . insert (asAccounts accountsSchema) $
+        insertValue 0
+
+getMoney
+    :: forall cmd be hdl m.
+       Database be AccountSchema
+    => MonadQuery cmd be hdl m =>
+       m Money
+getMoney =
+    fmap oneOrError . runSelect . select $ do
+        arMoney <$> all_ (asAccounts $ accountsSchema @be)
+
+setMoney
+    :: forall cmd be hdl m.
+       (Database be AccountSchema, MonadQuery cmd be hdl m, WithinWrite)
+    => Money -> m ()
+setMoney val =
+    runUpdate $ update
+        (asAccounts $ accountsSchema @be)
+        (\acc -> [ arMoney acc <-. val_ val ])
+        (\_ -> val_ True)
 
 addMoney :: (MonadUnliftIO m, HasCtx ctx m '[SQLiteDB]) => m ()
 addMoney =

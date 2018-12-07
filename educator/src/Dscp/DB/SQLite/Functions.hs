@@ -29,7 +29,7 @@ module Dscp.DB.SQLite.Functions
        , runInsertReturning
        , runUpdate
        , runDelete
-       , withConnection
+       , HasConnection (..)
 
          -- * Runners
        , invoke
@@ -54,7 +54,7 @@ import Database.Beam.Backend.SQL.SQL92 (IsSql92Syntax, Sql92DeleteSyntax, Sql92I
                                         Sql92SelectSyntax, Sql92UpdateSyntax)
 import Database.Beam.Query (QExpr, SqlDelete, SqlInsert, SqlInsertValues, SqlSelect, SqlUpdate)
 import qualified Database.Beam.Query as Query
-import Database.Beam.Schema (Beamable, DatabaseEntity, TableEntity)
+import Database.Beam.Schema (Beamable, Database, DatabaseEntity, DatabaseSettings, TableEntity)
 import Database.Beam.Sqlite (Sqlite, SqliteCommandSyntax, SqliteM (..))
 import Database.SQLite.Simple (Connection)
 import qualified Database.SQLite.Simple as Backend
@@ -249,8 +249,15 @@ runDelete
 runDelete = Query.runDelete
 
 -- | For low-level operations.
-withConnection :: (Connection -> IO a) -> SqliteM a
-withConnection f = SqliteM . ReaderT $ \(_, conn) -> f conn
+class HasConnection m where
+    askConnection :: m Connection
+
+    withConnection :: (Connection -> IO a) -> m a
+    default withConnection :: MonadIO m => (Connection -> IO a) -> m a
+    withConnection f = liftIO . f =<< askConnection
+
+instance HasConnection SqliteM where
+    askConnection = SqliteM . ReaderT $ \(_, conn) -> pure conn
 
 ------------------------------------------------------------
 -- DB endpoints runners
@@ -261,10 +268,15 @@ data SQLBackend cmd be hdl bm where
     SQLiteBackend :: SQLBackend SqliteCommandSyntax Sqlite Connection SqliteM
 
 -- | Untagged specifier of SQL backend engine.
+-- We have little choice but to keep our 'DatabaseSettings' as well, otherwise we
+-- won't be able to proof GHC that 'Database be db' required for some methods
+-- (like 'createSchema') is provided.
 data SomeSQLBackend where
     SomeSQLBackend
-        :: MonadQueryFull cmd be hdl bm
-        => SQLBackend cmd be hdl bm -> SomeSQLBackend
+        :: (MonadQuery cmd be hdl bm, Database be db)
+        => SQLBackend cmd be hdl bm
+        -> DatabaseSettings be db
+        -> SomeSQLBackend
 
 -- | Helper to set backend monad.
 restrictBackendMonad
@@ -275,7 +287,7 @@ restrictBackendMonad _ = pass
 -- | A query generalized over an SQL engine.
 type Query extraCtx a =
     forall cmd be hdl bm.
-       (MonadQueryFull cmd be hdl bm, extraCtx)
+       (MonadQueryLimited cmd be hdl bm, extraCtx)
     => bm a
 
 -- | Run DB action with all the missing constraints supplied as an argument.
@@ -292,7 +304,7 @@ invokeUnsafe
        (MonadUnliftIO m, HasCtx ctx m '[SQLiteDB, SomeSQLBackend])
     => Query WithinWriteTx a -> m a
 invokeUnsafe action = do
-    SomeSQLBackend sqlBackend@SQLiteBackend{} <- view $ lensOf @SomeSQLBackend
+    SomeSQLBackend sqlBackend@SQLiteBackend{} _ <- view $ lensOf @SomeSQLBackend
     let _ = restrictBackendMonad sqlBackend
     borrowConnection $ \conn ->
         liftIO $ withDatabase conn $ do
@@ -306,7 +318,7 @@ transactUsing
     -> Query () a
     -> m a
 transactUsing withTransaction action = do
-    SomeSQLBackend sqlBackend@SQLiteBackend{} <- view $ lensOf @SomeSQLBackend
+    SomeSQLBackend sqlBackend@SQLiteBackend{} _ <- view $ lensOf @SomeSQLBackend
     borrowConnection $ \conn ->
         liftIO . withTransaction conn $
             withDatabase conn (restrictBackendMonad sqlBackend >> action)
@@ -314,7 +326,8 @@ transactUsing withTransaction action = do
 -- | Run DB action within a transaction with all the missing constraints supplied as an
 -- argument.
 transactR
-    :: (MonadUnliftIO m, HasCtx ctx m '[SQLiteDB, SomeSQLBackend])
+    :: forall a ctx m.
+     (MonadUnliftIO m, HasCtx ctx m '[SQLiteDB, SomeSQLBackend])
     => Query WithinTx a
     -> m a
 transactR action =
@@ -323,9 +336,9 @@ transactR action =
 -- | Run DB action within a writing transaction with all the missing constraints supplied
 -- as an argument.
 transactW
-    :: (MonadUnliftIO m, HasCtx ctx m '[SQLiteDB, SomeSQLBackend])
-    => Query WithinWriteTx a
-    -> m a
+    :: forall a ctx m.
+       (MonadUnliftIO m, HasCtx ctx m '[SQLiteDB, SomeSQLBackend])
+    => Query WithinWriteTx a -> m a
 transactW action =
     allowWriteUnsafe $ allowTxUnsafe $
         transactUsing Backend.withImmediateTransaction action
@@ -333,8 +346,7 @@ transactW action =
 -- | Run DB action assuming that nothing is returned.
 invoke_
     :: (MonadUnliftIO m, HasCtx ctx m '[SQLiteDB, SomeSQLBackend])
-    => Query WithinWrite ()
-    -> m ()
+    => Query WithinWrite () -> m ()
 invoke_ action = invoke action
 
 -- | Run DB action within a transaction assuming that nothing is returned.

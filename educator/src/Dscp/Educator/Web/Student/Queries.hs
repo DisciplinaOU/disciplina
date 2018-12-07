@@ -85,7 +85,7 @@ studentGetCourse studentId courseId = do
     return CourseStudentInfo{ ciId = courseId, .. }
 
 studentGetCourses
-    :: (MonadEducatorWebQuery cmd be hdl m, MonadQueryEq cmd be hdl m, WithinTx)
+    :: (MonadEducatorWebQuery cmd be hdl m, MonadQuery cmd be hdl m, WithinTx)
     => Id Student -> Maybe IsEnrolled -> m [CourseStudentInfo]
 studentGetCourses studentId (coerce -> isEnrolledF) = do
     courses <- runSelect . select $ do

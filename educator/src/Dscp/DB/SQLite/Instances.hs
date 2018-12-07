@@ -5,8 +5,7 @@
 module Dscp.DB.SQLite.Instances
     ( BackendHasInstances
     , MonadQuery
-    , MonadQueryEq
-    , MonadQueryFull
+    , MonadQueryLimited
     ) where
 
 import Codec.Serialise as Codec (deserialise)
@@ -211,25 +210,18 @@ type BackendHasInstances cmd be =
     , TypeHasBackendInstances cmd be (EmptyMerkleTree PrivateTx)
     )
 
--- | Basic constraints among those which should suffice for any db endpoint.
-type MonadQuery cmd be hdl m =
+-- | Constaints which should suffice for any db endpoint.
+type MonadQueryLimited cmd be hdl m =
     ( Monad m
     , MonadCatch m
-    , BackendHasInstances cmd be
     , MonadBeam cmd be hdl m
-    )
-
--- | Equality constraints among those which should suffice for any db endpoint.
--- See db endpoints running functions for the motivation of such distinction.
-type MonadQueryEq cmd be hdl (m :: * -> *) =
-    ( Beam.Sql92ExpressionSelectSyntax
+    , Beam.Sql92ExpressionSelectSyntax
         (Beam.Sql92SelectTableExpressionSyntax
            (Beam.Sql92SelectSelectTableSyntax
               (Beam.Sql92SelectSyntax cmd))) ~ Beam.Sql92SelectSyntax cmd
     )
 
--- | All constraints which any endpoint should be satisfied with.
-type MonadQueryFull cmd be hdl m =
-    ( MonadQuery cmd be hdl m
-    , MonadQueryEq cmd be hdl m
+type MonadQuery cmd be hdl m =
+    ( MonadQueryLimited cmd be hdl m
+    , BackendHasInstances cmd be
     )
