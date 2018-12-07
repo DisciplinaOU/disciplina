@@ -4,13 +4,12 @@
 -- allow SQL transactions to work properly.
 -- Transactions do not work as expected automatically; for instances,
 -- queries are not allowed to be performed concurrently via the same connection.
-module Test.Dscp.DB.SQLite.Transactions where
+module Test.Dscp.DB.SQLite.Real.Transactions where
 
 import qualified Control.Concurrent.STM as STM
 import qualified Data.List as L
 import Database.SQLite.Simple (Only (..), execute, query)
 import Loot.Base.HasLens (HasCtx)
-import System.Directory (removeFile)
 import Text.InterpolatedString.Perl6 (q)
 import UnliftIO (MonadUnliftIO)
 import qualified UnliftIO.Async as UIO
@@ -18,6 +17,8 @@ import qualified UnliftIO.Async as UIO
 import Dscp.DB.SQLite
 import Dscp.Rio
 import Dscp.Util.Test
+
+import Test.Dscp.DB.SQLite.Real.Mode
 
 type MonadMoney m = (MonadIO m, MonadCatch m, MonadUnliftIO m)
 
@@ -58,29 +59,13 @@ addMoney =
         money <- getMoney
         setMoney (money + 1)
 
-runSQLiteMode :: RIO SQLiteDB a -> IO a
-runSQLiteMode action = do
-    db' <- openSQLiteDB dbParams
-    runRIO db' $ invoke prepareSchema
-    closeSQLiteDB db'
-    bracket (openSQLiteDB dbParams)
-            (\db -> closeSQLiteDB db >> removeFile dbPath) $
-            \db -> runRIO db action
-  where
-    -- sad, but testing with in-memory database is not an option
-    -- because each connection would work with its own database in this case
-    dbPath = "./sql-transaction-test.db"
-    dbParams = SQLiteParams
-        { sdpMode = SQLiteReal SQLiteRealParams
-            { srpPath = dbPath
-            , srpConnNum = Just 5
-            , srpMaxPending = 1000
-            }
-        }
+launchMoneySQLiteMode :: RIO SQLiteDB a -> IO a
+launchMoneySQLiteMode action =
+    launchSQLiteMode $ invoke prepareSchema >> action
 
 spec_SQLiteWrapper :: Spec
 spec_SQLiteWrapper = do
-    it "SQLite wrapper thread-safety" . property . ioProperty . runSQLiteMode $ do
+    it "SQLite wrapper thread-safety" . ioProperty . launchMoneySQLiteMode $ do
         invoke prepareSchema
         let iterations = 100
 
