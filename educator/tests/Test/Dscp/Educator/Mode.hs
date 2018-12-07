@@ -76,11 +76,11 @@ runTestSQLiteM action =
 
 educatorPropertyM
     :: Testable prop
-    => (HasEducatorConfig => PropertyM TestEducatorM prop)
+    => ((HasEducatorConfig, WithinWriteTx) => PropertyM TestEducatorM prop)
     -> Property
 educatorPropertyM action =
     monadic (ioProperty . runTestSQLiteM)
-            (withEducatorConfig testEducatorConfig $ void $ action >>= stop)
+            (withEducatorConfig testEducatorConfig $ void $ allowWriteTxUnsafe action >>= stop)
 
 educatorProperty
     :: (Testable prop, Show a, Arbitrary a)
@@ -90,14 +90,24 @@ educatorProperty action =
     educatorPropertyM $ pick (resize 5 arbitrary) >>= lift . action
 
 sqliteProperty
-    :: (Testable prop, Show a, Arbitrary a)
-    => (a -> DBT t w TestEducatorM prop) -> Property
+    :: (Testable prop, Show a, Arbitrary a, MonadQuery qm)
+    => (WithinWriteTx => TestEducatorCtx -> a -> qm prop) -> Property
 sqliteProperty action =
-    educatorProperty (invokeUnsafe . action)
+    educatorProperty $ \input -> do
+        ctx <- ask
+        invokeUnsafe (action ctx input)
 
-sqlitePropertyM :: Testable prop => PropertyM (DBT t w TestEducatorM) prop -> Property
+sqlitePropertyM
+    :: (MonadQuery qm, Testable prop)
+    => (WithinWriteTx => TestEducatorCtx -> PropertyM qm prop) -> Property
 sqlitePropertyM action =
-    monadic (ioProperty . runTestSQLiteM . invokeUnsafe) (void $ action >>= stop)
+    monadic (\getProperty -> ioProperty . runTestSQLiteM $
+                ask >>= \ctx -> invoke (runReaderT getProperty ctx)) $
+            do
+              ctx <- lift ask
+              res <- hoistPropertyM lift (`runReaderT` ctx) $
+                         allowWriteTxUnsafe (action ctx)
+              void $ stop res
 
 orIfItFails :: MonadCatch m => m a -> a -> m a
 orIfItFails action instead = do

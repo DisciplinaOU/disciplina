@@ -13,9 +13,10 @@ module Dscp.DB.SQLite.Functions
        , forEachConnection
 
          -- * SQLite context
-       , DBT
-       , TransactionalContext (WithinTx)
-       , OperationType (Writing)
+       , MonadQuery
+       , WithinWrite
+       , WithinTx
+       , WithinWriteTx
 
          -- * SQLite queries building
        , runSelect
@@ -35,30 +36,30 @@ module Dscp.DB.SQLite.Functions
          -- * Misc
        , traced
 
-         -- * Internal
-       , sqliteMToDbt
-       , dbtToSqliteM
+         -- * Unsafe
+       , allowTxUnsafe
+       , allowWriteUnsafe
+       , allowWriteTxUnsafe
        ) where
 
 import Control.Concurrent (getNumCapabilities)
 import Control.Concurrent.Chan (newChan, readChan, writeChan)
-import Control.Monad.Reader (mapReaderT)
 import qualified Data.List as L
+import Data.Reflection (Given, give)
 import Database.Beam.Backend (FromBackendRow, MonadBeam (..))
 import qualified Database.Beam.Backend.SQL.BeamExtensions as Backend
-import Database.Beam.Backend.SQL.SQL92 (Sql92DeleteSyntax, Sql92InsertSyntax, Sql92SelectSyntax,
-                                        Sql92UpdateSyntax)
+import Database.Beam.Backend.SQL.SQL92 (IsSql92Syntax, Sql92DeleteSyntax, Sql92InsertSyntax,
+                                        Sql92SelectSyntax, Sql92UpdateSyntax)
 import Database.Beam.Query (QExpr, SqlDelete, SqlInsert, SqlInsertValues, SqlSelect, SqlUpdate)
-import qualified Database.Beam.Query as Backend
-import Database.Beam.Schema (DatabaseEntity, TableEntity)
-import Database.Beam.Sqlite (Sqlite, SqliteCommandSyntax, SqliteM (..))
+import qualified Database.Beam.Query as Query
+import Database.Beam.Schema (Beamable, DatabaseEntity, TableEntity)
+import Database.Beam.Sqlite (SqliteM (..))
 import Database.SQLite.Simple (Connection)
 import qualified Database.SQLite.Simple as Backend
 import Loot.Base.HasLens (HasCtx, HasLens (..))
-import qualified Loot.Log as Log
 import qualified System.Console.ANSI as ANSI
 import Time (Millisecond, sec, toNum, toUnit)
-import UnliftIO (MonadUnliftIO (..), UnliftIO (..), askUnliftIO)
+import UnliftIO (MonadUnliftIO (..))
 import qualified UnliftIO as UIO
 
 import Dscp.DB.SQLite.Error
@@ -182,170 +183,135 @@ closeSQLiteDB sd =
 -- SQLite context
 ------------------------------------------------------------
 
--- | Single pack of DB operations.
--- Phantom type parameter @ t @ should be either a type variable or 'WithinTx'
--- and means whether actions should happen within transaction.
--- Phantom type parameter @ w @ should be either a type variable or 'Writing'
--- and means whether given actions should be performed in writing transaction,
--- if performed within a transaction at all.
---
--- Notice that for the sake of isolation we do not provide 'MonadTrans' instance,
--- though fetching info from context of the inner monad is allowed.
-newtype DBT (t :: TransactionalContext) (w :: OperationType) m a = DBT
-    { runDBT :: ReaderT Connection m a
-    } deriving (Functor, Applicative, Monad, MonadIO, MonadThrow, MonadCatch)
+data TransactionContextProvided = TransactionContextProvided
+type WithinTx = Given TransactionContextProvided
 
-instance MonadUnliftIO m => MonadUnliftIO (DBT t w m) where
-    askUnliftIO = do
-        UnliftIO unlift <- DBT askUnliftIO
-        return $ UnliftIO $ unlift . runDBT
+data WriteContextProvided = WriteContextProvided
+type WithinWrite = Given WriteContextProvided
 
-instance MonadReader r m => MonadReader r (DBT t w m) where
-    ask = DBT $ lift ask
-    reader = DBT . lift . reader
-    local doModify = DBT . mapReaderT (local doModify) . runDBT
+type WithinWriteTx = (WithinTx, WithinWrite)
 
-instance (Log.MonadLogging m, Monad m) => Log.MonadLogging (DBT t w m) where
-    log = DBT . lift ... Log.log
-    logName = DBT $ lift Log.logName
+allowTxUnsafe :: (WithinTx => a) -> a
+allowTxUnsafe = give TransactionContextProvided
 
-instance (Log.ModifyLogName m, Monad m) => Log.ModifyLogName (DBT t w m) where
-    modifyLogNameSel how = DBT . mapReaderT (Log.modifyLogNameSel how) . runDBT
+allowWriteUnsafe :: (WithinWrite => a) -> a
+allowWriteUnsafe a = give WriteContextProvided a
 
-dbtToSqliteM :: MonadUnliftIO m => DBT t w m (DBT t w m a -> SqliteM a)
-dbtToSqliteM = do
-    UnliftIO unliftIO <- DBT $ lift askUnliftIO
-    return $ \(DBT action) ->
-        SqliteM . ReaderT $ \(_logger, conn) -> unliftIO (runReaderT action conn)
-
-sqliteMToDbt :: MonadIO m => SqliteM a -> DBT t w m a
-sqliteMToDbt (SqliteM action) =
-    DBT . ReaderT $ \conn -> liftIO $ runReaderT action (logger, conn)
-  where
-    logger _ = pass
-    -- logger = sqlDebugLogger
-
-instance MonadUnliftIO m =>
-         MonadBeam SqliteCommandSyntax Sqlite Connection (DBT t w m) where
-    -- We omit implementation of the following methods as soon as they work in IO only,
-    -- use dedicated 'DBT' runners instead ('runInsert' and others).
-    withDatabaseDebug = error "DBT.withDatabaseDebug: not implemented"
-    withDatabase = error "DBT.withDatabase: not implemented"
-    runNoReturn = error "DBT.runNoReturn: not implemented"
-    runReturningMany = error "DBT.runReturningMany: not implemented"
-
--- | Declares whether given 'DBT' actions should be performed within
--- transaction.
-data TransactionalContext = WithinTx | OutsideOfTransaction
-
--- | Declares whether given 'DBT' actions, if performed within transaction,
--- should be performed within /write/ transaction.
--- We cannot rely on sqlite itself detecting writing transactions, otherwise
--- "ErrorBusy: database is locked" errors are possible,
--- see https://stackoverflow.com/questions/30438595/sqlite3-ignores-sqlite3-busy-timeout
--- for details.
-data OperationType = Writing | Reading
+allowWriteTxUnsafe :: (WithinWriteTx => a) -> a
+allowWriteTxUnsafe a = allowWriteUnsafe $ allowTxUnsafe a
 
 ------------------------------------------------------------
 -- SQLite queries building
 ------------------------------------------------------------
 
-{- We rewrite runners as soon as it allows requiring write or transaction context.
+type MonadQuery m = (m ~ SqliteM)
+
+{- We rewrite runners as soon as it allows requiring write context.
 -}
 
 -- | Run select query.
 -- We abandon different 'runSelectReturningOne' and 'runSelectReturningList' versions
 -- for the sake of better unexpected behavior processing.
 runSelect
-    :: (MonadIO m, FromBackendRow Sqlite a)
-    => SqlSelect (Sql92SelectSyntax SqliteCommandSyntax) a -> DBT t w m [a]
-runSelect = sqliteMToDbt . Backend.runSelectReturningList
+    :: forall m cmd be hdl a.
+       (MonadBeam cmd be hdl m, IsSql92Syntax cmd, FromBackendRow be a)
+    => SqlSelect (Sql92SelectSyntax cmd) a -> m [a]
+runSelect = Query.runSelectReturningList
 
 -- | Run select query and modify fetched results.
 runSelectMap
-    :: (MonadIO m, FromBackendRow Sqlite a)
-    => (a -> b) -> SqlSelect (Sql92SelectSyntax SqliteCommandSyntax) a -> DBT t w m [b]
+    :: (MonadBeam cmd be hdl m, IsSql92Syntax cmd, FromBackendRow be a)
+    => (a -> b) -> SqlSelect (Sql92SelectSyntax cmd) a -> m [b]
 runSelectMap f = fmap (map f) . runSelect
 
 runInsert
-    :: MonadIO m
-    => SqlInsert (Sql92InsertSyntax SqliteCommandSyntax) -> DBT t 'Writing m ()
-runInsert = sqliteMToDbt . Backend.runInsert
+    :: (MonadBeam cmd be hdl m, IsSql92Syntax cmd, WithinWrite)
+    => SqlInsert (Sql92InsertSyntax cmd) -> m ()
+runInsert = Query.runInsert
 
 runInsertReturning
-    :: (MonadIO m, _)
+    :: (Beamable table, WithinWrite,
+        FromBackendRow be (table Identity),
+        Backend.MonadBeamInsertReturning cmd be hdl m)
     => DatabaseEntity be db (TableEntity table)
     -> SqlInsertValues _ (table (QExpr _ _))
-    -> DBT t 'Writing m [table Identity]
-runInsertReturning db = sqliteMToDbt . Backend.runInsertReturningList db
+    -> m [table Identity]
+runInsertReturning db = Backend.runInsertReturningList db
 
 runUpdate
-    :: MonadIO m
-    => SqlUpdate (Sql92UpdateSyntax SqliteCommandSyntax) tbl -> DBT t 'Writing m ()
-runUpdate = sqliteMToDbt . Backend.runUpdate
+    :: (MonadBeam cmd be hdl m, IsSql92Syntax cmd, WithinWrite)
+    => SqlUpdate (Sql92UpdateSyntax cmd) tbl -> m ()
+runUpdate = Query.runUpdate
 
 runDelete
-    :: MonadIO m
-    => SqlDelete (Sql92DeleteSyntax SqliteCommandSyntax) tbl -> DBT t 'Writing m ()
-runDelete = sqliteMToDbt . Backend.runDelete
+    :: (MonadBeam cmd be hdl m, IsSql92Syntax cmd, WithinWrite)
+    => SqlDelete (Sql92DeleteSyntax cmd) tbl -> m ()
+runDelete = Query.runDelete
 
 -- | For low-level operations.
-withConnection :: MonadIO m => (Connection -> IO a) -> DBT t w m a
-withConnection f = DBT $ ReaderT (liftIO . f)
+withConnection :: (Connection -> IO a) -> SqliteM a
+withConnection f = SqliteM . ReaderT $ \(_, conn) -> f conn
 
 ------------------------------------------------------------
--- DBT runners
+-- DB endpoints runners
 ------------------------------------------------------------
 
--- | Run 'DBT' without carying about whether it assumes to be run in transaction
--- or not.
-invokeUnsafe
-    :: (MonadUnliftIO m, HasCtx ctx m '[SQLiteDB])
-    => DBT t w m a -> m a
-invokeUnsafe (DBT action) =
-    borrowConnection $ runReaderT action
+type Query extraCtx a = extraCtx => SqliteM a
 
--- | Run 'DBT'.
+-- | Run DB action with all the missing constraints supplied as an argument.
 invoke
-    :: (MonadUnliftIO m, HasCtx ctx m '[SQLiteDB])
-    => DBT 'OutsideOfTransaction w m a -> m a
-invoke (DBT action) =
-    borrowConnection $ runReaderT action
+    :: forall a ctx m.
+       (MonadUnliftIO m, HasCtx ctx m '[SQLiteDB])
+    => Query WithinWrite a -> m a
+invoke = invokeUnsafe
 
--- | Run 'DBT' within a transaction.
+-- | Run DB action without carying about whether it assumes to be run in transaction.
+-- or not. All the missing constraints supplied as an argument
+invokeUnsafe
+    :: forall a ctx m.
+       (MonadUnliftIO m, HasCtx ctx m '[SQLiteDB])
+    => Query WithinWriteTx a -> m a
+invokeUnsafe action =
+    borrowConnection $ \conn ->
+        liftIO $ withDatabase conn $ do
+            allowWriteTxUnsafe action
+
+-- | Run DB action within a transaction.
 transactUsing
     :: (MonadUnliftIO m, HasCtx ctx m '[SQLiteDB])
-    => (forall x. Connection -> IO x -> IO x) -> DBT t w m a -> m a
-transactUsing withTransaction (DBT action) = do
-    UnliftIO unlift <- askUnliftIO
+    => (forall x. Connection -> IO x -> IO x)
+    -> Query () a
+    -> m a
+transactUsing withTransaction action =
     borrowConnection $ \conn ->
         liftIO . withTransaction conn $
-            unlift $ runReaderT action conn
+            withDatabase conn action
 
--- | Run 'DBT' within a transaction.
--- This function is polymorphic over @r@ on purpose, this way it cannot be
--- applied to @forall r m a. DBT t m a@. If you encounter an error due to this,
--- you are probably doing something wrong (@martoon).
+-- | Run DB action within a transaction with all the missing constraints supplied as an
+-- argument.
 transactR
-    :: forall t m ctx a.
-       (MonadUnliftIO m, HasCtx ctx m '[SQLiteDB])
-    => RequiresTransaction t => DBT t 'Reading m a -> m a
-transactR = transactUsing Backend.withTransaction
+    :: (MonadUnliftIO m, HasCtx ctx m '[SQLiteDB])
+    => Query WithinTx a
+    -> m a
+transactR action =
+    allowTxUnsafe $ transactUsing Backend.withTransaction action
 
--- | Run 'DBT' within a writing transaction.
+-- | Run DB action within a writing transaction with all the missing constraints supplied
+-- as an argument.
 transactW
-    :: forall t w m ctx a.
-       (MonadUnliftIO m, HasCtx ctx m '[SQLiteDB])
-    => (RequiresTransaction t, RequiresWriting w) => DBT t w m a -> m a
-transactW = transactUsing Backend.withImmediateTransaction
+    :: (MonadUnliftIO m, HasCtx ctx m '[SQLiteDB])
+    => Query WithinWriteTx a
+    -> m a
+transactW action =
+    allowWriteTxUnsafe $
+        transactUsing Backend.withImmediateTransaction action
 
--- | Helps to prevent using 'transact' when 'invoke' is enough.
-class RequiresTransaction (t :: TransactionalContext)
-instance RequiresTransaction 'WithinTx
+------------------------------------------------------------
+-- Orphans
+------------------------------------------------------------
 
--- | Helps to prevent using 'transactW' when 'transact' is enough.
-class RequiresWriting (w :: OperationType)
-instance RequiresWriting 'Writing
+deriving instance MonadThrow SqliteM
+deriving instance MonadCatch SqliteM
 
 ------------------------------------------------------------
 -- Misc
@@ -362,13 +328,6 @@ sqlDebugLogger msg =
     , msg
     ]
 
--- | Enables SQLite tracing locally. For debug purposes.
---
--- Note: if any trace handler was set globally, it will be lost after that.
-traced :: MonadUnliftIO m => DBT t w m a -> DBT t w m a
-traced action = do
-    conn <- DBT ask
-    UIO.bracket_
-        (liftIO $ Backend.setTrace conn (Just $ sqlDebugLogger . toString))
-        (liftIO $ Backend.setTrace conn Nothing)
-        action
+-- | Enables SQL queries tracing locally. For debug purposes.
+traced :: MonadUnliftIO m => SqliteM a -> SqliteM a
+traced = SqliteM . local (\(_logger, conn) -> (sqlDebugLogger, conn)) . runSqliteM

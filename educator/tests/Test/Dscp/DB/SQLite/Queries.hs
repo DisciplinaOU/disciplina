@@ -19,30 +19,30 @@ spec_Instances = do
     describe "Basic database operations" $ do
         describe "Courses" $ do
             it "Course does not exist before it is created" $
-                sqliteProperty $ \courseId -> do
+                sqliteProperty $ \_ctx courseId -> do
                     isThere <- DB.existsCourse courseId
                     return (not isThere)
 
             it "Course does exist after it is created" $
-                sqliteProperty $ \courseId -> do
+                sqliteProperty $ \_ctx courseId -> do
                     _       <- DB.createCourse (simpleCourse courseId)
                     isThere <- DB.existsCourse courseId
 
                     return isThere
 
             it "Can create unique courses relying on autoincrement" $
-                sqliteProperty $ \n -> do
+                sqliteProperty $ \_ctx n -> do
                     ids <- replicateM n $ DB.createCourse nullCourse
                     return $ allUniqueOrd ids
 
         describe "Students" $ do
             it "Student does not exist before she is created" $
-                sqliteProperty $ \student -> do
+                sqliteProperty $ \_ctx student -> do
                     isThere <- DB.existsStudent student
                     return (not isThere)
 
             it "Student does exist after she is created" $
-                sqliteProperty $ \student -> do
+                sqliteProperty $ \_ctx student -> do
                     _       <- DB.createStudent student
                     isThere <- DB.existsStudent student
 
@@ -50,7 +50,7 @@ spec_Instances = do
 
         describe "Assignments" $ do
             it "Assignment is created and retrieved by hash" $
-                sqliteProperty $ \assignment -> do
+                sqliteProperty $ \_ctx assignment -> do
 
                     _              <- DB.createCourse    (simpleCourse $ assignment^.aCourseId)
                     assignmentHash <- DB.createAssignment assignment
@@ -59,20 +59,20 @@ spec_Instances = do
                     return (assignment' == Just assignment)
 
             it "Assignment is not created if course does not exist" $
-                sqliteProperty $ \(assignment) -> do
+                sqliteProperty $ \_ctx (assignment) -> do
                     throws @DomainError $ do
                         _ <- DB.createAssignment assignment
                         return ()
 
         describe "Submissions" $ do
             it "Submission is not created unless Assignment exist" $
-                sqliteProperty $ \submission -> do
+                sqliteProperty $ \_ctx submission -> do
                     throws @DomainError $ do
                         _ <- DB.createSignedSubmission submission
                         return ()
 
             it "Submission is not created unless Student exist" $
-                sqliteProperty $ \
+                sqliteProperty $ \_ctx
                     ( delayedGen (genCoreTestEnv simpleCoreTestParams) -> env
                     ) -> do
                     let assignment    = tiOne $ cteAssignments env
@@ -88,7 +88,7 @@ spec_Instances = do
                         return ()
 
             it "Submission is not created unless StudentAssignment exist" $
-                sqliteProperty $ \
+                sqliteProperty $ \_ctx
                     ( delayedGen (genCoreTestEnv simpleCoreTestParams) -> env
                     ) -> do
                     let assignment    = tiOne $ cteAssignments env
@@ -108,7 +108,7 @@ spec_Instances = do
 
         describe "Transactions" $ do
             it "Transaction is created if all deps exist" $
-                sqliteProperty $ \
+                sqliteProperty $ \_ctx
                     ( delayedGen (genCoreTestEnv simpleCoreTestParams) -> env
                     ) -> do
                     let assignment    = tiOne $ cteAssignments env
@@ -133,7 +133,7 @@ spec_Instances = do
 
     describe "Concrete operations from domain" $ do
         it "getStudentCourses/enrollStudentToCourse" $ do
-            sqliteProperty $ \
+            sqliteProperty $ \_ctx
                 (student,
                  delayedGen (vectorUnique 3)
                     -> [course1, course2, course3]
@@ -155,7 +155,7 @@ spec_Instances = do
                 return (sort (map getId courses) == sort courseIds')
 
         it "getStudentAssignments" $ do
-            sqliteProperty $ \
+            sqliteProperty $ \_ctx
                 ( student
                 , (delayedGen (vectorUnique 2)
                     -> [course1, course2])
@@ -204,7 +204,7 @@ spec_Instances = do
                             (assignments1 <> assignments2) `equal` toHer
 
         it "submitAssignment" $
-            sqliteProperty $ \
+            sqliteProperty $ \_ctx
                 ( delayedGen (genCoreTestEnv simpleCoreTestParams) -> env
                 ) -> do
                 let assignment    = tiOne $ cteAssignments env
@@ -226,7 +226,7 @@ spec_Instances = do
                 return (sub' == Just sigSubmission)
 
         it "getGradesForCourseAssignments" $
-            sqliteProperty $ \
+            sqliteProperty $ \_ctx
                 ( delayedGen (genCoreTestEnv simpleCoreTestParams) -> env
                 , course2
                 ) -> do
@@ -274,7 +274,7 @@ spec_Instances = do
 
     describe "Retrieval of proven transactions" $ do
         it "getProvenStudentTransactions" $
-            sqliteProperty $ \
+            sqliteProperty $ \ctx
                 ( delayedGen (genCoreTestEnv simpleCoreTestParams
                               `suchThat` ((>= 3) . tiNum . ctePrivateTxs)
                              ) -> env
@@ -302,7 +302,7 @@ spec_Instances = do
                         ptId <- DB.createTransaction trans
                         return ptId
 
-                    mblock <- DB.createPrivateBlock Nothing
+                    mblock <- DB.createPrivateBlock ctx Nothing
                     let !_ = mblock ?: error "No private block created"
 
                     transPacksSince <- DB.getProvenStudentTransactions

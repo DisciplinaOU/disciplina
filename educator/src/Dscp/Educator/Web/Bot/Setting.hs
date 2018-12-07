@@ -254,7 +254,7 @@ botProvideCourses student courses = do
 botProvideInitSetting :: (BotWorkMode ctx m, HasBotSetting) => Student -> m ()
 botProvideInitSetting student = do
     maybePresent $ do
-        void . invoke $ createStudent student
+        invoke @() $ void $ createStudent student
         botProvideCourses student (bsBasicCourses botSetting)
         botLog . logInfo $ "Registered student " +| student |+ ""
 
@@ -277,4 +277,4 @@ botGradeSubmission ssub = do
             , _ptGrade = grade
             , _ptTime = time
             }
-    maybePresent . transactW $ createTransaction ptx
+    maybePresent $ transactW $ createTransaction ptx
