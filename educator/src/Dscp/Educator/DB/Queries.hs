@@ -126,7 +126,7 @@ getStudentCourses student' =
 
 -- | How can a student enroll to a course?
 enrollStudentToCourse
-    :: (MonadQuery m, WithinWriteTx)
+    :: (MonadQuery m, WithinTx)
     => Id Student -> Id Course -> m ()
 enrollStudentToCourse student course = do
     -- TODO: try foreign constraints check
@@ -150,7 +150,7 @@ getStudentAssignments student' course' = do
 
 -- | How can a student submit a submission for assignment?
 submitAssignment
-    :: (MonadQuery m, WithinWriteTx)
+    :: (MonadQuery m, WithinTx)
     => SignedSubmission -> m (Id SignedSubmission)
 submitAssignment = createSignedSubmission
 
@@ -311,7 +311,7 @@ getPrivateBlocksAfterHash ctx phHash = do
     forM @Maybe midx getPrivateBlocksAfter
 
 createPrivateBlock
-    :: (MonadQuery m, HasLens' ctx (KeyResources EducatorNode), WithinWriteTx)
+    :: (MonadQuery m, HasLens' ctx (KeyResources EducatorNode), WithinTx)
     => ctx -> Maybe ATGDelta -> m (Maybe PrivateBlockHeader)
 createPrivateBlock ctx delta = runMaybeT $ do
     (prev, idx) <- lift (getLastBlockIdAndIdx ctx)
@@ -356,7 +356,7 @@ createPrivateBlock ctx delta = runMaybeT $ do
     return hdr
 
 createSignedSubmission
-    :: (MonadQuery m, WithinWriteTx)
+    :: (MonadQuery m, WithinTx)
     => SignedSubmission -> m (Id SignedSubmission)
 createSignedSubmission sigSub = do
     let
@@ -385,7 +385,7 @@ createSignedSubmission sigSub = do
     return submissionHash
 
 setStudentAssignment
-    :: (MonadQuery m, WithinWriteTx)
+    :: (MonadQuery m, WithinTx)
     => Id Student -> Id Assignment -> m ()
 setStudentAssignment studentId assignmentId = do
     _          <- existsStudent studentId    `assertExists`      StudentDomain    studentId
@@ -425,7 +425,7 @@ nullCourse = CourseDetails{ cdCourseId = Nothing, cdDesc = "", cdSubjects = [] }
 simpleCourse :: Course -> CourseDetails
 simpleCourse i = nullCourse{ cdCourseId = Just i }
 
-createCourse :: (MonadQuery m, WithinWriteTx) => CourseDetails -> m (Id Course)
+createCourse :: (MonadQuery m, WithinTx) => CourseDetails -> m (Id Course)
 createCourse params = do
     course <- case cdCourseId params of
         Nothing -> do
@@ -465,7 +465,7 @@ existsStudent = existsWithPk (esStudents es)
 existsSubmission :: MonadQuery m => Id Submission -> m Bool
 existsSubmission = existsWithPk (esSubmissions es)
 
-createStudent :: (MonadQuery m, WithinWrite) => Student -> m (Id Student)
+createStudent :: (MonadQuery m) => Student -> m (Id Student)
 createStudent student = do
     rewrapAlreadyExists (StudentDomain student) $
         runInsert . insert (esStudents es) . insertValue $
@@ -475,7 +475,7 @@ createStudent student = do
     return student
 
 createAssignment
-    :: (MonadQuery m, WithinWriteTx)
+    :: (MonadQuery m, WithinTx)
     => Assignment -> m (Id Assignment)
 createAssignment assignment = do
     let courseId = assignment^.aCourseId
@@ -507,7 +507,7 @@ getSignedSubmission
 getSignedSubmission = selectByPk submissionFromRow (esSubmissions es)
 
 createTransaction
-    :: (MonadQuery m, WithinWriteTx)
+    :: (MonadQuery m, WithinTx)
     => PrivateTx -> m (Id PrivateTx)
 createTransaction trans = do
     let ptid    = trans^.idOf

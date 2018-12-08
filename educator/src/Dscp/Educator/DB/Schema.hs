@@ -12,10 +12,11 @@ module Dscp.Educator.DB.Schema
 import Prelude hiding (_1, _2)
 
 import Data.Time.Clock (UTCTime)
+import Database.Beam.Backend (runNoReturn)
+import Database.Beam.Postgres (Pg)
+import Database.Beam.Postgres.Syntax (PgCommandSyntax (..), PgCommandType (..), emit)
 import Database.Beam.Schema.Tables (Beamable, C, Database, DatabaseSettings, Table (..),
                                     TableEntity, defaultDbSettings)
-import Database.SQLite.Simple.Internal (Connection (..))
-import Database.SQLite3 (exec)
 
 import Dscp.Core
 import Dscp.Crypto
@@ -249,14 +250,13 @@ schemaDefinition = [qFile|./database/schema.sql|]
 
 -- | Settings set on per-connection basis.
 schemaSettings :: IsString s => s
-schemaSettings = [qFile|./database/settings.sql|]
+schemaSettings = ";"  -- [qFile|./database/settings.sql|]  TODO: remove if isn't needed
 
 -- | Create tables if absent.
-ensureSchemaIsSetUp :: MonadIO m => Connection -> m ()
-ensureSchemaIsSetUp (Connection db) = do
-    liftIO $ exec db schemaDefinition
+ensureSchemaIsSetUp :: Pg ()
+ensureSchemaIsSetUp =
+    runNoReturn $ PgCommandSyntax PgCommandTypeDataUpdate $ emit schemaDefinition
 
 -- | Apply schema settings, should be invoked for every new connection.
-applySchemaSettings :: MonadIO m => Connection -> m ()
-applySchemaSettings (Connection db) =
-    liftIO $ exec db schemaSettings
+applySchemaSettings :: MonadIO m => m ()
+applySchemaSettings = pass

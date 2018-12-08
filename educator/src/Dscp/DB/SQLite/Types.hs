@@ -1,15 +1,14 @@
 module Dscp.DB.SQLite.Types
        ( -- * SQLite bindings
-         SQLiteRealParams (..)
-       , srpPathL
-       , srpConnNumL
-       , srpMaxPendingL
-       , SQLiteDBMode (..)
-       , _SQLiteReal
-       , _SQLiteInMemory
-       , SQLiteDB (..)
-       , SQLiteParams (..)
-       , sdpModeL
+         PostgresRealParams (..)
+       , prpConnStringL
+       , prpConnNumL
+       , prpMaxPendingL
+       , PostgresDBMode (..)
+       , _PostgresReal
+       , SQL (..)
+       , PostgresParams (..)
+       , ppModeL
        ) where
 
 import Control.Concurrent.Chan (Chan)
@@ -17,61 +16,54 @@ import Control.Lens (makeLensesWith, makePrisms)
 import Data.Aeson (FromJSON (..))
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveFromJSON)
-import Database.SQLite.Simple (Connection)
+import Database.PostgreSQL.Simple (Connection)
 
 import Dscp.Util
 
 ----------------------------------------------------------
--- SQLite bindings
+-- Postgres bindings
 ----------------------------------------------------------
 
-data SQLiteRealParams = SQLiteRealParams
-    { srpPath       :: !FilePath
+data PostgresRealParams = PostgresRealParams
+    { prpConnString :: !Text
       -- ^ Path to the file with database.
-    , srpConnNum    :: !(Maybe Int)
+    , prpConnNum    :: !(Maybe Int)
       -- ^ Connections pool size.
-    , srpMaxPending :: !Int
+    , prpMaxPending :: !Int
       -- ^ Maximal number of requests waiting for a free connection.
     } deriving (Show, Eq)
 
-makeLensesWith postfixLFields ''SQLiteRealParams
+makeLensesWith postfixLFields ''PostgresRealParams
 
 -- | Database mode.
-data SQLiteDBMode
-    = SQLiteReal !SQLiteRealParams
-      -- ^ In given file using given number of connections
-    | SQLiteInMemory
-      -- ^ In memory
-    deriving (Show, Eq)
+data PostgresDBMode
+    = PostgresReal !PostgresRealParams
+      -- ^ In given file using given number of connections.
+    deriving (Show, Eq, Generic)
 
-makePrisms ''SQLiteDBMode
+makePrisms ''PostgresDBMode
 
-data SQLiteParams = SQLiteParams
-    { sdpMode :: SQLiteDBMode
+data PostgresParams = PostgresParams
+    { ppMode :: PostgresDBMode
     } deriving (Show, Eq)
 
-makeLensesWith postfixLFields ''SQLiteParams
+makeLensesWith postfixLFields ''PostgresParams
 
-data SQLiteDB = SQLiteDB
-    { sdConnPool   :: Chan Connection
+-- | Database context.
+data SQL = SQL
+    { sqlConnPool   :: Chan Connection
       -- ^ Connections to given database. Each connection is used no more than
-      -- one thread at once - requirement of SQLite.
-    , sdConnNum    :: Int
+      -- one thread at once - requirement of the database engine.
+    , sqlConnNum    :: Int
       -- ^ Number of connections in pool
-    , sdPendingNum :: TVar Int
+    , sqlPendingNum :: TVar Int
       -- ^ Number of threads waiting for free connection.
-    , sdMaxPending :: Int
+    , sqlMaxPending :: Int
       -- ^ Allowed number of pending threads.
     }
 
-deriveFromJSON defaultOptions ''SQLiteRealParams
+deriveFromJSON defaultOptions ''PostgresRealParams
 
--- | Isomorphism between @Maybe SQLiteRealParams@ and 'SQLiteDBMode'
-maybeToSQLiteDBLoc :: Maybe SQLiteRealParams -> SQLiteDBMode
-maybeToSQLiteDBLoc Nothing       = SQLiteInMemory
-maybeToSQLiteDBLoc (Just params) = SQLiteReal params
+instance FromJSON PostgresDBMode
 
-instance FromJSON SQLiteDBMode where
-    parseJSON = fmap maybeToSQLiteDBLoc . parseJSON
-
-deriveFromJSON defaultOptions ''SQLiteParams
+deriveFromJSON defaultOptions ''PostgresParams

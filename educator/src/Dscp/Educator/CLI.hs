@@ -4,7 +4,7 @@
 -- | CLI for educator.
 
 module Dscp.Educator.CLI
-    ( sqliteParamsParser
+    ( postgresParamsParser
     , educatorWebConfigParser
     , educatorConfigParser
     , publishingPeriodParser
@@ -24,17 +24,17 @@ import Dscp.Educator.Web.Bot.Params
 import Dscp.Educator.Web.Config
 import Dscp.Witness.CLI (witnessConfigParser)
 
-sqliteParamsParser :: ModParser SQLiteParams
-sqliteParamsParser = over (sdpModeL._SQLiteReal) <$>
-    srpPathL       ..: pathParser <*<
-    srpConnNumL    ..: connNumParser <*<
-    srpMaxPendingL ..: maxPendingParser
+postgresParamsParser :: ModParser PostgresParams
+postgresParamsParser = over (ppModeL._PostgresReal) <$>
+    prpConnStringL ..: connParser <*<
+    prpConnNumL    ..: connNumParser <*<
+    prpMaxPendingL ..: maxPendingParser
   where
-    pathParser = strOption $
-        long "sql-path" <>
-        metavar "FILEPATH" <>
-        help "Path to database directory for educator's private data. If not \
-             \specified, 'educator-db' directory is used."
+    connParser = strOption $
+        long "sql-conn-str" <>
+        metavar "TEXT" <>
+        help "A libpq connection string. Behavior would be exactly as specified for this \
+             \method: https://hackage.haskell.org/package/postgresql-simple-0.6/docs/Database-PostgreSQL-Simple.html#v:connectPostgreSQL"
     connNumParser = fmap Just . option auto $
         long "sql-conns" <>
         metavar "INTEGER" <>
@@ -108,10 +108,9 @@ educatorConfigParser :: OptModParser EducatorConfig
 educatorConfigParser =
     uplift witnessConfigParser <*<
     #educator .:<
-        (#db %:: sqliteParamsParser <*<
+        (#db %:: postgresParamsParser <*<
          #keys %:: educatorKeyParamsParser <*<
          #api .:< educatorWebConfigParser <*<
          #publishing .:<
             (#period .:: publishingPeriodParser)
         )
-

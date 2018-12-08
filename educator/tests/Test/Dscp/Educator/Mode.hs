@@ -33,10 +33,12 @@ import Dscp.Util.HasLens
 import Dscp.Util.Test
 import Dscp.Witness
 
+import Test.Dscp.DB.SQLite.Real.Mode
+
 type Trololo m = (MonadThrow m, MonadCatch m)
 
 data TestEducatorCtx = TestEducatorCtx
-    { _tecEducatorDb       :: SQLiteDB
+    { _tecEducatorDb       :: SQL
     , _tecWitnessDb        :: DB.Plugin
     , _tecKeys             :: KeyResources EducatorNode
     , _tecWitnessKeys      :: KeyResources WitnessNode
@@ -55,32 +57,33 @@ runTestSQLiteM :: TestEducatorM a -> IO a
 runTestSQLiteM action =
     withEducatorConfig testEducatorConfig $
     withWitnessConfig (rcast testEducatorConfig) $
+    withTempPostgres $ \testDb ->
+    bracket (openDB testDb) closePostgresDB $ \db ->
     runRIO _tecLogging $ do
         _tecWitnessKeys <- mkCommitteeStore (CommitteeParamsOpen 0)
         _tecWitnessDb <- PureDB.plugin <$> liftIO PureDB.newCtxVar
         _tecWitnessVariables <- mkTestWitnessVariables (_tecWitnessKeys ^. krPublicKey)
                                                        _tecWitnessDb
         let _tecKeys = KeyResources $ mkSecretKeyData testSomeGenesisSecret
-        bracket openDB closeSQLiteDB $ \_tecEducatorDb -> do
-            let ctx = TestEducatorCtx{..}
-            runRIO ctx $ do
-                  markWithinWriteSDLockUnsafe applyGenesisBlock
-                  action
+        let _tecEducatorDb = db
+        let ctx = TestEducatorCtx{..}
+        runRIO ctx $ do
+              markWithinWriteSDLockUnsafe applyGenesisBlock
+              action
   where
-    dbParams = SQLiteParams SQLiteInMemory
-    openDB = do
-        db <- openSQLiteDB dbParams
+    openDB testDb = do
+        db <- openPostgresDB (testRealPostgresParams testDb)
         prepareEducatorSchema db
         return db
     _tecLogging = testLogging
 
 educatorPropertyM
     :: Testable prop
-    => ((HasEducatorConfig, WithinWriteTx) => PropertyM TestEducatorM prop)
+    => ((HasEducatorConfig, WithinTx) => PropertyM TestEducatorM prop)
     -> Property
 educatorPropertyM action =
     monadic (ioProperty . runTestSQLiteM)
-            (withEducatorConfig testEducatorConfig $ void $ allowWriteTxUnsafe action >>= stop)
+            (withEducatorConfig testEducatorConfig $ void $ allowTxUnsafe action >>= stop)
 
 educatorProperty
     :: (Testable prop, Show a, Arbitrary a)
@@ -91,7 +94,7 @@ educatorProperty action =
 
 sqliteProperty
     :: (Testable prop, Show a, Arbitrary a, MonadQuery qm)
-    => (WithinWriteTx => TestEducatorCtx -> a -> qm prop) -> Property
+    => (WithinTx => TestEducatorCtx -> a -> qm prop) -> Property
 sqliteProperty action =
     educatorProperty $ \input -> do
         ctx <- ask
@@ -99,14 +102,13 @@ sqliteProperty action =
 
 sqlitePropertyM
     :: (MonadQuery qm, Testable prop)
-    => (WithinWriteTx => TestEducatorCtx -> PropertyM qm prop) -> Property
+    => (WithinTx => TestEducatorCtx -> PropertyM qm prop) -> Property
 sqlitePropertyM action =
     monadic (\getProperty -> ioProperty . runTestSQLiteM $
                 ask >>= \ctx -> invoke (runReaderT getProperty ctx)) $
             do
               ctx <- lift ask
-              res <- hoistPropertyM lift (`runReaderT` ctx) $
-                         allowWriteTxUnsafe (action ctx)
+              res <- hoistPropertyM lift (`runReaderT` ctx) $ allowTxUnsafe (action ctx)
               void $ stop res
 
 orIfItFails :: MonadCatch m => m a -> a -> m a

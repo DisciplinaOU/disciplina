@@ -17,6 +17,8 @@ module Dscp.MultiEducator.Config
 
 import Control.Lens ((?~))
 import Data.Reflection (Given, give, given)
+import Database.PostgreSQL.Simple (ConnectInfo (connectDatabase), defaultConnectInfo,
+                                   postgreSQLConnectionString)
 import Loot.Config ((:::), (::<), ConfigKind (Final, Partial), ConfigRec, upcast)
 import Time (Second, Time)
 
@@ -29,7 +31,7 @@ import Dscp.Witness.Config
 
 type MultiEducatorConfig = WitnessConfig ++
     '[ "educator" ::<
-       '[ "db" ::: SQLiteParams
+       '[ "db" ::: PostgresParams
         , "keys" ::: MultiEducatorKeyParams
         , "api" ::< EducatorWebConfig
         , "publishing" ::<
@@ -48,10 +50,12 @@ defaultMultiEducatorConfig = upcast defaultWitnessConfig
     & sub #educator . option #db ?~ defSqliteParams
     & sub #educator . sub #api . option #botParams ?~ defBotParams
   where
-    defSqliteParams = SQLiteParams $ SQLiteReal $ SQLiteRealParams
-        { srpPath = "educator-db"
-        , srpConnNum = Nothing
-        , srpMaxPending = 200
+    defSqliteParams = PostgresParams $ PostgresReal $ PostgresRealParams
+        { prpConnString = decodeUtf8 $ postgreSQLConnectionString defaultConnectInfo
+            { connectDatabase = "educator"
+            }
+        , prpConnNum = Nothing
+        , prpMaxPending = 200
         }
     defBotParams = EducatorBotParams False "Memes generator" 0
 

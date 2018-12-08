@@ -30,20 +30,20 @@ studentApiHandlers student =
       -- Courses
 
       sGetCourses = \isEnrolledF _onlyCount ->
-        transactR $ studentGetCourses student isEnrolledF
+        transact $ studentGetCourses student isEnrolledF
 
     , sGetCourse = \course ->
-        transactR $ studentGetCourse student course
+        transact $ studentGetCourse student course
 
       -- Assignments
 
     , sGetAssignments = \afCourse afDocType afIsFinal _onlyCount ->
-        transactR $
+        transact $
             studentGetAssignments student
                 def{ afCourse, afDocType, afIsFinal }
 
     , sGetAssignment = \assignH ->
-        transactR $ studentGetAssignment student assignH
+        transact $ studentGetAssignment student assignH
 
       -- Submissions`
 
@@ -59,12 +59,12 @@ studentApiHandlers student =
         invoke $ studentGetSubmission student subH
 
     , sDeleteSubmission = \subH ->
-        transactW $ commonDeleteSubmission subH (Just student)
+        transact $ commonDeleteSubmission subH (Just student)
 
       -- Proofs
 
     , sGetProofs = \pfSince _onlyCount ->
-        transactR $ commonGetProofs def{ pfSince, pfStudent = Just student }
+        transact $ commonGetProofs def{ pfSince, pfStudent = Just student }
     }
 
 convertStudentApiHandler

@@ -9,9 +9,8 @@ module Dscp.DB.SQLite.Error
     , asReferenceInvalidError
     ) where
 
-import qualified Data.Text as T
 import qualified Data.Text.Buildable
-import Database.SQLite.Simple (Error (..), SQLError (..))
+import Database.PostgreSQL.Simple.Errors (ConstraintViolation (..))
 import Fmt ((+|), (|+))
 import qualified Text.Show
 
@@ -59,18 +58,14 @@ instance Exception SQLRequestsNumberExceeded
 
 -- | Matches on errors declaring violation of UNIQUE constraint,
 -- returns name of fields on which constraint was violated.
-asAlreadyExistsError :: SQLError -> Maybe Text
+asAlreadyExistsError :: ConstraintViolation -> Maybe ByteString
 asAlreadyExistsError err = do
-    SQLError ErrorConstraint details _ <- pure err
-    let pat = "UNIQUE constraint failed"
-    guard $ pat `T.isPrefixOf` details
-    return $ T.drop (length pat) details
+    UniqueViolation constr <- pure err
+    return constr
 
 -- | Matches on errors which declare violation of FOREIGN KEY constraint,
 -- returns descrition of violated constraint.
-asReferenceInvalidError :: SQLError -> Maybe Text
+asReferenceInvalidError :: ConstraintViolation -> Maybe (ByteString, ByteString)
 asReferenceInvalidError err = do
-    SQLError ErrorConstraint details _ <- pure err
-    let pat = "FOREIGN KEY constraint failed"
-    guard $ pat `T.isPrefixOf` details
-    return $ T.drop (length pat) details
+    ForeignKeyViolation tbl constr <- pure err
+    return (tbl, constr)

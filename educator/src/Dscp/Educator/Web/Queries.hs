@@ -77,7 +77,7 @@ isGradedSubmission submissionH =
 -- If student is supplied, then submissions owned by other students won't be
 -- visible/affected.
 commonDeleteSubmission
-    :: (MonadEducatorWebQuery m, WithinWriteTx)
+    :: (MonadEducatorWebQuery m, WithinTx)
     => Hash Submission
     -> Maybe Student
     -> m ()

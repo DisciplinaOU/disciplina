@@ -7,15 +7,19 @@
 module Test.Dscp.DB.SQLite.Real.Transactions where
 
 import qualified Control.Concurrent.STM as STM
-import qualified Data.List as L
-import Database.SQLite.Simple (Only (..), execute, query)
+import Database.Beam.Migrate (CheckedDatabaseSettings, defaultMigratableDbSettings, unCheckDatabase)
+import Database.Beam.Migrate.Simple (createSchema)
+import Database.Beam.Postgres (PgCommandSyntax, Postgres)
+import Database.Beam.Postgres.Migrate (migrationBackend)
+import Database.Beam.Schema.Tables (Beamable, C, Database, DatabaseSettings, Table (..),
+                                    TableEntity)
 import Loot.Base.HasLens (HasCtx)
-import Text.InterpolatedString.Perl6 (q)
 import UnliftIO (MonadUnliftIO)
 import qualified UnliftIO.Async as UIO
 
 import Dscp.DB.SQLite
 import Dscp.Rio
+import Dscp.Util
 import Dscp.Util.Test
 
 import Test.Dscp.DB.SQLite.Real.Mode
@@ -24,44 +28,56 @@ type MonadMoney m = (MonadIO m, MonadCatch m, MonadUnliftIO m)
 
 type Money = Int
 
+data AccountRowT f = AccountRow
+    { arMoney   :: C f Money
+    } deriving (Generic)
+
+type AccountRow = AccountRowT Identity
+
+instance Table AccountRowT where
+    newtype PrimaryKey AccountRowT f = AccountRowId (C f Int)
+        deriving (Generic)
+    primaryKey = AccountRowId . arMoney
+
+instance Beamable AccountRowT
+instance Beamable (PrimaryKey AccountRowT)
+
+data BankSchema f = BankSchema
+    { bsAccounts :: f (TableEntity AccountRowT)
+    } deriving (Generic)
+
+instance Database be BankSchema
+
+bankCheckedSchema :: CheckedDatabaseSettings Postgres BankSchema
+bankCheckedSchema = defaultMigratableDbSettings @PgCommandSyntax
+
+bankSchema :: DatabaseSettings Postgres BankSchema
+bankSchema = unCheckDatabase bankCheckedSchema
+
 prepareSchema :: MonadQuery m => m ()
-prepareSchema =
-    forM_ [createTableQuery, addAccountQuery] $
-        \que -> withConnection $ \conn -> execute conn que ()
-  where
-    createTableQuery = [q|
-        create table if not exists Accounts (
-            amount    INTEGER
-        );
-        |]
-    addAccountQuery = [q|
-        insert into Accounts values (0);
-        |]
+prepareSchema = do
+    createSchema migrationBackend bankCheckedSchema
+    runInsert . insert (bsAccounts bankSchema) $ insertValue (AccountRow 0)
 
 getMoney :: MonadQuery m => m Money
-getMoney = withConnection $ \conn ->
-           fromOnly . L.head <$> query conn queryText ()
-  where
-    queryText = [q|
-        select amount from Accounts
-    |]
+getMoney = fmap oneOrError . runSelectMap arMoney . select $ all_ (bsAccounts bankSchema)
 
 setMoney :: MonadQuery m => Money -> m ()
-setMoney val = withConnection $ \conn -> execute conn queryText (Only val)
-  where
-    queryText = [q|
-        update Accounts set amount = ?
-    |]
+setMoney val =
+    runUpdate $ update
+        (bsAccounts bankSchema)
+        (\acc -> [ arMoney acc <-. val_ val ])
+        (\_ -> val_ True)
 
-addMoney :: (MonadUnliftIO m, HasCtx ctx m '[SQLiteDB]) => m ()
+addMoney :: (MonadUnliftIO m, HasCtx ctx m '[SQL]) => m ()
 addMoney =
-    transactW $ do
+    transact $ do
         money <- getMoney
         setMoney (money + 1)
 
-launchMoneySQLiteMode :: RIO SQLiteDB a -> IO a
+launchMoneySQLiteMode :: RIO SQL a -> IO a
 launchMoneySQLiteMode action =
-    launchSQLiteMode $ invoke prepareSchema >> action
+    launchPostgresMode $ invoke prepareSchema >> action
 
 spec_SQLiteWrapper :: Spec
 spec_SQLiteWrapper = do

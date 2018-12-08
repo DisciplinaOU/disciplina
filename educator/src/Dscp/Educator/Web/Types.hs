@@ -52,7 +52,7 @@ type MonadEducatorWebQuery m =
 
 type MonadEducatorWeb ctx m =
     ( WitnessWorkMode ctx m
-    , HasCtx ctx m '[SQLiteDB, KeyResources EducatorNode]
+    , HasCtx ctx m '[SQL, KeyResources EducatorNode]
     )
 
 ---------------------------------------------------------------------------

@@ -22,8 +22,8 @@ spec_Publishing = describe "Private blocks publishing" $ do
         let txs = ordNub . tiList $ ctePrivateTxs env
 
         block <- lift $ do
-            transactW $ prepareAndCreateSubmissions env
-            transactW $ forM_ txs createTransaction
+            transact $ prepareAndCreateSubmissions env
+            transact $ forM_ txs createTransaction
             block <- nothingToPanic "No block created" <$> dumpPrivateBlock
             updateMempoolWithPublications
                 >>= bool (error "No mempool update??") pass
@@ -40,9 +40,9 @@ spec_Publishing = describe "Private blocks publishing" $ do
         let txs = Exts.fromList . ordNub . tiList $ ctePrivateTxs env
 
         blocks <- lift $ do
-            transactW $ prepareAndCreateSubmissions env
+            transact $ prepareAndCreateSubmissions env
             blocks <- forM txs $ \tx -> do
-                _ <- transactW $ createTransaction tx
+                _ <- transact $ createTransaction tx
                 nothingToPanic "No block created" <$> dumpPrivateBlock
             _ <- updateMempoolWithPublications
             return blocks

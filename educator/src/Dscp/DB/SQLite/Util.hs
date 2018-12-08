@@ -44,8 +44,7 @@ import qualified Database.Beam.Query as Beam
 import qualified Database.Beam.Query.Internal as Beam
 import Database.Beam.Schema as BeamReexport (DatabaseSettings)
 import qualified Database.Beam.Schema as Beam
-import Database.Beam.Schema.Tables (DatabaseEntity, FieldsFulfillConstraint, PrimaryKey,
-                                    TableEntity)
+import Database.Beam.Schema.Tables (DatabaseEntity, PrimaryKey, TableEntity)
 import qualified GHC.Generics as G
 import GHC.TypeLits (ErrorMessage (Text), TypeError)
 
@@ -188,18 +187,8 @@ existsWithPk tbl key =
 
 -- | Quick way to delete a single entiry refered by the given primary key.
 deleteByPk
-    :: (Beam.MonadBeam cmd be hdl m, Beam.IsSql92Syntax cmd, Beam.Table table, WithinWrite,
-        PrimaryKeyWrapper (PrimaryKey table Identity) pk,
-        FieldsFulfillConstraint
-                    ((Beam.HasSqlValueSyntax
-                      (Beam.Sql92ExpressionValueSyntax
-                        (Beam.Sql92SelectTableExpressionSyntax
-                            (Beam.Sql92SelectSelectTableSyntax
-                              (Beam.Sql92SelectSyntax cmd)))))) (PrimaryKey table),
-        FieldsFulfillConstraint
-                    ((Beam.HasSqlEqualityCheck
-                      (Beam.Sql92DeleteExpressionSyntax
-                        (Beam.Sql92DeleteSyntax cmd)))) (PrimaryKey table)
+    :: (Beam.MonadBeam cmd be hdl m, Beam.IsSql92Syntax cmd, Beam.Table table,
+        PrimaryKeyWrapper (PrimaryKey table Identity) pk, _
        )
     => Beam.DatabaseEntity be db (TableEntity table)
     -> pk
@@ -244,6 +233,7 @@ getNextPrimaryKey
        , Beam.Table table
        , Beam.Database be db
        , Beam.FromBackendRow be keyInner
+       -- , Coercible keyInner Int
        , _
        )
     => Beam.DatabaseEntity be db (TableEntity table) -> m keyInner

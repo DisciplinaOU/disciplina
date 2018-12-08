@@ -115,25 +115,22 @@ lookupEducator login = do
 loadEducator :: MultiEducatorWorkMode ctx m => Bool -> Text -> Text -> m Bool
 loadEducator _new login passphrase = do
     -- TODO: add hashing
-    let loginFile = id (toString login)
+    let postgresUser = "educator-" <> login
     let appDir = case multiEducatorConfig ^. sub #witness . option #appDir of
           AppDirectoryOS         -> ""
           AppDirectorySpecific x -> x
     let (MultiEducatorKeyParams path) = multiEducatorConfig ^. sub #educator . option #keys
         prepareDb = do
             p <- case multiEducatorConfig ^. sub #educator . option #db of
-                SQLiteParams (SQLiteReal (SQLiteRealParams fp con pen)) -> do
-                    dbsPath <- canonicalizePath $ appDir </> fp
-                    createDirectoryIfMissing True $ dbsPath
-                    print dbsPath
-                    pure $ SQLiteParams (SQLiteReal (SQLiteRealParams (dbsPath </> loginFile) con pen))
+                PostgresParams (PostgresReal (PostgresRealParams fp con pen)) -> do
+                    pure $ PostgresParams (PostgresReal (PostgresRealParams (dbsPath </> loginFile) con pen))
                 x -> pure x
             db <- openSQLiteDB p
             prepareEducatorSchema db
             return (db, p)
     (db, _dbParam) <- liftIO $ prepareDb
     liftIO $ createDirectoryIfMissing True (appDir </> path)
-    let keyFile = path </> loginFile <> ".key"
+    let keyFile = path </> toString login <> ".key"
         -- FIXME
         (Right p) = mkPassPhrase . encodeUtf8 $ passphrase
     let keyParams = BaseKeyParams (Just keyFile) True (Just p)

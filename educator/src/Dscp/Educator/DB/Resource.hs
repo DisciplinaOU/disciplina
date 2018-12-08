@@ -5,6 +5,8 @@ module Dscp.Educator.DB.Resource
     ( prepareEducatorSchema
     ) where
 
+import UnliftIO (MonadUnliftIO)
+
 import Dscp.DB.SQLite
 import Dscp.Educator.DB.Schema
 import Dscp.Resource.Class (AllocResource (..), buildComponentR)
@@ -14,16 +16,16 @@ import Dscp.Rio
 -- Instances
 ----------------------------------------------------------------------------
 
-prepareEducatorSchema :: MonadIO m => SQLiteDB -> m ()
+prepareEducatorSchema :: MonadUnliftIO m => SQL -> m ()
 prepareEducatorSchema db = do
-    forEachConnection db applySchemaSettings
-    runRIO db $ borrowConnection ensureSchemaIsSetUp
+    -- forEachConnection db applySchemaSettings  TODO
+    runRIO db $ transact ensureSchemaIsSetUp
 
-instance AllocResource SQLiteDB where
-    type Deps SQLiteDB = SQLiteParams
-    allocResource p = buildComponentR "SQLite DB" (openSQLiteDB' p) closeSQLiteDB
+instance AllocResource SQL where
+    type Deps SQL = PostgresParams
+    allocResource p = buildComponentR "SQLite DB" (openPostgresDB' p) closePostgresDB
       where
-        openSQLiteDB' p' = do
-            db <- openSQLiteDB p'
+        openPostgresDB' p' = do
+            db <- openPostgresDB p'
             prepareEducatorSchema db
             return db

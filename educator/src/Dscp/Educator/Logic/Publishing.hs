@@ -20,7 +20,7 @@ import Dscp.Witness
 dumpPrivateBlock :: EducatorWorkMode ctx m => m (Maybe PrivateBlockHeader)
 dumpPrivateBlock = do
     ctx <- ask
-    mblock <- transactW $ createPrivateBlock ctx Nothing
+    mblock <- transact $ createPrivateBlock ctx Nothing
     case mblock of
         Nothing ->
             logInfo "No private chain updates, skipping private block creation"

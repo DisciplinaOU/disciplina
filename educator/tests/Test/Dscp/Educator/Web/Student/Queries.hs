@@ -56,7 +56,7 @@ submission1 : _ = detGen 23423 $ do
         <&> \(_sStudentId, _sContentsHash, (hash -> _sAssignmentHash))
             -> Submission{..}
 
-createCourseSimple :: (MonadQuery m, WithinWriteTx) => Int -> m Course
+createCourseSimple :: (MonadQuery m, WithinTx) => Int -> m Course
 createCourseSimple i =
     createCourse
         CourseDetails
@@ -553,7 +553,7 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
                 let student = tiOne $ cteStudents env
                     sigSub = tiOne $ cteSignedSubmissions env
                     submissionReq = signedSubmissionToRequest sigSub
-                transactW $ prepareForSubmissions env
+                transact $ prepareForSubmissions env
                 void $ studentMakeSubmissionVerified student submissionReq
 
                 res <- invoke $ studentGetSubmissions student def
@@ -573,7 +573,7 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
                 if student == badStudent
                 then return $ property rejected
                 else do
-                    transactW $ prepareForSubmissions env
+                    transact $ prepareForSubmissions env
                     fmap property $ throwsPrism (_BadSubmissionSignature . _FakeSubmissionSignature) $
                         studentMakeSubmissionVerified badStudent newSubmission
 
@@ -587,7 +587,7 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
                                         .~ unsafeHash @Text "pva was here"
                     newSubmission = signedSubmissionToRequest badSub
 
-                transactW $ prepareForSubmissions env
+                transact $ prepareForSubmissions env
                 fmap property $ throwsPrism (_BadSubmissionSignature . _SubmissionSignatureInvalid) $
                     studentMakeSubmissionVerified student newSubmission
 
@@ -597,7 +597,7 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
             env <- pick $ genCoreTestEnv simpleCoreTestParams
             let txs = tiList $ ctePrivateTxs env
 
-            lift . transactW $ prepareAndCreateTransactions env
+            lift . transact $ prepareAndCreateTransactions env
 
             positiveGrades <- lift . invoke $ runSelect . select $ do
                 privateTx <- all_ (esTransactions educatorSchema)

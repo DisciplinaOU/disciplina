@@ -195,7 +195,7 @@ delayed action
     logException e = botLog . logError $ "Delayed action failed: " +|| e ||+ ""
 
 botPrepareInitialData :: (BotWorkMode ctx m, HasBotSetting) => m ()
-botPrepareInitialData = transactW $ do
+botPrepareInitialData = transact $ do
     exists <- existsCourse (head . Exts.fromList $ bsBasicCourses botSetting)
     unless exists $ do
         forM_ (bsCourses botSetting) $
@@ -220,7 +220,7 @@ botNoteCompletedAssignments student course completedAssigns =
       \courseAssigns ->
         forM_ courseAssigns $ \(WithDependencies assign deps) ->
             when (deps `S.isSubsetOf` completedAssigns) $
-                transactW $
+                transact $
                 maybePresent $
                 setStudentAssignment student (getId assign)
 
@@ -247,7 +247,7 @@ botProvideCourses
     => Student -> [Course] -> m ()
 botProvideCourses student courses = do
     forM_ courses $ \course -> do
-        transactW $ enrollStudentToCourse student course
+        transact $ enrollStudentToCourse student course
         botNoteCompletedAssignments student course mempty
 
 -- | Remember student and add minimal set of courses.
@@ -277,4 +277,4 @@ botGradeSubmission ssub = do
             , _ptGrade = grade
             , _ptTime = time
             }
-    maybePresent $ transactW $ createTransaction ptx
+    maybePresent $ transact $ createTransaction ptx

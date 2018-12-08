@@ -19,7 +19,7 @@ import Dscp.Educator.DB
 -- | Puts in db all needed to put 'SignedSubmission's
 -- later, tolerates repeated entities.
 prepareForAssignments
-    :: (MonadQuery m, WithinWriteTx)
+    :: (MonadQuery m, WithinTx)
     => CoreTestEnv -> m ()
 prepareForAssignments CoreTestEnv{..} = do
     let assignments = F.toList cteAssignments
@@ -34,7 +34,7 @@ prepareForAssignments CoreTestEnv{..} = do
 -- | Puts in db all needed to put 'SignedSubmission's
 -- later, tolerates repeated entities.
 prepareForSubmissions
-    :: (MonadQuery m, WithinWriteTx)
+    :: (MonadQuery m, WithinTx)
     => CoreTestEnv -> m ()
 prepareForSubmissions env@CoreTestEnv{..} = do
     let assignments = F.toList cteAssignments
@@ -47,7 +47,7 @@ prepareForSubmissions env@CoreTestEnv{..} = do
 
 -- | Prepare all needed to put 'SignedSubmission's, and puts the first one.
 prepareAndCreateSubmission
-    :: (MonadQuery m, WithinWriteTx)
+    :: (MonadQuery m, WithinTx)
     => CoreTestEnv -> m ()
 prepareAndCreateSubmission env = do
     prepareForSubmissions env
@@ -56,7 +56,7 @@ prepareAndCreateSubmission env = do
 
 -- | Add all submissions from given test env to the database.
 prepareAndCreateSubmissions
-    :: (MonadQuery m, WithinWriteTx)
+    :: (MonadQuery m, WithinTx)
     => CoreTestEnv -> m ()
 prepareAndCreateSubmissions env@CoreTestEnv{..} = do
     prepareForSubmissions env
@@ -66,7 +66,7 @@ prepareAndCreateSubmissions env@CoreTestEnv{..} = do
 -- | Add all transactions from given test env to the database.
 -- Transactions will have no block assiged to them.
 prepareAndCreateTransactions
-    :: (MonadQuery m, WithinWriteTx)
+    :: (MonadQuery m, WithinTx)
     => CoreTestEnv -> m ()
 prepareAndCreateTransactions env@CoreTestEnv{..} = do
     prepareAndCreateSubmissions env

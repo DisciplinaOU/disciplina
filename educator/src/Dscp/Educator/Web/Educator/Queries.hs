@@ -62,7 +62,7 @@ es :: DatabaseSettings be EducatorSchema
 es = educatorSchema
 
 educatorRemoveStudent
-    :: (MonadEducatorWebQuery m, WithinWrite)
+    :: (MonadEducatorWebQuery m)
     => Student -> m ()
 educatorRemoveStudent student = do
     -- TODO [DSCP-176]: Proper implementation of this method may require
@@ -113,7 +113,7 @@ educatorGetCourse courseId = do
     return CourseEducatorInfo{ ciId = courseId, .. }
 
 educatorUnassignFromStudent
-    :: (MonadEducatorWebQuery m, WithinWrite)
+    :: (MonadEducatorWebQuery m)
     => Student
     -> Hash Assignment
     -> m ()
@@ -210,7 +210,7 @@ educatorGetGrades courseIdF studentF assignmentF isFinalF =
         return privateTx
 
 educatorPostGrade
-    :: (MonadEducatorWebQuery m, WithinWriteTx)
+    :: (MonadEducatorWebQuery m, WithinTx)
     => Hash Submission -> Grade -> m ()
 educatorPostGrade subH grade = do
     time <- liftIO getCurrentTime
