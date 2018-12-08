@@ -5,6 +5,10 @@ module Dscp.Educator.DB.Resource
     ( prepareEducatorSchema
     ) where
 
+import Loot.Base.HasLens (HasCtx, lensOf)
+import Loot.Log (LoggingIO)
+import UnliftIO (MonadUnliftIO)
+
 import Dscp.DB.SQLite
 import Dscp.Educator.DB.Schema
 import Dscp.Resource.Class (AllocResource (..), buildComponentR)
@@ -14,16 +18,18 @@ import Dscp.Rio
 -- Instances
 ----------------------------------------------------------------------------
 
-prepareEducatorSchema :: MonadIO m => SQLiteDB -> m ()
+prepareEducatorSchema
+    :: (MonadUnliftIO m, HasCtx ctx m '[LoggingIO], HasCallStack)
+    => SQL -> m ()
 prepareEducatorSchema db = do
-    forEachConnection db applySchemaSettings
-    runRIO db $ borrowConnection ensureSchemaIsSetUp
+    logging <- view (lensOf @LoggingIO)
+    runRIO (db, logging) . transact $ ensureSchemaIsSetUp
 
-instance AllocResource SQLiteDB where
-    type Deps SQLiteDB = SQLiteParamsRec
-    allocResource p = buildComponentR "SQLite DB" (openSQLiteDB' p) closeSQLiteDB
+instance AllocResource SQL where
+    type Deps SQL = PostgresRealParamsRec
+    allocResource p = buildComponentR "SQLite DB" (openPostgresDB' p) closePostgresDB
       where
-        openSQLiteDB' p' = do
-            db <- openSQLiteDB p'
+        openPostgresDB' p' = do
+            db <- openPostgresDB (PostgresParams $ PostgresReal p')
             prepareEducatorSchema db
             return db

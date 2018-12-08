@@ -57,7 +57,7 @@ es = educatorSchema
 
 studentIsCourseFinished
     :: MonadEducatorWebQuery m
-    => Id Student -> Course -> DBT t w m Bool
+    => Id Student -> Course -> DBT t m Bool
 studentIsCourseFinished studentId' courseId' =
     checkExists $ do
         privateTx <- all_ (esTransactions es)
@@ -70,7 +70,7 @@ studentIsCourseFinished studentId' courseId' =
 
 studentGetCourse
     :: MonadEducatorWebQuery m
-    => Id Student -> Course -> DBT 'WithinTx w m CourseStudentInfo
+    => Id Student -> Course -> DBT 'WithinTx m CourseStudentInfo
 studentGetCourse studentId courseId = do
     ciDesc <- selectByPk crDesc (esCourses es) courseId
         `assertJust` AbsentError (CourseDomain courseId)
@@ -81,7 +81,7 @@ studentGetCourse studentId courseId = do
 
 studentGetCourses
     :: MonadEducatorWebQuery m
-    => Id Student -> Maybe IsEnrolled -> DBT 'WithinTx w m [CourseStudentInfo]
+    => Id Student -> Maybe IsEnrolled -> DBT 'WithinTx m [CourseStudentInfo]
 studentGetCourses studentId (coerce -> isEnrolledF) = do
     courses <- runSelect . select $ do
         course <- all_ (esCourses es)
@@ -100,7 +100,7 @@ studentGetCourses studentId (coerce -> isEnrolledF) = do
 
 studentGetGrade
     :: MonadEducatorWebQuery m
-    => Hash Submission -> DBT 'WithinTx w m (Maybe GradeInfo)
+    => Hash Submission -> DBT 'WithinTx m (Maybe GradeInfo)
 studentGetGrade submissionH = do
     mgrade <- listToMaybeWarnM . runSelect . select $ do
         ptx <- all_ (esTransactions es)
@@ -116,7 +116,7 @@ studentGetLastAssignmentSubmission
     :: MonadEducatorWebQuery m
     => Student
     -> Hash Assignment
-    -> DBT 'WithinTx w m (Maybe SubmissionStudentInfo)
+    -> DBT 'WithinTx m (Maybe SubmissionStudentInfo)
 studentGetLastAssignmentSubmission student assignH = do
     msubmission <- listToMaybeWarnM . runSelect . select $ do
         submission <- limit_ 1 . orderBy_ (desc_ . srCreationTime) $
@@ -136,7 +136,7 @@ studentComplementAssignmentInfo
     => Student
     -> Hash Assignment
     -> Assignment
-    -> DBT 'WithinTx w m AssignmentStudentInfo
+    -> DBT 'WithinTx m AssignmentStudentInfo
 studentComplementAssignmentInfo student assignH assignment = do
     aiLastSubmission <- studentGetLastAssignmentSubmission student assignH
     return AssignmentStudentInfo
@@ -153,7 +153,7 @@ studentGetAssignment
     :: MonadEducatorWebQuery m
     => Student
     -> Hash Assignment
-    -> DBT 'WithinTx w m AssignmentStudentInfo
+    -> DBT 'WithinTx m AssignmentStudentInfo
 studentGetAssignment student assignH = do
     assignments <- runSelectMap assignmentFromRow . select $ do
         assignment <- related_ (esAssignments es) (valPk_ assignH)
@@ -169,7 +169,7 @@ studentGetAssignments
     :: MonadEducatorWebQuery m
     => Student
     -> StudentGetAssignmentsFilters
-    -> DBT 'WithinTx w m [AssignmentStudentInfo]
+    -> DBT 'WithinTx m [AssignmentStudentInfo]
 studentGetAssignments student filters = do
     assignments <- runSelectMap (arHash &&& assignmentFromRow) . select $ do
         assignment <- all_ (esAssignments es)
@@ -192,7 +192,7 @@ studentGetSubmission
     :: MonadEducatorWebQuery m
     => Student
     -> Hash Submission
-    -> DBT t w m SubmissionStudentInfo
+    -> DBT t m SubmissionStudentInfo
 studentGetSubmission student subH = do
     submissions <- runSelectMap studentSubmissionInfoFromRow . select $ do
         submission <- related_ (esSubmissions es) (valPk_ subH)
@@ -211,7 +211,7 @@ studentGetSubmissions
     :: MonadEducatorWebQuery m
     => Student
     -> StudentGetSubmissionsFilters
-    -> DBT t w m [SubmissionStudentInfo]
+    -> DBT t m [SubmissionStudentInfo]
 studentGetSubmissions student filters = do
     runSelectMap studentSubmissionInfoFromRow . select $ do
         submission <- all_ (esSubmissions es)

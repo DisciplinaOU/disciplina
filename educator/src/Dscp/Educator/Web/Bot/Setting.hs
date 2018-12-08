@@ -63,7 +63,7 @@ genBotCourseAssignments n _aCourseId =
     forM [1..n] $ \i -> do
         let _aContentsHash = offlineHash
         let _aType = if i == n then CourseFinal else Regular
-        let _aDesc = if i == n then "Exam" else "Task #" <> pretty i
+        let _aDesc = if i == n then "Exam" else "Task #" <> ItemDescUnsafe (pretty i)
         return Assignment{..}
 
 ---------------------------------------------------------------------
@@ -89,7 +89,7 @@ as well as in every case we rely on this bot behaviour.
 data BotSetting = BotSetting
     {
       -- | All courses info
-      bsCourses           :: [(Course, Text, [Id Subject])]
+      bsCourses           :: [(Course, ItemDesc, [Id Subject])]
       -- | We show a small set of courses at the beginning in order not to
       -- confuse user, and disclose all others later to prevent him getting
       -- bored.
@@ -198,7 +198,7 @@ delayed action
     logException e = botLog . logError $ "Delayed action failed: " +|| e ||+ ""
 
 botPrepareInitialData :: (BotWorkMode ctx m, HasBotSetting) => m ()
-botPrepareInitialData = transactW $ do
+botPrepareInitialData = transact $ do
     exists <- existsCourse (head . Exts.fromList $ bsBasicCourses botSetting)
     unless exists $ do
         forM_ (bsCourses botSetting) $
@@ -223,7 +223,7 @@ botNoteCompletedAssignments student course completedAssigns =
       \courseAssigns ->
         forM_ courseAssigns $ \(WithDependencies assign deps) ->
             when (deps `S.isSubsetOf` completedAssigns) $
-                transactW $
+                transact $
                 maybePresent $
                 setStudentAssignment student (getId assign)
 
@@ -250,7 +250,7 @@ botProvideCourses
     => Student -> [Course] -> m ()
 botProvideCourses student courses = do
     forM_ courses $ \course -> do
-        transactW $ enrollStudentToCourse student course
+        transact $ enrollStudentToCourse student course
         botNoteCompletedAssignments student course mempty
 
 -- | Remember student and add minimal set of courses.
@@ -273,11 +273,11 @@ botGradeSubmission :: BotWorkMode ctx m => SignedSubmission -> m ()
 botGradeSubmission ssub = do
     let subm = _ssSubmission ssub
         contentsH = _sContentsHash subm
-    time <- liftIO getCurrentTime
+    time <- toTimestamp <$> liftIO getCurrentTime
     let grade = detGenG contentsH genPleasantGrade
     let ptx = PrivateTx
             { _ptSignedSubmission = ssub
             , _ptGrade = grade
             , _ptTime = time
             }
-    maybePresent . transactW $ createTransaction ptx
+    maybePresent . transact $ createTransaction ptx

@@ -16,7 +16,7 @@ gradeInfoEx =
     GradeInfo
     { giSubmissionHash = hash submissionEx
     , giGrade = gradeEx
-    , giTimestamp = utcTimeEx
+    , giTimestamp = timestampEx
     , giHasProof = True
     }
 

@@ -9,7 +9,6 @@ module Dscp.Educator.Web.Student.API
        , StudentApiHandlers
        ) where
 
-import Data.Time.Clock (UTCTime)
 import Servant
 import Servant.Generic
 
@@ -130,7 +129,7 @@ type DeleteSubmission
 
 type GetProofs
     = "proofs"
-    :> QueryParam "since" UTCTime
+    :> QueryParam "since" Core.Timestamp
     :> QueryFlag "onlyCount"
     :> Summary "Get available proofs for student"
     :> Description "Gets private transactions together with corresponding Merkle \

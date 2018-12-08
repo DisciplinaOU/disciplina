@@ -11,7 +11,7 @@ import Dscp.Util.Test
 import Dscp.Crypto.ByteArray
 import Dscp.Crypto.Encrypt
 import Dscp.Crypto.Hash
-import Dscp.Crypto.Impl (HasHash)
+import Dscp.Crypto.Impl
 import Dscp.Crypto.MerkleTree
 import Dscp.Crypto.Signing
 

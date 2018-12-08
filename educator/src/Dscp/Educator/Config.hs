@@ -30,7 +30,7 @@ import Dscp.Witness.Config
 
 type EducatorConfig = WitnessConfig ++
     '[ "educator" ::<
-       '[ "db" ::< SQLiteParams
+       '[ "db" ::< PostgresRealParams
         , "keys" ::< EducatorKeyParams
         , "api" ::< EducatorWebConfig
         , "publishing" ::<
@@ -46,7 +46,7 @@ type HasEducatorConfig = (Given EducatorConfigRec, HasWitnessConfig)
 
 defaultEducatorConfig :: EducatorConfigRecP
 defaultEducatorConfig = upcast defaultWitnessConfig
-    & sub #educator . sub #db .~ defaultSQLiteParams
+    & sub #educator . sub #db .~ defaultPostgresRealParams
     & sub #educator . sub #keys . sub #keyParams .~ defaultBaseKeyParams
     & sub #educator . sub #api . sub #botConfig . tree #params . selection ?~ "disabled"
 

@@ -6,43 +6,45 @@ import Prelude
 
 import Control.Lens (mapped)
 -- import Data.Default (Default (..))
+import Test.QuickCheck.Monadic (pre)
 
 import Dscp.Core.Arbitrary
 -- import qualified Dscp.Crypto.MerkleTree as MerkleTree
 import Dscp.Educator.DB as DB
 import Dscp.Util
 
+import Test.Dscp.DB.SQLite.Mode
 import Test.Dscp.Educator.Mode
 
 spec_Instances :: Spec
-spec_Instances = do
+spec_Instances = specWithTempPostgresServer $ do
     describe "Basic database operations" $ do
         describe "Courses" $ do
             it "Course does not exist before it is created" $
-                sqliteProperty $ \courseId -> do
+                sqlProperty $ \courseId -> do
                     isThere <- DB.existsCourse courseId
                     return (not isThere)
 
             it "Course does exist after it is created" $
-                sqliteProperty $ \courseId -> do
+                sqlProperty $ \courseId -> do
                     _       <- DB.createCourse (simpleCourse courseId)
                     isThere <- DB.existsCourse courseId
 
                     return isThere
 
             it "Can create unique courses relying on autoincrement" $
-                sqliteProperty $ \n -> do
+                sqlProperty $ \n -> do
                     ids <- replicateM n $ DB.createCourse nullCourse
                     return $ allUniqueOrd ids
 
         describe "Students" $ do
             it "Student does not exist before she is created" $
-                sqliteProperty $ \student -> do
+                sqlProperty $ \student -> do
                     isThere <- DB.existsStudent student
                     return (not isThere)
 
             it "Student does exist after she is created" $
-                sqliteProperty $ \student -> do
+                sqlProperty $ \student -> do
                     _       <- DB.createStudent student
                     isThere <- DB.existsStudent student
 
@@ -50,29 +52,29 @@ spec_Instances = do
 
         describe "Assignments" $ do
             it "Assignment is created and retrieved by hash" $
-                sqliteProperty $ \assignment -> do
+                sqlProperty $ \assignment -> do
 
                     _              <- DB.createCourse    (simpleCourse $ assignment^.aCourseId)
                     assignmentHash <- DB.createAssignment assignment
                     assignment'    <- DB.getAssignment    assignmentHash
 
-                    return (assignment' == Just assignment)
+                    return (assignment' === Just assignment)
 
             it "Assignment is not created if course does not exist" $
-                sqliteProperty $ \(assignment) -> do
+                sqlProperty $ \(assignment) -> do
                     throws @DomainError $ do
                         _ <- DB.createAssignment assignment
                         return ()
 
         describe "Submissions" $ do
             it "Submission is not created unless Assignment exist" $
-                sqliteProperty $ \submission -> do
+                sqlProperty $ \submission -> do
                     throws @DomainError $ do
                         _ <- DB.createSignedSubmission submission
                         return ()
 
             it "Submission is not created unless Student exist" $
-                sqliteProperty $ \
+                sqlProperty $ \
                     ( delayedGen (genCoreTestEnv simpleCoreTestParams) -> env
                     ) -> do
                     let assignment    = tiOne $ cteAssignments env
@@ -88,7 +90,7 @@ spec_Instances = do
                         return ()
 
             it "Submission is not created unless StudentAssignment exist" $
-                sqliteProperty $ \
+                sqlProperty $ \
                     ( delayedGen (genCoreTestEnv simpleCoreTestParams) -> env
                     ) -> do
                     let assignment    = tiOne $ cteAssignments env
@@ -108,7 +110,7 @@ spec_Instances = do
 
         describe "Transactions" $ do
             it "Transaction is created if all deps exist" $
-                sqliteProperty $ \
+                sqlProperty $ \
                     ( delayedGen (genCoreTestEnv simpleCoreTestParams) -> env
                     ) -> do
                     let assignment    = tiOne $ cteAssignments env
@@ -133,7 +135,7 @@ spec_Instances = do
 
     describe "Concrete operations from domain" $ do
         it "getStudentCourses/enrollStudentToCourse" $ do
-            sqliteProperty $ \
+            sqlProperty $ \
                 (student,
                  delayedGen (vectorUnique 3)
                     -> [course1, course2, course3]
@@ -155,7 +157,7 @@ spec_Instances = do
                 return (sort (map getId courses) == sort courseIds')
 
         it "getStudentAssignments" $ do
-            sqliteProperty $ \
+            sqlProperty $ \
                 ( student
                 , (delayedGen (vectorUnique 2)
                     -> [course1, course2])
@@ -204,7 +206,7 @@ spec_Instances = do
                             (assignments1 <> assignments2) `equal` toHer
 
         it "submitAssignment" $
-            sqliteProperty $ \
+            sqlProperty $ \
                 ( delayedGen (genCoreTestEnv simpleCoreTestParams) -> env
                 ) -> do
                 let assignment    = tiOne $ cteAssignments env
@@ -226,10 +228,10 @@ spec_Instances = do
                 return (sub' == Just sigSubmission)
 
         it "getGradesForCourseAssignments" $
-            sqliteProperty $ \
-                ( delayedGen (genCoreTestEnv simpleCoreTestParams) -> env
-                , course2
-                ) -> do
+            sqlPropertyM $ do
+                env <- pickSmall $ genCoreTestEnv simpleCoreTestParams
+                course2 <- pick arbitrary
+
                 let assignment    = tiOne $ cteAssignments env
                     trans         = tiOne $ ctePrivateTxs env
 
@@ -243,8 +245,9 @@ spec_Instances = do
                     assignment2    = assignment    & aCourseId          .~ getId course2
                     trans2         = trans         & ptSignedSubmission .~ sigSubmission2
 
-                if  (assignment^.idOf /= assignment2^.idOf)
-                then do
+                pre (assignment^.idOf /= assignment2^.idOf)
+
+                lift $ do
                     _studentId <- DB.createStudent          student
 
                     courseId   <- DB.createCourse           (simpleCourse course)
@@ -268,13 +271,11 @@ spec_Instances = do
                     transs2    <- DB.getGradesForCourseAssignments student courseId2
                     transs1    <- DB.getGradesForCourseAssignments student courseId
 
-                    return (transs2 == [trans2] && transs1 == [trans])
-                else do
-                    return True
+                    return (transs2 === [trans2] .&&. transs1 === [trans])
 
     -- describe "Retrieval of proven transactions" $ do
     --     it "getProvenStudentTransactions" $
-    --         sqliteProperty $ \
+    --         sqlProperty $ \
     --             ( delayedGen (genCoreTestEnv simpleCoreTestParams
     --                           `suchThat` ((>= 3) . tiNum . ctePrivateTxs)
     --                          ) -> env

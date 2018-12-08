@@ -11,14 +11,14 @@ module Dscp.Educator.DB.Schema
 
 import Prelude hiding (_1, _2)
 
-import Data.Time.Clock (UTCTime)
+import Database.Beam.Backend (runNoReturn)
+import Database.Beam.Postgres.Syntax (PgCommandSyntax (..), PgCommandType (..), emit)
 import Database.Beam.Schema.Tables (Beamable, C, Database, DatabaseSettings, Table (..),
                                     TableEntity, defaultDbSettings)
-import Database.SQLite.Simple.Internal (Connection (..))
-import Database.SQLite3 (exec)
 
 import Dscp.Core
 import Dscp.Crypto
+import Dscp.DB.SQLite.Functions
 import Dscp.DB.SQLite.Util
 import Dscp.Educator.DB.BlockData
 import Dscp.Educator.DB.FileQuoter
@@ -31,12 +31,12 @@ import Dscp.Util
 
 data CourseRowT f = CourseRow
     { crId   :: C f Course
-    , crDesc :: C f Text
+    , crDesc :: C f ItemDesc
     } deriving (Generic)
 
 data SubjectRowT f = SubjectRow
     { srId     :: C f Subject
-    , srDesc   :: C f Text
+    , srDesc   :: C f ItemDesc
     , srCourse :: PrimaryKey CourseRowT f
     } deriving (Generic)
 
@@ -48,7 +48,7 @@ data AssignmentRowT f = AssignmentRow
     { arHash         :: C f (Hash Assignment)
     , arContentsHash :: C f (Hash Raw)
     , arType         :: C f AssignmentType
-    , arDesc         :: C f Text
+    , arDesc         :: C f ItemDesc
     , arCourse       :: PrimaryKey CourseRowT f
     } deriving (Generic)
 
@@ -56,7 +56,7 @@ data SubmissionRowT f = SubmissionRow
     { srHash         :: C f (Hash Submission)
     , srContentsHash :: C f (Hash Raw)
     , srSignature    :: C f SubmissionWitness
-    , srCreationTime :: C f UTCTime
+    , srCreationTime :: C f Timestamp
     , srStudent      :: PrimaryKey StudentRowT f
     , srAssignment   :: PrimaryKey AssignmentRowT f
     } deriving (Generic)
@@ -64,7 +64,7 @@ data SubmissionRowT f = SubmissionRow
 data TransactionRowT f = TransactionRow
     { trHash         :: C f (Hash PrivateTx)
     , trGrade        :: C f Grade
-    , trCreationTime :: C f UTCTime
+    , trCreationTime :: C f Timestamp
     , trIdx          :: C f TxBlockIdx
     , trSubmission   :: PrimaryKey SubmissionRowT f
     } deriving (Generic)
@@ -73,7 +73,7 @@ data TransactionRowT f = TransactionRow
 data BlockRowT f = BlockRow
     { brIdx          :: C f BlockIdx
     , brHash         :: C f PrivateHeaderHash
-    , brCreationTime :: C f UTCTime
+    , brCreationTime :: C f Timestamp
     , brPrevHash     :: C f PrivateHeaderHash
     , brAtgDelta     :: C f ATGDelta
     , brMerkleRoot   :: C f (MerkleSignature PrivateTx)
@@ -247,16 +247,7 @@ educatorSchema = defaultDbSettings
 schemaDefinition :: IsString s => s
 schemaDefinition = [qFile|./database/schema.sql|]
 
--- | Settings set on per-connection basis.
-schemaSettings :: IsString s => s
-schemaSettings = [qFile|./database/settings.sql|]
-
 -- | Create tables if absent.
-ensureSchemaIsSetUp :: MonadIO m => Connection -> m ()
-ensureSchemaIsSetUp (Connection db) = do
-    liftIO $ exec db schemaDefinition
-
--- | Apply schema settings, should be invoked for every new connection.
-applySchemaSettings :: MonadIO m => Connection -> m ()
-applySchemaSettings (Connection db) =
-    liftIO $ exec db schemaSettings
+ensureSchemaIsSetUp :: MonadIO m => DBT 'WithinTx m ()
+ensureSchemaIsSetUp =
+    liftPg . runNoReturn $ PgCommandSyntax PgCommandTypeDataUpdate $ emit schemaDefinition

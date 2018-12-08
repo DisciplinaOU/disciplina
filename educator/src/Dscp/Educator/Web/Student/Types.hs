@@ -44,7 +44,7 @@ nsOwner = mkAddr . _swKey . nsWitness
 
 data CourseStudentInfo = CourseStudentInfo
     { ciId         :: Course
-    , ciDesc       :: Text
+    , ciDesc       :: ItemDesc
     , ciSubjects   :: [Subject]
     , ciIsEnrolled :: Bool
     , ciIsFinished :: Bool
@@ -55,7 +55,7 @@ data AssignmentStudentInfo = AssignmentStudentInfo
     , aiCourseId       :: Course
     , aiContentsHash   :: (Hash Raw)
     , aiIsFinal        :: IsFinal
-    , aiDesc           :: Text
+    , aiDesc           :: ItemDesc
     , aiLastSubmission :: (Maybe SubmissionStudentInfo)
     } deriving (Show, Eq, Generic)
 

@@ -12,6 +12,7 @@ import Dscp.Util.Test
 import Dscp.Witness.Config
 import Test.QuickCheck.Monadic (pick)
 
+import Test.Dscp.DB.SQLite.Mode
 import Test.Dscp.Educator.Mode
 
 student :: Student
@@ -31,7 +32,7 @@ testMakeBotHandlers seed = initializeBot botConfig $ pure $
         & option #operationsDelay ?~ 0
 
 spec_StudentApiWithBotQueries :: Spec
-spec_StudentApiWithBotQueries = describe "Basic properties" $ do
+spec_StudentApiWithBotQueries = specWithTempPostgresServer $ do
     it "Student gets assigned on courses on first request" $
         educatorProperty $ \seed -> do
             StudentApiEndpoints{..} <- testMakeBotHandlers seed

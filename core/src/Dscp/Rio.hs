@@ -6,7 +6,7 @@ module Dscp.Rio
     ) where
 
 import Control.Monad.Catch (MonadCatch, MonadMask, MonadThrow)
-import Loot.Base.HasLens (HasLens)
+import Loot.Base.HasLens (HasLens (..))
 import Loot.Log (ModifyLogName (..), MonadLogging (..))
 import Loot.Log.Rio (LoggingIO)
 import qualified Loot.Log.Rio as Rio
@@ -28,6 +28,11 @@ newtype RIO ctx a = RIO { unRIO :: ReaderT ctx IO a }
 
 runRIO :: MonadIO m => ctx -> RIO ctx a -> m a
 runRIO ctx (RIO act) = liftIO $ runReaderT act ctx
+
+instance HasLens a (a, b) a where
+    lensOf = _1
+instance HasLens b (a, b) b where
+    lensOf = _2
 
 instance HasLens LoggingIO ctx LoggingIO =>
          MonadLogging (RIO ctx) where

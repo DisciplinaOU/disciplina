@@ -12,6 +12,7 @@ Dependencies:
 
 * [Stack](https://docs.haskellstack.org/en/stable/README/) tool
 * [RocksDB](https://github.com/facebook/rocksdb/blob/master/INSTALL.md)
+* [PostgreSQL](https://www.postgresql.org/)
 
 ## Running the educator node
 
@@ -50,3 +51,12 @@ See [configuration section](/docs/config.md) document.
   ```bash
   > ./scripts/launch/node.sh educator bot
   ```
+
+## Running educator tests
+
+You will need to run Postgres server in order for `stack exec disciplina-educator` to work.
+
+Or run the [test script](./scripts/test/educator.sh) which does that for you
+(with nix, execute `nix-build -A disciplina-educator`).
+Server still requires a bit of general tunning, if you have just installed your Postgres server
+read [`educator.sh`'s](/scripts/test/educator.sh) 'Prerequisites' section first.

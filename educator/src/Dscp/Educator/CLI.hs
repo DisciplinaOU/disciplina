@@ -4,13 +4,13 @@
 -- | CLI for educator.
 
 module Dscp.Educator.CLI
-    ( sqliteParamsParser
+    ( postgresParamsParser
     , educatorWebConfigParser
     , educatorConfigParser
     , publishingPeriodParser
     ) where
 
-import Loot.Config (OptModParser, uplift, (.::), (.:<), (.:+), (.:-), (<*<))
+import Loot.Config (OptModParser, uplift, (.:+), (.:-), (.::), (.:<), (<*<))
 import Options.Applicative (Parser, auto, flag', help, long, metavar, option, strOption)
 import Time (Second, Time)
 
@@ -23,29 +23,17 @@ import Dscp.Educator.Web.Bot.Params
 import Dscp.Educator.Web.Config
 import Dscp.Witness.CLI (witnessConfigParser)
 
-sqliteParamsParser :: OptModParser SQLiteParams
-sqliteParamsParser = #mode .:+
-    (#modeType .:: (inMemoryP <|> realP) <*<
-     #real .:-
-        (#path       .:: pathParser <*<
-         #connNum    .:: connNumParser <*<
-         #maxPending .:: maxPendingParser
-        )
-    )
+postgresParamsParser :: OptModParser PostgresRealParams
+postgresParamsParser =
+    #connString .:: connParser <*<
+    #connNum    .:: connNumParser <*<
+    #maxPending .:: maxPendingParser
   where
-    inMemoryP = flag' "inMemory" $
-        long "sql-mode-in-memory" <>
-        help "Use in-memory SQLite mode. To use real SQLite mode instead, \
-             \provide `--sql-mode-real` flag."
-    realP = flag' "real" $
-        long "sql-mode-real" <>
-        help "Use SQLite with a file and a number of connections, for in-memory\
-             \ SQLite mode, provide `--sql-mode-in-memory` flag instead."
-    pathParser = strOption $
-        long "sql-path" <>
-        metavar "FILEPATH" <>
-        help "Path to database directory for educator's private data. If not \
-             \specified, 'educator-db' directory is used."
+    connParser = strOption $
+        long "sql-conn-str" <>
+        metavar "TEXT" <>
+        help "A libpq connection string. Behavior would be exactly as specified for this \
+             \method: https://hackage.haskell.org/package/postgresql-simple-0.6/docs/Database-PostgreSQL-Simple.html#v:connectPostgreSQL"
     connNumParser = fmap Just . option auto $
         long "sql-conns" <>
         metavar "INTEGER" <>
@@ -125,10 +113,9 @@ educatorConfigParser :: OptModParser EducatorConfig
 educatorConfigParser =
     uplift witnessConfigParser <*<
     #educator .:<
-        (#db .:< sqliteParamsParser <*<
+        (#db .:< postgresParamsParser <*<
          #keys .:< educatorKeyParamsParser <*<
          #api .:< educatorWebConfigParser <*<
          #publishing .:<
             (#period .:: publishingPeriodParser)
         )
-

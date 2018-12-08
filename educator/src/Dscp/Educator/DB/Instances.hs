@@ -5,12 +5,13 @@ module Dscp.Educator.DB.Instances () where
 
 import Codec.Serialise as Codec (deserialise)
 import qualified Data.ByteArray as BA
+import Data.Time.Clock (UTCTime)
 import Database.Beam.Backend (BackendFromField, BeamBackend, FromBackendRow (..))
 import Database.Beam.Backend.SQL.SQL92 (HasSqlValueSyntax (..), IsSql92ExpressionSyntax,
                                         Sql92ExpressionValueSyntax)
+import Database.Beam.Postgres.Syntax (PgValueSyntax)
 import Database.Beam.Query (HasSqlEqualityCheck (..))
-import Database.Beam.Sqlite.Syntax (SqliteValueSyntax)
-import Database.SQLite.Simple.FromField (FromField (..))
+import Database.PostgreSQL.Simple.FromField (FromField (..))
 
 import Dscp.Core
 import Dscp.Crypto
@@ -28,7 +29,7 @@ CPP does not allow multi-line output, so writing one macros per instance.
 TH would play better, but supposedly would also work slightly slower.
 -}
 
-#define IsSqliteValue HasSqlValueSyntax SqliteValueSyntax
+#define IsSqliteValue HasSqlValueSyntax PgValueSyntax
 
 #define CodecInstanceEnc(TYPE) \
 instance IsSqliteValue (TYPE) where \
@@ -36,7 +37,7 @@ instance IsSqliteValue (TYPE) where \
 
 #define CodecInstanceDec(TYPE) \
 instance FromField (TYPE) where \
-    fromField f = Codec.deserialise <$> fromField f
+    fromField field ty = Codec.deserialise <$> fromField field ty
 
 #define ByteArrayInstanceEnc(TYPE) \
 instance IsSqliteValue (TYPE) where \
@@ -44,7 +45,8 @@ instance IsSqliteValue (TYPE) where \
 
 #define ByteArrayInstanceDec(TYPE) \
 instance FromField (TYPE) where \
-    fromField f = leftToPanic . fromByteArray @(TYPE) @ByteString <$> fromField f
+    fromField field ty = \
+        leftToPanic . fromByteArray @(TYPE) @ByteString <$> fromField field ty
 
 #define EnumInstanceEnc(TYPE) \
 instance IsSqliteValue (TYPE) where \
@@ -52,7 +54,7 @@ instance IsSqliteValue (TYPE) where \
 
 #define EnumInstanceDec(TYPE) \
 instance FromField (TYPE) where \
-    fromField f = toEnum <$> fromField f
+    fromField field ty = toEnum <$> fromField field ty
 
 {- Instances via Enum -}
 
@@ -89,6 +91,10 @@ CodecInstanceDec(EmptyMerkleTree a)
 
 {- Newtype-derived instances -}
 
+deriving instance IsSqliteValue ItemDesc
+
+deriving instance IsSqliteValue Timestamp
+
 deriving instance FromField Subject
 deriving instance IsSqliteValue Subject
 
@@ -104,10 +110,24 @@ deriving instance IsSqliteValue BlockIdx
 {- Custom instances -}
 
 instance FromField TxBlockIdx where
-    fromField f = leftToPanic . txBlockIdxFromInt <$> fromField f
+    fromField field ty = leftToPanic . txBlockIdxFromInt <$> fromField field ty
 
-instance HasSqlValueSyntax SqliteValueSyntax TxBlockIdx where
+instance HasSqlValueSyntax PgValueSyntax TxBlockIdx where
     sqlValueSyntax = sqlValueSyntax . txBlockIdxToInt
+
+{- Basic instances -}
+
+instance FromField Word32 where
+    fromField field ty = fromIntegral @Int32 <$> fromField field ty
+
+instance FromField Word8 where
+    fromField field ty = fromIntegralChecked @_ @Int16 <$> fromField field ty
+
+instance FromField ItemDesc where
+    fromField field ty = toItemDescUnsafe <$> fromField @Text field ty
+
+instance FromField Timestamp where
+    fromField field ty = toTimestampUnsafe <$> fromField @UTCTime field ty
 
 ----------------------------------------------------------------------------
 -- 'FromBackendRow' instances
@@ -117,6 +137,8 @@ instance HasSqlValueSyntax SqliteValueSyntax TxBlockIdx where
 instance (BeamBackend be, BackendFromField be (TYPE)) => FromBackendRow be (TYPE)
 
 -- For SQLite they all refer to 'FromField' instances
+GenFromBackendRow(ItemDesc)
+GenFromBackendRow(Timestamp)
 GenFromBackendRow(Hash a)
 GenFromBackendRow(Address)
 GenFromBackendRow(Course)

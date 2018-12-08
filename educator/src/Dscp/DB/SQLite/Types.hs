@@ -2,29 +2,45 @@
 
 module Dscp.DB.SQLite.Types
        ( -- * SQLite bindings
-         SQLiteRealParams
-       , SQLiteRealParamsRec
-       , SQLiteRealParamsRecP
+         ConnectionString (..)
 
-       , SQLiteParams
-       , SQLiteParamsRec
-       , SQLiteParamsRecP
-       , defaultSQLiteParams
+       , PostgresRealParams
+       , PostgresRealParamsRec
+       , PostgresRealParamsRecP
+       , PostgresTestParams (..)
+       , PostgresDBMode (..)
+       , TransactionsSwitch (..)
+       , PostgresParams (..)
+       , SQL (..)
 
-       , SQLiteDB (..)
+       , _ConnectionString
+       , connStringFromText
+       , _PostgresReal
+       , defaultPostgresRealParams
        ) where
 
 import Control.Concurrent.Chan (Chan)
-import Database.SQLite.Simple (Connection)
-import Loot.Config ((::+), (:::), (::-), Config, PartialConfig, tree, branch,
-                    selection, option, (?~))
+import Control.Lens (makePrisms, (?~))
+import Data.Aeson (FromJSON (..))
+import Database.PostgreSQL.Simple (Connection)
+import Loot.Config ((:::), Config, PartialConfig, option)
 
 ----------------------------------------------------------
--- SQLite bindings
+-- Postgres bindings
 ----------------------------------------------------------
 
-type SQLiteRealParams =
-   '[ "path"       ::: FilePath
+-- | Lib-pg connection string.
+newtype ConnectionString = ConnectionString ByteString
+    deriving (Show, Eq, IsString)
+
+makePrisms ''ConnectionString
+
+-- | Make a connection string from textual representation.
+connStringFromText :: ConvertUtf8 text ByteString => text -> ConnectionString
+connStringFromText = ConnectionString . encodeUtf8
+
+type PostgresRealParams =
+   '[ "connString" ::: ConnectionString
       -- Path to the file with database.
     , "connNum"    ::: Maybe Int
       -- Connections pool size.
@@ -32,40 +48,56 @@ type SQLiteRealParams =
       -- Maximal number of requests waiting for a free connection.
     ]
 
-type SQLiteRealParamsRec = Config SQLiteRealParams
-type SQLiteRealParamsRecP = PartialConfig SQLiteRealParams
+type PostgresRealParamsRec = Config PostgresRealParams
+type PostgresRealParamsRecP = PartialConfig PostgresRealParams
+
+defaultPostgresRealParams :: PostgresRealParamsRecP
+defaultPostgresRealParams = mempty
+    & option #connString ?~ "postgresql:///disciplina-educator"
+    & option #connNum    ?~ Nothing
+    & option #maxPending ?~ 200
+
+data PostgresTestParams = PostgresTestParams
+    { ptpConnString :: !ConnectionString
+      -- ^ Connection string for a database.
+    } deriving (Show, Eq)
 
 -- | Database mode.
--- Note, there is a reason this contains the whole tree and not just its content
--- see 'ConfigMaybe' for an explanation.
-type SQLiteParams =
-   '[ "mode" ::+
-       '[ "real"     ::- SQLiteRealParams
-          -- In given file using given number of connections
-        , "inMemory" ::- '[]
-          -- In memory
-        ]
-    ]
+data PostgresDBMode
+    = PostgresReal !PostgresRealParamsRec
+      -- ^ Production settings.
+    | PostgresTest !PostgresTestParams
+      -- ^ Test settings.
+    deriving (Show, Eq, Generic)
 
-type SQLiteParamsRec = Config SQLiteParams
-type SQLiteParamsRecP = PartialConfig SQLiteParams
+makePrisms ''PostgresDBMode
 
-defaultSQLiteParams :: SQLiteParamsRecP
-defaultSQLiteParams = mempty
-    & tree #mode . selection ?~ "real"
-    & tree #mode . branch #real . option #path       ?~ "educator-db"
-    & tree #mode . branch #real . option #connNum    ?~ Nothing
-    & tree #mode . branch #real . option #maxPending ?~ 200
+data PostgresParams = PostgresParams
+    { ppMode :: PostgresDBMode
+    } deriving (Show, Eq)
 
 
-data SQLiteDB = SQLiteDB
-    { sdConnPool   :: Chan Connection
+data TransactionsSwitch
+    = RealTransactions
+      -- ^ Transactions in code map to @BEGIN TRANSACTION@/@COMMIT@ statements.
+    | TestTransactions
+      -- [Note: sql-transactions-in-tests]
+      -- ^ Transactions in code map to @SAVEPOINT@/@ROLLBACK TO + RELEASE SAVEPOINT@.
+
+-- | Database context.
+data SQL = SQL
+    { sqlConnPool           :: Chan Connection
       -- ^ Connections to given database. Each connection is used no more than
-      -- one thread at once - requirement of SQLite.
-    , sdConnNum    :: Int
+      -- one thread at once - requirement of the database engine.
+    , sqlConnNum            :: Int
       -- ^ Number of connections in pool
-    , sdPendingNum :: TVar Int
+    , sqlPendingNum         :: TVar Int
       -- ^ Number of threads waiting for free connection.
-    , sdMaxPending :: Int
+    , sqlMaxPending         :: Int
       -- ^ Allowed number of pending threads.
+    , sqlTransactionsSwitch :: TransactionsSwitch
+      -- ^ How transactions are interpreted.
     }
+
+instance FromJSON ConnectionString where
+    parseJSON v = connStringFromText <$> parseJSON @Text v

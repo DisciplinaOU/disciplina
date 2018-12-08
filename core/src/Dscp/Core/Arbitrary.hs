@@ -36,6 +36,7 @@ module Dscp.Core.Arbitrary
     , privateTxEx
     , submissionWitnessEx
     , utcTimeEx
+    , timestampEx
     ) where
 
 import qualified Data.Foldable
@@ -237,6 +238,12 @@ instance ArbitraryMixture Header
 instance ArbitraryMixture BlockBody
 instance ArbitraryMixture Block
 
+instance Arbitrary ItemDesc where
+    arbitrary = arbitrary `suchThatMap` (rightToMaybe . toItemDesc)
+
+instance Arbitrary Timestamp where
+    arbitrary = toTimestamp <$> arbitrary
+
 ---------------------------------------------------------------------
 -- Test case input
 ---------------------------------------------------------------------
@@ -434,7 +441,7 @@ privateTxEx =
     PrivateTx
     { _ptSignedSubmission = signedSubmissionEx
     , _ptGrade = gradeEx
-    , _ptTime = utcTimeEx
+    , _ptTime = timestampEx
     }
 
 submissionWitnessEx :: SubmissionWitness
@@ -447,3 +454,6 @@ submissionWitnessEx = _ssWitness signedSubmissionEx
 utcTimeEx :: UTCTime
 utcTimeEx = unsafePerformIO getCurrentTime
 {-# NOINLINE utcTimeEx #-}
+
+timestampEx :: Timestamp
+timestampEx = toTimestamp utcTimeEx

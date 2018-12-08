@@ -1,10 +1,19 @@
 -- | Private-chain (educator) datatypes definition.
 
+{-# LANGUAGE NumDecimals #-}
+
 module Dscp.Core.Foundation.Educator
     (
 
     -- * Common types
-      Course (..)
+      ItemDesc (..)
+    , isValidItemDesc
+    , toItemDesc
+    , toItemDescUnsafe
+    , Timestamp (..)
+    , toTimestamp
+    , toTimestampUnsafe
+    , Course (..)
     , Subject (..)
     , Student
     , Grade (..)
@@ -80,23 +89,67 @@ module Dscp.Core.Foundation.Educator
     , ATG (..)
     ) where
 
+import Control.Exception as E
 import Control.Lens (Getter, makeLenses, to)
 import qualified Data.ByteArray as BA
-import Data.Time.Clock (UTCTime)
+import qualified Data.Text as T
+import Data.Time.Clock (UTCTime (..), diffTimeToPicoseconds, picosecondsToDiffTime)
 import Fmt (build, genericF, mapF, (+|), (|+))
 
 import Dscp.Core.Foundation.Address (Address (..))
-import Dscp.Crypto.Impl
-import Dscp.Crypto.MerkleTree
-import Dscp.Util (HasId (..))
+import Dscp.Crypto
+import Dscp.Util
+
+-- | Description of some object.
+-- Cannot contain @\0@ symbol (Postgres truncates such strings for 'TEXT' type).
+-- TODO [DSCP-416]: move to SQL utils moved to core.
+newtype ItemDesc = ItemDescUnsafe { unItemDesc :: Text }
+    deriving (Show, Eq, Ord, Buildable, Semigroup, Monoid)
+
+isValidItemDesc :: Text -> Bool
+isValidItemDesc = isNothing . T.find (== '\0')
+
+toItemDesc :: Text -> Either Text ItemDesc
+toItemDesc t
+    | isValidItemDesc t = Right (ItemDescUnsafe t)
+    | otherwise = Left "Text contains \0 characters."
+
+toItemDescUnsafe :: Text -> ItemDesc
+toItemDescUnsafe t = E.assert (isValidItemDesc t) (ItemDescUnsafe t)
+
+instance IsString ItemDesc where
+    fromString = leftToPanic . toItemDesc . fromString
+
+-- | Timestamp with up to microseconds precision, as it is stored by Postgres.
+-- Helps to avoid confusion like when a time value gets rounded on itself.
+--
+-- Since Postgres truncates not only timestamps it stores, but also the ones we compare on
+-- in @SELECT@ query, this type should appear in web API as well.
+-- TODO [DSCP-416]: move to SQL utils moved to core.
+newtype Timestamp = TimestampUnsafe { unTimestamp :: UTCTime }
+    deriving (Show, Eq, Ord, Buildable)
+
+-- | Rounds time to microseconds.
+toTimestamp :: UTCTime -> Timestamp
+toTimestamp utc = TimestampUnsafe
+    utc{ utctDayTime =
+            picosecondsToDiffTime . roundPcsToMcs . diffTimeToPicoseconds $
+            utctDayTime utc
+       }
+  where
+    roundPcsToMcs = (* 1e6) . round . (/ 1e6) . fromIntegral @_ @Double
+
+toTimestampUnsafe :: UTCTime -> Timestamp
+toTimestampUnsafe = TimestampUnsafe
 
 ----------------------------------------------------------------------------
 -- Common educator types
 ----------------------------------------------------------------------------
 
+-- TODO [DSCP-416]: extract "Int64" to reasonable type helper.
 -- | ID of particular subject.
 newtype Subject = Subject
-    { getSubjectId :: Word32
+    { getSubjectId :: Int64
     } deriving (Eq, Ord, Show, Num)
 
 instance Buildable Subject where
@@ -131,10 +184,10 @@ instance HasId Student
 -- | Educator is identified by their public adddress.
 type EducatorId = Address
 
--- | Educator's course ID is simply a 'Word32' too.
+-- | Educator's course ID is simply a number too.
 -- There's a mapping from course ID to a set of associated subject IDs.
 newtype Course = Course
-    { getCourseId :: Word32
+    { getCourseId :: Int64
     } deriving (Eq, Ord, Show, Num)
 
 instance HasId Course
@@ -151,7 +204,7 @@ data Assignment = Assignment
     -- ^ Hash of assignment contents
     , _aType         :: !AssignmentType
     -- ^ Assignment type
-    , _aDesc         :: !Text
+    , _aDesc         :: !ItemDesc
     -- ^ Description of assignment
     } deriving (Eq, Ord, Show, Generic)
 
@@ -277,7 +330,7 @@ data PrivateTx = PrivateTx
     -- ^ Every transaction contains one signed student submission
     , _ptGrade            :: !Grade
     -- ^ Grade for this submission
-    , _ptTime             :: !UTCTime
+    , _ptTime             :: !Timestamp
     -- ^ Timestamp for this transaction
     } deriving (Show, Eq, Ord, Generic)
 

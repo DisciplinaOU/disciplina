@@ -15,7 +15,7 @@ import Dscp.Educator.DB.Schema
 instance
     ( MonadIO n
     , MonadCatch n
-    , m ~ DBT t w n
+    , m ~ DBT t n
     )
     => MonadSearchTxObj m
   where
@@ -31,7 +31,7 @@ instance
 
 getPrivateTxsByFilter
     :: MonadIO m
-    => TxsFilterExpr -> DBT t w m [Core.PrivateTx]
+    => TxsFilterExpr -> DBT t m [Core.PrivateTx]
 getPrivateTxsByFilter filterExpr = do
     runSelectMap privateTxFromRow . select $ do
         privateTx <- all_ (esTransactions educatorSchema)

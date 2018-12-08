@@ -30,3 +30,9 @@ instance FromHttpApiData DocumentType where
 
 deriving instance ToHttpApiData GTxId
 deriving instance FromHttpApiData GTxId
+
+deriving instance ToHttpApiData Timestamp
+instance FromHttpApiData Timestamp where
+    parseQueryParam t =
+        -- Rounding here since Postgres rounds all timestamps it receives anyway
+        toTimestamp <$> parseQueryParam t

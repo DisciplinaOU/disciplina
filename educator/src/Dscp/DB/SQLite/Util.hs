@@ -31,8 +31,8 @@ import Prelude hiding (_1, _2)
 
 import Control.Lens (Field1 (..), Field2 (..))
 import Data.Coerce (coerce)
-import Data.Time.Clock (UTCTime)
 import qualified Database.Beam.Backend.SQL as Beam
+import qualified Database.Beam.Postgres as Beam
 import Database.Beam.Query as BeamReexport (QGenExpr (..), aggregate_, all_, as_, asc_, countAll_,
                                             default_, delete, desc_, exists_, filter_, guard_,
                                             insert, insertValues, leftJoin_, limit_, max_, orderBy_,
@@ -43,11 +43,10 @@ import qualified Database.Beam.Query.Internal as Beam
 import Database.Beam.Schema (DatabaseEntity, PrimaryKey, TableEntity)
 import Database.Beam.Schema as BeamReexport (DatabaseSettings)
 import qualified Database.Beam.Schema as Beam
-import Database.Beam.Sqlite.Connection (Sqlite)
-import qualified Database.Beam.Sqlite.Syntax as Beam
 import qualified GHC.Generics as G
 import GHC.TypeLits (ErrorMessage (Text), TypeError)
 
+import Dscp.Core
 import Dscp.DB.SQLite.Functions
 import Dscp.Util
 
@@ -91,7 +90,7 @@ link_
     :: (table ~ RelationT t a b, _)
     => DatabaseEntity be db (TableEntity table)
     -> table (QGenExpr _ _ _)
-    -> Beam.Q Beam.SqliteSelectSyntax db _ ()
+    -> Beam.Q Beam.PgSelectSyntax db _ ()
 link_ relation (pk1 :-: pk2) = do
     id1 :-: id2 <- all_ relation
     guard_ (id1 ==. pk1)
@@ -100,7 +99,7 @@ link_ relation (pk1 :-: pk2) = do
 -- | Check whether the query returns any row.
 checkExists
     :: (MonadIO m)
-    => Beam.Q Beam.SqliteSelectSyntax db (Beam.QNested _) () -> DBT t w m Bool
+    => Beam.Q Beam.PgSelectSyntax db (Beam.QNested _) () -> DBT t m Bool
 checkExists query =
     fmap ((> 0) . oneOrError) $
     runSelect . select $
@@ -166,7 +165,7 @@ selectByPk
     => (row Identity -> res)
     -> Beam.DatabaseEntity be db (TableEntity table)
     -> pk
-    -> DBT t w m (Maybe res)
+    -> DBT t m (Maybe res)
 selectByPk mapper tbl key =
     fmap fetchOne $
     runSelect . Beam.select $
@@ -179,28 +178,32 @@ selectByPk mapper tbl key =
 -- | Quick way to check whether an entiry refered by the given primary key exists.
 existsWithPk
     :: _
-    => Beam.DatabaseEntity be db (TableEntity table) -> pk -> DBT t w m Bool
+    => Beam.DatabaseEntity be db (TableEntity table) -> pk -> DBT t m Bool
 existsWithPk tbl key =
     checkExists $ do
         row <- all_ tbl
         guard_ (Beam.pk row ==. valPk_ key)
 
 -- | Quick way to delete a single entiry refered by the given primary key.
+-- Returns whether anything was actually deleted.
 deleteByPk
     :: (MonadIO m, _)
     => Beam.DatabaseEntity be db (TableEntity table)
     -> pk
-    -> DBT t 'Writing m ()
-deleteByPk tbl key = runDelete $ delete tbl (valPk_ key `references_`)
+    -> DBT t m Bool
+deleteByPk tbl key = do
+    changes <- runDelete $ delete tbl (valPk_ key `references_`)
+    return (anyAffected changes)
 
 -- | SQL CURRENT_TIMESTAMP function.
 currentTimestampUtc_
     :: forall ctxt syntax s.
        Beam.IsSql92ExpressionSyntax syntax
-    => Beam.QGenExpr ctxt syntax s UTCTime
+    => Beam.QGenExpr ctxt syntax s Timestamp
 currentTimestampUtc_ =
     -- The behavior should not depend much on the backend.
-    -- CURRENT_TIMESTAMP is nicely fetched both for "datetime" and "timestamp" types.
+    -- CURRENT_TIMESTAMP is nicely fetched both for "datetime" and "timestamp" types,
+    -- and returned value should already have no more than microseconds precision.
     coerce (Beam.currentTimestamp_ @syntax)
 
 -- | Make a filtering predicate checking for values match.
@@ -224,17 +227,19 @@ filterMatchesPk_ = \case
 -- | Take the next primary key for the given table, can be used for further insert.
 -- In [DSCP-388] we probably remove this function for the sake of specialized methods
 -- to do the similar thing.
+-- We assume that primary key is exactly of "bigserial" type, thus an extra
+-- 'Coercible' constraint here.
 getNextPrimaryKey
-    :: (PrimaryKeyWrapper (PrimaryKey table Identity) keyInner
-       ,MonadIO m
-       ,Num keyInner
-       ,Beam.Table table
-       ,Beam.Database be db
-       ,Beam.FromBackendRow be keyInner
-       ,be ~ Sqlite
-       ,_)
-    => Beam.DatabaseEntity be db (TableEntity table)
-    -> DBT 'WithinTx 'Writing m keyInner
+    :: ( PrimaryKeyWrapper (PrimaryKey table Identity) keyInner
+       , Num keyInner
+       , MonadIO m
+       , Beam.Table table
+       , Beam.Database be db
+       , Beam.FromBackendRow Beam.Postgres keyInner
+       , Coercible keyInner Int64
+       , _
+       )
+    => Beam.DatabaseEntity Beam.Postgres db (TableEntity table) -> DBT 'WithinTx m keyInner
 getNextPrimaryKey tbl = do
     res <- runSelect . select $
         aggregate_ (Beam.max_ . unpackPk . pk_) (all_ tbl)

@@ -30,7 +30,6 @@ import Control.Lens (Iso', from, iso, makePrisms)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
-import Data.Time.Clock (UTCTime)
 import Fmt (build, (+|), (+||), (|+), (||+))
 import Loot.Base.HasLens (HasCtx)
 import Loot.Log (ModifyLogName, MonadLogging)
@@ -55,7 +54,7 @@ type MonadEducatorWebQuery m =
 
 type MonadEducatorWeb ctx m =
     ( WitnessWorkMode ctx m
-    , HasCtx ctx m '[SQLiteDB, KeyResources EducatorNode]
+    , HasCtx ctx m '[SQL, KeyResources EducatorNode]
     )
 
 ---------------------------------------------------------------------------
@@ -90,7 +89,7 @@ data StudentInfo = StudentInfo
 data GradeInfo = GradeInfo
     { giSubmissionHash :: (Hash Submission)
     , giGrade          :: Grade
-    , giTimestamp      :: UTCTime
+    , giTimestamp      :: Timestamp
     , giHasProof       :: Bool
     } deriving (Show, Eq, Ord, Generic)
 

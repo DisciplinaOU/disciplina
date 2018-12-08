@@ -10,6 +10,7 @@ import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveFromJSON, deriveJSON)
 import Data.Aeson.Types (toJSONKeyText)
 import Data.Scientific (scientific, toBoundedInteger)
+import Data.Time.Clock (UTCTime)
 import Data.Typeable (gcast)
 
 import Dscp.Core.Config
@@ -25,6 +26,15 @@ import Dscp.Util.Aeson (parseJSONSerialise, toJSONSerialise)
 ---------------------------------------------------------------------------
 -- Manual instances
 ---------------------------------------------------------------------------
+
+-- TODO [DSCP-416]: Move
+deriving instance ToJSON ItemDesc
+instance FromJSON ItemDesc where
+    parseJSON v = leftToFail . toItemDesc =<< parseJSON @Text v
+
+deriving instance ToJSON Timestamp
+instance FromJSON Timestamp where
+    parseJSON v = toTimestamp <$> parseJSON @UTCTime v
 
 -- | TODO: make a generic instance generation for these enum-like instances
 instance ToJSON AssignmentType where

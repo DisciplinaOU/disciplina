@@ -12,7 +12,7 @@ import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
 import Servant.Auth.Server (FromJWT, ToJWT)
 
-import Dscp.DB.SQLite (SQLiteDB)
+import Dscp.DB.SQLite (SQL)
 import Dscp.Educator.Launcher.Mode (EducatorNode)
 import Dscp.Resource.Keys (KeyResources)
 
@@ -22,11 +22,11 @@ import Dscp.Resource.Keys (KeyResources)
 
 -- data EducatorAuth
 
-newtype LookupEducator = LookupEducator (Text -> IO (Maybe (KeyResources EducatorNode, SQLiteDB)))
+newtype LookupEducator = LookupEducator (Text -> IO (Maybe (KeyResources EducatorNode, SQL)))
 
 data EducatorAuthResult
     = EducatorNotFound
-    | EducatorData (KeyResources EducatorNode) SQLiteDB
+    | EducatorData (KeyResources EducatorNode) SQL
 
 newtype EducatorAuthData = EducatorAuthData
     { eadLogin :: Text
