@@ -51,38 +51,6 @@ library:
     - wai
     - wai-cors
 
-  tests:
-    disciplina-test:
-      <<: *test-common
-
-      build-tools:
-        - tasty-discover
-
-      dependencies:
-        - containers
-        - cryptonite
-        - data-default
-        - disciplina-core
-        - disciplina-witness
-        - disciplina-educator
-        - directory
-        - fmt
-        - generic-arbitrary
-        - hspec
-        - interpolatedstring-perl6
-        - lens
-        - loot-base
-        - loot-log
-        - safe-exceptions >= 0.1.4
-        - sqlite-simple
-        - stm
-        - tasty
-        - tasty-hspec
-        - text-format
-        - time
-        - QuickCheck
-        - unliftio
-
 executables:
   dscp-multi-educator:
     <<: *exec-common
