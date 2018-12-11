@@ -23,7 +23,7 @@ module Dscp.MultiEducator.Launcher.Mode
 
 import Control.Lens (makeLenses)
 import qualified Data.Map as M
-import Loot.Base.HasLens (HasLens', lensOf)
+import Loot.Base.HasLens (HasLens, lensOf)
 import Loot.Config (option, sub)
 import System.Directory (canonicalizePath, createDirectoryIfMissing)
 import System.FilePath.Posix ((</>))
@@ -61,12 +61,13 @@ type MultiEducatorWorkMode ctx m =
 
     , MonadReader ctx m
 
-    , HasLens' ctx (TVar EducatorContexts)
+    , HasLens ctx (TVar EducatorContexts)
 
-    -- It's easier to just have these two lenses instead of reconstructing
+    -- It's easier to just have these two (or a bit more) lenses instead of reconstructing
     -- the full educator context in multiToNormal from other lenses
-    , HasLens' ctx MultiEducatorResources
-    , HasLens' ctx W.WitnessVariables
+    , HasLens ctx MultiEducatorResources
+    , HasLens ctx W.WitnessVariables
+    , HasLens ctx W.WitnessResources
     )
 
 -- | Set of typeclasses which define capabilities both of Educator and Witness.
@@ -108,8 +109,7 @@ deriveHasLens 'mecWitnessVars ''MultiEducatorContext ''W.WitnessVariables
 lookupEducator :: MultiEducatorWorkMode ctx m => Text -> m (Maybe EducatorCtxWithCfg)
 lookupEducator login = do
     mctx <- ask
-    let MultiEducatorResources{ _merEducatorData }
-            = mctx ^. lensOf @MultiEducatorResources
+    let MultiEducatorResources{ _merEducatorData } = mctx ^. lensOf
     fmap (\(EducatorContexts ctxs) -> M.lookup login ctxs) . atomically $ readTVar _merEducatorData
 
 loadEducator :: MultiEducatorWorkMode ctx m => Bool -> Text -> Text -> m Bool
@@ -141,19 +141,19 @@ loadEducator _new login passphrase = do
     -- FIXME: DB is not closed
     ctx <- ask
     let educatorResources = E.EducatorResources
-            { _erWitnessResources = ctx ^. lensOf @MultiEducatorResources . lensOf @W.WitnessResources
+            { _erWitnessResources = ctx ^. lensOf
             , _erKeys = key
             , _erDB = db
             }
         educatorContext = E.EducatorContext
             { _ecResources = educatorResources
-            , _ecWitnessVars = ctx ^. lensOf @W.WitnessVariables
+            , _ecWitnessVars = ctx ^. lensOf
             }
         --newCfg' = E.defaultEducatorConfig
         --    & (sub #educator . option #db ?~ dbParam)
         --    . (sub #educator . option #keys ?~ E.EducatorKeyParams keyParams)
         newCfg = error "no config"
-    atomically $ modifyTVar' (ctx ^. lensOf @(TVar EducatorContexts))
+    atomically $ modifyTVar' (ctx ^. lensOf @_ @(TVar EducatorContexts))
         $ \(EducatorContexts ctxs) -> EducatorContexts $
             case M.lookup login ctxs of
                 Just _ -> ctxs

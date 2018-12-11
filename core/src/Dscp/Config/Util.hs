@@ -46,7 +46,7 @@ import Data.Yaml (FromJSON (..), ParseException (AesonException), decodeFileEith
                   (.:?))
 import Fmt (blockListF)
 import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
-import Loot.Base.HasLens (HasLens', lensOf)
+import Loot.Base.HasLens (HasLens, lensOf)
 import Loot.Config (ConfigKind (Final, Partial), ConfigRec, HasLensC, finalise, lensOfC, option,
                     sub)
 import qualified Options.Applicative as Opt
@@ -167,10 +167,10 @@ configParamsParser = do
 ----------------------------------------------------------------------------
 
 type HasGiven is v =
-    (Given (ConfigRec 'Final is), HasLens' (ConfigRec 'Final is) v)
+    (Given (ConfigRec 'Final is), HasLens (ConfigRec 'Final is) v)
 
 giveL :: forall is v . HasGiven is v => v
-giveL = given @(ConfigRec 'Final is) ^. (lensOf @v)
+giveL = given @(ConfigRec 'Final is) ^. lensOf
 
 type HasGivenC path is v =
     (Given (ConfigRec 'Final is), HasLensC path is v)

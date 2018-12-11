@@ -28,13 +28,13 @@ module Dscp.DB.Rocks.Real.Functions
        , iterate
        ) where
 
-import Prelude hiding (get, put, iterate)
+import Prelude hiding (get, iterate, put)
 
 import Codec.Serialise
 import Control.Monad.Reader (MonadReader)
 import Control.Monad.Trans.Resource (runResourceT)
 import qualified Database.RocksDB as Rocks
-import Loot.Base.HasLens (HasLens')
+import Loot.Base.HasLens (HasLens)
 import System.Directory (doesDirectoryExist, removeDirectoryRecursive)
 import UnliftIO (MonadUnliftIO)
 
@@ -51,7 +51,7 @@ data DeserialisationError = DeserialisationError DeserialiseFailure
 
 instance Exception DeserialisationError
 
-type HasRocksDB ctx m = (MonadReader ctx m, HasLens' ctx RocksDB, MonadIO m, MonadThrow m)
+type HasRocksDB ctx m = (MonadReader ctx m, HasLens ctx RocksDB, MonadIO m, MonadThrow m)
 
 openRocksDB :: MonadIO m => FilePath -> m DB
 openRocksDB path = do

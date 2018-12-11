@@ -10,7 +10,7 @@ module Dscp.Witness.SDLock
 
 import qualified Control.Concurrent.ReadWriteLock as RawLock
 import Data.Reflection (Given, give)
-import Loot.Base.HasLens (HasLens (..), HasLens')
+import Loot.Base.HasLens (HasLens (..))
 import Loot.Log (MonadLogging)
 import Time (sec)
 import qualified UnliftIO
@@ -46,25 +46,25 @@ readingSDLock
     ::  ( UnliftIO.MonadUnliftIO m
         , MonadReader ctx m
         , MonadLogging m
-        , HasLens' ctx SDLock
+        , HasLens ctx SDLock
         )
     => (WithinReadSDLock => m a)
     -> m a
 readingSDLock action = do
-    lock <- view (lensOf @SDLock)
+    lock <- view lensOf
     readingSDLockOf lock action
 
 writingSDLock
     ::  ( UnliftIO.MonadUnliftIO m
         , MonadReader ctx m
         , MonadLogging m
-        , HasLens' ctx SDLock
+        , HasLens ctx SDLock
         )
     => Text
     -> (WithinWriteSDLock => m a)
     -> m a
 writingSDLock desc action = do
-    lock <- view (lensOf @SDLock)
+    lock <- view lensOf
     logWarningWaitInf (sec 1) desc $
         writingSDLockOf lock action
 

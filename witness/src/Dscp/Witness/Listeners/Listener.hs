@@ -28,7 +28,7 @@ import Dscp.Witness.SDLock
 
 witnessListeners :: WitnessWorkMode ctx m => m [Listener m]
 witnessListeners = do
-    relayState <- view (lensOf @RelayState)
+    relayState <- view lensOf
     return
         [ blockIssuingListener
         , getBlocksListener

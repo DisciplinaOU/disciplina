@@ -22,7 +22,7 @@ import Control.Lens (Getter, makeLenses, makeLensesWith, to)
 import Data.Aeson (FromJSON (..), ToJSON (..), object, withObject, (.:), (.=))
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
-import Loot.Base.HasLens (HasLens', lensOf)
+import Loot.Base.HasLens (HasLens, glensOf)
 
 import Dscp.Core.Aeson ()
 import Dscp.Core.Foundation.Address
@@ -125,24 +125,24 @@ deriveJSON defaultOptions ''BaseKeyParams
 -- different key resources.
 ourSecretKey
     :: forall node ctx m.
-       (HasLens' ctx (KeyResources node), MonadReader ctx m)
+       (HasLens ctx (KeyResources node), MonadReader ctx m)
     => m SecretKey
-ourSecretKey = view $ lensOf @(KeyResources node) . krSecretKeyData . to skSecret
+ourSecretKey = view $ glensOf @node . krSecretKeyData . to skSecret
 
 ourPublicKey
     :: forall node ctx m.
-       (HasLens' ctx (KeyResources node), MonadReader ctx m)
+       (HasLens ctx (KeyResources node), MonadReader ctx m)
     => m PublicKey
-ourPublicKey = view $ lensOf @(KeyResources node) . krSecretKeyData . to skPublic
+ourPublicKey = view $ glensOf @node . krSecretKeyData . to skPublic
 
 ourAddress
     :: forall node ctx m.
-       (HasLens' ctx (KeyResources node), MonadReader ctx m)
+       (HasLens ctx (KeyResources node), MonadReader ctx m)
     => m Address
-ourAddress = view $ lensOf @(KeyResources node) . krSecretKeyData . to skAddress
+ourAddress = view $ glensOf @node . krSecretKeyData . to skAddress
 
 ourSecretKeyData
     :: forall node ctx m.
-       (MonadReader ctx m, HasLens' ctx (KeyResources node))
+       (MonadReader ctx m, HasLens ctx (KeyResources node))
     => m SecretKeyData
-ourSecretKeyData = view $ lensOf @(KeyResources node) . krSecretKeyData
+ourSecretKeyData = view $ glensOf @node . krSecretKeyData

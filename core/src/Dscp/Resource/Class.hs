@@ -32,7 +32,7 @@ data InitContext = InitContext
 
 makeLenses ''InitContext
 
-instance HasLens LoggingIO InitContext LoggingIO where
+instance HasLens InitContext LoggingIO where
     lensOf = icLogging
 
 -- | Resources safe allocation.

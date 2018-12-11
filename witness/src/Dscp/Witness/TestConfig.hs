@@ -21,7 +21,7 @@ import Control.Lens (makeLenses, (.=), (?=))
 import Data.Default (def)
 import qualified Data.List as L
 import qualified Data.Map as M
-import Loot.Base.HasLens (HasLens')
+import Loot.Base.HasLens (HasLens)
 import Loot.Config.Record (finaliseDeferredUnsafe, option, sub)
 
 import Dscp.Core
@@ -40,7 +40,7 @@ import Dscp.Witness.SDLock
 
 type TestWitnessWorkMode ctx m =
     ( WitnessWorkMode ctx m
-    , HasLens' ctx TestTimeActions
+    , HasLens ctx TestTimeActions
     )
 
 testGenesisSecrets :: [SecretKey]

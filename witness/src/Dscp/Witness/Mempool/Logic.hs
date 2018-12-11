@@ -17,7 +17,7 @@ module Dscp.Witness.Mempool.Logic
 import UnliftIO (MonadUnliftIO)
 
 import qualified Data.Set as S
-import Loot.Base.HasLens (HasCtx, HasLens', lensOf)
+import Loot.Base.HasLens (HasCtx, HasLens, lensOf)
 import Loot.Log (MonadLogging)
 
 import qualified Snowdrop.Core as SD
@@ -40,9 +40,9 @@ type MempoolCtx ctx m =
     , MonadUnliftIO   m
     , MonadReader ctx m
     , MonadLogging    m
-    , HasLens' ctx MempoolVar
-    , HasLens' ctx SD.SDVars
-    , HasLens' ctx SD.LoggingIO
+    , HasLens ctx MempoolVar
+    , HasLens ctx SD.SDVars
+    , HasLens ctx SD.LoggingIO
     , HasCoreConfig
     )
 
@@ -59,14 +59,14 @@ addTxToMempool
     => GTxWitnessed
     -> m ()
 addTxToMempool tx = do
-    Mempool pool conf <- view (lensOf @MempoolVar)
+    Mempool pool conf <- view (lensOf @_ @MempoolVar)
     writeToMempool @ctx pool $
         Pool.processTxAndInsertToMempool conf tx
 
 -- | See all mempool transactions.
 readTxsMempool :: (MempoolCtx ctx m, WithinReadSDLock) => m [GTxWitnessed]
 readTxsMempool = do
-    Mempool pool _ <- view (lensOf @MempoolVar)
+    Mempool pool _ <- view (lensOf @_ @MempoolVar)
     readFromMempoolUnsafe pool $
         map fst <$> gets Pool.msTxs
 
@@ -76,7 +76,7 @@ takeTxsMempool
     .  (MempoolCtx ctx m, WithinWriteSDLock)
     => m [GTxWitnessed]
 takeTxsMempool = do
-    Mempool pool _ <- view (lensOf @MempoolVar)
+    Mempool pool _ <- view (lensOf @_ @MempoolVar)
     txsWithUndos <- writeToMempool @ctx pool Pool.evictMempool
     return (map fst txsWithUndos)
 
@@ -87,7 +87,7 @@ normalizeMempool
     .  (MempoolCtx ctx m, WithinWriteSDLock)
     => m (Pool.Rejected GTxWitnessed)
 normalizeMempool = do
-    Mempool pool conf <- view (lensOf @MempoolVar)
+    Mempool pool conf <- view (lensOf @_ @MempoolVar)
     writeToMempool pool $ Pool.normalizeMempool conf
 
 ----------------------------------------------------------------------------
@@ -134,8 +134,8 @@ readFromMempoolUnsafe
     -> SdMemWriteM a
     -> m a
 readFromMempoolUnsafe pool action = do
-    actions <- view (lensOf @SD.SDVars)
-    logger  <- view (lensOf @SD.LoggingIO)
+    actions <- view lensOf
+    logger  <- view (lensOf @_ @SD.LoggingIO)
     let dbActions = sdActionsComposition actions
     SD.runRIO logger $
         SD.unwrapSDBaseRethrow $
@@ -164,7 +164,7 @@ runSdMempool
     :: (MempoolCtx ctx m, WithinReadSDLock)
     => SdMemReadM a -> m a
 runSdMempool action = do
-    Mempool pool _ <- view (lensOf @MempoolVar)
+    Mempool pool _ <- view (lensOf @_ @MempoolVar)
     readFromMempool pool action
 
 runSdMempoolLocked

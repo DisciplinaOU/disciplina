@@ -29,11 +29,11 @@ newtype RIO ctx a = RIO { unRIO :: ReaderT ctx IO a }
 runRIO :: MonadIO m => ctx -> RIO ctx a -> m a
 runRIO ctx (RIO act) = liftIO $ runReaderT act ctx
 
-instance HasLens LoggingIO ctx LoggingIO =>
+instance HasLens ctx LoggingIO =>
          MonadLogging (RIO ctx) where
     log = Rio.defaultLog
     logName = Rio.defaultLogName
 
-instance HasLens LoggingIO ctx LoggingIO =>
+instance HasLens ctx LoggingIO =>
          ModifyLogName (RIO ctx) where
     modifyLogNameSel = Rio.defaultModifyLogNameSel

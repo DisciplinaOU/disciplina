@@ -5,7 +5,7 @@ module Test.Dscp.Witness.Common
     , dumpBlock
     ) where
 
-import Loot.Base.HasLens (lensOf)
+import Loot.Base.HasLens (glensOf)
 
 import Dscp.Core
 import Dscp.Crypto
@@ -37,7 +37,7 @@ dumpBlock = do
     slotId <- rewindToNextSlot
     let issuerKey = KeyResources . mkSecretKeyData $ testFindSlotOwner slotId
 
-    local (lensOf @(KeyResources WitnessNode) .~ issuerKey) $ do
+    local (glensOf @WitnessNode .~ issuerKey) $ do
         block <- createBlock slotId
         void $ applyBlock block
         return (headerHash block)

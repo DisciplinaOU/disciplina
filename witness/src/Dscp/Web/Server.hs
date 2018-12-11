@@ -9,7 +9,7 @@ module Dscp.Web.Server
        ) where
 
 import Control.Lens (views)
-import Loot.Base.HasLens (HasLens', lensOf)
+import Loot.Base.HasLens (HasLens, lensOf)
 import Loot.Log (Logging, Message (..), MonadLogging, Name, NameSelector (..))
 import qualified Loot.Log.Internal as Log
 import Network.HTTP.Client.TLS (newTlsManager)
@@ -36,11 +36,11 @@ serveWeb addr = liftIO . Warp.runSettings (warpSettings addr)
 
 -- | Grab logging context and build config for servant requests logging.
 buildServantLogConfig
-    :: (MonadReader ctx m, HasLens' ctx (Logging IO), MonadLogging m)
+    :: (MonadReader ctx m, HasLens ctx (Logging IO), MonadLogging m)
     => (Name -> Name) -> m ServantLogConfig
 buildServantLogConfig modifyName = do
     origNameSel <- Log.logName
-    logger <- views (lensOf @(Logging IO)) Log._log
+    logger <- views lensOf Log._log
     let origName = case origNameSel of
                        GivenName x -> x
                        _           -> mempty

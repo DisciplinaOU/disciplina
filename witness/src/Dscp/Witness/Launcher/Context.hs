@@ -21,7 +21,7 @@ module Dscp.Witness.Launcher.Context
 
 import Control.Lens (makeLenses)
 
-import Loot.Base.HasLens (HasCtx, HasLens')
+import Loot.Base.HasLens (HasCtx, HasLens)
 import Loot.Log.Rio (LoggingIO)
 import Loot.Network.Class (NetworkingCli, NetworkingServ)
 import Loot.Network.ZMQ as Z
@@ -70,9 +70,9 @@ type NetworkMode ctx m =
     ( NetworkingCli ZmqTcp m
     , NetworkingServ ZmqTcp m
 
-    , HasLens' ctx Z.ZTGlobalEnv
-    , HasLens' ctx Z.ZTNetCliEnv
-    , HasLens' ctx Z.ZTNetServEnv
+    , HasLens ctx Z.ZTGlobalEnv
+    , HasLens ctx Z.ZTNetCliEnv
+    , HasLens ctx Z.ZTNetServEnv
     )
 
 -- | Full set of typeclasses which define capabilities of Witness node.

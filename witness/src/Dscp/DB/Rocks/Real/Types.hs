@@ -13,14 +13,14 @@ import Control.Lens (makeLenses, makeLensesWith)
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveFromJSON)
 import qualified Database.RocksDB as Rocks
-import Loot.Base.HasLens (HasLens')
+import Loot.Base.HasLens (HasLens)
 
 import Dscp.Util (postfixLFields)
 
 -- | Set of constraints necessary to operate on real DB.
 type MonadRealDB ctx m =
     ( MonadReader ctx m
-    , HasLens' ctx RocksDB
+    , HasLens ctx RocksDB
     , MonadIO m
     , Monad m
     )

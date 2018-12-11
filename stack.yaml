@@ -35,7 +35,7 @@ extra-deps:
   commit: 333a2b2cf113e115ea2ec450dc706d3f47ee54e4
 
 - git: https://github.com/serokell/blockchain-util.git
-  commit: 9a28a192c55cb61735ffc0c899fbd80815e1dd2c # volhovm/dscp193
+  commit: 4c8d1fa17e3dc3578c0e93958b3a3715610214e5 # (will be at volhovm/dscp193)
   subdirs:
     - snowdrop-core
     - snowdrop-util
@@ -62,7 +62,7 @@ extra-deps:
 - primitive-0.6.4.0
 
 - git: https://github.com/serokell/lootbox.git
-  commit: b66d53bf42e88d44184046f3450ab2f01bd9c8b6
+  commit: 8b35882bbc918007f21ef75054c993268a6b467a
   subdirs:
     - code/base
     - code/config

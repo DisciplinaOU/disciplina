@@ -59,15 +59,15 @@ deriveHasLensExt deriveWay preLensQ ctxName tyName = do
     mkInstance fieldTy mkLensName = do
       preLens <- preLensQ
       let addPreLens = TH.UInfixE (preLens) (TH.VarE $ TH.mkName ".")
-      fieldLens <- [e| lensOf @($(pure fieldTy)) |]
+      fieldLens <- [e| lensOf @_ @($(pure fieldTy)) |]
       case deriveWay of
         DeriveViaLensOf ->
-            [d| instance HasLens $(pure fieldTy) $(TH.conT ctxName) $(pure fieldTy) where
+            [d| instance HasLens $(TH.conT ctxName) $(pure fieldTy) where
                       lensOf = $(pure $ addPreLens fieldLens)
                 |]
         DeriveViaFieldLens rules -> do
             lensName <- mkLensName rules
-            [d| instance HasLens $(pure fieldTy) $(TH.conT ctxName) $(pure fieldTy) where
+            [d| instance HasLens $(TH.conT ctxName) $(pure fieldTy) where
                       lensOf = $(pure $ addPreLens (TH.VarE lensName))
                 |]
 

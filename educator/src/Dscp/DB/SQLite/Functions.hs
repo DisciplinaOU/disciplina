@@ -75,7 +75,7 @@ notingPending
     :: (MonadUnliftIO m, HasCtx ctx m '[SQLiteDB])
     => m a -> m a
 notingPending action = do
-    db <- view (lensOf @SQLiteDB)
+    db <- view lensOf
     let pendingNum = sdPendingNum db
         maxPending = sdMaxPending db
     UIO.bracket_ (increaseCounterOrThrow pendingNum maxPending)
@@ -98,7 +98,7 @@ borrowConnection
 borrowConnection action = do
     -- TODO: timeout?
     -- TODO: drop warnings on long execution?
-    db <- view (lensOf @SQLiteDB)
+    db <- view lensOf
     let connPool = sdConnPool db
     UIO.bracket (notingPending $ liftIO $ readChan connPool)
                 (liftIO . writeChan connPool)

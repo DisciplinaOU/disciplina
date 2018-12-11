@@ -76,7 +76,7 @@ import Data.Default (Default (..))
 import qualified Data.Map as Map (empty, fromList, insertWith, toList)
 import Data.Time.Clock (UTCTime)
 import GHC.Exts (fromList)
-import Loot.Base.HasLens (HasLens')
+import Loot.Base.HasLens (HasLens)
 import Snowdrop.Util (OldestFirst (..))
 
 import Dscp.Core
@@ -306,7 +306,7 @@ genesisBlockIdx :: BlockIdx
 genesisBlockIdx = 0
 
 getLastBlockIdAndIdx
-    :: (MonadQuery m, HasLens' ctx (KeyResources EducatorNode))
+    :: (MonadQuery m, HasLens ctx (KeyResources EducatorNode))
     => ctx -> m (Hash PrivateBlockHeader, BlockIdx)
 getLastBlockIdAndIdx ctx = do
     author <- runRIO ctx $ ourAddress @EducatorNode
@@ -326,7 +326,7 @@ getPrivateBlock = selectByPk pbHeaderFromRow (esBlocks es)
 
 -- TODO [DSCP-384]: requires index on Blocks.hash
 getPrivateBlockIdxByHash
-    :: (MonadQuery m, HasLens' ctx (KeyResources EducatorNode))
+    :: (MonadQuery m, HasLens ctx (KeyResources EducatorNode))
     => ctx -> PrivateHeaderHash -> m (Maybe BlockIdx)
 getPrivateBlockIdxByHash ctx phHash = do
     author <- runRIO ctx $ ourAddress @EducatorNode
@@ -350,14 +350,14 @@ getPrivateBlocksAfter idx =
         all_ (esBlocks es)
 
 getPrivateBlocksAfterHash
-    :: (MonadQuery m, HasLens' ctx (KeyResources EducatorNode))
+    :: (MonadQuery m, HasLens ctx (KeyResources EducatorNode))
     => ctx -> PrivateHeaderHash -> m (Maybe $ OldestFirst [] PrivateBlockHeader)
 getPrivateBlocksAfterHash ctx phHash = do
     midx <- getPrivateBlockIdxByHash ctx phHash
     forM @Maybe midx getPrivateBlocksAfter
 
 createPrivateBlock
-    :: (MonadQuery m, HasLens' ctx (KeyResources EducatorNode), WithinWriteTx)
+    :: (MonadQuery m, HasLens ctx (KeyResources EducatorNode), WithinWriteTx)
     => ctx -> Maybe ATGDelta -> m (Maybe PrivateBlockHeader)
 createPrivateBlock ctx delta = runMaybeT $ do
     (prev, idx) <- lift (getLastBlockIdAndIdx ctx)

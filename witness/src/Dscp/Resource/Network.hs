@@ -79,8 +79,8 @@ data NetCliResources = NetCliResources
 
 makeLenses ''NetCliResources
 
-instance HasLens ZTGlobalEnv NetCliResources ZTGlobalEnv where lensOf = ncGlobalEnv
-instance HasLens ZTNetCliEnv NetCliResources ZTNetCliEnv where lensOf = ncClientEnv
+instance HasLens NetCliResources ZTGlobalEnv where lensOf = ncGlobalEnv
+instance HasLens NetCliResources ZTNetCliEnv where lensOf = ncClientEnv
 
 instance WithNetLogging => AllocResource NetCliResources where
     type Deps NetCliResources = NetCliParams
@@ -116,9 +116,9 @@ data NetServResources = NetServResources
 
 makeLenses ''NetServResources
 
-instance HasLens ZTGlobalEnv NetServResources ZTGlobalEnv where lensOf = nsGlobalEnv
-instance HasLens ZTNetCliEnv NetServResources ZTNetCliEnv where lensOf = nsClientEnv
-instance HasLens ZTNetServEnv NetServResources ZTNetServEnv where lensOf = nsServerEnv
+instance HasLens NetServResources ZTGlobalEnv where lensOf = nsGlobalEnv
+instance HasLens NetServResources ZTNetCliEnv where lensOf = nsClientEnv
+instance HasLens NetServResources ZTNetServEnv where lensOf = nsServerEnv
 
 instance WithNetLogging => AllocResource NetServResources where
     type Deps NetServResources = NetServParams

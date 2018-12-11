@@ -43,7 +43,7 @@ instance AllocResource FaucetResources where
     type Deps FaucetResources = FaucetConfigRec
     allocResource faucetCfg = do
         let cfg = faucetCfg ^. sub #faucet
-        _frLogging <- view (lensOf @(Logging IO))
+        _frLogging <- view lensOf
         _frAppDir <- allocResource $ cfg ^. option #appDir
         _frKeys <- allocResource (faucetCfg, _frAppDir)
         _frWitnessClient <- allocResource $ cfg ^. option #witnessBackend

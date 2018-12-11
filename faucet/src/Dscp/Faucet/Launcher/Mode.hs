@@ -62,7 +62,7 @@ type FaucetRealMode = RIO FaucetContext
 ---------------------------------------------------------------------
 
 #define GenHasLens(SUBRES, IMPL) \
-    instance HasLens (SUBRES) FaucetContext (SUBRES) where \
+    instance HasLens FaucetContext (SUBRES) where \
         lensOf = IMPL
 
 GenHasLens(Logging IO            , fcResources . frLogging)

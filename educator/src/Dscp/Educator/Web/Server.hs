@@ -10,7 +10,7 @@ module Dscp.Educator.Web.Server
 import Data.Proxy (Proxy (..))
 import Data.Reflection (Reifies, reify)
 import Fmt ((+|), (|+))
-import Loot.Base.HasLens (lensOf)
+import Loot.Base.HasLens (glensOf)
 import Loot.Config (option, sub)
 import Loot.Log (logInfo)
 import Network.HTTP.Types.Header (hAuthorization, hContentType)
@@ -34,7 +34,7 @@ import Dscp.Educator.Web.Educator (EducatorPublicKey (..), ProtectedEducatorAPI,
                                    protectedEducatorAPI)
 import Dscp.Educator.Web.Student (ProtectedStudentAPI, StudentCheckAction (..),
                                   convertStudentApiHandler, studentAPI, studentApiHandlers)
-import Dscp.Resource.Keys (KeyResources, krPublicKey)
+import Dscp.Resource.Keys (krPublicKey)
 import Dscp.Util.Servant (LoggingApi, ServantLogConfig (..), methodsCoveringAPI)
 import Dscp.Web (ServerParams (..), buildServantLogConfig, serveWeb)
 import Dscp.Web.Metrics (responseTimeMetric)
@@ -110,7 +110,7 @@ serveEducatorAPIsReal withWitnessApi = do
         educatorAPINoAuth = webCfg ^. option #educatorAPINoAuth
         studentAPINoAuth  = webCfg ^. option #studentAPINoAuth
 
-    educatorKeyResources <- view (lensOf @(KeyResources EducatorNode))
+    educatorKeyResources <- view (glensOf @EducatorNode)
     studentCheckAction <- createStudentCheckAction botParams
     let educatorPublicKey = EducatorPublicKey $ educatorKeyResources ^. krPublicKey
     let srvCtx = educatorPublicKey :. educatorAPINoAuth :.

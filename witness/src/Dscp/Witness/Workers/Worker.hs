@@ -37,7 +37,7 @@ witnessWorkers
     :: FullWitnessWorkMode ctx m
     => m [Worker m]
 witnessWorkers = do
-    relayState <- view (lensOf @RelayState)
+    relayState <- view lensOf
     let (inputReader, subReader) = makeRelay relayState
     return [blockUpdateWorker, inputReader, subReader]
 

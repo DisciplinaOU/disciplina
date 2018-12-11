@@ -3,7 +3,7 @@
 module Main where
 
 import Fmt ((+|), (|+))
-import Loot.Base.HasLens (lensOf)
+import Loot.Base.HasLens (glensOf)
 import Loot.Log (logInfo)
 import Options.Applicative (execParser, fullDesc, helper, info, progDesc)
 
@@ -22,7 +22,7 @@ main = do
         serveFaucetAPIReal
   where
     printSourceInfo = do
-        pk <- view $ lensOf @(KeyResources FaucetApp) . krPublicKey
+        pk <- view $ glensOf @FaucetApp . krPublicKey
         let addr = mkAddr pk
         logInfo $ "Faucet source address: " +| addr |+ ""
 

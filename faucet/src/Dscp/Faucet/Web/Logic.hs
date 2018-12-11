@@ -29,7 +29,7 @@ ensureFirstGift
     :: (MonadIO m, MonadThrow m, HasCtx ctx m '[GiftedAddresses])
     => Address -> m ()
 ensureFirstGift addr = do
-    giftedAddresses <- view (lensOf @GiftedAddresses)
+    giftedAddresses <- view (lensOf @_ @GiftedAddresses)
     prevVal <- atomically . modifyTVarS giftedAddresses $
         at addr <<.= Just ()
     when (isJust prevVal) $
@@ -42,8 +42,8 @@ faucetTransferMoneyTo dest = do
     sk <- ourSecretKeyData @FaucetApp
     let source = skAddress sk
 
-    wc <- views (lensOf @WitnessClient) (hoistWitnessClient liftIO)
-    lock <- view (lensOf @TxSendLock)
+    wc <- views lensOf (hoistWitnessClient liftIO)
+    lock <- view lensOf
     let DryRun dryRun = giveL @FaucetConfig @DryRun
         TransferredAmount transfer = giveL @FaucetConfig @TransferredAmount
 

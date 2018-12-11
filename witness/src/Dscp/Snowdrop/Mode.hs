@@ -67,7 +67,7 @@ type MonadSD ctx m =
 -- This is terrible
 runSdRIO :: MonadSD ctx m => RIO LoggingIO a -> m a
 runSdRIO action = do
-    logger <- view (lensOf @LoggingIO)
+    logger <- view lensOf
     liftIO $ runRIO logger action
 
 -- | Snowdrop's @run..IO@ throw exceptions being wrapped into 'BaseMException',
@@ -78,7 +78,7 @@ unwrapSDBaseRethrow = wrapRethrow $ \(BaseMException e) -> e :: Exceptions
 -- | SdM runner, should be protected by some lock.
 runSdM :: (MonadSD ctx m, Lock.WithinReadSDLock) => SdM a -> m a
 runSdM action = do
-    blockDBA <- view (lensOf @SDVars) <&> SD.dmaAccessActions . nsBlockDBActions
+    blockDBA <- view lensOf <&> SD.dmaAccessActions . nsBlockDBActions
     plugin   <- providePlugin
     unwrapSDBaseRethrow $ do
         initAVLStorage @AvlHash plugin initAccounts
@@ -94,7 +94,7 @@ runStateSdM
     :: (MonadSD ctx m, Lock.WithinReadSDLock)
     => StateSdM a -> m a
 runStateSdM action = do
-    stateDBA <- view (lensOf @SDVars) <&> SD.dmaAccessActions . nsStateDBActions
+    stateDBA <- view lensOf <&> SD.dmaAccessActions . nsStateDBActions
     plugin   <- providePlugin
     unwrapSDBaseRethrow $ do
         initAVLStorage @AvlHash plugin initAccounts

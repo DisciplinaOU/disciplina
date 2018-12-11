@@ -17,7 +17,7 @@ module Dscp.Educator.Launcher.Mode
     ) where
 
 import Control.Lens (makeLenses)
-import Loot.Base.HasLens (HasLens')
+import Loot.Base.HasLens (HasLens)
 
 import Dscp.DB.CanProvideDB as DB
 import Dscp.DB.SQLite (SQLiteDB)
@@ -43,9 +43,9 @@ type EducatorOnlyWorkMode ctx m =
 
     , MonadReader ctx m
 
-    , HasLens' ctx DB.Plugin
-    , HasLens' ctx SQLiteDB
-    , HasLens' ctx (KeyResources EducatorNode)
+    , HasLens ctx DB.Plugin
+    , HasLens ctx SQLiteDB
+    , HasLens ctx (KeyResources EducatorNode)
     , MonadThrow m
     )
 

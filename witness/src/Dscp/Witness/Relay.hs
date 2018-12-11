@@ -15,7 +15,7 @@ import qualified Data.Text.Buildable
 import qualified Text.Show
 import qualified UnliftIO.Exception as UIO
 
-import Loot.Base.HasLens (HasLens (..), HasLens')
+import Loot.Base.HasLens (HasLens (..))
 
 import Dscp.Core
 import Dscp.Crypto
@@ -54,11 +54,11 @@ newRelayState = atomically $
         <*> STM.newTVar mempty
 
 relayTx
-    :: (MonadReader ctx m, HasLens' ctx RelayState, MonadIO m)
+    :: (MonadReader ctx m, HasLens ctx RelayState, MonadIO m)
     => GTxWitnessed
     -> m (Waiter "tx in mempool")
 relayTx tx = do
-    input <- view (lensOf @RelayState . rsInput)
+    input <- view (lensOf . rsInput)
     (notifier, waiter) <- newWaitPair
     isFull <- atomically $ do
         full <- STM.isFullTBQueue input

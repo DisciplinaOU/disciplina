@@ -70,7 +70,7 @@ instance AllocResource WitnessResources where
     type Deps WitnessResources = WitnessConfigRec
     allocResource witnessCfg = do
         let cfg = witnessCfg ^. sub #witness
-        _wrLogging <- view (lensOf @LoggingIO)
+        _wrLogging <- view lensOf
         _wrDB <- fmap RealRocks.plugin . allocResource $ cfg ^. option #db
         _wrNetwork <- do
             let modGivenName (GivenName x) = GivenName $ x <> "network"

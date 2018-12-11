@@ -33,7 +33,7 @@ applyBlockRaw
     -> m AvlProof
 applyBlockRaw applyFees block = do
     plugin <- providePlugin
-    sdActions <- view (lensOf @SDVars)
+    sdActions <- view lensOf
 
     let sdOSParamsBuilder = nsSDParamsBuilder sdActions
     let blockDBM = nsBlockDBActions sdActions
