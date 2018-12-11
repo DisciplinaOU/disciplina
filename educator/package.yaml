@@ -82,6 +82,7 @@ tests:
       - stm
       - tasty
       - tasty-hspec
+      - temporary
       - text-format
       - time
       - QuickCheck
