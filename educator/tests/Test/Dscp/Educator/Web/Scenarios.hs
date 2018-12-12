@@ -19,8 +19,8 @@ import Dscp.Educator.DB
 -- | Puts in db all needed to put 'SignedSubmission's
 -- later, tolerates repeated entities.
 prepareForAssignments
-    :: (MonadIO m, MonadCatch m)
-    => CoreTestEnv -> DBT 'WithinTx 'Writing m ()
+    :: (MonadQuery m, WithinWriteTx)
+    => CoreTestEnv -> m ()
 prepareForAssignments CoreTestEnv{..} = do
     let assignments = F.toList cteAssignments
         courses = map _aCourseId assignments
@@ -34,8 +34,8 @@ prepareForAssignments CoreTestEnv{..} = do
 -- | Puts in db all needed to put 'SignedSubmission's
 -- later, tolerates repeated entities.
 prepareForSubmissions
-    :: (MonadIO m, MonadCatch m)
-    => CoreTestEnv -> DBT 'WithinTx 'Writing m ()
+    :: (MonadQuery m, WithinWriteTx)
+    => CoreTestEnv -> m ()
 prepareForSubmissions env@CoreTestEnv{..} = do
     let assignments = F.toList cteAssignments
         owners = F.toList cteStudents
@@ -47,8 +47,8 @@ prepareForSubmissions env@CoreTestEnv{..} = do
 
 -- | Prepare all needed to put 'SignedSubmission's, and puts the first one.
 prepareAndCreateSubmission
-    :: (MonadIO m, MonadCatch m)
-    => CoreTestEnv -> DBT 'WithinTx 'Writing m ()
+    :: (MonadQuery m, WithinWriteTx)
+    => CoreTestEnv -> m ()
 prepareAndCreateSubmission env = do
     prepareForSubmissions env
     let sigSub = tiOne $ cteSignedSubmissions env
@@ -56,8 +56,8 @@ prepareAndCreateSubmission env = do
 
 -- | Add all submissions from given test env to the database.
 prepareAndCreateSubmissions
-    :: (MonadIO m, MonadCatch m)
-    => CoreTestEnv -> DBT 'WithinTx 'Writing m ()
+    :: (MonadQuery m, WithinWriteTx)
+    => CoreTestEnv -> m ()
 prepareAndCreateSubmissions env@CoreTestEnv{..} = do
     prepareForSubmissions env
     let sigSubs = nub $ tiList cteSignedSubmissions
@@ -66,8 +66,8 @@ prepareAndCreateSubmissions env@CoreTestEnv{..} = do
 -- | Add all transactions from given test env to the database.
 -- Transactions will have no block assiged to them.
 prepareAndCreateTransactions
-    :: (MonadIO m, MonadCatch m)
-    => CoreTestEnv -> DBT 'WithinTx 'Writing m ()
+    :: (MonadQuery m, WithinWriteTx)
+    => CoreTestEnv -> m ()
 prepareAndCreateTransactions env@CoreTestEnv{..} = do
     prepareAndCreateSubmissions env
     let txs = nub $ tiList ctePrivateTxs

@@ -5,11 +5,10 @@ module Dscp.Educator.DB.Instances () where
 
 import Codec.Serialise as Codec (deserialise)
 import qualified Data.ByteArray as BA
-import Database.Beam.Backend (FromBackendRow (..))
+import Database.Beam.Backend (BackendFromField, BeamBackend, FromBackendRow (..))
 import Database.Beam.Backend.SQL.SQL92 (HasSqlValueSyntax (..), IsSql92ExpressionSyntax,
                                         Sql92ExpressionValueSyntax)
 import Database.Beam.Query (HasSqlEqualityCheck (..))
-import Database.Beam.Sqlite (Sqlite)
 import Database.Beam.Sqlite.Syntax (SqliteValueSyntax)
 import Database.SQLite.Simple.FromField (FromField (..))
 
@@ -114,19 +113,22 @@ instance HasSqlValueSyntax SqliteValueSyntax TxBlockIdx where
 -- 'FromBackendRow' instances
 ----------------------------------------------------------------------------
 
+#define GenFromBackendRow(TYPE) \
+instance (BeamBackend be, BackendFromField be (TYPE)) => FromBackendRow be (TYPE)
+
 -- For SQLite they all refer to 'FromField' instances
-instance FromBackendRow Sqlite (Hash a)
-instance FromBackendRow Sqlite Address
-instance FromBackendRow Sqlite Course
-instance FromBackendRow Sqlite AssignmentType
-instance FromBackendRow Sqlite Subject
-instance FromBackendRow Sqlite Grade
-instance FromBackendRow Sqlite BlockIdx
-instance FromBackendRow Sqlite TxBlockIdx where
-instance FromBackendRow Sqlite SubmissionWitness where
-instance FromBackendRow Sqlite (MerkleSignature a) where
-instance FromBackendRow Sqlite (EmptyMerkleTree a) where
-instance FromBackendRow Sqlite ATGDelta where
+GenFromBackendRow(Hash a)
+GenFromBackendRow(Address)
+GenFromBackendRow(Course)
+GenFromBackendRow(AssignmentType)
+GenFromBackendRow(Subject)
+GenFromBackendRow(Grade)
+GenFromBackendRow(BlockIdx)
+GenFromBackendRow(TxBlockIdx)
+GenFromBackendRow(SubmissionWitness)
+GenFromBackendRow(MerkleSignature a)
+GenFromBackendRow(EmptyMerkleTree a)
+GenFromBackendRow(ATGDelta)
 
 ----------------------------------------------------------------------------
 -- Other instances

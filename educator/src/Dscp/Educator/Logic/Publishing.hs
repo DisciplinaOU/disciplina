@@ -19,7 +19,8 @@ import Dscp.Witness
 -- | Form and store a new private block made up from hanging private transactions.
 dumpPrivateBlock :: EducatorWorkMode ctx m => m (Maybe PrivateBlockHeader)
 dumpPrivateBlock = do
-    mblock <- transactW $ createPrivateBlock Nothing
+    ctx <- ask
+    mblock <- transactW $ createPrivateBlock ctx Nothing
     case mblock of
         Nothing ->
             logInfo "No private chain updates, skipping private block creation"
@@ -33,12 +34,13 @@ dumpPrivateBlock = do
 publishMissingBlocks :: EducatorWorkMode ctx m => m ()
 publishMissingBlocks =
     writingSDLock "add publication to mempool" $ do
+        ctx <- ask
         sk <- ourSecretKeyData @EducatorNode
         privTip <- runSdMempool $ getPrivateTipHash (skAddress sk)
         let feePolicy = fcPublication feeConfig
 
-        OldestFirst blocks <-
-            invoke (getPrivateBlocksAfterHash privTip)
+        OldestFirst blocks :: OldestFirst [] PrivateBlockHeader <-
+            invoke (getPrivateBlocksAfterHash ctx privTip)
             >>= nothingToThrow (PrivateAndPublicChainsDiverged privTip)
         let pubTxs = createPublicationTxw feePolicy sk <$> blocks
 
@@ -49,9 +51,10 @@ publishMissingBlocks =
 -- Returns whether the update was performed.
 updateMempoolWithPublications :: EducatorWorkMode ctx m => m Bool
 updateMempoolWithPublications = do
+    ctx <- ask
     sk <- ourSecretKeyData @EducatorNode
     publishedPrivTip <- runSdMempoolLocked $ getPrivateTipHash (skAddress sk)
-    (storedPrivTip, _) <- invoke getLastBlockIdAndIdx
+    storedPrivTip <- invoke (fst <$> getLastBlockIdAndIdx ctx)
 
     let needUpdate = publishedPrivTip /= storedPrivTip
     when needUpdate publishMissingBlocks
