@@ -1,6 +1,10 @@
 module Dscp.DB.SQLite.Types
        ( -- * SQLite bindings
-         PostgresRealParams (..)
+         ConnectionString (..)
+       , _ConnectionString
+       , connStringEx
+       , connStringFromText
+       , PostgresRealParams (..)
        , prpConnStringL
        , prpConnNumL
        , prpMaxPendingL
@@ -24,8 +28,23 @@ import Dscp.Util
 -- Postgres bindings
 ----------------------------------------------------------
 
+-- | Lib-pg connection string.
+-- Normally looks like "".
+newtype ConnectionString = ConnectionString ByteString
+    deriving (Show, Eq, IsString)
+
+makePrisms ''ConnectionString
+
+-- | Example of 'ConnectionString'.
+connStringEx :: ConnectionString
+connStringEx = "postgresql:///my-db?host=localhost&port=5432"
+
+-- | Make a connection string from textual representation.
+connStringFromText :: ConvertUtf8 text ByteString => text -> ConnectionString
+connStringFromText = ConnectionString . encodeUtf8
+
 data PostgresRealParams = PostgresRealParams
-    { prpConnString :: !Text
+    { prpConnString :: !ConnectionString
       -- ^ Path to the file with database.
     , prpConnNum    :: !(Maybe Int)
       -- ^ Connections pool size.
@@ -36,6 +55,7 @@ data PostgresRealParams = PostgresRealParams
 makeLensesWith postfixLFields ''PostgresRealParams
 
 -- | Database mode.
+-- TODO: remove?
 data PostgresDBMode
     = PostgresReal !PostgresRealParams
       -- ^ In given file using given number of connections.
@@ -62,8 +82,9 @@ data SQL = SQL
       -- ^ Allowed number of pending threads.
     }
 
-deriveFromJSON defaultOptions ''PostgresRealParams
-
 instance FromJSON PostgresDBMode
-
+deriveFromJSON defaultOptions ''PostgresRealParams
 deriveFromJSON defaultOptions ''PostgresParams
+
+instance FromJSON ConnectionString where
+    parseJSON v = connStringFromText <$> parseJSON @Text v

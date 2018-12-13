@@ -12,6 +12,7 @@ Dependencies:
 
 * [Stack](https://docs.haskellstack.org/en/stable/README/) tool
 * [RocksDB](https://github.com/facebook/rocksdb/blob/master/INSTALL.md)
+* [PostgreSQL](https://www.postgresql.org/)
 
 ## Running the educator node
 
@@ -50,3 +51,24 @@ See [configuration section](/docs/config.md) document.
   ```bash
   > ./scripts/launch/node.sh educator bot
   ```
+
+## Running educator tests
+
+### Tuning Postgres server
+
+As soon as tests involve creation of one database per test case, you will need to connect
+to the server as a superuser there.
+
+This can be achieved in the following way (read the entire section before doing anything).
+
+First create a postgres user:
+``` bash
+sudo -u postgres createuser --interactive --pwprompt
+```
+
+You will be asked for a user name, password and required privilegies.
+
+When launching tests, specify your credentials:
+* Set environmental variable `PGUSER=username`, by default your OS username is used;
+* If you specified a password for your user, add it to
+[`.pgpass` file](https://www.postgresql.org/docs/9.1/libpq-pgpass.html).

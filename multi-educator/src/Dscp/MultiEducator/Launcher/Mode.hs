@@ -25,7 +25,7 @@ import Control.Lens (makeLenses)
 import qualified Data.Map as M
 import Loot.Base.HasLens (HasLens', lensOf)
 import Loot.Config (option, sub)
-import System.Directory (canonicalizePath, createDirectoryIfMissing)
+import System.Directory (createDirectoryIfMissing)
 import System.FilePath.Posix ((</>))
 
 import Dscp.Config
@@ -115,17 +115,17 @@ lookupEducator login = do
 loadEducator :: MultiEducatorWorkMode ctx m => Bool -> Text -> Text -> m Bool
 loadEducator _new login passphrase = do
     -- TODO: add hashing
-    let postgresUser = "educator-" <> login
+    let postgresDatabase = "educator-" <> encodeUtf8 login
     let appDir = case multiEducatorConfig ^. sub #witness . option #appDir of
           AppDirectoryOS         -> ""
           AppDirectorySpecific x -> x
     let (MultiEducatorKeyParams path) = multiEducatorConfig ^. sub #educator . option #keys
         prepareDb = do
             p <- case multiEducatorConfig ^. sub #educator . option #db of
-                PostgresParams (PostgresReal (PostgresRealParams fp con pen)) -> do
-                    pure $ PostgresParams (PostgresReal (PostgresRealParams (dbsPath </> loginFile) con pen))
-                x -> pure x
-            db <- openSQLiteDB p
+                PostgresParams prp -> pure . PostgresParams $
+                    prp & _PostgresReal . prpConnStringL . connStringDatabaseL
+                        .~ postgresDatabase
+            db <- openPostgresDB p
             prepareEducatorSchema db
             return (db, p)
     (db, _dbParam) <- liftIO $ prepareDb

@@ -1,9 +1,11 @@
+{-# LANGUAGE QuasiQuotes #-}
+
 module Test.Dscp.Educator.Mode
   ( module Test.Dscp.Educator.Mode
   , module Dscp.Core
   , module Dscp.Util
   , module Dscp.Util.Test
-  , module Test.Hspec
+  , module Hspec
   , hash
   ) where
 
@@ -11,7 +13,7 @@ import Prelude hiding (fold)
 
 import Control.Lens (makeLenses)
 import qualified Loot.Log as Log
-import Test.Hspec
+import qualified Test.Hspec as Hspec
 import Test.QuickCheck (ioProperty, resize)
 import Test.QuickCheck.Monadic (PropertyM, monadic, stop)
 
@@ -33,7 +35,7 @@ import Dscp.Util.HasLens
 import Dscp.Util.Test
 import Dscp.Witness
 
-import Test.Dscp.DB.SQLite.Real.Mode
+import Test.Dscp.DB.SQLite.Mode
 
 type Trololo m = (MonadThrow m, MonadCatch m)
 
@@ -53,58 +55,61 @@ deriveHasLens 'tecWitnessVariables ''TestEducatorCtx ''TestWitnessVariables
 
 type TestEducatorM = RIO TestEducatorCtx
 
-runTestSQLiteM :: TestEducatorM a -> IO a
-runTestSQLiteM action =
+runTestSQLiteM :: PostgresTestServer -> TestEducatorM a -> IO a
+runTestSQLiteM testDb action = trace @Text "Running test env" $
     withEducatorConfig testEducatorConfig $
     withWitnessConfig (rcast testEducatorConfig) $
-    withTempPostgres $ \testDb ->
-    bracket (openDB testDb) closePostgresDB $ \db ->
-    runRIO _tecLogging $ do
+    allocPostgresDb testDb $ \db -> trace @Text "Allocating db" $
+    runRIO testLogging $ do
         _tecWitnessKeys <- mkCommitteeStore (CommitteeParamsOpen 0)
         _tecWitnessDb <- PureDB.plugin <$> liftIO PureDB.newCtxVar
         _tecWitnessVariables <- mkTestWitnessVariables (_tecWitnessKeys ^. krPublicKey)
                                                        _tecWitnessDb
         let _tecKeys = KeyResources $ mkSecretKeyData testSomeGenesisSecret
         let _tecEducatorDb = db
+        let _tecLogging = testLogging
         let ctx = TestEducatorCtx{..}
         runRIO ctx $ do
               markWithinWriteSDLockUnsafe applyGenesisBlock
+              traceM "Going to prepare schema"
+              prepareEducatorSchema db
+              traceM "Prepared schema"
               action
-  where
-    openDB testDb = do
-        db <- openPostgresDB (testRealPostgresParams testDb)
-        prepareEducatorSchema db
-        return db
-    _tecLogging = testLogging
 
 educatorPropertyM
     :: Testable prop
     => ((HasEducatorConfig, WithinTx) => PropertyM TestEducatorM prop)
+    -> PostgresTestServer
     -> Property
-educatorPropertyM action =
-    monadic (ioProperty . runTestSQLiteM)
+educatorPropertyM action testDb =
+    monadic (ioProperty . runTestSQLiteM testDb)
             (withEducatorConfig testEducatorConfig $ void $ allowTxUnsafe action >>= stop)
 
 educatorProperty
     :: (Testable prop, Show a, Arbitrary a)
     => (HasEducatorConfig => a -> TestEducatorM prop)
+    -> PostgresTestServer
     -> Property
 educatorProperty action =
     educatorPropertyM $ pick (resize 5 arbitrary) >>= lift . action
 
-sqliteProperty
+sqlProperty
     :: (Testable prop, Show a, Arbitrary a, MonadQuery qm)
-    => (WithinTx => TestEducatorCtx -> a -> qm prop) -> Property
-sqliteProperty action =
+    => (WithinTx => TestEducatorCtx -> a -> qm prop)
+    -> PostgresTestServer
+    -> Property
+sqlProperty action =
     educatorProperty $ \input -> do
         ctx <- ask
         invokeUnsafe (action ctx input)
 
-sqlitePropertyM
+sqlPropertyM
     :: (MonadQuery qm, Testable prop)
-    => (WithinTx => TestEducatorCtx -> PropertyM qm prop) -> Property
-sqlitePropertyM action =
-    monadic (\getProperty -> ioProperty . runTestSQLiteM $
+    => (WithinTx => TestEducatorCtx -> PropertyM qm prop)
+    -> PostgresTestServer
+    -> Property
+sqlPropertyM action testDb =
+    monadic (\getProperty -> ioProperty . runTestSQLiteM testDb $
                 ask >>= \ctx -> invoke (runReaderT getProperty ctx)) $
             do
               ctx <- lift ask

@@ -7,6 +7,7 @@ module Dscp.DB.SQLite.Functions
        ( -- * Closing/opening
          openPostgresDB
        , closePostgresDB
+       , connStringDatabaseL
 
          -- * Operations with connections
        , borrowConnection
@@ -39,6 +40,7 @@ module Dscp.DB.SQLite.Functions
 import Control.Concurrent (getNumCapabilities)
 import Control.Concurrent.Chan (newChan, readChan, writeChan)
 import qualified Control.Monad.Catch as Catch
+import qualified Data.ByteString as BS
 import Data.Reflection (Given, give)
 import Database.Beam.Backend (FromBackendRow, MonadBeam (..))
 import qualified Database.Beam.Backend.SQL.BeamExtensions as Backend
@@ -117,15 +119,15 @@ openPostgresDB
     :: (MonadIO m, MonadCatch m)
     => PostgresParams -> m SQL
 openPostgresDB params = do
-    (connStr, connNum, maxPending) <- case ppMode params of
-        PostgresReal PostgresRealParams{ prpConnString = connStr, prpConnNum = mConnNum
-                                       , prpMaxPending = maxPending } -> do
-
-            connNum <- case mConnNum of
-                Nothing  -> liftIO $ max 1 . pred <$> getNumCapabilities
-                Just num -> pure num
-
-            return (connStr, connNum, maxPending)
+    (ConnectionString connStr, connNum, maxPending) <- case ppMode params of
+        PostgresReal PostgresRealParams
+            { prpConnString = connStr, prpConnNum = mConnNum
+            , prpMaxPending = maxPending
+            } -> do
+                connNum <- case mConnNum of
+                    Nothing  -> liftIO $ max 1 . pred <$> getNumCapabilities
+                    Just num -> pure num
+                return (connStr, connNum, maxPending)
 
     unless (connNum > 0) $
         throwM $ SQLInvalidConnectionsNumber connNum
@@ -137,7 +139,7 @@ openPostgresDB params = do
 
     wrapRethrowIO @SomeException (SQLConnectionOpenningError . show) $ do
         replicateM_ connNum $
-            Backend.connectPostgreSQL (encodeUtf8 connStr) >>= writeChan connPool
+            Backend.connectPostgreSQL connStr >>= writeChan connPool
 
     return SQL
         { sqlConnNum = connNum
@@ -152,6 +154,20 @@ closePostgresDB sd =
     -- would better throw an exception trying to operate with closed connection
     -- rather than just hang.
     liftIO $ forEachConnection sd Backend.close
+
+-- | Extract the database name in the given Postgres connection string.
+-- Following the format: https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNSTRING
+-- TODO: complete, add to tests
+connStringDatabaseL :: HasCallStack => Lens' ConnectionString ByteString
+connStringDatabaseL = _ConnectionString . \f connStr -> fromMaybe (error "Invalid format") $ do
+    [protocol, part1] <- pure $ BS.split (bsChar ':') connStr
+    protocolExcluding <- BS.stripPrefix "//" part1
+    host : hostExcludingL <- pure $ BS.split (bsChar '/') protocolExcluding
+    let hostExcluding = BS.intercalate "/" hostExcludingL
+    [database, params] <- pure $ BS.split (bsChar '?') hostExcluding
+    return $ f database <&> \database' -> protocol <> "://" <> host <> "/" <> database' <> "?" <> params
+  where
+    bsChar = toEnum . fromEnum
 
 ------------------------------------------------------------
 -- SQLite context

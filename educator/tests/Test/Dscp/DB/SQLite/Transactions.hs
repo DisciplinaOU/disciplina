@@ -1,10 +1,10 @@
 {-# LANGUAGE QuasiQuotes #-}
 
--- | This module tests that our wrapper over SQLite library
+-- | This module tests that our wrapper over SQL library
 -- allow SQL transactions to work properly.
 -- Transactions do not work as expected automatically; for instances,
 -- queries are not allowed to be performed concurrently via the same connection.
-module Test.Dscp.DB.SQLite.Real.Transactions where
+module Test.Dscp.DB.SQLite.Transactions where
 
 import qualified Control.Concurrent.STM as STM
 import Database.Beam.Migrate (CheckedDatabaseSettings, defaultMigratableDbSettings, unCheckDatabase)
@@ -18,11 +18,10 @@ import UnliftIO (MonadUnliftIO)
 import qualified UnliftIO.Async as UIO
 
 import Dscp.DB.SQLite
-import Dscp.Rio
 import Dscp.Util
 import Dscp.Util.Test
 
-import Test.Dscp.DB.SQLite.Real.Mode
+import Test.Dscp.DB.SQLite.Mode
 
 type MonadMoney m = (MonadIO m, MonadCatch m, MonadUnliftIO m)
 
@@ -54,8 +53,8 @@ bankCheckedSchema = defaultMigratableDbSettings @PgCommandSyntax
 bankSchema :: DatabaseSettings Postgres BankSchema
 bankSchema = unCheckDatabase bankCheckedSchema
 
-prepareSchema :: MonadQuery m => m ()
-prepareSchema = do
+prepareBankSchema :: MonadQuery m => m ()
+prepareBankSchema = do
     createSchema migrationBackend bankCheckedSchema
     runInsert . insert (bsAccounts bankSchema) $ insertValue (AccountRow 0)
 
@@ -75,14 +74,10 @@ addMoney =
         money <- getMoney
         setMoney (money + 1)
 
-launchMoneySQLiteMode :: RIO SQL a -> IO a
-launchMoneySQLiteMode action =
-    launchPostgresMode $ invoke prepareSchema >> action
-
 spec_SQLiteWrapper :: Spec
-spec_SQLiteWrapper = do
-    it "SQLite wrapper thread-safety" . ioProperty . launchMoneySQLiteMode $ do
-        invoke prepareSchema
+spec_SQLiteWrapper = specWithTempPostgresServer $ do
+    it "SQLite wrapper thread-safety" $ \testDb -> ioProperty . runPostgresMode testDb $ do
+        invoke prepareBankSchema
         let iterations = 100
 
         started <- newTVarIO False

@@ -74,12 +74,14 @@ tests:
       - directory
       - fmt
       - generic-arbitrary
+      - hspec-core
       - hspec
       - interpolatedstring-perl6
       - lens
       - loot-base
       - loot-config
       - loot-log
+      - process
       - safe-exceptions >= 0.1.4
       - stm
       - tasty

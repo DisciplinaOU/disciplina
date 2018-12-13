@@ -1,3 +1,4 @@
+
 -- Postgres syntax.
 
 -- As sql keywords are composite and have spaces inside them,
@@ -14,8 +15,8 @@ create table if not exists courses (
     -- Sqlite3 will force ascending primary key to be non-null, replacing
     --  null with autoincremented key (while sqlite2 won't).
     --
-    id     SERIAL   PRIMARY KEY,
-    "desc" TEXT     not null
+    id    SERIAL   PRIMARY KEY,
+    desca  TEXT     not null
 );
 
 -- Creating 'subjects' table.
@@ -23,7 +24,7 @@ create table if not exists courses (
 create table if not exists subjects (
     id          INTEGER  not null,
     course__id  INTEGER  not null,
-    "desc"      TEXT     not null,
+    desca        TEXT     not null,
 
     primary key (id, course__id),
     foreign key (course__id) references courses (id)

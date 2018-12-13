@@ -11,11 +11,12 @@ import Dscp.Util
 import Dscp.Util.Test
 import Dscp.Witness
 
+import Test.Dscp.DB.SQLite.Mode
 import Test.Dscp.Educator.Mode
 import Test.Dscp.Educator.Web.Scenarios
 
-spec_Publishing :: Spec
-spec_Publishing = describe "Private blocks publishing" $ do
+spec_Private_blocks_publishing :: Spec
+spec_Private_blocks_publishing = specWithTempPostgresServer $ do
     it "Single block is successfully published by worker" $ educatorPropertyM $ do
         sk <- lift $ ourSecretKeyData @EducatorNode
         env <- pickSmall $ genCoreTestEnv simpleCoreTestParams

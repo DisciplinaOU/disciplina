@@ -54,7 +54,7 @@ defaultEducatorConfig = upcast defaultWitnessConfig
     & sub #educator . sub #api . option #botParams ?~ defBotParams
   where
     defSqliteParams = PostgresParams $ PostgresReal PostgresRealParams
-        { prpConnString = decodeUtf8 $ postgreSQLConnectionString defaultConnectInfo
+        { prpConnString = ConnectionString $ postgreSQLConnectionString defaultConnectInfo
             { connectDatabase = "educator"
             }
         , prpConnNum = Nothing
