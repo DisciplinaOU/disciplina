@@ -56,10 +56,10 @@ deriveHasLens 'tecWitnessVariables ''TestEducatorCtx ''TestWitnessVariables
 type TestEducatorM = RIO TestEducatorCtx
 
 runTestSQLiteM :: PostgresTestServer -> TestEducatorM a -> IO a
-runTestSQLiteM testDb action = trace @Text "Running test env" $
+runTestSQLiteM testDb action =
     withEducatorConfig testEducatorConfig $
     withWitnessConfig (rcast testEducatorConfig) $
-    allocPostgresDb testDb $ \db -> trace @Text "Allocating db" $
+    withPostgresDb testDb $ \db ->
     runRIO testLogging $ do
         _tecWitnessKeys <- mkCommitteeStore (CommitteeParamsOpen 0)
         _tecWitnessDb <- PureDB.plugin <$> liftIO PureDB.newCtxVar
@@ -71,9 +71,7 @@ runTestSQLiteM testDb action = trace @Text "Running test env" $
         let ctx = TestEducatorCtx{..}
         runRIO ctx $ do
               markWithinWriteSDLockUnsafe applyGenesisBlock
-              traceM "Going to prepare schema"
               prepareEducatorSchema db
-              traceM "Prepared schema"
               action
 
 educatorPropertyM

@@ -96,7 +96,7 @@ import Dscp.Util (HasId (..))
 
 -- | ID of particular subject.
 newtype Subject = Subject
-    { getSubjectId :: Word32
+    { getSubjectId :: Int32
     } deriving (Eq, Ord, Show, Num)
 
 instance Buildable Subject where
@@ -131,10 +131,10 @@ instance HasId Student
 -- | Educator is identified by their public adddress.
 type EducatorId = Address
 
--- | Educator's course ID is simply a 'Word32' too.
+-- | Educator's course ID is simply a number too.
 -- There's a mapping from course ID to a set of associated subject IDs.
 newtype Course = Course
-    { getCourseId :: Word32
+    { getCourseId :: Int32
     } deriving (Eq, Ord, Show, Num)
 
 instance HasId Course

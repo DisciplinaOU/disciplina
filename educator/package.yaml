@@ -81,6 +81,7 @@ tests:
       - loot-base
       - loot-config
       - loot-log
+      - postgresql-simple
       - process
       - safe-exceptions >= 0.1.4
       - stm

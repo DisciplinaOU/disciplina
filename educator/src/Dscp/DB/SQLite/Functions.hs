@@ -7,7 +7,6 @@ module Dscp.DB.SQLite.Functions
        ( -- * Closing/opening
          openPostgresDB
        , closePostgresDB
-       , connStringDatabaseL
 
          -- * Operations with connections
        , borrowConnection
@@ -39,8 +38,8 @@ module Dscp.DB.SQLite.Functions
 
 import Control.Concurrent (getNumCapabilities)
 import Control.Concurrent.Chan (newChan, readChan, writeChan)
+import Control.Lens (views)
 import qualified Control.Monad.Catch as Catch
-import qualified Data.ByteString as BS
 import Data.Reflection (Given, give)
 import Database.Beam.Backend (FromBackendRow, MonadBeam (..))
 import qualified Database.Beam.Backend.SQL.BeamExtensions as Backend
@@ -119,7 +118,7 @@ openPostgresDB
     :: (MonadIO m, MonadCatch m)
     => PostgresParams -> m SQL
 openPostgresDB params = do
-    (ConnectionString connStr, connNum, maxPending) <- case ppMode params of
+    (ConnectionString connStr, connNum, maxPending, txSwitch) <- case ppMode params of
         PostgresReal PostgresRealParams
             { prpConnString = connStr, prpConnNum = mConnNum
             , prpMaxPending = maxPending
@@ -127,7 +126,11 @@ openPostgresDB params = do
                 connNum <- case mConnNum of
                     Nothing  -> liftIO $ max 1 . pred <$> getNumCapabilities
                     Just num -> pure num
-                return (connStr, connNum, maxPending)
+                return (connStr, connNum, maxPending, TransactionsOn)
+        PostgresTest PostgresTestParams
+            { ptpConnString = connStr
+            } -> do
+                return (connStr, 1, 1000000000, TransactionsOff)
 
     unless (connNum > 0) $
         throwM $ SQLInvalidConnectionsNumber connNum
@@ -146,6 +149,7 @@ openPostgresDB params = do
         , sqlConnPool = connPool
         , sqlPendingNum = pendingThreadsNum
         , sqlMaxPending = maxPending
+        , sqlTransactionsSwitch = txSwitch
         }
 
 closePostgresDB :: MonadIO m => SQL -> m ()
@@ -154,20 +158,6 @@ closePostgresDB sd =
     -- would better throw an exception trying to operate with closed connection
     -- rather than just hang.
     liftIO $ forEachConnection sd Backend.close
-
--- | Extract the database name in the given Postgres connection string.
--- Following the format: https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNSTRING
--- TODO: complete, add to tests
-connStringDatabaseL :: HasCallStack => Lens' ConnectionString ByteString
-connStringDatabaseL = _ConnectionString . \f connStr -> fromMaybe (error "Invalid format") $ do
-    [protocol, part1] <- pure $ BS.split (bsChar ':') connStr
-    protocolExcluding <- BS.stripPrefix "//" part1
-    host : hostExcludingL <- pure $ BS.split (bsChar '/') protocolExcluding
-    let hostExcluding = BS.intercalate "/" hostExcludingL
-    [database, params] <- pure $ BS.split (bsChar '?') hostExcluding
-    return $ f database <&> \database' -> protocol <> "://" <> host <> "/" <> database' <> "?" <> params
-  where
-    bsChar = toEnum . fromEnum
 
 ------------------------------------------------------------
 -- SQLite context
@@ -239,10 +229,15 @@ transact
     :: (MonadUnliftIO m, HasCtx ctx m '[SQL])
     => Query WithinTx a
     -> m a
-transact action =
+transact action = do
+    mode <- views (lensOf @SQL) sqlTransactionsSwitch
     borrowConnection $ \conn ->
-        liftIO . Backend.withTransactionSerializable conn $
+        liftIO . inTransaction mode conn $
             withDatabase conn $ allowTxUnsafe action
+  where
+    inTransaction = \case
+        TransactionsOn -> Backend.withTransactionSerializable
+        TransactionsOff -> \_conn -> id
 
 ------------------------------------------------------------
 -- Orphans
@@ -251,7 +246,7 @@ transact action =
 instance MonadThrow Pg where
     throwM = liftIO . Catch.throwM
 instance MonadCatch Pg where
-    catch = error "("
+    catch = const
 
 ------------------------------------------------------------
 -- Misc

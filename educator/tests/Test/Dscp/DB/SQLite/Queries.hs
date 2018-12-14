@@ -6,6 +6,7 @@ import Prelude
 
 import Control.Lens (mapped)
 -- import Data.Default (Default (..))
+import Test.QuickCheck.Monadic (pre)
 
 import Dscp.Core.Arbitrary
 -- import qualified Dscp.Crypto.MerkleTree as MerkleTree
@@ -21,9 +22,7 @@ spec_Instances = specWithTempPostgresServer $ do
         describe "Courses" $ do
             it "Course does not exist before it is created" $
                 sqlProperty $ \_ctx courseId -> do
-                    traceM "Test env inited"
                     isThere <- DB.existsCourse courseId
-                    traceM "Checked"
                     return (not isThere)
 
             it "Course does exist after it is created" $
@@ -59,7 +58,7 @@ spec_Instances = specWithTempPostgresServer $ do
                     assignmentHash <- DB.createAssignment assignment
                     assignment'    <- DB.getAssignment    assignmentHash
 
-                    return (assignment' == Just assignment)
+                    return (assignment' === Just assignment)
 
             it "Assignment is not created if course does not exist" $
                 sqlProperty $ \_ctx (assignment) -> do
@@ -229,10 +228,10 @@ spec_Instances = specWithTempPostgresServer $ do
                 return (sub' == Just sigSubmission)
 
         it "getGradesForCourseAssignments" $
-            sqlProperty $ \_ctx
-                ( delayedGen (genCoreTestEnv simpleCoreTestParams) -> env
-                , course2
-                ) -> do
+            sqlPropertyM $ \_ctx -> do
+                env <- pickSmall $ genCoreTestEnv simpleCoreTestParams
+                course2 <- pick arbitrary
+
                 let assignment    = tiOne $ cteAssignments env
                     trans         = tiOne $ ctePrivateTxs env
 
@@ -246,8 +245,9 @@ spec_Instances = specWithTempPostgresServer $ do
                     assignment2    = assignment    & aCourseId          .~ getId course2
                     trans2         = trans         & ptSignedSubmission .~ sigSubmission2
 
-                if  (assignment^.idOf /= assignment2^.idOf)
-                then do
+                pre (assignment^.idOf /= assignment2^.idOf)
+
+                lift $ do
                     _studentId <- DB.createStudent          student
 
                     courseId   <- DB.createCourse           (simpleCourse course)
@@ -271,9 +271,7 @@ spec_Instances = specWithTempPostgresServer $ do
                     transs2    <- DB.getGradesForCourseAssignments student courseId2
                     transs1    <- DB.getGradesForCourseAssignments student courseId
 
-                    return (transs2 == [trans2] && transs1 == [trans])
-                else do
-                    return True
+                    return (transs2 === [trans2] .&&. transs1 === [trans])
 
     -- describe "Retrieval of proven transactions" $ do
     --     it "getProvenStudentTransactions" $

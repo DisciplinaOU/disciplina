@@ -5,8 +5,6 @@
 --
 -- Also, postgres is said to create indices on PKs automatically, so I will omit them.
 
-begin transaction;
-
 -- Creating 'courses' table.
 --
 create table if not exists courses (
@@ -99,12 +97,12 @@ create index if not exists student_assigments_assignment_hash on student_assignm
 -- Creating 'submissions' table.
 --
 create table if not exists submissions (
-    hash             BYTEA      not null,
-    student__addr    BYTEA      not null,
-    assignment__hash BYTEA      not null,
-    contents_hash    BYTEA      not null,
-    signature        BYTEA      not null,
-    creation_time    TIMESTAMP  not null,
+    hash             BYTEA       not null,
+    student__addr    BYTEA       not null,
+    assignment__hash BYTEA       not null,
+    contents_hash    BYTEA       not null,
+    signature        BYTEA       not null,
+    creation_time    TIMESTAMPTZ not null,
 
     primary key (hash),
 
@@ -119,11 +117,11 @@ create index if not exists submissions_assignment_hash on submissions (assignmen
 -- Creating 'transactions' table.
 --
 create table if not exists transactions (
-    hash             BYTEA      not null,
-    submission__hash BYTEA      not null,
-    grade            INTEGER    not null,
-    creation_time    TIMESTAMP  not null,
-    idx              INTEGER    not null,    -- Index inside a block. -1 for every mempool transaction.
+    hash             BYTEA        not null,
+    submission__hash BYTEA        not null,
+    grade            SMALLINT     not null,
+    creation_time    TIMESTAMPTZ  not null,
+    idx              INTEGER      not null,    -- Index inside a block. -1 for every mempool transaction.
 
     primary key (hash),
     foreign key (submission__hash) references submissions(hash) on delete restrict
@@ -136,12 +134,12 @@ create index if not exists transactions_submission_hash on transactions (submiss
 -- We need `idx` field to be able to perform queries like "get N last blocks" efficiently.
 create table if not exists blocks (
     idx           INTEGER          ,
-    hash          BYTEA      not null,
-    creation_time TIMESTAMP  not null,
-    prev_hash     BYTEA      null,
-    atg_delta     BYTEA      not null,
-    merkle_root   BYTEA      not null,
-    merkle_tree   BYTEA      not null,
+    hash          BYTEA        not null,
+    creation_time TIMESTAMPTZ  not null,
+    prev_hash     BYTEA        null,
+    atg_delta     BYTEA        not null,
+    merkle_root   BYTEA        not null,
+    merkle_tree   BYTEA        not null,
 
     primary key (idx)
 
@@ -153,16 +151,14 @@ create index if not exists blocks_prev_hash on blocks (prev_hash);
 -- Creating 'blocks_txs' table.
 --
 create table if not exists block_txs (
-    __idx  INTEGER  not null,
-    __hash  BYTEA   not null,
+    __idx   INTEGER  not null,
+    __hash  BYTEA    not null,
 
     primary key (__hash),  -- A transaction can belong only to one block
 
-    foreign key (__idx) references  blocks      (idx),
+    foreign key (__idx)  references blocks      (idx),
     foreign key (__hash) references transactions(hash)
 
 );
 
 create index if not exists block_txs_blk_idx on block_txs (__idx);
-
-commit;
