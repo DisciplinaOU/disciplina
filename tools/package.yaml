@@ -57,3 +57,6 @@ executables:
       - serialise
       - servant-client
       - time
+    default-extensions:
+      - CPP
+      - DeriveAnyClass

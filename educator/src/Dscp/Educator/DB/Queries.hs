@@ -190,7 +190,7 @@ getProvenStudentTransactions
     :: forall m.
        (MonadQuery m, WithinTx)
     => GetProvenStudentTransactionsFilters
-    -> m [(PrivateHeaderHash, MerkleProof PrivateTx, [(TxWithinBlockIdx, PrivateTx)])]
+    -> m [(PrivateHeaderHash, EmptyMerkleProof PrivateTx, [(TxWithinBlockIdx, PrivateTx)])]
 getProvenStudentTransactions filters = do
     -- Contains `(tx, idx, blockId)` map.
     txsBlockList <- getTxsBlockMap
@@ -243,7 +243,7 @@ getProvenStudentTransactions filters = do
 
     getMerkleTreeAndHash
         :: BlockIdx
-        -> DBT t w m (PrivateHeaderHash, EmptyMerkleTree PrivateTx)
+        -> m (PrivateHeaderHash, EmptyMerkleTree PrivateTx)
     getMerkleTreeAndHash blockIdx =
         nothingToThrow (AbsentError $ BlockWithIndexDomain blockIdx) =<<
         selectByPk (\row -> (brHash row, brMerkleTree row)) (esBlocks es) blockIdx

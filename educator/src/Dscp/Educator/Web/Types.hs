@@ -33,7 +33,6 @@ import Data.Aeson.TH (deriveJSON)
 import Data.Time.Clock (UTCTime)
 import Fmt (build, (+|), (+||), (|+), (||+))
 import Loot.Base.HasLens (HasCtx)
-import Loot.Log (ModifyLogName, MonadLogging)
 import Servant (FromHttpApiData (..), ToHttpApiData)
 
 import Dscp.Core
