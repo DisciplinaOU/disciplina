@@ -70,7 +70,7 @@ if [[ $node == "educator" ]]; then
         exit 2
     fi
     echo $educator_keyfile_seed \
-        | dscp-keygen --seed keyfile \
+        | dscp-keygen --seed --command keyfile \
         > "${tmp_files}/educator.key"
     chmod 0600 ${tmp_files}/educator.key
 fi
@@ -145,9 +145,9 @@ if [[ "$node" == "educator" ]]; then
     fi
 elif [[ "$node" == "multi-educator" ]]; then
     if [ -z "$(which dscp-multi-educator)" ]; then
-        stack exec "dscp-multi-educator" -- $common_params $witness_params $educator_params
+        stack exec "dscp-multi-educator" -- $common_params $witness_params $multi_educator_params
     else
-        dscp-multi-educator $common_params $witness_params $educator_params
+        dscp-multi-educator $common_params $witness_params $multi_educator_params
     fi
 elif [[ "$node" == "witness" ]]; then
     if [ -z "$(which dscp-witness)" ]; then
