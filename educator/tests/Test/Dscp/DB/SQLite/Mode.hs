@@ -6,12 +6,15 @@ module Test.Dscp.DB.SQLite.Mode
     , runPostgresMode
     ) where
 
+import Database.PostgreSQL.Simple.Transaction (IsolationLevel (..), ReadWriteMode (..),
+                                               TransactionMode (..))
 import qualified Database.PostgreSQL.Simple.Transaction as Transaction
 import System.Environment (lookupEnv)
 import Test.Hspec.Core.Hooks (beforeAll)
 import Test.Hspec.Core.Spec (Spec, SpecWith)
 
 import Dscp.DB.SQLite
+import Dscp.Educator.DB
 import Dscp.Rio
 
 -- | Information about postgres test server.
@@ -32,10 +35,10 @@ testRealPostgresParams connStr = PostgresParams
 postgresTestServerEnvName :: String
 postgresTestServerEnvName = "TEST_PG_CONN_STRING"
 
-fetchPostgresTestServer :: MonadIO m => m PostgresTestServer
+fetchPostgresTestServer :: IO PostgresTestServer
 fetchPostgresTestServer = do
     mRes <- liftIO $ lookupEnv postgresTestServerEnvName
-    case mRes of
+    server <- case mRes of
         Nothing -> error $ "Connection string for test server is not provided. \
                            \Pass it via " <> show postgresTestServerEnvName <>
                            " environmental variable."
@@ -43,6 +46,8 @@ fetchPostgresTestServer = do
             when (null res) $
                 putTextLn "Warning: empty connection string to postgres server specified"
             return (PostgresTestServer $ connStringFromText res)
+    withPostgresDb server $ \_rollbackInEnd -> prepareEducatorSchema
+    return server
 
 -- You probably want to start all your database-related specs with this function.
 -- It will provide 'PostgresTempDB' argument to properties specified in each 'it' call
@@ -58,16 +63,25 @@ specWithTempPostgresServer = beforeAll fetchPostgresTestServer
    We will run test cases sequentially with database provided via environment.
 -}
 
+-- | Action that wraps computation into an SQL transaction, and rollbacks it in the
+-- end. This way we can start with clear schema in next test case, and several test
+-- cases can execute in parallel.
+type SetTestTransaction a = IO a -> IO a
+
 -- | Connect to a database in the given test SQL server and run an action with it.
-withPostgresDb :: PostgresTestServer -> (SQL -> IO a) -> IO a
+withPostgresDb :: PostgresTestServer -> (SetTestTransaction a -> SQL -> IO a) -> IO a
 withPostgresDb (PostgresTestServer connStr) action =
     bracket (openPostgresDB params) closePostgresDB $ \db ->
-        bracket_ (withConn db Transaction.begin) (withConn db Transaction.rollback)
-        (action db)
+        action (setTx db) db
   where
     params = testRealPostgresParams connStr
     withConn db act = runRIO db $ borrowConnection $ liftIO . act
+    txMode = TransactionMode Serializable ReadWrite
+    setTx db =
+        bracket_ (withConn db $ Transaction.beginMode txMode)
+                 (withConn db Transaction.rollback)
 
 -- | Run an action with a context supplied, using the given test SQL server.
 runPostgresMode :: PostgresTestServer -> RIO SQL a -> IO a
-runPostgresMode testDb action = withPostgresDb testDb $ flip runRIO action
+runPostgresMode testDb action =
+    withPostgresDb testDb $ \rollbackInEnd db -> rollbackInEnd $ runRIO db action

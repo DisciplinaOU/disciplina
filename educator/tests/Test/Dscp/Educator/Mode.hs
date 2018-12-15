@@ -59,7 +59,7 @@ runTestSQLiteM :: PostgresTestServer -> TestEducatorM a -> IO a
 runTestSQLiteM testDb action =
     withEducatorConfig testEducatorConfig $
     withWitnessConfig (rcast testEducatorConfig) $
-    withPostgresDb testDb $ \db ->
+    withPostgresDb testDb $ \rollbackInEnd db -> rollbackInEnd $
     runRIO testLogging $ do
         _tecWitnessKeys <- mkCommitteeStore (CommitteeParamsOpen 0)
         _tecWitnessDb <- PureDB.plugin <$> liftIO PureDB.newCtxVar
@@ -71,7 +71,6 @@ runTestSQLiteM testDb action =
         let ctx = TestEducatorCtx{..}
         runRIO ctx $ do
               markWithinWriteSDLockUnsafe applyGenesisBlock
-              prepareEducatorSchema db
               action
 
 educatorPropertyM
