@@ -60,7 +60,7 @@ genBotCourseAssignments n _aCourseId =
     forM [1..n] $ \i -> do
         let _aContentsHash = offlineHash
         let _aType = if i == n then CourseFinal else Regular
-        let _aDesc = if i == n then "Exam" else "Task #" <> pretty i
+        let _aDesc = if i == n then "Exam" else "Task #" <> PgText (pretty i)
         return Assignment{..}
 
 ---------------------------------------------------------------------
@@ -86,7 +86,7 @@ as well as in every case we rely on this bot behaviour.
 data BotSetting = BotSetting
     {
       -- | All courses info
-      bsCourses           :: [(Course, Text, [Id Subject])]
+      bsCourses           :: [(Course, PgText, [Id Subject])]
       -- | We show a small set of courses at the beginning in order not to
       -- confuse user, and disclose all others later to prevent him getting
       -- bored.

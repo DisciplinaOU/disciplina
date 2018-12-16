@@ -226,7 +226,7 @@ filterMatchesPk_ = \case
 -- | Take the next primary key for the given table, can be used for further insert.
 -- In [DSCP-388] we probably remove this function for the sake of specialized methods
 -- to do the similar thing.
--- We assume that primary key is exactly of "serial" type for now, thus an extra
+-- We assume that primary key is exactly of "bigserial" type, thus an extra
 -- 'Coercible' constraint here.
 getNextPrimaryKey
     :: ( PrimaryKeyWrapper (PrimaryKey table Identity) keyInner
@@ -235,7 +235,7 @@ getNextPrimaryKey
        , Beam.Table table
        , Beam.Database be db
        , Beam.FromBackendRow be keyInner
-       , Coercible keyInner Int32
+       , Coercible keyInner Int64
        , _
        )
     => Beam.DatabaseEntity be db (TableEntity table) -> m keyInner

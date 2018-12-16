@@ -32,12 +32,12 @@ import Dscp.Util
 
 data CourseRowT f = CourseRow
     { crId   :: C f Course
-    , crDesc :: C f Text
+    , crDesc :: C f PgText
     } deriving (Generic)
 
 data SubjectRowT f = SubjectRow
     { srId     :: C f Subject
-    , srDesc   :: C f Text
+    , srDesc   :: C f PgText
     , srCourse :: PrimaryKey CourseRowT f
     } deriving (Generic)
 
@@ -49,7 +49,7 @@ data AssignmentRowT f = AssignmentRow
     { arHash         :: C f (Hash Assignment)
     , arContentsHash :: C f (Hash Raw)
     , arType         :: C f AssignmentType
-    , arDesc         :: C f Text
+    , arDesc         :: C f PgText
     , arCourse       :: PrimaryKey CourseRowT f
     } deriving (Generic)
 

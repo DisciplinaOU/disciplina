@@ -11,7 +11,7 @@ import Dscp.Core.Foundation.Educator
 import Dscp.Core.Foundation.Witness
 import Dscp.Crypto.Impl
 import Dscp.Crypto.Serialise ()
-import Dscp.Util (HasId (..))
+import Dscp.Util
 
 ----------------------------------------------------------------------------
 -- Educator
@@ -72,6 +72,10 @@ instance Serialise Submission where
         case (len, tag) of
             (4, 0) -> Submission <$> decode <*> decode <*> decode
             _      -> fail "Invalid Submission encoding"
+
+instance Serialise PgText where
+    encode (PgText t) = encode t
+    decode = leftToFail . mkPgText =<< decode
 
 ----------------------------------------------------------------------------
 -- Witness

@@ -62,7 +62,7 @@ createCourseSimple i =
     createCourse
         CourseDetails
         { cdCourseId = Just $ allCourses !! (i - 1)
-        , cdDesc = "course " <> pretty i
+        , cdDesc = "course " <> PgText (pretty i)
         , cdSubjects = []
         }
 

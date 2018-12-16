@@ -85,7 +85,7 @@ educatorGetCourses
     :: MonadEducatorWebQuery m
     => Maybe Student -> m [CourseEducatorInfo]
 educatorGetCourses studentF = do
-    res :: [(Course, Text, Maybe Subject)] <- runSelect $ select query
+    res :: [(Course, PgText, Maybe Subject)] <- runSelect $ select query
     return
         -- group "subject" fields for the same courses
         [ CourseEducatorInfo{ ciId, ciDesc, ciSubjects }

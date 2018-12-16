@@ -46,7 +46,7 @@ data NewStudent = NewStudent
 
 data NewCourse = NewCourse
     { ncId       :: Maybe Course
-    , ncDesc     :: Text
+    , ncDesc     :: PgText
     , ncSubjects :: [Subject]
     } deriving (Show, Eq, Generic)
 
@@ -59,7 +59,7 @@ data NewAssignment = NewAssignment
     { naCourseId     :: Course
     , naContentsHash :: (Hash Raw)
     , naIsFinal      :: IsFinal
-    , naDesc         :: Text
+    , naDesc         :: PgText
     } deriving (Show, Eq, Generic)
 
 data NewStudentCourse = NewStudentCourse
@@ -77,7 +77,7 @@ data EducatorInfo = EducatorInfo
 
 data CourseEducatorInfo = CourseEducatorInfo
     { ciId       :: Course
-    , ciDesc     :: Text
+    , ciDesc     :: PgText
     , ciSubjects :: [Subject]
     } deriving (Show, Eq, Ord, Generic)
 
@@ -86,7 +86,7 @@ data AssignmentEducatorInfo = AssignmentEducatorInfo
     , aiCourseId     :: Course
     , aiContentsHash :: (Hash Raw)
     , aiIsFinal      :: IsFinal
-    , aiDesc         :: Text
+    , aiDesc         :: PgText
     } deriving (Show, Eq, Generic)
 
 data SubmissionEducatorInfo = SubmissionEducatorInfo

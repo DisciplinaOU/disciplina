@@ -412,7 +412,7 @@ isAssignedToStudent student assignment =
 
 data CourseDetails = CourseDetails
     { cdCourseId :: Maybe Course
-    , cdDesc     :: Text
+    , cdDesc     :: PgText
     , cdSubjects :: [Id Subject]
     } deriving (Show, Generic)
 

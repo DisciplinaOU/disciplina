@@ -12,18 +12,17 @@ create table if not exists courses (
     -- Sqlite3 will force ascending primary key to be non-null, replacing
     --  null with autoincremented key (while sqlite2 won't).
     --
-    id     SERIAL   PRIMARY KEY,
-    "desc" TEXT     not null
+    id     BIGSERIAL  PRIMARY KEY,
+    "desc" TEXT       not null
 );
 
 -- Creating 'subjects' table.
 --
 create table if not exists subjects (
-    id          INTEGER  not null,
-    course__id  INTEGER  not null,
-    "desc"      TEXT     not null,
+    id          BIGSERIAL  PRIMARY KEY,
+    course__id  INTEGER    not null,
+    "desc"      TEXT       not null,
 
-    primary key (id, course__id),
     foreign key (course__id) references courses (id)
 );
 
@@ -133,7 +132,7 @@ create index if not exists transactions_submission_hash on transactions (submiss
 -- Creating 'blocks' table.
 -- We need `idx` field to be able to perform queries like "get N last blocks" efficiently.
 create table if not exists blocks (
-    idx           INTEGER          ,
+    idx           INTEGER      not null,
     hash          BYTEA        not null,
     creation_time TIMESTAMPTZ  not null,
     prev_hash     BYTEA        null,

@@ -26,6 +26,11 @@ import Dscp.Util.Aeson (parseJSONSerialise, toJSONSerialise)
 -- Manual instances
 ---------------------------------------------------------------------------
 
+-- TODO [DSCP-416]: Move
+deriving instance ToJSON PgText
+instance FromJSON PgText where
+    parseJSON v = leftToFail . mkPgText =<< parseJSON @Text v
+
 -- | TODO: make a generic instance generation for these enum-like instances
 instance ToJSON AssignmentType where
     toJSON Regular     = String "regular"

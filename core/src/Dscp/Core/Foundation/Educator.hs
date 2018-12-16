@@ -4,7 +4,10 @@ module Dscp.Core.Foundation.Educator
     (
 
     -- * Common types
-      Course (..)
+      PgText (..)
+    , isValidPgText
+    , mkPgText
+    , Course (..)
     , Subject (..)
     , Student
     , Grade (..)
@@ -82,21 +85,39 @@ module Dscp.Core.Foundation.Educator
 
 import Control.Lens (Getter, makeLenses, to)
 import qualified Data.ByteArray as BA
+import qualified Data.Text as T
 import Data.Time.Clock (UTCTime)
 import Fmt (build, genericF, mapF, (+|), (|+))
 
 import Dscp.Core.Foundation.Address (Address (..))
-import Dscp.Crypto.Impl
-import Dscp.Crypto.MerkleTree
-import Dscp.Util (HasId (..))
+import Dscp.Crypto
+import Dscp.Util
+
+-- | Text which does not contain @\0@ symbol
+--   (Postgres truncates such strings when of 'TEXT' type).
+--   TODO [DSCP-416]: move to SQL utils moved to core.
+newtype PgText = PgText Text
+    deriving (Show, Eq, Ord, Buildable, Semigroup, Monoid)
+
+isValidPgText :: Text -> Bool
+isValidPgText = isNothing . T.find (== '\0')
+
+mkPgText :: Text -> Either Text PgText
+mkPgText t
+    | isValidPgText t = Right (PgText t)
+    | otherwise = Left "Text contains \0 characters."
+
+instance IsString PgText where
+    fromString = leftToPanic . mkPgText . fromString
 
 ----------------------------------------------------------------------------
 -- Common educator types
 ----------------------------------------------------------------------------
 
+-- TODO [DSCP-416]: extract "Int64" to reasonable type helper.
 -- | ID of particular subject.
 newtype Subject = Subject
-    { getSubjectId :: Int32
+    { getSubjectId :: Int64
     } deriving (Eq, Ord, Show, Num)
 
 instance Buildable Subject where
@@ -134,7 +155,7 @@ type EducatorId = Address
 -- | Educator's course ID is simply a number too.
 -- There's a mapping from course ID to a set of associated subject IDs.
 newtype Course = Course
-    { getCourseId :: Int32
+    { getCourseId :: Int64
     } deriving (Eq, Ord, Show, Num)
 
 instance HasId Course
@@ -151,7 +172,7 @@ data Assignment = Assignment
     -- ^ Hash of assignment contents
     , _aType         :: !AssignmentType
     -- ^ Assignment type
-    , _aDesc         :: !Text
+    , _aDesc         :: !PgText
     -- ^ Description of assignment
     } deriving (Eq, Ord, Show, Generic)
 

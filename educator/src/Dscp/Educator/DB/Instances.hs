@@ -4,6 +4,7 @@
 module Dscp.Educator.DB.Instances () where
 
 import Codec.Serialise as Codec (deserialise)
+import qualified Control.Exception as E
 import qualified Data.ByteArray as BA
 import Database.Beam.Backend (BackendFromField, BeamBackend, FromBackendRow (..))
 import Database.Beam.Backend.SQL.SQL92 (HasSqlValueSyntax (..), IsSql92ExpressionSyntax,
@@ -90,6 +91,8 @@ CodecInstanceDec(EmptyMerkleTree a)
 
 {- Newtype-derived instances -}
 
+deriving instance IsSqliteValue PgText
+
 deriving instance FromField Subject
 deriving instance IsSqliteValue Subject
 
@@ -118,6 +121,10 @@ instance FromField Word32 where
 instance FromField Word8 where
     fromField field ty = fromIntegralChecked @_ @Int16 <$> fromField field ty
 
+instance FromField PgText where
+    fromField field ty =
+        (\t -> E.assert (isValidPgText t) $ PgText t) <$> fromField @Text field ty
+
 ----------------------------------------------------------------------------
 -- 'FromBackendRow' instances
 ----------------------------------------------------------------------------
@@ -126,6 +133,7 @@ instance FromField Word8 where
 instance (BeamBackend be, BackendFromField be (TYPE)) => FromBackendRow be (TYPE)
 
 -- For SQLite they all refer to 'FromField' instances
+GenFromBackendRow(PgText)
 GenFromBackendRow(Hash a)
 GenFromBackendRow(Address)
 GenFromBackendRow(Course)

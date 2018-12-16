@@ -237,6 +237,9 @@ instance ArbitraryMixture Header
 instance ArbitraryMixture BlockBody
 instance ArbitraryMixture Block
 
+instance Arbitrary PgText where
+    arbitrary = arbitrary `suchThatMap` (rightToMaybe . mkPgText)
+
 ---------------------------------------------------------------------
 -- Test case input
 ---------------------------------------------------------------------
