@@ -57,6 +57,7 @@ executables:
       - serialise
       - servant-client
       - time
+      - QuickCheck
     default-extensions:
       - CPP
       - DeriveAnyClass

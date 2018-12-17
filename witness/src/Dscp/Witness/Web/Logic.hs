@@ -212,9 +212,11 @@ checkFairCV =
   where
     checkAgainstDB (FairCVReady cv) =
         M.traverseWithKey (M.traverseWithKey . checkProofAgainstDB) cv
+
     checkProofAgainstDB addr h proof =
         maybe False (checkProofPure addr proof) <$>
-        runSdMempoolLocked (getPublicationByHeaderHash h)
+            runSdMempoolLocked (getPublicationByHeaderHash h)
+
     checkProofPure addr proof ptw =
         let root = ptw ^. ptwTxL.ptHeaderL.pbhBodyProof
         in verifyPubTxWitnessed addr ptw &&

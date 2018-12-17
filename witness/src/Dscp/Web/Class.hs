@@ -59,6 +59,7 @@ class HasErrorTag e => FromServantErr e where
     fromServantError :: ServantError -> Maybe e
     default fromServantError :: FromJSON e => ServantError -> Maybe e
     fromServantError err = do
+        _ <- error $ fromString $ "Servant err: " ++ show err
         let FailureResponse Response{..} = err
         errResponse <- decode @(ErrResponse e) responseBody
         return $ erContent errResponse
