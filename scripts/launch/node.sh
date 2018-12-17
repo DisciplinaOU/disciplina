@@ -70,7 +70,7 @@ if [[ $node == "educator" ]]; then
         exit 2
     fi
     echo $educator_keyfile_seed \
-        | dscp-keygen --seed --command keyfile \
+        | dscp-keygen --seed keyfile \
         > "${tmp_files}/educator.key"
     chmod 0600 ${tmp_files}/educator.key
 fi
