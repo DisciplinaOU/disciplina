@@ -160,9 +160,6 @@ deriving instance FromJSON GenesisDistribution
 deriving instance Serialise (MerkleProof PrivateTx) => ToJSON FairCV
 deriving instance Serialise (MerkleProof PrivateTx) => FromJSON FairCV
 
-deriving instance ToJSON FairCVCheckResult
-deriving instance FromJSON FairCVCheckResult
-
 ---------------------------------------------------------------------------
 -- TH derivations for data
 ---------------------------------------------------------------------------
@@ -205,3 +202,14 @@ instance Typeable tx => FromJSON (FeePolicy tx) where
         ]
       where
         unallowedPolicy = "This fees policy is not applicable"
+
+instance ToJSON FairCVCheckResult where
+    toJSON FairCVCheckResult{..} = object
+        [ "isValid" .= fairCVFullyValid
+        , "checkResponse" .= fairCVCheckResults
+        ]
+instance FromJSON FairCVCheckResult where
+    parseJSON = withObject "FairCVCheckResult" $ \o -> do
+        fairCVFullyValid <- o .: "isValid"
+        fairCVCheckResults <- o .: "checkResponse"
+        return FairCVCheckResult{..}

@@ -671,10 +671,19 @@ components:
                 $ref: '#/components/schemas/PrivateTx'
     FairCVCheckResult:
       type: object
-      additionalProperties:
-        type: object
-        additionalProperties:
+      required:
+        - isValid
+        - checkResponse
+      properties:
+        isValid:
           type: boolean
+          description: Is the entire FairCV valid?
+        checkResponse:
+          type: object
+          additionalProperties:
+            type: object
+            additionalProperties:
+              type: boolean
 
     ErrResponse:
       type: object

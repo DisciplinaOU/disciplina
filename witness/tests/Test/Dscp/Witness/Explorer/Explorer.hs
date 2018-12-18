@@ -330,9 +330,9 @@ spec_Explorer = describe "Explorer" $ do
             checkResBad <- lift $ checkFairCV fairCvInvalid
             let goodCheck =
                     counterexample "Valid FairCV is not checked correctly" $
-                    fullyValid checkResGood
+                    fairCVFullyValid checkResGood
                 badCheck =
                     counterexample "Invalid FairCV is not rejected" $
-                    not $ fullyValid checkResBad
+                    not $ fairCVFullyValid checkResBad
 
             return $ goodCheck .&&. badCheck
