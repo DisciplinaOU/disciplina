@@ -10,6 +10,7 @@ import Data.Reflection (Reifies, reify)
 import Fmt ((+|), (|+))
 import Loot.Log (logInfo)
 import Network.HTTP.Types.Header (hContentType)
+import Network.Wai (Middleware)
 import Network.Wai.Middleware.Cors (CorsResourcePolicy (..), cors, simpleCorsResourcePolicy)
 import Servant (Handler, Server, hoistServer, serve, throwError)
 import UnliftIO (UnliftIO (..), askUnliftIO)
@@ -40,16 +41,23 @@ convertWitnessHandler (UnliftIO unliftIO) handler =
   where
     throwServant = throwError . toServantErr @WitnessAPIError
 
+-- | CORS is enabled to ease development for frontend team.
+witnessCors :: Middleware
+witnessCors = cors $ const $ Just $
+    simpleCorsResourcePolicy
+    { -- We use @Access-Control-Allow-Origin: *@ as soon as API is public.
+      corsOrigins = Nothing
+    , corsMethods = ["GET", "POST", "PUT", "DELETE"]
+    , corsRequestHeaders = [hContentType]
+    }
+
 serveWitnessAPIReal :: WitnessWorkMode ctx m => ServerParams -> m ()
 serveWitnessAPIReal ServerParams{..} = do
     logInfo $ "Serving wallet API on "+|spAddr|+""
     unliftIO <- askUnliftIO
     lc <- buildServantLogConfig (<> "web")
-    let ourCors = cors (const $ Just $
-                        simpleCorsResourcePolicy
-                        { corsRequestHeaders = [hContentType] })
     serveWeb spAddr $
-        ourCors $
+        witnessCors $
         reify lc $ \logConfigP ->
         serve (servedApi logConfigP) $
         mkWitnessAPIServer $
