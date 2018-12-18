@@ -206,6 +206,9 @@ seqExpandersPublicationTx feesReceiverAddr (Fees minFee) =
 -- Money tx
 ----------------------------------------------------------------------------
 
+type Expansion ctx = ERoComp Exceptions Ids Values ctx
+type ChangeEntry = (Ids, ValueOp Values)
+
 toProofBalanceTx :: Fees -> TxWitnessed -> (StateTxType, Proofs)
 toProofBalanceTx minFee (TxWitnessed tx (TxWitness {..})) =
     (txType, AddressTxWitnessProof $ WithSignature {..} `PersonalisedProof` minFee)
@@ -215,115 +218,143 @@ toProofBalanceTx minFee (TxWitnessed tx (TxWitness {..})) =
     wsPublicKey = toDscpPK txwPk
     wsBody = (toTxId tx, txwPk, ())
 
+toChangeMap :: [ChangeEntry] -> Map Ids (ValueOp Values)
+toChangeMap changes =
+    let keyz = map fst changes
+    in if length keyz == length (ordNub keyz)
+       then Map.fromList changes
+       else error "Changeset produced by tx has duplicates"
+
 seqExpandersBalanceTx :: Address
                       -> Fees
                       -> SeqExpanders Exceptions Ids Proofs Values ctx TxWitnessed
 seqExpandersBalanceTx feesReceiverAddr (Fees minimalFees) =
     SeqExpanders $ one $ Expander inP outP $ \tw@TxWitnessed{..} -> do
+        let txId = toTxId twTx
+        let gTxId = coerce @_ @GTxId txId
+
         let outputs = txOuts twTx
-        -- check for output duplicates
-        let uniqOutAddrs = ordNub $ map txOutAddr outputs
-
-        when (null outputs) $
-            throwLocalError MTxNoOutputs
-
-        when (length uniqOutAddrs /= length outputs) $
-            throwLocalError MTxDuplicateOutputs
 
         -- Account we transfer money from
-        let inAddr    = tiaAddr $ txInAcc twTx
-        let getCurAcc = queryOne @_ @AccountId @_ @Account . AccountId
+        let txIn      = txInAcc twTx
+        let inAddr    = tiaAddr txIn
         let outSame   = find ((== inAddr) . txOutAddr) (txOuts twTx)
         let outOther  = maybe outputs (`List.delete` outputs) outSame
-
-        -- How much money user has sent to himself back.
         let inputBack = maybe 0 (coinToInteger . txOutValue) outSame
         -- How much money user has spent as the tx input.
         let inputSent = coinToInteger $ txInValue twTx
 
-        inpPrevAcc <- fromMaybe def <$> getCurAcc inAddr
-
-        let inpNewBal     = aBalance inpPrevAcc + inputBack - inputSent
-        let newInpAccount = Account
-                { aBalance = inpNewBal
-                , aNonce   = tiaNonce (txInAcc twTx) + 1
-                }
-
-        let inp = AccountId inAddr ==> Upd newInpAccount
-
-        outs <- forM outOther $ \TxOut{..} -> do
-            prevAcc <- getCurAcc txOutAddr
-
-            let outVal    = coinToInteger txOutValue
-            let newAcc    = Account { aBalance = outVal,               aNonce = 0 }
-            let updAcc a0 = Account { aBalance = aBalance a0 + outVal, aNonce = aNonce a0 }
-            let ch        = maybe (New newAcc) (Upd . updAcc) prevAcc
-
-            pure (AccountId txOutAddr ==> ch)
-
-        let txId = toTxId twTx
-        let gTxId = coerce @_ @GTxId txId
-
-        -- before we can add next changeset entry, we have to check our transaction is new
-        txAlreadyExists <- queryOneExists txId
-        when txAlreadyExists $
-            throwLocalError $ TransactionAlreadyExists txId
-
-        let miscChanges = txId ==> New (TxItself tw)
-
-        miscChanges2 <- forM (inAddr : map txOutAddr outOther) $ \txAddr ->
-            queryOne (TxsOf txAddr) >>= return . \case
-                Nothing -> [TxsOf txAddr ==> New (LastTx gTxId)]
-                Just (LastTx prevTxId) ->
-                    [ TxsOf  txAddr      ==> Upd (LastTx gTxId)
-                    , TxHead txAddr gTxId ==> New (TxNext prevTxId)
-                    ]
+        inputChg <- expandDeparture txIn (inputSent - inputBack)
+        -- TODO: shouldn't we pass "otherOutputs" here?
+        outputChg <- expandReceivals outputs outOther
+        historyChg <- expandTxHistory gTxId (tiaAddr txIn : map txOutAddr outputs)
+        remChg <- rememberTx txId tw
 
         -- Money flow related changes (w/o fees)
-        let changesList = inp : miscChanges : outs ++ concat miscChanges2
+        let changes = toChangeMap (inputChg : remChg : outputChg ++ historyChg)
 
-        -- Checking for duplicates
-        let hasDuplicates l = length l /= length (ordNub l)
-        when (hasDuplicates $ map fst changesList) $
-            throwLocalError $
-            AccountInternalError "Changeset produced by tx has duplicates"
-
-        -- Adding fees
-        let feeAmount =
-                max 0 $ inputSent - sum (map (coinToInteger . txOutValue) outputs)
-        let feesReceiverAccountId = AccountId feesReceiverAddr
-        feesReceiverAccM <- queryOne feesReceiverAccountId
-        let addFee receiver = receiver { aBalance = aBalance receiver + feeAmount }
-        let onlyFees = Account { aBalance = feeAmount, aNonce = 0 }
-        let feesReceiverUpd = maybe (New onlyFees) (Upd . addFee) feesReceiverAccM
-
-        unless (feeAmount >= coinToInteger minimalFees) $
-            throwLocalError InsufficientFees
-                { aeActualFees = feeAmount
-                , aeExpectedFees = coinToInteger minimalFees }
-
-        let changes :: Map Ids (ValueOp Values)
-            changes = Map.fromList changesList
-        let changesWithFees
-                | feeAmount == 0 = changes
-                | otherwise =
-                -- Current key we're interested in
-                let k = inj feesReceiverAccountId
-                    updated =
-                        Map.adjust (fmap (\(AccountOutVal x) -> AccountOutVal $ addFee x)) k changes
-                in case Map.lookup k changes of
-                    Nothing      -> Map.insert k (inj feesReceiverUpd) changes
-                    Just (New _) -> updated
-                    Just (Upd _) -> updated
-                    Just Rem     -> Map.insert k (New $ inj onlyFees) changes
-                    other        -> error $ "changesWithFees: not expected: " <> show other
-
+        changesWithFees <- expandAddFees inputSent outputs feesReceiverAddr minimalFees changes
         pure $ mkDiffCS changesWithFees
   where
     -- Account prefixes are used during the computation to access current balance
     inP  = Set.fromList [accountPrefix, txOfPrefix]
     -- Expander returns account changes only
     outP = Set.fromList [accountPrefix, txPrefix, txHeadPrefix, txOfPrefix]
+
+expandDeparture :: TxInAcc -> Integer -> Expansion ctx ChangeEntry
+expandDeparture inpAcc inputSentToOthers = do
+    -- How much money user has sent to himself back.
+    let inAddr = tiaAddr inpAcc
+
+    inpPrevAcc <- fromMaybe def <$> queryOne (AccountId inAddr)
+
+    let inpNewBal     = aBalance inpPrevAcc - inputSentToOthers
+    let newInpAccount = Account
+            { aBalance = inpNewBal
+            , aNonce   = tiaNonce inpAcc + 1
+            }
+
+    return (AccountId inAddr ==> Upd newInpAccount)
+
+expandReceivals
+    :: [TxOut]
+    -> [TxOut]
+    -> Expansion ctx [ChangeEntry]
+expandReceivals outputs otherOutputs = do
+    when (null outputs) $
+        throwLocalError MTxNoOutputs
+
+    let uniqOutAddrs = ordNub $ map txOutAddr outputs
+    when (length uniqOutAddrs /= length outputs) $
+        throwLocalError MTxDuplicateOutputs
+
+    forM otherOutputs $ \TxOut{..} -> do
+        prevAcc <- queryOne (AccountId txOutAddr)
+
+        let outVal    = coinToInteger txOutValue
+        let newAcc    = Account { aBalance = outVal,               aNonce = 0 }
+        let updAcc a0 = Account { aBalance = aBalance a0 + outVal, aNonce = aNonce a0 }
+        let ch        = maybe (New newAcc) (Upd . updAcc) prevAcc
+
+        pure (AccountId txOutAddr ==> ch)
+
+rememberTx :: TxId -> TxWitnessed -> Expansion ctx ChangeEntry
+rememberTx txId tw = do
+    -- before we can add next changeset entry, we have to check our transaction is new
+    -- to the chain
+    txAlreadyExists <- queryOneExists txId
+    when txAlreadyExists $
+        throwLocalError $ TransactionAlreadyExists txId
+
+    return (txId ==> New (TxItself tw))
+
+expandTxHistory :: GTxId -> [Address] -> Expansion ctx [ChangeEntry]
+expandTxHistory gTxId txAddrs =
+    fmap concat . forM txAddrs $ \txAddr ->
+        queryOne (TxsOf txAddr) <&> \case
+            Nothing -> [TxsOf txAddr ==> New (LastTx gTxId)]
+            Just (LastTx prevTxId) ->
+                [ TxsOf  txAddr       ==> Upd (LastTx gTxId)
+                , TxHead txAddr gTxId ==> New (TxNext prevTxId)
+                ]
+
+expandAddFees
+    :: Integer
+    -> [TxOut]
+    -> Address
+    -> Coin
+    -> Map Ids (ValueOp Values)
+    -> Expansion ctx (Map Ids (ValueOp Values))
+expandAddFees inputSent outputs feesReceiver minimalFees changes = do
+      -- Adding fees
+    let feeAmount =
+            max 0 $ inputSent - sum (map (coinToInteger . txOutValue) outputs)
+    let feesReceiverAccountId = AccountId feesReceiver
+    feesReceiverAccM <- queryOne feesReceiverAccountId
+    let addFee receiver = receiver { aBalance = aBalance receiver + feeAmount }
+    let onlyFees = Account { aBalance = feeAmount, aNonce = 0 }
+    let feesReceiverUpd = maybe (New onlyFees) (Upd . addFee) feesReceiverAccM
+
+    unless (feeAmount >= coinToInteger minimalFees) $
+        throwLocalError InsufficientFees
+            { aeActualFees = feeAmount
+            , aeExpectedFees = coinToInteger minimalFees }
+
+    let changesWithFees
+            | feeAmount == 0 = changes
+            | otherwise =
+            -- Current key we're interested in
+            let k = inj feesReceiverAccountId
+                updated =
+                    Map.adjust (fmap (\(AccountOutVal x) -> AccountOutVal $ addFee x)) k changes
+            in case Map.lookup k changes of
+                Nothing      -> Map.insert k (inj feesReceiverUpd) changes
+                Just (New _) -> updated
+                Just (Upd _) -> updated
+                Just Rem     -> Map.insert k (New $ inj onlyFees) changes
+                other        -> error $ "changesWithFees: not expected: " <> show other
+
+    return changesWithFees
 
 --------------------------------------------------------------------------
 -- Block meta tx
