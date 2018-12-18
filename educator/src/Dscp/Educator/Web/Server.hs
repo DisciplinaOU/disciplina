@@ -16,7 +16,7 @@ import Loot.Log (logInfo)
 import Network.HTTP.Types.Header (hAuthorization, hContentType)
 import Network.Wai (Middleware)
 import Network.Wai.Middleware.Cors (CorsResourcePolicy (..), cors, simpleCorsResourcePolicy)
-import Servant ((:<|>) (..), Context (..), Handler, ServantErr (..), Server, err405,
+import Servant ((:<|>) (..), Context (..), Handler, ServantErr (..), Server, StdMethod (..), err405,
                 hoistServerWithContext, serveWithContext)
 import Servant.Auth.Server.Internal.ThrowAll (throwAll)
 import Servant.Generic (toServant)
@@ -35,7 +35,7 @@ import Dscp.Educator.Web.Educator (EducatorPublicKey (..), ProtectedEducatorAPI,
 import Dscp.Educator.Web.Student (ProtectedStudentAPI, StudentCheckAction (..),
                                   convertStudentApiHandler, studentAPI, studentApiHandlers)
 import Dscp.Resource.Keys (KeyResources, krPublicKey)
-import Dscp.Util.Servant (LoggingApi, ServantLogConfig (..))
+import Dscp.Util.Servant (LoggingApi, ServantLogConfig (..), methodsCoveringAPI)
 import Dscp.Web (ServerParams (..), buildServantLogConfig, serveWeb)
 import Dscp.Web.Metrics (responseTimeMetric)
 import Dscp.Witness.Web
@@ -99,7 +99,7 @@ educatorCors = cors $ const $ Just $
       -- authentication prevents CSRF attacks, and API is public anyway.
       corsOrigins = Nothing
     , corsRequestHeaders = [hContentType, hAuthorization]
-    , corsMethods = ["GET", "POST", "DELETE"]
+    , corsMethods = methodsCoveringAPI @['GET, 'POST, 'PUT, 'DELETE] @EducatorWebAPI
     }
 
 serveEducatorAPIsReal :: EducatorWorkMode ctx m => Bool -> m ()

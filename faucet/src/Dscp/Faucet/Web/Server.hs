@@ -13,7 +13,7 @@ import Loot.Log (logInfo)
 import Network.HTTP.Types.Header (hContentType)
 import Network.Wai (Middleware)
 import Network.Wai.Middleware.Cors (CorsResourcePolicy (..), cors, simpleCorsResourcePolicy)
-import Servant ((:>), Handler, Server, hoistServer, serve)
+import Servant ((:>), Handler, Server, StdMethod (..), hoistServer, serve)
 import Servant.Generic (toServant)
 
 import Dscp.Config
@@ -21,7 +21,7 @@ import Dscp.Faucet.Config
 import Dscp.Faucet.Launcher (FaucetRealMode, FaucetWorkMode)
 import Dscp.Faucet.Web.API (FaucetAPI, faucetAPI)
 import Dscp.Faucet.Web.Handlers (convertFaucetApiHandler, faucetApiHandlers)
-import Dscp.Util.Servant (LoggingApi)
+import Dscp.Util.Servant (LoggingApi, methodsCoveringAPI)
 import Dscp.Web (ServerParams (..), serveWeb)
 import Dscp.Web.Server (buildServantLogConfig)
 
@@ -40,6 +40,7 @@ faucetCors = cors $ const $ Just $
     simpleCorsResourcePolicy
     { -- We use @Access-Control-Allow-Origin: *@ as soon as API is public.
       corsOrigins = Nothing
+    , corsMethods = methodsCoveringAPI @['GET, 'POST] @FaucetWebAPI
     , corsRequestHeaders = [hContentType]
     }
 

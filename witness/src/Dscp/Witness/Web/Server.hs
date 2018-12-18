@@ -12,10 +12,10 @@ import Loot.Log (logInfo)
 import Network.HTTP.Types.Header (hContentType)
 import Network.Wai (Middleware)
 import Network.Wai.Middleware.Cors (CorsResourcePolicy (..), cors, simpleCorsResourcePolicy)
-import Servant (Handler, Server, hoistServer, serve, throwError)
+import Servant (Handler, Server, StdMethod (..), hoistServer, serve, throwError)
 import UnliftIO (UnliftIO (..), askUnliftIO)
 
-import Dscp.Util.Servant (LoggingApi, ServantLogConfig (..))
+import Dscp.Util.Servant (LoggingApi, ServantLogConfig (..), methodsCoveringAPI)
 import Dscp.Web (ServerParams (..), buildServantLogConfig, serveWeb)
 import Dscp.Web.Class
 import Dscp.Witness.Launcher.Context
@@ -47,7 +47,7 @@ witnessCors = cors $ const $ Just $
     simpleCorsResourcePolicy
     { -- We use @Access-Control-Allow-Origin: *@ as soon as API is public.
       corsOrigins = Nothing
-    , corsMethods = ["GET", "POST", "PUT", "DELETE"]
+    , corsMethods = methodsCoveringAPI @['GET, 'POST, 'PUT] @WitnessAPI
     , corsRequestHeaders = [hContentType]
     }
 
