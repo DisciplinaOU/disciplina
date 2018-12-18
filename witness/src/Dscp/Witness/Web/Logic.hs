@@ -208,9 +208,9 @@ getHashType someHash = fmap (fromMaybe HashIsUnknown) . runMaybeT . asum $
 -- | Check @'FairCV'@ against records in the public chain.
 checkFairCV :: forall ctx m. WitnessWorkMode ctx m => FairCV -> m FairCVCheckResult
 checkFairCV =
-    checkAgainstDB . readyFairCV
+    fmap buildResults . checkAgainstDB . readyFairCV
   where
-    checkAgainstDB (FairCVReady cv) = FairCVCheckResult <$>
+    checkAgainstDB (FairCVReady cv) =
         M.traverseWithKey (M.traverseWithKey . checkProofAgainstDB) cv
     checkProofAgainstDB addr h proof =
         maybe False (checkProofPure addr proof) <$>
@@ -219,3 +219,8 @@ checkFairCV =
         let root = ptw ^. ptwTxL.ptHeaderL.pbhBodyProof
         in verifyPubTxWitnessed addr ptw &&
            root == mprRoot proof
+    buildResults results =
+        FairCVCheckResult
+        { fairCVCheckResults = results
+        , fairCVFullyValid = all and results
+        }

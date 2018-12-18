@@ -12,7 +12,6 @@ module Dscp.Core.FairCV
 
          -- * Fair CV check result
        , FairCVCheckResult (..)
-       , fullyValid
        ) where
 
 import qualified Data.Map.Merge.Strict as M
@@ -86,13 +85,13 @@ addProof educatorAddr blkHash proof =
 -- Fair CV check result
 ---------------------------------------------------------------------------
 
-newtype FairCVCheckResult = FairCVCheckResult
-    { unFairCVCheckResult :: GenericFairCV Bool
+data FairCVCheckResult = FairCVCheckResult
+    { fairCVCheckResults :: GenericFairCV Bool
+    , fairCVFullyValid   :: Bool
     } deriving (Show, Eq, Generic)
 
 instance Buildable FairCVCheckResult where
-    build (FairCVCheckResult res) =
-        "Fair CV check result { "+|mapF (mapF <$> res)|+" }"
-
-fullyValid :: FairCVCheckResult -> Bool
-fullyValid = all and . unFairCVCheckResult
+    build (FairCVCheckResult res total) =
+        "Fair CV check result: "+|totalS+|" "+|mapF (mapF <$> res)
+      where
+        totalS = if total then "✔" else "✘"
