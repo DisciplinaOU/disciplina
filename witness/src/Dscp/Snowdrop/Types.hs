@@ -25,14 +25,15 @@ module Dscp.Snowdrop.Types
     , _SignatureIsMissing
     , _SignatureIsCorrupted
     , _TransactionIsCorrupted
-    , _NotASingletonSelfUpdate
-    , _NonceMustBeIncremented
+    , _NonceMismatch
     , _PaymentMustBePositive
     , _ReceiverOnlyGetsMoney
-    , _ReceiverMustIncreaseBalance
+    , _OutputIsEmpty
     , _SumMustBeNonNegative
-    , _BalanceCannotBecomeNegative
     , _CannotAffordFees
+    , _CannotAffordOutputs
+    , _InsufficientBalance
+    , _WitnessMismatchesInput
     , BlockException(..)
     , _DuplicatedDifficulty
     , _DifficultyIsTooLarge
@@ -40,7 +41,7 @@ module Dscp.Snowdrop.Types
     , _SlotIdIsNotIncreased
     ) where
 
-import Control.Lens (makePrisms)
+import Control.Lens (LensLike', makePrisms, united)
 import Data.Default (Default (..))
 import Data.Text.Buildable (Buildable (..))
 import Fmt (build, (+|), (|+))
@@ -101,28 +102,32 @@ data AccountException
       { taeTxId :: TxId }
     | InsufficientFees
       { aeExpectedFees :: Integer, aeActualFees :: Integer }
-    | SignatureIsMissing
+    | SignatureIsMissing  -- TODO [DSCP-364]: remove when publication validation is moved
     | SignatureIsCorrupted
-    | TransactionIsCorrupted
-    | NotASingletonSelfUpdate      -- ^ 'Author' account updated multiple times.
-    | NonceMustBeIncremented
-      { aePreviousNonce :: Nonce, aeNewNonce :: Nonce }
+    | TransactionIsCorrupted  -- TODO [DSCP-364]: remove when publication validation is moved
+    | NonceMismatch
+      { aePreviousNonce :: Nonce, aeTxNonce :: Nonce }
     | PaymentMustBePositive
     | ReceiverOnlyGetsMoney        -- ^ Receiver can only change its 'aBalance', never 'aNonce'.
-    | ReceiverMustIncreaseBalance  -- ^ Receiver cannot decrease in its 'aBalance'.
+    | OutputIsEmpty
+      { aeAddress :: Address }
     | SumMustBeNonNegative
-      { aeSent :: Integer, aeReceived :: Integer, aeFees :: Integer }
+      { aeSent :: Integer, aeReceived :: Integer }
       -- ^ Amount of money sent must be greater of equal
       -- to the total amount received.
+    | CannotAffordOutputs
+      { aeOutputsSum :: Integer, aeBalance :: Integer }
     | CannotAffordFees
-      { aeOutputsSum :: Integer, aeBalance :: Integer, aeFees :: Integer }
-      -- ^ Given account state cannot afford given fees.
-    | BalanceCannotBecomeNegative
       { aeSpent :: Integer, aeBalance :: Integer }
-    | AccountInternalError String
+      -- ^ Given account state cannot afford given fees.
     deriving (Eq, Ord)
 
 makePrisms ''AccountException
+
+_InsufficientBalance
+    :: (Applicative f, Semigroup (f AccountException))
+    => LensLike' f AccountException ()
+_InsufficientBalance = (_CannotAffordOutputs . united) <> (_CannotAffordFees . united)
 
 instance Buildable AccountException where
     build = \case
@@ -141,29 +146,25 @@ instance Buildable AccountException where
             "Bad signature"
         TransactionIsCorrupted ->
             "Transaction is corrupted"
-        NotASingletonSelfUpdate ->
-            "Author account is updated multiple times"
-        NonceMustBeIncremented{..} ->
-            "Nonce should've been incremented by one: previous nonce was "
-            +| aePreviousNonce |+ ", new nonce is " +| aeNewNonce |+ ""
+        NonceMismatch{..} ->
+            "Nonce does not match: previous nonce of input account was "
+            +| aePreviousNonce |+ ", nonce used in transaction is " +| aeTxNonce |+ ""
         PaymentMustBePositive ->
             "Spent amount of money must be positive"
         ReceiverOnlyGetsMoney ->
             "Improper changes of receiver account (it is only possible to add \
             \tokens)"
-        ReceiverMustIncreaseBalance ->
-            "One of receivers' balance decreased or didn't change"
+        OutputIsEmpty{..} ->
+            "Output corresponding to address " +| aeAddress |+ " is zero"
         SumMustBeNonNegative{..} ->
             "Tx input value (" +| unsafeMkCoin aeSent |+ ") is not greater than \
-            \sum of outputs (" +| unsafeMkCoin aeReceived |+ ") plus fees (" +| unsafeMkCoin aeFees |+ ")"
+            \sum of outputs (" +| unsafeMkCoin aeReceived |+ ")"
+        CannotAffordOutputs{..} ->
+            "Tx sender can not afford outputs: outputs sum is " +| unsafeMkCoin aeOutputsSum
+            |+ ", while balance is " +| unsafeMkCoin aeBalance |+ ""
         CannotAffordFees{..} ->
-            "Tx sender can not afford fees: sending " +| unsafeMkCoin aeOutputsSum |+ " \
-            \and fees are " +| unsafeMkCoin aeFees |+ ", while balance is " +| unsafeMkCoin aeBalance |+ ""
-        BalanceCannotBecomeNegative{..} ->
-            "Balance can not become negative: spending " +| unsafeMkCoin aeSpent |+ ", \
-            \while balance is " +| unsafeMkCoin aeBalance |+ ""
-        AccountInternalError s ->
-            fromString $ "Expander failed internally: " <> s
+            "Tx sender can not afford fees: sending " +| unsafeMkCoin aeSpent |+
+            ", while balance is " +| unsafeMkCoin aeBalance |+ ""
 
 instance Show AccountException where
     show = toString . pretty

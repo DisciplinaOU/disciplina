@@ -32,7 +32,7 @@ createTx sk nonce outs fees =
 -- | Sign a transaction.
 signTx :: SecretKeyData -> Tx -> TxWitnessed
 signTx sk tx =
-    let signature   = sign (skSecret sk) (toTxId tx, skPublic sk, ())
+    let signature   = sign (skSecret sk) (toTxId tx, skPublic sk)
         witness     = TxWitness   { txwSig = signature, txwPk = skPublic sk }
         txWitnessed = TxWitnessed { twTx   = tx, twWitness = witness }
     in txWitnessed

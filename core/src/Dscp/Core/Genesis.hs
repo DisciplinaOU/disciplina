@@ -115,7 +115,7 @@ formGenesisInfo GenesisConfig{..} =
                 twTx = Tx { txInAcc = TxInAcc fromAddr 0
                           , txInValue = totalCoinsAddrMap genesisAddrMap
                           , txOuts = txOutputs }
-                twWitness = TxWitness { txwSig = sign sk (toTxId twTx, pk, ())
+                twWitness = TxWitness { txwSig = sign sk (toTxId twTx, pk)
                                       , txwPk = pk }
             in GMoneyTxWitnessed $ TxWitnessed {..}
 

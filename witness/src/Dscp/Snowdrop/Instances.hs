@@ -33,15 +33,13 @@ instance HasErrorTag AccountException where
         SignatureIsMissing{}          -> "SignatureIsMissing"
         SignatureIsCorrupted{}        -> "SignatureIsCorrupted"
         TransactionIsCorrupted{}      -> "TransactionIsCorrupted"
-        NotASingletonSelfUpdate{}     -> "NotASingletonSelfUpdate"
-        NonceMustBeIncremented{}      -> "NonceMustBeIncremented"
+        NonceMismatch{}               -> "NonceMismatch"
         PaymentMustBePositive{}       -> "PaymentMustBePositive"
         ReceiverOnlyGetsMoney{}       -> "ReceiverOnlyGetsMoney"
-        ReceiverMustIncreaseBalance{} -> "ReceiverMustIncreaseBalance"
+        OutputIsEmpty{}               -> "OutputIsEmpty"
         SumMustBeNonNegative{}        -> "SumMustBeNonNegative"
+        CannotAffordOutputs{}         -> "CannotAffordOutputs"
         CannotAffordFees{}            -> "CannotAffordFees"
-        BalanceCannotBecomeNegative{} -> "InsufficientBalance"
-        AccountInternalError{}        -> "InternalError"
 
 instance ToServantErr AccountException where
     toServantErrNoBody = \case
@@ -52,15 +50,13 @@ instance ToServantErr AccountException where
         SignatureIsMissing{}          -> err500
         SignatureIsCorrupted{}        -> err400
         TransactionIsCorrupted{}      -> err500
-        NotASingletonSelfUpdate{}     -> err400
-        NonceMustBeIncremented{}      -> err403
+        NonceMismatch{}               -> err403
         PaymentMustBePositive{}       -> err500
         ReceiverOnlyGetsMoney{}       -> err500
-        ReceiverMustIncreaseBalance{} -> err500
+        OutputIsEmpty{}               -> err400
         SumMustBeNonNegative{}        -> err400
+        CannotAffordOutputs{}         -> err403
         CannotAffordFees{}            -> err403
-        BalanceCannotBecomeNegative{} -> err403
-        AccountInternalError{}        -> err500
 
 instance HasErrorTag LogicException where
     errorTag = \case

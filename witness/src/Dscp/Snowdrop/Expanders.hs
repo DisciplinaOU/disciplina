@@ -102,7 +102,7 @@ getByGTx applyFees pk t =
     let fee  = calcFeeG (if applyFees then feeConfig else noFeesConfig) t
         addr = mkAddr pk
         (a, b) = case t of
-                   GMoneyTxWitnessed tx        -> toProofBalanceTx fee tx
+                   GMoneyTxWitnessed tx        -> toProofBalanceTx tx
                    GPublicationTxWitnessed ptx -> toProofPublicationTx fee ptx
     in (a, b, seqExpandersGTx addr fee t)
 
@@ -209,15 +209,15 @@ seqExpandersPublicationTx feesReceiverAddr (Fees minFee) =
 type Expansion ctx = ERoComp Exceptions Ids Values ctx
 type ChangeEntry = (Ids, ValueOp Values)
 
-toProofBalanceTx :: Fees -> TxWitnessed -> (StateTxType, Proofs)
-toProofBalanceTx minFee (TxWitnessed tx (TxWitness {..})) =
-    (txType, AddressTxWitnessProof $ WithSignature {..} `PersonalisedProof` minFee)
+-- TODO: move all this stuff to separate module
+
+toProofBalanceTx :: TxWitnessed -> (StateTxType, Proofs)
+toProofBalanceTx (TxWitnessed _ (TxWitness {..})) =
+    (txType, AddressTxWitnessProof)
   where
     txType = StateTxType $ getId (Proxy @TxIds) AccountTxTypeId
-    wsSignature = toDscpSig txwSig
-    wsPublicKey = toDscpPK txwPk
-    wsBody = (toTxId tx, txwPk, ())
 
+-- | Folds changes list into map checking that no entries overlap.
 toChangeMap :: [ChangeEntry] -> Map Ids (ValueOp Values)
 toChangeMap changes =
     let keyz = map fst changes
@@ -237,23 +237,31 @@ seqExpandersBalanceTx feesReceiverAddr (Fees minimalFees) =
 
         -- Account we transfer money from
         let txIn      = txInAcc twTx
+        -- Input address
         let inAddr    = tiaAddr txIn
+        -- Output matching transaction input, if any
         let outSame   = find ((== inAddr) . txOutAddr) (txOuts twTx)
+        -- All outputs which does not match the input
         let outOther  = maybe outputs (`List.delete` outputs) outSame
+        -- Money sent to ourselves
         let inputBack = maybe 0 (coinToInteger . txOutValue) outSame
         -- How much money user has spent as the tx input.
         let inputSent = coinToInteger $ txInValue twTx
+        -- Sum of outputs
+        let outputsReceived = sum $ map (coinToInteger . txOutValue) outputs
+        -- Fees
+        let fee       = inputSent - outputsReceived
 
-        inputChg <- expandDeparture txIn (inputSent - inputBack)
-        -- TODO: shouldn't we pass "otherOutputs" here?
+        remChg <- expandRememberTx txId tw
+        inputChg <- expandDeparture txIn inputSent (inputSent - inputBack) fee
         outputChg <- expandReceivals outputs outOther
         historyChg <- expandTxHistory gTxId (tiaAddr txIn : map txOutAddr outputs)
-        remChg <- rememberTx txId tw
 
-        -- Money flow related changes (w/o fees)
+        verifyMoneyTxSig tw
+
         let changes = toChangeMap (inputChg : remChg : outputChg ++ historyChg)
 
-        changesWithFees <- expandAddFees inputSent outputs feesReceiverAddr minimalFees changes
+        changesWithFees <- expandAddFees fee feesReceiverAddr minimalFees changes
         pure $ mkDiffCS changesWithFees
   where
     -- Account prefixes are used during the computation to access current balance
@@ -261,14 +269,37 @@ seqExpandersBalanceTx feesReceiverAddr (Fees minimalFees) =
     -- Expander returns account changes only
     outP = Set.fromList [accountPrefix, txPrefix, txHeadPrefix, txOfPrefix]
 
-expandDeparture :: TxInAcc -> Integer -> Expansion ctx ChangeEntry
-expandDeparture inpAcc inputSentToOthers = do
+-- | Expand everything related to the transaction input.
+expandDeparture :: TxInAcc -> Integer -> Integer -> Integer -> Expansion ctx ChangeEntry
+expandDeparture inpAcc inputSent inputSentToOthers outputsReceived = do
     -- How much money user has sent to himself back.
     let inAddr = tiaAddr inpAcc
 
-    inpPrevAcc <- fromMaybe def <$> queryOne (AccountId inAddr)
+    account <- fromMaybe def <$> queryOne (AccountId inAddr)
+    let balance = aBalance account
 
-    let inpNewBal     = aBalance inpPrevAcc - inputSentToOthers
+    -- TODO: do we ever need this check?
+    -- outputs are forced to have at least 1 coin in sum
+    unless (inputSent > 0) $
+        throwLocalError PaymentMustBePositive
+
+    unless (inputSent - outputsReceived >= 0) $
+        throwLocalError SumMustBeNonNegative
+            { aeSent = inputSent, aeReceived = outputsReceived }
+
+    unless (balance - outputsReceived >= 0) $
+        throwLocalError CannotAffordOutputs
+            { aeOutputsSum = outputsReceived, aeBalance = balance }
+
+    unless (balance - inputSent >= 0) $
+        throwLocalError CannotAffordFees
+            { aeSpent = inputSent, aeBalance = balance }
+
+    unless (tiaNonce inpAcc == aNonce account) $
+        throwLocalError NonceMismatch
+            { aePreviousNonce = aNonce account, aeTxNonce = tiaNonce inpAcc }
+
+    let inpNewBal     = aBalance account - inputSentToOthers
     let newInpAccount = Account
             { aBalance = inpNewBal
             , aNonce   = tiaNonce inpAcc + 1
@@ -281,6 +312,12 @@ expandReceivals
     -> [TxOut]
     -> Expansion ctx [ChangeEntry]
 expandReceivals outputs otherOutputs = do
+    -- TODO: it is weird that we validate "outputs", but "otherOutputs" participate
+    -- in changeset formation.
+    -- For instance, this means that if I specify a single output to myself, resulting
+    -- transaction will have no outputs at all like if it was fine.
+    -- Maybe outputs refering to our input should be removed at this point, or be prohibited
+    -- entirely?
     when (null outputs) $
         throwLocalError MTxNoOutputs
 
@@ -290,16 +327,19 @@ expandReceivals outputs otherOutputs = do
 
     forM otherOutputs $ \TxOut{..} -> do
         prevAcc <- queryOne (AccountId txOutAddr)
-
         let outVal    = coinToInteger txOutValue
+
+        unless (outVal > 0) $
+            throwLocalError OutputIsEmpty{ aeAddress = txOutAddr }
+
         let newAcc    = Account { aBalance = outVal,               aNonce = 0 }
         let updAcc a0 = Account { aBalance = aBalance a0 + outVal, aNonce = aNonce a0 }
         let ch        = maybe (New newAcc) (Upd . updAcc) prevAcc
 
         pure (AccountId txOutAddr ==> ch)
 
-rememberTx :: TxId -> TxWitnessed -> Expansion ctx ChangeEntry
-rememberTx txId tw = do
+expandRememberTx :: TxId -> TxWitnessed -> Expansion ctx ChangeEntry
+expandRememberTx txId tw = do
     -- before we can add next changeset entry, we have to check our transaction is new
     -- to the chain
     txAlreadyExists <- queryOneExists txId
@@ -320,15 +360,11 @@ expandTxHistory gTxId txAddrs =
 
 expandAddFees
     :: Integer
-    -> [TxOut]
     -> Address
     -> Coin
     -> Map Ids (ValueOp Values)
     -> Expansion ctx (Map Ids (ValueOp Values))
-expandAddFees inputSent outputs feesReceiver minimalFees changes = do
-      -- Adding fees
-    let feeAmount =
-            max 0 $ inputSent - sum (map (coinToInteger . txOutValue) outputs)
+expandAddFees feeAmount feesReceiver minimalFees changes = do
     let feesReceiverAccountId = AccountId feesReceiver
     feesReceiverAccM <- queryOne feesReceiverAccountId
     let addFee receiver = receiver { aBalance = aBalance receiver + feeAmount }
@@ -355,6 +391,14 @@ expandAddFees inputSent outputs feesReceiver minimalFees changes = do
                 other        -> error $ "changesWithFees: not expected: " <> show other
 
     return changesWithFees
+
+verifyMoneyTxSig :: TxWitnessed -> Expansion ctx ()
+verifyMoneyTxSig TxWitnessed{ twWitness = witness, twTx = tx } = do
+    let txId = toTxId tx
+    let pk = txwPk witness
+
+    let valid = verify pk (txId, pk) (txwSig witness)
+    unless valid $ throwLocalError SignatureIsCorrupted
 
 --------------------------------------------------------------------------
 -- Block meta tx
