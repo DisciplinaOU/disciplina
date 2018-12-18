@@ -38,6 +38,7 @@ fromSnowdropException = \case
     PublicationError{} -> mzero
     BlockError{} -> mzero
     SdInternalError{} -> mzero
+    ContractException{} -> mzero
 
 -- | All witness API exceptions.
 data WitnessAPIError
