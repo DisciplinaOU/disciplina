@@ -29,13 +29,28 @@ getAssignments sc = do
     hashes <- map aiHash <$> sGetAssignments sc Nothing Nothing Nothing False
     for hashes $ sGetAssignment sc
 
-makeRandomSubmissionForAssignment :: StudentApiClient -> Hash Assignment -> IO NewSubmission
-makeRandomSubmissionForAssignment sc aHash = do
+makeRandomSubmissionForAssignment :: SecretKey -> Hash Assignment -> IO NewSubmission
+makeRandomSubmissionForAssignment student aHash = do
+    ch <- generate arbitrary
+
+    let sub = Submission
+            { _sStudentId = mkAddr (toPublic student)
+            , _sContentsHash = ch
+            , _sAssignmentHash = aHash
+            }
+
     return NewSubmission
         { nsAssignmentHash = aHash
         , nsContentsHash   = hash "mkay"
-        , nsWitness        = _
+        , nsWitness        = SubmissionWitness
+            { _swKey = toPublic student
+            , _swSig = sign student (hash sub)
+            }
         }
+
+sendSubmission :: StudentApiClient -> NewSubmission -> IO SubmissionStudentInfo
+sendSubmission sc sub = do
+    sAddSubmission sc sub
 
 getAllCourses :: StudentApiClient -> IO [Course]
 getAllCourses sc = do

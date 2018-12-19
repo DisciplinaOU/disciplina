@@ -12,10 +12,13 @@ module Dscp.Educator.Web.Educator.Error
        ) where
 
 import Control.Lens (makePrisms)
+import Data.Aeson.Options (defaultOptions)
+import Data.Aeson.TH (deriveJSON)
 import Data.Reflection (Reifies (..))
 import Data.Typeable (cast)
 import Dscp.DB.SQLite (SQLRequestsNumberExceeded)
 import Dscp.Educator.DB (DomainError)
+import qualified Data.Text.Buildable as B
 import Servant (ServantErr (..), err400, err503)
 
 import Dscp.Educator.Web.Util
@@ -33,6 +36,14 @@ data EducatorAPIError
     deriving (Show, Eq, Generic)
 
 makePrisms ''EducatorAPIError
+
+instance Buildable EducatorAPIError where
+    build (SomeDomainError err) =
+        "Database error: " <> B.build err
+    build InvalidFormat =
+        "Invalid format of the request"
+    build (ServiceUnavailable msg) =
+        "Service unavailable: " <> B.build msg
 
 instance Exception EducatorAPIError where
     fromException e@(SomeException e') =
@@ -56,12 +67,16 @@ instance HasErrorTag EducatorAPIError where
 -- Functions
 ---------------------------------------------------------------------------
 
+deriveJSON defaultOptions ''EducatorAPIError
+
 instance ToServantErr EducatorAPIError where
     toServantErrNoBody = \case
         InvalidFormat        -> err400
         ServiceUnavailable{} -> err503
         SomeDomainError err  -> domainToServantErrNoReason err
     toServantErr = toServantErrJustTag
+
+instance FromServantErr EducatorAPIError
 
 ---------------------------------------------------------------------------
 -- Other

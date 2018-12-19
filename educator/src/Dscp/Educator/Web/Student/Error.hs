@@ -15,9 +15,9 @@ import Control.Lens (makePrisms)
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
 import Data.Reflection (Reifies (..))
-import qualified Data.Text.Buildable as B
 import Data.Typeable (cast)
 import Fmt (listF, (+|))
+import qualified Data.Text.Buildable as B
 import Servant (ServantErr (..), err400, err403, err503)
 
 import Dscp.DB.SQLite (SQLRequestsNumberExceeded)
