@@ -40,6 +40,7 @@ instance HasErrorTag AccountException where
         SumMustBeNonNegative{}        -> "SumMustBeNonNegative"
         CannotAffordOutputs{}         -> "CannotAffordOutputs"
         CannotAffordFees{}            -> "CannotAffordFees"
+        WitnessMismatchesInput{}      -> "WitnessMismatchesInput"
 
 instance ToServantErr AccountException where
     toServantErrNoBody = \case
@@ -57,6 +58,7 @@ instance ToServantErr AccountException where
         SumMustBeNonNegative{}        -> err400
         CannotAffordOutputs{}         -> err403
         CannotAffordFees{}            -> err403
+        WitnessMismatchesInput{}      -> err400
 
 instance HasErrorTag LogicException where
     errorTag = \case

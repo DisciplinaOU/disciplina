@@ -257,7 +257,7 @@ seqExpandersBalanceTx feesReceiverAddr (Fees minimalFees) =
         outputChg <- expandReceivals outputs outOther
         historyChg <- expandTxHistory gTxId (tiaAddr txIn : map txOutAddr outputs)
 
-        verifyMoneyTxSig tw
+        verifyMoneyTxWitness tw
 
         let changes = toChangeMap (inputChg : remChg : outputChg ++ historyChg)
 
@@ -392,13 +392,18 @@ expandAddFees feeAmount feesReceiver minimalFees changes = do
 
     return changesWithFees
 
-verifyMoneyTxSig :: TxWitnessed -> Expansion ctx ()
-verifyMoneyTxSig TxWitnessed{ twWitness = witness, twTx = tx } = do
+verifyMoneyTxWitness :: TxWitnessed -> Expansion ctx ()
+verifyMoneyTxWitness TxWitnessed{ twWitness = witness, twTx = tx } = do
     let txId = toTxId tx
     let pk = txwPk witness
+    let input = tiaAddr $ txInAcc tx
 
-    let valid = verify pk (txId, pk) (txwSig witness)
-    unless valid $ throwLocalError SignatureIsCorrupted
+    unless (verify pk (txId, pk) (txwSig witness)) $
+        throwLocalError SignatureIsCorrupted
+
+    unless (mkAddr pk == input) $
+        throwLocalError WitnessMismatchesInput
+            { aeSignerAddress = mkAddr pk, aeInput = input }
 
 --------------------------------------------------------------------------
 -- Block meta tx

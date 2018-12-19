@@ -720,6 +720,7 @@ components:
             - NonceMismatch
             - CannotAffordOutputs
             - CannotAffordFees
+            - WitnessMismatchesInput
           description: |-
             Error type:
               * `InvalidFormat` - Failed to deserialise one of parameters.
@@ -727,7 +728,8 @@ components:
               * `DuplicatedOutputs` - Transaction has duplicated outputs.
               * `TransactionAlreadyExists` - Exactly the same transaction has been registered. Rarely this error may be transient, i.e. backend may fail to apply the transaction.
               * `InsufficientFees` - Input of transaction is too small to provide appropriate fees amount.
-              * `SignatureIsCorrupted` - Bad signature provided.
+              * `SignatureIsCorrupted` - Wrong signature in witness provided.
               * `NonceMismatch` - Bad nonce for source account is used. Should be exactly an actual "currentNonce" value returned by /accounts/{address} endpoint.
               * `CannotAffordOutputs` - User balance is too small to afford transaction outputs.
               * `CannotAffordFees` - User balance is too small to afford transaction outputs and fees.
+              * `WitnessMismatchesInput` - Public key provided in transaction witness does not correspond to the input address of the transaction.
