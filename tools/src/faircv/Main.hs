@@ -1,5 +1,4 @@
 
-import Control.Concurrent
 import Data.Aeson
 import qualified Data.Set as Set
 import Data.Traversable
@@ -36,9 +35,9 @@ instance MonadLogging IO where
 
 main :: IO ()
 main = do
-    [port, skFile] <- getArgs
+    [url, skFile] <- getArgs
 
-    wClient <- createWitnessClient =<< parseBaseUrl ("localhost:" ++ port)
+    wClient <- createWitnessClient =<< parseBaseUrl url
 
     store <- readStore skFile emptyPassPhrase
 
@@ -98,8 +97,6 @@ main = do
     Just proof <- return $ mkMerkleProof tree (Set.fromList [0..9])
 
     fcv :: FairCV <- return $ unReadyFairCV $ singletonFCV addr (hash hdr) (readyProof proof)
-
-    threadDelay 10000000
 
     writeFile "fairCV-example.json" $ decodeUtf8 $ encode fcv
 
