@@ -1,56 +1,109 @@
 
+import Control.Concurrent
+import Data.Aeson
+import qualified Data.Set as Set
 import Data.Traversable
-
--- import Data.Aeson
+import Data.Time.Clock
 import Servant.Client
+import Test.QuickCheck
+
+import Loot.Log
 
 import Dscp.Core
 import Dscp.Crypto
-import Dscp.Educator.Web.Educator
-import Dscp.Educator.Web.Student
-import Dscp.Educator.Web.Types
--- import Dscp.Witness.Web.Client
+import Dscp.Witness.Web hiding (checkFairCV)
+import Dscp.Resource.Keys
 
-import Test.QuickCheck
+import Client
+
+createActor :: IO (SecretKey, PublicKey, Address)
+createActor = do
+    sk   <- genSecretKey
+    pk   <- return (toPublic sk)
+    addr <- return (mkAddr   pk)
+    return (sk, pk, addr)
+
+createActorOf :: SecretKey -> IO (PublicKey, Address)
+createActorOf sk = do
+    pk   <- return (toPublic sk)
+    addr <- return (mkAddr   pk)
+    return (pk, addr)
+
+instance MonadLogging IO where
+    log = putStrLn . fmtMessageColored
+
+    logName = return CallstackName
 
 main :: IO ()
 main = do
-    [port] <- getArgs
+    [port, skFile] <- getArgs
 
-    wClient <- createEducatorApiClient =<< parseBaseUrl ("localhost:" ++ port)
+    wClient <- createWitnessClient =<< parseBaseUrl ("localhost:" ++ port)
 
-    courses <- for [1..5 :: Int] $ \_ -> do
-        eAddCourse wClient NewCourse
-            { ncId = Nothing
-            , ncDesc = fromString "Doing nothing"
-            , ncSubjects = [Subject 1, Subject 2]
+    store <- readStore skFile emptyPassPhrase
+
+    sk <- return $ store^.krSecretKey
+
+    (pk,  addr)       <- createActorOf sk
+    (skS, pkS, addrS) <- createActor
+
+    privateTxs <- for [1..10 :: Integer] $ \_ -> do
+        timestamp      <- getCurrentTime
+        contentsHash   <- generate arbitrary
+        assignmentHash <- generate arbitrary
+
+        sub <- return Submission
+            { _sStudentId      = addrS
+            , _sContentsHash   = contentsHash
+            , _sAssignmentHash = assignmentHash
             }
 
-    sk <- genSecretKey
+        return PrivateTx
+            { _ptGrade            = gA
+            , _ptTime             = timestamp
+            , _ptSignedSubmission = SignedSubmission
+                { _ssSubmission = sub
+                , _ssWitness    = SubmissionWitness
+                    { _swKey = pkS
+                    , _swSig = sign skS (hash sub)
+                    }
+                }
+            }
 
-    student <- eAddStudent wClient NewStudent
-        { nsAddr = mkAddr (toPublic sk)
+    tree <- return $ fromFoldable privateTxs
+    sig  <- return $ getMerkleRoot tree
+
+    hdr <- return PrivateBlockHeader
+        { _pbhPrevBlock = genesisHeaderHash addr
+        , _pbhBodyProof = sig
+        , _pbhAtgDelta  = mempty
         }
 
-    contentHash <- generate arbitrary
+    ptx <- return PublicationTx
+        { ptAuthor     = addr
+        , ptFeesAmount = unsafeMkCoin (100 :: Integer)
+        , ptHeader     = hdr
+        }
 
-    asses <- for courses $ \course -> do
-        () <- eAddAssignment wClient True NewAssignment
-            { naCourseId = course
-            , naContentsHash = contentHash
-            , naIsFinal = IsFinal True
-            , naDesc = fromString  $ "Chilling right there at " ++ show course
+    res <- wSubmitPublication wClient PublicationTxWitnessed
+        { ptwTx = ptx
+        , ptwWitness = PublicationTxWitness
+            { pwSig = sign sk (toPtxId ptx, pk, hdr)
+            , pwPk  = pk
             }
-        eGetAssignments wClient (Just course) Nothing Nothing Nothing False
+        }
 
-    enrollments <- for courses $ \course -> do
-        eAddStudentCourse wClient (mkAddr $ toPublic sk) (NewStudentCourse course)
+    print res
 
-    sClient <- createStudentApiClient =<< parseBaseUrl ("localhost:" ++ port)
+    Just proof <- return $ mkMerkleProof tree (Set.fromList [0..9])
 
-    print =<< sGetAssignments sClient Nothing Nothing Nothing False
+    fcv :: FairCV <- return $ unReadyFairCV $ singletonFCV addr (hash hdr) (readyProof proof)
 
-    print (student, asses, enrollments)
+    threadDelay 10000000
+
+    writeFile "fairCV-example.json" $ decodeUtf8 $ encode fcv
+
+    print =<< checkFairCV wClient fcv
 
     -- sClient <- createStudentApiClient =<< parseBaseUrl "127.0.0.1:8090"
     -- asses   <- getAssignments sClient

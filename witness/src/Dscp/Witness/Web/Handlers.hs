@@ -23,6 +23,8 @@ witnessServantHandlers =
     { wPing = pass
     , wSubmitTx = \tw ->
         submitUserTx tw $> toTxId (twTx tw)
+    , wSubmitPublication = \ptx ->
+        submitUserPublicationTx ptx $> toPtxId (ptwTx ptx)
     , wSubmitTxAsync = \tw ->
         submitUserTxAsync tw $> toTxId (twTx tw)
     , wGetBlocks = getBlocks

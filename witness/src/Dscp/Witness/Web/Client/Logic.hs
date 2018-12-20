@@ -27,6 +27,7 @@ hoistWitnessClient nat es =
     WitnessEndpoints
     { wPing = nat ... wPing es
     , wSubmitTx = nat ... wSubmitTx es
+    , wSubmitPublication = nat ... wSubmitPublication es
     , wSubmitTxAsync = nat ... wSubmitTxAsync es
     , wGetBlocks = nat ... wGetBlocks es
     , wGetBlock = nat ... wGetBlock es

@@ -28,6 +28,11 @@ data WitnessEndpoints route = WitnessEndpoints
         :> ReqBody '[JSON] TxWitnessed
         :> Verb 'POST 201 '[DSON] TxId
 
+    , wSubmitPublication :: route
+        :- "publications"
+        :> ReqBody '[JSON] PublicationTxWitnessed
+        :> Verb 'POST 201 '[DSON] PublicationTxId
+
       -- Like 'wSubmitTx', but does not any checks on transaction application.
       -- Useful, since submitting transaction over network may take long.
     , wSubmitTxAsync :: route
