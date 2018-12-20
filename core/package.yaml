@@ -29,6 +29,7 @@ library:
     - generic-arbitrary
     - hashable
     - hspec
+    - http-types
     - jose
     - loot-base
     - loot-config
