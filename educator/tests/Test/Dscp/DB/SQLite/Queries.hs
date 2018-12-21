@@ -5,10 +5,10 @@ module Test.Dscp.DB.SQLite.Queries where
 import Prelude
 
 import Control.Lens (mapped)
-import Data.Default (Default (..))
+-- import Data.Default (Default (..))
 
 import Dscp.Core.Arbitrary
-import qualified Dscp.Crypto.MerkleTree as MerkleTree
+-- import qualified Dscp.Crypto.MerkleTree as MerkleTree
 import Dscp.Educator.DB as DB
 import Dscp.Util
 
@@ -272,53 +272,53 @@ spec_Instances = do
                 else do
                     return True
 
-    describe "Retrieval of proven transactions" $ do
-        it "getProvenStudentTransactions" $
-            sqliteProperty $ \ctx
-                ( delayedGen (genCoreTestEnv simpleCoreTestParams
-                              `suchThat` ((>= 3) . tiNum . ctePrivateTxs)
-                             ) -> env
-                ) -> do
-                    let student      = tiOne $ cteStudents env
-                        assignment   = tiOne $ cteAssignments env
-                        transactions = take 3 $ tiList $ ctePrivateTxs env
+    -- describe "Retrieval of proven transactions" $ do
+    --     it "getProvenStudentTransactions" $
+    --         sqliteProperty $ \ctx
+    --             ( delayedGen (genCoreTestEnv simpleCoreTestParams
+    --                           `suchThat` ((>= 3) . tiNum . ctePrivateTxs)
+    --                          ) -> env
+    --             ) -> do
+    --                 let student      = tiOne $ cteStudents env
+    --                     assignment   = tiOne $ cteAssignments env
+    --                     transactions = take 3 $ tiList $ ctePrivateTxs env
 
-                    studentId <- DB.createStudent student
+    --                 studentId <- DB.createStudent student
 
-                    let (_ : rest@ (next : _)) = sortWith _ptTime transactions
-                        pointSince             = next^.ptTime
+    --                 let (_ : rest@ (next : _)) = sortWith _ptTime transactions
+    --                     pointSince             = next^.ptTime
 
-                    -- Check that transactions aren't simultaneous.
-                    for_ transactions $ \trans -> do
-                        let sigSubmission = trans        ^.ptSignedSubmission
-                            course        = assignment   ^.aCourseId
+    --                 -- Check that transactions aren't simultaneous.
+    --                 for_ transactions $ \trans -> do
+    --                     let sigSubmission = trans        ^.ptSignedSubmission
+    --                         course        = assignment   ^.aCourseId
 
-                        cId <- DB.createCourse           (simpleCourse course) `orIfItFails` getId course
-                        _   <- DB.enrollStudentToCourse  studentId cId     `orIfItFails` ()
-                        aId <- DB.createAssignment       assignment        `orIfItFails` getId assignment
-                        _   <- DB.setStudentAssignment   studentId aId     `orIfItFails` ()
-                        _   <- DB.createSignedSubmission sigSubmission     `orIfItFails` getId sigSubmission
+    --                     cId <- DB.createCourse           (simpleCourse course) `orIfItFails` getId course
+    --                     _   <- DB.enrollStudentToCourse  studentId cId     `orIfItFails` ()
+    --                     aId <- DB.createAssignment       assignment        `orIfItFails` getId assignment
+    --                     _   <- DB.setStudentAssignment   studentId aId     `orIfItFails` ()
+    --                     _   <- DB.createSignedSubmission sigSubmission     `orIfItFails` getId sigSubmission
 
-                        ptId <- DB.createTransaction trans
-                        return ptId
+    --                     ptId <- DB.createTransaction trans
+    --                     return ptId
 
-                    mblock <- DB.createPrivateBlock ctx Nothing
-                    let !_ = mblock ?: error "No private block created"
+    --                 mblock <- DB.createPrivateBlock ctx Nothing
+    --                 let !_ = mblock ?: error "No private block created"
 
-                    transPacksSince <- DB.getProvenStudentTransactions
-                        def{ pfStudent = Just studentId, pfSince = Just pointSince }
+    --                 transPacksSince <- DB.getProvenStudentTransactions
+    --                     def{ pfStudent = Just studentId, pfSince = Just pointSince }
 
-                    let transSince = join $ map (map snd . snd) transPacksSince
+    --                 let transSince = join $ map (map snd . snd) _transPacksSince
 
-                    let equal = (==) `on` sortWith getId
+    --                 let equal = (==) `on` sortWith getId
 
-                    (transSince `equal` rest) `assertThat`
-                        ("Incorrect set of transactions is returned: "
-                        <> show (length transSince) <> " vs "
-                        <> show (length rest)
-                        )
+    --                 (transSince `equal` rest) `assertThat`
+    --                     ("Incorrect set of transactions is returned: "
+    --                     <> show (length transSince) <> " vs "
+    --                     <> show (length rest)
+    --                     )
 
-                    return $ conjoin $ transPacksSince <&> \(proof, txSet) ->
-                        conjoin $ txSet <&> \(idx, tx) ->
-                            counterexample ("Tx not present in tree: " <> show tx) $
-                            MerkleTree.validateElementExistAt (fromIntegral idx) tx proof
+    --                 return $ conjoin $ transPacksSince <&> \(proof, txSet) ->
+    --                     conjoin $ txSet <&> \(idx, tx) ->
+    --                         counterexample ("Tx not present in tree: " <> show tx) $
+    --                         MerkleTree.validateElementExistAt (fromIntegral idx) tx proof
