@@ -13,8 +13,8 @@ import System.FilePath.Posix ((</>))
 
 import qualified Data.ByteString.Lazy as LBS
 
-import Dscp.Resource.AppDir (getOSAppDir)
-import Dscp.Util.Aeson (Base64Encoded, CustomEncoding (..))
+import Dscp.Resource.AppDir
+import Dscp.Util.Aeson
 import Dscp.Wallet.Face
 
 data Storage = Storage
@@ -23,7 +23,7 @@ data Storage = Storage
 
 data StorageAccount = StorageAccount
     { name      :: Maybe Text
-    , secretKey :: CustomEncoding Base64Encoded (Encrypted SecretKey)
+    , secretKey :: EncodeSerialised Base64Encoded (Encrypted SecretKey)
     , publicKey :: PublicKey
     }
 
@@ -49,7 +49,7 @@ getAccounts = do
   where
     toAccount StorageAccount{..} = Account
         { accountName = name
-        , accountSecretKey = unCustomEncoding secretKey
+        , accountSecretKey = unEncodeSerialised secretKey
         , accountPublicKey = publicKey
         , accountAddress = mkAddr publicKey
         }
@@ -59,7 +59,7 @@ addAccount account = modifyStorage (\(Storage accs) -> Storage $ accs ++ [fromAc
   where
     fromAccount Account{..} = StorageAccount
         { name = accountName
-        , secretKey = CustomEncoding accountSecretKey
+        , secretKey = EncodeSerialised accountSecretKey
         , publicKey = accountPublicKey
         }
 

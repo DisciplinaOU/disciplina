@@ -1,5 +1,6 @@
 module Dscp.Witness.Web.Logic
        ( submitUserTx
+       , submitUserPublicationTx
        , submitUserTxAsync
        , getBlocks
        , getBlockInfo
@@ -46,6 +47,11 @@ import qualified Snowdrop.Util as SD
 submitUserTx :: WitnessWorkMode ctx m => TxWitnessed -> m ()
 submitUserTx tw =
     Relay.relayTx (GMoneyTxWitnessed tw) >>= wait @"tx in mempool"
+
+-- | Applies publication tx.
+submitUserPublicationTx :: WitnessWorkMode ctx m => PublicationTxWitnessed -> m ()
+submitUserPublicationTx tw =
+    Relay.relayTx (GPublicationTxWitnessed tw) >>= wait @"tx in mempool"
 
 -- | Applies transaction, but does not wait transaction to appear in mempool.
 submitUserTxAsync :: WitnessWorkMode ctx m => TxWitnessed -> m ()
@@ -212,9 +218,11 @@ checkFairCV =
   where
     checkAgainstDB (FairCVReady cv) =
         M.traverseWithKey (M.traverseWithKey . checkProofAgainstDB) cv
+
     checkProofAgainstDB addr h proof =
         maybe False (checkProofPure addr proof) <$>
-        runSdMempoolLocked (getPublicationByHeaderHash h)
+            runSdMempoolLocked (getPublicationByHeaderHash h)
+
     checkProofPure addr proof ptw =
         let root = ptw ^. ptwTxL.ptHeaderL.pbhBodyProof
         in verifyPubTxWitnessed addr ptw &&

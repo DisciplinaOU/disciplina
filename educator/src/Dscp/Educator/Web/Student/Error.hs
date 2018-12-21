@@ -1,7 +1,7 @@
 -- | Student API errors
 
 module Dscp.Educator.Web.Student.Error
-       ( APIError (..)
+       ( StudentAPIError (..)
        , _BadSubmissionSignature
        , _SomeDomainError
        , WrongSubmissionSignature (..)
@@ -16,6 +16,8 @@ import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
 import Data.Reflection (Reifies (..))
 import Data.Typeable (cast)
+import Fmt (listF, (+|))
+import qualified Data.Text.Buildable as B
 import Servant (ServantErr (..), err400, err403, err503)
 
 import Dscp.DB.SQLite (SQLRequestsNumberExceeded)
@@ -35,10 +37,16 @@ data WrongSubmissionSignature
 
 makePrisms ''WrongSubmissionSignature
 
+instance Buildable WrongSubmissionSignature where
+    build FakeSubmissionSignature =
+        "Submission signature does not belong to the student who provided it"
+    build (SubmissionSignatureInvalid failures) =
+        "Signature validation has failed: "+|listF failures
+
 instance Exception WrongSubmissionSignature
 
 -- | Any error backend may return.
-data APIError
+data StudentAPIError
     = BadSubmissionSignature WrongSubmissionSignature
       -- ^ Submission signature doesn't match the student nor has valid format.
     | SomeDomainError DomainError
@@ -49,9 +57,19 @@ data APIError
       -- ^ Service is overloaded with requests.
     deriving (Show, Eq, Generic, Typeable)
 
-makePrisms ''APIError
+makePrisms ''StudentAPIError
 
-instance Exception APIError where
+instance Buildable StudentAPIError where
+    build (BadSubmissionSignature err) =
+        "Bad submission signature: " <> B.build err
+    build (SomeDomainError err) =
+        "Database error: " <> B.build err
+    build InvalidFormat =
+        "Invalid format of the request"
+    build (ServiceUnavailable msg) =
+        "Service unavailable: " <> B.build msg
+
+instance Exception StudentAPIError where
     fromException e@(SomeException e') =
         asum
         [ cast e'
@@ -65,8 +83,9 @@ instance Exception APIError where
 ---------------------------------------------------------------------------
 
 deriveJSON defaultOptions ''WrongSubmissionSignature
+deriveJSON defaultOptions ''StudentAPIError
 
-instance HasErrorTag APIError where
+instance HasErrorTag StudentAPIError where
     errorTag = \case
         BadSubmissionSignature err -> case err of
             FakeSubmissionSignature{}    -> "FakeSubmissionSignature"
@@ -79,13 +98,15 @@ instance HasErrorTag APIError where
 -- Functions
 ---------------------------------------------------------------------------
 
-instance ToServantErr APIError where
+instance ToServantErr StudentAPIError where
     toServantErrNoBody = \case
         BadSubmissionSignature{} -> err403
         InvalidFormat{}          -> err400
         ServiceUnavailable{}     -> err503
         SomeDomainError err -> domainToServantErrNoReason err
     toServantErr = toServantErrJustTag
+
+instance FromServantErr StudentAPIError
 
 ---------------------------------------------------------------------------
 -- Other

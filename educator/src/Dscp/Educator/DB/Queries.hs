@@ -71,78 +71,30 @@ module Dscp.Educator.DB.Queries
 
 
 import Control.Exception.Safe (catchJust)
-import Control.Lens (makePrisms, to)
+import Control.Lens (to)
 import Data.Default (Default (..))
-import qualified Data.Map as Map (empty, fromList, insertWith, toList)
+import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
 import Data.Time.Clock (UTCTime)
 import GHC.Exts (fromList)
 import Loot.Base.HasLens (HasLens')
 import Snowdrop.Util (OldestFirst (..))
 
 import Dscp.Core
-import Dscp.Crypto (EmptyMerkleTree, Hash, MerkleProof, fillEmptyMerkleTree, getEmptyMerkleTree,
-                    getMerkleRoot, hash)
+import Dscp.Crypto
 import Dscp.DB.SQLite.Error (asAlreadyExistsError, asReferenceInvalidError)
 import Dscp.DB.SQLite.Functions
 import Dscp.DB.SQLite.Util
 import Dscp.Educator.DB.BlockData
+import Dscp.Educator.DB.Error
 import Dscp.Educator.DB.Instances ()
 import Dscp.Educator.DB.Schema
 import Dscp.Educator.Launcher.Marker
 import Dscp.Resource.Keys
 import Dscp.Rio
-import Dscp.Util (HasId (..), idOf)
 import Dscp.Util
 
-data DomainError
-    = AbsentError DomainErrorItem
-    | AlreadyPresentError DomainErrorItem
-    | SemanticError DatabaseSemanticError
-    deriving (Show, Eq)
-
-data DomainErrorItem
-    = CourseDomain
-        { deCourseId :: Id Course }
-
-    | StudentDomain
-        { deStudentId :: Id Student }
-
-    | AssignmentDomain
-        { deAssignmentId :: Id Assignment }
-
-    | StudentCourseEnrollmentDomain
-        { deStudentId :: Id Student
-        , deCourseId  :: Id Course }
-
-    | StudentAssignmentSubscriptionDomain
-        { deStudentId    :: Id Student
-        , deAssignmentId :: Id Assignment }
-
-    | SubmissionDomain
-        { deSubmissionId :: Id Submission }
-
-    | TransactionDomain
-        { deTransactionId :: Id PrivateTx }
-
-    | BlockWithIndexDomain
-        { deBlockIdx :: BlockIdx }
-
-    deriving (Show, Typeable, Eq)
-
--- | Logical errors.
-data DatabaseSemanticError
-    = StudentIsActiveError     (Id Student)
-      -- ^ Student can't be deleted because it has activities.
-    | DeletingGradedSubmission (Id Submission)
-      -- ^ Submission has potentially published grade and thus can't be deleted.
-    deriving (Show, Eq)
-
-makePrisms ''DomainError
-makePrisms ''DomainErrorItem
-makePrisms ''DatabaseSemanticError
-
-instance Exception DomainError
-
+-- | Short alias for @'educatorSchema'@ for convenience.
 es :: DatabaseSettings be EducatorSchema
 es = educatorSchema
 
@@ -238,7 +190,7 @@ getProvenStudentTransactions
     :: forall m.
        (MonadQuery m, WithinTx)
     => GetProvenStudentTransactionsFilters
-    -> m [(MerkleProof PrivateTx, [(TxWithinBlockIdx, PrivateTx)])]
+    -> m [(PrivateHeaderHash, EmptyMerkleProof PrivateTx, [(TxWithinBlockIdx, PrivateTx)])]
 getProvenStudentTransactions filters = do
     -- Contains `(tx, idx, blockId)` map.
     txsBlockList <- getTxsBlockMap
@@ -249,14 +201,14 @@ getProvenStudentTransactions filters = do
                   <&> (<&> reverse)
 
     results <- forM txsBlockMap $ \(blockId, transactions) -> do
-        tree <- getMerkleTree blockId
+        (blockHash, tree) <- getMerkleTreeAndHash blockId
 
-        let mapping = Map.fromList $ map (first unTxWithinBlockIdx) transactions
-            pruned  = fillEmptyMerkleTree mapping tree
+        let indices = Set.fromList $ map (unTxWithinBlockIdx . fst) transactions
+            pruned  = mkEmptyMerkleProof tree indices
 
-        return (pruned, transactions)
+        return (blockHash, pruned, transactions)
 
-    return [(proof, txs) | (Just proof, txs) <- results]
+    return [(blockHash, proof, txs) | (blockHash, Just proof, txs) <- results]
   where
     groupToAssocWith :: Ord k => [(k, v)] -> [(k, [v])]
     groupToAssocWith =
@@ -289,10 +241,12 @@ getProvenStudentTransactions filters = do
             let TxBlockIdx txIdx = trIdx tx
             in (bi, (txIdx, privateTxFromRow (tx, sub)))
 
-    getMerkleTree :: BlockIdx -> m (EmptyMerkleTree PrivateTx)
-    getMerkleTree blockIdx =
+    getMerkleTreeAndHash
+        :: BlockIdx
+        -> m (PrivateHeaderHash, EmptyMerkleTree PrivateTx)
+    getMerkleTreeAndHash blockIdx =
         nothingToThrow (AbsentError $ BlockWithIndexDomain blockIdx) =<<
-        selectByPk brMerkleTree (esBlocks es) blockIdx
+        selectByPk (\row -> (brHash row, brMerkleTree row)) (esBlocks es) blockIdx
 
 getAllNonChainedTransactions :: MonadQuery m => m [PrivateTx]
 getAllNonChainedTransactions =

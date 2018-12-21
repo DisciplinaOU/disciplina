@@ -41,6 +41,7 @@ library:
     - safe-exceptions >= 0.1.4
     - serialise
     - servant-auth-server
+    - servant-client
     - servant-generic
     - servant-server
     - snowdrop-util

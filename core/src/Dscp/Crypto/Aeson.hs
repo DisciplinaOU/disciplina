@@ -6,12 +6,10 @@ module Dscp.Crypto.Aeson () where
 
 import Prelude hiding (toStrict)
 
-import Codec.Serialise (Serialise)
 import Data.Aeson (FromJSON (..), FromJSONKey (..), FromJSONKeyFunction (..), ToJSON (..),
                    ToJSONKey (..), object, withObject, (.:), (.=))
 import Data.Aeson.Types (toJSONKeyText)
 import Data.ByteArray (ByteArrayAccess, convert)
-import Data.Reflection (Reifies (..))
 
 import Dscp.Crypto.ByteArray
 import Dscp.Crypto.Encrypt
@@ -24,13 +22,6 @@ import Dscp.Util.Aeson
 ---------------------------------------------------------------------------
 -- Encrypted data and passphrases
 ---------------------------------------------------------------------------
-
-instance (FromByteArray a, IsEncoding enc) =>
-         ToJSON (CustomEncoding enc $ Encrypted a) where
-    toJSON = toJSONSerialise (reflect (Proxy @enc)) . unCustomEncoding
-instance (FromByteArray a, IsEncoding enc) =>
-         FromJSON (CustomEncoding enc $ Encrypted a) where
-    parseJSON = fmap CustomEncoding . parseJSONSerialise (reflect (Proxy @enc))
 
 instance ToJSON PassPhrase where
     toJSON = toJSON . decodeUtf8 @Text @ByteString . convert
@@ -70,20 +61,6 @@ instance FromByteArray (AbstractSig ss a) => FromJSON (AbstractSig ss a) where
 ---------------------------------------------------------------------------
 -- Merkle trees
 ---------------------------------------------------------------------------
-
-instance (Serialise (MerkleSignature a), IsEncoding enc) =>
-         ToJSON (CustomEncoding enc $ MerkleSignature a) where
-    toJSON = toJSONSerialise (reflect (Proxy @enc)). unCustomEncoding
-instance (Serialise (MerkleSignature a), IsEncoding enc) =>
-         FromJSON (CustomEncoding enc $ MerkleSignature a) where
-    parseJSON = fmap CustomEncoding . parseJSONSerialise (reflect (Proxy @enc))
-
-instance (Serialise (MerkleProof a), IsEncoding enc) =>
-         ToJSON (CustomEncoding enc $ MerkleProof a) where
-    toJSON = toJSONSerialise (reflect (Proxy @enc)). unCustomEncoding
-instance (Serialise (MerkleProof a), IsEncoding enc) =>
-         FromJSON (CustomEncoding enc $ MerkleProof a) where
-    parseJSON = fmap CustomEncoding . parseJSONSerialise (reflect (Proxy @enc))
 
 instance ToJSON (MerkleSignature a) where
     toJSON MerkleSignature{..} = object

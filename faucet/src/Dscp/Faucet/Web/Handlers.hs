@@ -28,7 +28,7 @@ faucetApiHandlers =
           (sk, pk) <- runSecureRandom keyGen
           let esk = encrypt pp sk
           return GenKeysResponse
-              { gkrEncSecretKey = CustomEncoding esk
+              { gkrEncSecretKey = EncodeSerialised esk
               , gkrSecretKey = AsByteString sk
               , gkrPublicKey = pk
               , gkrAddress = mkAddr pk
@@ -43,4 +43,4 @@ convertFaucetApiHandler
     -> FaucetRealMode a
     -> Handler a
 convertFaucetApiHandler ctx handler =
-    processServerErrors @APIError (runRIO ctx handler)
+    processServerErrors @FaucetAPIError (runRIO ctx handler)

@@ -15,7 +15,12 @@ instance ToHttpApiData Address where
 instance FromHttpApiData Address where
     parseUrlPiece = addrFromText
 
+deriving instance ToHttpApiData Course
 deriving instance FromHttpApiData Course
+
+instance ToHttpApiData DocumentType where
+    toQueryParam Offline = "offline"
+    toQueryParam Online  = "online"
 
 instance FromHttpApiData DocumentType where
     parseQueryParam "offline" = Right Offline

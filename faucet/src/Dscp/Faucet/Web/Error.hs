@@ -1,7 +1,7 @@
 -- | Faucet API errors
 
 module Dscp.Faucet.Web.Error
-       ( APIError (..)
+       ( FaucetAPIError (..)
        , DSON
 
        , toServantErr
@@ -17,7 +17,7 @@ import Dscp.Util.Servant
 import Dscp.Web.Class
 
 -- | Any error backend may return.
-data APIError
+data FaucetAPIError
     = InvalidFormat
       -- ^ Failed to parse something
     | AddressAlreadyGifted
@@ -27,9 +27,9 @@ data APIError
       -- ^ Source address has not enough money for further use.
     deriving (Show, Eq, Generic, Typeable, Data)
 
-makePrisms ''APIError
+makePrisms ''FaucetAPIError
 
-instance Exception APIError
+instance Exception FaucetAPIError
 
 ---------------------------------------------------------------------------
 -- JSON instances
@@ -39,11 +39,11 @@ instance Exception APIError
 -- Functions
 ---------------------------------------------------------------------------
 
-instance HasErrorTag APIError where
+instance HasErrorTag FaucetAPIError where
     -- HTTP error is enough to distinguish possible errors for now
     errorTag _ = ""
 
-instance ToServantErr APIError where
+instance ToServantErr FaucetAPIError where
     toServantErrNoBody = \case
         InvalidFormat -> err400
         AddressAlreadyGifted -> err403

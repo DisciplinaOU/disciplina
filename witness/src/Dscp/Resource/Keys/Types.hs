@@ -30,7 +30,7 @@ import Dscp.Core.Foundation.Witness
 import Dscp.Core.Governance (CommitteeSecret (..))
 import Dscp.Crypto (Encrypted, PassPhrase, PublicKey, SecretKey)
 import Dscp.Util (postfixLFields)
-import Dscp.Util.Aeson (Base64Encoded, CustomEncoding (..), Versioned)
+import Dscp.Util.Aeson (Base64Encoded, EncodeSerialised (..), Versioned)
 
 -- | Contains all parameters required for manipulating with secret key.
 data BaseKeyParams = BaseKeyParams
@@ -85,7 +85,7 @@ krPublicKey = krSecretKeyData . to skPublic
 
 -- | Intermediate form of 'KeyResources' for JSON serialization.
 data KeyJson = KeyJson
-    { kjEncSecretKey :: CustomEncoding Base64Encoded (Encrypted SecretKey)
+    { kjEncSecretKey :: EncodeSerialised Base64Encoded (Encrypted SecretKey)
     } deriving (Eq, Show)
 
 -- | What exactly lies in the store.

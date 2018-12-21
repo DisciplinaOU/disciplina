@@ -54,6 +54,9 @@ instance (Arbitrary ba, FromByteArray ba) =>
 longerThan :: Container f => Int -> f -> Bool
 longerThan n x = length x > n
 
+instance Arbitrary ElementStub where
+    arbitrary = pure ElementStub
+
 instance Arbitrary (MerkleSignature a) where
     arbitrary = MerkleSignature <$> choose (0, 100) <*> arbitrary
     shrink = genericShrink
@@ -74,3 +77,9 @@ instance (HasHash a, Arbitrary a) => Arbitrary (MerkleProof a) where
                 `suchThat` longerThan 0
         maybe (error "impossible") pure $
             mkMerkleProof tree $ Set.fromList idxs
+
+instance (HasHash a, Arbitrary a) => Arbitrary (EmptyMerkleTree a) where
+    arbitrary = getEmptyMerkleTree <$> arbitrary
+
+instance (HasHash a, Arbitrary a) => Arbitrary (EmptyMerkleProof a) where
+    arbitrary = getEmptyMerkleProof <$> arbitrary

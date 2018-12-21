@@ -1,7 +1,7 @@
 -- | Educator API errors
 
 module Dscp.Educator.Web.Educator.Error
-       ( APIError (..)
+       ( EducatorAPIError (..)
 
        , ErrResponse (..)
 
@@ -12,10 +12,13 @@ module Dscp.Educator.Web.Educator.Error
        ) where
 
 import Control.Lens (makePrisms)
+import Data.Aeson.Options (defaultOptions)
+import Data.Aeson.TH (deriveJSON)
 import Data.Reflection (Reifies (..))
 import Data.Typeable (cast)
 import Dscp.DB.SQLite (SQLRequestsNumberExceeded)
 import Dscp.Educator.DB (DomainError)
+import qualified Data.Text.Buildable as B
 import Servant (ServantErr (..), err400, err503)
 
 import Dscp.Educator.Web.Util
@@ -23,7 +26,7 @@ import Dscp.Util.Servant
 import Dscp.Web.Class
 
 -- | Any error backend may return.
-data APIError
+data EducatorAPIError
     = SomeDomainError DomainError
       -- ^ Something not found or already exists.
     | InvalidFormat
@@ -32,9 +35,17 @@ data APIError
       -- ^ Service is overloaded with requests.
     deriving (Show, Eq, Generic)
 
-makePrisms ''APIError
+makePrisms ''EducatorAPIError
 
-instance Exception APIError where
+instance Buildable EducatorAPIError where
+    build (SomeDomainError err) =
+        "Database error: " <> B.build err
+    build InvalidFormat =
+        "Invalid format of the request"
+    build (ServiceUnavailable msg) =
+        "Service unavailable: " <> B.build msg
+
+instance Exception EducatorAPIError where
     fromException e@(SomeException e') =
         asum
         [ cast e'
@@ -46,7 +57,7 @@ instance Exception APIError where
 -- JSON instances
 ---------------------------------------------------------------------------
 
-instance HasErrorTag APIError where
+instance HasErrorTag EducatorAPIError where
     errorTag = \case
         InvalidFormat        -> "InvalidFormat"
         SomeDomainError err  -> domainErrorToShortJSON err
@@ -56,12 +67,16 @@ instance HasErrorTag APIError where
 -- Functions
 ---------------------------------------------------------------------------
 
-instance ToServantErr APIError where
+deriveJSON defaultOptions ''EducatorAPIError
+
+instance ToServantErr EducatorAPIError where
     toServantErrNoBody = \case
         InvalidFormat        -> err400
         ServiceUnavailable{} -> err503
         SomeDomainError err  -> domainToServantErrNoReason err
     toServantErr = toServantErrJustTag
+
+instance FromServantErr EducatorAPIError
 
 ---------------------------------------------------------------------------
 -- Other
