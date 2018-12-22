@@ -37,6 +37,7 @@ library:
     - loot-config
     - loot-log
     - lens
+    - megaparsec
     - memory
     - mon
     - mtl

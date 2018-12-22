@@ -1,5 +1,6 @@
--- | Student HTTP API definition.
+{-# LANGUAGE ExistentialQuantification #-}
 
+-- | Student HTTP API definition.
 module Dscp.Educator.Web.Student.API
        ( StudentApiEndpoints (..)
        , ProtectedStudentAPI
@@ -9,6 +10,7 @@ module Dscp.Educator.Web.Student.API
        , StudentApiHandlers
        ) where
 
+import Data.Time.Clock (UTCTime)
 import Servant
 import Servant.Generic
 
@@ -19,6 +21,7 @@ import Dscp.Educator.Web.Student.Auth
 import Dscp.Educator.Web.Student.Error (DSON)
 import Dscp.Educator.Web.Student.Types
 import Dscp.Educator.Web.Types
+import Dscp.Util.Servant
 
 data StudentApiEndpoints route = StudentApiEndpoints
     { sGetCourses       :: route :- GetCourses
@@ -56,6 +59,7 @@ type GetCourses
     :> QueryFlag "onlyCount"
     :> Summary "Get Educator's courses"
     :> Description "Gets a list of Educator's courses, both enrolled and available."
+    :> SortingParams '["nyan" ?: Int, "kek" ?: Double]
     :> Verb 'GET 200 '[DSON] [CourseStudentInfo]
 
 type GetCourse

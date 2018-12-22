@@ -27,6 +27,7 @@ extra-deps:
 - cborg-0.2.1.0
 - serialise-0.2.1.0
 - beam-postgres-0.3.2.2
+- HList-0.5.0.0
 
 - git: https://github.com/serokell/auth-data-structures.git
   commit: 4a95f4dd32a82195f49ceb0113c9f05bc260ca7d
