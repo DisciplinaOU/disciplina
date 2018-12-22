@@ -15,6 +15,7 @@ module Dscp.Snowdrop.Types
     , _PublicationFeeIsTooLow
     , _PublicationCantAffordFee
     , _PublicationLocalLoop
+    , _PublicationWitnessMismatchesAuthor
     , AccountException(..)
     , _MTxNoOutputs
     , _MTxDuplicateOutputs

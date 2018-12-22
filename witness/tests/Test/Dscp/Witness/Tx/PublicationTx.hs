@@ -2,6 +2,7 @@ module Test.Dscp.Witness.Tx.PublicationTx where
 
 import Control.Lens (forOf, _last)
 import qualified GHC.Exts as Exts
+import Test.QuickCheck.Modifiers (getPositive)
 import Test.QuickCheck.Monadic (pre)
 
 import Dscp.Core
@@ -67,7 +68,8 @@ spec_Publication_tx_application = do
         badPubs  <- pick $ shuffleNE pubs
         pre (pubs /= badPubs)
         let badTws = map (signPubTx author) badPubs
-        lift $ throwsSome $ mapM_ submitPub badTws
+        lift $ throwsPrism (_PublicationError . _PublicationPrevBlockIsIncorrect) $
+            mapM_ submitPub badTws
 
     it "Foreign author in the chain is not fine" $ witnessProperty $ do
         author <- pick selectAuthor
@@ -81,7 +83,7 @@ spec_Publication_tx_application = do
             mapM_ submitPub (init badTws)
             throwsSome $ submitPub (last badTws)
 
-    it "Signing by another author is blatantly" $ witnessProperty $ do
+    it "Signing by another author is bad" $ witnessProperty $ do
         -- this is not sufficient check for this case, because at present the error is
         -- thrown at "previous block matches check", but depending on the previous portion
         -- of chain this check may not safe us.
@@ -90,7 +92,20 @@ spec_Publication_tx_application = do
         pre (author /= signer)
         pub :| [] <- pick $ genPublicationChain 1 author
         let tw = signPubTx signer pub
-        lift . throwsSome $ submitPub tw
+        lift . throwsPrism (_PublicationError . _PublicationWitnessMismatchesAuthor) $
+            submitPub tw
+
+    it "Not enough money is not fine" $ witnessProperty $ do
+        author <- pick selectAuthor
+        pub :| [] <- pick $ genPublicationChain 1 author
+        let tw = signPubTx author pub
+        badTw <- forOf (ptwTxL . ptFeesAmountL) tw $ \fee -> do
+            extra <- pick (Coin . getPositive <$> arbitrary)
+            let highFee = leftToPanic $ addCoins testGenesisAddressAmount extra
+            pre (highFee >= fee)
+            return highFee
+        lift . throwsPrism (_PublicationError . _PublicationCantAffordFee) $
+            submitPub badTw
 
     it "Not enough fees is not fine" $ witnessProperty $ do
         author <- pick selectAuthor
