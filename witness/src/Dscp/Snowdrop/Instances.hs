@@ -30,9 +30,7 @@ instance HasErrorTag AccountException where
         MTxDuplicateOutputs{}         -> "DuplicatedOutputs"
         TransactionAlreadyExists{}    -> "TransactionAlreadyExists"
         InsufficientFees{}            -> "InsufficientFees"
-        SignatureIsMissing{}          -> "SignatureIsMissing"
         SignatureIsCorrupted{}        -> "SignatureIsCorrupted"
-        TransactionIsCorrupted{}      -> "TransactionIsCorrupted"
         NonceMismatch{}               -> "NonceMismatch"
         PaymentMustBePositive{}       -> "PaymentMustBePositive"
         ReceiverOnlyGetsMoney{}       -> "ReceiverOnlyGetsMoney"
@@ -48,9 +46,7 @@ instance ToServantErr AccountException where
         MTxDuplicateOutputs{}         -> err400
         TransactionAlreadyExists{}    -> err403
         InsufficientFees{}            -> err400
-        SignatureIsMissing{}          -> err500
         SignatureIsCorrupted{}        -> err400
-        TransactionIsCorrupted{}      -> err500
         NonceMismatch{}               -> err403
         PaymentMustBePositive{}       -> err500
         ReceiverOnlyGetsMoney{}       -> err500

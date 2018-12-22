@@ -21,11 +21,8 @@ import Dscp.Snowdrop.Expanders.Common
 import Dscp.Snowdrop.Storage.Types
 import Dscp.Snowdrop.Types
 
-toProofBalanceTx :: TxWitnessed -> (StateTxType, Proofs)
-toProofBalanceTx (TxWitnessed _ (TxWitness {..})) =
-    (txType, AddressTxWitnessProof)
-  where
-    txType = StateTxType $ getId (Proxy @TxIds) AccountTxTypeId
+toProofBalanceTx :: (StateTxType, Proofs)
+toProofBalanceTx = (getStateTxType AccountTxTypeId, NoProof)
 
 seqExpandersBalanceTx :: Address
                       -> Fees

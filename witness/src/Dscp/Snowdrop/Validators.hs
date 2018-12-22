@@ -11,11 +11,9 @@ import qualified Snowdrop.Util as SD
 
 import Dscp.Core hiding (PublicationTxWitness)
 import Dscp.Crypto (PublicKey, hash)
-import Dscp.Snowdrop.AccountValidation
-import Dscp.Snowdrop.BlockMetaValidation
 import Dscp.Snowdrop.Configuration
 import Dscp.Snowdrop.Mode
-import Dscp.Snowdrop.PublicationValidation
+import Dscp.Snowdrop.Types
 import Dscp.Witness.Config
 
 ----------------------------------------------------------------------------
@@ -28,42 +26,20 @@ validator = _baseValidator
 instance SD.HasGetter PublicKey Address where
     gett = Address . hash
 
-instance SD.HasPrism Proofs PublicationTxProof where
-    proj (PublicationTxWitnessProof it) = Just it
-    proj  _                             = Nothing
-
-instance SD.HasReview Proofs PublicationTxProof where
-    inj = PublicationTxWitnessProof
-
--- | We have to implement one part of the Prism ("contains"), bu we
---   can't rebuild Proofs from TxId back.
-instance SD.HasReview Proofs TxId where
-    inj = error "impossible to implement"
-
-instance SD.HasPrism Proofs PublicationTxId where
-    proj (PublicationTxWitnessProof
-          (SD.wsBody . ppSignedPart -> (it, _, _))) = Just it
-    proj  _                                                              = Nothing
-
--- | Same as TxId.
-instance SD.HasReview Proofs PublicationTxId where
-    inj = error "impossible to implement"
-
-instance SD.HasGetter Proofs PublicKey where
-    gett AddressTxWitnessProof = error ":shrug:"
-    gett (PublicationTxWitnessProof (SD.wsBody . ppSignedPart -> (_, it, _))) = it
-    gett BlockMetaTxWitnessProof = error "No public key kept for block meta"
-
 instance SD.HasGetter SPayload [SStateTx] where
     gett = sPayStateTxs
+
+validateNothingFor :: SD.StateTxType
+                -> SD.Validator Exceptions Ids Proofs Values (IOCtx chgAccum)
+validateNothingFor ty = SD.mkValidator ty []
 
 _baseValidator ::
        forall chgAccum.
        SD.Validator Exceptions Ids Proofs Values (IOCtx chgAccum)
 _baseValidator = mconcat
-    [ validateSimpleMoneyTransfer @(IOCtx chgAccum)
-    , validatePublication         @(IOCtx chgAccum)
-    , validateBlockMeta           @(IOCtx chgAccum)
+    [ validateNothingFor @chgAccum (getStateTxType AccountTxTypeId)
+    , validateNothingFor @chgAccum (getStateTxType PublicationTxTypeId)
+    , validateNothingFor @chgAccum (getStateTxType BlockMetaTxTypeId)
     ]
 
 ----------------------------------------------------------------------------

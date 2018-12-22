@@ -15,24 +15,12 @@ import Snowdrop.Util
 import Dscp.Core
 import Dscp.Crypto as Dscp
 import Dscp.Snowdrop.Configuration
-import qualified Dscp.Snowdrop.Configuration as Conf (Proofs (..))
 import Dscp.Snowdrop.Expanders.Common
 import Dscp.Snowdrop.Storage.Types
 import Dscp.Snowdrop.Types
 
-toProofPublicationTx :: Fees -> PublicationTxWitnessed -> (StateTxType, Proofs)
-toProofPublicationTx minFee (PublicationTxWitnessed tx (PublicationTxWitness {..})) =
-    (txType, Conf.PublicationTxWitnessProof $ WithSignature
-        { wsSignature = toDscpSig pwSig
-        , wsPublicKey = toDscpPK pwPk
-        , wsBody = (toPtxId tx, pwPk, ptHeader)
-        } `PersonalisedProof`
-            minFee
-    )
-  where
-    PublicationTx { ptHeader } = tx
-    txType = StateTxType $ getId (Proxy @TxIds) PublicationTxTypeId
-
+toProofPublicationTx :: (StateTxType, Proofs)
+toProofPublicationTx = (getStateTxType PublicationTxTypeId, NoProof)
 
 seqExpandersPublicationTx
     :: Address
@@ -57,8 +45,12 @@ seqExpandersPublicationTx feesReceiverAddr (Fees minFee) =
                 throwLocalError PublicationLocalLoop
 
             let feeAmount = fromIntegral $ coinToInteger ptFeesAmount
-            maybePub <- queryOne (PublicationsOf ptAuthor)
+            tipM <- fmap @Maybe unLastPublication <$> queryOne (PublicationsOf ptAuthor)
             mFeesReceiver <- queryOne (AccountId feesReceiverAddr)
+
+            unless (prevHashM == tipM) $
+                throwLocalError PublicationPrevBlockIsIncorrect
+                    { peGivenPrev = prevHashM, peActualTip = tipM }
 
             let isPaid = ptAuthor /= feesReceiverAddr
 
@@ -93,10 +85,25 @@ seqExpandersPublicationTx feesReceiverAddr (Fees minFee) =
                     -- address, we do not transfer any coins.
                     | otherwise = []
 
-            let change = if isJust maybePub then Upd else New
+            verifyPublicationWitness ptw
+
+            let change = if isJust tipM then Upd else New
             pure $ mkDiffCS $ Map.fromList $
                 [ PublicationsOf  ptAuthor ==> change (LastPublication phHash)
                 , PublicationHead phHash   ==> New    (PublicationNext prevHashM)
                 , PublicationIds  ptxId    ==> New    (PublicationItself ptw)
                 , PrivateBlockTx  phHash   ==> New    (PrivateBlockTxVal ptxId)
                 ] ++ feesChanges
+
+verifyPublicationWitness :: PublicationTxWitnessed -> Expansion ctx ()
+verifyPublicationWitness PublicationTxWitnessed{ ptwWitness = witness, ptwTx = ptx } = do
+    let ptxId = toPtxId ptx
+    let pk = pwPk witness
+    let author = ptAuthor ptx
+
+    unless (verify pk (ptxId, pk, ptHeader ptx) (pwSig witness)) $
+        throwLocalError PublicationSignatureIsIncorrect
+
+    unless (mkAddr pk == author) $
+        throwLocalError PublicationWitnessMismatchesAuthor
+            { peSignerAddress = mkAddr pk, peAuthor = author }

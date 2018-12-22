@@ -77,8 +77,8 @@ getByGTx applyFees pk t =
     let fee  = calcFeeG (if applyFees then feeConfig else noFeesConfig) t
         addr = mkAddr pk
         (a, b) = case t of
-                   GMoneyTxWitnessed tx        -> toProofBalanceTx tx
-                   GPublicationTxWitnessed ptx -> toProofPublicationTx fee ptx
+                   GMoneyTxWitnessed _       -> toProofBalanceTx
+                   GPublicationTxWitnessed _ -> toProofPublicationTx
     in (a, b, seqExpandersGTx addr fee t)
 
 seqExpandersGTx

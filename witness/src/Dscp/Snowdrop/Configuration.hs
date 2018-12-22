@@ -28,10 +28,6 @@ module Dscp.Snowdrop.Configuration
     , Ids (..)
     , Values (..)
 
-    , CanVerifyPayload
-    , PersonalisedProof (..)
-    , AddrTxProof
-    , PublicationTxProof
     , Proofs (..)
     , Exceptions (..)
     , _AccountError
@@ -40,6 +36,7 @@ module Dscp.Snowdrop.Configuration
     , _LogicError
 
     , TxIds (..)
+    , getStateTxType
 
     , BlockPlusAVLComposition
     ) where
@@ -56,13 +53,13 @@ import Snowdrop.Block (Block (..), BlockApplicationException, BlockRef (..), Blo
                        Blund (buBlock), CurrentBlockRef (..), TipKey, TipValue)
 import Snowdrop.Core (CSMappendException, IdSumPrefixed (..), Prefix (..), RedundantIdException,
                       SValue, StateModificationException, StatePException, StateTx (..),
-                      TxValidationException, Undo, ValidatorExecException)
+                      StateTxType (..), TxValidationException, Undo, ValidatorExecException)
 import Snowdrop.Execution (RestrictionInOutException)
-import Snowdrop.Util (HasReview (..), IdStorage, VerifySign, WithSignature (..), deriveIdView,
-                      deriveView, verifySignature, withInj, withInjProj)
+import Snowdrop.Util (HasReview (..), IdStorage, VerifySign, deriveIdView, deriveView, getId,
+                      verifySignature, withInj, withInjProj)
 import qualified Snowdrop.Util as SD (PublicKey, Signature)
 
-import Dscp.Core (Fees, HeaderHash)
+import Dscp.Core (HeaderHash)
 import qualified Dscp.Core.Foundation as T
 import Dscp.Crypto (HasAbstractSignature, Hash, PublicKey, SigScheme, Signature, hashF, verify)
 import Dscp.Snowdrop.Storage.Types
@@ -263,33 +260,7 @@ type instance SValue  T.Difficulty         = HeaderHash
 -- Proofs
 ----------------------------------------------------------------------------
 
-deriving instance (Eq (SD.Signature sigScheme a), Eq (SD.PublicKey sigScheme), Eq a) => Eq (WithSignature sigScheme a)
-deriving instance (Show (SD.Signature sigScheme a), Show (SD.PublicKey sigScheme), Show a) => Show (WithSignature sigScheme a)
-
-type CanVerifyPayload txid payload =
-    VerifySign DscpSigScheme (txid, PublicKey, payload)
-
--- | Proof for transaction.
---   Allows to check that tx was not corrupted and is properly signed.
---   Also carries calculated fees.
-data PersonalisedProof txid payload = PersonalisedProof
-    { ppSignedPart :: WithSignature
-        DscpSigScheme
-        (txid, PublicKey, payload)
-    , ppFees :: Fees
-    }
-    deriving (Eq, Show, Generic)
-
-type AddrTxProof =
-    PersonalisedProof T.TxId ()
-
-type PublicationTxProof =
-    PersonalisedProof T.PublicationTxId T.PrivateBlockHeader
-
-data Proofs
-    = AddressTxWitnessProof                        -- ^ Money transaction witness
-    | PublicationTxWitnessProof PublicationTxProof  -- ^ Publication transaction witness
-    | BlockMetaTxWitnessProof                       -- ^ Block meta transaction witness
+data Proofs = NoProof
     deriving (Eq, Show, Generic)
 
 ----------------------------------------------------------------------------
@@ -366,6 +337,9 @@ instance Enum TxIds where
 instance IdStorage TxIds AccountTxTypeId
 instance IdStorage TxIds PublicationTxTypeId
 instance IdStorage TxIds BlockMetaTxTypeId
+
+getStateTxType :: IdStorage TxIds txType => txType -> StateTxType
+getStateTxType = StateTxType . getId (Proxy @TxIds)
 
 ----------------------------------------------------------------------------
 -- Misc

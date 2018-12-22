@@ -12,16 +12,16 @@ import Serokell.Util (enumerate)
 
 import qualified Snowdrop.Block as SD
 import Snowdrop.Core (ChgAccum, ChgAccumCtx, ERoComp, Expander (..), SeqExpanders (..),
-                      StateTxType (..), ValueOp (..), mkDiffCS, queryOne)
+                      ValueOp (..), mkDiffCS, queryOne)
 import Snowdrop.Execution (RestrictCtx, expandUnionRawTxs)
 import Snowdrop.Util
 
 import Dscp.Core
 import Dscp.Crypto as Dscp
-import Dscp.Snowdrop.AccountValidation
 import Dscp.Snowdrop.Configuration
 import Dscp.Snowdrop.Storage.Types
 import Dscp.Snowdrop.Types
+import Dscp.Snowdrop.Util
 
 expandBlockMetaTx
     :: ( Default (ChgAccum ctx)
@@ -31,8 +31,8 @@ expandBlockMetaTx
        )
     => BlockMetaTx -> ERoComp Exceptions Ids Values ctx SStateTx
 expandBlockMetaTx meta =
-    let stateTx = StateTxType $ getId (Proxy @TxIds) BlockMetaTxTypeId
-        proof = BlockMetaTxWitnessProof
+    let stateTx = getStateTxType BlockMetaTxTypeId
+        proof = NoProof
     in expandUnionRawTxs (\_ -> (stateTx, proof, seqExpandersBlockMetaTx)) [meta] >>= \case
            [expanded] -> return expanded
            _          -> error "expandBlockMetaTx: did not expand 1 meta into 1 sd tx"
@@ -111,7 +111,7 @@ seqExpandersBlockMetaTx =
                     )
 
         let totalChange = mconcat [diffChange, forwardBlockChange, txBlockRefsChange]
-        pure $ mkDiffCS (totalChange :: Map.Map Ids (ValueOp Values))
+        pure $ mkDiffCS totalChange
   where
     -- Account prefixes are used during the computation to access current balance
     inP  = Set.fromList []

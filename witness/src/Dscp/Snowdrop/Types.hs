@@ -12,8 +12,6 @@ module Dscp.Snowdrop.Types
     , PublicationException(..)
     , _PublicationSignatureIsIncorrect
     , _PublicationPrevBlockIsIncorrect
-    , _StorageIsCorrupted
-    , _PublicationIsBroken
     , _PublicationFeeIsTooLow
     , _PublicationCantAffordFee
     , _PublicationLocalLoop
@@ -22,9 +20,7 @@ module Dscp.Snowdrop.Types
     , _MTxDuplicateOutputs
     , _TransactionAlreadyExists
     , _InsufficientFees
-    , _SignatureIsMissing
     , _SignatureIsCorrupted
-    , _TransactionIsCorrupted
     , _NonceMismatch
     , _PaymentMustBePositive
     , _ReceiverOnlyGetsMoney
@@ -59,13 +55,14 @@ data PublicationTxTypeId
 data PublicationException
     = PublicationSignatureIsIncorrect
     | PublicationPrevBlockIsIncorrect
-    | StorageIsCorrupted
-    | PublicationIsBroken Text
+      { peGivenPrev :: Maybe PrivateHeaderHash, peActualTip :: Maybe PrivateHeaderHash }
     | PublicationFeeIsTooLow
       { peMinimalFee :: Integer, peGivenFee :: Integer }
     | PublicationCantAffordFee
       { peFee :: Integer, peBalance :: Integer }  -- ^ Publication owner can not afford the fee
     | PublicationLocalLoop
+    | PublicationWitnessMismatchesAuthor
+      { peSignerAddress :: Address, peAuthor :: Address }
     deriving (Eq, Ord)
 
 makePrisms ''PublicationException
@@ -77,12 +74,10 @@ instance Buildable PublicationException where
     build = \case
         PublicationSignatureIsIncorrect ->
             "Publication signature is incorrect"
-        PublicationPrevBlockIsIncorrect ->
-            "Publication previous block is incorrect"
-        StorageIsCorrupted ->
-            "Storage is inconsistent"
-        PublicationIsBroken msg ->
-            "Bad publication" +| msg |+ ""
+        PublicationPrevBlockIsIncorrect{..} ->
+            "Publication previous block is incorrect: given " +|
+            (maybe "<genesis>" build peGivenPrev) +| ", tip was " +|
+            (maybe "<genesis>" build peActualTip) +| ""
         PublicationFeeIsTooLow{..} ->
             "The fee specified in the publication tx " <> show peGivenFee <>
             " is lower than the minimal one " <> show peMinimalFee
@@ -91,6 +86,9 @@ instance Buildable PublicationException where
             \(fee: " +| peFee |+ ", balance: " +| peBalance |+ ")"
         PublicationLocalLoop ->
             "Transaction would create a loop in educator's chain"
+        PublicationWitnessMismatchesAuthor{..} ->
+            "Publication author " +| peAuthor |+ " does not correspond to public key in \
+            \witness (address=" +| peSignerAddress |+ ")"
 
 data AccountTxTypeId = AccountTxTypeId deriving (Eq, Ord, Show, Generic)
 
@@ -102,9 +100,7 @@ data AccountException
       { taeTxId :: TxId }
     | InsufficientFees
       { aeExpectedFees :: Integer, aeActualFees :: Integer }
-    | SignatureIsMissing  -- TODO [DSCP-364]: remove when publication validation is moved
     | SignatureIsCorrupted
-    | TransactionIsCorrupted  -- TODO [DSCP-364]: remove when publication validation is moved
     | NonceMismatch
       { aePreviousNonce :: Nonce, aeTxNonce :: Nonce }
     | PaymentMustBePositive
@@ -142,12 +138,8 @@ instance Buildable AccountException where
         InsufficientFees{..} ->
             "Amount of money left for fees in transaction is not enough, \
              \expected " +| unsafeMkCoin aeExpectedFees |+ ", got " +| unsafeMkCoin aeActualFees |+ ""
-        SignatureIsMissing ->
-            "Transaction has no correct signature"
         SignatureIsCorrupted ->
             "Bad signature"
-        TransactionIsCorrupted ->
-            "Transaction is corrupted"
         NonceMismatch{..} ->
             "Nonce does not match: previous nonce of input account was "
             +| aePreviousNonce |+ ", nonce used in transaction is " +| aeTxNonce |+ ""
