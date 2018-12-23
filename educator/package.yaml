@@ -26,6 +26,7 @@ library:
     - fmt
     - interpolatedstring-perl6
     - jose
+    - HList
     - http-types
     - lens
     - loot-base

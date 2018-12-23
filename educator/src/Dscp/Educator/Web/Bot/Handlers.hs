@@ -3,7 +3,6 @@ module Dscp.Educator.Web.Bot.Handlers
      , initializeBot
      ) where
 
-import Data.Default (def)
 import Loot.Log (logInfo)
 
 import Dscp.Core (Student)
@@ -27,9 +26,9 @@ addBotHandlers student StudentApiEndpoints{..} = botEndpoints
   where
     botEndpoints :: (BotWorkMode ctx m, HasBotSetting) => StudentApiHandlers m
     botEndpoints = StudentApiEndpoints
-        { sGetCourses = \isEnrolledF onlyCount sorting -> do
+        { sGetCourses = \isEnrolledF onlyCount -> do
             botProvideInitSetting student
-            sGetCourses isEnrolledF onlyCount sorting
+            sGetCourses isEnrolledF onlyCount
 
         , sGetCourse = \course -> do
             botProvideInitSetting student
@@ -67,7 +66,7 @@ addBotHandlers student StudentApiEndpoints{..} = botEndpoints
             -- Frontend team can still unlock courses quickly if they need
             -- because assignments for first two courses are fixed disregard
             -- the seed.
-            courses <- sGetCourses (Just $ IsEnrolled True) False def
+            courses <- sGetCourses (Just $ IsEnrolled True) False
             when (length (filter ciIsFinished courses) >= 2) $
                 botProvideAdvancedSetting student
 

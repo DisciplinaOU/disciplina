@@ -31,6 +31,7 @@ import Dscp.Educator.Web.Educator.Types
 import Dscp.Educator.Web.Queries
 import Dscp.Educator.Web.Types
 import Dscp.Util
+import Dscp.Util.Servant
 
 ----------------------------------------------------------------------------
 -- Filters for endpoints
@@ -141,19 +142,26 @@ educatorGetAssignment assignH =
 educatorGetAssignments
     :: MonadEducatorWebQuery m
     => EducatorGetAssignmentsFilters
+    -> SortingSpec ["course" ?: Course, "desc" ?: Text]
     -> DBT t m [AssignmentEducatorInfo]
-educatorGetAssignments filters = do
-    runSelectMap educatorAssignmentInfoFromRow . select $ do
-        assignment <- all_ (esAssignments es)
+educatorGetAssignments filters sorting = do
+    runSelectMap educatorAssignmentInfoFromRow . select $
+        orderBy_
+            (\AssignmentRow{..} -> bySpec_ sorting $
+                fieldSort_ @"course" (unpackPk arCourse) .*.
+                fieldSort_ @"desc" arDesc .*.
+                HNil) $
+        do
+            assignment <- all_ (esAssignments es)
 
-        guard_ $ filterMatchesPk_ (afCourse filters) (arCourse assignment)
-        guard_ $ filterMatches_ assignTypeF (arType assignment)
-        whenJust (afDocType filters) $ \docType ->
-            guard_ (eqDocTypeQ docType (arContentsHash assignment))
-        whenJust (afStudent filters) $ \student -> do
-            link_ (esStudentAssignments es) (valPk_ student :-: pk_ assignment)
+            guard_ $ filterMatchesPk_ (afCourse filters) (arCourse assignment)
+            guard_ $ filterMatches_ assignTypeF (arType assignment)
+            whenJust (afDocType filters) $ \docType ->
+                guard_ (eqDocTypeQ docType (arContentsHash assignment))
+            whenJust (afStudent filters) $ \student -> do
+                link_ (esStudentAssignments es) (valPk_ student :-: pk_ assignment)
 
-        return assignment
+            return assignment
   where
     assignTypeF = afIsFinal filters ^. mapping (from assignmentTypeRaw)
 

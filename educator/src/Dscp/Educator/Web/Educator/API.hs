@@ -19,6 +19,7 @@ import Dscp.Educator.Web.Educator.Auth
 import Dscp.Educator.Web.Educator.Error
 import Dscp.Educator.Web.Educator.Types
 import Dscp.Educator.Web.Types
+import Dscp.Util.Servant
 
 data EducatorApiEndpoints route = EducatorApiEndpoints
     { eGetStatus               :: route :- GetStatus
@@ -153,6 +154,7 @@ type GetAssignments
     :> QueryParam "since" Timestamp
     :> QueryFlag "onlyCount"
     :> Summary "Get all assignments"
+    :> SortingParams '["course" ?: Course, "desc" ?: Text]
     :> Get '[DSON] [AssignmentEducatorInfo]
 
 type AddAssignment

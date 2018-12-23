@@ -66,9 +66,10 @@ educatorApiHandlers =
 
       -- Assignments
 
-    , eGetAssignments = \afCourse afStudent afIsFinal _afSince _afOnlyCount ->
+    , eGetAssignments = \afCourse afStudent afIsFinal _afSince _afOnlyCount sorting ->
         invoke $ educatorGetAssignments
             def{ afCourse, afStudent, afIsFinal }
+            sorting
 
     , eAddAssignment = \_autoAssign na -> do
         void . transact $ createAssignment (requestToAssignment na)
