@@ -32,8 +32,12 @@ module Dscp.Util.Servant
     , type (?:)
     , SortingSpec (..)
     , SortingOrder (..)
+    , NullsSortingOrder (..)
     , SortingItemTagged (..)
     , SortingItem (..)
+    , SortingParamTypesOf
+    , SortingParamsOf
+    , SortingSpecOf
 
       -- * Utilities for clients
     , AsClientT
@@ -557,19 +561,30 @@ data SortingOrder
     | Ascendant
     deriving (Show, Eq, Enum)
 
+-- | Where to place null fields.
+data NullsSortingOrder
+    = NullsFirst
+    | NullsLast
+    deriving (Show, Eq, Enum)
+
 -- | For a given field, user-supplied order of sorting.
--- This type is primarly for internal use, see 'SortingItemTagged'.
+-- This type is primarly for internal use, see also 'SortingItemTagged'.
 data SortingItem = SortingItem
     { siName  :: Text
       -- ^ Name of parameter.
-      -- Always matches one in @param@, but we keep it here as well for convenience.
+      -- Always matches one in @param@, but we keep it at term-level as well for convenience.
     , siOrder :: SortingOrder
       -- ^ Sorting order on the given parameter.
+
+    -- , siNullsOrder :: Maybe NullsSortingOrder
+      ---- ^ Order of null fields.
+      ---- Present only when the second element in @param@ tuple is 'Maybe'.
+      ---- TODO [DSCP-425] add support for this
     } deriving (Show)
 
 -- | Version 'SortingItem' which remembers its name and parameter type at type level.
 -- In functions which belong to public API you will most probably want to use this datatype
--- as a safer variant of 'SortingIte,'.
+-- as a safer variant of 'SortingItem'.
 newtype SortingItemTagged (param :: TyNamedParam *) = SortingItemTagged
     { untagSortingItem :: SortingItem
     } deriving (Show)
@@ -607,15 +622,14 @@ type TaggedSortingItemsList allowed = Tagged (allowed :: [TyNamedParam *]) [Sort
 
 -- | How servant sees 'SortParams' under the hood.
 type SortParamsExpanded allowed subApi =
-    QueryParam "sort_by" (TaggedSortingItemsList allowed) :> subApi
+    QueryParam "sortBy" (TaggedSortingItemsList allowed) :> subApi
 
 {- | What is passed to an endpoint, contains all sorting parameters provided by a user.
 
 Following properties hold:
 1. Each entry in the underlying list has a unique name ('siName' field).
 2. Entries correspond to @params@ type, i.e. any 'SortingItem' entry of the underlying
-list with name "N" will be present in @params@ and typed with the same type variable
-which it is in pair with within @params@.
+list with name "N" will be present in @params@.
 
 Not all parameters specified by @params@ phantom type can be present, e.g. the underlying
 list will be empty if user didn't pass "sort_by" query parameter at all.
@@ -705,6 +719,17 @@ instance HasClient m subApi =>
          HasClient m (SortingParams params :> subApi) where
     type Client m (SortingParams params :> subApi) = Client m subApi
     clientWithRoute mp _ req = clientWithRoute mp (Proxy @subApi) req
+
+-- | For a given return type of an endpoint get corresponding sorting params.
+-- This mapping is sensible, since we usually allow to sort only on fields appearing in
+-- endpoint's response.
+type family SortingParamTypesOf a :: [TyNamedParam *]
+
+-- | This you will most probably want to specify in API.
+type SortingParamsOf a = SortingParams (SortingParamTypesOf a)
+
+-- | This you will most probably want to specify in an endpoint implementation.
+type SortingSpecOf a = SortingSpec (SortingParamTypesOf a)
 
 ---------------------------------------------------------------------------
 -- Client stuff

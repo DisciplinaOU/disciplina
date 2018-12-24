@@ -21,6 +21,7 @@ import Dscp.Educator.Web.Student.Auth
 import Dscp.Educator.Web.Student.Error (DSON)
 import Dscp.Educator.Web.Student.Types
 import Dscp.Educator.Web.Types
+import Dscp.Util.Servant
 
 data StudentApiEndpoints route = StudentApiEndpoints
     { sGetCourses       :: route :- GetCourses
@@ -58,6 +59,7 @@ type GetCourses
     :> QueryFlag "onlyCount"
     :> Summary "Get Educator's courses"
     :> Description "Gets a list of Educator's courses, both enrolled and available."
+    :> SortingParamsOf CourseStudentInfo
     :> Verb 'GET 200 '[DSON] [CourseStudentInfo]
 
 type GetCourse
@@ -79,6 +81,7 @@ type GetAssignments
     :> Summary "Get student's assignments"
     :> Description "Gets a list of student's assignments. Filter parameters are \
                    \used to specify specific course, type, etc."
+    :> SortingParamsOf AssignmentStudentInfo
     :> Verb 'GET 200 '[DSON] [AssignmentStudentInfo]
 
 type GetAssignment
@@ -101,6 +104,7 @@ type GetSubmissions
     :> Summary "Get student's submissions"
     :> Description "Gets a list of student's submissions. Filter parameters are \
                    \used to specify specific course, assignment, etc."
+    :> SortingParamsOf SubmissionStudentInfo
     :> Verb 'GET 200 '[DSON] [SubmissionStudentInfo]
 
 type AddSubmission

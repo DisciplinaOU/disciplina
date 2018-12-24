@@ -27,6 +27,7 @@ import Dscp.Util
 import Dscp.Educator.Web.Queries
 import Dscp.Educator.Web.Student.Types
 import Dscp.Educator.Web.Types
+import Dscp.Util.Servant
 
 ----------------------------------------------------------------------------
 -- Filters for endpoints
@@ -81,22 +82,31 @@ studentGetCourse studentId courseId = do
 
 studentGetCourses
     :: MonadEducatorWebQuery m
-    => Id Student -> Maybe IsEnrolled -> DBT 'WithinTx m [CourseStudentInfo]
-studentGetCourses studentId (coerce -> isEnrolledF) = do
-    courses <- runSelect . select $ do
-        course <- all_ (esCourses es)
-        whenJust isEnrolledF $ \isEnrolled -> do
-            let isEnrolled' = exists_ $ do
-                    link_ (esStudentCourses es) (valPk_ studentId :-: pk_ course)
-                    return (as_ @Int 1)
-            guard_ (val_ isEnrolled ==. isEnrolled')
-        return (crId course, crDesc course)
+    => Id Student
+    -> Maybe IsEnrolled
+    -> SortingSpecOf CourseStudentInfo
+    -> DBT 'WithinTx m [CourseStudentInfo]
+studentGetCourses studentId (coerce -> isEnrolledF) sorting = do
+    courses <- runSelect . select $
+        orderBy_ (bySpec_ sorting . mkSortingSpecApp) $ do
+            course <- all_ (esCourses es)
+            whenJust isEnrolledF $ \isEnrolled -> do
+                let isEnrolled' = exists_ $ do
+                        link_ (esStudentCourses es) (valPk_ studentId :-: pk_ course)
+                        return (as_ @Int 1)
+                guard_ (val_ isEnrolled ==. isEnrolled')
+            return (crId course, crDesc course)
 
     forM courses $ \(courseId, ciDesc) -> do
         ciIsEnrolled <- Base.isEnrolledTo studentId courseId
         ciSubjects <- Base.getCourseSubjects courseId
         ciIsFinished <- studentIsCourseFinished studentId courseId
         return CourseStudentInfo{ ciId = courseId, .. }
+  where
+    mkSortingSpecApp (courseId, desc) =
+        fieldSort_ @"id" courseId .*.
+        fieldSort_ @"desc" desc .*.
+        HNil
 
 studentGetGrade
     :: MonadEducatorWebQuery m
@@ -164,15 +174,20 @@ studentGetAssignment student assignH = do
         >>= nothingToThrow (AbsentError $ AssignmentDomain assignH)
     studentComplementAssignmentInfo student assignH assignment
 
+
 -- | Get student assignments.
 studentGetAssignments
     :: MonadEducatorWebQuery m
     => Student
     -> StudentGetAssignmentsFilters
+    -> SortingSpecOf AssignmentStudentInfo
     -> DBT 'WithinTx m [AssignmentStudentInfo]
-studentGetAssignments student filters = do
+studentGetAssignments student filters sorting = do
     assignments <- runSelectMap (arHash &&& assignmentFromRow) . select $ do
-        assignment <- all_ (esAssignments es)
+        assignment <-
+            orderBy_ (bySpec_ sorting . mkSortingSpecApp) $
+            all_ (esAssignments es)
+
         link_ (esStudentAssignments es) (valPk_ student :-: pk_ assignment)
 
         guard_ $ filterMatchesPk_ (afCourse filters) (arCourse assignment)
@@ -186,6 +201,10 @@ studentGetAssignments student filters = do
         studentComplementAssignmentInfo student assignH assignment
   where
     assignTypeF = afIsFinal filters ^. mapping (from assignmentTypeRaw)
+    mkSortingSpecApp AssignmentRow{..} =
+        fieldSort_ @"course" (unpackPk arCourse) .*.
+        fieldSort_ @"desc" arDesc .*.
+        HNil
 
 -- | Get exactly one assignment.
 studentGetSubmission
@@ -211,19 +230,26 @@ studentGetSubmissions
     :: MonadEducatorWebQuery m
     => Student
     -> StudentGetSubmissionsFilters
+    -> SortingSpecOf SubmissionStudentInfo
     -> DBT t m [SubmissionStudentInfo]
-studentGetSubmissions student filters = do
-    runSelectMap studentSubmissionInfoFromRow . select $ do
-        submission <- all_ (esSubmissions es)
-        assignment <- related_ (esAssignments es) (srAssignment submission)
-        link_ (esStudentAssignments es) (valPk_ student :-: pk_ assignment)
+studentGetSubmissions student filters sorting = do
+    runSelectMap studentSubmissionInfoFromRow . select $
+        orderBy_ (bySpec_ sorting . mkSortingSpecApp) $ do
+            submission <- all_ (esSubmissions es)
 
-        guard_ $ filterMatchesPk_ (sfCourse filters) (arCourse assignment)
-        guard_ $ filterMatchesPk_ (sfAssignmentHash filters) (srAssignment submission)
-        whenJust (sfDocType filters) $ \docType ->
-            guard_ (eqDocTypeQ docType (arContentsHash assignment))
+            assignment <- related_ (esAssignments es) (srAssignment submission)
+            link_ (esStudentAssignments es) (valPk_ student :-: pk_ assignment)
 
-        mPrivateTx <- leftJoin_ (all_ $ esTransactions es)
-                                ((`references_` submission) . trSubmission)
+            guard_ $ filterMatchesPk_ (sfCourse filters) (arCourse assignment)
+            guard_ $ filterMatchesPk_ (sfAssignmentHash filters) (srAssignment submission)
+            whenJust (sfDocType filters) $ \docType ->
+                guard_ (eqDocTypeQ docType (arContentsHash assignment))
 
-        return (submission, mPrivateTx)
+            mPrivateTx <- leftJoin_ (all_ $ esTransactions es)
+                                    ((`references_` submission) . trSubmission)
+
+            return (submission, mPrivateTx)
+  where
+    mkSortingSpecApp (_, TransactionRow{..}) =
+        fieldSort_ @"grade" trGrade .*.
+        HNil

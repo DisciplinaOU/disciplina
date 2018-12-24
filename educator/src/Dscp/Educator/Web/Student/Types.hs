@@ -31,7 +31,7 @@ import Dscp.DB.SQL.Util
 import Dscp.Educator.DB
 import Dscp.Educator.Web.Types
 import Dscp.Util
-import Dscp.Util.Servant (ForResponseLog (..), buildShortResponseList)
+import Dscp.Util.Servant
 
 data NewSubmission = NewSubmission
     { nsAssignmentHash :: (Hash Assignment)
@@ -177,3 +177,18 @@ deriveJSON defaultOptions ''NewSubmission
 deriveJSON defaultOptions ''CourseStudentInfo
 deriveJSON defaultOptions ''AssignmentStudentInfo
 deriveJSON defaultOptions ''SubmissionStudentInfo
+
+---------------------------------------------------------------------------
+-- Sorting parameters
+---------------------------------------------------------------------------
+
+type instance SortingParamTypesOf CourseStudentInfo =
+    ["id" ?: Course, "desc" ?: Text]
+
+-- TODO [DSCP-424]: add timestamps
+type instance SortingParamTypesOf AssignmentStudentInfo =
+    ["course" ?: Course, "desc" ?: Text]
+
+-- TODO [DSCP-424]: add timestamps
+type instance SortingParamTypesOf SubmissionStudentInfo =
+    '["grade" ?: Maybe Grade]

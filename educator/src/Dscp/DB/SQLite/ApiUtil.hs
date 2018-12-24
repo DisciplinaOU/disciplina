@@ -7,6 +7,8 @@ module Dscp.DB.SQLite.ApiUtil
       -- * Re-exports
     , HList (..)
     , (.*.)
+    , Sql92OrderingExpressionSyntax
+    , IsSql92OrderingSyntax
     ) where
 
 import Data.Coerce (coerce)
@@ -30,12 +32,21 @@ type SortingToBeam name syntax s a =
 -- | Implement 'SortingToBeam' as sorting on the given table field.
 fieldSort_
     :: forall name a syntax s.
-       IsSql92OrderingSyntax syntax
+       (IsSql92OrderingSyntax syntax)
     => QExpr (Sql92OrderingExpressionSyntax syntax) s a
     -> SortingToBeam name syntax s a
-fieldSort_ field (SortingItemTagged SortingItem{..}) =
-    let order = case siOrder of { Ascendant -> asc_; Descendant -> desc_ }
-    in order (coerce field)
+fieldSort_ field (SortingItemTagged SortingItem{..}) = order (coerce field)
+  where
+    order = case siOrder of
+        Ascendant  -> asc_
+        Descendant -> desc_
+
+    -- TODO [DSCP-425]
+    -- Ordering NULLs is not supported by SQLite :peka:
+    -- nullsOrder = case siNullsOrder of
+    --     Nothing         -> id
+    --     Just NullsFirst -> nullsFirst_
+    --     Just NullsLast  -> nullsLast_
 
 -- | Maps each named parameter to 'SortingToBeam'.
 type family SqlOrderingApp (params :: [TyNamedParam *]) syntax s :: [*] where
@@ -49,8 +60,8 @@ to an SQL query.
 Instance of this type can be created using 'fieldSort_' function. For example:
 
 @
-let sortingSpecApp :: SortingSpecApp ["course" ?: Course, "desc" ?: Text]
-    sortingSpecApp =
+let defSortingSpecApp :: SortingSpecApp ["course" ?: Course, "desc" ?: Text]
+    defSortingSpecApp =
         fieldSort_ @"course" courseField .*.
         fieldSort_ @"desc" descField .*.
         HNil
