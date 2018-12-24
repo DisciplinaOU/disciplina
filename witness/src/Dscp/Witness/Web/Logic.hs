@@ -60,7 +60,7 @@ submitUserTxAsync tw =
 
 toBlockInfo
     :: HasWitnessConfig
-    => Bool -> Block -> SdM_ chgacc BlockInfo
+    => Bool -> Block -> SdM BlockInfo
 toBlockInfo includeTxs block = do
     nextHash <- resolveNext hh
     pure BlockInfo
@@ -89,7 +89,7 @@ toAccountInfo
     :: HasWitnessConfig
     => BlocksOrMempool Account
     -> Maybe [WithBlock GTxWitnessed]
-    -> SdM_ chgacc AccountInfo
+    -> SdM AccountInfo
 toAccountInfo account txs = do
     transactions <- mapM (mapM (fetchBlockInfo . fmap @WithBlock unGTxWitnessed)) txs
     pure AccountInfo
@@ -103,7 +103,7 @@ toAccountInfo account txs = do
 
 fetchBlockInfo
     :: HasWitnessConfig
-    => WithBlock a -> SdM_ chgacc (WithBlockInfo a)
+    => WithBlock a -> SdM (WithBlockInfo a)
 fetchBlockInfo txWithBlock = do
     blockInfo <- mapM (toBlockInfo False) $ wbBlock txWithBlock
     pure WithBlockInfo
@@ -131,18 +131,13 @@ getBlockInfo hh = runSdMLocked $
     toBlockInfo True
 
 getAccountInfo :: WitnessWorkMode ctx m => Address -> Bool -> m AccountInfo
-getAccountInfo address includeTxs = do
-    account <- readingSDLock $ do
-        blockAccount <- runSdReadM $ fromMaybe def <$> getAccountMaybe address
-        poolAccount  <- runSdReadM $ fromMaybe def <$> getMempoolAccountMaybe address
-        return BlocksOrMempool
-              { bmConfirmed = blockAccount
-              , bmTotal     = poolAccount }
+getAccountInfo address includeTxs = readingSDLock $ do
+    account <- runSdDual $ fromMaybe def <$> getAccountMaybe address
     -- TODO: remove this, same info can be found in an another place
     txs <- if includeTxs
         then runSdMLocked $ Just <$> getAccountTxs address
         else return Nothing
-    runSdMLocked $ toAccountInfo account txs
+    runSdM $ toAccountInfo account txs
 
 toPaginatedList :: (Show a, Show (Id a)) => HasId a => Int -> [a] -> PaginatedList d a
 toPaginatedList count allItems =
@@ -202,7 +197,7 @@ getHashType someHash = fmap (fromMaybe HashIsUnknown) . runMaybeT . asum $
     isAddress = is
         (const HashIsAddress)
         addrFromText
-        (\x -> runSdReadMLocked @'ChainAndMempool $ getMempoolAccountMaybe x)
+        (\x -> runSdReadMLocked @'ChainAndMempool $ getAccountMaybe x)
     isTx = is
         (distinguishTx . unGTxWitnessed)
         fromHex

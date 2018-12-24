@@ -39,10 +39,8 @@ applyBlockRaw applyFees block = do
     let blockDBM = nsBlockDBActions sdActions
     let stateDBM = nsStateDBActions sdActions
 
-    (blockCS, stateCS) <-
-        let actions = SD.constructCompositeActions @BlockPlusAVLComposition
-                                                   (SD.dmaAccessActions blockDBM)
-                                                   (SD.dmaAccessActions stateDBM)
+    (stateCS, blockCS) <-
+        let actions = sdActionsComposition sdActions
             rwComp = do
               sblock <- SD.liftERoComp $ expandBlock applyFees block
               -- getCurrentTime requires MonadIO
@@ -52,8 +50,8 @@ applyBlockRaw applyFees block = do
               Avlp.initAVLStorage @AvlHash plugin initAccounts
 
               res <- unwrapSDBaseRethrow $
-                  SD.runERwCompIO actions def rwComp <&>
-                  \((), (SD.CompositeChgAccum blockCS_ stateCS_)) -> (blockCS_, stateCS_)
+                     SD.runERwCompIO actions def rwComp <&>
+                  \((), (SD.CompositeChgAccum stateCS_ blockCS_)) -> (stateCS_, blockCS_)
 
               return res
 
