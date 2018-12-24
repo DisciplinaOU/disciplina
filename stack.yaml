@@ -29,7 +29,7 @@ extra-deps:
 - beam-sqlite-0.3.2.3
 
 - git: https://github.com/serokell/auth-data-structures.git
-  commit: 4a95f4dd32a82195f49ceb0113c9f05bc260ca7d
+  commit: b04bb2f5b30ebd28f0064a68509b51792e0316b5
 
 - git: https://github.com/serokell/direct-sqlite.git
   commit: 333a2b2cf113e115ea2ec450dc706d3f47ee54e4
