@@ -46,6 +46,8 @@ main = do
     (pk,  addr)       <- createActorOf sk
     (skS, pkS, addrS) <- createActor
 
+    putStrLn (addrToText addr)
+
     privateTxs <- for [1..10 :: Integer] $ \_ -> do
         timestamp      <- getCurrentTime
         contentsHash   <- generate arbitrary
@@ -80,7 +82,7 @@ main = do
 
     ptx <- return PublicationTx
         { ptAuthor     = addr
-        , ptFeesAmount = unsafeMkCoin (100 :: Integer)
+        , ptFeesAmount = unsafeMkCoin (20 :: Integer)
         , ptHeader     = hdr
         }
 
