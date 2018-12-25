@@ -1,8 +1,8 @@
 {-# LANGUAGE QuasiQuotes #-}
 
--- | Validation of private block
+-- | Validation of private block and private transactions.
 
-module Dscp.Educator.BlockValidation
+module Dscp.Core.Validation.Educator
        ( BlockValidationFailure (..)
        , SubmissionValidationFailure (..)
        , validateSubmission
@@ -13,14 +13,12 @@ import Control.Lens (to)
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
 import Data.Text.Buildable (build)
-
-import Dscp.Core
-import Dscp.Crypto (Hash, MerkleSignature, PublicKey, fromFoldable, getMerkleRoot, hash, verify)
-import Text.InterpolatedString.Perl6 (qc)
-
 import qualified Data.Text.Buildable ()
+import Text.InterpolatedString.Perl6 (qc)
 import qualified Text.Show
 
+import Dscp.Core.Foundation
+import Dscp.Crypto
 import Dscp.Util (mappendLefts)
 
 -- | Block validation failures

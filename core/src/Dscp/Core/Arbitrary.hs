@@ -195,7 +195,8 @@ instance Arbitrary Block where
 -- | TODO: resolve the weird problem with _very_ long generation
 -- and produce larger FairCVs.
 instance Arbitrary FairCV where
-    arbitrary = resize 5 $ FairCV <$> arbitrary
+    arbitrary = resize 5 $
+        FairCV <$> arbitrary <*> arbitrary <*> arbitrary
 
 instance ArbitraryMixture (AbstractSK ss) where
     arbitraryMixture = primitiveArbitraryMixture

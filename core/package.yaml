@@ -30,6 +30,7 @@ library:
     - hashable
     - hspec
     - http-types
+    - interpolatedstring-perl6
     - jose
     - loot-base
     - loot-config

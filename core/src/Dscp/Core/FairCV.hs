@@ -2,8 +2,12 @@
 module Dscp.Core.FairCV
        (
          -- * Fair CV
-         FairCV (..)
-       , FairCVReady (..)
+         FairCVTemplate (..)
+       , fcStudentAddrL
+       , fcStudentNameL
+       , fcCVL
+       , FairCV
+       , FairCVReady
        , readyFairCV
        , unReadyFairCV
        , singletonFCV
@@ -14,6 +18,7 @@ module Dscp.Core.FairCV
        , FairCVCheckResult (..)
        ) where
 
+import Control.Lens (makeLensesWith)
 import qualified Data.Map.Merge.Strict as M
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
@@ -21,51 +26,64 @@ import Fmt (build, mapF, (+|), (|+))
 
 import Dscp.Core.Foundation
 import Dscp.Crypto
+import Dscp.Util
 
 -- | Two-level map which represents common structure for all `FairCV*`
 -- types
 type GenericFairCV a = Map Address (Map PrivateHeaderHash a)
 
--- | FairCV datatype. Proofs are divided by educators (designated by their
--- addresses) and blocks (designated by their hashes).
-newtype FairCV = FairCV
-    { unFairCV :: GenericFairCV (MerkleProof PrivateTx)
+-- | FairCV template, which contains the common data for both
+-- unprocessed and pre-processed FairCVs.
+data FairCVTemplate proof = FairCV
+    { fcStudentAddr :: !Address
+    , fcStudentName :: !Text
+    , fcCV          :: !(GenericFairCV proof)
     } deriving (Show, Eq, Generic)
 
-instance Buildable FairCV where
-    build (FairCV cv) = "FairCV { "+|mapF (mapF <$> cv)|+" }"
+makeLensesWith postfixLFields ''FairCVTemplate
+
+instance Buildable proof => Buildable (FairCVTemplate proof) where
+    build (FairCV addr name cv) =
+        "FairCV { student = ("+|name|+", "+|addr|+
+        "), cv = "+|mapF (mapF <$> cv)|+" }"
+
+-- | FairCV datatype. Proofs are divided by educators (designated by their
+-- addresses) and blocks (designated by their hashes).
+type FairCV = FairCVTemplate (MerkleProof PrivateTx)
 
 -- | @'FairCV'@ with pre-processed proofs (all the proofs have their Merkle
 -- roots pre-calculated).
-newtype FairCVReady = FairCVReady
-    { unFairCVReady :: GenericFairCV (MerkleProofReady PrivateTx)
-    } deriving (Show, Eq, Generic)
-
-instance Buildable FairCVReady where
-    build (FairCVReady cv) = "FairCVReady { "+|mapF (mapF <$> cv)|+" }"
+type FairCVReady = FairCVTemplate (MerkleProofReady PrivateTx)
 
 -- | Pre-process all the proofs in @'FairCV'@
 readyFairCV :: FairCV -> FairCVReady
-readyFairCV = FairCVReady . fmap (fmap readyProof) . unFairCV
+readyFairCV = fcCVL %~ fmap (fmap readyProof)
 
 -- | Strip roots from all the proofs in @'FairCVReady'@
 unReadyFairCV :: FairCVReady -> FairCV
-unReadyFairCV = FairCV . fmap (fmap mprProof) . unFairCVReady
+unReadyFairCV = fcCVL %~ fmap (fmap mprProof)
 
 -- | Make a FairCV from one proof.
 singletonFCV
-    :: Address
-    -> PrivateHeaderHash
-    -> MerkleProofReady PrivateTx
+    :: Address                    -- ^ Student's address
+    -> Text                       -- ^ Student's name
+    -> Address                    -- ^ Educator's address
+    -> PrivateHeaderHash          -- ^ Private block header hash
+    -> MerkleProofReady PrivateTx -- ^ Merkle proof
     -> FairCVReady
-singletonFCV educatorAddr blkHash proof = FairCVReady $
+singletonFCV sAddr sName educatorAddr blkHash proof =
+    FairCV sAddr sName $
     M.singleton educatorAddr $
     M.singleton blkHash proof
 
 -- | Merge two pre-processed FairCVs, checking if their common parts match.
+-- Does not check that student names match (student names are metadata,
+-- which should eventually be provided on-chain or fixed by some hash).
 mergeFairCVs :: FairCVReady -> FairCVReady -> Either Text FairCVReady
-mergeFairCVs (FairCVReady a) (FairCVReady b) = FairCVReady <$>
-    unionWithA (unionWithA mergeProofs) a b
+mergeFairCVs (FairCV aAddr aName a) (FairCV bAddr _ b)
+    | aAddr /= bAddr = Left "Student's addresses do not match"
+    | otherwise = FairCV aAddr aName <$>
+                  unionWithA (unionWithA mergeProofs) a b
   where
     unionWithA f =
         M.mergeA M.preserveMissing M.preserveMissing $
@@ -78,8 +96,9 @@ addProof
     -> MerkleProofReady PrivateTx
     -> FairCVReady
     -> Either Text FairCVReady
-addProof educatorAddr blkHash proof =
-    mergeFairCVs $ singletonFCV educatorAddr blkHash proof
+addProof educatorAddr blkHash proof fcv@(FairCV sAddr sName _) =
+    mergeFairCVs fcv $
+    singletonFCV sAddr sName educatorAddr blkHash proof
 
 ---------------------------------------------------------------------------
 -- Fair CV check result

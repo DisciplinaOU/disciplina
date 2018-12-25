@@ -10,7 +10,6 @@ import Servant (err500, errBody)
 import qualified UnliftIO as UIO
 
 import Dscp.Core
-import Dscp.Educator.BlockValidation (validateSubmission)
 import Dscp.Educator.Web.Student.Error (WrongSubmissionSignature (..))
 
 -- | Checks that

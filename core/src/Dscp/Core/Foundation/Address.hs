@@ -13,7 +13,8 @@ import Codec.Serialise (Serialise (..))
 import Data.ByteString.Base58 (Alphabet, bitcoinAlphabet, decodeBase58, encodeBase58)
 import Fmt (build)
 
-import Dscp.Crypto (Hash, PublicKey, hash)
+import Dscp.Crypto.Impl (Hash, PublicKey, hash)
+import Dscp.Crypto.Serialise ()
 import Dscp.Util.Serialise (decodeCrcProtected, deserialiseOrFail', encodeCrcProtected, serialise')
 
 -- | 'Address' datatype. Not 'newtype', because later it will

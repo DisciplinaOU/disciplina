@@ -1,8 +1,8 @@
 
 import Data.Aeson
 import qualified Data.Set as Set
-import Data.Traversable
 import Data.Time.Clock
+import Data.Traversable
 import Servant.Client
 import Test.QuickCheck
 
@@ -10,8 +10,8 @@ import Loot.Log
 
 import Dscp.Core
 import Dscp.Crypto
-import Dscp.Witness.Web hiding (checkFairCV)
 import Dscp.Resource.Keys
+import Dscp.Witness.Web hiding (checkFairCV)
 
 import Client
 
@@ -51,11 +51,11 @@ main = do
         contentsHash   <- generate arbitrary
         assignmentHash <- generate arbitrary
 
-        sub <- return Submission
-            { _sStudentId      = addrS
-            , _sContentsHash   = contentsHash
-            , _sAssignmentHash = assignmentHash
-            }
+        let sub = Submission
+                  { _sStudentId      = addrS
+                  , _sContentsHash   = contentsHash
+                  , _sAssignmentHash = assignmentHash
+                  }
 
         return PrivateTx
             { _ptGrade            = gA
@@ -96,7 +96,8 @@ main = do
 
     Just proof <- return $ mkMerkleProof tree (Set.fromList [0..9])
 
-    fcv :: FairCV <- return $ unReadyFairCV $ singletonFCV addr (hash hdr) (readyProof proof)
+    fcv :: FairCV <- return $ unReadyFairCV $
+        singletonFCV addrS "John Doe" addr (hash hdr) (readyProof proof)
 
     writeFile "fairCV-example.json" $ decodeUtf8 $ encode fcv
 

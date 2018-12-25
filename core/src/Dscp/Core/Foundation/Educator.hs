@@ -86,7 +86,8 @@ import Data.Time.Clock (UTCTime)
 import Fmt (build, genericF, mapF, (+|), (|+))
 
 import Dscp.Core.Foundation.Address (Address (..))
-import Dscp.Crypto
+import Dscp.Crypto.Impl
+import Dscp.Crypto.MerkleTree
 import Dscp.Util (HasId (..))
 
 ----------------------------------------------------------------------------

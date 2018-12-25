@@ -119,9 +119,9 @@ editSomeKV mp action = do
 spoilFairCV
     :: FairCV
     -> Gen FairCV
-spoilFairCV (FairCV cv) = do
+spoilFairCV (FairCV sAddr sName cv) = do
     var <- arbitraryBoundedEnum
-    fmap FairCV $ editSomeKV cv $ case var of
+    fmap (FairCV sAddr sName) $ editSomeKV cv $ case var of
         WrongAddr -> \oldAddr subCv ->
             (,subCv) <$> arbitrary `suchThat` (/= oldAddr)
         WrongHeaderHash -> \addr subCv -> do
@@ -291,7 +291,11 @@ spec_Explorer = describe "Explorer" $ do
 
     describe "checkFairCV" $
         it "FairCV validation works correctly" $ witnessProperty $ do
-            -- Select some secret keys for educators,
+            -- Select a student address and name,
+            sAddr <- pick arbitrary
+            let sName = "John Doe" -- why not
+
+            -- select some secret keys for educators,
             numEducators <- pick $ choose (1, length testGenesisSecrets)
             sks <- map mkSecretKeyData . take numEducators <$>
                    pick (shuffle testGenesisSecrets)
@@ -321,7 +325,7 @@ spec_Explorer = describe "Explorer" $ do
             let cvPairs = catMaybes cvPairsMs
             pre $ not (null cvPairs)
 
-            let fairCv = FairCV $ M.fromList cvPairs
+            let fairCv = FairCV sAddr sName $ M.fromList cvPairs
             fairCvInvalid <- pick $ spoilFairCV fairCv
 
             -- Do positive and negative case in one `it` to reduce test
