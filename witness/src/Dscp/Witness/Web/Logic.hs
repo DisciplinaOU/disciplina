@@ -218,15 +218,17 @@ checkFairCV =
         maybe False (checkProofPure sAddr eAddr proof) <$>
             runSdMempoolLocked (getPublicationByHeaderHash h)
 
-    checkProofPure _ eAddr proof ptw =
+    checkProofPure sAddr eAddr proof ptw =
         let root = ptw ^. ptwTxL.ptHeaderL.pbhBodyProof
             pubAuthor = ptw ^. ptwTxL.ptAuthorL
         in verifyPubTxWitnessed ptw &&
            eAddr == pubAuthor &&
-           root == mprRoot proof
+           root == mprRoot proof &&
+           all (checkTxSubmission sAddr) (mprProof proof)
 
-    -- checkTxSubmission sAddr (PrivateTx sSub _ _) =
-    --     let sSub
+    checkTxSubmission sAddr (PrivateTx sSub _ _) =
+        let sAuthor = sSub ^. ssSubmission.sStudentId
+        in sAuthor == sAddr && isRight (validateSubmission sSub)
 
     buildResults results =
         FairCVCheckResult
