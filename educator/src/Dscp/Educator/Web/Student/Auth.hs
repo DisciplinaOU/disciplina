@@ -4,12 +4,14 @@
 -- | Necessary types and implementation for Student authenthication
 module Dscp.Educator.Web.Student.Auth
        ( StudentCheckAction (..)
+       , mkStudentActionM
        , StudentAuth
        , ClientAuthData (StudentClientAuthData)
        ) where
 
 import Servant.Auth.Server (AuthCheck (..))
 import Servant.Auth.Server.Internal.Class (AuthArgs (..), IsAuth (..))
+import UnliftIO (MonadUnliftIO, UnliftIO (..), askUnliftIO)
 
 import Dscp.Core
 import Dscp.Crypto
@@ -32,6 +34,12 @@ instance IsAuth StudentAuth Student where
 instance IsClientAuth StudentAuth where
     data ClientAuthData StudentAuth = StudentClientAuthData SecretKey
     provideAuth req (StudentClientAuthData sk) = signRequestBasic sk req
+
+-- | Creates a check action supplying it with the current context.
+mkStudentActionM :: MonadUnliftIO m => (PublicKey -> m Bool) -> m StudentCheckAction
+mkStudentActionM action = do
+    UnliftIO unliftIO <- askUnliftIO
+    return . StudentCheckAction $ \pk -> unliftIO (action pk)
 
 ---------------------------------------------------------------------------
 -- Helpers
