@@ -150,23 +150,27 @@ spoilFairCV
 spoilFairCV (FairCV sAddr sName cv) = do
     var <- arbitraryBoundedEnum
     case var of
-        WrongStudent ->
-            (\addr -> FairCV addr sName cv) <$>
-            arbitrary `suchThat` (/= sAddr)
-        _ -> fmap (FairCV sAddr sName) $
-             editSomeKV cv $ case var of
-            WrongAddr -> \oldAddr subCv ->
-                (,subCv) <$> arbitrary `suchThat` (/= oldAddr)
-            WrongHeaderHash -> \addr subCv -> do
+        WrongStudent -> do
+            newAddr <- arbitrary `suchThat` (/= sAddr)
+            return $ FairCV newAddr sName cv
+        WrongAddr -> do
+            newCv <- editSomeKV cv $ \oldAddr subCv -> do
+                newAddr <- arbitrary `suchThat` (/= oldAddr)
+                return (newAddr, subCv)
+            return $ FairCV sAddr sName newCv
+        WrongHeaderHash -> do
+            newCv <- editSomeKV cv $ \addr subCv -> do
                 subCv' <- editSomeKV subCv $ \oldHash proof ->
                     (,proof) <$> arbitrary `suchThat` (/= oldHash)
                 return (addr, subCv')
-            WrongProof -> \addr subCv -> do
+            return $ FairCV sAddr sName newCv
+        WrongProof -> do
+            newCv <- editSomeKV cv $ \addr subCv -> do
                 subCv' <- editSomeKV subCv $ \hhash proof -> do
                     proof' <- spoilMerkleProof proof
                     return (hhash, proof')
                 return (addr, subCv')
-            _ -> error "already ruled out"
+            return $ FairCV sAddr sName newCv
 
 spec_Explorer :: Spec
 spec_Explorer = describe "Explorer" $ do

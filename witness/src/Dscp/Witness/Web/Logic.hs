@@ -227,8 +227,7 @@ checkFairCV =
            all (checkTxSubmission sAddr) (mprProof proof)
 
     checkTxSubmission sAddr (PrivateTx sSub _ _) =
-        let sAuthor = sSub ^. ssSubmission.sStudentId
-        in sAuthor == sAddr && isRight (validateSubmission sSub)
+        isRight $ verifyStudentSubmission sAddr sSub
 
     buildResults results =
         FairCVCheckResult
