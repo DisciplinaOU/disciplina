@@ -14,22 +14,22 @@ module Dscp.MultiEducator.Web.Educator.API
     ) where
 
 import Servant
-import Servant.Generic
 import Servant.Auth.Server
+import Servant.Generic
 
 --import Dscp.Educator.Web.Auth
-import Dscp.Educator.Web.Educator.Error
 import Dscp.Educator.Web.Educator.API
+import Dscp.Educator.Web.Educator.Error
 import Dscp.Educator.Web.Student.API
-import Dscp.MultiEducator.Web.Educator.Types
 import Dscp.MultiEducator.Web.Educator.Auth
+import Dscp.MultiEducator.Web.Educator.Types
 
 type MultiEducatorAuthAPI =
     "api" :> "educator" :> "v1" :> ToServant (MultiEducatorApiEndpoints AsApi)
 
 type MultiEducatorAPI = MultiEducatorAuthAPI :<|> ProtectedMultiEducatorAPI
 
-type ProtectedMultiEducatorAPI = Auth '[JWT] EducatorAuthData :> EducatorAPI
+type ProtectedMultiEducatorAPI = Auth '[JWT] EducatorAuthData :> RawEducatorAPI
 
 type MultiEducatorApiHandlers m = MultiEducatorApiEndpoints (AsServerT m)
 

@@ -171,6 +171,6 @@ keygenCommandExecutor secret = \case
         in decodeUtf8 . doEncode $
            Versioned $ toSecretJson pp secret
     PrintEducatorAuthToken endpointName ->
-        makeAuthToken secret endpointName
+        decodeUtf8 $ makeTestAuthToken secret endpointName
     PrintStudentSubmission seed ->
         decodeUtf8 $ encodePretty $ mkSignedSubmissionExample secret seed

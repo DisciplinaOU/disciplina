@@ -16,7 +16,7 @@ import Test.QuickCheck
 data InvalidProofs = InvalidProofs deriving (Show, Exception)
 
 -- | Get all proofs since given time.
-getProofs :: StudentApiClient -> IO [MerkleProof PrivateTx]
+getProofs :: StudentApiClientNoAuth -> IO [MerkleProof PrivateTx]
 getProofs sc = do
     rawProofs <- sGetProofs sc Nothing False
     nothingToThrow InvalidProofs $ mapM zipProof rawProofs
@@ -37,7 +37,7 @@ mergeFairCVList [] = Left "No FairCV in the list"
 mergeFairCVList (fcv:fcvs) =
     foldr (\fa efb -> efb >>= mergeFairCVs fa) (Right fcv) fcvs
 
-getAssignments :: StudentApiClient -> IO [AssignmentStudentInfo]
+getAssignments :: StudentApiClientNoAuth -> IO [AssignmentStudentInfo]
 getAssignments sc = do
     hashes <- map aiHash <$> sGetAssignments sc Nothing Nothing Nothing False def
     for hashes $ sGetAssignment sc
@@ -61,11 +61,11 @@ makeRandomSubmissionForAssignment student aHash = do
             }
         }
 
-sendSubmission :: StudentApiClient -> NewSubmission -> IO SubmissionStudentInfo
+sendSubmission :: StudentApiClientNoAuth -> NewSubmission -> IO SubmissionStudentInfo
 sendSubmission sc sub = do
     sAddSubmission sc sub
 
-getAllCourses :: StudentApiClient -> IO [Course]
+getAllCourses :: StudentApiClientNoAuth -> IO [Course]
 getAllCourses sc = do
     map ciId <$> sGetCourses sc Nothing False def
 

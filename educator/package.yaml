@@ -44,6 +44,7 @@ library:
     - servant-auth-server
     - servant-client
     - servant-generic
+    - servant-client-core
     - servant-server
     - servant-util
     - servant-util-beam-pg

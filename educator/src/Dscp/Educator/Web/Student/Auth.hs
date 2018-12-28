@@ -5,6 +5,7 @@
 module Dscp.Educator.Web.Student.Auth
        ( StudentCheckAction (..)
        , StudentAuth
+       , ClientAuthData (StudentClientAuthData)
        ) where
 
 import Servant.Auth.Server (AuthCheck (..))
@@ -27,6 +28,10 @@ newtype StudentCheckAction = StudentCheckAction (PublicKey -> IO Bool)
 instance IsAuth StudentAuth Student where
     type AuthArgs StudentAuth = '[StudentCheckAction]
     runAuth _ _ = studentAuthCheck
+
+instance IsClientAuth StudentAuth where
+    data ClientAuthData StudentAuth = StudentClientAuthData SecretKey
+    provideAuth req (StudentClientAuthData sk) = signRequestBasic sk req
 
 ---------------------------------------------------------------------------
 -- Helpers

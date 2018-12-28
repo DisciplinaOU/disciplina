@@ -34,7 +34,7 @@ import Dscp.Educator.Web.Educator (EducatorPublicKey (..), ProtectedEducatorAPI,
                                    convertEducatorApiHandler, educatorApiHandlers,
                                    protectedEducatorAPI)
 import Dscp.Educator.Web.Student (ProtectedStudentAPI, StudentCheckAction (..),
-                                  convertStudentApiHandler, studentAPI, studentApiHandlers)
+                                  convertStudentApiHandler, rawStudentAPI, studentApiHandlers)
 import Dscp.Resource.Keys (KeyResources, krPublicKey)
 import Dscp.Web (buildServantLogConfig, serveWeb)
 import Dscp.Web.Metrics (responseTimeMetric)
@@ -72,7 +72,7 @@ mkStudentApiServer nat botConfig = case botConfig ^. tree #params . selection of
     sel -> error $ "unknown EducatorBotConfig type: " <> fromString sel
   where
     getServer handlers = hoistServerWithContext
-        studentAPI
+        rawStudentAPI
         (Proxy :: Proxy '[StudentCheckAction])
         nat
         (toServant handlers)

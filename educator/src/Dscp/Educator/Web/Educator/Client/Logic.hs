@@ -54,5 +54,5 @@ createEducatorApiClient netAddr = do
         nat act = runClientM act cliEnv >>= leftToThrow servantToEducatorApiError
 
     let es :: EducatorApiEndpoints (AsClientT ClientM)
-        es = fromServant $ client educatorAPI
+        es = fromServant $ client rawEducatorAPI
     return $ hoistEducatorApiClient nat es
