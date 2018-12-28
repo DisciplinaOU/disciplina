@@ -6,19 +6,25 @@ module Dscp.Educator.Web.Student.Client.Logic
        , StudentApiClientNoAuthM
        , hoistStudentApiClient
        , createStudentApiClient
+       , requestStudent
+       , requestStudentNoAuth
        ) where
 
 import Servant.Client (ClientM, client, runClientM)
 import Servant.Generic (fromServant)
 import Servant.Util ()
 
+import Dscp.Core
 import Dscp.Crypto
 import Dscp.Educator.Web.Auth
 import Dscp.Educator.Web.Student.API
 import Dscp.Educator.Web.Student.Auth
-import Dscp.Educator.Web.Student.Client.Error
+import Dscp.Educator.Web.Student.Error
 import Dscp.Util
 import Dscp.Web
+
+-- | Exceptions which can appear from the client.
+type StudentApiClientError = ClientError StudentAPIError
 
 -- | Hoists existing @'StudentApiClient'@ to another monad.
 -- TODO: use `hoistClient` after migration to servant-0.15
@@ -47,7 +53,7 @@ type StudentApiClientNoAuth = StudentApiClientNoAuthM IO
 -- | Client handlers for Student API.
 -- You have to provide it with secret key of a student unless authenticaion is disabled,
 -- in which case it is optional.
-type StudentApiClientM m = Maybe SecretKey -> StudentApiClientNoAuthM m
+type StudentApiClientM m = Maybe SecretKeyData -> StudentApiClientNoAuthM m
 
 type StudentApiClient = StudentApiClientM IO
 
@@ -56,10 +62,26 @@ createStudentApiClient :: MonadIO m => BaseUrl -> m StudentApiClient
 createStudentApiClient netAddr = do
     cliEnv <- buildClientEnv netAddr
     let nat :: ClientM a -> IO a
-        nat act = runClientM act cliEnv >>= leftToThrow servantToStudentApiError
+        nat act = runClientM act cliEnv
+              >>= leftToThrow (servantToClientError @StudentAPIError)
 
-    let mkCliAuth = maybe [] (one . CliAuthData . StudentClientAuthData)
+    let mkCliAuth = CliAuthData . StudentClientAuthData
 
     let es :: Maybe SecretKey -> StudentApiEndpoints (AsClientT ClientM)
-        es mSk = fromServant $ client protectedStudentAPI (mkCliAuth mSk)
-    return $ \mStudentSk -> hoistStudentApiClient nat (es mStudentSk)
+        es mSk = fromServant $ client protectedStudentAPI (fmap mkCliAuth mSk)
+    return $ \mStudentSk -> hoistStudentApiClient nat (es $ fmap skSecret mStudentSk)
+
+-- | Helper which performs a request to server.
+requestStudent
+    :: (StudentApiEndpoints (AsClientT m) -> a)
+    -> StudentApiClientM m
+    -> SecretKeyData
+    -> a
+requestStudent field cli sk = field $ cli (Just sk)
+
+-- | Helper which performs a request to server with disabled authentication.
+requestStudentNoAuth
+    :: (StudentApiEndpoints (AsClientT m) -> a)
+    -> StudentApiClientM m
+    -> a
+requestStudentNoAuth field cli = field $ cli Nothing

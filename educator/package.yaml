@@ -54,6 +54,7 @@ library:
     - text-format
     - time
     - QuickCheck
+    - generic-arbitrary
     - unliftio
     - wai
     - wai-cors
@@ -81,6 +82,7 @@ tests:
       - generic-arbitrary
       - hspec-core
       - hspec
+      - http-types
       - interpolatedstring-perl6
       - lens
       - loot-base
@@ -89,6 +91,13 @@ tests:
       - postgresql-simple
       - process
       - safe-exceptions >= 0.1.4
+      - servant
+      - servant-client
+      - servant-generic
+      - servant-server
+      - servant-mock
+      - servant-quickcheck
+      - sqlite-simple
       - stm
       - tasty
       - tasty-hspec
@@ -97,6 +106,7 @@ tests:
       - time
       - QuickCheck
       - unliftio
+      - wai
 
 executables:
   dscp-educator:

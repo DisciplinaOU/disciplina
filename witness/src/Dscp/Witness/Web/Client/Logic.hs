@@ -1,5 +1,6 @@
 module Dscp.Witness.Web.Client.Logic
-       ( WitnessClient
+       ( WitnessApiClientError
+       , WitnessClient
        , WitnessEndpoints (..)
        , createWitnessClient
        , hoistWitnessClient
@@ -12,7 +13,10 @@ import Dscp.Resource.Class
 import Dscp.Util
 import Dscp.Web
 import Dscp.Witness.Web.API
-import Dscp.Witness.Web.Client.Error
+import Dscp.Witness.Web.Error
+
+-- | Exceptions which can appear from the client.
+type WitnessApiClientError = ClientError WitnessAPIError
 
 type WitnessClient = WitnessEndpoints (AsClientT IO)
 
@@ -43,7 +47,8 @@ createWitnessClient :: MonadIO m => BaseUrl -> m WitnessClient
 createWitnessClient netAddr = do
     cliEnv <- buildClientEnv netAddr
     let nat :: ClientM a -> IO a
-        nat act = runClientM act cliEnv >>= leftToThrow servantToWitnessError
+        nat act = runClientM act cliEnv
+              >>= leftToThrow (servantToClientError @WitnessAPIError)
 
     let es :: WitnessEndpoints (AsClientT ClientM)
         es = fromServant $ client witnessAPI

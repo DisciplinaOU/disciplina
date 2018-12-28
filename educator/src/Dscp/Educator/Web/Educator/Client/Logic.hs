@@ -1,5 +1,6 @@
 module Dscp.Educator.Web.Educator.Client.Logic
-       ( EducatorApiClient
+       ( EducatorApiClientError
+       , EducatorApiClient
        , hoistEducatorApiClient
        , createEducatorApiClient
        ) where
@@ -9,11 +10,15 @@ import Servant.Generic (fromServant)
 import Servant.Util ()
 
 import Dscp.Educator.Web.Educator.API
-import Dscp.Educator.Web.Educator.Client.Error
+import Dscp.Educator.Web.Educator.Error
 import Dscp.Util
 import Dscp.Web
 
-type EducatorApiClient = EducatorApiEndpoints (AsClientT IO)
+-- | Exceptions which can appear from the client.
+type EducatorApiClientError = ClientError EducatorAPIError
+
+type EducatorApiClientM m = EducatorApiEndpoints (AsClientT m)
+type EducatorApiClient = EducatorApiClientM IO
 
 -- | Hoists existing @'EducatorApiClient'@ to another monad.
 -- TODO: use `hoistClient` after migration to servant-0.15
@@ -51,7 +56,8 @@ createEducatorApiClient :: MonadIO m => BaseUrl -> m EducatorApiClient
 createEducatorApiClient netAddr = do
     cliEnv <- buildClientEnv netAddr
     let nat :: ClientM a -> IO a
-        nat act = runClientM act cliEnv >>= leftToThrow servantToEducatorApiError
+        nat act = runClientM act cliEnv
+              >>= leftToThrow (servantToClientError @EducatorAPIError)
 
     let es :: EducatorApiEndpoints (AsClientT ClientM)
         es = fromServant $ client rawEducatorAPI

@@ -16,8 +16,10 @@ module Dscp.Educator.Web.Auth
        , NoAuthData
        , NoAuthContext (..)
 
+       , requestEndpoint
        , createAuthToken
        , makeTestAuthToken
+       , clientRequestEndpoint
        , signRequestBasic
        ) where
 
@@ -99,7 +101,7 @@ instance ApiCanLogArg (Auth' auths res)
 ---------------------------------------------------------------------------
 
 -- | One piece of authentication data, e.g. @Bearer <token>@.
-newtype AuthToken = AuthToken { unAuthHeader :: ByteString }
+newtype AuthToken = AuthToken { unAuthToken :: ByteString }
 
 -- | Provides a way to encode this type of authentication in client.
 class IsClientAuth auth where
@@ -107,7 +109,7 @@ class IsClientAuth auth where
     data ClientAuthData auth :: *
 
     -- | By the request built so far and authentication data, make authentication header.
-    provideAuth :: Cli.Request -> ClientAuthData auth -> AuthToken
+    provideAuth :: Cli.Request -> ClientAuthData auth -> IO AuthToken
 
 -- | Whether supplied @ClientAuthData auth@ relate to any of authentication types
 -- in @auths@.
@@ -135,7 +137,7 @@ type family AllUniqueAuths (auths :: [*]) :: Constraint where
 -- | Implementation of 'IsClientAuth' for some @auth@.
 data SomeAuthProvider =
     forall (auth :: *). Typeable auth =>
-    SomeAuthProvider (Cli.Request -> ClientAuthData auth -> AuthToken)
+    SomeAuthProvider (Cli.Request -> ClientAuthData auth -> IO AuthToken)
 
 -- | Multi-version of 'IsClientAuth'.
 class AreClientAuths (auths :: [*]) where
@@ -157,7 +159,7 @@ data ClientAuthDataFrom (auths :: [*]) =
 encodeAuthData
     :: forall auths.
        (Typeable auths, AreClientAuths auths, AllUniqueAuths auths)
-    => Cli.Request -> ClientAuthDataFrom auths -> AuthToken
+    => Cli.Request -> ClientAuthDataFrom auths -> IO AuthToken
 encodeAuthData req (CliAuthData authData) =
     -- The list constructed in the following do-block is not empty due to
     -- invariants of 'ClientAuthDataFrom'.
@@ -168,27 +170,31 @@ encodeAuthData req (CliAuthData authData) =
         Just matchingAuthData <- pure (cast authData)
         pure $ authProvider req matchingAuthData
 
--- | By built client request provides list of tokens for Authorization header.
-newtype MakeAuthHeaders = MakeAuthHeaders (Cli.Request -> [AuthToken])
-
 -- | Supposedly a wrapper over 'ClientM', it carries 'MakeAuthHeaders' till the moment
 -- a request is fully built and inserts authentication header upon submission.
-newtype AuthClientM m a = AuthClientM
-    { unAuthClientM :: ReaderT MakeAuthHeaders m a
+newtype AuthClientM auths m a = AuthClientM
+    { unAuthClientM :: ReaderT (Maybe (ClientAuthDataFrom auths)) m a
     } deriving (Functor, Applicative, Monad, MonadIO, MonadThrow, MonadCatch)
 
-runAuthClientM :: MakeAuthHeaders -> AuthClientM m a -> m a
+runAuthClientM :: Maybe (ClientAuthDataFrom auths) -> AuthClientM auths m a -> m a
 runAuthClientM ctx action = runReaderT (unAuthClientM action) ctx
 
 -- | Attaches authentication header to given request.
-runAuthRequest :: (Cli.Request -> m a) -> Cli.Request -> AuthClientM m a
+runAuthRequest
+    :: (MonadIO m, AreClientAuths auths, AllUniqueAuths auths, Typeable auths)
+    => (Cli.Request -> m a) -> Cli.Request -> AuthClientM auths m a
 runAuthRequest runReq req =
-    AuthClientM . ReaderT $ \(MakeAuthHeaders makeAuthHeaders) -> do
-        let authHeaders = makeAuthHeaders req
-        let totalAuthHeader = BS.intercalate ", " $ map unAuthHeader authHeaders
-        runReq $ Cli.addHeader "Authorization" (decodeUtf8 @Text totalAuthHeader) req
+    AuthClientM . ReaderT $ \mAuthData -> do
+        mAuthToken <- liftIO $ mapM (encodeAuthData req) mAuthData
+        let req' = maybe id addAuthToken mAuthToken req
+        runReq req'
+  where
+    addAuthToken = Cli.addHeader "Authorization" . decodeUtf8 @Text . unAuthToken
 
-instance RunClient m => RunClient (AuthClientM m) where
+instance ( MonadIO m, RunClient m
+         , AreClientAuths auths, AllUniqueAuths auths, Typeable auths
+         ) =>
+         RunClient (AuthClientM auths m) where
     runRequest = runAuthRequest runRequest
     streamingRequest = runAuthRequest streamingRequest
     throwServantError = AuthClientM . lift . throwServantError @m
@@ -197,26 +203,21 @@ instance RunClient m => RunClient (AuthClientM m) where
             catchServantError @m (runAuthClientM ctx action)
                                  (runAuthClientM ctx . handler)
 
--- | Generally, on client side you are allowed to provide multiple authentication data,
--- which will be mapped to comma-separated list of tokens in the authentication header.
---
--- NOTE: actually we do not yet support processing of several authentication methods at
--- server side, but this has no use yet anyway.
-instance ( HasClient (AuthClientM m) api
+-- | Generally, on client side you are allowed to optionally provide authentication data
+-- which will appear in an authentication header.
+instance ( HasClient (AuthClientM auths m) api
          , RunClient m
-         , CanHoistClient (AuthClientM m) api
+         , CanHoistClient (AuthClientM auths m) api
          , Typeable auths, AreClientAuths auths, AllUniqueAuths auths
          ) =>
          HasClient m (Auth' auths res :> api) where
 
     type Client m (Auth' auths res :> api) =
-        [ClientAuthDataFrom auths] -> Client m api
+        Maybe (ClientAuthDataFrom auths) -> Client m api
 
-    clientWithRoute _ _ semiBuiltRequest authDatas =
-        let mkAuthHeader = MakeAuthHeaders $ \req ->
-                map (encodeAuthData req) authDatas
-        in hoistClientMonad (Proxy @(AuthClientM m)) (Proxy @api) (runAuthClientM mkAuthHeader) $
-           clientWithRoute (Proxy @(AuthClientM m)) (Proxy @api) semiBuiltRequest
+    clientWithRoute _ _ semiBuiltRequest mAuthData =
+        hoistClientMonad (Proxy @(AuthClientM auths m)) (Proxy @api) (runAuthClientM mAuthData) $
+        clientWithRoute (Proxy @(AuthClientM auths m)) (Proxy @api) semiBuiltRequest
 
 ---------------------------------------------------------------------------
 -- Helpers
@@ -244,11 +245,15 @@ checkJWitness = do
 authTimeout :: NominalDiffTime
 authTimeout = 300
 
+-- | Get endpoint name from request.
+requestEndpoint :: Request -> Text
+requestEndpoint = decodeUtf8 . rawPathInfo
+
 checkAuthData :: AuthData -> AuthCheck ()
 checkAuthData AuthData {..} = do
     request <- ask
     -- request path verification
-    guard (adPath == decodeUtf8 (rawPathInfo request))
+    guard (adPath == requestEndpoint request)
     -- time verification
     curTime <- liftIO $ getCurrentTime
     guard (diffUTCTime curTime adTime <= authTimeout)
@@ -284,11 +289,16 @@ makeTestAuthToken secretKey endpoint = authDataToJWT secretKey authData
     farFuture = posixSecondsToUTCTime 1735689600 -- 1 Jan 2025
     authData = AuthData { adPath = endpoint, adTime = farFuture }
 
-signRequestBasic :: SecretKey -> Cli.Request -> AuthToken
-signRequestBasic sk req =
+-- | Extract endpoint name from built request.
+clientRequestEndpoint :: Cli.Request -> Text
+clientRequestEndpoint = decodeUtf8 . toLazyByteString . Cli.requestPath
+
+-- | Make authentication signature.
+signRequestBasic :: SecretKey -> Cli.Request -> IO AuthToken
+signRequestBasic sk req = do
     let endpoint = decodeUtf8 . toLazyByteString $ Cli.requestPath req
-    in AuthToken $ "Bearer " <> makeTestAuthToken sk endpoint
-        ---- ^ TODO: provide not a test auth token, but that requires IO :(
+    token <- createAuthToken sk endpoint
+    return $ AuthToken ("Bearer " <> token)
 
 ---------------------------------------------------------------------------
 -- Disabling auth
