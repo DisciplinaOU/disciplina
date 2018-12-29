@@ -37,6 +37,7 @@ module Dscp.Core.Foundation.Educator
 
     -- * Private transactions
     , PrivateTx (..)
+    , _ptSubmission
     , PrivateTxWitness (..)
     , PrivateTxAux (..)
 
@@ -279,6 +280,9 @@ data PrivateTx = PrivateTx
     , _ptTime             :: !UTCTime
     -- ^ Timestamp for this transaction
     } deriving (Show, Eq, Ord, Generic)
+
+_ptSubmission :: PrivateTx -> Submission
+_ptSubmission = _ssSubmission . _ptSignedSubmission
 
 type PrivateTxId = Hash PrivateTx
 
