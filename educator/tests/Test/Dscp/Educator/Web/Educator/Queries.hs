@@ -1,6 +1,6 @@
 module Test.Dscp.Educator.Web.Educator.Queries where
 
-import Control.Lens (to)
+import Control.Lens (to, united)
 import Data.Default (def)
 import Data.List (nubBy)
 import Test.QuickCheck (cover)
@@ -16,6 +16,7 @@ import Dscp.Util.Test
 import Test.Dscp.DB.SQL.Mode
 import Test.Dscp.Educator.Mode
 import Test.Dscp.Educator.Web.Instances
+import Test.Dscp.Educator.Web.Relations
 import Test.Dscp.Educator.Web.Scenarios
 
 applyFilterOn :: Eq f => (a -> f) -> (Maybe f) -> [a] -> [a]
@@ -236,6 +237,56 @@ spec_Educator_API_queries = specWithTempPostgresServer $ do
 
     describe "postGrade" $ pass  -- TODO [DSCP-176]
 
+
+  describe "Student courses" $
+      buildRelationTestScenarios
+          RelationTestActions
+          { rtsLeftName = "student"
+          , rtsPrepareLeftDep = pick arbitrary >>= lift . createStudent
+          , rtsLeftDepDomain = _StudentDomain . united
+          , rtsRightName = "course"
+          , rtsPrepareRightDep = pick arbitrary >>= lift . createCourse
+          , rtsRightDepDomain = _CourseDomain . united
+          , rtsDepRelation = Nothing
+          , rtsCreate = enrollStudentToCourse
+          , rtsDomain = _StudentCourseEnrollmentDomain . united
+          , rtsExists = isEnrolledTo
+          , rtsDeleteLeftDep = Nothing
+          , rtsDeleteRightDep = Nothing
+          , rtsDelete = Nothing
+          }
+
+  describe "Student assignments" $ do
+      let dropExtraIds action = \student (_courseId, assignmentId) ->
+              action student assignmentId
+
+      buildRelationTestScenarios
+          RelationTestActions
+          { rtsLeftName = "student"
+          , rtsPrepareLeftDep = do
+              student <- pick arbitrary
+              lift $ createStudent student
+          , rtsLeftDepDomain = _StudentDomain . united
+          , rtsRightName = "assignment"
+          , rtsPrepareRightDep = do
+              courseId <- lift $ createCourse nullCourse
+              assignment <- pick arbitrary
+              assignmentId <- lift $ createAssignment assignment{ _aCourseId = courseId }
+              return (courseId, assignmentId)
+          , rtsRightDepDomain = _AssignmentDomain . united
+          , rtsDepRelation = Just DepRelationTestActions
+              { drtaName = "student enrollment to course"
+              , drtaPrepare = \student (course, _) -> enrollStudentToCourse student course
+              , drtaDomain = _StudentCourseEnrollmentDomain . united
+              , drtaDelete = Nothing
+              }
+          , rtsCreate = dropExtraIds setStudentAssignment
+          , rtsDomain = _StudentAssignmentSubscriptionDomain . united
+          , rtsExists = dropExtraIds isAssignedToStudent
+          , rtsDeleteLeftDep = Nothing
+          , rtsDeleteRightDep = Nothing
+          , rtsDelete = Just $ dropExtraIds educatorUnassignFromStudent
+          }
 
   describe "Proofs" $ do
     describe "getProofs" $ do
