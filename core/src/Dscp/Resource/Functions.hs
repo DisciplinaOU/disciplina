@@ -10,11 +10,12 @@ module Dscp.Resource.Functions
 import Control.Monad.Component (ComponentError (..), ComponentM, runComponentM)
 import qualified Data.Text.Prettyprint.Doc as Doc (pretty)
 import Fmt ((+||), (||+))
-import Loot.Log (logError)
+import Loot.Log (logDebug, logError)
 
 import Dscp.Resource.Class (InitContext (..), InitParams (..))
 import Dscp.Resource.Logging (allocLogging)
 import Dscp.Rio
+import Dscp.System (gitInfo)
 
 -- | Catches and prints possible synchronous exceptions thrown
 -- in 'runComponentM'. This includes both resource allocation errors and
@@ -51,11 +52,16 @@ runResourceAllocation
 runResourceAllocation desc params component main = do
     eres <- try $ runComponentM initDesc (allocInitResources params) $
       \initCtx -> do
-         eres <- try $ runComponentR desc initCtx component $ \resources ->
-                 runRIO initCtx (main resources)
-         whenLeft eres $ \(err :: ComponentError) -> do
-             runRIO initCtx $ logError (""+||Doc.pretty err||+"")
-         either throwM pure eres
+        -- We have to print git revision after logging initialisation,
+        -- but before any other resources
+        runRIO initCtx $ logDebug gitInfo
+
+        eres <- try $ runComponentR desc initCtx component $ \resources ->
+                runRIO initCtx (main resources)
+        whenLeft eres $ \(err :: ComponentError) -> do
+            runRIO initCtx $ logError (""+||Doc.pretty err||+"")
+        either throwM pure eres
+
     whenLeft eres $ \case
         ComponentRuntimeFailed{ componentErrorOriginalException = cause }
             | isJust (fromException @ComponentError cause) ->

@@ -10,9 +10,10 @@ module Dscp.Resource.AppDir
 
 import Data.Aeson (FromJSON (..), ToJSON (..))
 import Fmt ((+|), (|+))
+import Loot.Log (MonadLogging, logInfo)
 import System.Directory (XdgDirectory (XdgData), createDirectoryIfMissing, getXdgDirectory)
 import System.Environment (lookupEnv)
-import System.IO.Error (catchIOError, isDoesNotExistError, ioError)
+import System.IO.Error (catchIOError, ioError, isDoesNotExistError)
 
 import Dscp.Resource.Class (AllocResource (..), buildComponentR)
 import Dscp.System (appName)
@@ -40,14 +41,14 @@ getOSAppDir = liftIO $
 
 -- | Create application directory if absent.
 prepareAppDir
-    :: MonadIO m
+    :: (MonadIO m, MonadLogging m)
     => AppDirParam -> m AppDir
 prepareAppDir param = do
     appDir <- case param of
         AppDirectoryOS            -> getOSAppDir
         AppDirectorySpecific path -> pure path
     -- we would unlikely have logging context here
-    putTextLn $ "Application home directory will be at "+|appDir|+""
+    logInfo $ "Application home directory will be at "+|appDir|+""
     liftIO $ createDirectoryIfMissing True appDir
     return appDir
 
