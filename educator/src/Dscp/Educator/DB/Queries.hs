@@ -31,7 +31,6 @@ module Dscp.Educator.DB.Queries
        , rewrapReferenceGotInvalid
 
          -- * Readonly actions
-       , GetProvenStudentTransactionsFilters (..)
        , getCourseSubjects
        , getStudentCourses
        , getStudentAssignments
@@ -75,14 +74,16 @@ module Dscp.Educator.DB.Queries
        ) where
 
 
-import Data.Default (Default (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Time.Clock (getCurrentTime)
 import Database.Beam.Postgres (PgJSONB (..))
+import Database.Beam.Query (guard_)
 import GHC.Exts (fromList)
 import Loot.Base.HasLens (HasCtx)
 import Pdf.Scanner (PDFBody)
+import Servant.Util (type (?:), FilterKind (..), FilteringSpec, HList (..), (.*.))
+import Servant.Util.Beam.Postgres (filterOn, matches_)
 import Snowdrop.Util (OldestFirst (..))
 
 import Dscp.Core
@@ -180,20 +181,16 @@ getStudentTransactions student' = do
         guard_ (srStudent submission ==. valPk_ student')
         return (privateTx, submission)
 
-data GetProvenStudentTransactionsFilters = GetProvenStudentTransactionsFilters
-    { pfCourse     :: Maybe Course
-    , pfStudent    :: Maybe Student
-    , pfAssignment :: Maybe (Hash Assignment)
-    , pfSince      :: Maybe Timestamp
-    } deriving (Show, Generic)
-
-deriving instance Default GetProvenStudentTransactionsFilters
-
 -- | Returns list of transaction blocks along with block-proof of a student since given moment.
 getProvenStudentTransactions
     :: forall m.
        DBM m
-    => GetProvenStudentTransactionsFilters
+    => FilteringSpec
+        [ "course" ?: 'AutoFilter Course
+        , "student" ?: 'AutoFilter Student
+        , "assignment" ?: 'AutoFilter (Hash Assignment)
+        , "createdAt" ?: 'AutoFilter Timestamp
+        ]
     -> DBT 'WithinTx m [(PrivateHeaderHash, EmptyMerkleProof PrivateTx, [PrivateTx])]
 getProvenStudentTransactions filters = do
     -- Contains `(tx, idx, blockId)` map.
@@ -228,22 +225,20 @@ getProvenStudentTransactions filters = do
             txId :-: BlockRowId blockIdx <- all_ (esBlockTxs es)
             privateTx <- related_ (esTransactions es) txId
             submission <- related_ (esSubmissions es) (trSubmission privateTx)
+            assignment <- related_ (esAssignments es) (srAssignment submission)
 
             guard_ (trIdx privateTx /=. val_ TxInMempool)
-
-            whenJust (pfSince filters) $ \since ->
-                guard_ (trCreationTime privateTx >=. val_ since)
-
-            whenJust (pfCourse filters) $ \course -> do
-                assignment <- related_ (esAssignments es) (srAssignment submission)
-                guard_ (arCourse assignment ==. valPk_ course)
-
-            guard_ $ filterMatchesPk_ (pfStudent filters) (srStudent submission)
-            guard_ $ filterMatchesPk_ (pfAssignment filters) (srAssignment submission)
+            guard_ . matches_ filters $ filterSpecApp privateTx submission assignment
 
             return (blockIdx, (privateTx, submission))
       where
         rearrange (bi, (tx, sub)) = (bi, privateTxFromRow (tx, sub))
+        filterSpecApp TransactionRow{..} SubmissionRow{..} AssignmentRow{..} =
+            filterOn (unpackPk arCourse) .*.
+            filterOn (unpackPk srStudent) .*.
+            filterOn arHash .*.
+            filterOn trCreationTime .*.
+            HNil
 
     getMerkleTreeAndHash :: BlockIdx -> DBT t m (PrivateHeaderHash, EmptyMerkleTree PrivateTx)
     getMerkleTreeAndHash blockIdx =

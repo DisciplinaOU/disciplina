@@ -12,12 +12,11 @@ import Data.Aeson.Encoding (encodingToLazyByteString)
 import Data.Swagger (Swagger, URL (..))
 import qualified Data.Swagger as S
 import GHC.TypeLits (AppendSymbol, KnownSymbol, Symbol)
-import Servant ((:<|>), (:>), Capture', Description, NoContent, QueryFlag, QueryParam', Raw,
-                StdMethod, Verb)
+import Servant ((:>))
 import Servant.Swagger (HasSwagger (..))
+import Servant.Util.Swagger (SwaggerrizeApi)
 
 import Dscp.Util
-import Dscp.Web.Swagger.Generation.Class
 import Dscp.Web.Types
 
 makePrisms ''S.Referenced
@@ -55,46 +54,6 @@ type family ExtractApiPrefix api :: Symbol where
     ExtractApiPrefix ((path :: Symbol) :> api) =
         "/" `AppendSymbol` path `AppendSymbol` ExtractApiPrefix api
     ExtractApiPrefix api = ""
-
-{- | This applies following transformations to API for the sake of better swagger
-documentation.
-
-* Response of methods returning `()` is replaced with `NoContents` (otherwise invalid
-swagger is generated).
-
-* `Capture`s and `QueryParam`s are attached a description according to
-'ParamDescription' type family (default description is empty).
-
-* @QueryFlag name@ occurences are attached descriptions according to
-@ParamsDescription (QueryFlagDescription name)@ (there is no description by default).
--}
-type family SwaggerrizeApi api where
-    SwaggerrizeApi ((path :: Symbol) :> api) =
-        path :> SwaggerrizeApi api
-
-    SwaggerrizeApi (Capture' mods sym a :> api) =
-        SwaggerCapture (Description (ParamDescription a) ': mods) sym a :> SwaggerrizeApi api
-
-    SwaggerrizeApi (QueryParam' mods sym a :> api) =
-        QueryParam' (Description (RequiredParamDescription mods a) ': mods) sym a
-        :> SwaggerrizeApi api
-
-    SwaggerrizeApi (QueryFlag name :> api) =
-        SwaggerQueryFlag name :> SwaggerrizeApi api
-
-    SwaggerrizeApi (arg :> api) =
-        arg :> SwaggerrizeApi api
-
-    SwaggerrizeApi (api1 :<|> api2) =
-        SwaggerrizeApi api1 :<|> SwaggerrizeApi api2
-
-    SwaggerrizeApi (Verb (method :: StdMethod) (code :: Nat) ctx ()) =
-        Verb method code ctx NoContent
-
-    SwaggerrizeApi (Verb (method :: StdMethod) (code :: Nat) ctx a) =
-        Verb method code ctx a
-
-    SwaggerrizeApi Raw = Raw
 
 -- | Apply some beautiness to automatically generated spec.
 swaggerPostfixes :: Swagger -> Swagger

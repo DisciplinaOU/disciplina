@@ -9,9 +9,9 @@ import qualified Data.ByteArray as BA
 import Data.Time.Clock (UTCTime)
 import Database.Beam.Backend (BackendFromField, BeamBackend, FromBackendRow (..))
 import Database.Beam.Backend.SQL.SQL92 (HasSqlValueSyntax (..), IsSql92ExpressionSyntax,
-                                        Sql92ExpressionValueSyntax)
+                                        IsSqlExpressionSyntaxStringType, Sql92ExpressionValueSyntax)
 import Database.Beam.Migrate (HasDefaultSqlDataType (..))
-import Database.Beam.Postgres.Syntax (PgDataTypeSyntax, PgValueSyntax)
+import Database.Beam.Postgres.Syntax (PgDataTypeSyntax, PgExpressionSyntax, PgValueSyntax)
 import Database.Beam.Query (HasSqlEqualityCheck (..))
 import Database.PostgreSQL.Simple.FromField (FromField (..))
 import Pdf.Scanner (PDFBody (..))
@@ -182,6 +182,7 @@ instance (HasSqlValueSyntax (Sql92ExpressionValueSyntax syntax) (TYPE), \
           IsSql92ExpressionSyntax syntax) => \
          HasSqlEqualityCheck syntax (TYPE)
 
+GenHasSqlEqualityCheck(ItemDesc)
 GenHasSqlEqualityCheck(Address)
 GenHasSqlEqualityCheck(Course)
 GenHasSqlEqualityCheck(Subject)
@@ -194,3 +195,6 @@ GenHasSqlEqualityCheck(AssignmentType)
 
 instance HasDefaultSqlDataType PgDataTypeSyntax ItemDesc where
     defaultSqlDataType _ = defaultSqlDataType (Proxy @Text)
+
+
+instance IsSqlExpressionSyntaxStringType PgExpressionSyntax ItemDesc

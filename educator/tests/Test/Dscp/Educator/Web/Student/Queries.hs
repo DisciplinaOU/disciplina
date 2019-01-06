@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedLists #-}
+
 module Test.Dscp.Educator.Web.Student.Queries where
 
 import Control.Concurrent (threadDelay)
@@ -7,6 +9,7 @@ import Data.List (nub, (!!))
 import Data.Time.Clock (UTCTime (..))
 import qualified GHC.Exts as Exts
 import Test.QuickCheck.Monadic (pick, pre)
+import Servant.Util ((?/), (?/~), (?/=))
 
 import Dscp.Core
 import Dscp.Crypto (hash, unsafeHash)
@@ -173,7 +176,7 @@ spec_Student_API_queries = specWithTempPostgresServer $ do
                 _ <- createStudent student1
                 _ <- createCourseSimple 1
 
-                courses <- studentGetCourses student1 Nothing def def
+                courses <- studentGetCourses student1 def def def
                 return . not $ any ciIsEnrolled courses
 
         it "Student gets enrolled when he asks to" $
@@ -182,7 +185,7 @@ spec_Student_API_queries = specWithTempPostgresServer $ do
                 _ <- createCourseSimple 1
                 enrollStudentToCourse student1 courseId1
 
-                courses <- studentGetCourses student1 Nothing def def
+                courses <- studentGetCourses student1 def def def
                 let Just course1 = find (\c -> ciId c == courseId1) courses
                 return (ciIsEnrolled course1)
 
@@ -195,7 +198,7 @@ spec_Student_API_queries = specWithTempPostgresServer $ do
 
                 _ <- lift $ createCourse courseDetails
 
-                courses <- lift $ studentGetCourses student1 Nothing def def
+                courses <- lift $ studentGetCourses student1 def def def
                 return $ courses === one CourseStudentInfo
                     { ciId = courseId
                     , ciDesc = cdDesc courseDetails
@@ -210,12 +213,11 @@ spec_Student_API_queries = specWithTempPostgresServer $ do
                 _ <- createStudent student2
                 _ <- createCourseSimple 1
                 _ <- createCourseSimple 2
-                mapM_ (enrollStudentToCourse student1)
-                      [courseId1]
-                mapM_ (enrollStudentToCourse student2)
-                      [courseId1, courseId2]
+                enrollStudentToCourse student1 courseId1
+                enrollStudentToCourse student2 courseId1
+                enrollStudentToCourse student2 courseId2
 
-                courses <- studentGetCourses student1 Nothing def def
+                courses <- studentGetCourses student1 def def def
                                <&> sortOn ciDesc
                 return (map ciIsEnrolled courses === [True, False])
 
@@ -228,7 +230,7 @@ spec_Student_API_queries = specWithTempPostgresServer $ do
 
                 (notEnrolled, enrolled) <-
                     forOf each (False, True) $ \isEnrolled ->
-                        studentGetCourses student1 (Just $ IsEnrolled isEnrolled) def def
+                        studentGetCourses student1 [#isEnrolled ?/~ isEnrolled] def def
 
                 return $
                     map ciDesc enrolled === ["course 2"]
@@ -255,7 +257,7 @@ spec_Student_API_queries = specWithTempPostgresServer $ do
                     }
 
                 courseInfo <- expectOne "courses" <$>
-                              studentGetCourses student Nothing def def
+                              studentGetCourses student def def def
                 actualGrades <-
                     fmap catMaybes . forM sigSubs $ \sigSub -> do
                         mgrade <- studentGetGrade . hash $ _ssSubmission sigSub
@@ -372,9 +374,13 @@ spec_Student_API_queries = specWithTempPostgresServer $ do
                     let assignH = hash assignment
                     void $ setStudentAssignment student1 assignH
 
-                assignments <- studentGetAssignments student1
-                        def{ afCourse = courseF, afDocType = docTypeF, afIsFinal = isFinalF }
-                        def def
+                let filters = Exts.fromList $ catMaybes
+                        [ (#course ?/=) <$> courseF
+                        , (#docType ?/) <$> docTypeF
+                        , (#isFinal ?/) <$> isFinalF
+                        ]
+
+                assignments <- studentGetAssignments student1 filters def def
 
                 let assignments' =
                         applyFilterOn aiCourseId courseF $

@@ -18,7 +18,7 @@ data InvalidProofs = InvalidProofs deriving (Show, Exception)
 -- | Get all proofs since given time.
 getProofs :: StudentApiClientNoAuth -> IO [MerkleProof PrivateTx]
 getProofs sc = do
-    rawProofs <- sGetProofs sc Nothing False
+    rawProofs <- sGetProofs sc False def
     nothingToThrow InvalidProofs $ mapM zipProof rawProofs
 
 zipProof :: BlkProofInfo -> Maybe (MerkleProof PrivateTx)
@@ -39,7 +39,7 @@ mergeFairCVList (fcv:fcvs) =
 
 getAssignments :: StudentApiClientNoAuth -> IO [AssignmentStudentInfo]
 getAssignments sc = do
-    hashes <- map aiHash <$> sGetAssignments sc Nothing Nothing Nothing False def def
+    hashes <- map aiHash <$> sGetAssignments sc False def def def
     for hashes $ sGetAssignment sc
 
 makeRandomSubmissionForAssignment :: SecretKey -> Hash Assignment -> IO NewSubmission
@@ -67,7 +67,7 @@ sendSubmission sc sub = do
 
 getAllCourses :: StudentApiClientNoAuth -> IO [Course]
 getAllCourses sc = do
-    map ciId <$> sGetCourses sc Nothing False def def
+    map ciId <$> sGetCourses sc False def def def
 
 
 getFairCV :: IO FairCV
