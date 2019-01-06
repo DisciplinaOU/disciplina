@@ -5,6 +5,7 @@
 
 module Dscp.DB.SQL.Util.Common
      ( module BeamReexport
+     , existsAny_
      , checkExists
      , insertValue
      , insertExpression
@@ -27,15 +28,18 @@ module Dscp.DB.SQL.Util.Common
 import Prelude hiding (_1, _2)
 
 import Data.Coerce (coerce)
+import Database.Beam.Backend.SQL as BeamReexport (HasSqlValueSyntax (..))
 import qualified Database.Beam.Backend.SQL as Beam
 import Database.Beam.Migrate (HasDefaultSqlDataType (..))
 import Database.Beam.Postgres as BeamReexport (PgJSONB (..))
 import qualified Database.Beam.Postgres as Beam
-import Database.Beam.Query as BeamReexport (QExpr, QGenExpr (..), aggregate_, all_, as_, asc_,
-                                            countAll_, default_, delete, desc_, exists_, filter_,
-                                            guard_, in_, insert, insertValues, leftJoin_, limit_, max_,
-                                            orderBy_, references_, related_, select, update, val_,
-                                            (&&.), (/=.), (<-.), (==.), (>.), (>=.), (||.))
+import Database.Beam.Postgres.Syntax as BeamReexport (PgExpressionSyntax, PgValueSyntax)
+import Database.Beam.Query as BeamReexport (HasSqlEqualityCheck, QExpr, QGenExpr (..), aggregate_,
+                                            all_, as_, asc_, countAll_, default_, delete, desc_,
+                                            exists_, filter_, guard_, in_, insert, insertValues,
+                                            isJust_, leftJoin_, limit_, max_, orderBy_, references_,
+                                            related_, select, update, val_, (&&.), (/=.), (<-.),
+                                            (==.), (>.), (>=.), (||.))
 import qualified Database.Beam.Query as Beam
 import qualified Database.Beam.Query.Internal as Beam
 import Database.Beam.Schema (PrimaryKey, TableEntity)
@@ -47,6 +51,11 @@ import GHC.TypeLits (ErrorMessage (Text), TypeError)
 import Dscp.Core
 import Dscp.DB.SQL.Functions
 import Dscp.Util
+
+-- | 'exists_' accepts a query returning something aggregatable,
+-- this function eliminates that restriction.
+existsAny_ :: Beam.Q Beam.PgSelectSyntax db s a -> QExpr _ s Bool
+existsAny_ query = exists_ (query $> as_ @Int 1)
 
 -- | Check whether the query returns any row.
 checkExists

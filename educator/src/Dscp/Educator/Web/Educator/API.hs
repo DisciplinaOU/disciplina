@@ -16,7 +16,8 @@ module Dscp.Educator.Web.Educator.API
 import Pdf.Scanner (PDFBody (..))
 import Servant
 import Servant.Generic
-import Servant.Util (type ( #: ), ExceptionalResponses, PaginationParams, SortingParamsOf, Tag)
+import Servant.Util (type ( #: ), ExceptionalResponses, FilteringParamsOf, PaginationParams,
+                     SortingParamsOf, Tag)
 
 import Dscp.Core
 import Dscp.Crypto
@@ -87,9 +88,8 @@ type GetStatus
 
 type GetStudents
     = "students"
-    :> FilterParam "course" Course
-    :> FilterParam "isEnrolled" IsEnrolled
     :> QueryFlag "onlyCount"
+    :> FilteringParamsOf StudentInfo
     :> PaginationParams
     :> Tag "Students"
     :> Summary "Get a list of all registered students' addresses"
@@ -171,8 +171,8 @@ type DeleteStudentAssignment
 
 type GetCourses
     = "courses"
-    :> FilterParam "student" Student
     :> QueryFlag "onlyCount"
+    :> FilteringParamsOf CourseEducatorInfo
     :> PaginationParams
     :> Tag "Courses"
     :> Summary "Get all courses"
@@ -201,11 +201,8 @@ type GetCourse
 
 type GetAssignments
     = "assignments"
-    :> FilterParam "course" Course
-    :> FilterParam "student" Student
-    :> FilterParam "isFinal" IsFinal
-    :> FilterParamSince "since" Timestamp
     :> QueryFlag "onlyCount"
+    :> FilteringParamsOf AssignmentEducatorInfo
     :> PaginationParams
     :> Tag "Assignments"
     :> Summary "Get all assignments"
@@ -228,12 +225,8 @@ type AddAssignment
 
 type GetSubmissions
     = "submissions"
-    :> FilterParam "course" Course
-    :> FilterParam "student" Student
-    :> FilterParam "assignment" (Hash Assignment)
-    :> FilterParam "isGraded" IsGraded
-    :> FilterParamSince "since" Timestamp
     :> QueryFlag "onlyCount"
+    :> FilteringParamsOf SubmissionEducatorInfo
     :> PaginationParams
     :> Tag "Submissions"
     :> Summary "Get all submissions"
@@ -269,13 +262,9 @@ type DeleteSubmission
 
 type GetGrades
     = "grades"
-    :> FilterParam "course" Course
-    :> FilterParam "student" Student
-    :> FilterParam "assignment" (Hash Assignment)
-    :> FilterParam "isFinal" IsFinal
-    :> FilterParamSince "since" Timestamp
-    :> QueryFlag "onlyCount"
     :> Tag "Grades"
+    :> QueryFlag "onlyCount"
+    :> FilteringParamsOf GradeInfo
     :> Summary "Get all grades"
     :> Description "Gets a list of all grades performed by all students."
     :> Get '[DSON] (Counted GradeInfo)
@@ -294,11 +283,9 @@ type AddGrade
 
 type GetProofs
     = "proofs"
-    :> FilterParam "course" Course
-    :> FilterParam "student" Student
-    :> FilterParam "assignment" (Hash Assignment)
-    :> QueryFlag "onlyCount"
     :> Tag "Proofs"
+    :> QueryFlag "onlyCount"
+    :> FilteringParamsOf BlkProofInfo
     :> Summary "Get proofs of all student's activity"
     :> Description "Gets all private transactions related to a student \
                     \together with corresponding Merkle proofs."

@@ -2,7 +2,6 @@
 module Dscp.Web.Swagger.Generation.Util
     ( _Inline
     , dscpSchemaOptions
-    , setParamDescription
     , setExample
     , declareSimpleSchema
     , inDeclaredSchema
@@ -25,10 +24,10 @@ import Data.Swagger.Internal.TypeShape (GenericHasSimpleShape, GenericShape)
 import Data.Typeable (typeRep)
 import qualified GHC.Generics as G
 import GHC.TypeLits (KnownSymbol)
+import Servant.Util.Swagger (ParamDescription, paramDescription)
 
 import Dscp.Util
 import Dscp.Util.Aeson
-import Dscp.Web.Swagger.Generation.Class
 
 
 makePrisms ''S.Referenced
@@ -36,13 +35,6 @@ makePrisms ''S.Referenced
 -- | Swagger schema options which correspond to our 'dscpAesonOptions'.
 dscpSchemaOptions :: S.SchemaOptions
 dscpSchemaOptions = S.fromAesonOptions dscpAesonOptions
-
--- | Set description according to 'ParamDescription' definition.
-setParamDescription
-    :: forall a proxy.
-       KnownSymbol (ParamDescription a)
-    => proxy a -> State Schema ()
-setParamDescription _ = S.description ?= symbolValT @(ParamDescription a)
 
 -- | Set the given item as example.
 setExample :: (S.HasExample s (Maybe Value), ToJSON a) => a -> State s ()
@@ -66,7 +58,8 @@ newtypeDeclareNamedSchema
     :: forall a nt proxy. (ToSchema a, Coercible a nt, KnownSymbol (ParamDescription nt))
     => proxy nt -> Declare (S.Definitions S.Schema) S.NamedSchema
 newtypeDeclareNamedSchema pnt = do
-    inDeclaredSchema (declareNamedSchema (Proxy @a)) (setParamDescription pnt)
+    inDeclaredSchema (declareNamedSchema (Proxy @a)) $
+        S.description ?= paramDescription pnt
 
 -- | Default implementation of 'ToParamSchema' via Generics.
 gToParamSchema
@@ -100,7 +93,7 @@ idDeclareNamedSchema
     => proxy a -> Declare (S.Definitions S.Schema) S.NamedSchema
 idDeclareNamedSchema pa =
     declareSimpleSchema (show $ typeRep pa) $ (S.paramSchemaToSchema pa) &: do
-        setParamDescription pa
+        S.description ?= paramDescription pa
 
 -- | Template for error schema (corresponding to `ErrResponse`).
 errResponseSchema :: State Schema () -> Schema

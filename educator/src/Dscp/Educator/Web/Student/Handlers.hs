@@ -5,13 +5,11 @@ module Dscp.Educator.Web.Student.Handlers
        , convertStudentApiHandler
        ) where
 
-import Data.Default (def)
 import Servant (Handler)
 import UnliftIO (UnliftIO (..))
 
 import Dscp.Core (Student)
 import Dscp.DB.SQL
-import Dscp.Educator.DB
 import Dscp.Educator.Web.Logic
 import Dscp.Educator.Web.Queries
 import Dscp.Educator.Web.Student.API
@@ -29,31 +27,24 @@ studentApiHandlers student =
     {
       -- Courses
 
-      sGetCourses = \isEnrolledF _onlyCount sorting pagination ->
-        transact $ studentGetCourses student isEnrolledF sorting pagination
+      sGetCourses = \_onlyCount filters sorting pagination ->
+        transact $ studentGetCourses student filters sorting pagination
 
     , sGetCourse = \course ->
         transact $ studentGetCourse student course
 
       -- Assignments
 
-    , sGetAssignments = \afCourse afDocType afIsFinal _onlyCount sorting pagination ->
-        transact $
-            studentGetAssignments student
-                def{ afCourse, afDocType, afIsFinal }
-                sorting pagination
+    , sGetAssignments = \_onlyCount filters sorting pagination ->
+        transact $ studentGetAssignments student filters sorting pagination
 
     , sGetAssignment = \assignH ->
         transact $ studentGetAssignment student assignH
 
       -- Submissions
 
-    , sGetSubmissions = \sfCourse sfAssignmentHash sfDocType _onlyCount sorting
-                         pagination ->
-        invoke $
-        studentGetSubmissions student
-            def{ sfCourse, sfAssignmentHash, sfDocType }
-            sorting pagination
+    , sGetSubmissions = \_onlyCount filters sorting pagination ->
+        invoke $ studentGetSubmissions student filters sorting pagination
 
     , sAddSubmission = \newSub ->
         studentMakeSubmissionVerified student newSub
@@ -66,8 +57,8 @@ studentApiHandlers student =
 
       -- Proofs
 
-    , sGetProofs = \pfSince _onlyCount ->
-        transact $ commonGetProofs def{ pfSince, pfStudent = Just student }
+    , sGetProofs = \_onlyCount filters ->
+        transact $ commonGetProofs filters
     }
 
 convertStudentApiHandler

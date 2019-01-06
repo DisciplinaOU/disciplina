@@ -7,9 +7,9 @@ import Data.Aeson (FromJSON (..), ToJSON (..))
 import qualified Data.Swagger as S
 import Fmt (build)
 import Servant (FromHttpApiData (..), ToHttpApiData (..))
+import Servant.Util (ParamDescription)
 
 import Dscp.Util
-import Dscp.Web.Swagger
 
 -- | Educator id we receive from AAA service.
 newtype EducatorUUID = EducatorUUID Text

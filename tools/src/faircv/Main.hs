@@ -60,7 +60,7 @@ main = do
                 _         -> threadDelay refreshRate >> waitForProofs (info:infos)
 
     -- Get all the available assignments for this student
-    assLst <- sGetAssignments sClient Nothing Nothing Nothing False def def
+    assLst <- sGetAssignments sClient False def def def
     -- Show a warning when there are not enough assignments available
     let assNum = length assLst
     when (assignmentNum > assNum) $ logWarning $
@@ -71,7 +71,7 @@ main = do
     -- Wait for the proofs to be available, then get them and make a faircv
     logInfo "Submissions sent, waiting for proofs"
     waitForProofs subInfos
-    proofs <- sGetProofs sClient Nothing False
+    proofs <- sGetProofs sClient False def
 
     fcvrs <- mapM (blkToFairCV addrS "John Doe" addr) proofs
     fcv <- unReadyFairCV <$> leftToFail (mergeFairCVList fcvrs)

@@ -14,7 +14,8 @@ module Dscp.Educator.Web.Student.API
 
 import Servant
 import Servant.Generic
-import Servant.Util (type ( #: ), ExceptionalResponses, PaginationParams, SortingParamsOf, Tag)
+import Servant.Util (type ( #: ), ExceptionalResponses, FilteringParamsOf, PaginationParams,
+                     SortingParamsOf, Tag)
 
 import qualified Dscp.Core as Core
 import Dscp.Crypto (Hash)
@@ -63,8 +64,8 @@ fullStudentAPI = Proxy
 
 type GetCourses
     = "courses"
-    :> FilterParam "isEnrolled" IsEnrolled
     :> QueryFlag "onlyCount"
+    :> FilteringParamsOf CourseStudentInfo
     :> SortingParamsOf CourseStudentInfo
     :> PaginationParams
     :> Tag "Courses"
@@ -89,10 +90,8 @@ type GetCourse
 type GetAssignments
     = "assignments"
     :> Tag "Assignments"
-    :> FilterParam "course" Core.Course
-    :> FilterParam "type" (Core.DocumentType Core.Assignment)
-    :> FilterParam "isFinal" IsFinal
     :> QueryFlag "onlyCount"
+    :> FilteringParamsOf AssignmentStudentInfo
     :> SortingParamsOf AssignmentStudentInfo
     :> PaginationParams
     :> Summary "Get student's assignments"
@@ -120,10 +119,8 @@ type GetAssignment
 
 type GetSubmissions
     = "submissions"
-    :> FilterParam "course" Core.Course
-    :> FilterParam "assignment" (Hash Core.Assignment)
-    :> FilterParam "type" (Core.DocumentType Core.Submission)
     :> QueryFlag "onlyCount"
+    :> FilteringParamsOf SubmissionStudentInfo
     :> SortingParamsOf SubmissionStudentInfo
     :> PaginationParams
     :> Tag "Submissions"
@@ -150,7 +147,7 @@ type GetSubmission
     :> Tag "Submissions"
     :> Summary "Get info about a submission"
     :> Description "Gets a submission data by given submission hash."
-   :> ExceptionalResponses StudentAPIError
+    :> ExceptionalResponses StudentAPIError
        '[ 404 #: "Submission with given hash was not found (or a user has no rights to \
                  \look it up)"
         ]
@@ -174,8 +171,8 @@ type DeleteSubmission
 type GetProofs
     = "proofs"
     :> Tag "Proofs"
-    :> FilterParamSince "since" Core.Timestamp
     :> QueryFlag "onlyCount"
+    :> FilteringParamsOf BlkProofInfo
     :> Summary "Get available proofs for student"
     :> Description "Gets private transactions together with corresponding Merkle \
                    \subtrees. Transactions from same blocks are grouped together \

@@ -25,7 +25,8 @@ import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
 import Data.Swagger (ToSchema (..))
 import Fmt (blockListF, build, (+|), (|+))
-import Servant.Util (type (?:), ForResponseLog (..), SortingParamTypesOf, buildListForResponse)
+import Servant.Util (type (?:), FilterKind (..), FilteringParamTypesOf, ForResponseLog (..),
+                     SortingParamTypesOf, buildListForResponse)
 
 import Dscp.Core
 import Dscp.Crypto
@@ -212,3 +213,27 @@ type instance SortingParamTypesOf AssignmentStudentInfo =
 -- TODO [DSCP-424]: add timestamps
 type instance SortingParamTypesOf SubmissionStudentInfo =
     '["grade" ?: Maybe Grade]
+
+---------------------------------------------------------------------------
+-- Filtering parameters
+---------------------------------------------------------------------------
+
+type instance FilteringParamTypesOf CourseStudentInfo =
+    [ "isEnrolled" ?: 'ManualFilter IsEnrolled
+    , "desc" ?: 'AutoFilter ItemDesc
+    ]
+
+-- TODO [DSCP-424]: add timestamps
+type instance FilteringParamTypesOf AssignmentStudentInfo =
+    [ "course" ?: 'AutoFilter Course
+    , "docType" ?: 'ManualFilter (DocumentType Assignment)
+    , "isFinal" ?: 'ManualFilter IsFinal
+    , "desc" ?: 'AutoFilter ItemDesc
+    ]
+
+-- TODO [DSCP-424]: add timestamps
+type instance FilteringParamTypesOf SubmissionStudentInfo =
+    [ "course" ?: 'AutoFilter Course
+    , "assignmentHash" ?: 'AutoFilter (Hash Assignment)
+    , "docType" ?: 'ManualFilter (DocumentType Submission)
+    ]
