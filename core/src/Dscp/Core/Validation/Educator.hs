@@ -1,26 +1,29 @@
 {-# LANGUAGE QuasiQuotes #-}
 
--- | Validation of private block
+-- | Validation of private block and private transactions.
 
-module Dscp.Educator.BlockValidation
+module Dscp.Core.Validation.Educator
        ( BlockValidationFailure (..)
        , SubmissionValidationFailure (..)
+       , WrongSubmissionSignature (..)
+       , _FakeSubmissionSignature
+       , _SubmissionSignatureInvalid
        , validateSubmission
+       , verifyStudentSubmission
        , validatePrivateBlk
        ) where
 
-import Control.Lens (to)
+import Control.Lens (makePrisms, to)
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
 import Data.Text.Buildable (build)
-
-import Dscp.Core
-import Dscp.Crypto (Hash, MerkleSignature, PublicKey, fromFoldable, getMerkleRoot, hash, verify)
-import Text.InterpolatedString.Perl6 (qc)
-
 import qualified Data.Text.Buildable ()
+import Fmt (listF, (+|))
+import Text.InterpolatedString.Perl6 (qc)
 import qualified Text.Show
 
+import Dscp.Core.Foundation
+import Dscp.Crypto
 import Dscp.Util (mappendLefts)
 
 -- | Block validation failures
@@ -47,25 +50,42 @@ data SubmissionValidationFailure
         , svfSubmissionSig    :: !SubmissionSig }
     deriving (Eq, Show)
 
+-- | Any issues with submission signature content.
+data WrongSubmissionSignature
+    = FakeSubmissionSignature
+      -- ^ Signature doesn't match the student who performs the request.
+    | SubmissionSignatureInvalid [SubmissionValidationFailure]
+      -- ^ Submission is invalid on itself.
+    deriving (Eq, Show)
+
+instance Exception WrongSubmissionSignature
+
 instance Show BlockValidationFailure where
     show = toString . pretty
 
 instance Buildable BlockValidationFailure where
-    build (MerkleSignatureMismatch {..}) =
+    build MerkleSignatureMismatch {..} =
       [qc|Merkle tree root signature mismatch. Expected {bvfExpectedSig} got {bvfActualMerkleSig}|]
     build (SubmissionInvalid x) = build x
 
 instance Buildable SubmissionValidationFailure where
-    build (SubmissionPublicKeyMismatch {..}) =
+    build SubmissionPublicKeyMismatch {..} =
       mconcat [ [qc|Submission public key address mismatch. |]
               , [qc|Expected {svfExpectedPubKey} got {svfActualPubKey}|]
               ]
-    build (SubmissionSignatureMismatch {..}) =
+    build SubmissionSignatureMismatch {..} =
       mconcat [ [qc|Submission signature mismatch.|]
               , [qc| Submission data {svfSubmissionHash} with signature {svfSubmissionSig}|]
               , [qc| does not correspond to public key {svfSubmissionSigKey}|]
               ]
 
+instance Buildable WrongSubmissionSignature where
+    build FakeSubmissionSignature =
+        "Submission signature does not belong to the student who provided it"
+    build (SubmissionSignatureInvalid failures) =
+        "Signature validation has failed: "+|listF failures
+
+makePrisms ''WrongSubmissionSignature
 deriveJSON defaultOptions ''SubmissionValidationFailure
 
 verifyGeneric :: [(Bool, e)] -> Either [e] ()
@@ -102,6 +122,20 @@ validateSubmission ss =
           )
         ]
 
+-- | Checks that
+-- 1. 'SignedSubmission' is valid;
+-- 2. It was actually signed by a student who makes a request.
+verifyStudentSubmission
+    :: Student
+    -> SignedSubmission
+    -> Either WrongSubmissionSignature ()
+verifyStudentSubmission author ss = do
+    let signatureAuthor = _sStudentId (_ssSubmission ss)
+    unless (signatureAuthor == author) $
+        Left FakeSubmissionSignature
+    validateSubmission ss
+        & first SubmissionSignatureInvalid
+
 -- | Validate private block.
 -- Private block is valid iff
 -- 1. Header merkle signature matches computed body merkle signature
@@ -118,7 +152,7 @@ validatePrivateBlk pb =
                    pass subs
     in headerValid `mappendLefts` subValid
   where
-    validateHeader (PrivateBlockHeader {..}) merkleRoot =
+    validateHeader PrivateBlockHeader {..} merkleRoot =
         [ (_pbhBodyProof == merkleRoot,
           MerkleSignatureMismatch { bvfExpectedSig     = _pbhBodyProof
                                   , bvfActualMerkleSig =  merkleRoot

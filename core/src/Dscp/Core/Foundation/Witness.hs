@@ -41,7 +41,6 @@ module Dscp.Core.Foundation.Witness
     , ptHeaderL
     , PublicationTxId
     , toPtxId
-    , verifyPubTxWitnessed
     , BlockMetaTx (..)
     , GTx (..)
     , _GMoneyTx
@@ -85,7 +84,8 @@ import Fmt (blockListF, build, indentF, listF, nameF, whenF, (+|), (+||), (|+), 
 import Dscp.Core.Foundation.Address
 import Dscp.Core.Foundation.Coin
 import Dscp.Core.Foundation.Educator
-import Dscp.Crypto
+import Dscp.Crypto.Hash.Class (hashF)
+import Dscp.Crypto.Impl
 import Dscp.Util
 
 ----------------------------------------------------------------------------
@@ -257,15 +257,6 @@ data PublicationTxWitnessed = PublicationTxWitnessed
 instance Buildable PublicationTxWitnessed where
     build PublicationTxWitnessed {..} =
         "PublicationTxWitnessed { " +| ptwTx |+ ", " +| ptwWitness |+  " }"
-
--- | Verify a publication coupled with witness against an address of Educator.
-verifyPubTxWitnessed
-    :: (Serialise PrivateBlockHeader, Serialise PublicationTx)
-    => Address -> PublicationTxWitnessed -> Bool
-verifyPubTxWitnessed addr PublicationTxWitnessed {..} =
-    let pk = pwPk ptwWitness
-    in mkAddr pk == addr &&
-       verify pk (getId ptwTx, pk, ptHeader ptwTx) (pwSig ptwWitness)
 
 ----------------------------------------------------------------------------
 -- Block meta

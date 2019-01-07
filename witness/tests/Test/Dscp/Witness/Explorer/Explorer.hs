@@ -72,6 +72,33 @@ createAndSubmitPubGen genSecret = do
     sig <- pick arbitrary
     lift $ createAndSubmitPub sk sig
 
+-- | Generate a @'PrivateTx'@ featuring submission from a student with
+-- given secret key.
+genPrivateTx :: SecretKeyData -> Gen PrivateTx
+genPrivateTx skData = do
+    timestamp <- arbitrary
+    contentsHash <- arbitrary
+    assignmentHash <- arbitrary
+    grade <- arbitrary
+
+    let sub = Submission
+              { _sStudentId = skAddress skData
+              , _sContentsHash = contentsHash
+              , _sAssignmentHash = assignmentHash
+              }
+
+    return PrivateTx
+        { _ptGrade = grade
+        , _ptTime = timestamp
+        , _ptSignedSubmission = SignedSubmission
+            { _ssSubmission = sub
+            , _ssWitness = SubmissionWitness
+                { _swKey = skPublic skData
+                , _swSig = sign (skSecret skData) (hash sub)
+                }
+            }
+        }
+
 -- | Run 'getTransactions' with pagination page by page until all transactions
 -- are fetched.
 getTransactionsPaged
@@ -88,6 +115,7 @@ getTransactionsPaged chunkSize mAddress = getFrom Nothing
 
 data SpoilVariant
     = WrongAddr
+    | WrongStudent
     | WrongHeaderHash
     | WrongProof
     deriving (Show, Eq, Generic, Enum, Bounded)
@@ -119,20 +147,30 @@ editSomeKV mp action = do
 spoilFairCV
     :: FairCV
     -> Gen FairCV
-spoilFairCV (FairCV cv) = do
+spoilFairCV (FairCV sAddr sName cv) = do
     var <- arbitraryBoundedEnum
-    fmap FairCV $ editSomeKV cv $ case var of
-        WrongAddr -> \oldAddr subCv ->
-            (,subCv) <$> arbitrary `suchThat` (/= oldAddr)
-        WrongHeaderHash -> \addr subCv -> do
-            subCv' <- editSomeKV subCv $ \oldHash proof ->
-                (,proof) <$> arbitrary `suchThat` (/= oldHash)
-            return (addr, subCv')
-        WrongProof -> \addr subCv -> do
-            subCv' <- editSomeKV subCv $ \hhash proof -> do
-                proof' <- spoilMerkleProof proof
-                return (hhash, proof')
-            return (addr, subCv')
+    case var of
+        WrongStudent -> do
+            newAddr <- arbitrary `suchThat` (/= sAddr)
+            return $ FairCV newAddr sName cv
+        WrongAddr -> do
+            newCv <- editSomeKV cv $ \oldAddr subCv -> do
+                newAddr <- arbitrary `suchThat` (/= oldAddr)
+                return (newAddr, subCv)
+            return $ FairCV sAddr sName newCv
+        WrongHeaderHash -> do
+            newCv <- editSomeKV cv $ \addr subCv -> do
+                subCv' <- editSomeKV subCv $ \oldHash proof ->
+                    (,proof) <$> arbitrary `suchThat` (/= oldHash)
+                return (addr, subCv')
+            return $ FairCV sAddr sName newCv
+        WrongProof -> do
+            newCv <- editSomeKV cv $ \addr subCv -> do
+                subCv' <- editSomeKV subCv $ \hhash proof -> do
+                    proof' <- spoilMerkleProof proof
+                    return (hhash, proof')
+                return (addr, subCv')
+            return $ FairCV sAddr sName newCv
 
 spec_Explorer :: Spec
 spec_Explorer = describe "Explorer" $ do
@@ -291,7 +329,12 @@ spec_Explorer = describe "Explorer" $ do
 
     describe "checkFairCV" $
         it "FairCV validation works correctly" $ witnessProperty $ do
-            -- Select some secret keys for educators,
+            -- Select a student address and name,
+            sKeyData <- mkSecretKeyData . mkPrivKey <$> pick arbitrary
+            let sAddr = skAddress sKeyData
+                sName = "John Doe" -- why not
+
+            -- select some secret keys for educators,
             numEducators <- pick $ choose (1, length testGenesisSecrets)
             sks <- map mkSecretKeyData . take numEducators <$>
                    pick (shuffle testGenesisSecrets)
@@ -301,7 +344,7 @@ spec_Explorer = describe "Explorer" $ do
             cvPairsMs <- forM sks $ \sk -> do
                 pChainLen <- pick $ choose (1, 5)
                 edCvs <- replicateM pChainLen $ do
-                    ptxs <- pick $ listOf1 arbitrary
+                    ptxs <- pick $ listOf1 (genPrivateTx sKeyData)
                     proofIdxs <- pick $
                         S.fromList <$> sublistOf [0 :: Word32 .. fromIntegral (length ptxs - 1)]
 
@@ -321,7 +364,7 @@ spec_Explorer = describe "Explorer" $ do
             let cvPairs = catMaybes cvPairsMs
             pre $ not (null cvPairs)
 
-            let fairCv = FairCV $ M.fromList cvPairs
+            let fairCv = FairCV sAddr sName $ M.fromList cvPairs
             fairCvInvalid <- pick $ spoilFairCV fairCv
 
             -- Do positive and negative case in one `it` to reduce test

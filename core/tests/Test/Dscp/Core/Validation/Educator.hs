@@ -1,20 +1,13 @@
-module Test.Dscp.Educator.BlockValidation where
+module Test.Dscp.Core.Validation.Educator where
 
-import Control.Lens (to)
-import qualified Crypto.PubKey.Ed25519 as Ed25519
 import qualified Data.Map.Strict as M
 import System.IO.Unsafe (unsafePerformIO)
 import Test.Hspec
 
 import Dscp.Core
-import Dscp.Crypto (AbstractPK (..), AbstractSK (..), PublicKey, SecretKey, fromFoldable,
-                    getMerkleRoot, hash)
-import Dscp.Educator.BlockValidation (BlockValidationFailure (..), SubmissionValidationFailure (..),
-                                      validatePrivateBlk)
-import Dscp.Util (Id)
+import Dscp.Crypto
+import Dscp.Util
 import Dscp.Util.Test
-
-import Test.Dscp.Educator.Common (mkPrivateTx)
 
 courseCompScience1 :: Id Course
 courseCompScience1 = Course 3
@@ -49,8 +42,8 @@ tx4 = mkPrivateTx courseCompScience1 gB studentBPubKey (studentBPubKey, studentB
 txsValid :: [PrivateTx]
 txsValid = map generateKeyPair [1..(100 :: Int)]
   where generateKeyPair _ =
-          let key = unsafePerformIO Ed25519.generateSecretKey
-              kp@(pubKey, _) = (AbstractPK (Ed25519.toPublic key), AbstractSK key)
+          let key = unsafePerformIO ssGenSecret
+              kp@(pubKey, _) = (ssToPublic key, key)
           in mkPrivateTx courseCompScience1 gB pubKey kp
 
 spec_ValidateBlock :: Spec
@@ -86,7 +79,7 @@ spec_ValidateBlock = describe "Validate private block" $ do
     educatorAddr = mkAddr $ mkPubKey 'z'
     getTxKey tx = tx^.ptSignedSubmission.ssWitness.swKey
     getTxSig tx = tx^.ptSignedSubmission.ssWitness.swSig
-    hashTxSub tx = tx^.ptSignedSubmission.ssSubmission.to hash
+    hashTxSub tx = hash $ tx^.ptSignedSubmission.ssSubmission
     mkBlock txs = PrivateBlock
         { _pbHeader = mkBlockHeader txs
         , _pbBody = mkBlockBody txs

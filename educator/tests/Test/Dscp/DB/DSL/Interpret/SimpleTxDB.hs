@@ -11,8 +11,6 @@ import Dscp.Educator.DB.DSL.Interpret.SimpleTxDB (runSimpleTxDBQuery)
 import Dscp.Util (HasId (Id))
 import Dscp.Util.Test
 
-import Test.Dscp.Educator.Common (mkPrivateTx)
-
 -- | Made up courses
 courseLinearAlg, courseCompScience1, courseCalculi, courseLogic :: Id Course
 courseLinearAlg = Course 2

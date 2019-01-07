@@ -15,35 +15,16 @@ import Control.Lens (makePrisms)
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
 import Data.Reflection (Reifies (..))
-import Data.Typeable (cast)
-import Fmt (listF, (+|))
 import qualified Data.Text.Buildable as B
+import Data.Typeable (cast)
 import Servant (ServantErr (..), err400, err403, err503)
 
+import Dscp.Core.Validation
 import Dscp.DB.SQLite (SQLRequestsNumberExceeded)
-import Dscp.Educator.BlockValidation (SubmissionValidationFailure)
 import Dscp.Educator.DB (DomainError (..))
 import Dscp.Educator.Web.Util
 import Dscp.Util.Servant
 import Dscp.Web.Class
-
--- | Any issues with submission signature content.
-data WrongSubmissionSignature
-    = FakeSubmissionSignature
-      -- ^ Signature doesn't match the student who performs the request.
-    | SubmissionSignatureInvalid [SubmissionValidationFailure]
-      -- ^ Submission is invalid on itself.
-    deriving (Eq, Show)
-
-makePrisms ''WrongSubmissionSignature
-
-instance Buildable WrongSubmissionSignature where
-    build FakeSubmissionSignature =
-        "Submission signature does not belong to the student who provided it"
-    build (SubmissionSignatureInvalid failures) =
-        "Signature validation has failed: "+|listF failures
-
-instance Exception WrongSubmissionSignature
 
 -- | Any error backend may return.
 data StudentAPIError

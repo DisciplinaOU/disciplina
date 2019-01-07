@@ -113,6 +113,25 @@ instance (FromJSON a, Serialise (EmptyMerkleProof a)) =>
         nothingToFail "Merkle proof and data do not match" $
             mergeProofAndData emptyProof txs
 
+instance Serialise (MerkleProof PrivateTx) =>
+         ToJSON FairCV where
+    toJSON FairCV {..} = object
+        [ "student" .= object
+            [ "name" .= fcStudentName
+            , "address" .= fcStudentAddr
+            ]
+        , "cv" .= fcCV
+        ]
+
+instance Serialise (MerkleProof PrivateTx) =>
+         FromJSON FairCV where
+    parseJSON = withObject "FairCV" $ \o -> do
+        student <- o .: "student"
+        sAddr <- student .: "address"
+        sName <- student .: "name"
+        cv <- o .: "cv"
+        pure $ FairCV sAddr sName cv
+
 ---------------------------------------------------------------------------
 -- Standalone derivations for newtypes
 ---------------------------------------------------------------------------
@@ -156,9 +175,6 @@ instance FromJSON CommitteeSecret where
 
 deriving instance ToJSON GenesisDistribution
 deriving instance FromJSON GenesisDistribution
-
-deriving instance Serialise (MerkleProof PrivateTx) => ToJSON FairCV
-deriving instance Serialise (MerkleProof PrivateTx) => FromJSON FairCV
 
 ---------------------------------------------------------------------------
 -- TH derivations for data

@@ -653,22 +653,39 @@ components:
           type: string
           format: binary
     FairCV:
-      type: object            # addresses as keys
-      additionalProperties:
-        type: object          # private header hashes as keys
-        additionalProperties:
+      type: object
+      required:
+        - student
+        - cv
+      properties:
+        student:
           type: object
           required:
-            - proof
-            - txs
+            - name
+            - address
           properties:
-            proof:
+            name:
+              type: string
+            address:
               type: string
               format: byte
-            txs:
-              type: array
-              items:
-                $ref: '#/components/schemas/PrivateTx'
+        cv:
+          type: object            # addresses as keys
+          additionalProperties:
+            type: object          # private header hashes as keys
+            additionalProperties:
+              type: object
+              required:
+                - proof
+                - txs
+                properties:
+                  proof:
+                    type: string
+                    format: byte
+                    txs:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/PrivateTx'
     FairCVCheckResult:
       type: object
       required:

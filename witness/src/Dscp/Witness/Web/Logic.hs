@@ -209,19 +209,26 @@ getHashType someHash = fmap (fromMaybe HashIsUnknown) . runMaybeT . asum $
 -- | Check @'FairCV'@ against records in the public chain.
 checkFairCV :: forall ctx m. WitnessWorkMode ctx m => FairCV -> m FairCVCheckResult
 checkFairCV =
-    fmap buildResults . checkAgainstDB . readyFairCV
+    fmap buildResults . checkCV . readyFairCV
   where
-    checkAgainstDB (FairCVReady cv) =
-        M.traverseWithKey (M.traverseWithKey . checkProofAgainstDB) cv
+    checkCV (FairCV sAddr _ cv) =
+        M.traverseWithKey (M.traverseWithKey . checkProofAgainstDB sAddr) cv
 
-    checkProofAgainstDB addr h proof =
-        maybe False (checkProofPure addr proof) <$>
+    checkProofAgainstDB sAddr eAddr h proof =
+        maybe False (checkProofPure sAddr eAddr proof) <$>
             runSdMempoolLocked (getPublicationByHeaderHash h)
 
-    checkProofPure addr proof ptw =
+    checkProofPure sAddr eAddr proof ptw =
         let root = ptw ^. ptwTxL.ptHeaderL.pbhBodyProof
-        in verifyPubTxWitnessed addr ptw &&
-           root == mprRoot proof
+            pubAuthor = ptw ^. ptwTxL.ptAuthorL
+        in verifyPubTxWitnessed ptw &&
+           eAddr == pubAuthor &&
+           root == mprRoot proof &&
+           all (checkTxSubmission sAddr) (mprProof proof)
+
+    checkTxSubmission sAddr (PrivateTx sSub _ _) =
+        isRight $ verifyStudentSubmission sAddr sSub
+
     buildResults results =
         FairCVCheckResult
         { fairCVCheckResults = results

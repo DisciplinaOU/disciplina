@@ -12,7 +12,6 @@ import Dscp.Educator.DB
 import Dscp.Educator.Web.Student.Error
 import Dscp.Educator.Web.Student.Queries
 import Dscp.Educator.Web.Student.Types
-import Dscp.Educator.Web.Student.Util
 import Dscp.Educator.Web.Types
 import Dscp.Util
 

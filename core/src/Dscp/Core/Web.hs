@@ -5,6 +5,7 @@ module Dscp.Core.Web () where
 import Servant.API
 
 import Dscp.Core.Foundation
+import Dscp.Crypto.Web ()
 
 ---------------------------------------------------------------------------
 -- FromHttpApiData/ToHttpApiData instances
