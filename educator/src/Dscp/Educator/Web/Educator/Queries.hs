@@ -4,6 +4,7 @@
 module Dscp.Educator.Web.Educator.Queries
     ( EducatorGetAssignmentsFilters (..)
     , EducatorGetSubmissionsFilters (..)
+    , EducatorGetGradesFilters (..)
     , educatorRemoveStudent
     , educatorGetStudents
     , educatorGetCourses
@@ -53,6 +54,15 @@ data EducatorGetSubmissionsFilters = EducatorGetSubmissionsFilters
     } deriving (Show, Generic)
 
 deriving instance Default EducatorGetSubmissionsFilters
+
+data EducatorGetGradesFilters = EducatorGetGradesFilters
+    { gfCourse         :: Maybe Course
+    , gfStudent        :: Maybe Student
+    , gfAssignmentHash :: Maybe $ Hash Assignment
+    , gfIsFinal        :: Maybe IsFinal
+    } deriving (Show, Generic)
+
+deriving instance Default EducatorGetGradesFilters
 
 ----------------------------------------------------------------------------
 -- DB endpoints
@@ -189,21 +199,18 @@ educatorGetSubmissions filters = do
 
 educatorGetGrades
     :: MonadEducatorWebQuery m
-    => Maybe Course
-    -> Maybe Student
-    -> Maybe (Hash Assignment)
-    -> Maybe IsFinal
+    => EducatorGetGradesFilters
     -> m [GradeInfo]
-educatorGetGrades courseIdF studentF assignmentF isFinalF =
+educatorGetGrades filters =
     runSelectMap gradeInfoFromRow . select $ do
         privateTx <- all_ (esTransactions es)
         submission <- related_ (esSubmissions es) (trSubmission privateTx)
         assignment <- related_ (esAssignments es) (srAssignment submission)
 
-        guard_ $ filterMatchesPk_ courseIdF (arCourse assignment)
-        guard_ $ filterMatchesPk_ studentF (srStudent submission)
-        guard_ $ filterMatchesPk_ assignmentF (pk_ assignment)
-        whenJust isFinalF $ \isFinal -> do
+        guard_ $ filterMatchesPk_ (gfCourse filters) (arCourse assignment)
+        guard_ $ filterMatchesPk_ (gfStudent filters) (srStudent submission)
+        guard_ $ filterMatchesPk_ (gfAssignmentHash filters) (pk_ assignment)
+        whenJust (gfIsFinal filters) $ \isFinal -> do
             let assignTypeF = isFinal ^. from assignmentTypeRaw
             guard_ (arType assignment ==. val_ assignTypeF)
 

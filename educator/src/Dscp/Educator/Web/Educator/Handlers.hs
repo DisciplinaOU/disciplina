@@ -88,8 +88,9 @@ educatorApiHandlers =
 
       -- Grades
 
-    , eGetGrades = \course student assignment isFinalF _since _onlyCount ->
-        invoke $ educatorGetGrades course student assignment isFinalF
+    , eGetGrades = \gfCourse gfStudent gfAssignmentHash gfIsFinal _since _onlyCount ->
+        invoke $ educatorGetGrades
+            def{ gfCourse, gfStudent, gfAssignmentHash, gfIsFinal }
 
     , eAddGrade = \(NewGrade subH grade) ->
         transactW $ educatorPostGrade subH grade

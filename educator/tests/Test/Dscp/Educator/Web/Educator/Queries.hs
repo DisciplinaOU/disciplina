@@ -1,8 +1,9 @@
 module Test.Dscp.Educator.Web.Educator.Queries where
 
-import Control.Lens (to)
+import Control.Lens (from, to)
 import Data.Default (def)
 import Data.List (nubBy)
+import Data.Time.Clock (diffUTCTime, getCurrentTime)
 import Test.QuickCheck (cover)
 import Test.QuickCheck.Monadic (pick, pre)
 
@@ -218,7 +219,7 @@ spec_EducatorApiQueries = describe "Basic database operations" $ do
 
             submissions <- lift $ educatorGetSubmissions
                 def{ sfStudent = Just student, sfCourse = courseIdF
-                    , sfAssignmentHash = assignHF, sfDocType = docTypeF }
+                   , sfAssignmentHash = assignHF, sfDocType = docTypeF }
 
             let submissions' =
                   map (\(s, _) -> educatorLiftSubmission s Nothing) $
@@ -231,10 +232,95 @@ spec_EducatorApiQueries = describe "Basic database operations" $ do
 
 
   describe "Grades" $ do
-    describe "getGrades" $ pass  -- TODO [DSCP-176]
+    describe "getGrades" $ do
+        it "No grades initially" $ sqlitePropertyM $ \_ctx -> do
+            env <- pickSmall $ genCoreTestEnv simpleCoreTestParams
+            lift $ prepareAndCreateSubmissions env
 
-    describe "postGrade" $ pass  -- TODO [DSCP-176]
+            grades <- lift $ educatorGetGrades def
 
+            return $ grades === []
+
+        it "Returns existing grade properly" $ sqlitePropertyM $ \_ctx -> do
+            env <- pickSmall $ genCoreTestEnv simpleCoreTestParams
+            let ptx = tiOne $ ctePrivateTxs env
+
+            lift $ do
+                prepareAndCreateSubmissions env
+                void $ createTransaction ptx
+
+            grades <- lift $ educatorGetGrades def
+
+            return $ grades === one GradeInfo
+                 { giSubmissionHash = hash . _ssSubmission $ _ptSignedSubmission ptx
+                 , giGrade = _ptGrade ptx
+                 , giTimestamp = _ptTime ptx
+                 , giHasProof = False
+                 }
+
+        -- There seem to be no sense in testing all filters since Beam does not
+        -- allow making a mistake there by accidence.
+        it "Filtering on isFinal works" $ sqlitePropertyM $ \_ctx -> do
+            env <- pickSmall $ genCoreTestEnv simpleCoreTestParams
+            let ptxs = tiList $ ctePrivateTxs env
+            let assignments = tiCycled $ cteAssignments env
+            isFinalF <- pick arbitrary
+            let docType = isFinalF ^. from assignmentTypeRaw
+
+            lift $ prepareAndCreateTransactions env
+
+            grades <- lift $ educatorGetGrades def{ gfIsFinal = Just isFinalF }
+            let ptxs' = map snd $
+                        filter ((== docType) . _aType . fst) $
+                        zip assignments ptxs
+
+            return $ sort (map giSubmissionHash grades)
+                     ===
+                     sort (map (hash . _ptSubmission) ptxs')
+
+    describe "postGrade" $ do
+        it "Can create grade normally" $ sqlitePropertyM $ \_ctx -> do
+            env <- pickSmall $ genCoreTestEnv simpleCoreTestParams
+            let submission = tiOne $ cteSubmissions env
+            grade <- pick arbitrary
+
+            lift $ do
+                prepareAndCreateSubmissions env
+                educatorPostGrade (hash submission) grade
+
+            gradeInfo <- lift $ oneOrError <$> educatorGetGrades def
+            curTime <- liftIO getCurrentTime
+
+            return $ conjoin
+                [ counterexample "submission mismatches" $
+                    giSubmissionHash gradeInfo === hash submission
+                , counterexample "grade mismatches" $
+                    giGrade gradeInfo === grade
+                , counterexample "timestamp in too different" $
+                    abs (curTime `diffUTCTime` giTimestamp gradeInfo) < 5
+                ]
+
+        it "Cannot create without submission" $ sqlitePropertyM $ \_ctx -> do
+            env <- pickSmall $ genCoreTestEnv simpleCoreTestParams
+            let submission = tiOne $ cteSubmissions env
+            grade <- pick arbitrary
+
+            lift $ do
+                prepareForSubmissions env
+                throwsPrism (_AbsentError . _SubmissionDomain) $
+                    educatorPostGrade (hash submission) grade
+
+        -- TODO: Is it a reasonable requirement? It does not hold yet.
+        it "Cannot post grade for the same submission twice" $ sqlitePropertyM $ \_ctx -> do
+            env <- pickSmall $ genCoreTestEnv simpleCoreTestParams
+            let submission = tiOne $ cteSubmissions env
+            grade <- pick arbitrary
+
+            lift $ do
+                prepareAndCreateSubmissions env
+                educatorPostGrade (hash submission) grade
+                throwsPrism (_AlreadyPresentError . _TransactionDomain) $
+                    educatorPostGrade (hash submission) grade
 
   describe "Proofs" $ do
     describe "getProofs" $ do
