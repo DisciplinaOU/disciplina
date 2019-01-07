@@ -36,11 +36,11 @@ See [configuration section](/docs/config.md) document.
 ### Scripts
 <a name="scripts"></a>
 
-* [Single node launcher](../scripts/launch/node.sh)
+* [Single node launcher](../scripts/launch/node.hs)
 
   Example:
   ```bash
-  > ./scripts/launch/node.sh witness
+  > ./scripts/launch/node.hs witness
   ```
 
 * [Witnesses cluster launcher](../scripts/launch/demo.sh)

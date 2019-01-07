@@ -46,7 +46,8 @@ gcc: error: ./specs: Is a directory
 `gcc' failed in phase `gcc'. (Exit code: 1)
 ```
 
-*Solution:* unfortunately, the only known solution is to temporaly move `./specs` directory from the root of the project.
+*Solution:* see answer from [here](https://github.com/raphlinus/pulldown-cmark/issues/122).
+
 
 #### `./database/schema` not found
 

@@ -39,14 +39,14 @@ See [configuration section](/docs/config.md) document.
 ### Scripts
 <a name="scripts"></a>
 
-* [Single node launcher](../scripts/launch/node.sh)
+* [Single node launcher](../scripts/launch/node.hs)
 
   Example:
   ```bash
-  > ./scripts/launch/node.sh educator
+  > ./scripts/launch/node.hs educator
   ```
   To launch educator with bot to automatically react on student's actions:
 
   ```bash
-  > ./scripts/launch/node.sh educator bot
+  > ./scripts/launch/node.hs educator bot
   ```

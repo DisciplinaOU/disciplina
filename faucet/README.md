@@ -6,8 +6,8 @@ Distributes money among users. Each user can get money only once.
 
 ### Launch
 
-Run witness node with `./script/launcher/node.sh w`.
-Run it with `./script/launcher/node.sh f`.
+Run witness node with `./script/launcher/node.hs w`.
+Run faucet with `./script/launcher/node.hs f`.
 Faucet will take one of witness key from config and use it as source.
 
 ### Using
