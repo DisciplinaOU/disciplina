@@ -1,0 +1,100 @@
+name: disciplina-snapshot
+resolver: lts-11.17
+
+packages:
+- aeson-options-0.0.0
+- base58-bytestring-0.1.0
+- cryptonite-openssl-0.7
+- pretty-tree-0.1.0.0
+- time-units-1.0.0
+- componentm-0.0.0.2
+- serokell-util-0.8.0
+- formatting-6.2.5
+- typed-process-0.2.2.0
+- teardown-0.5.0.0
+- universum-1.1.0
+- safe-exceptions-0.1.7.0
+- servant-auth-0.3.2.0
+- servant-auth-server-0.4.0.0
+- cborg-0.2.1.0
+- serialise-0.2.1.0
+- beam-sqlite-0.3.2.3
+
+- git: https://github.com/serokell/auth-data-structures.git
+  commit: 4a95f4dd32a82195f49ceb0113c9f05bc260ca7d
+
+- git: https://github.com/serokell/direct-sqlite.git
+  commit: 333a2b2cf113e115ea2ec450dc706d3f47ee54e4
+
+- git: https://github.com/serokell/blockchain-util.git
+  commit: 9a28a192c55cb61735ffc0c899fbd80815e1dd2c # volhovm/dscp193
+  subdirs:
+    - snowdrop-core
+    - snowdrop-util
+    - snowdrop-block
+    - snowdrop-execution
+
+- git: https://github.com/serokell/rocksdb-haskell.git
+  commit: 2dd6b4ffdc4edb86b477273ee3c8416a1520f4e1
+
+# Required by lootbox (loot-log)
+- git: https://github.com/kowainik/co-log.git
+  commit: 41cc915e42628c9cc4eea28db2ecdf11bd0e413e
+  subdirs:
+  - co-log-core
+  - co-log
+
+- git: https://github.com/serokell/co-log-sys.git
+  commit: 4d3edc99a073e51830dce0dd0efd35b65f9fb5b5
+
+# Required by co-log and co-log-core
+- contravariant-1.5
+- relude-0.3.0
+- typerep-map-0.3.0
+- primitive-0.6.4.0
+
+- git: https://github.com/serokell/lootbox.git
+  commit: b66d53bf42e88d44184046f3450ab2f01bd9c8b6
+  subdirs:
+    - code/base
+    - code/config
+    - code/log
+    - code/network
+    - code/prelude
+
+- git: https://github.com/serokell/ariadne.git
+  commit: 7676f62b48e76f6d2041d3b5c07e96979e4f517f
+  subdirs:
+    - ariadne/core
+    - knit
+    - ui/cli-lib
+    - ui/vty-lib
+
+# for ariadne
+- loc-0.1.3.2
+- brick-0.38
+- named-0.1.0.0
+- ntype-0.1.0.0
+- vty-5.22
+
+# Forced by lootbox #
+- base-noprelude-4.10.1.0
+# - log-warper-1.8.9 - overriden above
+# - serokell-util-0.6.0 - overriden above
+- vinyl-0.8.1.1
+
+- git: https://github.com/int-index/caps
+  commit: 2f46fc6d5480bdef0a17f64359ad6eb29510dba4
+
+# for caps
+- git: https://github.com/mokus0/dependent-sum
+  commit: f8909cb323b4ffa63af6c4e7cb3a9745e6199080
+
+# for monitoring
+- git: https://github.com/serokell/mon.git
+  commit: 19d35c9895468c22397187420fe9e63379aef4db
+
+# Lootbox dependencies end #
+
+# for snowdrop, will be removed
+- pretty-terminal-0.1.0.0
