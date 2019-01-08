@@ -28,5 +28,16 @@ stackToNix {
   inherit shell;
   overrides = final: previous: {
     disciplina-educator = withPostgreSQL previous.disciplina-educator;
+
+  overrides = self: super: {
+    HList = pkgs.haskell.lib.overrideCabal super.HList (o: {
+      preCompileBuildDriver = ''
+        rm -f Setup.lhs Setup.hs
+        cat << EOF > Setup.hs
+        import Distribution.Simple
+        main = defaultMain
+        EOF
+      '';
+    });
   };
 }
