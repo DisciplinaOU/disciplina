@@ -55,6 +55,7 @@ executables:
       - disciplina-educator
       - lens
       - loot-log
+      - o-clock
       - optparse-applicative
       - serialise
       - servant-client

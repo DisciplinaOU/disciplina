@@ -18,11 +18,23 @@ data InvalidProofs = InvalidProofs deriving (Show, Exception)
 getProofs :: StudentApiClient -> IO [MerkleProof PrivateTx]
 getProofs sc = do
     rawProofs <- sGetProofs sc Nothing False
-    let zipProof BlkProofInfo {..} = mergeProofAndData
-            (unEncodeSerialised bpiMtreeSerialized)
-            bpiTxs
-    nothingToThrow InvalidProofs $
-        mapM zipProof rawProofs
+    nothingToThrow InvalidProofs $ mapM zipProof rawProofs
+
+zipProof :: BlkProofInfo -> Maybe (MerkleProof PrivateTx)
+zipProof BlkProofInfo {..} =
+    mergeProofAndData (unEncodeSerialised bpiMtreeSerialized) bpiTxs
+
+blkToFairCV :: Address -> Text -> Address -> BlkProofInfo -> IO FairCVReady
+blkToFairCV studentAddr studentName educatorAddr proof = do
+    zippedProof <- nothingToThrow InvalidProofs $ zipProof proof
+    return $ singletonFCV studentAddr studentName educatorAddr
+        (bpiBlockHash proof) (readyProof zippedProof)
+
+-- Merge a list of 'FairCVReady' into a single one
+mergeFairCVList :: [FairCVReady] -> Either Text FairCVReady
+mergeFairCVList [] = Left "No FairCV in the list"
+mergeFairCVList (fcv:fcvs) =
+    foldr (\fa efb -> efb >>= mergeFairCVs fa) (Right fcv) fcvs
 
 getAssignments :: StudentApiClient -> IO [AssignmentStudentInfo]
 getAssignments sc = do
