@@ -51,12 +51,15 @@ _definitions:
     - &ghc-options
         - -Wall
         - -fno-warn-orphans
-        - -Werror
         - -Widentities
+        - -Werror
 
   _utils:
     - &lib-common
         source-dirs: src
+
+        ghc-options:
+          - -Wincomplete-uni-patterns
 
     - &test-common
         main:        Main.hs
@@ -78,3 +81,4 @@ _definitions:
         ghc-options:
           - -threaded
           - -O2
+          - -Wincomplete-uni-patterns

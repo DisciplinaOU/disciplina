@@ -107,7 +107,6 @@ formGenesisInfo genesisConfig =
   where
     govAddresses = case genesisConfig ^. option #governance of
         GovCommittee com -> committeeAddrs com
-        GovOpen          -> error "formGenesisInfo: open governance is not implemented"
 
     genesisAddrMap = distrToMap (Just $ NE.fromList govAddresses) $
         genesisConfig ^. option #distribution

@@ -18,6 +18,7 @@ module Dscp.Util
          -- * Error handling
        , assert
        , assertJust
+       , assert_
 
          -- * Maybe conversions
        , nothingToThrow
@@ -70,6 +71,7 @@ module Dscp.Util
        ) where
 
 import Codec.Serialise (Serialise, serialise)
+import qualified Control.Exception as E
 import Control.Lens (Getter, LensRules, lens, lensField, lensRules, mappingNamer, to)
 import Control.Monad.Except (MonadError (..))
 import Data.ByteArray (ByteArrayAccess)
@@ -179,6 +181,11 @@ assert action message = unlessM action $ throwM message
 
 assertJust :: (MonadThrow m, Exception e) => m (Maybe a) -> e -> m a
 assertJust action message = whenNothingM action $ throwM message
+
+-- | Ensure given condition holds.
+-- You have to force evaluation of result in order for check to take effect.
+assert_ :: HasCallStack => (a -> Bool) -> a -> ()
+assert_ predicate value = E.assert (predicate value) ()
 
 -----------------------------------------------------------
 -- Maybe conversions

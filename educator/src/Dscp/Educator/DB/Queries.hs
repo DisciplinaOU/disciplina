@@ -236,7 +236,9 @@ getProvenStudentTransactions filters = do
             return (blockIdx, (privateTx, submission))
       where
         rearrange (bi, (tx, sub)) =
-            let TxBlockIdx txIdx = trIdx tx
+            let txIdx = case trIdx tx of
+                    TxInMempool    -> error "impossible"
+                    TxBlockIdx idx -> idx
             in (bi, (txIdx, privateTxFromRow (tx, sub)))
 
     getMerkleTreeAndHash :: BlockIdx -> DBT t m (PrivateHeaderHash, EmptyMerkleTree PrivateTx)
