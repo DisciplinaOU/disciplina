@@ -157,7 +157,7 @@ seqExpandersPublicationTx feesReceiverAddr (Fees minFee) =
             when (headerWasEarlier || headerIsLast) $
                 throwLocalError PublicationLocalLoop
 
-            let feeAmount = fromIntegral $ coinToInteger ptFeesAmount
+            let feeAmount = coinToInteger ptFeesAmount
             maybePub <- queryOne (PublicationsOf ptAuthor)
             mFeesReceiver <- queryOne (AccountId feesReceiverAddr)
 

@@ -52,6 +52,7 @@ _definitions:
         - -Wall
         - -fno-warn-orphans
         - -Werror
+        - -Widentities
 
   _utils:
     - &lib-common

@@ -67,7 +67,7 @@ faucetTransferMoneyTo dest = do
             throwM SourceAccountExhausted
 
         let feePolicy = faucetConfig ^. sub #core . sub #fee . option #money
-            nonce = fromIntegral $ aiCurrentNonce sourceState
+            nonce = aiCurrentNonce sourceState
             outs = one (TxOut dest transfer)
             txWitnessed = createTxw feePolicy sk nonce outs
 

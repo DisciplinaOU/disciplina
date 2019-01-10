@@ -32,7 +32,7 @@ getSlotSince (SlotId i) = i * slotLength
 remainingTillNextSlot :: (HasCoreConfig, HasTime ctx m) => m Word64
 remainingTillNextSlot = do
     curTime <- getCurTimeMcs
-    return $ fromIntegral $ slotLength - (curTime `mod` slotLength)
+    return $ slotLength - (curTime `mod` slotLength)
 
 waitUntilNextSlot :: (HasCoreConfig, HasTime ctx m) => m SlotId
 waitUntilNextSlot = do
