@@ -26,15 +26,15 @@ studentAKeyPair = mkKeyPair 'a'
 -- | Educator 'k' grade student a an B in course Computer science
 -- transaction is signed by student a
 tx1, tx2, tx3, tx4 :: PrivateTx
-tx1 = mkPrivateTx courseCompScience1 gB studentAPubKey studentAKeyPair
+tx1 = mkTestPrivateTx courseCompScience1 gB studentAPubKey studentAKeyPair
 
 -- | Educator 'k' grade student a an B in course Computer science
 -- transaction is signed by student b
-tx2 = mkPrivateTx courseCompScience1 gB studentAPubKey (studentAPubKey, studentBPrivKey)
+tx2 = mkTestPrivateTx courseCompScience1 gB studentAPubKey (studentAPubKey, studentBPrivKey)
 
-tx3 = mkPrivateTx courseCompScience1 gB studentAPubKey (studentBPubKey, studentAPrivKey)
+tx3 = mkTestPrivateTx courseCompScience1 gB studentAPubKey (studentBPubKey, studentAPrivKey)
 
-tx4 = mkPrivateTx courseCompScience1 gB studentBPubKey (studentBPubKey, studentBPrivKey)
+tx4 = mkTestPrivateTx courseCompScience1 gB studentBPubKey (studentBPubKey, studentBPrivKey)
 
 -- | unsafePerformIO create bunch of PrivateTx.
 -- Use map instead of replicate here to force
@@ -44,7 +44,7 @@ txsValid = map generateKeyPair [1..(100 :: Int)]
   where generateKeyPair _ =
           let key = unsafePerformIO ssGenSecret
               kp@(pubKey, _) = (ssToPublic key, key)
-          in mkPrivateTx courseCompScience1 gB pubKey kp
+          in mkTestPrivateTx courseCompScience1 gB pubKey kp
 
 spec_ValidateBlock :: Spec
 spec_ValidateBlock = describe "Validate private block" $ do

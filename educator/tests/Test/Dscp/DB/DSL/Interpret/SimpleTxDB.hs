@@ -4,12 +4,12 @@ import Test.Hspec
 
 import Dscp.Core (Course (..), Subject, gA, gB, gC, gD)
 import Dscp.Core.Foundation.Educator (PrivateTx (..))
+import Dscp.Core.Test
 import Dscp.Crypto (PublicKey, SecretKey, hash)
 import Dscp.Educator.DB.DSL (Obj, ObjHashEq (..), QueryObj (..), QueryTx (..), QueryTxs (..),
                              TxGrade (..), TxIdEq (..), TxsFilterExpr (..), WHERE (..))
 import Dscp.Educator.DB.DSL.Interpret.SimpleTxDB (runSimpleTxDBQuery)
 import Dscp.Util (HasId (Id))
-import Dscp.Util.Test
 
 -- | Made up courses
 courseLinearAlg, courseCompScience1, courseCalculi, courseLogic :: Id Course
@@ -49,27 +49,27 @@ mkLinAlgPrivateTx :: StudentKeySeed -> EducatorKeySeed -> PrivateTx
 mkLinAlgPrivateTx sKeySeed eKeySeed =
     let studentKey = mkPubKey sKeySeed
         educatorKeyPair = mkKeyPair eKeySeed
-    in mkPrivateTx courseLinearAlg gC studentKey educatorKeyPair
+    in mkTestPrivateTx courseLinearAlg gC studentKey educatorKeyPair
 
 -- | Educator 'k' grade student 'a' an B in course Computer science
 tx1 :: PrivateTx
-tx1 = mkPrivateTx courseCompScience1 gB studentAPubKey educatorKKeyPair
+tx1 = mkTestPrivateTx courseCompScience1 gB studentAPubKey educatorKKeyPair
 
 -- | Educator 'k' grade student 'a' an D by in course Computer science
 tx2 :: PrivateTx
-tx2 = mkPrivateTx courseCompScience1 gD studentAPubKey educatorKKeyPair
+tx2 = mkTestPrivateTx courseCompScience1 gD studentAPubKey educatorKKeyPair
 
 -- | Educator 'k' grade student 'b' an D in course Calculi
 tx3 :: PrivateTx
-tx3 = mkPrivateTx courseCalculi gD studentAPubKey educatorKKeyPair
+tx3 = mkTestPrivateTx courseCalculi gD studentAPubKey educatorKKeyPair
 
 -- | Educator 'k' grade studet 'b' a C in course Calculi
 tx4 :: PrivateTx
-tx4 = mkPrivateTx courseCalculi gC studentAPubKey educatorKKeyPair
+tx4 = mkTestPrivateTx courseCalculi gC studentAPubKey educatorKKeyPair
 
 -- | Educator 'k' grade student 'a' an D in course logic
 tx5 :: PrivateTx
-tx5 = mkPrivateTx courseLogic gD studentAPubKey educatorKKeyPair
+tx5 = mkTestPrivateTx courseLogic gD studentAPubKey educatorKKeyPair
 
 -- | Create a bunch of transactions where student gets graded D in course Linear alg
 txs :: [PrivateTx]
