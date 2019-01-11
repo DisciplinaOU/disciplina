@@ -16,7 +16,7 @@ inject
     (PDFBody text)
   =
     let base64    = LBS.encode thing
-        commented = "\n" <> fairCVStartMark <> "{" <> base64 <> "}%"
+        commented = "\n%" <> fairCVStartMark <> "{" <> base64 <> "}%"
     in  do
         place <- findFromEnd quota insertionMark text
         return $ PDFBody $ insertAt place commented text
