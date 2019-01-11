@@ -38,15 +38,15 @@ findFromEnd :: Int -> LBS.ByteString -> LBS.ByteString -> Maybe Int
 findFromEnd quota what text = do
     guard $ not $ LBS.null what
     guard $ not $ LBS.null text
-    go quota (LBS.length text - LBS.length what) id
+    go quota (LBS.length text - LBS.length what)
   where
-    go 0 _ k         = k Nothing
-    go _ i k | i < 0 = k Nothing
-    go q i k = do
+    go 0 _         = Nothing
+    go _ i | i < 0 = Nothing
+    go q i = do
         if LBS.index text i == LBS.head what
             && equalsFrom i what text
-        then k (Just i)
-        else go (q - 1) (i - 1) k
+        then Just i
+        else go (q - 1) (i - 1)
 
 equalsFrom :: Int -> LBS.ByteString -> LBS.ByteString -> Bool
 equalsFrom offset what text = do
