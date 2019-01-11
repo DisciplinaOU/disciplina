@@ -10,6 +10,7 @@ module Dscp.Witness.Web.Logic
        , getPublications
        , getHashType
        , checkFairCV
+       , checkFairCVPDF
        ) where
 
 import Codec.Serialise (serialise)
@@ -234,3 +235,7 @@ checkFairCV =
         { fairCVCheckResults = results
         , fairCVFullyValid = all and results
         }
+
+checkFairCVPDF :: forall ctx m. WitnessWorkMode ctx m => ByteString -> m FairCVCheckResult
+checkFairCVPDF _stream = do
+    error "TODO: implement"

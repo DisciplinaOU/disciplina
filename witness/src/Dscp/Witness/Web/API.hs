@@ -82,6 +82,11 @@ data WitnessEndpoints route = WitnessEndpoints
         :- "checkcv"
         :> ReqBody '[JSON] FairCV
         :> Verb 'PUT 200 '[DSON] FairCVCheckResult
+
+    , wCheckFairCVPDF :: route
+        :- "checkcv"
+        :> ReqBody '[OctetStream] ByteString
+        :> Verb 'PUT 200 '[DSON] FairCVCheckResult
     } deriving (Generic)
 
 type WitnessAPI =

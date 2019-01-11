@@ -21,6 +21,7 @@ library:
     - data-default
     - directory
     - disciplina-core
+    - disciplina-pdfs
     - exceptions
     - formatting
     - filepath

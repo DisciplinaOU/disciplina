@@ -1,0 +1,22 @@
+<<: !include "../hpack/module.yaml"
+
+name: disciplina-pdfs
+description: Disciplina tools for work with PDFs
+
+library:
+  <<: *lib-common
+
+  dependencies:
+    - bytestring
+    - base64-bytestring
+    - hashable
+
+tests:
+  disciplina-witness-test:
+    <<: *test-common
+
+    dependencies:
+      - bytestring
+      - disciplina-pdfs
+      - hspec
+      - QuickCheck

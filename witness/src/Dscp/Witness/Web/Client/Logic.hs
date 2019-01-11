@@ -36,6 +36,7 @@ hoistWitnessClient nat es =
     , wGetPublications = nat ... wGetPublications es
     , wGetHashType = nat ... wGetHashType es
     , wCheckFairCV = nat ... wCheckFairCV es
+    , wCheckFairCVPDF = nat ... wCheckFairCVPDF es
     }
 
 createWitnessClient :: MonadIO m => BaseUrl -> m WitnessClient
