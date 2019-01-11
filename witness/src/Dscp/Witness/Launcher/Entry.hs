@@ -28,7 +28,6 @@ withWitnessBackground :: FullWitnessWorkMode ctx m => m () -> m ()
 withWitnessBackground cont = do
     initStorage
 
-    -- todo git revision
     logInfo $ "Genesis header: " +| genesisHeader |+ ""
 
     workers <- witnessWorkers
