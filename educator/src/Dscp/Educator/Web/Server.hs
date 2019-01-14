@@ -20,10 +20,10 @@ import Servant ((:<|>) (..), Context (..), Handler, ServantErr (..), Server, Std
                 hoistServerWithContext, serveWithContext)
 import Servant.Auth.Server.Internal.ThrowAll (throwAll)
 import Servant.Generic (toServant)
-import UnliftIO (UnliftIO (..), askUnliftIO)
+import UnliftIO (askUnliftIO)
 
 import Dscp.Core (mkAddr)
-import Dscp.DB.SQLite (invoke)
+import Dscp.DB.SQLite (SQLiteDB, invoke)
 import Dscp.Educator.Config
 import Dscp.Educator.DB (existsStudent)
 import Dscp.Educator.Launcher.Mode (EducatorNode, EducatorWorkMode)
@@ -86,10 +86,10 @@ createStudentCheckAction
 createStudentCheckAction EducatorBotParams {..}
     | ebpEnabled = return . StudentCheckAction . const $ pure True
     | otherwise = do
-          UnliftIO unliftIO <- askUnliftIO
+          db <- view (lensOf @SQLiteDB)
           return . StudentCheckAction $ \pk ->
               let addr = mkAddr pk
-              in unliftIO (invoke $ existsStudent addr)
+              in runReaderT (invoke $ existsStudent addr) db
 
 -- | CORS is enabled to ease development for frontend team.
 educatorCors :: Middleware

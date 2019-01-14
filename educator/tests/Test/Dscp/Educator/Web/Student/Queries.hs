@@ -56,7 +56,7 @@ submission1 : _ = detGen 23423 $ do
         <&> \(_sStudentId, _sContentsHash, (hash -> _sAssignmentHash))
             -> Submission{..}
 
-createCourseSimple :: (MonadQuery m, WithinWriteTx) => Int -> m Course
+createCourseSimple :: DBM m => Int -> DBT 'WithinTx 'Writing m Course
 createCourseSimple i =
     createCourse
         CourseDetails
@@ -91,7 +91,7 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
   describe "Courses" $ do
     describe "getCourse" $ do
         it "Student is not enrolled initially" $
-            sqliteProperty $ \_ctx () -> do
+            sqliteProperty $ \() -> do
                 _ <- createStudent student1
                 _ <- createCourseSimple 1
 
@@ -99,7 +99,7 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
                 return (not $ ciIsEnrolled course)
 
         it "Student gets enrolled when she asks to" $
-            sqliteProperty $ \_ctx () -> do
+            sqliteProperty $ \() -> do
                 _ <- createStudent student1
                 _ <- createCourseSimple 1
                 enrollStudentToCourse student1 courseId1
@@ -108,7 +108,7 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
                 return (ciIsEnrolled course)
 
         it "'Course' datatype is filled correctly" $
-            sqlitePropertyM $ \_ctx -> do
+            sqlitePropertyM $ do
                 courseDetails <- pick arbitrary
                 pre $ isJust (cdCourseId courseDetails)
                 let courseId = cdCourseId courseDetails
@@ -126,7 +126,7 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
                         }
 
         it "Student has vision proper for him" $
-            sqliteProperty $ \_ctx () -> do
+            sqliteProperty $ \() -> do
                 _ <- createStudent student1
                 _ <- createStudent student2
                 _ <- createCourseSimple 1
@@ -137,8 +137,8 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
                 return (not $ ciIsEnrolled course)
 
         it "Course 'isFinished' flag is correct" $
-            sqliteProperty $ \_ctx
-               ( delayedGen
+            sqliteProperty $
+              \( delayedGen
                  (genCoreTestEnv simpleCoreTestParams
                   { ctpAssignment = assignmentItemsForSameCourse }) -> env
                , delayedGen (infiniteList @(Maybe Grade)) -> mgrades
@@ -167,7 +167,7 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
 
     describe "getCourses" $ do
         it "Student is not enrolled initially" $
-            sqliteProperty $ \_ctx () -> do
+            sqliteProperty $ \() -> do
                 _ <- createStudent student1
                 _ <- createCourseSimple 1
 
@@ -175,7 +175,7 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
                 return . not $ any ciIsEnrolled courses
 
         it "Student gets enrolled when he asks to" $
-            sqliteProperty $ \_ctx () -> do
+            sqliteProperty $ \() -> do
                 _ <- createStudent student1
                 _ <- createCourseSimple 1
                 enrollStudentToCourse student1 courseId1
@@ -185,7 +185,7 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
                 return (ciIsEnrolled course1)
 
         it "'Course' datatype is filled correctly" $
-            sqliteProperty $ \_ctx
+            sqliteProperty $ \
               ( courseId
               , desc
               , delayedGen listUnique -> subjects
@@ -201,7 +201,7 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
                     }
 
         it "Student has vision proper for him" $
-            sqliteProperty $ \_ctx () -> do
+            sqliteProperty $ \() -> do
                 _ <- createStudent student1
                 _ <- createStudent student2
                 _ <- createCourseSimple 1
@@ -216,7 +216,7 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
                 return (map ciIsEnrolled courses === [True, False])
 
         it "Filtering on IsEnrolled works" $
-            sqliteProperty $ \_ctx () -> do
+            sqliteProperty $ \() -> do
                 _ <- createStudent student1
                 _ <- createCourseSimple 1
                 _ <- createCourseSimple 2
@@ -232,8 +232,8 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
                     map ciDesc notEnrolled === ["course 1"]
 
         it "Course 'isFinished' flag is correct" $
-            sqliteProperty $ \_ctx
-               (delayedGen
+            sqliteProperty $
+              \( delayedGen
                  (genCoreTestEnv simpleCoreTestParams
                   { ctpAssignment = assignmentItemsForSameCourse }) -> env
                , delayedGen (infiniteList @(Maybe Grade)) -> mgrades
@@ -266,7 +266,7 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
   describe "Assignments" $ do
     describe "getAssignment" $ do
         it "Fails on request of non-existent assignment" $
-            sqliteProperty $ \_ctx () ->
+            sqliteProperty $ \() ->
                 throwsPrism (_AbsentError . _AssignmentDomain) $ do
                     _ <- createStudent student1
                     studentGetAssignment student1 (hash assignment1)
@@ -274,7 +274,7 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
         it "Fails when student is not assigned to submission" $
             -- Student is required to just take his recent submission,
             -- but we have to fail on all unautharized actions.
-            sqliteProperty $ \_ctx assignment -> do
+            sqliteProperty $ \assignment -> do
                 let course = _aCourseId assignment
                 _ <- createStudent student1
                 _ <- createCourse $ simpleCourse course
@@ -283,7 +283,7 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
                     studentGetAssignment student1 (hash assignment1)
 
         it "Returns existing assignment properly" $
-            sqliteProperty $ \_ctx assignment -> do
+            sqliteProperty $ \assignment -> do
                 let assignmentH = hash assignment
                 let course = _aCourseId assignment
                 _ <- createStudent student1
@@ -303,7 +303,7 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
                     }
 
         it "Student sees only his assignment" $
-            sqliteProperty $ \_ctx
+            sqliteProperty $ \
               ( delayedGen (vectorUnique 2) -> [assignment, needlessAssignment]
               ) -> do
                 let course = _aCourseId assignment
@@ -317,7 +317,7 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
 
     describe "getAssignments" $ do
         it "Student has no last submission initially" $
-            sqliteProperty $ \_ctx () -> do
+            sqliteProperty $ \() -> do
                 let course = _aCourseId assignment1
                 _ <- createStudent student1
                 _ <- createCourse $ simpleCourse course
@@ -328,8 +328,8 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
                 return $ all (isNothing . aiLastSubmission) assignments
 
         it "Returns existing assignment properly and only related to student" $
-            sqliteProperty $ \_ctx
-               (delayedGen (vectorUnique 2)
+            sqliteProperty $
+              \(delayedGen (vectorUnique 2)
                  -> assignments@[assignment, needlessAssignment]) -> do
                 let assignmentH = hash assignment
                 _ <- createStudent student1
@@ -352,7 +352,7 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
                     }
 
         it "Filtering works" $
-            sqliteProperty $ \_ctx
+            sqliteProperty $ \
               ( delayedGen listUnique -> preAssignments
               , courseF
               , docTypeF
@@ -381,8 +381,8 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
                 return $ sortOn aiHash assignments === sortOn aiHash assignments'
 
         it "Last submission is actually the last" $
-            sqliteProperty $ \_ctx
-               ( delayedGen
+            sqliteProperty $
+              \( delayedGen
                  (genCoreTestEnv simpleCoreTestParams) -> env
                ) -> do
                 let student = tiOne $ cteStudents env
@@ -406,7 +406,7 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
                     -- Just (studentLiftSubmission lastSubmission Nothing)
 
         it "Cannot see the last submission of other students" $
-            sqlitePropertyM $ \_ctx -> do
+            sqlitePropertyM $ do
                 env <- pickSmall $ genCoreTestEnv wildCoreTestParams
                 let student = tiOne $ cteStudents env
                     submissions = tiList $ cteSubmissions env
@@ -432,7 +432,7 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
         -- there are still some student-specific things we'd like to check
 
         it "Fails when student is not submission owner" $
-            sqlitePropertyM $ \_ctx -> do
+            sqlitePropertyM $ do
                 env <- pickSmall $ genCoreTestEnv simpleCoreTestParams
                 user <- pick arbitrary
 
@@ -458,7 +458,7 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
 
     describe "getSubmissions" $ do
         it "Returns existing submission properly and only related to student" $
-            sqlitePropertyM $ \_ctx -> do
+            sqlitePropertyM $ do
                 env <- pickSmall $ genCoreTestEnv wildCoreTestParams
                 let sigSubs = tiList $ cteSignedSubmissions env
                 pre (length sigSubs >= 2)
@@ -479,14 +479,14 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
 
     describe "deleteSubmission" $ do
         it "Deletion of non-existing submission throws" $
-            sqliteProperty $ \_ctx submission -> do
+            sqliteProperty $ \submission -> do
                 _ <- createStudent student1
                 throwsPrism (_AbsentError . _SubmissionDomain) $
                     commonDeleteSubmission (hash submission) (Just student1)
 
         it "Delete works" $
-            sqliteProperty $ \_ctx
-               ( delayedGen (genCoreTestEnv simpleCoreTestParams) -> env
+            sqliteProperty $
+              \( delayedGen (genCoreTestEnv simpleCoreTestParams) -> env
                ) -> do
                   let student = tiOne $ cteStudents env
                       subToDel = tiOne $ cteSignedSubmissions env
@@ -504,8 +504,8 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
                   return $ sortOn siHash subAfter === sortOn siHash expected
 
         it "Can not delete graded submission" $
-            sqliteProperty $ \_ctx
-               ( delayedGen (genCoreTestEnv simpleCoreTestParams) -> env
+            sqliteProperty $
+              \( delayedGen (genCoreTestEnv simpleCoreTestParams) -> env
                ) -> do
                 let student = tiOne $ cteStudents env
                     sigSub = tiOne $ cteSignedSubmissions env
@@ -518,8 +518,8 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
                      commonDeleteSubmission (hash sub) (Just student)
 
         it "Can not delete other student's submission" $
-            sqliteProperty $ \_ctx
-               ( delayedGen (genCoreTestEnv simpleCoreTestParams) -> env
+            sqliteProperty $
+              \( delayedGen (genCoreTestEnv simpleCoreTestParams) -> env
                , otherStudent
                ) -> do
                 let student = tiOne $ cteStudents env
@@ -536,8 +536,8 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
 
     describe "makeSubmission" $ do
         it "Making same submission twice throws" $
-            sqliteProperty $ \_ctx
-               ( delayedGen (genCoreTestEnv simpleCoreTestParams) -> env
+            sqliteProperty $
+              \( delayedGen (genCoreTestEnv simpleCoreTestParams) -> env
                ) -> do
                 let sigSub = tiOne $ cteSignedSubmissions env
 

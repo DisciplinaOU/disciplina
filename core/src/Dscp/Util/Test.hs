@@ -44,7 +44,6 @@ import Test.QuickCheck.Arbitrary.Generic as T (genericArbitrary, genericShrink)
 import Test.QuickCheck.Gen (Gen (..))
 import Test.QuickCheck.Instances as T ()
 import Test.QuickCheck.Monadic as T (PropertyM, monadic, pick, stop)
-import Test.QuickCheck.Monadic (PropertyM (..))
 import Test.QuickCheck.Property as T (failed, rejected, succeeded)
 import Test.QuickCheck.Property (reason)
 import Test.QuickCheck.Random (QCGen, mkQCGen)
@@ -192,17 +191,6 @@ pickSmall = pick . Q.resize 5
 -- | Decrease required number of successful runs of the test case.
 divideMaxSuccessBy :: Int -> SpecWith a -> SpecWith a
 divideMaxSuccessBy times = modifyMaxSuccess $ max 1 . (`div` times)
-
--- | Change the monad under 'PropertyM'.
--- Note that your hoist functions can be invoked several times, so
--- it doesn't fit for e.g. converting to/from State monad.
-hoistPropertyM
-    :: (forall a. m a -> n a)
-    -> (forall a. n a -> m a)
-    -> PropertyM m r
-    -> PropertyM n r
-hoistPropertyM hst1 hst2 (MkPropertyM action) =
-    MkPropertyM $ \cont -> fmap hst1 $ action (fmap hst2 . cont)
 
 ----------------------------------------------------------------------------
 -- Helpers for data generation

@@ -35,10 +35,10 @@ educatorApiHandlers =
         invoke $ educatorGetStudents mCourse
 
     , eAddStudent = \(NewStudent student) ->
-        void $ invoke $ createStudent student
+        void . invoke $ createStudent student
 
-    , eDeleteStudent = \student ->
-        invoke $ educatorRemoveStudent student
+    , eDeleteStudent =
+        invoke ... educatorRemoveStudent
 
     , eAddStudentCourse = \student (NewStudentCourse course) ->
         transactW $ enrollStudentToCourse student course
@@ -46,8 +46,8 @@ educatorApiHandlers =
     , eAddStudentAssignment = \student (NewStudentAssignment assignmentHash) ->
         transactW $ setStudentAssignment student assignmentHash
 
-    , eDeleteStudentAssignment = \student assignment ->
-        invoke $ educatorUnassignFromStudent student assignment
+    , eDeleteStudentAssignment =
+        invoke ... educatorUnassignFromStudent
 
       -- Courses
 
@@ -61,8 +61,8 @@ educatorApiHandlers =
             , cdSubjects = subjects
             }
 
-    , eGetCourse = \courseId ->
-        transactR $ educatorGetCourse courseId
+    , eGetCourse =
+        invoke ... educatorGetCourse
 
       -- Assignments
 
@@ -71,7 +71,7 @@ educatorApiHandlers =
             def{ afCourse, afStudent, afIsFinal }
 
     , eAddAssignment = \_autoAssign na -> do
-        void $ transactW $ createAssignment (requestToAssignment na)
+        void . transactW $ createAssignment (requestToAssignment na)
         -- TODO [DSCP-176]: consider autoassign
 
       -- Submissions
@@ -80,8 +80,8 @@ educatorApiHandlers =
         invoke $ educatorGetSubmissions
             def{ sfCourse, sfStudent, sfAssignmentHash }
 
-    , eGetSubmission = \submissionId ->
-        invoke $ educatorGetSubmission submissionId
+    , eGetSubmission =
+        invoke ... educatorGetSubmission
 
     , eDeleteSubmission = \submissionH ->
         transactW $ commonDeleteSubmission submissionH Nothing
@@ -92,7 +92,7 @@ educatorApiHandlers =
         invoke $ educatorGetGrades course student assignment isFinalF
 
     , eAddGrade = \(NewGrade subH grade) ->
-        transactW $ educatorPostGrade subH grade
+        invoke $ educatorPostGrade subH grade
 
       -- Proofs
 

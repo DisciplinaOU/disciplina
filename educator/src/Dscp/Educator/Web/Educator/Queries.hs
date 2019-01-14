@@ -62,8 +62,8 @@ es :: DatabaseSettings be EducatorSchema
 es = educatorSchema
 
 educatorRemoveStudent
-    :: (MonadEducatorWebQuery m, WithinWrite)
-    => Student -> m ()
+    :: MonadEducatorWebQuery m
+    => Student -> DBT t 'Writing m ()
 educatorRemoveStudent student = do
     -- TODO [DSCP-176]: Proper implementation of this method may require
     -- fundemental rethinking of our database scheme and rewriting many code.
@@ -73,7 +73,7 @@ educatorRemoveStudent student = do
 
 educatorGetStudents
     :: MonadEducatorWebQuery m
-    => Maybe Course -> m [StudentInfo]
+    => Maybe Course -> DBT t w m [StudentInfo]
 educatorGetStudents courseF = do
     runSelectMap StudentInfo . select $ do
         student <- all_ (esStudents es)
@@ -82,8 +82,8 @@ educatorGetStudents courseF = do
         return (srAddr student)
 
 educatorGetCourses
-    :: MonadEducatorWebQuery m
-    => Maybe Student -> m [CourseEducatorInfo]
+    :: DBM m
+    => Maybe Student -> DBT t w m [CourseEducatorInfo]
 educatorGetCourses studentF = do
     res :: [(Course, Text, Maybe Subject)] <- runSelect $ select query
     return
@@ -104,8 +104,8 @@ educatorGetCourses studentF = do
         return (crId course, crDesc course, srId subject)
 
 educatorGetCourse
-    :: (MonadEducatorWebQuery m, WithinTx)
-    => Course -> m CourseEducatorInfo
+    :: MonadEducatorWebQuery m
+    => Course -> DBT t w m CourseEducatorInfo
 educatorGetCourse courseId = do
     ciDesc <- selectByPk crDesc (esCourses es) courseId
                 `assertJust` AbsentError (CourseDomain courseId)
@@ -113,10 +113,10 @@ educatorGetCourse courseId = do
     return CourseEducatorInfo{ ciId = courseId, .. }
 
 educatorUnassignFromStudent
-    :: (MonadEducatorWebQuery m, WithinWrite)
+    :: MonadEducatorWebQuery m
     => Student
     -> Hash Assignment
-    -> m ()
+    -> DBT t 'Writing m ()
 educatorUnassignFromStudent student assignH = do
     runDelete $ delete (esStudentAssignments es) (val_ (student <:-:> assignH) ==.)
     -- we are not deleting any other info since educator may want it to be preserved
@@ -126,7 +126,7 @@ educatorUnassignFromStudent student assignH = do
 educatorGetAssignment
     :: MonadEducatorWebQuery m
     => Hash Assignment
-    -> m AssignmentEducatorInfo
+    -> DBT t w m AssignmentEducatorInfo
 educatorGetAssignment assignH =
     selectByPk educatorAssignmentInfoFromRow (esAssignments es) assignH
         >>= nothingToThrow (AbsentError $ AssignmentDomain assignH)
@@ -135,7 +135,7 @@ educatorGetAssignment assignH =
 educatorGetAssignments
     :: MonadEducatorWebQuery m
     => EducatorGetAssignmentsFilters
-    -> m [AssignmentEducatorInfo]
+    -> DBT t w m [AssignmentEducatorInfo]
 educatorGetAssignments filters = do
     runSelectMap educatorAssignmentInfoFromRow . select $ do
         assignment <- all_ (esAssignments es)
@@ -155,21 +155,21 @@ educatorGetAssignments filters = do
 educatorGetSubmission
     :: MonadEducatorWebQuery m
     => Hash Submission
-    -> m SubmissionEducatorInfo
+    -> DBT t w m SubmissionEducatorInfo
 educatorGetSubmission subH = do
     submissions <- runSelectMap educatorSubmissionInfoFromRow . select $ do
         submission <- related_ (esSubmissions es) (valPk_ subH)
         mPrivateTx <- leftJoin_ (all_ $ esTransactions es)
                                 ((`references_` submission) . trSubmission)
         return (submission, mPrivateTx)
-    maybeOneOrError submissions
-        & nothingToThrow (AbsentError $ SubmissionDomain subH)
+    listToMaybeWarn submissions
+        >>= nothingToThrow (AbsentError $ SubmissionDomain subH)
 
 -- | Get all registered submissions.
 educatorGetSubmissions
     :: MonadEducatorWebQuery m
     => EducatorGetSubmissionsFilters
-    -> m [SubmissionEducatorInfo]
+    -> DBT t w m [SubmissionEducatorInfo]
 educatorGetSubmissions filters = do
     runSelectMap educatorSubmissionInfoFromRow . select $ do
         submission <- all_ (esSubmissions es)
@@ -193,7 +193,7 @@ educatorGetGrades
     -> Maybe Student
     -> Maybe (Hash Assignment)
     -> Maybe IsFinal
-    -> m [GradeInfo]
+    -> DBT t w m [GradeInfo]
 educatorGetGrades courseIdF studentF assignmentF isFinalF =
     runSelectMap gradeInfoFromRow . select $ do
         privateTx <- all_ (esTransactions es)
@@ -210,8 +210,8 @@ educatorGetGrades courseIdF studentF assignmentF isFinalF =
         return privateTx
 
 educatorPostGrade
-    :: (MonadEducatorWebQuery m, WithinWriteTx)
-    => Hash Submission -> Grade -> m ()
+    :: MonadEducatorWebQuery m
+    => Hash Submission -> Grade -> DBT t 'Writing m ()
 educatorPostGrade subH grade = do
     time <- liftIO getCurrentTime
     sigSub <- getSignedSubmission subH
