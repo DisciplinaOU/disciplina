@@ -26,7 +26,7 @@ import Test.Dscp.Witness.Mode
 data TxCreationSteps = TxCreationSteps
     { _tcsInAcc   :: Address -> TxInAcc
     , _tcsTx      :: TxInAcc -> Coin -> [TxOut] -> Tx
-    , _tcsWitness :: Signature (TxId, PublicKey, ()) -> PublicKey -> TxWitness
+    , _tcsWitness :: Signature (TxId, PublicKey) -> PublicKey -> TxWitness
     , _tcsFixFees :: (Fees -> TxWitnessed) -> TxWitnessed
     }
 
@@ -74,7 +74,7 @@ makeTx steps dat = _tcsFixFees steps $ \fee ->
         spent = leftToPanic $ sumCoins $
                 unFees fee : (map txOutValue $ toList (tdOuts dat))
         tx = _tcsTx steps inAcc spent (toList $ tdOuts dat)
-        sgn = sign (tdSecret dat) (toTxId tx, sourcePk, ())
+        sgn = sign (tdSecret dat) (toTxId tx, sourcePk)
         witness = _tcsWitness steps sgn sourcePk
     in TxWitnessed{ twTx = tx, twWitness = witness }
 
@@ -106,18 +106,20 @@ spec_Money_tx_application = do
             nonce <- pick $ arbitrary `suchThat` (/= 0)
             let steps = properSteps & tcsInAcc .~ \addr -> TxInAcc addr nonce
             let tx = makeTx steps txData
-            lift $ throwsPrism (_AccountError . _NonceMustBeIncremented) $
+            lift $ throwsPrism (_AccountError . _NonceMismatch) $
                 applyTx tx
 
-        it "Bad input address is not fine" $ witnessProperty $ do
+        it "Input address different from signer is not fine" $ witnessProperty $ do
             txData <- pick genSafeTxData
-            sourceAddr <- pick (arbitrary @Address)
+            sourceAddr <- mkAddr . toPublic <$> pick selectGenesisSecret
             pre (sourceAddr /= mkAddr (toPublic $ tdSecret txData))
 
             let steps = properSteps
                     & tcsInAcc %~ \f addr -> (f addr){ tiaAddr = sourceAddr }
             let tx = makeTx steps txData
-            lift $ throwsSome $ applyTx tx
+
+            lift $ throwsPrism (_AccountError . _WitnessMismatchesInput) $
+                applyTx tx
 
         it "Having no money is not fine" $ witnessProperty $ do
             txData' <- pick genSafeTxData
@@ -125,7 +127,7 @@ spec_Money_tx_application = do
             let txData = txData'{ tdSecret = secret }
 
             let tx = makeTx properSteps txData
-            lift $ throwsPrism (_AccountError . _BalanceCannotBecomeNegative) $
+            lift $ throwsPrism (_AccountError . _InsufficientBalance) $
                 applyTx tx
 
         it "Can't spend more money than currently present" $ witnessProperty $ do
@@ -139,7 +141,7 @@ spec_Money_tx_application = do
             let txOuts = L.head $ manyEnoughL
             txData <- pick $ genSafeTxData <&> \td -> td{ tdOuts = Exts.fromList txOuts }
             let tx = makeTx properSteps txData
-            lift $ throwsPrism (_AccountError . _BalanceCannotBecomeNegative) $
+            lift $ throwsPrism (_AccountError . _InsufficientBalance) $
                 applyTx tx
 
         it "Too high input is processed fine" $ witnessProperty $ do
@@ -166,8 +168,7 @@ spec_Money_tx_application = do
             txData <- pick genSafeTxData
                       <&> tdOutsL . _headNE . txOutValueL .~ minBound @Coin
             let tx = makeTx properSteps txData
-            lift $ throwsPrism (_AccountError .
-                                (_ReceiverMustIncreaseBalance <> _PaymentMustBePositive)) $
+            lift $ throwsPrism (_AccountError . _OutputIsEmpty) $
                 applyTx tx
 
         it "Large outputs are fine" $ witnessProperty $ do
@@ -225,7 +226,7 @@ spec_Money_tx_application = do
             -- going to skip transaction before the last one
             let initTxs = init . Exts.fromList $ init txs
             lift $ forM_ initTxs applyTx
-            lift $ throwsPrism (_AccountError . _NonceMustBeIncremented) $
+            lift $ throwsPrism (_AccountError . _NonceMismatch) $
                 applyTx (last txs)
 
         it "Several transactions exhausting account" $ witnessProperty $ do
@@ -235,7 +236,7 @@ spec_Money_tx_application = do
                              (coinToInteger testGenesisAddressAmount * 3) `div` 4
                 txData = txData'{ tdOuts = one $ TxOut destination spentPerTx }
                 txs = makeTxsChain 2 properSteps txData
-            lift $ throwsPrism (_AccountError . _BalanceCannotBecomeNegative) $
+            lift $ throwsPrism (_AccountError . _InsufficientBalance) $
                 mapM_ applyTx txs
 
         it "Two same transactions" $ witnessProperty $ do

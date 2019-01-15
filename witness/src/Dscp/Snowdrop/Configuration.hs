@@ -284,7 +284,7 @@ type PublicationTxProof =
     PersonalisedProof T.PublicationTxId T.PrivateBlockHeader
 
 data Proofs
-    = AddressTxWitnessProof     AddrTxProof         -- ^ Money transaction witness
+    = AddressTxWitnessProof                        -- ^ Money transaction witness
     | PublicationTxWitnessProof PublicationTxProof  -- ^ Publication transaction witness
     | BlockMetaTxWitnessProof                       -- ^ Block meta transaction witness
     deriving (Eq, Show, Generic)

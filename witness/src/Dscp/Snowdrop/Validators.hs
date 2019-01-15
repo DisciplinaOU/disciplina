@@ -28,23 +28,12 @@ validator = _baseValidator
 instance SD.HasGetter PublicKey Address where
     gett = Address . hash
 
-instance SD.HasPrism Proofs AddrTxProof where
-    proj (AddressTxWitnessProof it) = Just it
-    proj  _                         = Nothing
-
-instance SD.HasReview Proofs AddrTxProof where
-    inj = AddressTxWitnessProof
-
 instance SD.HasPrism Proofs PublicationTxProof where
     proj (PublicationTxWitnessProof it) = Just it
     proj  _                             = Nothing
 
 instance SD.HasReview Proofs PublicationTxProof where
     inj = PublicationTxWitnessProof
-
-instance SD.HasPrism Proofs TxId where
-    proj (AddressTxWitnessProof (SD.wsBody . ppSignedPart -> (it, _, _))) = Just it
-    proj  _                                                               = Nothing
 
 -- | We have to implement one part of the Prism ("contains"), bu we
 --   can't rebuild Proofs from TxId back.
@@ -61,7 +50,7 @@ instance SD.HasReview Proofs PublicationTxId where
     inj = error "impossible to implement"
 
 instance SD.HasGetter Proofs PublicKey where
-    gett (AddressTxWitnessProof     (SD.wsBody . ppSignedPart -> (_, it, _))) = it
+    gett AddressTxWitnessProof = error ":shrug:"
     gett (PublicationTxWitnessProof (SD.wsBody . ppSignedPart -> (_, it, _))) = it
     gett BlockMetaTxWitnessProof = error "No public key kept for block meta"
 

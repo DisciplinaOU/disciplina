@@ -187,7 +187,7 @@ instance Serialise Tx => HasId Tx where
 -- (@kirill.andreev). Public key hash should be equal to the input address.
 -- Also, public key should be the same which used to validate signature.
 data TxWitness = TxWitness
-    { txwSig :: !(Signature (TxId, PublicKey, ()))
+    { txwSig :: !(Signature (TxId, PublicKey))  -- TODO: do we need 'PublicKey' here?
     , txwPk  :: !PublicKey
     } deriving (Eq, Ord, Show, Generic)
 
