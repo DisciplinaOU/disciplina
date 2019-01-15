@@ -1,4 +1,3 @@
-
 import Data.Aeson
 import Servant.Client
 import Test.QuickCheck
@@ -9,12 +8,14 @@ import Loot.Log
 import Dscp.Core
 import Dscp.Crypto
 import Dscp.Educator.Web.Student
+import Dscp.Educator.Web.Types
 import Dscp.Resource.Keys
-import Dscp.Util (leftToFail)
+import Dscp.Util (leftToFail, nothingToFail)
 import Dscp.Util.Test (detGenG)
 import Dscp.Witness.Web hiding (checkFairCV)
 
 import Client
+import Options
 
 -- This is a copy of dscp-keygen's parseInputWithSecret (for SecretFromSeed)
 secretFromSeed :: ByteString -> Maybe SecretKey
@@ -25,13 +26,6 @@ secretFromSeed input = asum [
     , do
         return $ withSeed input genSecretKey
     ]
-
-createActor :: IO (SecretKey, PublicKey, Address)
-createActor = do
-    Just sk   <- return $ secretFromSeed ("456" :: ByteString)
-    pk   <- return (toPublic sk)
-    addr <- return (mkAddr   pk)
-    return (sk, pk, addr)
 
 createActorOf :: SecretKey -> IO (PublicKey, Address)
 createActorOf sk = do
@@ -46,20 +40,26 @@ instance MonadLogging IO where
 
 main :: IO ()
 main = do
-    [wUrl, eUrl, skFile] <- getArgs
+    FaircvOptions {..} <- getFaircvOptions
+
     -- create the APIs clients
-    wClient <- createWitnessClient =<< parseBaseUrl wUrl
-    sClient <- createStudentApiClient =<< parseBaseUrl eUrl
+    wClient <- createWitnessClient =<< parseBaseUrl witnessUrl
+    sClient <- createStudentApiClient =<< parseBaseUrl educatorUrl
 
     -- read educator's secret key from the file
-    store <- readStore skFile emptyPassPhrase
+    store <- readStore secretKeyFile emptyPassPhrase
     sk <- return $ store^.krSecretKey
 
+    -- make student secret key from a seed
+    skS <- nothingToFail "Could not make student secret key" $
+        secretFromSeed studentSeed
+
     -- make keys and addresses for educator and students
-    (_pk,  addr)      <- createActorOf sk
-    (skS, pkS, addrS) <- createActor
+    (_pk,  addr) <- createActorOf sk
+    (pkS, addrS) <- createActorOf skS
 
     let seed = "47295" :: Text -- NOTE: this can be randomized, or user defined
+        waitingTime = sec refreshRate
         infoToSubmission :: AssignmentStudentInfo -> Submission
         infoToSubmission assInfo = Submission
             { _sStudentId      = addrS
@@ -76,15 +76,22 @@ main = do
             }
         infoToNewSub :: AssignmentStudentInfo -> NewSubmission
         infoToNewSub = signedSubmissionToRequest . toSignedSubmission . infoToSubmission
+        waitForProofs :: [SubmissionStudentInfo] -> IO ()
+        waitForProofs [] = return ()
+        waitForProofs (info:infos) = do
+            newInfo <- sGetSubmission sClient $ siHash info
+            case giHasProof <$> siGrade newInfo of
+                Just True -> waitForProofs infos
+                _ -> threadDelay waitingTime >> waitForProofs (info:infos)
 
     -- Get all the available assignments for this student
     assLst <- sGetAssignments sClient Nothing Nothing Nothing False
     -- Make a new submission from the first one, then send it
-    mapM_ (sendSubmission sClient . infoToNewSub) $ take 1 assLst
+    subInfos <- mapM (sendSubmission sClient . infoToNewSub) $ take 1 assLst
 
-    -- Wait some time for the proofs to be available, then get them and make a faircv
+    -- Wait for the proofs to be available, then get them and make a faircv
     logInfo "Submissions sent, waiting for proofs"
-    threadDelay $ sec 20
+    waitForProofs subInfos
     proofs <- sGetProofs sClient Nothing False
     
     fcvrs <- mapM (blkToFairCV addrS "John Doe" addr) proofs
