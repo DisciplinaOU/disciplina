@@ -188,7 +188,7 @@ getProvenStudentTransactions
     :: forall m.
        DBM m
     => GetProvenStudentTransactionsFilters
-    -> DBT 'WithinTx m [(PrivateHeaderHash, EmptyMerkleProof PrivateTx, [(TxWithinBlockIdx, PrivateTx)])]
+    -> DBT 'WithinTx m [(PrivateHeaderHash, EmptyMerkleProof PrivateTx, [PrivateTx])]
 getProvenStudentTransactions filters = do
     -- Contains `(tx, idx, blockId)` map.
     txsBlockList <- getTxsBlockMap
@@ -201,7 +201,8 @@ getProvenStudentTransactions filters = do
     results <- forM txsBlockMap $ \(blockId, transactions) -> do
         (blockHash, tree) <- getMerkleTreeAndHash blockId
 
-        let indices = Set.fromList $ map (unTxWithinBlockIdx . fst) transactions
+        let indices = Set.fromList $
+                      zipWith const [unTxWithinBlockIdx firstBlockTxIdx ..] transactions
             pruned  = mkEmptyMerkleProof tree indices
 
         return (blockHash, pruned, transactions)
@@ -214,9 +215,10 @@ getProvenStudentTransactions filters = do
       where
         push acc a = Map.insertWith (++) (fst a) [snd a] acc
 
-    getTxsBlockMap :: DBT t m [(BlockIdx, (TxWithinBlockIdx, PrivateTx))]
+    getTxsBlockMap :: DBT t m [(BlockIdx, PrivateTx)]
     getTxsBlockMap =
-        runSelectMap rearrange . select $ do
+        runSelectMap rearrange . select $
+          orderBy_ (\(_bi, (tx, _sub)) -> asc_ (trIdx tx)) $ do
             txId :-: BlockRowId blockIdx <- all_ (esBlockTxs es)
             privateTx <- related_ (esTransactions es) txId
             submission <- related_ (esSubmissions es) (trSubmission privateTx)
@@ -235,11 +237,7 @@ getProvenStudentTransactions filters = do
 
             return (blockIdx, (privateTx, submission))
       where
-        rearrange (bi, (tx, sub)) =
-            let txIdx = case trIdx tx of
-                    TxInMempool    -> error "impossible"
-                    TxBlockIdx idx -> idx
-            in (bi, (txIdx, privateTxFromRow (tx, sub)))
+        rearrange (bi, (tx, sub)) = (bi, privateTxFromRow (tx, sub))
 
     getMerkleTreeAndHash :: BlockIdx -> DBT t m (PrivateHeaderHash, EmptyMerkleTree PrivateTx)
     getMerkleTreeAndHash blockIdx =
@@ -308,6 +306,9 @@ getPrivateBlocksAfterHash phHash = do
     midx <- getPrivateBlockIdxByHash phHash
     forM @Maybe midx getPrivateBlocksAfter
 
+firstBlockTxIdx :: TxWithinBlockIdx
+firstBlockTxIdx = 0
+
 createPrivateBlock
     :: (DBM m, HasCtx ctx m '[KeyResources EducatorNode])
     => Maybe ATGDelta -> DBT 'WithinTx m (Maybe PrivateBlockHeader)
@@ -318,7 +319,7 @@ createPrivateBlock delta = runMaybeT $ do
     let tree = fromList txs
         root = getMerkleRoot tree
 
-        txs' = zip [0..] (getId <$> txs)
+        txs' = zip [firstBlockTxIdx ..] (getId <$> txs)
         bid  = idx + 1
 
         trueDelta = mempty `fromMaybe` delta
