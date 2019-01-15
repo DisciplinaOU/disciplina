@@ -1,6 +1,7 @@
 steps:
   - command: nix-build release.nix -A disciplina-hlint -o hlint.html
     agents:
+      queue: testing
       system: x86_64-linux
     artifact_paths:
     - hlint.html
@@ -8,33 +9,27 @@ steps:
 
   - command: nix-build release.nix -A disciplina-trailing-whitespace --no-out-link
     agents:
+      queue: testing
       system: x86_64-linux
     label: trailing-whitespace
 
   - command: nix-build --no-out-link
     agents:
+      queue: testing
       system: x86_64-linux
     label: build
 
-  - command: nix-build --no-out-link
-    agents:
-      system: x86_64-darwin
-    label: build-darwin
-
   - command: nix-build shell.nix --no-out-link
     agents:
+      queue: testing
       system: x86_64-linux
     label: shell
-
-  - command: nix-build shell.nix --no-out-link
-    agents:
-      system: x86_64-darwin
-    label: shell-darwin
 
   - wait
 
   - command: nix-build release.nix -A disciplina-wallet-flatpak -o disciplina-wallet.flatpak
     agents:
+      queue: testing
       system: x86_64-linux
     artifact_paths:
     - disciplina-wallet.flatpak
@@ -42,20 +37,15 @@ steps:
 
   - command: nix-build release.nix -A disciplina-haddock -o haddock.tar.gz
     agents:
+      queue: testing
       system: x86_64-linux
     artifact_paths:
     - haddock.tar.gz
     label: haddock
 
-  - command: nix-build release.nix -A disciplina-wallet-macos-zip -o disciplina-wallet-macos.zip
-    agents:
-      system: x86_64-darwin
-    artifact_paths:
-    - disciplina-wallet-macos.zip
-    label: macos-zip
-
   - command: nix-build specs -o specs/result
     agents:
+      queue: testing
       system: x86_64-linux
     artifact_paths:
     - specs/result/*.pdf
@@ -63,5 +53,6 @@ steps:
 
   - command: nix-build release.nix -A disciplina --no-out-link
     agents:
+      queue: testing
       system: x86_64-linux
     label: static
