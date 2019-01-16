@@ -1,6 +1,6 @@
 module Test.Dscp.Educator.Publishing where
 
-import qualified GHC.Exts as Exts
+import qualified Data.List as L
 
 import Dscp.Core
 import Dscp.Crypto
@@ -38,16 +38,18 @@ spec_Private_blocks_publishing = specWithTempPostgresServer $ do
     it "Several blocks are successfully published by worker" $ educatorPropertyM $ do
         sk <- lift $ ourSecretKeyData @EducatorNode
         env <- pickSmall $ genCoreTestEnv simpleCoreTestParams
-        let txs = Exts.fromList . ordNub . tiList $ ctePrivateTxs env
+        txsPacks <- pick . groupArbitrarily . ordNub . tiList $ ctePrivateTxs env
 
         blocks <- lift $ do
-            transact $ prepareAndCreateSubmissions env
-            blocks <- forM txs $ \tx -> do
-                _ <- transact $ createTransaction tx
-                nothingToPanic "No block created" <$> dumpPrivateBlock
-            _ <- updateMempoolWithPublications
+            transactW $ prepareAndCreateSubmissions env
+            blocks <- fmap concat . forM txsPacks $ \txs -> do
+                blocks <- forM txs $ \tx -> do
+                    void $ transactW $ createTransaction tx
+                    nothingToPanic "No block created" <$> dumpPrivateBlock
+                void updateMempoolWithPublications
+                return blocks
             return blocks
 
         -- we have tests on publication separately, so just comparing tips
         tip <- lift . runSdMempoolLocked $ getPrivateTipHash (skAddress sk)
-        return $ tip === hash (last blocks)
+        return $ tip === hash (L.last blocks)

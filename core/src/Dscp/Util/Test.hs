@@ -126,6 +126,14 @@ takeSome l = sized $ \n -> do
 shuffleNE :: NonEmpty a -> Gen (NonEmpty a)
 shuffleNE = fmap Exts.fromList . shuffle . toList
 
+-- | Groups given items preserving order.
+groupArbitrarily :: [a] -> Gen [[a]]
+groupArbitrarily [] = pure []
+groupArbitrarily l = do
+    k <- choose (1, length l)
+    let (l1, l2) = splitAt k l
+    (l1 :) <$> groupArbitrarily l2
+
 data AssertionFailed = AssertionFailed String
     deriving (Show, Typeable)
 
