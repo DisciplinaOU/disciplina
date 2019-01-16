@@ -9,7 +9,7 @@ import Loot.Base.HasLens (HasCtx, lensOf)
 import Loot.Log (LoggingIO)
 import UnliftIO (MonadUnliftIO)
 
-import Dscp.DB.SQLite
+import Dscp.DB.SQL
 import Dscp.Educator.DB.Schema
 import Dscp.Resource.Class (AllocResource (..), buildComponentR)
 import Dscp.Rio
@@ -27,7 +27,7 @@ prepareEducatorSchema db = do
 
 instance AllocResource SQL where
     type Deps SQL = PostgresRealParamsRec
-    allocResource p = buildComponentR "SQLite DB" (openPostgresDB' p) closePostgresDB
+    allocResource p = buildComponentR "SQL DB" (openPostgresDB' p) closePostgresDB
       where
         openPostgresDB' p' = do
             db <- openPostgresDB (PostgresParams $ PostgresReal p')

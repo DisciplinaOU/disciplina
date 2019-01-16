@@ -29,10 +29,10 @@ CPP does not allow multi-line output, so writing one macros per instance.
 TH would play better, but supposedly would also work slightly slower.
 -}
 
-#define IsSqliteValue HasSqlValueSyntax PgValueSyntax
+#define IsPgValue HasSqlValueSyntax PgValueSyntax
 
 #define CodecInstanceEnc(TYPE) \
-instance IsSqliteValue (TYPE) where \
+instance IsPgValue (TYPE) where \
     sqlValueSyntax = sqlValueSyntax . serialise'
 
 #define CodecInstanceDec(TYPE) \
@@ -40,7 +40,7 @@ instance FromField (TYPE) where \
     fromField field ty = Codec.deserialise <$> fromField field ty
 
 #define ByteArrayInstanceEnc(TYPE) \
-instance IsSqliteValue (TYPE) where \
+instance IsPgValue (TYPE) where \
     sqlValueSyntax = sqlValueSyntax . BA.convert @_ @ByteString
 
 #define ByteArrayInstanceDec(TYPE) \
@@ -49,7 +49,7 @@ instance FromField (TYPE) where \
         leftToPanic . fromByteArray @(TYPE) @ByteString <$> fromField field ty
 
 #define EnumInstanceEnc(TYPE) \
-instance IsSqliteValue (TYPE) where \
+instance IsPgValue (TYPE) where \
     sqlValueSyntax = sqlValueSyntax . fromEnum
 
 #define EnumInstanceDec(TYPE) \
@@ -91,21 +91,21 @@ CodecInstanceDec(EmptyMerkleTree a)
 
 {- Newtype-derived instances -}
 
-deriving instance IsSqliteValue ItemDesc
+deriving instance IsPgValue ItemDesc
 
-deriving instance IsSqliteValue Timestamp
+deriving instance IsPgValue Timestamp
 
 deriving instance FromField Subject
-deriving instance IsSqliteValue Subject
+deriving instance IsPgValue Subject
 
 deriving instance FromField Course
-deriving instance IsSqliteValue Course
+deriving instance IsPgValue Course
 
 deriving instance FromField Grade
-deriving instance IsSqliteValue Grade
+deriving instance IsPgValue Grade
 
 deriving instance FromField BlockIdx
-deriving instance IsSqliteValue BlockIdx
+deriving instance IsPgValue BlockIdx
 
 {- Custom instances -}
 
@@ -136,7 +136,7 @@ instance FromField Timestamp where
 #define GenFromBackendRow(TYPE) \
 instance (BeamBackend be, BackendFromField be (TYPE)) => FromBackendRow be (TYPE)
 
--- For SQLite they all refer to 'FromField' instances
+-- For Postgres they all refer to 'FromField' instances
 GenFromBackendRow(ItemDesc)
 GenFromBackendRow(Timestamp)
 GenFromBackendRow(Hash a)

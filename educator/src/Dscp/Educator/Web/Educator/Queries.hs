@@ -25,7 +25,7 @@ import Servant (err501)
 
 import Dscp.Core
 import Dscp.Crypto
-import Dscp.DB.SQLite
+import Dscp.DB.SQL
 import Dscp.Educator.DB
 import Dscp.Educator.Web.Educator.Types
 import Dscp.Educator.Web.Queries

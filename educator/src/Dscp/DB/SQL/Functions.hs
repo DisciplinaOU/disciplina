@@ -4,7 +4,7 @@
 {-# LANGUAGE TypeApplications      #-}
 {-# OPTIONS_GHC -Wno-partial-type-signatures #-}
 
-module Dscp.DB.SQLite.Functions
+module Dscp.DB.SQL.Functions
        ( -- * Closing/opening
          openPostgresDB
        , closePostgresDB
@@ -13,11 +13,11 @@ module Dscp.DB.SQLite.Functions
        , borrowConnection
        , forEachConnection
 
-         -- * SQLite context
+         -- * SQL context
        , DBT
        , TransactionalContext (WithinTx)
 
-         -- * SQLite queries building
+         -- * SQL queries building
        , runSelect
        , runSelectMap
        , runInsert
@@ -67,8 +67,8 @@ import UnliftIO (MonadUnliftIO (..), UnliftIO (..), askUnliftIO)
 import qualified UnliftIO as UIO
 
 import Dscp.Config
-import Dscp.DB.SQLite.Error
-import Dscp.DB.SQLite.Types
+import Dscp.DB.SQL.Error
+import Dscp.DB.SQL.Types
 import Dscp.Util
 
 -----------------------------------------------------------
@@ -171,7 +171,7 @@ closePostgresDB sd =
     liftIO $ forEachConnection sd Backend.close
 
 ------------------------------------------------------------
--- SQLite context
+-- SQL context
 ------------------------------------------------------------
 
 -- | Single pack of DB operations.

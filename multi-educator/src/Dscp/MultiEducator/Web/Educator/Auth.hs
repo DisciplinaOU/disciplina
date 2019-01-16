@@ -12,7 +12,7 @@ import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
 import Servant.Auth.Server (FromJWT, ToJWT)
 
-import Dscp.DB.SQLite (SQL)
+import Dscp.DB.SQL (SQL)
 import Dscp.Educator.Launcher.Mode (EducatorNode)
 import Dscp.Resource.Keys (KeyResources)
 

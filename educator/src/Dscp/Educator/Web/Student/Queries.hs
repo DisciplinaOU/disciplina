@@ -19,7 +19,7 @@ import Data.Coerce (coerce)
 import Data.Default (Default)
 import Dscp.Core
 import Dscp.Crypto (Hash)
-import Dscp.DB.SQLite
+import Dscp.DB.SQL
 import Dscp.Educator.DB
 import qualified Dscp.Educator.DB as Base
 import Dscp.Util

@@ -1,4 +1,4 @@
-module Test.Dscp.DB.SQLite.Mode
+module Test.Dscp.DB.SQL.Mode
     ( PostgresTestServer (..)
     , testPostgresParams
     , specWithTempPostgresServer
@@ -19,7 +19,7 @@ import UnliftIO (MonadUnliftIO, UnliftIO (..), askUnliftIO)
 
 import Test.Hspec.Core.Spec (Spec, SpecWith)
 
-import Dscp.DB.SQLite
+import Dscp.DB.SQL
 import Dscp.Educator.DB
 import Dscp.Rio
 import Dscp.Util.Test

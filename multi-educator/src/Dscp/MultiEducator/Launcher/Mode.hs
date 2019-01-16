@@ -31,7 +31,7 @@ import System.FilePath.Posix ((</>))
 
 import Dscp.Config
 import Dscp.Crypto (mkPassPhrase)
-import Dscp.DB.SQLite
+import Dscp.DB.SQL
 import qualified Dscp.Educator.Config as E
 import Dscp.Educator.DB (prepareEducatorSchema)
 import Dscp.Educator.Launcher.Marker (EducatorNode)

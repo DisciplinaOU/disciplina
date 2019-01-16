@@ -27,7 +27,7 @@ import Fmt (blockListF, build, (+|), (|+))
 
 import Dscp.Core
 import Dscp.Crypto
-import Dscp.DB.SQLite.Util
+import Dscp.DB.SQL.Util
 import Dscp.Educator.DB
 import Dscp.Educator.Web.Types
 import Dscp.Util

@@ -11,7 +11,7 @@ import Snowdrop.Util (OldestFirst (..))
 
 import Dscp.Config (option)
 import Dscp.Core
-import Dscp.DB.SQLite
+import Dscp.DB.SQL
 import Dscp.Educator.DB
 import Dscp.Educator.Error
 import Dscp.Educator.Launcher.Mode

@@ -1,6 +1,6 @@
 {-# LANGUAGE ViewPatterns #-}
 
-module Test.Dscp.DB.SQLite.Queries where
+module Test.Dscp.DB.SQL.Queries where
 
 import Prelude
 
@@ -13,7 +13,7 @@ import Dscp.Core.Arbitrary
 import Dscp.Educator.DB as DB
 import Dscp.Util
 
-import Test.Dscp.DB.SQLite.Mode
+import Test.Dscp.DB.SQL.Mode
 import Test.Dscp.Educator.Mode
 
 spec_Instances :: Spec

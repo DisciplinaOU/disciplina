@@ -34,7 +34,7 @@ import Fmt (build, listF, (+|), (|+))
 
 import Dscp.Core
 import Dscp.Crypto
-import Dscp.DB.SQLite.Util
+import Dscp.DB.SQL.Util
 import Dscp.Educator.DB.Schema
 import Dscp.Educator.Web.Types
 import Dscp.Util.Servant (ForResponseLog (..), buildLongResponseList, buildShortResponseList)

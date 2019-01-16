@@ -15,7 +15,7 @@ import Options.Applicative (Parser, auto, flag', help, long, metavar, option, st
 import Time (Second, Time)
 
 import Dscp.CommonCLI
-import Dscp.DB.SQLite
+import Dscp.DB.SQL
 import Dscp.Educator.Config
 import Dscp.Educator.Launcher.Params (EducatorKeyParams)
 import Dscp.Educator.Web.Auth

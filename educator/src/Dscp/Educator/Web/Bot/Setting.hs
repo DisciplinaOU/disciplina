@@ -33,7 +33,7 @@ import UnliftIO.Async (async)
 import Dscp.Config
 import Dscp.Core
 import Dscp.Crypto.Impl
-import Dscp.DB.SQLite
+import Dscp.DB.SQL
 import Dscp.Educator.DB
 import Dscp.Educator.Web.Bot.Params
 import Dscp.Educator.Web.Student.Types

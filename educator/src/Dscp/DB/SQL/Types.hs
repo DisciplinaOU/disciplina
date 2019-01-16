@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedLabels #-}
 
-module Dscp.DB.SQLite.Types
-       ( -- * SQLite bindings
+module Dscp.DB.SQL.Types
+       ( -- * SQL bindings
          ConnectionString (..)
 
        , PostgresRealParams

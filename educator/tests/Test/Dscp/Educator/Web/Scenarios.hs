@@ -13,7 +13,7 @@ import Data.List (nub)
 
 import Dscp.Core
 import Dscp.Crypto
-import Dscp.DB.SQLite
+import Dscp.DB.SQL
 import Dscp.Educator.DB
 
 -- | Puts in db all needed to put 'SignedSubmission's

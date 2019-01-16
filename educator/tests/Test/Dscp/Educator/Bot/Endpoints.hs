@@ -12,7 +12,7 @@ import Dscp.Util.Test
 import Dscp.Witness.Config
 import Test.QuickCheck.Monadic (pick)
 
-import Test.Dscp.DB.SQLite.Mode
+import Test.Dscp.DB.SQL.Mode
 import Test.Dscp.Educator.Mode
 
 student :: Student

@@ -5,7 +5,7 @@
 -- allow SQL transactions to work properly.
 -- Transactions do not work as expected automatically; for instances,
 -- queries are not allowed to be performed concurrently via the same connection.
-module Test.Dscp.DB.SQLite.Transactions where
+module Test.Dscp.DB.SQL.Transactions where
 
 import qualified Control.Concurrent.STM as STM
 import Control.Lens ((?~))
@@ -21,12 +21,12 @@ import Loot.Log (LoggingIO, MonadLogging)
 import UnliftIO (MonadUnliftIO)
 import qualified UnliftIO.Async as UIO
 
-import Dscp.DB.SQLite
+import Dscp.DB.SQL
 import Dscp.Rio
 import Dscp.Util
 import Dscp.Util.Test
 
-import Test.Dscp.DB.SQLite.Mode
+import Test.Dscp.DB.SQL.Mode
 
 type MonadMoney m = (MonadIO m, MonadCatch m, MonadUnliftIO m)
 
@@ -91,8 +91,8 @@ runRealPostgresMode testDb action =
             & option #maxPending ?~ 100000
         }
 
-spec_SQLiteWrapper :: Spec
-spec_SQLiteWrapper = specWithTempPostgresServer $ do
+spec_SQL_wrapper :: Spec
+spec_SQL_wrapper = specWithTempPostgresServer $ do
     it "SQLite wrapper thread-safety" $ \testDb -> ioProperty . runPostgresMode testDb $ do
         transact prepareBankSchema
         let iterations = 100

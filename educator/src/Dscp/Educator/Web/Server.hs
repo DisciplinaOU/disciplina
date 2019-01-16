@@ -23,7 +23,7 @@ import UnliftIO (askUnliftIO)
 
 import Dscp.Config
 import Dscp.Core (mkAddr)
-import Dscp.DB.SQLite (SQL, invoke)
+import Dscp.DB.SQL (SQL, invoke)
 import Dscp.Educator.Config
 import Dscp.Educator.DB (existsStudent)
 import Dscp.Educator.Launcher.Mode (EducatorNode, EducatorWorkMode)

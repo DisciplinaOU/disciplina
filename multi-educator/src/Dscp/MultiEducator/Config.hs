@@ -21,7 +21,7 @@ import Loot.Config ((:::), (::<), ConfigKind (Final, Partial), ConfigRec, upcast
 import Time (Second, Time)
 
 import Dscp.Config
-import Dscp.DB.SQLite
+import Dscp.DB.SQL
 import Dscp.Educator.Web.Config
 import Dscp.MultiEducator.Launcher.Params (MultiEducatorKeyParams)
 import Dscp.Witness.Config

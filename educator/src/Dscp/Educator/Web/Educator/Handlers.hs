@@ -9,7 +9,7 @@ import Data.Default (def)
 import Servant (Handler)
 import UnliftIO (UnliftIO (..))
 
-import Dscp.DB.SQLite
+import Dscp.DB.SQL
 import Dscp.Educator.DB
 import Dscp.Educator.Web.Educator.API
 import Dscp.Educator.Web.Educator.Error

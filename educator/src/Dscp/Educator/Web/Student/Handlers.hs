@@ -10,7 +10,7 @@ import Servant (Handler)
 import UnliftIO (UnliftIO (..))
 
 import Dscp.Core (Student)
-import Dscp.DB.SQLite
+import Dscp.DB.SQL
 import Dscp.Educator.DB
 import Dscp.Educator.Web.Logic
 import Dscp.Educator.Web.Queries

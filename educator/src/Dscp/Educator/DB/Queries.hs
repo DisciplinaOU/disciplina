@@ -23,7 +23,7 @@ module Dscp.Educator.DB.Queries
        , _BlockWithIndexDomain
        , _DeletingGradedSubmission
        , _StudentIsActiveError
-         -- * Synonym for MonadSQLiteDB
+         -- * Synonym for MonadSQL
        , DBM
 
          -- * Utils
@@ -81,9 +81,9 @@ import Snowdrop.Util (OldestFirst (..))
 
 import Dscp.Core
 import Dscp.Crypto
-import Dscp.DB.SQLite.Error (asAlreadyExistsError, asReferenceInvalidError)
-import Dscp.DB.SQLite.Functions
-import Dscp.DB.SQLite.Util
+import Dscp.DB.SQL.Error (asAlreadyExistsError, asReferenceInvalidError)
+import Dscp.DB.SQL.Functions
+import Dscp.DB.SQL.Util
 import Dscp.Educator.DB.BlockData
 import Dscp.Educator.DB.Error
 import Dscp.Educator.DB.Instances ()

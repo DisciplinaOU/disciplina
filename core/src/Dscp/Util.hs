@@ -317,7 +317,7 @@ symbolValT :: forall s. KnownSymbol s => Text
 symbolValT = toText $ symbolVal (Proxy @s)
 
 -----------------------------------------------------------
--- Helper to establish notion of SQLite/db ID
+-- Helper to establish notion of SQL/db ID
 -----------------------------------------------------------
 
 class HasId s where

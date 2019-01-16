@@ -1,9 +1,9 @@
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# OPTIONS_GHC -Wno-partial-type-signatures #-}
 
--- | Utilities for writing SQLite queries.
+-- | Utilities for writing SQL queries.
 
-module Dscp.DB.SQLite.Util
+module Dscp.DB.SQL.Util
      ( module BeamReexport
      , RelationType (..)
      , RelationT (..)
@@ -47,7 +47,7 @@ import qualified GHC.Generics as G
 import GHC.TypeLits (ErrorMessage (Text), TypeError)
 
 import Dscp.Core
-import Dscp.DB.SQLite.Functions
+import Dscp.DB.SQL.Functions
 import Dscp.Util
 
 -- | Type of two entities relation.

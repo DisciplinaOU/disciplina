@@ -7,7 +7,7 @@ module Dscp.Educator.DB.DSL.Interpret.Sqlite3 () where
 import Database.Beam.Query (all_, related_, select)
 
 import qualified Dscp.Core.Foundation as Core
-import Dscp.DB.SQLite
+import Dscp.DB.SQL
 import Dscp.Educator.DB.DSL.Class
 import Dscp.Educator.DB.Queries
 import Dscp.Educator.DB.Schema

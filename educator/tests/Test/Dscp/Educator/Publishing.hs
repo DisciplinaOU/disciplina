@@ -4,14 +4,14 @@ import qualified GHC.Exts as Exts
 
 import Dscp.Core
 import Dscp.Crypto
-import Dscp.DB.SQLite
+import Dscp.DB.SQL
 import Dscp.Educator
 import Dscp.Resource.Keys
 import Dscp.Util
 import Dscp.Util.Test
 import Dscp.Witness
 
-import Test.Dscp.DB.SQLite.Mode
+import Test.Dscp.DB.SQL.Mode
 import Test.Dscp.Educator.Mode
 import Test.Dscp.Educator.Web.Scenarios
 

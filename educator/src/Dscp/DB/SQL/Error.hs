@@ -1,6 +1,6 @@
 -- | Exceptions happening during work with SQLLite.
 
-module Dscp.DB.SQLite.Error
+module Dscp.DB.SQL.Error
     ( SQLConnectionOpenningError (..)
     , SQLRequestsNumberExceeded (..)
 
@@ -17,9 +17,7 @@ import qualified Text.Show
 
 -- | All errors which may happen on DB openning.
 data SQLConnectionOpenningError
-    = SQLInvalidPathError !FilePath
-      -- ^ Used 'SQLiteReal' constructor with bad filepath
-    | SQLInvalidConnectionsNumber !Int
+    = SQLInvalidConnectionsNumber !Int
       -- ^ Bad number of connections passed
     | SQLInvalidMaxPendingNumber !Int
       -- ^ Bad number of max pending threads
@@ -31,8 +29,6 @@ instance Show SQLConnectionOpenningError where
 
 instance Buildable SQLConnectionOpenningError where
     build = \case
-        SQLInvalidPathError path ->
-            "Given unusable path for sqlite database: "+|path|+""
         SQLInvalidConnectionsNumber num ->
             "Illegal number of connections: "+|num|+""
         SQLInvalidMaxPendingNumber num ->
@@ -49,7 +45,7 @@ instance Show SQLRequestsNumberExceeded where
     show = toString . pretty
 
 instance Buildable SQLRequestsNumberExceeded where
-    build _ = "Too many requests to SQLite database"
+    build _ = "Too many requests to SQL database"
 
 instance Exception SQLRequestsNumberExceeded
 

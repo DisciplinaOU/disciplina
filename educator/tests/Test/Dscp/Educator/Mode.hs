@@ -22,7 +22,7 @@ import Dscp.Core
 import Dscp.Crypto
 import Dscp.DB.CanProvideDB as DB
 import Dscp.DB.CanProvideDB.Pure as PureDB
-import Dscp.DB.SQLite
+import Dscp.DB.SQL
 import Dscp.Educator.Arbitrary ()
 import Dscp.Educator.Config
 import Dscp.Educator.Launcher
@@ -34,7 +34,7 @@ import Dscp.Util.HasLens
 import Dscp.Util.Test
 import Dscp.Witness
 
-import Test.Dscp.DB.SQLite.Mode
+import Test.Dscp.DB.SQL.Mode
 
 type Trololo m = (MonadThrow m, MonadCatch m)
 
@@ -54,8 +54,8 @@ deriveHasLens 'tecWitnessVariables ''TestEducatorCtx ''TestWitnessVariables
 
 type TestEducatorM = RIO TestEducatorCtx
 
-runTestSQLiteM :: PostgresTestServer -> TestEducatorM a -> IO a
-runTestSQLiteM testDb action =
+runTestSqlM :: PostgresTestServer -> TestEducatorM a -> IO a
+runTestSqlM testDb action =
     withEducatorConfig testEducatorConfig $
     withWitnessConfig (rcast testEducatorConfig) $
     withPostgresDb testDb $ \rollbackInEnd db ->
@@ -83,7 +83,7 @@ educatorPropertyM
     -> PostgresTestServer
     -> Property
 educatorPropertyM action testDb =
-    monadic (ioProperty . runTestSQLiteM testDb)
+    monadic (ioProperty . runTestSqlM testDb)
             (withEducatorConfig testEducatorConfig $ void $ action >>= stop)
 
 educatorProperty
@@ -104,7 +104,7 @@ sqlPropertyM
     :: Testable prop
     => PropertyM (DBT t TestEducatorM) prop -> PostgresTestServer -> Property
 sqlPropertyM action testDb =
-    monadic (ioProperty . runTestSQLiteM testDb . invokeUnsafe) (void $ action >>= stop)
+    monadic (ioProperty . runTestSqlM testDb . invokeUnsafe) (void $ action >>= stop)
 
 orIfItFails :: MonadCatch m => m a -> a -> m a
 orIfItFails action instead = do

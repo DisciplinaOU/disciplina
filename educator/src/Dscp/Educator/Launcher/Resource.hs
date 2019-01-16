@@ -10,7 +10,7 @@ module Dscp.Educator.Launcher.Resource
 import Control.Lens (makeLenses)
 
 import Dscp.Config
-import Dscp.DB.SQLite (SQL)
+import Dscp.DB.SQL (SQL)
 import Dscp.Educator.Config
 import Dscp.Educator.DB.Resource ()
 import Dscp.Educator.Launcher.Marker (EducatorNode)

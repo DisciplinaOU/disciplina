@@ -154,10 +154,9 @@ sample:
         app-name: "educator"
       min-level: Debug
 
-    # SQLite DB params
+    # SQL DB params
     db:
-      # DB usage mode. If `null`, in-memory SQLite db is used.
-      # Otherwise, it is the object with params for on-disk SQLite connection.
+      # Params for connection to Postgres server.
       mode:
         # Connection string to Postgres server.
         connString: "postgresql:///disciplina-educator"

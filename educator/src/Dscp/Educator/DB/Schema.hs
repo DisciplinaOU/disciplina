@@ -18,8 +18,8 @@ import Database.Beam.Schema.Tables (Beamable, C, Database, DatabaseSettings, Tab
 
 import Dscp.Core
 import Dscp.Crypto
-import Dscp.DB.SQLite.Functions
-import Dscp.DB.SQLite.Util
+import Dscp.DB.SQL.Functions
+import Dscp.DB.SQL.Util
 import Dscp.Educator.DB.BlockData
 import Dscp.Educator.DB.FileQuoter
 import Dscp.Educator.DB.Instances ()
