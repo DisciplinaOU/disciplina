@@ -165,25 +165,25 @@ fi
 
 if [[ "$node" == "educator" ]]; then
     if [ -z "$(which dscp-educator)" ]; then
-        stack exec "dscp-educator" --nix -- $common_params $witness_params $educator_params
+        stack exec "dscp-educator" -- $common_params $witness_params $educator_params
     else
         dscp-educator $common_params $witness_params $educator_params
     fi
 elif [[ "$node" == "multi-educator" ]]; then
     if [ -z "$(which dscp-multi-educator)" ]; then
-        stack exec "dscp-multi-educator" --nix -- $common_params $witness_params $multi_educator_params
+        stack exec "dscp-multi-educator" -- $common_params $witness_params $multi_educator_params
     else
         dscp-multi-educator $common_params $witness_params $multi_educator_params
     fi
 elif [[ "$node" == "witness" ]]; then
     if [ -z "$(which dscp-witness)" ]; then
-        stack exec "dscp-witness" --nix -- $common_params $witness_params
+        stack exec "dscp-witness" -- $common_params $witness_params
     else
         dscp-witness $common_params $witness_params
     fi
 elif [[ "$node" == "faucet" ]]; then
     if [ -z "$(which dscp-faucet)" ]; then
-        stack exec "dscp-faucet" --nix -- $common_params $faucet_params
+        stack exec "dscp-faucet" -- $common_params $faucet_params
     else
         dscp-faucet $common_params $faucet_params
     fi

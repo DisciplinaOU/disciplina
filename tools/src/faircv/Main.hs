@@ -14,18 +14,8 @@ import Dscp.Util (leftToFail, nothingToFail)
 import Dscp.Util.Test (detGenG)
 import Dscp.Witness.Web hiding (checkFairCV)
 
-import Client
-import Options
-
--- This is a copy of dscp-keygen's parseInputWithSecret (for SecretFromSeed)
-secretFromSeed :: ByteString -> Maybe SecretKey
-secretFromSeed input = asum [
-      do
-        sd <- readMaybe @Word . toString @Text $ decodeUtf8 input
-        return $ withIntSeed (fromIntegral sd) genSecretKey
-    , do
-        return $ withSeed input genSecretKey
-    ]
+import FaircvClient
+import FaircvOptions
 
 createActorOf :: SecretKey -> IO (PublicKey, Address)
 createActorOf sk = do

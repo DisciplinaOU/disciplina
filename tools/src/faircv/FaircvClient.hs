@@ -1,4 +1,4 @@
-module Client where
+module FaircvClient where
 
 import Data.Traversable (for)
 

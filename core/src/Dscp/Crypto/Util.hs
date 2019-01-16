@@ -2,7 +2,10 @@
 
 module Dscp.Crypto.Util
        ( constTimeEq
+       , secretFromSeed
        ) where
+
+import Dscp.Crypto.Impl (SecretKey, genSecretKey, withIntSeed, withSeed)
 
 import qualified Crypto.Util as CU (constTimeEq)
 import Data.ByteArray (ByteArrayAccess, convert)
@@ -16,3 +19,16 @@ constTimeEq
     :: (ByteArrayAccess b1, ByteArrayAccess b2)
     => b1 -> b2 -> Bool
 constTimeEq b1 b2 = CU.constTimeEq (convert b1) (convert b2)
+
+-- | This is how we generate secret keys from user-supplied seed
+secretFromSeed :: ByteString -> Maybe SecretKey
+secretFromSeed input = asum
+    [ do
+        -- we need this clause as soon as many code uses
+        -- 'withIntSeed' for generation, for instance list of students
+        -- known to educator in Student API
+        seed <- readMaybe @Word . toString @Text $ decodeUtf8 input
+        return $ withIntSeed (fromIntegral seed) genSecretKey
+    , do
+        return $ withSeed input genSecretKey
+    ]
