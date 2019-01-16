@@ -130,6 +130,14 @@ takeSome l = sized $ \n -> do
 shuffleNE :: NonEmpty a -> Gen (NonEmpty a)
 shuffleNE = fmap Exts.fromList . shuffle . toList
 
+-- | Groups given items preserving order.
+groupArbitrarily :: [a] -> Gen [[a]]
+groupArbitrarily [] = pure []
+groupArbitrarily l = do
+    k <- choose (1, length l)
+    let (l1, l2) = splitAt k l
+    (l1 :) <$> groupArbitrarily l2
+
 data AssertionFailed = AssertionFailed String
     deriving (Show, Typeable)
 
@@ -394,4 +402,3 @@ instance (GArbitraryMixture l, GArbitraryMixture r) =>
          GArbitraryMixture (l G.:*: r) where
     gArbitraryMixture (l1 G.:*: l2) (r1 G.:*: r2) =
         (G.:*:) <$> gArbitraryMixture l1 r1 <*> gArbitraryMixture l2 r2
-

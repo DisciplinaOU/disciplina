@@ -293,14 +293,14 @@ getPrivateBlockIdxByHash ctx phHash = do
         guard_ (brHash block ==. val_ phHash)
         return (brIdx block)
 
--- | Returns blocks starting from given one (including) up to the tip.
+-- | Returns blocks starting from given one (excluding) up to the tip.
 getPrivateBlocksAfter
     :: MonadQuery m
     => BlockIdx -> m (OldestFirst [] PrivateBlockHeader)
 getPrivateBlocksAfter idx =
     fmap OldestFirst . runSelectMap pbHeaderFromRow . select $
         orderBy_ (asc_ . brIdx) $
-        filter_ (\block -> brIdx block >=. val_ idx) $
+        filter_ (\block -> brIdx block >. val_ idx) $
         all_ (esBlocks es)
 
 getPrivateBlocksAfterHash
