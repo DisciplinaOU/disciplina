@@ -42,7 +42,7 @@ demo: &demo
         - type: stderr
         - type: syslog
           app-name: "witness"
-        min-level: Debug
+        min-severity: Debug
 
   educator:
     logging:
@@ -52,13 +52,12 @@ demo: &demo
         - type: stderr
         - type: syslog
           app-name: "educator"
-        min-level: Debug
+        min-severity: Debug
     api:
       botConfig:
         params:
           enabled:
             seed: Bot seed
-
 
   faucet:
     logging:
@@ -68,7 +67,7 @@ demo: &demo
         - type: stderr
         - type: syslog
           app-name: "faucet"
-        min-level: Debug
+        min-severity: Debug
 
 singleton:
   <<: *demo
