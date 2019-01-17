@@ -1,5 +1,6 @@
-{-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE QuasiQuotes   #-}
+{-# LANGUAGE ApplicativeDo    #-}
+{-# LANGUAGE QuasiQuotes      #-}
+{-# LANGUAGE OverloadedLabels #-}
 
 -- | Common CLI params.
 
@@ -18,20 +19,21 @@ module Dscp.CommonCLI
 
 import Data.Char (toLower)
 import Data.Version (showVersion)
-import Loot.Config.CLI (ModParser, (..:), (<*<))
+import Loot.Config.CLI (OptModParser, (.::), (.:+), (.:-), (<*<))
 import Options.Applicative (Parser, ReadM, auto, eitherReader, flag', help, infoOption, long,
                             maybeReader, metavar, option, str, strOption)
 import Servant.Client (BaseUrl (..), parseBaseUrl)
 import Text.InterpolatedString.Perl6 (qc)
 import Time (KnownRatName, Time, unitsP)
 
+import Dscp.Config (selectBranchParser)
 import Dscp.Core.Foundation
 import Dscp.Crypto (PassPhrase)
 import Dscp.Crypto (mkPassPhrase)
 import Dscp.Resource.AppDir
 import Dscp.Resource.Keys
 import Dscp.Util
-import Dscp.Web (NetworkAddress (..), ServerParams (..), parseNetAddr)
+import Dscp.Web (NetworkAddress (..), ServerParams, parseNetAddr)
 import Paths_disciplina_witness (version)
 
 versionOption :: Parser (a -> a)
@@ -39,11 +41,11 @@ versionOption = infoOption ("disciplina-" <> (showVersion version)) $
     long "version" <>
     help "Show version."
 
-baseKeyParamsParser :: Text -> ModParser BaseKeyParams
+baseKeyParamsParser :: Text -> OptModParser BaseKeyParams
 baseKeyParamsParser who =
-    bkpPathL       ..: kpKeyPathParser <*<
-    bkpGenNewL     ..: kpGenKeyParser <*<
-    bkpPassphraseL ..: kpPassphraseParser
+    #path       .:: kpKeyPathParser <*<
+    #genNew     .:: kpGenKeyParser <*<
+    #passphrase .:: kpPassphraseParser
   where
     kpKeyPathParser = fmap Just . strOption $
          long [qc|{who}-keyfile|] <>
@@ -59,17 +61,16 @@ baseKeyParamsParser who =
          metavar "PASSWORD" <>
          help "Password of secret key."
 
-appDirParamParser :: Parser AppDirParam
-appDirParamParser =
-    AppDirectorySpecific <$> specificP <|>
-    AppDirectoryOS <$ osP
+appDirParamParser :: OptModParser AppDirParam
+appDirParamParser = #param .:+
+    selectBranchParser #paramType osP "specific" (#specific .:- (#path .:: specificP))
   where
     specificP = strOption $
       long "appdir" <>
       metavar "FILEPATH" <>
       help "Path to application folder. To use OS-specific default folder \
            \(e. g. '%APPDIR%/Disciplina'), provide `--os-appdir` flag instead."
-    osP = flag' () $
+    osP = flag' "os" $
       long "os-appdir" <>
       help "Use OS-specific default application folder. To use custom application \
            \folder, provide `--appdir` option instead."
@@ -108,9 +109,8 @@ clientAddressParser pName helpTxt =
     metavar "URL" <>
     help helpTxt
 
-serverParamsParser :: String -> Parser ServerParams
-serverParamsParser desc = do
-    spAddr <- networkAddressParser (map toLower desc <> "-listen")
+serverParamsParser :: String -> OptModParser ServerParams
+serverParamsParser desc =
+    #addr .:: networkAddressParser (map toLower desc <> "-listen")
         ("Host/port for serving " <> desc <> " API. If executable supports \
          \multiple APIs, they are allowed to have the same port.")
-    return ServerParams{..}

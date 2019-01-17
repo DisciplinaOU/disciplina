@@ -11,7 +11,6 @@ import Data.Proxy (Proxy (..))
 import Data.Reflection (Reifies, reify)
 import Fmt ((+|), (|+))
 import Loot.Base.HasLens (lensOf)
-import Loot.Config (option, sub)
 import Loot.Log (logInfo)
 import Network.HTTP.Types.Header (hAuthorization, hContentType)
 import Network.Wai (Middleware)
@@ -22,13 +21,14 @@ import Servant.Auth.Server.Internal.ThrowAll (throwAll)
 import Servant.Generic (toServant)
 import UnliftIO (askUnliftIO)
 
+import Dscp.Config
 import Dscp.Core (mkAddr)
 import Dscp.DB.SQLite (SQLiteDB, invoke)
 import Dscp.Educator.Config
 import Dscp.Educator.DB (existsStudent)
 import Dscp.Educator.Launcher.Mode (EducatorNode, EducatorWorkMode)
 import Dscp.Educator.Web.Auth
-import Dscp.Educator.Web.Bot (EducatorBotParams (..), addBotHandlers, initializeBot)
+import Dscp.Educator.Web.Bot (EducatorBotConfigRec, addBotHandlers, initializeBot)
 import Dscp.Educator.Web.Educator (EducatorPublicKey (..), ProtectedEducatorAPI,
                                    convertEducatorApiHandler, educatorApiHandlers,
                                    protectedEducatorAPI)
@@ -36,7 +36,7 @@ import Dscp.Educator.Web.Student (ProtectedStudentAPI, StudentCheckAction (..),
                                   convertStudentApiHandler, studentAPI, studentApiHandlers)
 import Dscp.Resource.Keys (KeyResources, krPublicKey)
 import Dscp.Util.Servant (LoggingApi, ServantLogConfig (..), methodsCoveringAPI)
-import Dscp.Web (ServerParams (..), buildServantLogConfig, serveWeb)
+import Dscp.Web (buildServantLogConfig, serveWeb)
 import Dscp.Web.Metrics (responseTimeMetric)
 import Dscp.Witness.Web
 
@@ -61,14 +61,15 @@ mkEducatorApiServer nat =
 mkStudentApiServer
     :: forall ctx m. EducatorWorkMode ctx m
     => (forall x. m x -> Handler x)
-    -> EducatorBotParams
+    -> EducatorBotConfigRec
     -> m (Server ProtectedStudentAPI)
-mkStudentApiServer nat botParams =
-    if ebpEnabled botParams
-    then initializeBot botParams $ return $ \student ->
-        getServer . addBotHandlers student .
-        studentApiHandlers $ student
-    else return $ getServer . studentApiHandlers
+mkStudentApiServer nat botConfig = case botConfig ^. tree #params . selection of
+    "enabled" -> initializeBot (botConfig ^. tree #params . peekBranch #enabled) $
+        return $ \student ->
+            getServer . addBotHandlers student .
+            studentApiHandlers $ student
+    "disabled" -> return $ getServer . studentApiHandlers
+    sel -> error $ "unknown EducatorBotConfig type: " <> fromString sel
   where
     getServer handlers = hoistServerWithContext
         studentAPI
@@ -81,15 +82,16 @@ mkStudentApiServer nat botParams =
 -- If bot is enabled, all students are allowed to use API.
 createStudentCheckAction
     :: forall ctx m. EducatorWorkMode ctx m
-    => EducatorBotParams
+    => EducatorBotConfigRec
     -> m StudentCheckAction
-createStudentCheckAction EducatorBotParams {..}
-    | ebpEnabled = return . StudentCheckAction . const $ pure True
-    | otherwise = do
+createStudentCheckAction botConfig = case botConfig ^. tree #params . selection of
+    "enabled"  -> return . StudentCheckAction . const $ pure True
+    "disabled" -> do
           db <- view (lensOf @SQLiteDB)
           return . StudentCheckAction $ \pk ->
               let addr = mkAddr pk
               in runReaderT (invoke $ existsStudent addr) db
+    sel -> error $ "unknown EducatorBotConfig type: " <> fromString sel
 
 -- | CORS is enabled to ease development for frontend team.
 educatorCors :: Middleware
@@ -105,28 +107,28 @@ educatorCors = cors $ const $ Just $
 serveEducatorAPIsReal :: EducatorWorkMode ctx m => Bool -> m ()
 serveEducatorAPIsReal withWitnessApi = do
     let webCfg = educatorConfig ^. sub #educator . sub #api
-        ServerParams{..}  = webCfg ^. option #serverParams
-        botParams         = webCfg ^. option #botParams
+        serverAddress     = webCfg ^. sub #serverParams . option #addr
+        botConfig         = webCfg ^. sub #botConfig
         educatorAPINoAuth = webCfg ^. option #educatorAPINoAuth
         studentAPINoAuth  = webCfg ^. option #studentAPINoAuth
 
     educatorKeyResources <- view (lensOf @(KeyResources EducatorNode))
-    studentCheckAction <- createStudentCheckAction botParams
+    studentCheckAction <- createStudentCheckAction botConfig
     let educatorPublicKey = EducatorPublicKey $ educatorKeyResources ^. krPublicKey
     let srvCtx = educatorPublicKey :. educatorAPINoAuth :.
                  studentCheckAction :. studentAPINoAuth :.
                  EmptyContext
 
-    logInfo $ "Serving Student API on "+|spAddr|+""
+    logInfo $ "Serving Student API on "+|serverAddress|+""
     unliftIO <- askUnliftIO
     lc <- buildServantLogConfig (<> "web")
     let educatorApiServer = mkEducatorApiServer (convertEducatorApiHandler unliftIO)
-    studentApiServer <- mkStudentApiServer (convertStudentApiHandler unliftIO) botParams
+    studentApiServer <- mkStudentApiServer (convertStudentApiHandler unliftIO) botConfig
     let witnessApiServer = if withWitnessApi
           then mkWitnessAPIServer (convertWitnessHandler unliftIO)
           else throwAll err405{ errBody = "Witness API disabled at this port" }
     let metricsEndpoint = witnessConfig ^. sub #witness . option #metricsEndpoint
-    serveWeb spAddr $
+    serveWeb serverAddress $
       responseTimeMetric metricsEndpoint $
       educatorCors $
       reify lc $ \logConfigP ->

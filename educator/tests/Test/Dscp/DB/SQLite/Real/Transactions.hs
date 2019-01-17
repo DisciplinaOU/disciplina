@@ -1,4 +1,5 @@
-{-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE QuasiQuotes      #-}
 
 -- | This module tests that our wrapper over SQLite library
 -- allow SQL transactions to work properly.

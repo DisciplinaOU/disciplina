@@ -9,11 +9,11 @@ module Dscp.Witness.Launcher.Entry
 
 import Control.Concurrent (threadDelay)
 import Fmt ((+|), (|+))
-import Loot.Config (option, sub)
 import Loot.Log (logDebug, logInfo)
 import Time (sec)
 import UnliftIO.Async (async, cancel)
 
+import Dscp.Config (sub, whenConfigJust)
 import Dscp.Network (runListener, runWorker, withServer)
 import Dscp.Util.TimeLimit
 import Dscp.Witness.Config
@@ -50,8 +50,8 @@ withWitnessBackground cont = do
 witnessEntry :: FullWitnessWorkMode ctx m => m ()
 witnessEntry =
     withServer. withWitnessBackground $ do
-        let mServerParams = witnessConfig ^. sub #witness . option #api
-        whenJust mServerParams $ \serverParams -> do
+        let mServerParams = witnessConfig ^. sub #witness . sub #api
+        whenConfigJust mServerParams $ \serverParams -> do
             logInfo "Forking witness API server"
             void . async $
                 serveWitnessAPIReal serverParams

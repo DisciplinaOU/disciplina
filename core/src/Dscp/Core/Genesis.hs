@@ -1,10 +1,15 @@
+{-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE TypeOperators    #-}
+
 -- | Genesis info and related.
 
 module Dscp.Core.Genesis
     ( GenesisInfo (..)
     , GenesisDistributionElem (..)
     , GenesisDistribution (..)
-    , GenesisConfig (..)
+    , GenesisConfig
+    , GenesisConfigRec
+    , GenesisConfigRecP
     , GenAddressMap (..)
     , totalCoinsAddrMap
     , distrToMap
@@ -15,6 +20,7 @@ module Dscp.Core.Genesis
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map as M
 import qualified Data.Map.Strict as Map
+import Loot.Config ((:::), PartialConfig, Config, option)
 
 import Dscp.Core.Foundation
 import Dscp.Core.Governance
@@ -57,14 +63,17 @@ newtype GenesisDistribution = GenesisDistribution
     } deriving (Eq, Show, Generic)
 
 -- | Genesis configuration.
-data GenesisConfig = GenesisConfig
-    { gcGenesisSeed  :: Text
-      -- ^ Seed that will be used in the creation of genesis block.
-    , gcGovernance   :: Governance
-      -- ^ Type of governance used.
-    , gcDistribution :: GenesisDistribution
-      -- ^ Initial coins distribution.
-    } deriving (Eq, Show, Generic)
+type GenesisConfig =
+    '[ "genesisSeed"  ::: Text
+       -- Seed that will be used in the creation of genesis block.
+     , "governance"   ::: Governance
+       -- Type of governance used.
+     , "distribution" ::: GenesisDistribution
+       -- Initial coins distribution.
+     ]
+
+type GenesisConfigRec = Config GenesisConfig
+type GenesisConfigRecP = PartialConfig GenesisConfig
 
 distrElemToMap :: Maybe (NonEmpty Address) -> GenesisDistributionElem -> GenAddressMap
 distrElemToMap _ (GDSpecific addrMap) = addrMap
@@ -90,17 +99,18 @@ genesisSk :: SecretKey
 genesisSk = withIntSeed 12345 genSecretKey
 
 -- | Generate genesis info (addr map, block).
-formGenesisInfo :: GenesisConfig -> GenesisInfo
-formGenesisInfo GenesisConfig{..} =
+formGenesisInfo :: GenesisConfigRec -> GenesisInfo
+formGenesisInfo genesisConfig =
     GenesisInfo { giAddressMap = genesisAddrMap
                 , giGenesisBlock = genesisBlock
                 }
   where
-    govAddresses = case gcGovernance of
+    govAddresses = case genesisConfig ^. option #governance of
         GovCommittee com -> committeeAddrs com
         GovOpen          -> error "formGenesisInfo: open governance is not implemented"
 
-    genesisAddrMap = distrToMap (Just $ NE.fromList govAddresses) gcDistribution
+    genesisAddrMap = distrToMap (Just $ NE.fromList govAddresses) $
+        genesisConfig ^. option #distribution
 
     genesisBlock :: Block
     genesisBlock = Block header payload
@@ -121,7 +131,7 @@ formGenesisInfo GenesisConfig{..} =
 
         payload = BlockBody [initTx]
 
-        prevHash = unsafeHash (gcGenesisSeed :: Text)
+        prevHash = unsafeHash $ genesisConfig ^. option #genesisSeed
         toSign = BlockToSign 0 0 prevHash (hash payload)
         header = Header { hSignature = sign sk toSign
                         , hIssuer = pk

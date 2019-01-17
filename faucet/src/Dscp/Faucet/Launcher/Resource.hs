@@ -33,7 +33,7 @@ makeLenses ''FaucetResources
 instance AllocResource (KeyResources FaucetApp) where
     type Deps (KeyResources FaucetApp) = (FaucetConfigRec, AppDir)
     allocResource (faucetCfg, appDir) =
-        let baseParams = faucetCfg ^. sub #faucet . option #keys
+        let baseParams = faucetCfg ^. sub #faucet . sub #keys
         in buildComponentR "faucet keys"
            (withCoreConfig (rcast faucetCfg) $
                linkStore baseParams appDir)
@@ -44,7 +44,7 @@ instance AllocResource FaucetResources where
     allocResource faucetCfg = do
         let cfg = faucetCfg ^. sub #faucet
         _frLogging <- view (lensOf @(Logging IO))
-        _frAppDir <- allocResource $ cfg ^. option #appDir
+        _frAppDir <- allocResource $ cfg ^. sub #appDir
         _frKeys <- allocResource (faucetCfg, _frAppDir)
         _frWitnessClient <- allocResource $ cfg ^. option #witnessBackend
         return FaucetResources{..}

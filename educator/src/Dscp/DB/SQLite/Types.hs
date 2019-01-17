@@ -1,56 +1,62 @@
+{-# LANGUAGE OverloadedLabels #-}
+
 module Dscp.DB.SQLite.Types
        ( -- * SQLite bindings
-         SQLiteRealParams (..)
-       , srpPathL
-       , srpConnNumL
-       , srpMaxPendingL
-       , SQLiteDBMode (..)
-       , _SQLiteReal
-       , _SQLiteInMemory
+         SQLiteRealParams
+       , SQLiteRealParamsRec
+       , SQLiteRealParamsRecP
+
+       , SQLiteParams
+       , SQLiteParamsRec
+       , SQLiteParamsRecP
+       , defaultSQLiteParams
+
        , SQLiteDB (..)
-       , SQLiteParams (..)
-       , sdpModeL
        ) where
 
 import Control.Concurrent.Chan (Chan)
-import Control.Lens (makeLensesWith, makePrisms)
-import Data.Aeson (FromJSON (..))
-import Data.Aeson.Options (defaultOptions)
-import Data.Aeson.TH (deriveFromJSON)
 import Database.SQLite.Simple (Connection)
-
-import Dscp.Util
+import Loot.Config ((::+), (:::), (::-), Config, PartialConfig, tree, branch,
+                    selection, option, (?~))
 
 ----------------------------------------------------------
 -- SQLite bindings
 ----------------------------------------------------------
 
-data SQLiteRealParams = SQLiteRealParams
-    { srpPath       :: !FilePath
-      -- ^ Path to the file with database.
-    , srpConnNum    :: !(Maybe Int)
-      -- ^ Connections pool size.
-    , srpMaxPending :: !Int
-      -- ^ Maximal number of requests waiting for a free connection.
-    } deriving (Show, Eq)
+type SQLiteRealParams =
+   '[ "path"       ::: FilePath
+      -- Path to the file with database.
+    , "connNum"    ::: Maybe Int
+      -- Connections pool size.
+    , "maxPending" ::: Int
+      -- Maximal number of requests waiting for a free connection.
+    ]
 
-makeLensesWith postfixLFields ''SQLiteRealParams
+type SQLiteRealParamsRec = Config SQLiteRealParams
+type SQLiteRealParamsRecP = PartialConfig SQLiteRealParams
 
 -- | Database mode.
-data SQLiteDBMode
-    = SQLiteReal !SQLiteRealParams
-      -- ^ In given file using given number of connections
-    | SQLiteInMemory
-      -- ^ In memory
-    deriving (Show, Eq)
+-- Note, there is a reason this contains the whole tree and not just its content
+-- see 'ConfigMaybe' for an explanation.
+type SQLiteParams =
+   '[ "mode" ::+
+       '[ "real"     ::- SQLiteRealParams
+          -- In given file using given number of connections
+        , "inMemory" ::- '[]
+          -- In memory
+        ]
+    ]
 
-makePrisms ''SQLiteDBMode
+type SQLiteParamsRec = Config SQLiteParams
+type SQLiteParamsRecP = PartialConfig SQLiteParams
 
-data SQLiteParams = SQLiteParams
-    { sdpMode :: SQLiteDBMode
-    } deriving (Show, Eq)
+defaultSQLiteParams :: SQLiteParamsRecP
+defaultSQLiteParams = mempty
+    & tree #mode . selection ?~ "real"
+    & tree #mode . branch #real . option #path       ?~ "educator-db"
+    & tree #mode . branch #real . option #connNum    ?~ Nothing
+    & tree #mode . branch #real . option #maxPending ?~ 200
 
-makeLensesWith postfixLFields ''SQLiteParams
 
 data SQLiteDB = SQLiteDB
     { sdConnPool   :: Chan Connection
@@ -63,15 +69,3 @@ data SQLiteDB = SQLiteDB
     , sdMaxPending :: Int
       -- ^ Allowed number of pending threads.
     }
-
-deriveFromJSON defaultOptions ''SQLiteRealParams
-
--- | Isomorphism between @Maybe SQLiteRealParams@ and 'SQLiteDBMode'
-maybeToSQLiteDBLoc :: Maybe SQLiteRealParams -> SQLiteDBMode
-maybeToSQLiteDBLoc Nothing       = SQLiteInMemory
-maybeToSQLiteDBLoc (Just params) = SQLiteReal params
-
-instance FromJSON SQLiteDBMode where
-    parseJSON = fmap maybeToSQLiteDBLoc . parseJSON
-
-deriveFromJSON defaultOptions ''SQLiteParams

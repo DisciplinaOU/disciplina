@@ -108,6 +108,8 @@ witness_params="
 --db-path $tmp_files/witness.db
 --witness-listen $witness_web_addr
 --comm-n 0
+--comm-open
+--witness-keys-comm
 --metrics-server 127.0.0.1:8125
 "
 

@@ -1,4 +1,5 @@
 {-# LANGUAGE GADTs                 #-}
+{-# LANGUAGE OverloadedLabels      #-}
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE TypeApplications      #-}
 {-# OPTIONS_GHC -Wno-partial-type-signatures #-}
@@ -61,6 +62,7 @@ import Time (Millisecond, sec, toNum, toUnit)
 import UnliftIO (MonadUnliftIO (..), UnliftIO (..), askUnliftIO)
 import qualified UnliftIO as UIO
 
+import Dscp.Config
 import Dscp.DB.SQLite.Error
 import Dscp.DB.SQLite.Types
 import Dscp.Util
@@ -121,15 +123,15 @@ forEachConnection sd action = do
 
 openSQLiteDB
     :: (MonadIO m, MonadCatch m)
-    => SQLiteParams -> m SQLiteDB
+    => SQLiteParamsRec -> m SQLiteDB
 openSQLiteDB params = do
-    (path, connNum, maxPending) <- case sdpMode params of
-        SQLiteInMemory ->
-            return (":memory:", 1, 99999)
-        SQLiteReal realParams -> do
-            let path = srpPath realParams
-                mConnNum = srpConnNum realParams
-                maxPending = srpMaxPending realParams
+    (path, connNum, maxPending) <- case params ^. tree #mode . selection of
+        "inMemory" -> return (":memory:", 1, 99999)
+        "real" -> do
+            let realParams = params ^. tree #mode . peekBranch #real
+                path       = realParams ^. option #path
+                mConnNum   = realParams ^. option #connNum
+                maxPending = realParams ^. option #maxPending
             -- some paths produce db in memory, can't use them
             when (path `elem` ["", ":memory:"]) $
                 throwM (SQLInvalidPathError path)
@@ -139,6 +141,7 @@ openSQLiteDB params = do
                 Just num -> pure num
 
             return (path, connNum, maxPending)
+        sel -> error $ "unknown SQLiteDBMode type: " <> fromString sel
 
     unless (connNum > 0) $
         throwM $ SQLInvalidConnectionsNumber connNum

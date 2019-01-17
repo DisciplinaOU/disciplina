@@ -20,6 +20,7 @@ module Dscp.Core.Config
 
     , genesisInfo
     , genesisBlock
+    , genesisGovernance
     , genesisHeader
     , genesisHash
 
@@ -31,12 +32,14 @@ module Dscp.Core.Config
 
 import Control.Lens ((?~))
 import Data.Reflection (Given (..), give)
-import Loot.Config ((:::), (::<), ConfigKind (Final, Partial), ConfigRec, option, sub)
+import Loot.Config ((:::), (::<), ConfigKind (Final, Partial), ConfigRec,
+                    finaliseDeferredUnsafe, option, sub)
 
 import Dscp.Config (giveL, giveLC)
 import Dscp.Core.Fees
 import Dscp.Core.Foundation
 import Dscp.Core.Genesis
+import Dscp.Core.Governance (Governance)
 import Dscp.Crypto (hash)
 
 ----------------------------------------------------------------------------
@@ -53,9 +56,9 @@ newtype SlotDuration = SlotDuration { unSlotDuration :: Word64 }
 
 type CoreConfig =
    '[ "core" ::<
-       '[ "genesis" ::: GenesisConfig
+       '[ "genesis" ::< GenesisConfig
         , "slotDuration" ::: SlotDuration
-        , "fee" ::: FeeConfig
+        , "fee" ::< FeeConfig
 
         , "generated" ::<
             '[ "genesisInfo" ::: GenesisInfo
@@ -86,9 +89,8 @@ fillCoreConfig conf = do
         conf & sub #core . sub #generated . option #genesisInfo ?~ ourGenesisInfo
   where
     ourGenesisInfo :: GenesisInfo
-    ourGenesisInfo =
-        formGenesisInfo $ fromMaybe (error "'genesis' is absent")
-                                    (conf ^. sub #core . option #genesis)
+    ourGenesisInfo = formGenesisInfo . finaliseDeferredUnsafe $
+        conf ^. sub #core . sub #genesis
 
 ----------------------------------------------------------------------------
 -- Getters
@@ -100,11 +102,14 @@ genesisInfo = giveL @CoreConfig @GenesisInfo
 genesisBlock :: HasCoreConfig => Block
 genesisBlock = giGenesisBlock genesisInfo
 
+genesisGovernance :: HasCoreConfig => Governance
+genesisGovernance = giveL @CoreConfig @Governance
+
 genesisHeader :: HasCoreConfig => Header
 genesisHeader = bHeader genesisBlock
 
 genesisHash :: HasCoreConfig => HeaderHash
 genesisHash = hash genesisHeader
 
-feeConfig :: HasCoreConfig => FeeConfig
-feeConfig = giveL @CoreConfig @FeeConfig
+feeConfig :: HasCoreConfig => FeeConfigRec
+feeConfig = coreConfig ^. sub #core . sub #fee

@@ -10,5 +10,5 @@ import Dscp.Resource.Class (AllocResource (..), buildComponentR)
 ----------------------------------------------------------------------------
 
 instance AllocResource RocksDB where
-    type Deps RocksDB = RocksDBParams
+    type Deps RocksDB = RocksDBParamsRec
     allocResource p = buildComponentR "RocksDB" (openNodeDB p) closeNodeDB

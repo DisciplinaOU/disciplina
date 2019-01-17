@@ -17,13 +17,13 @@ module Dscp.Witness.TestConfig
     , mkTestWitnessVariables
     ) where
 
-import Control.Lens (makeLenses, (.=), (?=))
+import Control.Lens (makeLenses, (.=), (?=), (?~))
 import Data.Default (def)
 import qualified Data.List as L
 import qualified Data.Map as M
 import Loot.Base.HasLens (HasLens')
-import Loot.Config.Record (finaliseDeferredUnsafe, option, sub)
 
+import Dscp.Config
 import Dscp.Core
 import Dscp.Crypto
 import Dscp.DB.CanProvideDB as DB
@@ -80,36 +80,33 @@ testFindSlotOwner slot =
 testWitnessConfigP :: WitnessConfigRecP
 testWitnessConfigP = def &: do
     sub #core .= def &: do
-        sub #generated . option #genesisInfo ?= formGenesisInfo genConfig
-        option #genesis ?= genConfig
-        option #fee ?= feeCoefs
+        sub #generated . option #genesisInfo ?= genInfo
+        sub #genesis .= genConfig
+        sub #fee .= feeCoefs
         option #slotDuration ?= 10000000
   where
     genesisAddressMap =
         GenAddressMap $ M.fromList $
         map (, testGenesisAddressAmount) testGenesisAddresses
-    genConfig =
-        GenesisConfig
-        { gcGenesisSeed = "meme tests"
-        , gcGovernance = GovCommittee testCommittee
-        , gcDistribution = GenesisDistribution
+    genConfig = mempty
+        & option #genesisSeed  ?~ "meme tests"
+        & option #governance   ?~ GovCommittee testCommittee
+        & option #distribution ?~ GenesisDistribution
             [ GDEqual testGenesisAddressAmount
             , GDSpecific genesisAddressMap
             ]
-        }
-    feeCoefs =
-        FeeConfig
-        { fcMoney = LinearFeePolicy
+    genInfo = formGenesisInfo $ finaliseDeferredUnsafe genConfig
+    feeCoefs = mempty
+        & option #money ?~ LinearFeePolicy
             FeeCoefficients
             { fcMinimal       = Coin 10
             , fcMultiplier    = 0.1
             }
-        , fcPublication = LinearFeePolicy
+        & option #publication ?~ LinearFeePolicy
             FeeCoefficients
             { fcMinimal       = Coin 10
             , fcMultiplier    = 0.1
             }
-        }
 
 testWitnessConfig :: WitnessConfigRec
 testWitnessConfig = finaliseDeferredUnsafe testWitnessConfigP

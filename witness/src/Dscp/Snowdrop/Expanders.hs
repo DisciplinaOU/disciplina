@@ -372,7 +372,7 @@ seqExpandersBlockMetaTx =
                   throwLocalError SlotIdIsNotIncreased
                   { bmeProvidedSlotId = hSlotId header, bmeTipSlotId = hSlotId prevHeader }
 
-            let GovCommittee com = gcGovernance $ giveL @CoreConfig
+            let GovCommittee com = genesisGovernance
             unless (committeeOwnsSlot com issuerAddr (hSlotId header)) $
                 throwLocalError $ IssuerDoesNotOwnSlot
                 { bmrSlotId = hSlotId header, bmrIssuer = issuerAddr }

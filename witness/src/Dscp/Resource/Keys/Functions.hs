@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedLabels #-}
+
 -- | Functions to work with key storage.
 -- Later this file will also provide possibility to choose a key from
 -- the predefined test genesis instead of providing a key explicitly.
@@ -20,12 +22,13 @@ import qualified System.Directory as D
 import System.FilePath ((</>))
 import qualified System.FilePath as FP
 
+import Dscp.Config
 import Dscp.Core
 import Dscp.Crypto
 import Dscp.Resource.AppDir
 import Dscp.Resource.Keys.Error (KeyInitError (..), rewrapKeyIOErrors)
-import Dscp.Resource.Keys.Types (BaseKeyParams (..), CommitteeParams (..), KeyJson (..),
-                                 KeyResources (..), KeyfileContent)
+import Dscp.Resource.Keys.Types (BaseKeyParamsRec, CommitteeParamsRec,
+                                 KeyJson (..), KeyResources (..), KeyfileContent)
 import Dscp.System (checkFileMode, mode600, setMode, whenPosix)
 import Dscp.Util (leftToThrow)
 import Dscp.Util.Aeson (EncodeSerialised (..), Versioned (..))
@@ -59,9 +62,9 @@ fromKeyfileContent pp (Versioned content) = fromSecretJson pp content
 -- | Where keyfile would lie.
 storePath
     :: Buildable (Proxy node)
-    => BaseKeyParams -> AppDir -> Proxy node -> FilePath
-storePath BaseKeyParams{..} appDir nodeNameP =
-    fromMaybe defPath bkpPath
+    => BaseKeyParamsRec -> AppDir -> Proxy node -> FilePath
+storePath baseKeyParams appDir nodeNameP =
+    fromMaybe defPath (baseKeyParams ^. option #path)
   where
     defPath = appDir </> (nodeNameP |+ ".key")
 
@@ -72,38 +75,42 @@ genStore = KeyResources . secretKeyDataFromPair <$> runSecureRandom keyGen
 -- | Generate key resources with respect to given committe parameters.
 mkCommitteeStore ::
        (HasCoreConfig, MonadThrow m, MonadLogging m)
-    => CommitteeParams
+    => CommitteeParamsRec
     -> m (KeyResources n)
 mkCommitteeStore comParams = do
+    let participantN = comParams ^. tree #params . option #participantN
     _krSecretKeyData <-
-        case comParams of
-          CommitteeParamsOpen i -> do
+      case comParams ^. tree #params . selection of
+          "open" -> do
               logInfo "Creating open committee key"
-              sec <- case gcGovernance (giveL @CoreConfig @GenesisConfig) of
+              sec <- case genesisGovernance of
                          GovCommittee (CommitteeOpen{..}) -> do
-                             when (i >= commN) $
+                             when (participantN >= commN) $
                                  throwM $ SecretConfMismatch $
-                                 "Index passed GOE than comm size: " <> show (i,commN)
+                                 "Index passed GOE than comm size: " <>
+                                    show (participantN,commN)
                              pure commSecret
                          x -> throwM $ SecretConfMismatch $
                                        "Params were passed for open committee, but " <>
                                        "config specifies: " <> show x
-              let sk = committeeDerive sec i
+              let sk = committeeDerive sec participantN
               pure (mkSecretKeyData sk)
-          CommitteeParamsClosed {..} -> do
+          "closed" -> do
+              let secret = comParams ^. tree #params . peekBranch #closed . option #secret
               logInfo "Creating closed committee key"
-              let addrs = case gcGovernance (giveL @CoreConfig @GenesisConfig) of
+              let addrs = case genesisGovernance of
                               GovCommittee (CommitteeClosed a) -> a
                               x -> throwM $ SecretConfMismatch $
                                             "Params were passed for closed committee, but " <>
                                             "config specifies: " <> show x
 
-              let sk = committeeDerive cpSecret cpParticipantN
+              let sk = committeeDerive secret participantN
               let pk = toPublic sk
               when (mkAddr pk `notElem` addrs) $
                   throwM $ SecretConfMismatch $ "Provided secret and index doesn't " <>
                                                 "belong to the list of addrs"
               pure $ secretKeyDataFromPair (sk,pk)
+          sel -> error $ "unknown committee params type: " <> fromString sel
     return KeyResources{..}
 
 -- | Read store under given path.
@@ -166,11 +173,11 @@ linkStore
     :: forall m n.
        (MonadIO m, MonadCatch m, MonadLogging m, MonadThrow m,
         HasCoreConfig, Buildable (Proxy n))
-    => BaseKeyParams -> AppDir -> m (KeyResources n)
-linkStore params@BaseKeyParams{..} appDir = do
-    let path = storePath params appDir (Proxy :: Proxy n)
-        pp = fromMaybe emptyPassPhrase bkpPassphrase
+    => BaseKeyParamsRec -> AppDir -> m (KeyResources n)
+linkStore baseKeyParams appDir = do
+    let path = storePath baseKeyParams appDir (Proxy :: Proxy n)
+        pp = fromMaybe emptyPassPhrase $ baseKeyParams ^. option #passphrase
     keyExists <- liftIO . rewrapKeyIOErrors $ D.doesFileExist path
-    if bkpGenNew && not keyExists
+    if (baseKeyParams ^. option #genNew) && not keyExists
         then createStore path pp
         else readStore path pp

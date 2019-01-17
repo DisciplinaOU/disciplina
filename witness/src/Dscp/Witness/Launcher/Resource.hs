@@ -51,16 +51,21 @@ deriveHasLens 'wrNetwork ''WitnessResources ''NetServResources
 -- Otherwise, just generate a key using committee params.
 getWitnessKeyResources
     :: (HasCoreConfig, MonadCatch m, MonadIO m, MonadLogging m)
-    => WitnessKeyParams
+    => WitnessKeyParamsRec
     -> AppDir
     -> m (KeyResources WitnessNode)
-getWitnessKeyResources (Basic bkp) appDir = linkStore bkp appDir
-getWitnessKeyResources (Committee cp) _   = mkCommitteeStore cp
+getWitnessKeyResources keyParams appDir = case keyParams ^. tree #params . selection of
+    "basic"     -> linkStore basicBranch appDir
+    "committee" -> mkCommitteeStore committeeBranch
+    sel -> error $ "unknown WitnessParams type: " <> fromString sel
+  where
+    basicBranch = keyParams ^. tree #params . peekBranch #basic
+    committeeBranch = keyParams ^. tree #params . peekBranch #committee
 
 instance AllocResource (KeyResources WitnessNode) where
     type Deps (KeyResources WitnessNode) = (WitnessConfigRec, AppDir)
     allocResource (witnessCfg, appDir) =
-        let keyParams = witnessCfg ^. sub #witness . option #keys
+        let keyParams = witnessCfg ^. sub #witness . sub #keys
         in buildComponentR "witness keys"
            (withCoreConfig (rcast witnessCfg) $
                getWitnessKeyResources keyParams appDir)
@@ -71,12 +76,12 @@ instance AllocResource WitnessResources where
     allocResource witnessCfg = do
         let cfg = witnessCfg ^. sub #witness
         _wrLogging <- view (lensOf @LoggingIO)
-        _wrDB <- fmap RealRocks.plugin . allocResource $ cfg ^. option #db
+        _wrDB <- fmap RealRocks.plugin . allocResource $ cfg ^. sub #db
         _wrNetwork <- do
             let modGivenName (GivenName x) = GivenName $ x <> "network"
                 modGivenName x             = x
             withNetLogging (NetLogging $ _wrLogging & logNameSelL %~ modGivenName)
-                           (allocResource $ cfg ^. option #network)
-        _wrAppDir <- allocResource $ cfg ^. option #appDir
+                           (allocResource $ cfg ^. sub #network)
+        _wrAppDir <- allocResource $ cfg ^. sub #appDir
         _wrKey <- allocResource (witnessCfg, _wrAppDir)
         return WitnessResources {..}

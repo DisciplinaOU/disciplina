@@ -1,3 +1,5 @@
+{-# LANGUAGE OverloadedLabels #-}
+
 -- | ZMQ TCP Networking resource allocation.
 
 module Dscp.Resource.Network
@@ -10,7 +12,9 @@ module Dscp.Resource.Network
     , NetCliParams(..)
     , NetCliResources(..)
 
-    , NetServParams(..)
+    , NetServParams
+    , NetServParamsRec
+    , NetServParamsRecP
     , NetServResources(..)
     ) where
 
@@ -21,6 +25,7 @@ import Data.Aeson.TH (deriveFromJSON)
 import Data.Default (def)
 import Data.Reflection (Given (given), give)
 import Loot.Base.HasLens (HasLens (..))
+import Loot.Config ((:::), Config, PartialConfig, option)
 import Loot.Log (Logging)
 import Loot.Network.ZMQ (ZTGlobalEnv, ZTNetCliEnv, ZTNetServEnv, ZTNodeId, createNetCliEnv,
                          createNetServEnv, parseZTNodeId, termNetCliEnv, termNetServEnv,
@@ -100,12 +105,15 @@ instance WithNetLogging => AllocResource NetCliResources where
 ----------------------------------------------------------------------------
 
 -- | Server networking params.
-data NetServParams = NetServParams
-    { nsPeers      :: ![ZTNodeId]
-      -- ^ Peers we should connect to
-    , nsOurAddress :: !ZTNodeId
-      -- ^ Our binding address
-    } deriving (Show, Eq)
+type NetServParams =
+   '[ "peers"      ::: [ZTNodeId]
+      -- Peers we should connect to
+    , "ourAddress" ::: ZTNodeId
+      -- Our binding address
+    ]
+
+type NetServParamsRec = Config NetServParams
+type NetServParamsRecP = PartialConfig NetServParams
 
 -- | Resources needed for ZMQ TCP client + server.
 data NetServResources = NetServResources
@@ -121,14 +129,14 @@ instance HasLens ZTNetCliEnv NetServResources ZTNetCliEnv where lensOf = nsClien
 instance HasLens ZTNetServEnv NetServResources ZTNetServEnv where lensOf = nsServerEnv
 
 instance WithNetLogging => AllocResource NetServResources where
-    type Deps NetServResources = NetServParams
-    allocResource NetServParams {..} =
+    type Deps NetServResources = NetServParamsRec
+    allocResource netServParams =
         buildComponentR "netcli" allocate release
       where
         allocate = liftIO $ do
             global <- ztGlobalEnv (unNetLogging netLogging)
-            cli <- createNetCliEnv global def nsPeers
-            serv <- createNetServEnv global def nsOurAddress
+            cli <- createNetCliEnv global def $ netServParams ^. option #peers
+            serv <- createNetServEnv global def $ netServParams ^. option #ourAddress
 
             pure $ NetServResources global cli serv
         release NetServResources{..} = liftIO $ do
@@ -145,4 +153,3 @@ instance FromJSON ZTNodeId where
         either fail pure . parseZTNodeId . toString
 
 deriveFromJSON defaultOptions ''NetCliParams
-deriveFromJSON defaultOptions ''NetServParams

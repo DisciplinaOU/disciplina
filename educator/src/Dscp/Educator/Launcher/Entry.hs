@@ -7,11 +7,11 @@ module Dscp.Educator.Launcher.Entry
     ) where
 
 import Control.Concurrent (threadDelay)
-import Loot.Config (option, sub)
 import Loot.Log (logInfo)
 import Time (sec)
 import UnliftIO.Async (async, cancel)
 
+import Dscp.Config (sub, tree, branch, whenConfigJust)
 import Dscp.Educator.Config
 import Dscp.Educator.Launcher.Mode
 import Dscp.Educator.Web.Server
@@ -35,11 +35,13 @@ withEducatorBackground cont = do
 -- | Launch witness and educator servers.
 serveAPIs :: EducatorWorkMode ctx m => m ()
 serveAPIs = do
-    let witnessApiParams = witnessConfig ^. sub #witness . option #api
-        educatorApiParams = educatorConfig ^. sub #educator . sub #api . option #serverParams
-        separateWitnessServer = witnessApiParams /= Just educatorApiParams
+    let witnessApiParams = witnessConfig ^. sub #witness . sub #api
+        educatorApiParams = educatorConfig ^. sub #educator . sub #api . sub #serverParams
+        separateWitnessServer =
+            witnessApiParams ^. tree #maybe . branch #just
+            /= Just educatorApiParams
 
-    whenJust witnessApiParams $ \serverParams ->
+    whenConfigJust witnessApiParams $ \serverParams ->
         when separateWitnessServer $ do
             logInfo "Forking witness API server"
             void . async $

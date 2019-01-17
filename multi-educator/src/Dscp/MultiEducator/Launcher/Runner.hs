@@ -7,7 +7,6 @@ module Dscp.MultiEducator.Launcher.Runner
     , launchEducatorRealMode
     ) where
 
-import Loot.Config (option, sub)
 import Loot.Log (MonadLogging)
 
 import Dscp.Config
@@ -45,5 +44,5 @@ launchEducatorRealMode config action =
   where
     appDesc = "Educator (real mode)"
     initParams = InitParams
-        { ipLoggingParams = config ^. sub #witness . option #logging
+        { ipLoggingParams = config ^. sub #witness . sub #logging
         }

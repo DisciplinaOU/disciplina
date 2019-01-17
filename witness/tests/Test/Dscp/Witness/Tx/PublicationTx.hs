@@ -1,9 +1,12 @@
+{-# LANGUAGE OverloadedLabels #-}
+
 module Test.Dscp.Witness.Tx.PublicationTx where
 
 import Control.Lens (forOf, _last)
 import qualified GHC.Exts as Exts
 import Test.QuickCheck.Monadic (pre)
 
+import Dscp.Config (option)
 import Dscp.Core
 import Dscp.Crypto
 import Dscp.Resource.Keys
@@ -33,7 +36,8 @@ genPublicationChain n secret
                         }
                 in PublicationTx
                 { ptAuthor = addr
-                , ptFeesAmount = unFees $ calcFeePub (fcPublication feeConfig) ptHeader
+                , ptFeesAmount = unFees $
+                    calcFeePub (feeConfig ^. option #publication) ptHeader
                 , ptHeader
                 }
 

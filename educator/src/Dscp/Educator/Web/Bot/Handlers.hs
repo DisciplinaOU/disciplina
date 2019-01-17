@@ -13,7 +13,7 @@ import Dscp.Educator.Web.Types
 
 initializeBot
     :: BotWorkMode ctx m
-    => EducatorBotParams -> (HasBotSetting => m a) -> m a
+    => EducatorBotParamsRec -> (HasBotSetting => m a) -> m a
 initializeBot params m = withBotSetting (mkBotSetting params) $ do
     botPrepareInitialData
     botLog $ logInfo "Educator bot initiated"

@@ -22,7 +22,7 @@ import Dscp.Faucet.Launcher (FaucetRealMode, FaucetWorkMode)
 import Dscp.Faucet.Web.API (FaucetAPI, faucetAPI)
 import Dscp.Faucet.Web.Handlers (convertFaucetApiHandler, faucetApiHandlers)
 import Dscp.Util.Servant (LoggingApi, methodsCoveringAPI)
-import Dscp.Web (ServerParams (..), serveWeb)
+import Dscp.Web (serveWeb)
 import Dscp.Web.Server (buildServantLogConfig)
 
 type FaucetWebAPI = "api" :> "faucet" :> FaucetAPI
@@ -46,7 +46,7 @@ faucetCors = cors $ const $ Just $
 
 serveFaucetAPIReal :: HasFaucetConfig => FaucetRealMode ()
 serveFaucetAPIReal = do
-    let ServerParams {..} = faucetConfig ^. sub #faucet . option #api
+    let spAddr = faucetConfig ^. sub #faucet . sub #api . option #addr
     logInfo $ "Serving faucet API on "+|spAddr|+""
     ctx <- ask
     lc <- buildServantLogConfig (<> "web")

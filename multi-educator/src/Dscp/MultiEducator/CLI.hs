@@ -8,7 +8,7 @@ module Dscp.MultiEducator.CLI
     , multiEducatorConfigParser
     ) where
 
-import Loot.Config (OptModParser, uplift, (%::), (.::), (.:<), (<*<))
+import Loot.Config (OptModParser, uplift, (.::), (.:<), (<*<))
 import Options.Applicative (Parser, help, long, metavar, strOption)
 
 import Dscp.Educator.CLI (educatorWebConfigParser, publishingPeriodParser, sqliteParamsParser)
@@ -26,7 +26,7 @@ multiEducatorConfigParser :: OptModParser MultiEducatorConfig
 multiEducatorConfigParser =
     uplift witnessConfigParser <*<
     #educator .:<
-        (#db %:: sqliteParamsParser <*<
+        (#db .:< sqliteParamsParser <*<
          #keys .:: multiEducatorKeyParamsParser <*<
          #api .:< educatorWebConfigParser <*<
          #publishing .:<
