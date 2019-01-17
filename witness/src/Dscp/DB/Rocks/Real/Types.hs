@@ -33,9 +33,9 @@ data DB = DB
 -- | Set of parameters provided on opening connection.
 type RocksDBParams =
    '[ "path"  ::: FilePath
-      -- ^ Path to the database
+      -- Path to the database
     , "clean" ::: Bool
-      -- ^ Whether DB should be cleaned/removed on start.
+      -- Whether DB should be cleaned/removed on start.
     ]
 
 type RocksDBParamsRec = Config RocksDBParams

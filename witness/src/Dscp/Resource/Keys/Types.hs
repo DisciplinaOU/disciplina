@@ -38,14 +38,14 @@ import Dscp.Util.Aeson (Base64Encoded, EncodeSerialised (..), Versioned)
 -- | Contains all parameters required for manipulating with secret key.
 type BaseKeyParams =
    '[ "path"       ::: Maybe FilePath
-      -- ^ Path to file with secret key.
+      -- Path to file with secret key.
       -- If not specified, some default OS-dependent path is used.
     , "genNew"     ::: Bool
-      -- ^ When 'True', file with secret key is expected to be
+      -- When 'True', file with secret key is expected to be
       -- absent and will be generated from scratch.
     , "passphrase" ::: Maybe PassPhrase
       -- When 'False', file should be present and it will be used.
-      -- ^ Password of encrypted secret key stored on disk.
+      -- Password of encrypted secret key stored on disk.
     ]
 
 type BaseKeyParamsRec = Config BaseKeyParams
@@ -63,13 +63,13 @@ defaultBaseKeyParams = mempty
 type CommitteeParams =
    '[ "params" ::+
        '[ "participantN" ::: Integer
-          -- ^ This is necessary to both types of committee
+          -- This is necessary to both types of committee
         , "open" ::- '[]
-          -- ^ In open committee you become participant n/N.
+          -- In open committee you become participant n/N.
         , "closed" ::-
            '[ "secret" ::: CommitteeSecret
             ]
-          -- ^ In closed committee you should provide a (common) secret and your index.
+          -- In closed committee you should provide a (common) secret and your index.
         ]
     ]
 

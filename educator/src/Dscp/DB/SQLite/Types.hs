@@ -25,11 +25,11 @@ import Loot.Config ((::+), (:::), (::-), Config, PartialConfig, tree, branch,
 
 type SQLiteRealParams =
    '[ "path"       ::: FilePath
-      -- ^ Path to the file with database.
+      -- Path to the file with database.
     , "connNum"    ::: Maybe Int
-      -- ^ Connections pool size.
+      -- Connections pool size.
     , "maxPending" ::: Int
-      -- ^ Maximal number of requests waiting for a free connection.
+      -- Maximal number of requests waiting for a free connection.
     ]
 
 type SQLiteRealParamsRec = Config SQLiteRealParams
@@ -41,9 +41,9 @@ type SQLiteRealParamsRecP = PartialConfig SQLiteRealParams
 type SQLiteParams =
    '[ "mode" ::+
        '[ "real"     ::- SQLiteRealParams
-          -- ^ In given file using given number of connections
+          -- In given file using given number of connections
         , "inMemory" ::- '[]
-          -- ^ In memory
+          -- In memory
         ]
     ]
 

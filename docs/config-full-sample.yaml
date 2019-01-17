@@ -195,7 +195,7 @@ sample:
       botConfig:
         params:
           # Type of botConfig.
-          # - `enabled` - to use a bot with the specified seed and delay. 
+          # - `enabled` - to use a bot with the specified seed and delay.
           # - `closed` - to use no bot.
           paramsType: "disabled"
           enabled:

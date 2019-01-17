@@ -65,11 +65,11 @@ newtype GenesisDistribution = GenesisDistribution
 -- | Genesis configuration.
 type GenesisConfig =
     '[ "genesisSeed"  ::: Text
-       -- ^ Seed that will be used in the creation of genesis block.
+       -- Seed that will be used in the creation of genesis block.
      , "governance"   ::: Governance
-       -- ^ Type of governance used.
+       -- Type of governance used.
      , "distribution" ::: GenesisDistribution
-       -- ^ Initial coins distribution.
+       -- Initial coins distribution.
      ]
 
 type GenesisConfigRec = Config GenesisConfig

@@ -110,7 +110,7 @@ clientAddressParser pName helpTxt =
     help helpTxt
 
 serverParamsParser :: String -> OptModParser ServerParams
-serverParamsParser desc = 
+serverParamsParser desc =
     #addr .:: networkAddressParser (map toLower desc <> "-listen")
         ("Host/port for serving " <> desc <> " API. If executable supports \
          \multiple APIs, they are allowed to have the same port.")

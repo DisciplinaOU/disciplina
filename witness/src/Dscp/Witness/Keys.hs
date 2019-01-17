@@ -16,9 +16,9 @@ import Dscp.Resource.Keys
 type WitnessKeyParams =
    '[ "params" ::+
        '[ "basic" ::- BaseKeyParams
-          -- ^ Basic key management with a keyfile
+          -- Basic key management with a keyfile
         , "committee" ::- CommitteeParams
-          -- ^ Generate a key from committee params
+          -- Generate a key from committee params
         ]
     ]
 

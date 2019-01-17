@@ -30,9 +30,9 @@ import Dscp.System (appName)
 type AppDirParam =
    '[ "param" ::+
        '[ "os" ::- '[]
-          -- ^ Dedicated folder inside OS directory for applications
+          -- Dedicated folder inside OS directory for applications
         , "specific" ::- '[ "path" ::: FilePath ]
-          -- ^ Given path
+          -- Given path
         ]
     ]
 

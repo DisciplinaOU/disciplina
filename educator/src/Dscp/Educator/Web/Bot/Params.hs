@@ -14,9 +14,9 @@ import Time.Units (Microsecond, Time)
 -- | Which params to use when launching bot.
 type EducatorBotParams =
    '[ "seed" ::: Text
-      -- ^ Seed to generate initial data (assignments, ...).
+      -- Seed to generate initial data (assignments, ...).
     , "operationsDelay" ::: Time Microsecond
-      -- ^ Artificial delay in bot operations.
+      -- Artificial delay in bot operations.
     ]
 
 type EducatorBotParamsRec = Config EducatorBotParams

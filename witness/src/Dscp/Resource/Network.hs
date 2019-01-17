@@ -107,9 +107,9 @@ instance WithNetLogging => AllocResource NetCliResources where
 -- | Server networking params.
 type NetServParams =
    '[ "peers"      ::: [ZTNodeId]
-      -- ^ Peers we should connect to
+      -- Peers we should connect to
     , "ourAddress" ::: ZTNodeId
-      -- ^ Our binding address
+      -- Our binding address
     ]
 
 type NetServParamsRec = Config NetServParams

@@ -31,9 +31,9 @@ import Dscp.Rio (runRIO)
 -- | Contains all parameters required for hierarchical logger initialization.
 type LoggingParams =
     '[ "config"      ::: LogConfig
-       -- ^ Logger configuration that will be used
+       -- Logger configuration that will be used
      , "defaultName" ::: Name
-       -- ^ Logger name which will be used by default
+       -- Logger name which will be used by default
      ]
 
 type LoggingParamsRec = Config LoggingParams
