@@ -233,10 +233,9 @@ sample:
 
     # Faucet config params. See option `witness.keys.params.basic`
     keys:
-      keyParams:
-        path: "faucet.key"
-        genNew: false
-        passphrase: "qwerty123"
+      path: "faucet.key"
+      genNew: false
+      passphrase: "qwerty123"
 
     # Paramerers of Faucet HTTP API
     api:
