@@ -14,7 +14,9 @@ module Dscp.Witness.Web.Logic
        ) where
 
 import Codec.Serialise (serialise)
+import qualified Data.Aeson as Aeson (decode)
 import qualified Data.ByteString.Lazy as BS
+import qualified Data.ByteString.Base64 as BS
 import Data.Coerce (coerce)
 import Data.Conduit ((.|))
 import qualified Data.Conduit as C
@@ -22,6 +24,8 @@ import qualified Data.Conduit.Combinators as C
 import Data.Default (def)
 import qualified Data.Map.Strict as M
 import Fmt ((+|), (|+))
+
+import Pdf.Scanner as Pdf
 
 import Dscp.Core
 import Dscp.Crypto
@@ -34,6 +38,7 @@ import Dscp.Witness.Logic
 import Dscp.Witness.Mempool
 import qualified Dscp.Witness.Relay as Relay
 import Dscp.Witness.SDLock
+import Dscp.Witness.Web.Error
 import Dscp.Witness.Web.Types
 import qualified Snowdrop.Util as SD
 
@@ -236,6 +241,15 @@ checkFairCV =
         , fairCVFullyValid = all and results
         }
 
-checkFairCVPDF :: forall ctx m. WitnessWorkMode ctx m => ByteString -> m FairCVCheckResult
-checkFairCVPDF _stream = do
-    error "TODO: implement"
+checkFairCVPDF :: forall ctx m. WitnessWorkMode ctx m => ByteString -> m (FairCVCheckResult, FairCV)
+checkFairCVPDF pdf = do
+    let maybeFairCV = do
+            base64json    <- Pdf.project (Pdf.MaxSearchLength (Just 2048)) (Pdf.PDFBody pdf)
+            fairCVencoded <- toMaybe $ BS.decode base64json
+            Aeson.decode $ BS.fromStrict fairCVencoded
+
+    fairCV    <- maybe (throwM InvalidFormat) pure maybeFairCV
+    checkeRes <- checkFairCV fairCV
+    return (checkeRes, fairCV)
+  where
+    toMaybe = either (const Nothing) pure

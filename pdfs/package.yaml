@@ -20,3 +20,12 @@ tests:
       - disciplina-pdfs
       - hspec
       - QuickCheck
+
+executables:
+  dscp-inject-json-into-pdf:
+    <<: *exec-common
+    source-dirs: app
+    dependencies:
+      - disciplina-pdfs
+      - bytestring
+      - text

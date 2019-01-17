@@ -21,7 +21,8 @@ import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), object, withObject, w
                    (.:?), (.=))
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (Options (..), deriveJSON)
-import Fmt (build, genericF, (+|), (|+))
+import qualified Data.ByteString.Base64 as Base64
+import Fmt (build, genericF, (+|), (|+), Builder)
 import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
 import Servant.Util (ForResponseLog (..), buildForResponse)
 
@@ -107,6 +108,9 @@ data HashIs
 deriving instance (Eq (Id a), Eq a) => Eq (PaginatedList d a)
 deriving instance (Show (Id a), Show a) => Show (PaginatedList d a)
 
+instance Buildable ByteString where
+    build = (build :: Text -> Builder) . decodeUtf8 . Base64.encode
+
 instance HasId a => HasId (WithBlockInfo a) where
     type Id (WithBlockInfo a) = Id a
     getId WithBlockInfo{..} = getId wbiItem
@@ -116,6 +120,12 @@ instance Buildable (ForResponseLog BlockInfo) where
         "{ headerHash = " +| biHeaderHash |+
         ", header = " +| biHeader |+
         " }"
+
+instance Buildable (ForResponseLog (FairCVCheckResult, FairCV)) where
+    build (ForResponseLog (res, fcv)) =
+        "("  +| res |+
+        ", " +| fcv |+
+        ")"
 
 instance Buildable (ForResponseLog BlockList) where
     build (ForResponseLog BlockList{..}) = "" +| length blBlocks |+ " blocks"
