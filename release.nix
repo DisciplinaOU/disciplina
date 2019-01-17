@@ -30,6 +30,8 @@ rec {
     ];
   };
 
+  inherit (project) disciplina-tools;
+
   disciplina-config = runCommand "disciplina-config.yaml" {} "cp ${./config.yaml} $out";
 
   disciplina-haddock = with lib;
