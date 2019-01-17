@@ -53,6 +53,12 @@ demo: &demo
         - type: syslog
           app-name: "educator"
         min-level: Debug
+    api:
+      botConfig:
+        params:
+          enabled:
+            seed: Bot seed
+
 
   faucet:
     logging:
