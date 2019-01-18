@@ -30,7 +30,7 @@ import System.Directory (createDirectoryIfMissing)
 import System.FilePath.Posix ((</>))
 
 import Dscp.Config
-import Dscp.Crypto (mkPassPhrase)
+import Dscp.Crypto
 import Dscp.DB.SQL
 import qualified Dscp.Educator.Config as E
 import Dscp.Educator.DB (prepareEducatorSchema)
@@ -113,10 +113,9 @@ lookupEducator login = do
             = mctx ^. lensOf @MultiEducatorResources
     fmap (\(EducatorContexts ctxs) -> M.lookup login ctxs) . atomically $ readTVar _merEducatorData
 
-loadEducator :: (MultiEducatorWorkMode ctx m) => Bool -> Text -> Text -> m Bool
-loadEducator _new login passphrase = do
+loadEducator :: (MultiEducatorWorkMode ctx m) => Bool -> Text -> Maybe PassPhrase -> m Bool
+loadEducator _new login mpassphrase = do
     -- TODO: add hashing
-    let sqlConnString = ConnectionString $ "postgresql:///disciplina-educator-" <> encodeUtf8 login
     let appDirParam = multiEducatorConfig ^. sub #witness . sub #appDir
         appDir = case appDirParam ^. tree #param . selection of
             "os" -> ""
@@ -126,19 +125,18 @@ loadEducator _new login passphrase = do
     let (MultiEducatorKeyParams path) = multiEducatorConfig ^. sub #educator . option #keys
         prepareDb = do
             let realPar = multiEducatorConfig ^. sub #educator . sub #db
-            let p = realPar & option #connString .~ sqlConnString  -- TODO: do not erase parameters
-            db <- openPostgresDB (PostgresParams $ PostgresReal p)
+            db <- openPostgresDB (PostgresParams $ PostgresReal realPar)
+            setSchemaName db ("educator_" <> login)
             prepareEducatorSchema db
-            return (db, p)
+            return (db, realPar)
     (db, _dbParam) <- prepareDb
     liftIO $ createDirectoryIfMissing True (appDir </> path)
-    let keyFile = path </> toString login <> ".key"
+    let keyFile = path  -- TODO [DSCP-449]: remove entirely
         -- FIXME
-        (Right p) = mkPassPhrase . encodeUtf8 $ passphrase
         keyParams = finaliseDeferredUnsafe $ mempty
             & option #path       ?~ Just keyFile
             & option #genNew     ?~ False
-            & option #passphrase ?~ Just p
+            & option #passphrase ?~ mpassphrase
     key <- withCoreConfig (rcast multiEducatorConfig) $ linkStore keyParams appDir
     -- FIXME: DB is not closed
     ctx <- ask

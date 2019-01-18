@@ -35,6 +35,7 @@ module Dscp.DB.SQL.Functions
 
          -- * Misc
        , withConnection
+       , setSchemaName
 
          -- * Internal
        , liftPg
@@ -51,6 +52,8 @@ import qualified Database.Beam.Backend.SQL.BeamExtensions as Backend
 import Database.Beam.Postgres (Pg, PgCommandSyntax, PgDeleteSyntax, PgInsertSyntax, PgSelectSyntax,
                                PgUpdateSyntax, Postgres, runBeamPostgres, runBeamPostgresDebug)
 import qualified Database.Beam.Postgres.Conduit as Backend.Conduit
+import Database.Beam.Postgres.Syntax (PgCommandSyntax (..), PgCommandType (..), emit,
+                                      pgQuotedIdentifier)
 import Database.Beam.Query (QExpr, SqlDelete, SqlInsert, SqlInsertValues, SqlSelect, SqlUpdate)
 import qualified Database.Beam.Query as Backend
 import Database.Beam.Schema (DatabaseEntity, TableEntity)
@@ -69,6 +72,7 @@ import qualified UnliftIO as UIO
 import Dscp.Config
 import Dscp.DB.SQL.Error
 import Dscp.DB.SQL.Types
+import Dscp.Rio
 import Dscp.Util
 
 -----------------------------------------------------------
@@ -348,14 +352,16 @@ withTransactionSerializable action = do
         ]
 
 -- | Create a savepoint within an active transaction.
+-- On error rollback to the beginning of the savepoint occurs
+-- (on Postgres server's side).
 withSavepoint :: (MonadUnliftIO m, HasCallStack) => DBT t m a -> DBT t m a
 withSavepoint action = do
     UnliftIO unliftIO <- askUnliftIO
     withConnection $ \conn ->
         Backend.withSavepoint conn $ unliftIO action
 
--- | Apply given function which sets transaction context and reports if
--- that function invokes given action too many times.
+-- | Apply given function which sets transaction context and report if
+-- that function invokes the given action too many times.
 countingRollbacks
     :: (MonadUnliftIO m, Log.MonadLogging m, HasCallStack)
     => (m a -> m a) -> m a -> m a
@@ -392,8 +398,8 @@ invoke
     => DBT 'OutsideOfTransaction m a -> m a
 invoke = invokeUnsafe
 
--- | Run DBT action within a transaction.
--- Note that action may happen multiple times.
+-- | Run a 'DBT' action within a transaction.
+-- Note that the action may happen multiple times.
 transact
     :: forall t ctx m a.
        (MonadUnliftIO m, Log.MonadLogging m, HasCtx ctx m '[SQL], HasCallStack)
@@ -405,11 +411,34 @@ transact action = do
   where
     inTransaction = \case
         RealTransactions -> countingRollbacks withTransactionSerializable
-        TestTransactions -> countingRollbacks withSavepoint
+        TestTransactions -> withSavepoint
 
 -- | Helps to prevent using 'transact' when 'invoke' is enough.
 class RequiresTransaction (t :: TransactionalContext)
 instance RequiresTransaction 'WithinTx
+
+------------------------------------------------------------
+-- Schema name
+------------------------------------------------------------
+
+createSchemaIfNotExists :: MonadIO m => Text -> Connection -> m ()
+createSchemaIfNotExists schema conn =
+    liftIO . runBeamPostgres conn . runNoReturn $
+        PgCommandSyntax PgCommandTypeDataUpdate $
+            emit "create schema if not exists " <> pgQuotedIdentifier schema <> emit ";"
+
+-- | Changes default database schema for the given connection.
+setConnSchemaName :: MonadIO m => Text -> Connection -> m ()
+setConnSchemaName schema conn =
+    liftIO . runBeamPostgres conn . runNoReturn $
+        PgCommandSyntax PgCommandTypeDataUpdate $
+            emit "set search_path to " <> pgQuotedIdentifier schema <> emit ";"
+
+-- | Changes default database schema for the given database context.
+setSchemaName :: MonadIO m => SQL -> Text -> m ()
+setSchemaName db schema = do
+    runRIO db . borrowConnection $ createSchemaIfNotExists schema
+    forEachConnection db $ setConnSchemaName schema
 
 ------------------------------------------------------------
 -- Misc
