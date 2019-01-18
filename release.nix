@@ -26,9 +26,12 @@ rec {
     paths = with project; map haskell.lib.justStaticExecutables [
       disciplina-educator
       disciplina-faucet
+      disciplina-tools
       disciplina-witness
     ];
   };
+
+  inherit (project) disciplina-tools;
 
   disciplina-config = runCommand "disciplina-config.yaml" {} "cp ${./config.yaml} $out";
 
