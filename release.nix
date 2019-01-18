@@ -26,6 +26,7 @@ rec {
     paths = with project; map haskell.lib.justStaticExecutables [
       disciplina-educator
       disciplina-faucet
+      disciplina-tools
       disciplina-witness
     ];
   };
