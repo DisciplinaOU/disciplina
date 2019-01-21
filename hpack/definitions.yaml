@@ -52,6 +52,7 @@ _definitions:
         - -Wall
         - -fno-warn-orphans
         - -Widentities
+        - -Wincomplete-record-updates
         - -Werror
 
   _utils:
