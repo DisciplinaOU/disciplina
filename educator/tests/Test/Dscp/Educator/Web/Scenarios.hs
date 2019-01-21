@@ -13,14 +13,14 @@ import Data.List (nub)
 
 import Dscp.Core
 import Dscp.Crypto
-import Dscp.DB.SQLite
+import Dscp.DB.SQL
 import Dscp.Educator.DB
 
 -- | Puts in db all needed to put 'SignedSubmission's
 -- later, tolerates repeated entities.
 prepareForAssignments
     :: (MonadIO m, MonadCatch m)
-    => CoreTestEnv -> DBT 'WithinTx 'Writing m ()
+    => CoreTestEnv -> DBT 'WithinTx m ()
 prepareForAssignments CoreTestEnv{..} = do
     let assignments = F.toList cteAssignments
         courses = map _aCourseId assignments
@@ -35,7 +35,7 @@ prepareForAssignments CoreTestEnv{..} = do
 -- later, tolerates repeated entities.
 prepareForSubmissions
     :: (MonadIO m, MonadCatch m)
-    => CoreTestEnv -> DBT 'WithinTx 'Writing m ()
+    => CoreTestEnv -> DBT 'WithinTx m ()
 prepareForSubmissions env@CoreTestEnv{..} = do
     let assignments = F.toList cteAssignments
         owners = F.toList cteStudents
@@ -48,7 +48,7 @@ prepareForSubmissions env@CoreTestEnv{..} = do
 -- | Prepare all needed to put 'SignedSubmission's, and puts the first one.
 prepareAndCreateSubmission
     :: (MonadIO m, MonadCatch m)
-    => CoreTestEnv -> DBT 'WithinTx 'Writing m ()
+    => CoreTestEnv -> DBT 'WithinTx m ()
 prepareAndCreateSubmission env = do
     prepareForSubmissions env
     let sigSub = tiOne $ cteSignedSubmissions env
@@ -57,7 +57,7 @@ prepareAndCreateSubmission env = do
 -- | Add all submissions from given test env to the database.
 prepareAndCreateSubmissions
     :: (MonadIO m, MonadCatch m)
-    => CoreTestEnv -> DBT 'WithinTx 'Writing m ()
+    => CoreTestEnv -> DBT 'WithinTx m ()
 prepareAndCreateSubmissions env@CoreTestEnv{..} = do
     prepareForSubmissions env
     let sigSubs = nub $ tiList cteSignedSubmissions
@@ -67,7 +67,7 @@ prepareAndCreateSubmissions env@CoreTestEnv{..} = do
 -- Transactions will have no block assiged to them.
 prepareAndCreateTransactions
     :: (MonadIO m, MonadCatch m)
-    => CoreTestEnv -> DBT 'WithinTx 'Writing m ()
+    => CoreTestEnv -> DBT 'WithinTx m ()
 prepareAndCreateTransactions env@CoreTestEnv{..} = do
     prepareAndCreateSubmissions env
     let txs = nub $ tiList ctePrivateTxs

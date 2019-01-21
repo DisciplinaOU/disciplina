@@ -23,7 +23,7 @@ import UnliftIO (askUnliftIO)
 
 import Dscp.Config
 import Dscp.Core (mkAddr)
-import Dscp.DB.SQLite (SQLiteDB, invoke)
+import Dscp.DB.SQL (SQL, invoke)
 import Dscp.Educator.Config
 import Dscp.Educator.DB (existsStudent)
 import Dscp.Educator.Launcher.Mode (EducatorNode, EducatorWorkMode)
@@ -87,7 +87,7 @@ createStudentCheckAction
 createStudentCheckAction botConfig = case botConfig ^. tree #params . selection of
     "enabled"  -> return . StudentCheckAction . const $ pure True
     "disabled" -> do
-          db <- view (lensOf @SQLiteDB)
+          db <- view (lensOf @SQL)
           return . StudentCheckAction $ \pk ->
               let addr = mkAddr pk
               in runReaderT (invoke $ existsStudent addr) db

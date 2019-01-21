@@ -20,7 +20,7 @@ import Data.Typeable (cast)
 import Servant (ServantErr (..), err400, err403, err503)
 
 import Dscp.Core.Validation
-import Dscp.DB.SQLite (SQLRequestsNumberExceeded)
+import Dscp.DB.SQL (SQLRequestsNumberExceeded)
 import Dscp.Educator.DB (DomainError (..))
 import Dscp.Educator.Web.Util
 import Dscp.Util.Servant

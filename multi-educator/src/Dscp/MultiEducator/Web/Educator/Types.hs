@@ -9,10 +9,12 @@ module Dscp.MultiEducator.Web.Educator.Types
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
 
+import Dscp.Crypto
+
 -- | Login data sent by client
 data LoginData = LoginData
-   { ldLogin :: Text
-   , ldPassword :: Text
+   { ldLogin    :: Text
+   , ldPassword :: Maybe PassPhrase
    }
 
 deriveJSON defaultOptions ''LoginData

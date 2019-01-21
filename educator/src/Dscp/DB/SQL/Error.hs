@@ -1,6 +1,6 @@
 -- | Exceptions happening during work with SQLLite.
 
-module Dscp.DB.SQLite.Error
+module Dscp.DB.SQL.Error
     ( SQLConnectionOpenningError (..)
     , SQLRequestsNumberExceeded (..)
 
@@ -9,17 +9,15 @@ module Dscp.DB.SQLite.Error
     , asReferenceInvalidError
     ) where
 
-import qualified Data.Text as T
 import qualified Data.Text.Buildable
-import Database.SQLite.Simple (Error (..), SQLError (..))
+import Database.PostgreSQL.Simple (SqlError)
+import Database.PostgreSQL.Simple.Errors (ConstraintViolation (..), constraintViolation)
 import Fmt ((+|), (|+))
 import qualified Text.Show
 
 -- | All errors which may happen on DB openning.
 data SQLConnectionOpenningError
-    = SQLInvalidPathError !FilePath
-      -- ^ Used 'SQLiteReal' constructor with bad filepath
-    | SQLInvalidConnectionsNumber !Int
+    = SQLInvalidConnectionsNumber !Int
       -- ^ Bad number of connections passed
     | SQLInvalidMaxPendingNumber !Int
       -- ^ Bad number of max pending threads
@@ -31,8 +29,6 @@ instance Show SQLConnectionOpenningError where
 
 instance Buildable SQLConnectionOpenningError where
     build = \case
-        SQLInvalidPathError path ->
-            "Given unusable path for sqlite database: "+|path|+""
         SQLInvalidConnectionsNumber num ->
             "Illegal number of connections: "+|num|+""
         SQLInvalidMaxPendingNumber num ->
@@ -49,7 +45,7 @@ instance Show SQLRequestsNumberExceeded where
     show = toString . pretty
 
 instance Buildable SQLRequestsNumberExceeded where
-    build _ = "Too many requests to SQLite database"
+    build _ = "Too many requests to SQL database"
 
 instance Exception SQLRequestsNumberExceeded
 
@@ -59,18 +55,16 @@ instance Exception SQLRequestsNumberExceeded
 
 -- | Matches on errors declaring violation of UNIQUE constraint,
 -- returns name of fields on which constraint was violated.
-asAlreadyExistsError :: SQLError -> Maybe Text
+asAlreadyExistsError :: SqlError -> Maybe ByteString
 asAlreadyExistsError err = do
-    SQLError ErrorConstraint details _ <- pure err
-    let pat = "UNIQUE constraint failed"
-    guard $ pat `T.isPrefixOf` details
-    return $ T.drop (length pat) details
+    err' <- constraintViolation err
+    UniqueViolation constr <- pure err'
+    return constr
 
 -- | Matches on errors which declare violation of FOREIGN KEY constraint,
 -- returns descrition of violated constraint.
-asReferenceInvalidError :: SQLError -> Maybe Text
+asReferenceInvalidError :: SqlError -> Maybe (ByteString, ByteString)
 asReferenceInvalidError err = do
-    SQLError ErrorConstraint details _ <- pure err
-    let pat = "FOREIGN KEY constraint failed"
-    guard $ pat `T.isPrefixOf` details
-    return $ T.drop (length pat) details
+    err' <- constraintViolation err
+    ForeignKeyViolation tbl constr <- pure err'
+    return (tbl, constr)

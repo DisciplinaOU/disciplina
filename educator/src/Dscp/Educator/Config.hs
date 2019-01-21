@@ -22,7 +22,7 @@ import Loot.Config ((:::), (::<), ConfigKind (Final, Partial), ConfigRec, upcast
 import Time (Second, Time)
 
 import Dscp.Config
-import Dscp.DB.SQLite
+import Dscp.DB.SQL
 import Dscp.Educator.Launcher.Params
 import Dscp.Educator.Web.Config
 import Dscp.Resource.Keys
@@ -30,7 +30,7 @@ import Dscp.Witness.Config
 
 type EducatorConfig = WitnessConfig ++
     '[ "educator" ::<
-       '[ "db" ::< SQLiteParams
+       '[ "db" ::< PostgresRealParams
         , "keys" ::< EducatorKeyParams
         , "api" ::< EducatorWebConfig
         , "publishing" ::<
@@ -46,7 +46,7 @@ type HasEducatorConfig = (Given EducatorConfigRec, HasWitnessConfig)
 
 defaultEducatorConfig :: EducatorConfigRecP
 defaultEducatorConfig = upcast defaultWitnessConfig
-    & sub #educator . sub #db .~ defaultSQLiteParams
+    & sub #educator . sub #db .~ defaultPostgresRealParams
     & sub #educator . sub #keys . sub #keyParams .~ defaultBaseKeyParams
     & sub #educator . sub #api . sub #botConfig . tree #params . selection ?~ "disabled"
 

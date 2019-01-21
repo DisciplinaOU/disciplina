@@ -47,7 +47,7 @@ main = do
     (skS, pkS, addrS) <- createActor
 
     privateTxs <- for [1..10 :: Integer] $ \_ -> do
-        timestamp      <- getCurrentTime
+        timestamp      <- toTimestamp <$> getCurrentTime
         contentsHash   <- generate arbitrary
         assignmentHash <- generate arbitrary
 

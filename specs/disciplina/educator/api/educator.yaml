@@ -752,7 +752,9 @@ components:
     Time:
       type: string
       format: date-time
-      description: Time in ISO format
+      description: >-
+        Time in ISO format.
+        Value is automatically rounded to microseconds precision.
 
     # Entities
     Student:

@@ -123,7 +123,7 @@ createStudentCheckAction _ =
     return . StudentCheckAction . const $ pure True
 {-
 createStudentCheckAction EducatorBotOff = do
-    db <- view (lensOf @SQLiteDB)
+    db <- view (lensOf @SQL)
     return . StudentCheckAction $ \pk ->
         let addr = mkAddr pk
         in runReaderT (invoke $ existsStudent addr) db

@@ -3,6 +3,13 @@
 # Launches a single node, be it witness, educator or other one,
 # with predefined parameters.
 
+# Prerequisites for educator node:
+# * Specify your database user name via 'PGUSER' variable; default user name is your OS username.
+#   If you haven't created a database user yet, run
+#   > sudo -u postgres createuser --interactive --pwprompt
+# * If your database user's password is not empty, specify it in .pgpass file
+#   (see https://www.postgresql.org/docs/9.3/libpq-pgpass.html).
+
 set -e -o pipefail
 
 # directory with script
@@ -21,7 +28,7 @@ do
         node="witness"
     elif [[ "$var" == "educator" ]] || [ "$var" == "e" ]; then
         node="educator"
-    elif [[ "$var" == "educator" ]] || [ "$var" == "me" ]; then
+    elif [[ "$var" == "multi-educator" ]] || [ "$var" == "me" ]; then
         node="multi-educator"
     elif [[ "$var" == "bot" ]] || [ "$var" == "b" ]; then
         educator_bot=true
@@ -55,10 +62,19 @@ witness_web_addr="127.0.0.1:8091"
 
 educator_keyfile_seed="educator-1"
 
+if [[ $node == "educator" ]]; then
+    sql_db_name="disciplina-educator"
+elif [[ $node == "multi-educator" ]]; then
+    sql_db_name="disciplina-multi-educator"
+fi
+
 ### Actions ###
 
 if [[ "$no_clean" != true ]]; then
     rm -rf $tmp_files
+    if [[ $sql_db_name != "" ]]; then
+        dropdb --if-exists $sql_db_name 2> /dev/null
+    fi
 fi
 
 mkdir $tmp_files 2> /dev/null || true
@@ -75,6 +91,14 @@ if [[ $node == "educator" ]]; then
     chmod 0600 ${tmp_files}/educator.key
 fi
 
+# Create database
+if [[ $sql_db_name != "" ]]; then
+    createdb $sql_db_name 2> /dev/null || :
+    psql $sql_db_name -tAc \
+         "alter database \"$sql_db_name\" set client_min_messages to warning" \
+         > /dev/null
+fi
+
 ##################
 # Launch
 ##################
@@ -82,7 +106,7 @@ fi
 # educator-only params
 educator_params="
 --educator-keyfile $tmp_files/educator.key
---sql-path $tmp_files/educator.db
+--sql-conn-str "postgresql:///$sql_db_name"
 --educator-listen 127.0.0.1:8090
 --educator-api-no-auth
 --student-api-no-auth 3BAyX5pNpoFrLJcP5bZ2kXihBfmBVLprSyP1RhcPPddm6Dw42jzEPXZz22
@@ -90,7 +114,7 @@ educator_params="
 "
 multi_educator_params="
 --educator-key-dir $files/educator.key
---sql-path $tmp_files/educator.db
+--sql-conn-str "postgresql:///$sql_db_name"
 --educator-listen 127.0.0.1:8090
 --educator-api-no-auth
 --student-api-no-auth 3BAyX5pNpoFrLJcP5bZ2kXihBfmBVLprSyP1RhcPPddm6Dw42jzEPXZz22

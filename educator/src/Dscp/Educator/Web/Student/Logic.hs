@@ -7,7 +7,7 @@ module Dscp.Educator.Web.Student.Logic
 
 import Dscp.Core
 import Dscp.Crypto
-import Dscp.DB.SQLite
+import Dscp.DB.SQL
 import Dscp.Educator.DB
 import Dscp.Educator.Web.Student.Error
 import Dscp.Educator.Web.Student.Queries
@@ -39,6 +39,6 @@ studentMakeSubmissionVerified student newSubmission = do
     signedSubmission <- requestToSignedSubmission newSubmission
     verifyStudentSubmission student signedSubmission
         & leftToThrow BadSubmissionSignature
-    transactW $ do
+    transact $ do
         submissionId <- submitAssignment signedSubmission
         studentGetSubmission student submissionId

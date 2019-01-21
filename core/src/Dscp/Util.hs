@@ -9,6 +9,7 @@ module Dscp.Util
        , sizeSerialised
        , Seed (..)
        , execUnmasked
+       , fromIntegralChecked
 
          -- * Exceptions processing
        , wrapRethrow
@@ -140,6 +141,17 @@ newtype Seed a = Seed { unSeed :: a }
 execUnmasked :: MonadUnliftIO m => m a -> m a
 execUnmasked action =
     UIO.asyncWithUnmask (\doUnmask -> doUnmask action) >>= UIO.wait
+
+-- | Like 'fromIntegral', but ensures there is no overflow.
+fromIntegralChecked
+    :: forall b a.
+       (HasCallStack, Each [Integral, Num] [a, b])
+    => a -> b
+fromIntegralChecked x =
+    let r = fromIntegral x
+    in if fromIntegral r == x
+          then r
+          else error "Integral overflow"
 
 -----------------------------------------------------------
 -- Exceptions processing
@@ -305,7 +317,7 @@ symbolValT :: forall s. KnownSymbol s => Text
 symbolValT = toText $ symbolVal (Proxy @s)
 
 -----------------------------------------------------------
--- Helper to establish notion of SQLite/db ID
+-- Helper to establish notion of SQL/db ID
 -----------------------------------------------------------
 
 class HasId s where

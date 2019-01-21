@@ -14,12 +14,11 @@ library:
     - aeson-options
     - ansi-terminal
     - beam-core
-    - beam-sqlite >= 0.3.2.3
+    - beam-postgres
     - bytestring
     - containers
     - data-default
     - directory
-    - direct-sqlite
     - disciplina-core
     - disciplina-witness
     - exceptions
@@ -37,6 +36,7 @@ library:
     - mtl
     - optparse-applicative
     - o-clock
+    - postgresql-simple
     - reflection
     - safe-exceptions >= 0.1.4
     - serialise
@@ -45,7 +45,6 @@ library:
     - servant-generic
     - servant-server
     - snowdrop-util
-    - sqlite-simple
     - template-haskell
     - text
     - text-format
@@ -63,6 +62,10 @@ tests:
       - tasty-discover
 
     dependencies:
+      - beam-core
+      - beam-migrate
+      - beam-postgres
+      - bytestring
       - containers
       - cryptonite
       - data-default
@@ -72,19 +75,21 @@ tests:
       - directory
       - fmt
       - generic-arbitrary
+      - hspec-core
       - hspec
       - interpolatedstring-perl6
       - lens
       - loot-base
       - loot-config
       - loot-log
+      - postgresql-simple
+      - process
       - safe-exceptions >= 0.1.4
-      - sqlite-simple
       - stm
       - tasty
       - tasty-hspec
-      - temporary
       - text-format
+      - tmp-postgres
       - time
       - QuickCheck
       - unliftio

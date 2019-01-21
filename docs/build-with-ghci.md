@@ -51,7 +51,7 @@ gcc: error: ./specs: Is a directory
 #### `./database/schema` not found
 
 ```
-/home/martoon/serokell/disciplina/educator/src/Dscp/DB/SQLite/Schema.hs:16:10: error:
+/home/martoon/serokell/disciplina/educator/src/Dscp/DB/SQL/Schema.hs:16:10: error:
     • Exception when trying to run compile-time code:
         ./database/schema.sql: openFile: does not exist (No such file or directory)
       Code: Language.Haskell.TH.Quote.quoteExp

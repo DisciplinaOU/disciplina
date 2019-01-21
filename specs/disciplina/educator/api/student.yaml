@@ -409,7 +409,9 @@ components:
     Time:
       type: string
       format: date-time
-      description: Time in ISO format
+      description: >-
+        Time in ISO format.
+        Value is automatically rounded to microseconds precision.
     Count:
       type: integer
       format: int32

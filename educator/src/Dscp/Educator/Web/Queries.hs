@@ -16,10 +16,9 @@ module Dscp.Educator.Web.Queries
 
 import Dscp.Core
 import Dscp.Crypto
-import Dscp.DB.SQLite
+import Dscp.DB.SQL
 import Dscp.Educator.DB
 import Dscp.Educator.Web.Types
-import Dscp.Util
 
 es :: DatabaseSettings be EducatorSchema
 es = educatorSchema
@@ -53,7 +52,7 @@ commonExistsSubmission
     :: MonadEducatorWebQuery m
     => Hash Submission
     -> Maybe Student
-    -> DBT t w m Bool
+    -> DBT t m Bool
 commonExistsSubmission submissionH studentF =
     checkExists $ do
         submission <- all_ (esSubmissions es)
@@ -63,7 +62,7 @@ commonExistsSubmission submissionH studentF =
 -- | Whether a submission has taken any grade.
 isGradedSubmission
     :: MonadEducatorWebQuery m
-    => Hash Submission -> DBT t w m Bool
+    => Hash Submission -> DBT t m Bool
 isGradedSubmission submissionH =
     checkExists $ do
         privateTx <- all_ (esTransactions es)
@@ -80,11 +79,12 @@ commonDeleteSubmission
     :: MonadEducatorWebQuery m
     => Hash Submission
     -> Maybe Student
-    -> DBT 'WithinTx 'Writing m ()
-commonDeleteSubmission submissionH studentF = do
-    commonExistsSubmission submissionH studentF
-        `assert` AbsentError (SubmissionDomain submissionH)
-    rewrapReferenceGotInvalid (SemanticError $ DeletingGradedSubmission submissionH) $
-        runDelete $ delete (esSubmissions es)
+    -> DBT t m ()
+commonDeleteSubmission submissionH studentF =
+    rewrapReferenceGotInvalid (SemanticError $ DeletingGradedSubmission submissionH) $ do
+        changes <- runDelete $ delete (esSubmissions es)
             (\submission -> valPk_ submissionH `references_` submission
                         &&. filterMatchesPk_ studentF (srStudent submission))
+
+        unless (anyAffected changes) $
+            throwM $ AbsentError (SubmissionDomain submissionH)

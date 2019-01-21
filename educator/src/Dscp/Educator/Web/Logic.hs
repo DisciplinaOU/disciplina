@@ -7,7 +7,7 @@ module Dscp.Educator.Web.Logic
 
 import Data.Default (def)
 import Dscp.Core
-import Dscp.DB.SQLite
+import Dscp.DB.SQL
 import Dscp.Educator.DB
 import Dscp.Educator.Launcher.Mode
 import Dscp.Educator.Web.Educator.Types
@@ -21,7 +21,7 @@ import Dscp.Witness.SDLock
 commonGetProofs
     :: MonadEducatorWebQuery m
     => GetProvenStudentTransactionsFilters
-    -> DBT 'WithinTx w m [BlkProofInfo]
+    -> DBT 'WithinTx m [BlkProofInfo]
 commonGetProofs filters = do
     rawProofs <- getProvenStudentTransactions filters
     return

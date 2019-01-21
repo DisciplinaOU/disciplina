@@ -11,7 +11,7 @@ import Snowdrop.Util (OldestFirst (..))
 
 import Dscp.Config (option)
 import Dscp.Core
-import Dscp.DB.SQLite
+import Dscp.DB.SQL
 import Dscp.Educator.DB
 import Dscp.Educator.Error
 import Dscp.Educator.Launcher.Mode
@@ -22,7 +22,7 @@ import Dscp.Witness
 -- | Form and store a new private block made up from hanging private transactions.
 dumpPrivateBlock :: EducatorWorkMode ctx m => m (Maybe PrivateBlockHeader)
 dumpPrivateBlock = do
-    mblock <- transactW $ createPrivateBlock Nothing
+    mblock <- transact $ createPrivateBlock Nothing
     case mblock of
         Nothing ->
             logInfo "No private chain updates, skipping private block creation"

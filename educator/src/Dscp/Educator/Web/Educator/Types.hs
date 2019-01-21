@@ -34,7 +34,7 @@ import Fmt (build, listF, (+|), (|+))
 
 import Dscp.Core
 import Dscp.Crypto
-import Dscp.DB.SQLite.Util
+import Dscp.DB.SQL.Util
 import Dscp.Educator.DB.Schema
 import Dscp.Educator.Web.Types
 import Dscp.Util.Servant (ForResponseLog (..), buildLongResponseList, buildShortResponseList)
@@ -46,7 +46,7 @@ data NewStudent = NewStudent
 
 data NewCourse = NewCourse
     { ncId       :: Maybe Course
-    , ncDesc     :: Text
+    , ncDesc     :: ItemDesc
     , ncSubjects :: [Subject]
     } deriving (Show, Eq, Generic)
 
@@ -59,7 +59,7 @@ data NewAssignment = NewAssignment
     { naCourseId     :: Course
     , naContentsHash :: (Hash Raw)
     , naIsFinal      :: IsFinal
-    , naDesc         :: Text
+    , naDesc         :: ItemDesc
     } deriving (Show, Eq, Generic)
 
 data NewStudentCourse = NewStudentCourse
@@ -77,7 +77,7 @@ data EducatorInfo = EducatorInfo
 
 data CourseEducatorInfo = CourseEducatorInfo
     { ciId       :: Course
-    , ciDesc     :: Text
+    , ciDesc     :: ItemDesc
     , ciSubjects :: [Subject]
     } deriving (Show, Eq, Ord, Generic)
 
@@ -86,7 +86,7 @@ data AssignmentEducatorInfo = AssignmentEducatorInfo
     , aiCourseId     :: Course
     , aiContentsHash :: (Hash Raw)
     , aiIsFinal      :: IsFinal
-    , aiDesc         :: Text
+    , aiDesc         :: ItemDesc
     } deriving (Show, Eq, Generic)
 
 data SubmissionEducatorInfo = SubmissionEducatorInfo

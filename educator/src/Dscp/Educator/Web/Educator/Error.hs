@@ -15,10 +15,10 @@ import Control.Lens (makePrisms)
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
 import Data.Reflection (Reifies (..))
-import Data.Typeable (cast)
-import Dscp.DB.SQLite (SQLRequestsNumberExceeded)
-import Dscp.Educator.DB (DomainError)
 import qualified Data.Text.Buildable as B
+import Data.Typeable (cast)
+import Dscp.DB.SQL (SQLRequestsNumberExceeded)
+import Dscp.Educator.DB (DomainError)
 import Servant (ServantErr (..), err400, err503)
 
 import Dscp.Educator.Web.Util

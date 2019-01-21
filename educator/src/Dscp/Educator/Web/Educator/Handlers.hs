@@ -9,7 +9,7 @@ import Data.Default (def)
 import Servant (Handler)
 import UnliftIO (UnliftIO (..))
 
-import Dscp.DB.SQLite
+import Dscp.DB.SQL
 import Dscp.Educator.DB
 import Dscp.Educator.Web.Educator.API
 import Dscp.Educator.Web.Educator.Error
@@ -41,10 +41,10 @@ educatorApiHandlers =
         invoke ... educatorRemoveStudent
 
     , eAddStudentCourse = \student (NewStudentCourse course) ->
-        transactW $ enrollStudentToCourse student course
+        transact $ enrollStudentToCourse student course
 
     , eAddStudentAssignment = \student (NewStudentAssignment assignmentHash) ->
-        transactW $ setStudentAssignment student assignmentHash
+        transact $ setStudentAssignment student assignmentHash
 
     , eDeleteStudentAssignment =
         invoke ... educatorUnassignFromStudent
@@ -55,7 +55,7 @@ educatorApiHandlers =
         invoke $ educatorGetCourses mStudent
 
     , eAddCourse = \(NewCourse mcid desc subjects) ->
-        transactW $ createCourse CourseDetails
+        transact $ createCourse CourseDetails
             { cdCourseId = mcid
             , cdDesc = desc
             , cdSubjects = subjects
@@ -71,7 +71,7 @@ educatorApiHandlers =
             def{ afCourse, afStudent, afIsFinal }
 
     , eAddAssignment = \_autoAssign na -> do
-        void . transactW $ createAssignment (requestToAssignment na)
+        void . transact $ createAssignment (requestToAssignment na)
         -- TODO [DSCP-176]: consider autoassign
 
       -- Submissions
@@ -84,7 +84,7 @@ educatorApiHandlers =
         invoke ... educatorGetSubmission
 
     , eDeleteSubmission = \submissionH ->
-        transactW $ commonDeleteSubmission submissionH Nothing
+        invoke $ commonDeleteSubmission submissionH Nothing
 
       -- Grades
 
@@ -92,12 +92,12 @@ educatorApiHandlers =
         invoke $ educatorGetGrades course student assignment isFinalF
 
     , eAddGrade = \(NewGrade subH grade) ->
-        invoke $ educatorPostGrade subH grade
+        transact $ educatorPostGrade subH grade
 
       -- Proofs
 
     , eGetProofs = \pfCourse pfStudent pfAssignment _pfOnlyCount ->
-        transactR $ commonGetProofs
+        transact $ commonGetProofs
             def{ pfCourse, pfStudent, pfAssignment }
     }
 

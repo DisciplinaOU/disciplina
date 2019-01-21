@@ -10,7 +10,7 @@ import Test.QuickCheck.Monadic (pick, pre)
 
 import Dscp.Core
 import Dscp.Crypto (hash, unsafeHash)
-import Dscp.DB.SQLite
+import Dscp.DB.SQL
 import Dscp.Educator.DB
 import Dscp.Educator.Web.Queries
 import Dscp.Educator.Web.Student
@@ -18,8 +18,9 @@ import Dscp.Educator.Web.Types
 import Dscp.Util
 import Dscp.Util.Test
 
+import Test.Dscp.DB.SQL.Mode
 import Test.Dscp.Educator.Mode
-import Test.Dscp.Educator.Web.Instances ()
+import Test.Dscp.Educator.Web.Instances (genCourseNoSubjects)
 import Test.Dscp.Educator.Web.Scenarios
 
 allStudents :: [Student]
@@ -56,12 +57,12 @@ submission1 : _ = detGen 23423 $ do
         <&> \(_sStudentId, _sContentsHash, (hash -> _sAssignmentHash))
             -> Submission{..}
 
-createCourseSimple :: DBM m => Int -> DBT 'WithinTx 'Writing m Course
+createCourseSimple :: DBM m => Int -> DBT 'WithinTx m Course
 createCourseSimple i =
     createCourse
         CourseDetails
         { cdCourseId = Just $ allCourses !! (i - 1)
-        , cdDesc = "course " <> pretty i
+        , cdDesc = "course " <> ItemDescUnsafe (pretty i)
         , cdSubjects = []
         }
 
@@ -69,8 +70,8 @@ applyFilterOn :: Eq f => (a -> f) -> (Maybe f) -> [a] -> [a]
 applyFilterOn field (Just match) = filter (\a -> field a == match)
 applyFilterOn _ _                = id
 
-someTime :: UTCTime
-someTime = UTCTime (toEnum 0) 0
+someTime :: Timestamp
+someTime = toTimestamp $ UTCTime (toEnum 0) 0
 
 assignmentItemsForSameCourse :: TestItemParam Assignment
 assignmentItemsForSameCourse = FixedItemSet $ do
@@ -86,12 +87,12 @@ assignmentItemsForSameCourse = FixedItemSet $ do
 5. Filtering.
 
 -}
-spec_StudentApiQueries :: Spec
-spec_StudentApiQueries = describe "Educator endpoint" $ do
+spec_Student_API_queries :: Spec
+spec_Student_API_queries = specWithTempPostgresServer $ do
   describe "Courses" $ do
     describe "getCourse" $ do
         it "Student is not enrolled initially" $
-            sqliteProperty $ \() -> do
+            sqlProperty $ \() -> do
                 _ <- createStudent student1
                 _ <- createCourseSimple 1
 
@@ -99,7 +100,7 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
                 return (not $ ciIsEnrolled course)
 
         it "Student gets enrolled when she asks to" $
-            sqliteProperty $ \() -> do
+            sqlProperty $ \() -> do
                 _ <- createStudent student1
                 _ <- createCourseSimple 1
                 enrollStudentToCourse student1 courseId1
@@ -108,8 +109,8 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
                 return (ciIsEnrolled course)
 
         it "'Course' datatype is filled correctly" $
-            sqlitePropertyM $ do
-                courseDetails <- pick arbitrary
+            sqlPropertyM $ do
+                courseDetails <- pick genCourseNoSubjects
                 pre $ isJust (cdCourseId courseDetails)
                 let courseId = cdCourseId courseDetails
                             ?: error "Course should be defined"
@@ -126,7 +127,7 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
                         }
 
         it "Student has vision proper for him" $
-            sqliteProperty $ \() -> do
+            sqlProperty $ \() -> do
                 _ <- createStudent student1
                 _ <- createStudent student2
                 _ <- createCourseSimple 1
@@ -137,7 +138,7 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
                 return (not $ ciIsEnrolled course)
 
         it "Course 'isFinished' flag is correct" $
-            sqliteProperty $
+            sqlProperty $
               \( delayedGen
                  (genCoreTestEnv simpleCoreTestParams
                   { ctpAssignment = assignmentItemsForSameCourse }) -> env
@@ -167,7 +168,7 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
 
     describe "getCourses" $ do
         it "Student is not enrolled initially" $
-            sqliteProperty $ \() -> do
+            sqlProperty $ \() -> do
                 _ <- createStudent student1
                 _ <- createCourseSimple 1
 
@@ -175,7 +176,7 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
                 return . not $ any ciIsEnrolled courses
 
         it "Student gets enrolled when he asks to" $
-            sqliteProperty $ \() -> do
+            sqlProperty $ \() -> do
                 _ <- createStudent student1
                 _ <- createCourseSimple 1
                 enrollStudentToCourse student1 courseId1
@@ -185,23 +186,25 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
                 return (ciIsEnrolled course1)
 
         it "'Course' datatype is filled correctly" $
-            sqliteProperty $ \
-              ( courseId
-              , desc
-              , delayedGen listUnique -> subjects
-              ) -> do
-                _ <- createCourse $ CourseDetails (Just courseId) desc subjects
-                courses <- studentGetCourses student1 Nothing
+            sqlPropertyM $ do
+                courseDetails <- pick genCourseNoSubjects
+                pre $ isJust (cdCourseId courseDetails)
+                let courseId = cdCourseId courseDetails
+                            ?: error "Course should be defined"
+
+                _ <- lift $ createCourse courseDetails
+
+                courses <- lift $ studentGetCourses student1 Nothing
                 return $ courses === one CourseStudentInfo
                     { ciId = courseId
-                    , ciDesc = desc
-                    , ciSubjects = subjects
+                    , ciDesc = cdDesc courseDetails
+                    , ciSubjects = cdSubjects courseDetails
                     , ciIsEnrolled = False
                     , ciIsFinished = False
                     }
 
         it "Student has vision proper for him" $
-            sqliteProperty $ \() -> do
+            sqlProperty $ \() -> do
                 _ <- createStudent student1
                 _ <- createStudent student2
                 _ <- createCourseSimple 1
@@ -216,7 +219,7 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
                 return (map ciIsEnrolled courses === [True, False])
 
         it "Filtering on IsEnrolled works" $
-            sqliteProperty $ \() -> do
+            sqlProperty $ \() -> do
                 _ <- createStudent student1
                 _ <- createCourseSimple 1
                 _ <- createCourseSimple 2
@@ -232,7 +235,7 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
                     map ciDesc notEnrolled === ["course 1"]
 
         it "Course 'isFinished' flag is correct" $
-            sqliteProperty $
+            sqlProperty $
               \( delayedGen
                  (genCoreTestEnv simpleCoreTestParams
                   { ctpAssignment = assignmentItemsForSameCourse }) -> env
@@ -266,7 +269,7 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
   describe "Assignments" $ do
     describe "getAssignment" $ do
         it "Fails on request of non-existent assignment" $
-            sqliteProperty $ \() ->
+            sqlProperty $ \() ->
                 throwsPrism (_AbsentError . _AssignmentDomain) $ do
                     _ <- createStudent student1
                     studentGetAssignment student1 (hash assignment1)
@@ -274,7 +277,7 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
         it "Fails when student is not assigned to submission" $
             -- Student is required to just take his recent submission,
             -- but we have to fail on all unautharized actions.
-            sqliteProperty $ \assignment -> do
+            sqlProperty $ \assignment -> do
                 let course = _aCourseId assignment
                 _ <- createStudent student1
                 _ <- createCourse $ simpleCourse course
@@ -283,7 +286,7 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
                     studentGetAssignment student1 (hash assignment1)
 
         it "Returns existing assignment properly" $
-            sqliteProperty $ \assignment -> do
+            sqlProperty $ \assignment -> do
                 let assignmentH = hash assignment
                 let course = _aCourseId assignment
                 _ <- createStudent student1
@@ -303,7 +306,7 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
                     }
 
         it "Student sees only his assignment" $
-            sqliteProperty $ \
+            sqlProperty $ \
               ( delayedGen (vectorUnique 2) -> [assignment, needlessAssignment]
               ) -> do
                 let course = _aCourseId assignment
@@ -317,7 +320,7 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
 
     describe "getAssignments" $ do
         it "Student has no last submission initially" $
-            sqliteProperty $ \() -> do
+            sqlProperty $ \() -> do
                 let course = _aCourseId assignment1
                 _ <- createStudent student1
                 _ <- createCourse $ simpleCourse course
@@ -328,7 +331,7 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
                 return $ all (isNothing . aiLastSubmission) assignments
 
         it "Returns existing assignment properly and only related to student" $
-            sqliteProperty $
+            sqlProperty $
               \(delayedGen (vectorUnique 2)
                  -> assignments@[assignment, needlessAssignment]) -> do
                 let assignmentH = hash assignment
@@ -352,7 +355,7 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
                     }
 
         it "Filtering works" $
-            sqliteProperty $ \
+            sqlProperty $ \
               ( delayedGen listUnique -> preAssignments
               , courseF
               , docTypeF
@@ -381,32 +384,29 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
                 return $ sortOn aiHash assignments === sortOn aiHash assignments'
 
         it "Last submission is actually the last" $
-            sqliteProperty $
-              \( delayedGen
-                 (genCoreTestEnv simpleCoreTestParams) -> env
-               ) -> do
+            sqlPropertyM $ do
+                env <- pickSmall $ genCoreTestEnv simpleCoreTestParams
                 let student = tiOne $ cteStudents env
-                    sigSubs = take 3 $ tiList $ cteSignedSubmissions env
+                    sigSubs = nub . tiList $ cteSignedSubmissions env
 
-                prepareForSubmissions env
-                forM_ (nub $ toList sigSubs) $ \sigSub -> do
-                    void $ createSignedSubmission sigSub
-                    liftIO $ threadDelay 10000  -- sqlite keeps time in ms precision
+                lift $ do
+                    prepareForSubmissions env
+                    forM_ sigSubs $ \sigSub -> do
+                        void $ createSignedSubmission sigSub
+                        liftIO $ threadDelay 1000
 
                 let lastSigSubmission = last $ Exts.fromList sigSubs
                 let lastSubmission = _ssSubmission lastSigSubmission
                 let assignmentId = _sAssignmentHash lastSubmission
-                assignment' <-
-                    studentGetAssignment student assignmentId
-                let _lastSubmission' = aiLastSubmission assignment'
-                -- @martoon: I dunno how to make it work ((
-                return True
-                    -- lastSubmission'
-                    -- ===
-                    -- Just (studentLiftSubmission lastSubmission Nothing)
+                assignment' <- lift $ studentGetAssignment student assignmentId
+                let lastSubmission' = aiLastSubmission assignment'
+                return $
+                    fmap siContentsHash lastSubmission'
+                    ===
+                    Just (_sContentsHash lastSubmission)
 
         it "Cannot see the last submission of other students" $
-            sqlitePropertyM $ do
+            sqlPropertyM $ do
                 env <- pickSmall $ genCoreTestEnv wildCoreTestParams
                 let student = tiOne $ cteStudents env
                     submissions = tiList $ cteSubmissions env
@@ -432,7 +432,7 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
         -- there are still some student-specific things we'd like to check
 
         it "Fails when student is not submission owner" $
-            sqlitePropertyM $ do
+            sqlPropertyM $ do
                 env <- pickSmall $ genCoreTestEnv simpleCoreTestParams
                 user <- pick arbitrary
 
@@ -458,7 +458,7 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
 
     describe "getSubmissions" $ do
         it "Returns existing submission properly and only related to student" $
-            sqlitePropertyM $ do
+            sqlPropertyM $ do
                 env <- pickSmall $ genCoreTestEnv wildCoreTestParams
                 let sigSubs = tiList $ cteSignedSubmissions env
                 pre (length sigSubs >= 2)
@@ -479,13 +479,13 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
 
     describe "deleteSubmission" $ do
         it "Deletion of non-existing submission throws" $
-            sqliteProperty $ \submission -> do
+            sqlProperty $ \submission -> do
                 _ <- createStudent student1
                 throwsPrism (_AbsentError . _SubmissionDomain) $
                     commonDeleteSubmission (hash submission) (Just student1)
 
         it "Delete works" $
-            sqliteProperty $
+            sqlProperty $
               \( delayedGen (genCoreTestEnv simpleCoreTestParams) -> env
                ) -> do
                   let student = tiOne $ cteStudents env
@@ -504,7 +504,7 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
                   return $ sortOn siHash subAfter === sortOn siHash expected
 
         it "Can not delete graded submission" $
-            sqliteProperty $
+            sqlProperty $
               \( delayedGen (genCoreTestEnv simpleCoreTestParams) -> env
                ) -> do
                 let student = tiOne $ cteStudents env
@@ -518,7 +518,7 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
                      commonDeleteSubmission (hash sub) (Just student)
 
         it "Can not delete other student's submission" $
-            sqliteProperty $
+            sqlProperty $
               \( delayedGen (genCoreTestEnv simpleCoreTestParams) -> env
                , otherStudent
                ) -> do
@@ -536,7 +536,7 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
 
     describe "makeSubmission" $ do
         it "Making same submission twice throws" $
-            sqliteProperty $
+            sqlProperty $
               \( delayedGen (genCoreTestEnv simpleCoreTestParams) -> env
                ) -> do
                 let sigSub = tiOne $ cteSignedSubmissions env
@@ -553,7 +553,7 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
                 let student = tiOne $ cteStudents env
                     sigSub = tiOne $ cteSignedSubmissions env
                     submissionReq = signedSubmissionToRequest sigSub
-                transactW $ prepareForSubmissions env
+                transact $ prepareForSubmissions env
                 void $ studentMakeSubmissionVerified student submissionReq
 
                 res <- invoke $ studentGetSubmissions student def
@@ -573,7 +573,7 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
                 if student == badStudent
                 then return $ property rejected
                 else do
-                    transactW $ prepareForSubmissions env
+                    transact $ prepareForSubmissions env
                     fmap property $ throwsPrism (_BadSubmissionSignature . _FakeSubmissionSignature) $
                         studentMakeSubmissionVerified badStudent newSubmission
 
@@ -587,7 +587,7 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
                                         .~ unsafeHash @Text "pva was here"
                     newSubmission = signedSubmissionToRequest badSub
 
-                transactW $ prepareForSubmissions env
+                transact $ prepareForSubmissions env
                 fmap property $ throwsPrism (_BadSubmissionSignature . _SubmissionSignatureInvalid) $
                     studentMakeSubmissionVerified student newSubmission
 
@@ -597,7 +597,7 @@ spec_StudentApiQueries = describe "Educator endpoint" $ do
             env <- pick $ genCoreTestEnv simpleCoreTestParams
             let txs = tiList $ ctePrivateTxs env
 
-            lift . transactW $ prepareAndCreateTransactions env
+            lift . transact $ prepareAndCreateTransactions env
 
             positiveGrades <- lift . invoke $ runSelect . select $ do
                 privateTx <- all_ (esTransactions educatorSchema)

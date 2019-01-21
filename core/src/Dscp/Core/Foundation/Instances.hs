@@ -11,7 +11,7 @@ import Dscp.Core.Foundation.Educator
 import Dscp.Core.Foundation.Witness
 import Dscp.Crypto.Impl
 import Dscp.Crypto.Serialise ()
-import Dscp.Util (HasId (..))
+import Dscp.Util
 
 ----------------------------------------------------------------------------
 -- Educator
@@ -72,6 +72,14 @@ instance Serialise Submission where
         case (len, tag) of
             (4, 0) -> Submission <$> decode <*> decode <*> decode
             _      -> fail "Invalid Submission encoding"
+
+instance Serialise ItemDesc where
+    encode t = encode $ unItemDesc t
+    decode = leftToFail . toItemDesc =<< decode
+
+instance Serialise Timestamp where
+    encode t = encode $ unTimestamp t
+    decode = toTimestamp <$> decode
 
 ----------------------------------------------------------------------------
 -- Witness

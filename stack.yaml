@@ -26,13 +26,10 @@ extra-deps:
 - servant-auth-server-0.4.0.0
 - cborg-0.2.1.0
 - serialise-0.2.1.0
-- beam-sqlite-0.3.2.3
+- beam-postgres-0.3.2.2
 
 - git: https://github.com/serokell/auth-data-structures.git
   commit: 4a95f4dd32a82195f49ceb0113c9f05bc260ca7d
-
-- git: https://github.com/serokell/direct-sqlite.git
-  commit: 333a2b2cf113e115ea2ec450dc706d3f47ee54e4
 
 - git: https://github.com/serokell/blockchain-util.git
   commit: 9a28a192c55cb61735ffc0c899fbd80815e1dd2c # volhovm/dscp193
