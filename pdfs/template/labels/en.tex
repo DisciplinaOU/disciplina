@@ -1,0 +1,24 @@
+\newcommand{\ifeq}[3]{%
+    \def\a{#1}%
+    \def\b{#2}%
+    \ifx\a\b%
+        #3
+    \fi
+}
+
+\newcommand{\tr}[1]{%
+    \ifeq{#1}{Date of birth:}{Date of birth:}%
+    \ifeq{#1}{Year of admission}{Year of admission}%
+    \ifeq{#1}{Year of graduation}{Year of graduation}%
+    \ifeq{#1}{Part-time education}{Part-time education}%
+    \ifeq{#1}{Full-time education}{Full-time education}%
+    \ifeq{#1}{Diploma \#}{Diploma \#}%
+    \ifeq{#1}{Degree}{Degree}%
+    \ifeq{#1}{Major}{Major}%
+    \ifeq{#1}{Minor}{Minor}%
+    \ifeq{#1}{Course}{Course}%
+    \ifeq{#1}{Language}{Language}%
+    \ifeq{#1}{Hours}{Hours}%
+    \ifeq{#1}{ECTS credits}{ECTS credits}%
+    \ifeq{#1}{Grade}{Grade}%
+}
