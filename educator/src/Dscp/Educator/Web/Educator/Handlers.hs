@@ -100,6 +100,16 @@ educatorApiHandlers =
     , eGetProofs = \pfCourse pfStudent pfAssignment pfOnlyCount ->
             fmap (mkCountedList pfOnlyCount) $ transact $
             commonGetProofs def{ pfCourse, pfStudent, pfAssignment }
+
+      -- Certificates
+    , eGetCertificates = \_offset _limit _order _onlyCount ->
+            error "not implemented"
+
+    , eGetCertificate = \_id ->
+            error "not implemented"
+
+    , eAddCertificate = \_fullInfo ->
+            error "not implemented"
     }
 
 convertEducatorApiHandler

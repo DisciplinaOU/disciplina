@@ -1104,7 +1104,8 @@ components:
     CertificateMeta:
       type: object
       required:
-        - student
+        - studentName
+        - studentBirthDate
         - startYear
         - endYear
         - educationForm
@@ -1113,17 +1114,11 @@ components:
         - title
         - major
       properties:
-        student:
-          type: object
-          required:
-            - name
-            - birthDate
-          properties:
-            name:
-              type: string
-            birthDate:
-              type: string
-              format: date
+        studentName:
+          type: string
+        studentBirthDate:
+          type: string
+          format: date
         startYear:
           type: integer
           format: int32
@@ -1132,7 +1127,7 @@ components:
           format: int32
         educationForm:
           type: string
-          enum: [fulltime, parttime]
+          enum: [fulltime, parttime, fullpart]
         number:
           type: string
         issueDate:

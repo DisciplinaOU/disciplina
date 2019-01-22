@@ -27,6 +27,7 @@ library:
     - interpolatedstring-perl6
     - jose
     - http-types
+    - http-media
     - lens
     - loot-base
     - loot-config

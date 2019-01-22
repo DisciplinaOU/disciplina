@@ -27,6 +27,8 @@ module Dscp.Core.Foundation.Educator
     , SubmissionSig
     , SignedSubmission (..)
     , SubmissionWitness (..)
+    , CertificateMeta (..)
+    , EducationForm (..)
     , documentType
     , _aDocumentType
     , aDocumentType
@@ -93,6 +95,7 @@ import Control.Exception as E
 import Control.Lens (Getter, makeLenses, to)
 import qualified Data.ByteArray as BA
 import qualified Data.Text as T
+import Data.Time.Calendar (Day (..))
 import Data.Time.Clock (UTCTime (..), diffTimeToPicoseconds, picosecondsToDiffTime)
 import Fmt (build, genericF, mapF, (+|), (|+))
 
@@ -319,6 +322,39 @@ instance Buildable () where
 
 instance Buildable DocumentType where
     build = genericF
+
+-- | Datatype containing info about a certificate issued by Educator.
+data CertificateMeta = CertificateMeta
+    { cmStudentName      :: !ItemDesc
+    , cmStudentBirthDate :: !Day
+    , cmStartYear        :: !Int
+    , cmEndYear          :: !Int
+    , cmEducationForm    :: !EducationForm
+    , cmNumber           :: !Integer
+    , cmIssueDate        :: !Day
+    , cmTitle            :: !ItemDesc
+    , cmMajor            :: !ItemDesc
+    , cmSpecialization   :: !(Maybe ItemDesc)
+    } deriving (Show, Eq, Generic)
+
+data EducationForm = Fulltime | Parttime | Fullpart
+    deriving (Show, Eq, Generic, Enum, Bounded)
+
+instance Buildable EducationForm where
+    build = show
+
+instance Buildable CertificateMeta where
+    build CertificateMeta {..} =
+        "{ studentName = "+|cmStudentName|+
+        ", studentBirthDate = "+|cmStudentBirthDate|+
+        ", startYear = "+|cmStartYear|+
+        ", endYear = "+|cmEndYear|+
+        ", educationForm = "+|cmEducationForm|+
+        ", number = "+|cmNumber|+
+        ", issueDate = "+|cmIssueDate|+
+        ", title = "+|cmTitle|+
+        ", major = "+|cmMajor|+
+        ", specialization = "+|cmSpecialization|+" }"
 
 ----------------------------------------------------------------------------
 -- Transactions

@@ -41,6 +41,9 @@ hoistEducatorApiClient nat es = EducatorApiEndpoints
     , eGetGrades               = nat ... eGetGrades es
     , eAddGrade                = nat ... eAddGrade es
     , eGetProofs               = nat ... eGetProofs es
+    , eGetCertificates         = nat ... eGetCertificates es
+    , eGetCertificate          = nat ... eGetCertificate es
+    , eAddCertificate          = nat ... eAddCertificate es
     }
 
 -- | Creates a new @'EducatorApiClient'@ connecting to a given @'BaseUrl'@

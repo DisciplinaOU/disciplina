@@ -15,6 +15,8 @@ spec_coreSerialise = describe "Core datatypes binary serialisation" $ do
     serialiseRoundtripProp @Submission
     serialiseRoundtripProp @SubmissionWitness
     serialiseRoundtripProp @SignedSubmission
+    serialiseRoundtripProp @EducationForm
+    serialiseRoundtripProp @CertificateMeta
     serialiseRoundtripProp @ATGSubjectChange
     serialiseRoundtripProp @ATGDelta
     serialiseRoundtripProp @PrivateBlockHeader
@@ -31,6 +33,8 @@ spec_coreAeson = describe "Core datatypes JSON serialisation" $ do
     aesonRoundtripProp @Submission
     aesonRoundtripProp @SubmissionWitness
     aesonRoundtripProp @SignedSubmission
+    aesonRoundtripProp @EducationForm
+    aesonRoundtripProp @CertificateMeta
     aesonRoundtripProp @ATGSubjectChange
     aesonRoundtripProp @ATGDelta
     aesonRoundtripProp @Tx
