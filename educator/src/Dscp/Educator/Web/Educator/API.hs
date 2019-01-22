@@ -73,7 +73,7 @@ type GetStudents
     :> QueryParam "isEnrolled" IsEnrolled
     :> QueryFlag "onlyCount"
     :> Summary "Get a list of all registered students' addresses"
-    :> Get '[DSON] [StudentInfo]
+    :> Get '[DSON] (Counted StudentInfo)
 
 type AddStudent
     = "students"
@@ -127,7 +127,7 @@ type GetCourses
     :> QueryParam "student" Student
     :> QueryFlag "onlyCount"
     :> Summary "Get all courses"
-    :> Get '[DSON] [CourseEducatorInfo]
+    :> Get '[DSON] (Counted CourseEducatorInfo)
 
 type AddCourse
     = "courses"
@@ -153,7 +153,7 @@ type GetAssignments
     :> QueryParam "since" Timestamp
     :> QueryFlag "onlyCount"
     :> Summary "Get all assignments"
-    :> Get '[DSON] [AssignmentEducatorInfo]
+    :> Get '[DSON] (Counted AssignmentEducatorInfo)
 
 type AddAssignment
     = "assignments"
@@ -177,7 +177,7 @@ type GetSubmissions
     :> Summary "Get all submissions"
     :> Description "Gets a list of all submissions done by all students. \
                   \This method is inaccessible by students."
-    :> Get '[DSON] [SubmissionEducatorInfo]
+    :> Get '[DSON] (Counted SubmissionEducatorInfo)
 
 type GetSubmission
     = "submissions" :> Capture "submission" (Hash Submission)
@@ -206,7 +206,7 @@ type GetGrades
     :> QueryFlag "onlyCount"
     :> Summary "Get all grades"
     :> Description "Gets a list of all grades performed by all students."
-    :> Get '[DSON] [GradeInfo]
+    :> Get '[DSON] (Counted GradeInfo)
 
 type AddGrade
     = "grades"
@@ -228,4 +228,4 @@ type GetProofs
     :> Summary "Get proofs of all student's activity"
     :> Description "Gets all private transactions related to a student \
                     \together with corresponding Merkle proofs."
-    :> Get '[DSON] [BlkProofInfo]
+    :> Get '[DSON] (Counted BlkProofInfo)

@@ -102,7 +102,7 @@ paths:
                 properties:
                   count:
                     $ref: '#/components/schemas/Count'
-                  students:
+                  items:
                     type: array
                     items:
                       $ref: '#/components/schemas/Student'
@@ -310,7 +310,7 @@ paths:
                 properties:
                   count:
                     $ref: '#/components/schemas/Count'
-                  courses:
+                  items:
                     type: array
                     items:
                       $ref: '#/components/schemas/Course'
@@ -406,7 +406,7 @@ paths:
                 properties:
                   count:
                     $ref: '#/components/schemas/Count'
-                  assignments:
+                  items:
                     type: array
                     items:
                       $ref: '#/components/schemas/Assignment'
@@ -479,7 +479,7 @@ paths:
                 properties:
                   count:
                     $ref: '#/components/schemas/Count'
-                  submissions:
+                  items:
                     type: array
                     items:
                       $ref: '#/components/schemas/Submission'
@@ -580,7 +580,7 @@ paths:
                 properties:
                   count:
                     $ref: '#/components/schemas/Count'
-                  grades:
+                  items:
                     type: array
                     items:
                       $ref: '#/components/schemas/Grade'
@@ -641,7 +641,7 @@ paths:
                 properties:
                   count:
                     $ref: '#/components/schemas/Count'
-                  proofs:
+                  items:
                     type: array
                     items:
                       $ref: '#/components/schemas/Proof'
@@ -686,7 +686,7 @@ paths:
                 properties:
                   count:
                     $ref: '#/components/schemas/Count'
-                  certificates:
+                  items:
                     type: array
                     items:
                       $ref: '#/components/schemas/Certificate'

@@ -13,6 +13,8 @@ module Dscp.Educator.Web.Educator.Types
     , NewStudentAssignment (..)
 
       -- * Responses
+    , Counted (..)
+    , mkCountedList
     , EducatorInfo (..)
     , CourseEducatorInfo (..)
     , AssignmentEducatorInfo (..)
@@ -99,6 +101,18 @@ data SubmissionEducatorInfo = SubmissionEducatorInfo
 
 eaDocumentType :: AssignmentEducatorInfo -> DocumentType
 eaDocumentType = documentType . aiContentsHash
+
+-- | Special wrapper for list which includes its length
+data Counted a = Counted
+    { cCount :: Int
+    , cItems :: Maybe [a]
+    } deriving (Show, Eq, Generic)
+
+-- | Makes a @Counted@ from a list, omitting the list itself if
+-- 'onlyCount' flag is set
+mkCountedList :: Bool -> [a] -> Counted a
+mkCountedList onlyCount ls =
+    Counted (length ls) (if onlyCount then Nothing else Just ls)
 
 ---------------------------------------------------------------------------
 -- Simple conversions
@@ -245,6 +259,14 @@ instance Buildable (ForResponseLog [AssignmentEducatorInfo]) where
 instance Buildable (ForResponseLog [SubmissionEducatorInfo]) where
     build = buildListForResponse (take 4)
 
+instance Buildable (ForResponseLog [a]) =>
+         Buildable (ForResponseLog (Counted a)) where
+    build (ForResponseLog (Counted n mbLs)) =
+        "Counted { n = "+|n|+", items = "+|mbItems mbLs|+" }"
+      where
+        mbItems Nothing   = "omitted"
+        mbItems (Just ls) = build (ForResponseLog ls)
+
 ---------------------------------------------------------------------------
 -- JSON instances
 ---------------------------------------------------------------------------
@@ -259,3 +281,4 @@ deriveJSON defaultOptions ''EducatorInfo
 deriveJSON defaultOptions ''CourseEducatorInfo
 deriveJSON defaultOptions ''AssignmentEducatorInfo
 deriveJSON defaultOptions ''SubmissionEducatorInfo
+deriveJSON defaultOptions ''Counted

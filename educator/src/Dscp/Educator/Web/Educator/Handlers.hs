@@ -31,8 +31,8 @@ educatorApiHandlers =
 
       -- Students
 
-    , eGetStudents = \mCourse _mIsEnrolled _onlyCount ->
-        invoke $ educatorGetStudents mCourse
+    , eGetStudents = \mCourse _mIsEnrolled onlyCount ->
+        fmap (mkCountedList onlyCount) $ invoke $ educatorGetStudents mCourse
 
     , eAddStudent = \(NewStudent student) ->
         void . invoke $ createStudent student
@@ -51,8 +51,8 @@ educatorApiHandlers =
 
       -- Courses
 
-    , eGetCourses = \mStudent _onlyCount ->
-        invoke $ educatorGetCourses mStudent
+    , eGetCourses = \mStudent onlyCount ->
+        fmap (mkCountedList onlyCount) $ invoke $ educatorGetCourses mStudent
 
     , eAddCourse = \(NewCourse mcid desc subjects) ->
         transact $ createCourse CourseDetails
@@ -66,9 +66,9 @@ educatorApiHandlers =
 
       -- Assignments
 
-    , eGetAssignments = \afCourse afStudent afIsFinal _afSince _afOnlyCount ->
-        invoke $ educatorGetAssignments
-            def{ afCourse, afStudent, afIsFinal }
+    , eGetAssignments = \afCourse afStudent afIsFinal _afSince afOnlyCount ->
+            fmap (mkCountedList afOnlyCount) $ invoke $
+            educatorGetAssignments def{ afCourse, afStudent, afIsFinal }
 
     , eAddAssignment = \_autoAssign na -> do
         void . transact $ createAssignment (requestToAssignment na)
@@ -76,9 +76,9 @@ educatorApiHandlers =
 
       -- Submissions
 
-    , eGetSubmissions = \sfCourse sfStudent sfAssignmentHash _sfIsGraded _sfSince _sfOnlyCount ->
-        invoke $ educatorGetSubmissions
-            def{ sfCourse, sfStudent, sfAssignmentHash }
+    , eGetSubmissions = \sfCourse sfStudent sfAssignmentHash _sfIsGraded _sfSince sfOnlyCount ->
+            fmap (mkCountedList sfOnlyCount) $ invoke $
+            educatorGetSubmissions def{ sfCourse, sfStudent, sfAssignmentHash }
 
     , eGetSubmission =
         invoke ... educatorGetSubmission
@@ -88,17 +88,18 @@ educatorApiHandlers =
 
       -- Grades
 
-    , eGetGrades = \course student assignment isFinalF _since _onlyCount ->
-        invoke $ educatorGetGrades course student assignment isFinalF
+    , eGetGrades = \course student assignment isFinalF _since onlyCount ->
+            fmap (mkCountedList onlyCount) $ invoke $
+            educatorGetGrades course student assignment isFinalF
 
     , eAddGrade = \(NewGrade subH grade) ->
-        transact $ educatorPostGrade subH grade
+            transact $ educatorPostGrade subH grade
 
       -- Proofs
 
-    , eGetProofs = \pfCourse pfStudent pfAssignment _pfOnlyCount ->
-        transact $ commonGetProofs
-            def{ pfCourse, pfStudent, pfAssignment }
+    , eGetProofs = \pfCourse pfStudent pfAssignment pfOnlyCount ->
+            fmap (mkCountedList pfOnlyCount) $ transact $
+            commonGetProofs def{ pfCourse, pfStudent, pfAssignment }
     }
 
 convertEducatorApiHandler
