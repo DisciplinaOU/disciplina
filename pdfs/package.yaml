@@ -11,6 +11,8 @@ library:
     - base64-bytestring
     - hashable
     - pandoc
+    - process
+    - temporary
 
 tests:
   disciplina-witness-test:

@@ -1,8 +1,11 @@
 
 module Pdf.FromLatex where
 
+import System.IO.Temp
+import System.Process
+
 escapeInLatex :: Text -> Text
-escapeInLatex text = "\\verb|" <> {-Text.filter (\= '|')-} text <> "|"
+escapeInLatex text = text
 
 type Locale = Text
 
@@ -43,6 +46,56 @@ data Course = Course
     , cHours       :: Int
     , cEstcCredits :: Maybe Int
     , cResult      :: Text
+    }
+
+newtype ResourcePath = ResourcePath { unResourcePath :: FilePath }
+
+convert :: Locale -> ResourcePath -> IO ByteString
+convert loc resources tmp = do
+    withSystemTempFile "faircv" $ \fname _handle -> do
+        runProcess "xelatex" []
+
+testData :: StudentInfo
+testData = StudentInfo
+    { siName        = "Фу Бар"
+    , siDateOfBirth = Date 1990 5 13
+    , siSections    =
+        [ Section
+            { sEducator = "Random dude"
+            , sDiploma  = Diploma
+                { dEducatorUrl     = "http://example.com"
+                , dEducationPeriod = (2010, 2015)
+                , dDiplomaId       = "Фу-Бар-42, 2015"
+                , dDegreeLevel     = "Младший помошник старшего черпальщика"
+                , dMajor           = "123 Черпание"
+                , dMinor           = "Владение черпаком"
+                , dPartTime        = True
+                }
+            , sCourses =
+                [ Course
+                    { cName        = "Следование за обозом"
+                    , cLanguage    = "Latin"
+                    , cHours       = 420
+                    , cEstcCredits = Nothing
+                    , cResult      = "Устал"
+                    }
+                , Course
+                    { cName        = "Черпание"
+                    , cLanguage    = "POSIX"
+                    , cHours       = 666
+                    , cEstcCredits = Just 55
+                    , cResult      = "Пролил"
+                    }
+                , Course
+                    { cName        = "Сопротивление холере"
+                    , cLanguage    = "С"
+                    , cHours       = 2
+                    , cEstcCredits = Just 8
+                    , cResult      = "Провалил"
+                    }
+                ]
+            }
+        ]
     }
 
 generate :: Locale -> StudentInfo -> Text
@@ -109,6 +162,7 @@ generateCourse
     -&- show cHours
     -&- maybe "---" show cEstcCredits
     -&- cResult
+    <>  "//"
 
 nl :: (IsString a, Semigroup a) => a -> a -> a
 a `nl` b = a <> "\n" <> b
