@@ -95,7 +95,6 @@ instance FromJSON Governance where
         "committeeClosed" -> do
             commParticipants <- o .: "participants"
             return $ GovCommittee (CommitteeClosed {..})
-        "governanceOpen" -> return GovOpen
         _ -> fail "Governance type is invalid"
 
 instance ToJSON Coin where

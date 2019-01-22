@@ -39,7 +39,7 @@ blockActions plugin =
 
     iterImpl :: Prefix -> b -> ((Ids, Values) -> b -> b) -> n b
     iterImpl (Prefix prefix) accum folder =
-        DB.pIterate plugin (fromIntegral prefix) accum (flip folder)
+        DB.pIterate plugin prefix accum (flip folder)
 
     applyImpl :: SumChangeSet Ids Values -> n ()
     applyImpl cs =

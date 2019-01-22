@@ -57,6 +57,7 @@ import qualified GHC.Exts as Exts (IsList (..))
 import qualified Text.Show
 
 import Dscp.Crypto.Impl
+import Dscp.Util
 
 -- | Data type for root of sized merkle tree.
 data MerkleSignature a = MerkleSignature
@@ -183,7 +184,7 @@ instance HasHash a => Exts.IsList (MerkleTree a) where
 nodeFromList :: HasHash a => NonEmpty a -> MerkleNode a
 nodeFromList lst@(a :| as) = tree
   where
-    (tree, []) = go (0, uLen - 1) `runState` (a : as)
+    (tree, assert_ null -> ()) = go (0, uLen - 1) `runState` (a : as)
 
     uLen = length lst
 

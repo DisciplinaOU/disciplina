@@ -113,9 +113,13 @@ seqExpandersGTx
     -> GTxWitnessed
     -> SeqExpanders Exceptions Ids Proofs Values ctx GTxWitnessed
 seqExpandersGTx addr minFee (GMoneyTxWitnessed _) =
-    flip contramap (seqExpandersBalanceTx addr minFee) $ \(GMoneyTxWitnessed tx) -> tx
+    flip contramap (seqExpandersBalanceTx addr minFee) $ \case
+        GMoneyTxWitnessed tx -> tx
+        _ -> error "impossible"
 seqExpandersGTx addr minFee (GPublicationTxWitnessed _) =
-    flip contramap (seqExpandersPublicationTx addr minFee) $ \(GPublicationTxWitnessed ptx) -> ptx
+    flip contramap (seqExpandersPublicationTx addr minFee) $ \case
+        GPublicationTxWitnessed ptx -> ptx
+        _ -> error "impossible"
 
 ----------------------------------------------------------------------------
 -- Publication tx
@@ -157,7 +161,7 @@ seqExpandersPublicationTx feesReceiverAddr (Fees minFee) =
             when (headerWasEarlier || headerIsLast) $
                 throwLocalError PublicationLocalLoop
 
-            let feeAmount = fromIntegral $ coinToInteger ptFeesAmount
+            let feeAmount = coinToInteger ptFeesAmount
             maybePub <- queryOne (PublicationsOf ptAuthor)
             mFeesReceiver <- queryOne (AccountId feesReceiverAddr)
 
@@ -310,7 +314,7 @@ seqExpandersBalanceTx feesReceiverAddr (Fees minimalFees) =
                 -- Current key we're interested in
                 let k = inj feesReceiverAccountId
                     updated =
-                        Map.adjust (fmap (\(AccountOutVal x) -> AccountOutVal $ addFee x)) k changes
+                        Map.adjust (fmap $ mapAccountOutVal addFee) k changes
                 in case Map.lookup k changes of
                     Nothing      -> Map.insert k (inj feesReceiverUpd) changes
                     Just (New _) -> updated
@@ -320,6 +324,11 @@ seqExpandersBalanceTx feesReceiverAddr (Fees minimalFees) =
 
         pure $ mkDiffCS changesWithFees
   where
+    mapAccountOutVal :: HasCallStack => (Account -> Account) -> Values -> Values
+    mapAccountOutVal f = \case
+        AccountOutVal x -> AccountOutVal (f x)
+        other -> error $ "expected AccountOutVal, got " +| show @Text other |+ ""
+
     -- Account prefixes are used during the computation to access current balance
     inP  = Set.fromList [accountPrefix, txOfPrefix]
     -- Expander returns account changes only
