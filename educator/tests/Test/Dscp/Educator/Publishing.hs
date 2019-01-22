@@ -41,10 +41,10 @@ spec_Private_blocks_publishing = specWithTempPostgresServer $ do
         txsPacks <- pick . groupArbitrarily . ordNub . tiList $ ctePrivateTxs env
 
         blocks <- lift $ do
-            transactW $ prepareAndCreateSubmissions env
+            transact $ prepareAndCreateSubmissions env
             blocks <- fmap concat . forM txsPacks $ \txs -> do
                 blocks <- forM txs $ \tx -> do
-                    void $ transactW $ createTransaction tx
+                    void $ transact $ createTransaction tx
                     nothingToPanic "No block created" <$> dumpPrivateBlock
                 void updateMempoolWithPublications
                 return blocks

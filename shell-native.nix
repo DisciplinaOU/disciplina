@@ -7,6 +7,7 @@ stdenv.mkDerivation rec {
     binutils
     haskell.compiler.ghc822
     pkgconfig
+    postgresql
     git
   ];
 
