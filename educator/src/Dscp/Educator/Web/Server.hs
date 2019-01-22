@@ -19,6 +19,7 @@ import Servant ((:<|>) (..), Context (..), Handler, ServantErr (..), Server, Std
                 hoistServerWithContext, serveWithContext)
 import Servant.Auth.Server.Internal.ThrowAll (throwAll)
 import Servant.Generic (toServant)
+import Servant.Util (LoggingApi, ServantLogConfig (..), methodsCoveringAPI)
 import UnliftIO (askUnliftIO)
 
 import Dscp.Config
@@ -35,7 +36,6 @@ import Dscp.Educator.Web.Educator (EducatorPublicKey (..), ProtectedEducatorAPI,
 import Dscp.Educator.Web.Student (ProtectedStudentAPI, StudentCheckAction (..),
                                   convertStudentApiHandler, studentAPI, studentApiHandlers)
 import Dscp.Resource.Keys (KeyResources, krPublicKey)
-import Dscp.Util.Servant (LoggingApi, ServantLogConfig (..), methodsCoveringAPI)
 import Dscp.Web (buildServantLogConfig, serveWeb)
 import Dscp.Web.Metrics (responseTimeMetric)
 import Dscp.Witness.Web

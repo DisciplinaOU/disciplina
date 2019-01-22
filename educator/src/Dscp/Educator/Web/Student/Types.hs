@@ -24,6 +24,7 @@ module Dscp.Educator.Web.Student.Types
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
 import Fmt (blockListF, build, (+|), (|+))
+import Servant.Util (type (?:), ForResponseLog (..), SortingParamTypesOf, buildListForResponse)
 
 import Dscp.Core
 import Dscp.Crypto
@@ -31,7 +32,6 @@ import Dscp.DB.SQL.Util
 import Dscp.Educator.DB
 import Dscp.Educator.Web.Types
 import Dscp.Util
-import Dscp.Util.Servant
 
 data NewSubmission = NewSubmission
     { nsAssignmentHash :: (Hash Assignment)
@@ -161,13 +161,13 @@ instance Buildable (ForResponseLog SubmissionStudentInfo) where
       " }"
 
 instance Buildable (ForResponseLog [CourseStudentInfo]) where
-    build = buildShortResponseList
+    build = buildListForResponse (take 4)
 
 instance Buildable (ForResponseLog [AssignmentStudentInfo]) where
-    build = buildShortResponseList
+    build = buildListForResponse (take 4)
 
 instance Buildable (ForResponseLog [SubmissionStudentInfo]) where
-    build = buildShortResponseList
+    build = buildListForResponse (take 4)
 
 ---------------------------------------------------------------------------
 -- JSON instances
@@ -183,11 +183,11 @@ deriveJSON defaultOptions ''SubmissionStudentInfo
 ---------------------------------------------------------------------------
 
 type instance SortingParamTypesOf CourseStudentInfo =
-    ["id" ?: Course, "desc" ?: Text]
+    ["id" ?: Course, "desc" ?: ItemDesc]
 
 -- TODO [DSCP-424]: add timestamps
 type instance SortingParamTypesOf AssignmentStudentInfo =
-    ["course" ?: Course, "desc" ?: Text]
+    ["course" ?: Course, "desc" ?: ItemDesc]
 
 -- TODO [DSCP-424]: add timestamps
 type instance SortingParamTypesOf SubmissionStudentInfo =

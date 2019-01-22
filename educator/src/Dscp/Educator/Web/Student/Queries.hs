@@ -17,6 +17,9 @@ module Dscp.Educator.Web.Student.Queries
 import Control.Lens (from, mapping)
 import Data.Coerce (coerce)
 import Data.Default (Default)
+import Servant.Util (SortingSpecOf)
+import Servant.Util.Beam.Postgres (SortingSpecApp (..), bySpec_, fieldSort_)
+
 import Dscp.Core
 import Dscp.Crypto (Hash)
 import Dscp.DB.SQL
@@ -27,7 +30,6 @@ import Dscp.Util
 import Dscp.Educator.Web.Queries
 import Dscp.Educator.Web.Student.Types
 import Dscp.Educator.Web.Types
-import Dscp.Util.Servant
 
 ----------------------------------------------------------------------------
 -- Filters for endpoints
@@ -104,9 +106,9 @@ studentGetCourses studentId (coerce -> isEnrolledF) sorting = do
         return CourseStudentInfo{ ciId = courseId, .. }
   where
     mkSortingSpecApp (courseId, desc) =
-        fieldSort_ @"id" courseId .*.
-        fieldSort_ @"desc" desc .*.
-        HNil
+        fieldSort_ @"id" courseId :>:
+        fieldSort_ @"desc" desc :>:
+        SortingSpecAppEnd
 
 studentGetGrade
     :: MonadEducatorWebQuery m
@@ -202,9 +204,9 @@ studentGetAssignments student filters sorting = do
   where
     assignTypeF = afIsFinal filters ^. mapping (from assignmentTypeRaw)
     mkSortingSpecApp AssignmentRow{..} =
-        fieldSort_ @"course" (unpackPk arCourse) .*.
-        fieldSort_ @"desc" arDesc .*.
-        HNil
+        fieldSort_ @"course" (unpackPk arCourse) :>:
+        fieldSort_ @"desc" arDesc :>:
+        SortingSpecAppEnd
 
 -- | Get exactly one assignment.
 studentGetSubmission
@@ -251,5 +253,5 @@ studentGetSubmissions student filters sorting = do
             return (submission, mPrivateTx)
   where
     mkSortingSpecApp (_, TransactionRow{..}) =
-        fieldSort_ @"grade" trGrade .*.
-        HNil
+        fieldSort_ @"grade" trGrade :>:
+        SortingSpecAppEnd

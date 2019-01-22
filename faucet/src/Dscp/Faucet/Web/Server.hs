@@ -15,13 +15,13 @@ import Network.Wai (Middleware)
 import Network.Wai.Middleware.Cors (CorsResourcePolicy (..), cors, simpleCorsResourcePolicy)
 import Servant ((:>), Handler, Server, StdMethod (..), hoistServer, serve)
 import Servant.Generic (toServant)
+import Servant.Util (LoggingApi, methodsCoveringAPI)
 
 import Dscp.Config
 import Dscp.Faucet.Config
 import Dscp.Faucet.Launcher (FaucetRealMode, FaucetWorkMode)
 import Dscp.Faucet.Web.API (FaucetAPI, faucetAPI)
 import Dscp.Faucet.Web.Handlers (convertFaucetApiHandler, faucetApiHandlers)
-import Dscp.Util.Servant (LoggingApi, methodsCoveringAPI)
 import Dscp.Web (serveWeb)
 import Dscp.Web.Server (buildServantLogConfig)
 

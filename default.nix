@@ -26,11 +26,10 @@ stackToNix {
     "/specs"
   ];
   inherit shell;
-  overrides = final: previous: {
+  overrides = self: previous: {
     disciplina-educator = withPostgreSQL previous.disciplina-educator;
 
-  overrides = self: super: {
-    HList = pkgs.haskell.lib.overrideCabal super.HList (o: {
+    HList = pkgs.haskell.lib.overrideCabal previous.HList (o: {
       preCompileBuildDriver = ''
         rm -f Setup.lhs Setup.hs
         cat << EOF > Setup.hs

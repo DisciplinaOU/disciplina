@@ -6,11 +6,11 @@ module Dscp.Educator.Web.Educator.Client.Logic
 
 import Servant.Client (ClientM, client, runClientM)
 import Servant.Generic (fromServant)
+import Servant.Util ()
 
 import Dscp.Educator.Web.Educator.API
 import Dscp.Educator.Web.Educator.Client.Error
 import Dscp.Util
-import Dscp.Util.Servant
 import Dscp.Web
 
 type EducatorApiClient = EducatorApiEndpoints (AsClientT IO)

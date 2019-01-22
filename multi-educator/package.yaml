@@ -41,6 +41,7 @@ library:
     - servant-auth-server
     - servant-generic
     - servant-server
+    - servant-util
     - singleton-bool
     - sqlite-simple
     - template-haskell

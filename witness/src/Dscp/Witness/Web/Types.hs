@@ -23,11 +23,11 @@ import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (Options (..), deriveJSON)
 import Fmt (build, genericF, (+|), (|+))
 import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
+import Servant.Util (ForResponseLog (..), buildForResponse)
 
 import Dscp.Core
 import Dscp.Util
 import Dscp.Util.Aeson
-import Dscp.Util.Servant (ForResponseLog (..), buildForResponse)
 
 -- | Distinguishes stuff on whether does it take mempool in consideration.
 data BlocksOrMempool a = BlocksOrMempool

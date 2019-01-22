@@ -18,12 +18,12 @@ import Data.Reflection (Reifies (..))
 import qualified Data.Text.Buildable as B
 import Data.Typeable (cast)
 import Servant (ServantErr (..), err400, err403, err503)
+import Servant.Util (SimpleJSON)
 
 import Dscp.Core.Validation
 import Dscp.DB.SQL (SQLRequestsNumberExceeded)
 import Dscp.Educator.DB (DomainError (..))
 import Dscp.Educator.Web.Util
-import Dscp.Util.Servant
 import Dscp.Web.Class
 
 -- | Any error backend may return.

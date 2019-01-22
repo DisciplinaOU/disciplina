@@ -53,6 +53,7 @@ library:
     - servant-client
     - servant-server
     - servant-generic
+    - servant-util
     - serokell-util
     - snowdrop-block
     - snowdrop-core

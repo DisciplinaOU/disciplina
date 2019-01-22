@@ -4,9 +4,12 @@
 module Dscp.Web.Types
        ( NetworkAddress (..)
        , parseNetAddr
+       , AsClientT
        ) where
 
 import Fmt (Buildable (..), (+|), (|+))
+import Servant.Client (Client)
+import Servant.Generic ((:-))
 import Text.Parsec (eof, many1, parse, sepBy)
 import Text.Parsec.Char (char, digit)
 import qualified Text.Parsec.String as Parsec
@@ -43,3 +46,11 @@ parseNetAddr st =
     parseWord n = do x <- fromMaybe (error "unexpected") . readMaybe <$> many1 digit
                      when ((x :: Integer) > 2 ^ (n :: Integer) - 1) $ fail "invalid"
                      return $ fromIntegral x
+
+---------------------------------------------------------------------------
+-- Servant
+---------------------------------------------------------------------------
+
+-- todo: isn't needed with servant-client-0.14 (lts-12)
+data AsClientT (m :: * -> *)
+type instance AsClientT m :- api = Client m api

@@ -16,8 +16,8 @@ import Network.HTTP.Client.TLS (newTlsManager)
 import qualified Network.Wai.Handler.Warp as Warp
 import Servant (Application)
 import Servant.Client (BaseUrl (..), ClientEnv, Scheme (..), mkClientEnv)
+import Servant.Util (ServantLogConfig (..))
 
-import Dscp.Util.Servant (ServantLogConfig (..))
 import Dscp.Web.Types (NetworkAddress (..))
 
 warpSettings :: NetworkAddress -> Warp.Settings
@@ -46,7 +46,7 @@ buildServantLogConfig modifyName = do
                        _           -> mempty
         name = modifyName origName
     return ServantLogConfig
-        { clcLog = \severity text -> logger $ Message severity name text
+        { clcLog = \text -> logger $ Message Log.Info name text
         }
 
 ----------------------------------------------------------------------------

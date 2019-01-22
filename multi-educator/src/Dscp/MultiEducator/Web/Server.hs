@@ -19,6 +19,7 @@ import Servant.Auth.Server (AuthResult (..), CookieSettings, JWTSettings, defaul
                             defaultJWTSettings, generateKey)
 import Servant.Auth.Server.Internal.ThrowAll (throwAll)
 import Servant.Generic (toServant)
+import Servant.Util (methodsCoveringAPI)
 import UnliftIO (askUnliftIO)
 
 import Dscp.Config
@@ -35,7 +36,6 @@ import Dscp.MultiEducator.Launcher.Resource (EducatorCtxWithCfg (..))
 import Dscp.MultiEducator.Web.Educator (MultiEducatorAPI, MultiStudentAPI, multiEducatorAPI,
                                         multiEducatorApiHandlers, multiStudentAPI)
 import Dscp.MultiEducator.Web.Educator.Auth
-import Dscp.Util.Servant (methodsCoveringAPI)
 import Dscp.Web (serveWeb)
 import Dscp.Web.Metrics (responseTimeMetric)
 import Dscp.Witness.Web

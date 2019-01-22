@@ -34,6 +34,7 @@ import Fmt (build, (+|), (+||), (|+), (||+))
 import Loot.Base.HasLens (HasCtx)
 import Loot.Log (ModifyLogName, MonadLogging)
 import Servant (FromHttpApiData (..), ToHttpApiData)
+import Servant.Util (ForResponseLog (..), buildForResponse, buildListForResponse)
 
 import Dscp.Core
 import Dscp.Crypto
@@ -42,7 +43,6 @@ import Dscp.Educator.DB
 import Dscp.Educator.Launcher.Marker
 import Dscp.Resource.Keys
 import Dscp.Util.Aeson
-import Dscp.Util.Servant
 import Dscp.Witness.Launcher.Context
 
 type MonadEducatorWebQuery m =
@@ -157,13 +157,13 @@ instance Buildable (ForResponseLog Course) where
     build = buildForResponse
 
 instance Buildable (ForResponseLog [GradeInfo]) where
-    build = buildShortResponseList
+    build = buildListForResponse (take 4)
 
 instance Buildable (ForResponseLog [StudentInfo]) where
-    build = buildLongResponseList
+    build = buildListForResponse (take 8)
 
 instance Buildable (ForResponseLog [BlkProofInfo]) where
-    build = buildLongResponseList
+    build = buildListForResponse (take 8)
 
 ---------------------------------------------------------------------------
 -- Simple conversions

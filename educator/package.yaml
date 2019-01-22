@@ -26,7 +26,6 @@ library:
     - fmt
     - interpolatedstring-perl6
     - jose
-    - HList
     - http-types
     - lens
     - loot-base
@@ -45,6 +44,8 @@ library:
     - servant-client
     - servant-generic
     - servant-server
+    - servant-util
+    - servant-util-beam-pg
     - snowdrop-util
     - template-haskell
     - text
