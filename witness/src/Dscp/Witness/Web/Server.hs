@@ -15,10 +15,10 @@ import Network.HTTP.Types.Header (hContentType)
 import Network.Wai (Middleware)
 import Network.Wai.Middleware.Cors (CorsResourcePolicy (..), cors, simpleCorsResourcePolicy)
 import Servant (Handler, Server, StdMethod (..), hoistServer, serve, throwError)
+import Servant.Util (LoggingApi, ServantLogConfig (..), methodsCoveringAPI)
 import UnliftIO (UnliftIO (..), askUnliftIO)
 
 import Dscp.Config (option)
-import Dscp.Util.Servant (LoggingApi, ServantLogConfig (..), methodsCoveringAPI)
 import Dscp.Web (ServerParamsRec, buildServantLogConfig, serveWeb)
 import Dscp.Web.Class
 import Dscp.Witness.Launcher.Context

@@ -9,11 +9,11 @@ import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveFromJSON, deriveToJSON)
 import qualified Data.Text.Buildable
 import Fmt ((+|), (|+))
+import Servant.Util (ForResponseLog (..))
 
 import Dscp.Core
 import Dscp.Crypto
 import Dscp.Util.Aeson
-import Dscp.Util.Servant
 
 -- | Wrapper to generate proper JSON instance for request body.
 newtype GenKeysRequest = GenKeysRequest

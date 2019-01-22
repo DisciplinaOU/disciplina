@@ -27,6 +27,7 @@ library:
     - servant-client
     - servant-generic
     - servant-server
+    - servant-util
     - text-format
     - unliftio
     - wai

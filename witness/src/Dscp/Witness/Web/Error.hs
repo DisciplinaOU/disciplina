@@ -13,9 +13,9 @@ import Data.Reflection (Reifies (..))
 import qualified Data.Text.Buildable as B
 import Data.Typeable (cast)
 import Servant (err400, err500, err503)
+import Servant.Util (SimpleJSON)
 
 import Dscp.Snowdrop
-import Dscp.Util.Servant
 import Dscp.Web.Class
 import Dscp.Witness.Logic.Exceptions
 import Dscp.Witness.Relay (RelayException)

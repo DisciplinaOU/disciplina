@@ -12,8 +12,8 @@ import Control.Lens (makePrisms)
 import Data.Data (Data)
 import Data.Reflection (Reifies (..))
 import Servant (ServantErr (..), err400, err403, err503)
+import Servant.Util (SimpleJSON)
 
-import Dscp.Util.Servant
 import Dscp.Web.Class
 
 -- | Any error backend may return.

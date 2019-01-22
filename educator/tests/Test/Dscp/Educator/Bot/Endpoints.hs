@@ -3,6 +3,8 @@
 module Test.Dscp.Educator.Bot.Endpoints where
 
 import Control.Lens ((?~))
+import Data.Default (def)
+
 import Dscp.Config
 import Dscp.Core.Arbitrary
 import Dscp.Crypto
@@ -36,13 +38,13 @@ spec_StudentApiWithBotQueries = specWithTempPostgresServer $ do
     it "Student gets assigned on courses on first request" $
         educatorProperty $ \seed -> do
             StudentApiEndpoints{..} <- testMakeBotHandlers seed
-            courses <- sGetCourses Nothing False
+            courses <- sGetCourses Nothing False def
             return (not $ null courses)
 
     it "Student gets some assignments on first request" $
         educatorProperty $ \seed -> do
             StudentApiEndpoints{..} <- testMakeBotHandlers seed
-            assignments <- sGetAssignments Nothing Nothing Nothing False
+            assignments <- sGetAssignments Nothing Nothing Nothing False def
             return (not $ null assignments)
 
     it "Submissions are graded automatically" $
@@ -56,6 +58,6 @@ spec_StudentApiWithBotQueries = specWithTempPostgresServer $ do
             submissions <- lift $ do
                 StudentApiEndpoints{..} <- testMakeBotHandlers seed
                 void $ sAddSubmission (signedSubmissionToRequest sigsub)
-                sGetSubmissions Nothing Nothing Nothing False
+                sGetSubmissions Nothing Nothing Nothing False def
             [submission] <- pure submissions
             return (isJust $ siGrade submission)

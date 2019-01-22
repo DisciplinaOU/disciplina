@@ -31,13 +31,13 @@ import Control.Lens (from)
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
 import Fmt (build, listF, (+|), (|+))
+import Servant.Util (ForResponseLog (..), buildListForResponse)
 
 import Dscp.Core
 import Dscp.Crypto
 import Dscp.DB.SQL.Util
 import Dscp.Educator.DB.Schema
 import Dscp.Educator.Web.Types
-import Dscp.Util.Servant (ForResponseLog (..), buildLongResponseList, buildShortResponseList)
 import Dscp.Witness.Web.Types
 
 data NewStudent = NewStudent
@@ -237,13 +237,13 @@ instance Buildable (ForResponseLog SubmissionEducatorInfo) where
       " }"
 
 instance Buildable (ForResponseLog [CourseEducatorInfo]) where
-    build = buildLongResponseList
+    build = buildListForResponse (take 6)
 
 instance Buildable (ForResponseLog [AssignmentEducatorInfo]) where
-    build = buildShortResponseList
+    build = buildListForResponse (take 4)
 
 instance Buildable (ForResponseLog [SubmissionEducatorInfo]) where
-    build = buildShortResponseList
+    build = buildListForResponse (take 4)
 
 ---------------------------------------------------------------------------
 -- JSON instances

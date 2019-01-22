@@ -10,7 +10,6 @@ import Servant.Generic (fromServant)
 
 import Dscp.Resource.Class
 import Dscp.Util
-import Dscp.Util.Servant
 import Dscp.Web
 import Dscp.Witness.Web.API
 import Dscp.Witness.Web.Client.Error

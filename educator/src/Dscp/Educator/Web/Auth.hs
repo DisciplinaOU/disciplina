@@ -32,9 +32,9 @@ import Servant.Auth.Server (AuthCheck (..), AuthResult (..))
 import Servant.Auth.Server.Internal.Class (AreAuths (..), IsAuth (..), runAuths)
 import Servant.Server.Internal.RoutingApplication (DelayedIO, addAuthCheck, delayedFailFatal,
                                                    withRequest)
+import Servant.Util (ApiCanLogArg (..), ApiHasArgClass (..))
 
 import Dscp.Crypto
-import Dscp.Util.Servant (ApiHasArgClass (..), ApiCanLogArg (..))
 
 ---------------------------------------------------------------------------
 -- Data types
