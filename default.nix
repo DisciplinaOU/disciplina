@@ -9,7 +9,7 @@ let
     # we need the temporary directory from pg_tmp
     # so extract it out of $TEST_PG_CONN_STRING
     postCheck = (a.postCheck or "") + ''
-      pg_tmp stop -d $(echo ''${TEST_PG_CONN_STRING#*=} | sed 's:%2F:/:g' || :)
+      pg_tmp stop -d $(echo ''${TEST_PG_CONN_STRING#*=} | sed 's:%2F:/:g') || :
     '';
   });
 in
