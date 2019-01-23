@@ -56,7 +56,7 @@ See [configuration section](/docs/config.md) document.
 
 You will need to run Postgres server in order for `stack exec disciplina-educator` to work.
 
-Or run the [test script](./scripts/test/educator.sh) which does that for you
+Or run the [test script](/scripts/test/educator.sh) which does that for you
 (with nix, execute `nix-build -A disciplina-educator`).
 Server still requires a bit of general tunning, if you have just installed your Postgres server
 read [`educator.sh`'s](/scripts/test/educator.sh) 'Prerequisites' section first.
