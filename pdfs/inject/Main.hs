@@ -1,6 +1,5 @@
 
-import Data.ByteString as LBS
-import Data.Text as Text
+import qualified Data.ByteString as BS
 
 import Pdf.Scanner
 

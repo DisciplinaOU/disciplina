@@ -9,9 +9,12 @@ library:
   dependencies:
     - bytestring
     - base64-bytestring
+    - directory
     - hashable
+    - path
+    - path-io
     - pandoc
-    - process
+    - typed-process
     - temporary
 
 tests:
@@ -27,7 +30,16 @@ tests:
 executables:
   dscp-inject-json-into-pdf:
     <<: *exec-common
-    source-dirs: app
+    source-dirs: inject
+    dependencies:
+      - disciplina-pdfs
+      - bytestring
+      - text
+
+executables:
+  dscp-generate-test-pdf:
+    <<: *exec-common
+    source-dirs: test-pdf
     dependencies:
       - disciplina-pdfs
       - bytestring

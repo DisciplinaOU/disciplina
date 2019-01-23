@@ -1,8 +1,12 @@
 
 module Pdf.FromLatex where
 
+import qualified Data.ByteString as BS
+import Path.IO
+import Path
+import System.Directory
 import System.IO.Temp
-import System.Process
+import System.Process.Typed
 
 escapeInLatex :: Text -> Text
 escapeInLatex text = text
@@ -50,10 +54,28 @@ data Course = Course
 
 newtype ResourcePath = ResourcePath { unResourcePath :: FilePath }
 
-convert :: Locale -> ResourcePath -> IO ByteString
-convert loc resources tmp = do
-    withSystemTempFile "faircv" $ \fname _handle -> do
-        runProcess "xelatex" []
+produce :: Locale -> StudentInfo -> ResourcePath -> IO ByteString
+produce loc info (ResourcePath resources) = do
+    withSystemTempDirectory "faircv" $ \dir -> do
+        resPath <- parseRelDir resources
+        tmpPath <- parseAbsDir dir
+        copyDirRecur resPath tmpPath
+
+        let input = encodeUtf8 $ generate loc info
+        withCurrentDirectory dir $ do
+            let action =
+                    runProcess
+                    $ setStdin (byteStringInput input)
+                    $ setStdout byteStringOutput
+                    $ "xelatex"
+
+            -- LaTeX Warning: Label(s) may have changed. Rerun to get cross-references right.
+            --
+            -- That's why. And there's no picture behind header if only 1 action is run.
+            _ <- action
+            _ <- action
+
+            BS.readFile "texput.pdf"
 
 testData :: StudentInfo
 testData = StudentInfo
@@ -123,7 +145,7 @@ generateSection
         , sCourses
         }
   = ""
-    `nl` command "Section" [sEducator]
+    `nl` command "section" [sEducator]
     `nl` block   "Diploma" (generateDiploma sDiploma)
     `nl` block   "Courses" (unlines (map generateCourse sCourses))
 
@@ -162,7 +184,7 @@ generateCourse
     -&- show cHours
     -&- maybe "---" show cEstcCredits
     -&- cResult
-    <>  "//"
+    <>  " \\\\"
 
 nl :: (IsString a, Semigroup a) => a -> a -> a
 a `nl` b = a <> "\n" <> b
