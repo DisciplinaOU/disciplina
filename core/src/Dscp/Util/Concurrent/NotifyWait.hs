@@ -52,8 +52,8 @@ notifyError notifier err = notify notifier (Left err)
 -- or termination caused by exception. Any exceptions are rethrown (in this
 -- thread).
 -- Note that this function is exception-safe only in absence of async exceptions.
-finallyNotify :: MonadUnliftIO m => m a -> Notifier desc -> m a
-finallyNotify action notifier =
+finallyNotify :: MonadUnliftIO m => Notifier desc -> m a -> m a
+finallyNotify notifier action =
     (action <* notifyCompleted notifier)
         `UIO.catchAny` \e -> notifyError notifier e >> UIO.throwIO e
 

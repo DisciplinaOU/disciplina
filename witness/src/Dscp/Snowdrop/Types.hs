@@ -16,11 +16,11 @@ module Dscp.Snowdrop.Types
     , _PublicationIsBroken
     , _PublicationFeeIsTooLow
     , _PublicationCantAffordFee
-    , _PublicationLocalLoop
+    , _PublicationAlreadyExists
     , AccountException(..)
     , _MTxNoOutputs
     , _MTxDuplicateOutputs
-    , _TransactionAlreadyExists
+    , _MTxAlreadyExists
     , _InsufficientFees
     , _SignatureIsMissing
     , _SignatureIsCorrupted
@@ -64,7 +64,8 @@ data PublicationException
       { peMinimalFee :: Integer, peGivenFee :: Integer }
     | PublicationCantAffordFee
       { peFee :: Integer, peBalance :: Integer }  -- ^ Publication owner can not afford the fee
-    | PublicationLocalLoop
+    | PublicationAlreadyExists
+      { peTxId :: PublicationTxId }
     deriving (Eq, Ord)
 
 makePrisms ''PublicationException
@@ -88,8 +89,8 @@ instance Buildable PublicationException where
         PublicationCantAffordFee{..} ->
             "Publication author can't afford the fee \
             \(fee: " +| peFee |+ ", balance: " +| peBalance |+ ")"
-        PublicationLocalLoop ->
-            "Transaction would create a loop in educator's chain"
+        PublicationAlreadyExists{..} ->
+            "Transaction " +| peTxId |+ " already exists educator's chain"
 
 data AccountTxTypeId = AccountTxTypeId deriving (Eq, Ord, Show, Generic)
 
@@ -97,8 +98,8 @@ data AccountTxTypeId = AccountTxTypeId deriving (Eq, Ord, Show, Generic)
 data AccountException
     = MTxNoOutputs
     | MTxDuplicateOutputs
-    | TransactionAlreadyExists
-      { taeTxId :: TxId }
+    | MTxAlreadyExists
+      { aeTxId :: TxId }
     | InsufficientFees
       { aeExpectedFees :: Integer, aeActualFees :: Integer }
     | SignatureIsMissing
@@ -130,8 +131,8 @@ instance Buildable AccountException where
             "Transaction has no outputs"
         MTxDuplicateOutputs ->
             "Duplicated transaction outputs"
-        TransactionAlreadyExists{..} ->
-            "Transaction " +| taeTxId |+ " has already been registered"
+        MTxAlreadyExists{..} ->
+            "Transaction " +| aeTxId |+ " has already been registered"
         InsufficientFees{..} ->
             "Amount of money left for fees in transaction is not enough, \
              \expected " +| unsafeMkCoin aeExpectedFees |+ ", got " +| unsafeMkCoin aeActualFees |+ ""

@@ -38,12 +38,13 @@ module Dscp.Snowdrop.Configuration
     , _PublicationError
     , _BlockError
     , _LogicError
+    , _TransactionAlreadyExists
 
     , TxIds (..)
     ) where
 
 
-import Control.Lens (makePrisms)
+import Control.Lens (coerced, failing, makePrisms)
 import qualified Data.Set as S
 import qualified Data.Text.Buildable as B
 import Fmt (build, (+|))
@@ -63,9 +64,7 @@ import Dscp.Core (Fees, HeaderHash)
 import qualified Dscp.Core.Foundation as T
 import Dscp.Crypto (HasAbstractSignature, Hash, PublicKey, SigScheme, Signature, hashF, verify)
 import Dscp.Snowdrop.Storage.Types
-import Dscp.Snowdrop.Types (Account, AccountException, AccountId (..), AccountTxTypeId (..),
-                            BlockException (..), BlockMetaTxTypeId (..), PublicationException,
-                            PublicationTxTypeId (..))
+import Dscp.Snowdrop.Types
 import Dscp.Witness.Logic.Exceptions (LogicException)
 
 ----------------------------------------------------------------------------
@@ -338,6 +337,12 @@ instance Buildable Exceptions where
         PublicationError err -> B.build err
         LogicError err -> B.build err
         SdInternalError err -> B.build err
+
+_TransactionAlreadyExists :: Traversal' Exceptions T.GTxId
+_TransactionAlreadyExists =
+    (_AccountError . _MTxAlreadyExists . coerced)
+    `failing`
+    (_PublicationError . _PublicationAlreadyExists . coerced)
 
 ----------------------------------------------------------------------------
 -- TxIds
