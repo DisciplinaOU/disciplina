@@ -17,6 +17,7 @@ import Dscp.Educator.Error
 import Dscp.Educator.Launcher.Mode
 import Dscp.Resource.Keys
 import Dscp.Util
+import Dscp.Util.Concurrent.NotifyWait
 import Dscp.Witness
 
 -- | Form and store a new private block made up from hanging private transactions.
@@ -34,8 +35,8 @@ dumpPrivateBlock = do
 -- | Update mempool with lacking private blocks.
 -- Heavyweight operation.
 publishMissingBlocks :: EducatorWorkMode ctx m => m ()
-publishMissingBlocks =
-    writingSDLock "add publication to mempool" $ do
+publishMissingBlocks = do
+    monitors <- writingSDLock "add publication to mempool" $ do
         sk <- ourSecretKeyData @EducatorNode
         privTip <- runSdMempool $ getPrivateTipHash (skAddress sk)
         let feePolicy = feeConfig ^. option #publication
@@ -46,7 +47,9 @@ publishMissingBlocks =
         let pubTxs = createPublicationTxw feePolicy sk <$> blocks
 
         logInfo . fmt $ nameF "Adding publications to mempool" (listF $ toPtxId . ptwTx <$> pubTxs)
-        forM_ pubTxs $ addTxToMempool . GPublicationTxWitnessed
+        forM pubTxs $ relayTx . GPublicationTxWitnessed
+
+    forM_ monitors $ wait @"tx in mempool"
 
 -- | Update mempool with lacking private blocks, if needed.
 -- Returns whether the update was performed.
