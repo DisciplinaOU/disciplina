@@ -30,6 +30,7 @@ _definitions:
         - MultiWayIf
         - NamedFieldPuns
         - OverloadedStrings
+        - OverloadedLabels
         - PatternSynonyms
         - RankNTypes
         - RecordWildCards

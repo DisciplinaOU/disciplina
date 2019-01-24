@@ -179,6 +179,13 @@ getTxMaybe gTxId = runMaybeT $ asum
     , fmap (GPublicationTxWitnessed . piTw) . MaybeT $
           SD.queryOne (coerce @_ @PublicationTxId gTxId)
     ]
+  where
+    _completenessCheck = \case
+        GMoneyTxWitnessed{} -> ()
+        GPublicationTxWitnessed{} -> ()
+        -- NB: when compiler forces you to add a pattern match, update
+        -- the code above as well.
+        -- :pled: tactics to evolve the code in bug-less way
 
 -- | Resolves transaction, throws exception if it's absent.
 getTx
