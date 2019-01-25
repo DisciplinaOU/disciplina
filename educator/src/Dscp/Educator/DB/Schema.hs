@@ -80,6 +80,12 @@ data BlockRowT f = BlockRow
     , brMerkleTree   :: C f (EmptyMerkleTree PrivateTx)
     } deriving (Generic)
 
+data CertificateRowT f = CertificateRow
+    { crHash :: C f (Hash CertificateMeta)
+    , crMeta :: C f CertificateMeta
+    , crPdf  :: C f Text  -- ^ TODO: Change it to whatever is used as PDF type
+    } deriving (Generic)
+
 data EducatorSchema f = EducatorSchema
     { esCourses            :: f (TableEntity CourseRowT)
     , esSubjects           :: f (TableEntity SubjectRowT)
@@ -91,6 +97,8 @@ data EducatorSchema f = EducatorSchema
     , esTransactions       :: f (TableEntity TransactionRowT)
     , esBlocks             :: f (TableEntity BlockRowT)
     , esBlockTxs           :: f (TableEntity $ RelationT 'Mx1 TransactionRowT BlockRowT)
+
+    , esCertificates       :: f (TableEntity CertificateRowT)
     } deriving (Generic)
 
 ----------------------------------------------------------------------------
@@ -104,6 +112,7 @@ type AssignmentRow = AssignmentRowT Identity
 type SubmissionRow = SubmissionRowT Identity
 type TransactionRow = TransactionRowT Identity
 type BlockRow = BlockRowT Identity
+type CertificateRow = CertificateRowT Identity
 
 ----------------------------------------------------------------------------
 -- Connection with core types
@@ -185,6 +194,11 @@ instance Table BlockRowT where
         deriving (Generic)
     primaryKey = BlockRowId . brIdx
 
+instance Table CertificateRowT where
+    newtype PrimaryKey CertificateRowT f = HashTableId (C f (Hash CertificateMeta))
+        deriving (Generic)
+    primaryKey = HashTableId . crHash
+
 ----------------------------------------------------------------------------
 -- 'Beamable' instances
 ----------------------------------------------------------------------------
@@ -209,6 +223,9 @@ instance Beamable (PrimaryKey TransactionRowT)
 
 instance Beamable BlockRowT
 instance Beamable (PrimaryKey BlockRowT)
+
+instance Beamable CertificateRowT
+instance Beamable (PrimaryKey CertificateRowT)
 
 ----------------------------------------------------------------------------
 -- Final

@@ -5,6 +5,10 @@
 --
 -- Also, postgres is said to create indices on PKs automatically, so I will omit them.
 
+----------------------------------------------------------------------------
+-- General info
+----------------------------------------------------------------------------
+
 -- Creating 'courses' table.
 --
 create table if not exists courses (
@@ -161,3 +165,22 @@ create table if not exists block_txs (
 );
 
 create index if not exists block_txs_blk_idx on block_txs (__idx);
+
+----------------------------------------------------------------------------
+-- Certificates
+----------------------------------------------------------------------------
+
+-- Creating 'certificates' table.
+--
+create table if not exists certificates (
+    hash  BYTEA  not null,
+    meta  JSONB  not null,
+    pdf   BYTEA  not null,
+
+    primary key (hash),
+
+);
+
+create index if not exists certificates_student_name
+    on certificates ((meta ->> 'studentName'));
+    -- Double parenthesis ^ are required because of the non trivial expression.
