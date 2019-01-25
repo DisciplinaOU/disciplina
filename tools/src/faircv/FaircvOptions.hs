@@ -6,15 +6,17 @@ module FaircvOptions
 import Options.Applicative (Parser, auto, execParser, fullDesc, help, helper,
                             info, long, metavar, option, progDesc, short,
                             showDefault, strOption, value)
-import Time.Rational (RatioNat)
-
+import Time.Units (Time, Second, sec)
 
 data FaircvOptions = FaircvOptions
     { witnessUrl    :: String
     , educatorUrl   :: String
     , secretKeyFile :: FilePath
-    , refreshRate   :: RatioNat
+    , refreshRate   :: (Time Second)
     , studentSeed   :: ByteString
+    , assignmentNum :: Int
+    , outputFile    :: FilePath
+    , contentSeed   :: Text
     }
 
 getFaircvOptions :: IO FaircvOptions
@@ -28,6 +30,9 @@ optionParser = FaircvOptions
     <*> secretKeyFileParser
     <*> refreshRateParser
     <*> studentSecretSeedParser
+    <*> assignmentNumberParser
+    <*> outputFileParser
+    <*> contentSeedParser
 
 witnessUrlParser :: Parser String
 witnessUrlParser = strOption $
@@ -50,14 +55,14 @@ secretKeyFileParser = strOption $
     metavar "PATH" <>
     help "Path for the educator secret key file"
 
-refreshRateParser :: Parser RatioNat
-refreshRateParser = option auto $
+refreshRateParser :: Parser (Time Second)
+refreshRateParser = sec <$> option auto (
     long "refresh-rate" <>
     short 'r' <>
-    metavar "INT" <>
     value 3 <>
     showDefault <>
-    help "Time to wait between a request and another, in seconds"
+    help "Time to wait between a proof request and another, in seconds"
+    )
 
 studentSecretSeedParser :: Parser ByteString
 studentSecretSeedParser = option auto $
@@ -66,3 +71,29 @@ studentSecretSeedParser = option auto $
     value "456" <>
     showDefault <>
     help "Seed for the student private key, see keygen for more info"
+
+assignmentNumberParser :: Parser Int
+assignmentNumberParser = option auto $
+    long "assignments" <>
+    short 'n' <>
+    value 3 <>
+    showDefault <>
+    metavar "INT" <>
+    help "Number of assignment to include in the FairCV"
+
+outputFileParser :: Parser FilePath
+outputFileParser = strOption $
+    long "file-output" <>
+    short 'f' <>
+    value "fairCV-example.json" <>
+    showDefault <>
+    metavar "PATH" <>
+    help "File that will contain the resulting FairCV"
+
+contentSeedParser :: Parser Text
+contentSeedParser = option auto $
+    long "content-seed" <>
+    short 'c' <>
+    value "54321" <>
+    metavar "TEXT" <>
+    help "Seed used to generate the assignment's content hash"

@@ -54,6 +54,7 @@ executables:
       - disciplina-core
       - disciplina-witness
       - disciplina-educator
+      - fmt
       - lens
       - loot-log
       - o-clock

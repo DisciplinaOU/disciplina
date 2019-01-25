@@ -1,7 +1,8 @@
 import Data.Aeson
+import Fmt ((+|), (|+))
 import Servant.Client
 import Test.QuickCheck
-import Time.Units (threadDelay, sec)
+import Time.Units (threadDelay)
 
 import Loot.Log
 
@@ -48,18 +49,16 @@ main = do
     (_pk,  addr) <- createActorOf sk
     (pkS, addrS) <- createActorOf skS
 
-    let seed = "47295" :: Text -- NOTE: this can be randomized, or user defined
-        waitingTime = sec refreshRate
-        infoToSubmission :: AssignmentStudentInfo -> Submission
+    let infoToSubmission :: AssignmentStudentInfo -> Submission
         infoToSubmission assInfo = Submission
             { _sStudentId      = addrS
-            , _sContentsHash   = detGenG seed arbitrary
+            , _sContentsHash   = detGenG contentSeed arbitrary
             , _sAssignmentHash = aiHash assInfo
             }
         toSignedSubmission :: Submission -> SignedSubmission
         toSignedSubmission sbm = SignedSubmission
             { _ssSubmission = sbm
-            , _ssWitness    = SubmissionWitness 
+            , _ssWitness    = SubmissionWitness
                 { _swKey = pkS
                 , _swSig = sign skS $ hash sbm
                 }
@@ -72,21 +71,30 @@ main = do
             newInfo <- sGetSubmission sClient $ siHash info
             case giHasProof <$> siGrade newInfo of
                 Just True -> waitForProofs infos
-                _ -> threadDelay waitingTime >> waitForProofs (info:infos)
+                _ -> threadDelay refreshRate >> waitForProofs (info:infos)
 
     -- Get all the available assignments for this student
     assLst <- sGetAssignments sClient Nothing Nothing Nothing False
-    -- Make a new submission from the first one, then send it
-    subInfos <- mapM (sendSubmission sClient . infoToNewSub) $ take 1 assLst
+    -- Show a warning when there are not enough assignments available
+    let assNum = length assLst
+    when (assignmentNum > assNum) $ logWarning $
+        "Not enough assignments available, only " +|assNum|+ " will be used"
+    -- Make new submissions from the assignments
+    subInfos <- mapM (sendSubmission sClient . infoToNewSub) $ take assignmentNum assLst
 
     -- Wait for the proofs to be available, then get them and make a faircv
     logInfo "Submissions sent, waiting for proofs"
     waitForProofs subInfos
     proofs <- sGetProofs sClient Nothing False
-    
+
     fcvrs <- mapM (blkToFairCV addrS "John Doe" addr) proofs
     fcv <- unReadyFairCV <$> leftToFail (mergeFairCVList fcvrs)
 
-    writeFile "fairCV-example.json" $ decodeUtf8 $ encode fcv
+    -- Write the result in the specified file and show the validation result
+    logInfo "Writing result to file"
+    writeFile outputFile $ decodeUtf8 $ encode fcv
 
-    print =<< checkFairCV wClient fcv
+    checkFairCV wClient fcv >>= \res ->
+        if fairCVFullyValid res
+        then logInfo "FairCV was successfully validated"
+        else logError "FairCV was not validated successfully"
