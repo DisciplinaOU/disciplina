@@ -150,18 +150,6 @@ pbHeaderFromRow BlockRow{..} =
 -- 'Table' instances
 ----------------------------------------------------------------------------
 
-instance (Typeable a, Typeable b, Beamable (PrimaryKey a), Beamable (PrimaryKey b)) =>
-         Table (RelationT 'Mx1 a b) where
-    newtype PrimaryKey (RelationT 'Mx1 a b) f = Mx1RelationRowId (PrimaryKey a f)
-        deriving (Generic)
-    primaryKey (a :-: _) = Mx1RelationRowId a
-
-instance (Typeable a, Typeable b, Beamable (PrimaryKey a), Beamable (PrimaryKey b)) =>
-         Table (RelationT 'MxM a b) where
-    data PrimaryKey (RelationT 'MxM a b) f = MxMRelationRowId (PrimaryKey a f) (PrimaryKey b f)
-        deriving (Generic)
-    primaryKey (a :-: b) = MxMRelationRowId a b
-
 instance Table CourseRowT where
     newtype PrimaryKey CourseRowT f = CourseRowId (C f (Id Course))
         deriving (Generic)
@@ -200,15 +188,6 @@ instance Table BlockRowT where
 ----------------------------------------------------------------------------
 -- 'Beamable' instances
 ----------------------------------------------------------------------------
-
-instance (Beamable (PrimaryKey a), Beamable (PrimaryKey b)) =>
-         Beamable (RelationT t a b)
-
-instance (Beamable (PrimaryKey a)) =>
-         Beamable (PrimaryKey $ RelationT 'Mx1 a b)
-
-instance (Beamable (PrimaryKey a), Beamable (PrimaryKey b)) =>
-         Beamable (PrimaryKey $ RelationT 'MxM a b)
 
 instance Beamable CourseRowT
 instance Beamable (PrimaryKey CourseRowT)
