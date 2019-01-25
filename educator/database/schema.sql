@@ -177,10 +177,23 @@ create table if not exists certificates (
     meta  JSONB  not null,
     pdf   BYTEA  not null,
 
-    primary key (hash),
+    primary key (hash)
 
 );
 
 create index if not exists certificates_student_name
     on certificates ((meta ->> 'studentName'));
     -- Double parenthesis ^ are required because of the non trivial expression.
+
+create index if not exists certificates_student_name
+    on certificates ((meta ->> 'number'));
+
+-- Creating 'certificates_version' table.
+--
+create table if not exists certificates_version (
+    id    CHAR(4)   not null,
+    item  SMALLINT  not null,
+
+    primary key (id)
+
+);

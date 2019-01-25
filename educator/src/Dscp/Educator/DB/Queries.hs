@@ -541,7 +541,7 @@ getCertificateMeta = selectByPk crMeta (esCertificates es)
 
 createCertificateMeta
     :: MonadIO m
-    => CertificateMeta -> Text -> DBT t m ()
+    => CertificateMeta -> LByteString -> DBT t m ()
 createCertificateMeta meta pdf =
     runInsert . insert (esCertificates es) $ insertValue
         CertificateRow

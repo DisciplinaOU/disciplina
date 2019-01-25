@@ -83,22 +83,23 @@ data BlockRowT f = BlockRow
 data CertificateRowT f = CertificateRow
     { crHash :: C f (Hash CertificateMeta)
     , crMeta :: C f CertificateMeta
-    , crPdf  :: C f Text  -- ^ TODO: Change it to whatever is used as PDF type
+    , crPdf  :: C f LByteString
     } deriving (Generic)
 
 data EducatorSchema f = EducatorSchema
-    { esCourses            :: f (TableEntity CourseRowT)
-    , esSubjects           :: f (TableEntity SubjectRowT)
-    , esStudents           :: f (TableEntity StudentRowT)
-    , esStudentCourses     :: f (TableEntity $ RelationT 'MxM StudentRowT CourseRowT)
-    , esAssignments        :: f (TableEntity AssignmentRowT)
-    , esStudentAssignments :: f (TableEntity $ RelationT 'MxM StudentRowT AssignmentRowT)
-    , esSubmissions        :: f (TableEntity SubmissionRowT)
-    , esTransactions       :: f (TableEntity TransactionRowT)
-    , esBlocks             :: f (TableEntity BlockRowT)
-    , esBlockTxs           :: f (TableEntity $ RelationT 'Mx1 TransactionRowT BlockRowT)
+    { esCourses             :: f (TableEntity CourseRowT)
+    , esSubjects            :: f (TableEntity SubjectRowT)
+    , esStudents            :: f (TableEntity StudentRowT)
+    , esStudentCourses      :: f (TableEntity $ RelationT 'MxM StudentRowT CourseRowT)
+    , esAssignments         :: f (TableEntity AssignmentRowT)
+    , esStudentAssignments  :: f (TableEntity $ RelationT 'MxM StudentRowT AssignmentRowT)
+    , esSubmissions         :: f (TableEntity SubmissionRowT)
+    , esTransactions        :: f (TableEntity TransactionRowT)
+    , esBlocks              :: f (TableEntity BlockRowT)
+    , esBlockTxs            :: f (TableEntity $ RelationT 'Mx1 TransactionRowT BlockRowT)
 
-    , esCertificates       :: f (TableEntity CertificateRowT)
+    , esCertificates        :: f (TableEntity CertificateRowT)
+    , esCertificatesVersion :: f (TableEntity $ SingletonT Word32)
     } deriving (Generic)
 
 ----------------------------------------------------------------------------
