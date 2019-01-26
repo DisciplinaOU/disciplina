@@ -3,10 +3,9 @@ module FaircvOptions
        , getFaircvOptions
        ) where
 
-import Options.Applicative (Parser, auto, execParser, fullDesc, help, helper,
-                            info, long, metavar, option, progDesc, short,
-                            showDefault, strOption, value)
-import Time.Units (Time, Second, sec)
+import Options.Applicative (Parser, auto, execParser, fullDesc, help, helper, info, long, metavar,
+                            option, progDesc, short, showDefault, strOption, value)
+import Time.Units (Second, Time, sec)
 
 data FaircvOptions = FaircvOptions
     { witnessUrl    :: String
@@ -65,7 +64,7 @@ refreshRateParser = sec <$> option auto (
     )
 
 studentSecretSeedParser :: Parser ByteString
-studentSecretSeedParser = option auto $
+studentSecretSeedParser = strOption $
     long "student-seed" <>
     short 's' <>
     value "456" <>
@@ -91,7 +90,7 @@ outputFileParser = strOption $
     help "File that will contain the resulting FairCV"
 
 contentSeedParser :: Parser Text
-contentSeedParser = option auto $
+contentSeedParser = strOption $
     long "content-seed" <>
     short 'c' <>
     value "54321" <>
