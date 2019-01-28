@@ -16,7 +16,6 @@ module Dscp.Witness.Web.Logic
 import Codec.Serialise (serialise)
 import qualified Data.Aeson as Aeson (decode)
 import qualified Data.ByteString.Lazy as BS
-import qualified Data.ByteString.Base64 as BS
 import Data.Coerce (coerce)
 import Data.Conduit ((.|))
 import qualified Data.Conduit as C
@@ -241,15 +240,12 @@ checkFairCV =
         , fairCVFullyValid = all and results
         }
 
-checkFairCVPDF :: forall ctx m. WitnessWorkMode ctx m => ByteString -> m (FairCVCheckResult, FairCV)
+checkFairCVPDF :: forall ctx m. WitnessWorkMode ctx m => ByteString -> m FairCVAndCheckResult
 checkFairCVPDF pdf = do
     let maybeFairCV = do
-            base64json    <- Pdf.project (Pdf.MaxSearchLength (Just 2048)) (Pdf.PDFBody pdf)
-            fairCVencoded <- toMaybe $ BS.decode base64json
+            fairCVencoded <- Pdf.project (Pdf.MaxSearchLength (Just 2048)) (Pdf.PDFBody pdf)
             Aeson.decode $ BS.fromStrict fairCVencoded
 
-    fairCV    <- maybe (throwM InvalidFormat) pure maybeFairCV
-    checkeRes <- checkFairCV fairCV
-    return (checkeRes, fairCV)
-  where
-    toMaybe = either (const Nothing) pure
+    fairCV   <- maybe (throwM InvalidFormat) pure maybeFairCV
+    checkRes <- checkFairCV fairCV
+    return $ FairCVAndCheckResult fairCV checkRes

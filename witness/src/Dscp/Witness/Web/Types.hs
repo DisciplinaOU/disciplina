@@ -15,20 +15,25 @@ module Dscp.Witness.Web.Types
     , TxList
     , PublicationList
     , HashIs (..)
+    , FairCVAndCheckResult (..)
     ) where
 
 import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), object, withObject, withText, (.:),
                    (.:?), (.=))
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (Options (..), deriveJSON)
-import qualified Data.ByteString.Base64 as Base64
-import Fmt (build, genericF, (+|), (|+), Builder)
+import Fmt (build, genericF, (+|), (|+))
 import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
 import Servant.Util (ForResponseLog (..), buildForResponse)
 
 import Dscp.Core
 import Dscp.Util
 import Dscp.Util.Aeson
+
+data FairCVAndCheckResult = FairCVAndCheckResult
+    { fcacrFairCV      :: FairCV
+    , fcacrCheckResult :: FairCVCheckResult
+    } deriving (Eq, Show, Generic)
 
 -- | Distinguishes stuff on whether does it take mempool in consideration.
 data BlocksOrMempool a = BlocksOrMempool
@@ -109,7 +114,7 @@ deriving instance (Eq (Id a), Eq a) => Eq (PaginatedList d a)
 deriving instance (Show (Id a), Show a) => Show (PaginatedList d a)
 
 instance Buildable ByteString where
-    build = (build :: Text -> Builder) . decodeUtf8 . Base64.encode
+    build _ = "<binary data, omitted>"
 
 instance HasId a => HasId (WithBlockInfo a) where
     type Id (WithBlockInfo a) = Id a
@@ -121,11 +126,14 @@ instance Buildable (ForResponseLog BlockInfo) where
         ", header = " +| biHeader |+
         " }"
 
-instance Buildable (ForResponseLog (FairCVCheckResult, FairCV)) where
-    build (ForResponseLog (res, fcv)) =
-        "("  +| res |+
-        ", " +| fcv |+
-        ")"
+instance Buildable FairCVAndCheckResult where
+    build (FairCVAndCheckResult res fcv) =
+        "{ fairCV = "  +| res |+
+        ", checkResult = " +| fcv |+
+        " }"
+
+instance Buildable (ForResponseLog FairCVAndCheckResult) where
+    build (ForResponseLog rfc) = build rfc
 
 instance Buildable (ForResponseLog BlockList) where
     build (ForResponseLog BlockList{..}) = "" +| length blBlocks |+ " blocks"
@@ -175,6 +183,7 @@ instance Buildable (ForResponseLog FairCVCheckResult) where
 
 deriveJSON defaultOptions ''BlocksOrMempool
 deriveJSON defaultOptions ''BlockList
+deriveJSON defaultOptions ''FairCVAndCheckResult
 deriveJSON defaultOptions{ omitNothingFields = True } ''BlockInfo
 deriveJSON defaultOptions{ omitNothingFields = True } ''AccountInfo
 

@@ -368,6 +368,22 @@ paths:
       requestBody:
         $ref: '#/components/requestBodies/FairCV'
 
+  /checkcv-pdf:
+    put:
+      summary: Check the validity of FairCV embedded in PDF document.
+      operationId: checkFairCVPDF
+      responses:
+        200:
+          description: >-
+            FairCV in a PDF was well-formed and has been successfully checked. The
+            result of checking is returned in a response along with FairCV itself.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FairCVAndCheckResult'
+      requestBody:
+        $ref: '#/components/requestBodies/ByteString'
+
 components:
   requestBodies:
     TxWitnessed:
