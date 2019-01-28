@@ -1,5 +1,5 @@
 
-module Pdf.Scanner (inject, project, PDFBody (..), MaxSearchLength (..)) where
+module Pdf.Scanner (inject, project, insertionMark, PDFBody (..), MaxSearchLength (..)) where
 
 import Data.ByteString.Char8  as LBS
 import Data.ByteString.Base64 as LBS
