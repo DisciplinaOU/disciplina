@@ -55,6 +55,17 @@ instance FromJSON DocumentType where
         "offline" -> pure Offline
         other -> fail $ "invalid constructor: " ++ toString other
 
+instance ToJSON EducationForm where
+    toJSON Fulltime = String "fulltime"
+    toJSON Parttime = String "parttime"
+    toJSON Fullpart = String "fullpart"
+instance FromJSON EducationForm where
+    parseJSON = withText "EducationForm" $ \case
+        "fulltime" -> pure Fulltime
+        "parttime" -> pure Parttime
+        "fullpart" -> pure Fullpart
+        other -> fail $ "invalid constructor: " ++ toString other
+
 instance ToJSON Address where
     toJSON = String . toText
 instance FromJSON Address where
@@ -192,6 +203,7 @@ deriving instance FromJSON GenesisDistribution
 deriveJSON defaultOptions ''Assignment
 deriveJSON defaultOptions ''Submission
 deriveJSON defaultOptions ''SignedSubmission
+deriveJSON defaultOptions ''CertificateMeta
 deriveJSON defaultOptions ''PrivateTx
 deriveJSON defaultOptions ''PrivateBlockHeader
 deriveJSON defaultOptions ''Header

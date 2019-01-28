@@ -9,8 +9,10 @@ module Dscp.Educator.Web.Educator.API
     , EducatorApiHandlers
     ) where
 
+import Network.HTTP.Media.MediaType ((//))
 import Servant
 import Servant.Generic
+import Servant.Util (SortingParamsOf)
 
 import Dscp.Core
 import Dscp.Crypto
@@ -39,6 +41,9 @@ data EducatorApiEndpoints route = EducatorApiEndpoints
     , eGetGrades               :: route :- GetGrades
     , eAddGrade                :: route :- AddGrade
     , eGetProofs               :: route :- GetProofs
+    , eGetCertificates         :: route :- GetCertificates
+    , eGetCertificate          :: route :- GetCertificate
+    , eAddCertificate          :: route :- AddCertificate
     } deriving (Generic)
 
 type EducatorAPI =
@@ -54,6 +59,19 @@ educatorAPI = Proxy
 
 protectedEducatorAPI :: Proxy ProtectedEducatorAPI
 protectedEducatorAPI = Proxy
+
+---------------------------------------------------------------------------
+-- Content-type 'application/pdf'
+---------------------------------------------------------------------------
+
+data PDF
+
+instance Accept PDF where
+    contentType _ = "application" // "pdf"
+instance MimeRender PDF LByteString where
+    mimeRender _ = id
+instance MimeUnrender PDF LByteString where
+    mimeUnrender _ = Right . id
 
 ---------------------------------------------------------------------------
 -- General
@@ -73,7 +91,7 @@ type GetStudents
     :> QueryParam "isEnrolled" IsEnrolled
     :> QueryFlag "onlyCount"
     :> Summary "Get a list of all registered students' addresses"
-    :> Get '[DSON] [StudentInfo]
+    :> Get '[DSON] (Counted StudentInfo)
 
 type AddStudent
     = "students"
@@ -127,7 +145,7 @@ type GetCourses
     :> QueryParam "student" Student
     :> QueryFlag "onlyCount"
     :> Summary "Get all courses"
-    :> Get '[DSON] [CourseEducatorInfo]
+    :> Get '[DSON] (Counted CourseEducatorInfo)
 
 type AddCourse
     = "courses"
@@ -137,7 +155,7 @@ type AddCourse
     -- TODO: return proper JSON-object here
 
 type GetCourse
-    = "courses" :> Capture "course" Course
+    = "course" :> Capture "course" Course
     :> Summary "Get info about a course"
     :> Get '[DSON] CourseEducatorInfo
 
@@ -153,7 +171,7 @@ type GetAssignments
     :> QueryParam "since" Timestamp
     :> QueryFlag "onlyCount"
     :> Summary "Get all assignments"
-    :> Get '[DSON] [AssignmentEducatorInfo]
+    :> Get '[DSON] (Counted AssignmentEducatorInfo)
 
 type AddAssignment
     = "assignments"
@@ -177,7 +195,7 @@ type GetSubmissions
     :> Summary "Get all submissions"
     :> Description "Gets a list of all submissions done by all students. \
                   \This method is inaccessible by students."
-    :> Get '[DSON] [SubmissionEducatorInfo]
+    :> Get '[DSON] (Counted SubmissionEducatorInfo)
 
 type GetSubmission
     = "submissions" :> Capture "submission" (Hash Submission)
@@ -206,7 +224,7 @@ type GetGrades
     :> QueryFlag "onlyCount"
     :> Summary "Get all grades"
     :> Description "Gets a list of all grades performed by all students."
-    :> Get '[DSON] [GradeInfo]
+    :> Get '[DSON] (Counted GradeInfo)
 
 type AddGrade
     = "grades"
@@ -228,4 +246,33 @@ type GetProofs
     :> Summary "Get proofs of all student's activity"
     :> Description "Gets all private transactions related to a student \
                     \together with corresponding Merkle proofs."
-    :> Get '[DSON] [BlkProofInfo]
+    :> Get '[DSON] (Counted BlkProofInfo)
+
+---------------------------------------------------------------------------
+-- Certificates
+---------------------------------------------------------------------------
+
+type GetCertificates
+    = "certificates"
+    :> QueryParam "offset" Int
+    :> QueryParam "limit" Int
+    :> SortingParamsOf Certificate
+    :> QueryFlag "onlyCount"
+    :> Summary "Get the list of certificates created by Educator"
+    :> Description "Gets all the certificates created by Educator. Each \
+                   \entry contains certificate metadata and certificate ID."
+    :> Get '[DSON] (Counted Certificate)
+
+type GetCertificate
+    = "certificate" :> Capture "certificate" (Hash CertificateMeta)
+    :> Summary "Get the certificate by ID"
+    :> Description "Gets the PDF certificate with FairCV JSON included as \
+                   \metadata by ID"
+    :> Get '[PDF] LByteString
+
+type AddCertificate
+    = "certificates"
+    :> Summary "Create a new certificate"
+    :> Description "Creates a new certificate given metadata and the grades."
+    :> ReqBody '[DSON] CertificateFullInfo
+    :> PostCreated '[DSON] Certificate

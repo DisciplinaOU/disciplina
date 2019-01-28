@@ -45,7 +45,7 @@ import Data.Time.Clock (UTCTime, getCurrentTime)
 import Fmt ((+||), (||+))
 import qualified GHC.Exts as Exts
 import GHC.IO.Unsafe (unsafePerformIO)
-import Test.QuickCheck (resize)
+import Test.QuickCheck (arbitraryBoundedEnum, resize)
 import Test.QuickCheck.Arbitrary.Generic (genericArbitrary, genericShrink)
 import qualified Text.Show
 
@@ -113,6 +113,13 @@ instance Arbitrary DocumentType where
 
 genCommonDocumentType :: Gen DocumentType
 genCommonDocumentType = frequency [(5, pure Offline), (1, pure Online)]
+
+instance Arbitrary EducationForm where
+    arbitrary = arbitraryBoundedEnum
+
+instance Arbitrary CertificateMeta where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
 
 instance Arbitrary PrivateTx where
     arbitrary = PrivateTx <$> arbitrary <*> arbitrary <*> arbitrary

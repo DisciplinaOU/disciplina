@@ -82,10 +82,10 @@ instance FromServantErr EducatorAPIError
 -- Other
 ---------------------------------------------------------------------------
 
-data FaucetDecodeErrTag
-instance Reifies FaucetDecodeErrTag String where
+data EducatorDecodeErrTag
+instance Reifies EducatorDecodeErrTag String where
     reflect _ = decodeUtf8 . errBody $ toServantErr InvalidFormat
 
 -- | Marker like 'JSON' for servant, but returns just "InvalidFormat" on
 -- decoding error.
-type DSON = SimpleJSON FaucetDecodeErrTag
+type DSON = SimpleJSON EducatorDecodeErrTag

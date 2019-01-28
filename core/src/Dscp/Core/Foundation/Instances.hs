@@ -5,6 +5,7 @@ module Dscp.Core.Foundation.Instances where
 import Codec.Serialise (Serialise (..))
 import Codec.Serialise.Decoding (decodeListLen, decodeWord)
 import Codec.Serialise.Encoding (encodeListLen, encodeWord)
+import Data.Time.Calendar (Day (..))
 
 import Dscp.Core.Foundation.Coin
 import Dscp.Core.Foundation.Educator
@@ -42,7 +43,6 @@ instance HasId PrivateTx where
 deriving instance Serialise Course
 deriving instance Serialise Subject
 
-
 instance Serialise Grade
 instance Serialise ATGNode
 instance Serialise ATGEdge
@@ -56,6 +56,13 @@ instance Serialise AssignmentType
 instance Serialise SubmissionWitness
 instance Serialise SignedSubmission
 instance Serialise DocumentType
+
+instance Serialise Day where
+    encode = encode . toModifiedJulianDay
+    decode = ModifiedJulianDay <$> decode
+
+instance Serialise EducationForm
+instance Serialise CertificateMeta
 
 instance Serialise Submission where
     encode (Submission s c a) = mconcat

@@ -35,6 +35,8 @@ tags:
     description: Methods for working with grades
   - name: Proofs
     description: Methods for working with proofs
+  - name: Certificates
+    description: Methods for working with FairCV certificates
 paths:
   /status:
     get:
@@ -100,7 +102,7 @@ paths:
                 properties:
                   count:
                     $ref: '#/components/schemas/Count'
-                  students:
+                  items:
                     type: array
                     items:
                       $ref: '#/components/schemas/Student'
@@ -308,7 +310,7 @@ paths:
                 properties:
                   count:
                     $ref: '#/components/schemas/Count'
-                  courses:
+                  items:
                     type: array
                     items:
                       $ref: '#/components/schemas/Course'
@@ -404,7 +406,7 @@ paths:
                 properties:
                   count:
                     $ref: '#/components/schemas/Count'
-                  assignments:
+                  items:
                     type: array
                     items:
                       $ref: '#/components/schemas/Assignment'
@@ -477,7 +479,7 @@ paths:
                 properties:
                   count:
                     $ref: '#/components/schemas/Count'
-                  submissions:
+                  items:
                     type: array
                     items:
                       $ref: '#/components/schemas/Submission'
@@ -578,7 +580,7 @@ paths:
                 properties:
                   count:
                     $ref: '#/components/schemas/Count'
-                  grades:
+                  items:
                     type: array
                     items:
                       $ref: '#/components/schemas/Grade'
@@ -639,7 +641,7 @@ paths:
                 properties:
                   count:
                     $ref: '#/components/schemas/Count'
-                  proofs:
+                  items:
                     type: array
                     items:
                       $ref: '#/components/schemas/Proof'
@@ -657,6 +659,112 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrResponse'
+
+  /certificates:
+    get:
+      tags:
+        - Certificates
+      summary: Get the list of certificates created by Educator
+      description: >-
+        Gets all the certificates created by Educator. Each entry contains
+        certificate metadata and certificate ID.
+      operationId: getCertificates
+      parameters:
+        - $ref: '#/components/parameters/Offset'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/SortingSpec'
+        - $ref: '#/components/parameters/OnlyCount'
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - count
+                properties:
+                  count:
+                    $ref: '#/components/schemas/Count'
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Certificate'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags:
+        - Certificates
+      summary: Create a new certificate
+      description: >-
+        Creates a new certificate given metadata and the grades.
+      operationId: addCertificate
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - meta
+                - grades
+              properties:
+                meta:
+                  $ref: '#/components/schemas/CertificateMeta'
+                grades:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/CertificateGrade'
+        description: Content of the certificate
+        required: true
+      responses:
+        201:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Certificate'
+        400:
+          description: Request body is invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrResponse'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+
+  /certificate/{certificate}:
+    get:
+      tags:
+        - Certificates
+      summary: Get the certificate by ID
+      description: >-
+        Gets the PDF certificate with FairCV JSON included as metadata by ID
+      operationId: getCertificate
+      parameters:
+        - $ref: '#/components/parameters/Certificate'
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        400:
+          description: Course ID is invalid
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrResponse'
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        404:
+          description: Certificate with given ID not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrResponse'
+
 components:
   parameters:
     # Path parameters
@@ -685,6 +793,13 @@ components:
       in: path
       name: submission
       description: Submission hash
+      required: true
+      schema:
+        $ref: '#/components/schemas/Hash'
+    Certificate:
+      in: path
+      name: certificate
+      description: Certificate ID (hash)
       required: true
       schema:
         $ref: '#/components/schemas/Hash'
@@ -726,6 +841,34 @@ components:
       allowEmptyValue: true
       schema:
         type: boolean
+    Offset:
+      in: query
+      name: offset
+      description: Pagination parameter. How many items to skip from the beginning.
+      required: false
+      schema:
+        type: integer
+        format: int32
+    Limit:
+      in: query
+      name: limit
+      description: Pagination parameter. Maximum number of items to return.
+      required: false
+      schema:
+        type: integer
+        format: int32
+    SortingSpec:
+      in: query
+      name: sortBy
+      description: >-
+        Allows to sort on certificate creation date (`createdAt` field) and
+        student's name (`student` field).
+      required: false
+      allowEmptyValue: true
+      schema:
+        type: string
+        description: How to sort responses.
+        example: asc(field1),desc(field2)
 
   responses:
     Unauthorized:
@@ -755,6 +898,10 @@ components:
       description: >-
         Time in ISO format.
         Value is automatically rounded to microseconds precision.
+    Count:
+      type: integer
+      format: int32
+      description: Count of items returned
 
     # Entities
     Student:
@@ -948,6 +1095,74 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Transaction'
+    Certificate:
+      type: object
+      required:
+        - id
+        - meta
+      properties:
+        id:
+          $ref: '#/components/schemas/Hash'
+        meta:
+          $ref: '#/components/schemas/CertificateMeta'
+    CertificateMeta:
+      type: object
+      required:
+        - studentName
+        - studentBirthDate
+        - startYear
+        - endYear
+        - educationForm
+        - number
+        - issueDate
+        - title
+        - major
+      properties:
+        studentName:
+          type: string
+        studentBirthDate:
+          type: string
+          format: date
+        startYear:
+          type: integer
+          format: int32
+        endYear:
+          type: integer
+          format: int32
+        educationForm:
+          type: string
+          enum: [fulltime, parttime, fullpart]
+        number:
+          type: string
+        issueDate:
+          type: string
+          format: date
+        title:
+          type: string
+        major:
+          type: string
+        specialization:
+          type: string
+    CertificateGrade:
+      type: object
+      required:
+        - subject
+        - grade
+      properties:
+        subject:
+          type: string
+        lang:
+          type: string
+          enum: [en, ru]
+        hours:
+          type: integer
+          format: int32
+        credits:
+          type: integer
+          format: int32
+        grade:
+          type: integer
+          format: int32
 
     # Errors
     ErrResponse:

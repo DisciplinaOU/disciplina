@@ -13,10 +13,16 @@ module Dscp.Educator.Web.Educator.Types
     , NewStudentAssignment (..)
 
       -- * Responses
+    , Counted (..)
+    , mkCountedList
     , EducatorInfo (..)
     , CourseEducatorInfo (..)
     , AssignmentEducatorInfo (..)
     , SubmissionEducatorInfo (..)
+    , Certificate (..)
+    , CertificateGrade (..)
+    , CertificateFullInfo (..)
+    , mkCertificate
     , eaDocumentType
 
       -- * Conversions
@@ -28,10 +34,11 @@ module Dscp.Educator.Web.Educator.Types
     ) where
 
 import Control.Lens (from)
+import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), withText)
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
 import Fmt (build, listF, (+|), (|+))
-import Servant.Util (ForResponseLog (..), buildListForResponse)
+import Servant.Util (type (?:), ForResponseLog (..), SortingParamTypesOf, buildListForResponse)
 
 import Dscp.Core
 import Dscp.Crypto
@@ -99,6 +106,55 @@ data SubmissionEducatorInfo = SubmissionEducatorInfo
 
 eaDocumentType :: AssignmentEducatorInfo -> DocumentType
 eaDocumentType = documentType . aiContentsHash
+
+-- | Datatype which combines certificate meta with its ID.
+data Certificate = Certificate
+    { cId   :: Hash CertificateMeta
+    , cMeta :: CertificateMeta
+    } deriving (Show, Eq, Generic)
+
+-- | Datatype which contains information about the grade which
+-- gets included into the certificate.
+data CertificateGrade = CertificateGrade
+    { cgSubject :: ItemDesc
+    , cgLang    :: Language
+    , cgHours   :: Int
+    , cgCredits :: Int
+    , cgGrade   :: Grade
+    } deriving (Show, Eq, Generic)
+
+-- | Datatype which contains all the info about certificate. This
+-- datatype represents a request body for 'AddCertificate' endpoint.
+data CertificateFullInfo = CertificateFullInfo
+    { cfiMeta   :: CertificateMeta
+    , cfiGrades :: [CertificateGrade]
+    } deriving (Show, Eq, Generic)
+
+data Language = EN | RU
+    deriving (Show, Eq, Generic)
+
+-- | Makes a 'Certificate' from 'CertificateMeta'.
+mkCertificate :: CertificateMeta -> Certificate
+mkCertificate meta = Certificate (hash meta) meta
+
+-- | Special wrapper for list which includes its length
+data Counted a = Counted
+    { cCount :: Int
+    , cItems :: Maybe [a]
+    } deriving (Show, Eq, Generic)
+
+-- | Makes a 'Counted' from a list, omitting the list itself if
+-- @onlyCount@ flag is set
+mkCountedList :: Bool -> [a] -> Counted a
+mkCountedList onlyCount ls =
+    Counted (length ls) (if onlyCount then Nothing else Just ls)
+
+---------------------------------------------------------------------------
+-- Sorting
+---------------------------------------------------------------------------
+
+type instance SortingParamTypesOf Certificate =
+    ["createdAt" ?: Timestamp, "student" ?: ItemDesc]
 
 ---------------------------------------------------------------------------
 -- Simple conversions
@@ -215,6 +271,22 @@ instance Buildable (SubmissionEducatorInfo) where
       ", assignment hash = " +| siAssignmentHash |+
       " }"
 
+instance Buildable Certificate where
+    build Certificate {..} =
+        "{ id = "+|cId|+", meta = "+|cMeta|+" }"
+
+instance Buildable CertificateGrade where
+    build CertificateGrade {..} =
+        "{ subject = "+|cgSubject|+
+        ", hours = "+|cgHours|+
+        ", credits = "+|cgCredits|+
+        ", grade = "+|cgGrade|+" }"
+
+instance Buildable CertificateFullInfo where
+    build CertificateFullInfo {..} =
+        "{ meta = "+|cfiMeta|+
+        ", grades = "+|listF cfiGrades|+" }"
+
 instance Buildable (ForResponseLog EducatorInfo) where
     build (ForResponseLog EducatorInfo{..})=
       "{ address = " +| eiAddress |+
@@ -236,6 +308,23 @@ instance Buildable (ForResponseLog SubmissionEducatorInfo) where
       "{ hash = " +| siHash |+
       " }"
 
+instance Buildable (ForResponseLog Certificate) where
+    build (ForResponseLog Certificate{..}) = "{ id = "+|cId|+" }"
+
+instance Buildable (ForResponseLog CertificateGrade) where
+    build (ForResponseLog CertificateGrade {..}) =
+        "{ subject = "+|cgSubject|+
+        ", grade = "+|cgGrade|+" }"
+
+instance Buildable (ForResponseLog CertificateFullInfo) where
+    build (ForResponseLog CertificateFullInfo {..}) =
+        "{ meta = "+|cfiMeta|+
+        ", grades = "+|buildListForResponse (take 4) (ForResponseLog cfiGrades)|+" }"
+
+-- Instance for PDF contents
+instance Buildable (ForResponseLog LByteString) where
+    build _ = "<binary data>"
+
 instance Buildable (ForResponseLog [CourseEducatorInfo]) where
     build = buildListForResponse (take 6)
 
@@ -245,9 +334,29 @@ instance Buildable (ForResponseLog [AssignmentEducatorInfo]) where
 instance Buildable (ForResponseLog [SubmissionEducatorInfo]) where
     build = buildListForResponse (take 4)
 
+instance Buildable (ForResponseLog [Certificate]) where
+    build = buildListForResponse (take 4)
+
+instance Buildable (ForResponseLog [a]) =>
+         Buildable (ForResponseLog (Counted a)) where
+    build (ForResponseLog (Counted n mbLs)) =
+        "Counted { n = "+|n|+", items = "+|mbItems mbLs|+" }"
+      where
+        mbItems Nothing   = "omitted"
+        mbItems (Just ls) = build (ForResponseLog ls)
+
 ---------------------------------------------------------------------------
 -- JSON instances
 ---------------------------------------------------------------------------
+
+instance ToJSON Language where
+    toJSON EN = String "en"
+    toJSON RU = String "ru"
+instance FromJSON Language where
+    parseJSON = withText "Language" $ \case
+        "en" -> pure EN
+        "ru" -> pure RU
+        other -> fail $ "invalid constructor: " ++ toString other
 
 deriveJSON defaultOptions ''NewStudent
 deriveJSON defaultOptions ''NewCourse
@@ -259,3 +368,7 @@ deriveJSON defaultOptions ''EducatorInfo
 deriveJSON defaultOptions ''CourseEducatorInfo
 deriveJSON defaultOptions ''AssignmentEducatorInfo
 deriveJSON defaultOptions ''SubmissionEducatorInfo
+deriveJSON defaultOptions ''Certificate
+deriveJSON defaultOptions ''CertificateGrade
+deriveJSON defaultOptions ''CertificateFullInfo
+deriveJSON defaultOptions ''Counted
