@@ -12,6 +12,7 @@ import UnliftIO (UnliftIO (..))
 import Dscp.DB.SQL
 import Dscp.Educator.DB
 import Dscp.Educator.Web.Educator.API
+import Dscp.Educator.Web.Educator.Arbitrary
 import Dscp.Educator.Web.Educator.Error
 import Dscp.Educator.Web.Educator.Queries
 import Dscp.Educator.Web.Educator.Types
@@ -102,14 +103,15 @@ educatorApiHandlers =
             commonGetProofs def{ pfCourse, pfStudent, pfAssignment }
 
       -- Certificates
-    , eGetCertificates = \_offset _limit _sorting _onlyCount ->
-            error "not implemented"
+    , eGetCertificates = \offset limit _sorting onlyCount ->
+            pure $ mkCountedList onlyCount $
+            take (fromMaybe 100 limit) $ drop (fromMaybe 0 offset) certificateListEx
 
     , eGetCertificate = \_id ->
-            error "not implemented"
+            pure "<THIS IS NOT A PDF YET>"
 
-    , eAddCertificate = \_fullInfo ->
-            error "not implemented"
+    , eAddCertificate = \(CertificateFullInfo meta _) ->
+            pure $ mkCertificate meta
     }
 
 convertEducatorApiHandler

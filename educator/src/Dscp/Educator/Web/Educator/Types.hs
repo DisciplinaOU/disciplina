@@ -22,6 +22,7 @@ module Dscp.Educator.Web.Educator.Types
     , Certificate (..)
     , CertificateGrade (..)
     , CertificateFullInfo (..)
+    , mkCertificate
     , eaDocumentType
 
       -- * Conversions
@@ -132,14 +133,18 @@ data CertificateFullInfo = CertificateFullInfo
 data Language = EN | RU
     deriving (Show, Eq, Generic)
 
+-- | Makes a 'Certificate' from 'CertificateMeta'.
+mkCertificate :: CertificateMeta -> Certificate
+mkCertificate meta = Certificate (hash meta) meta
+
 -- | Special wrapper for list which includes its length
 data Counted a = Counted
     { cCount :: Int
     , cItems :: Maybe [a]
     } deriving (Show, Eq, Generic)
 
--- | Makes a @Counted@ from a list, omitting the list itself if
--- 'onlyCount' flag is set
+-- | Makes a 'Counted' from a list, omitting the list itself if
+-- @onlyCount@ flag is set
 mkCountedList :: Bool -> [a] -> Counted a
 mkCountedList onlyCount ls =
     Counted (length ls) (if onlyCount then Nothing else Just ls)

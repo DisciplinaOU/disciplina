@@ -3,12 +3,16 @@
 module Dscp.Educator.Web.Educator.Arbitrary
     ( educatorCourseInfoEx
     , educatorSubmissionInfoEx
+    , certificateListEx
     ) where
+
+import Test.QuickCheck (vectorOf)
 
 import Dscp.Core
 import Dscp.Crypto
 import Dscp.Educator.Web.Arbitrary
 import Dscp.Educator.Web.Educator.Types
+import Dscp.Util.Test
 
 educatorCourseInfoEx :: CourseEducatorInfo
 educatorCourseInfoEx =
@@ -27,3 +31,6 @@ educatorSubmissionInfoEx =
     , siGrade = Just gradeInfoEx
     , siWitness = submissionWitnessEx
     }
+
+certificateListEx :: [Certificate]
+certificateListEx = detGen 123 $ vectorOf 200 $ mkCertificate <$> arbitrary
