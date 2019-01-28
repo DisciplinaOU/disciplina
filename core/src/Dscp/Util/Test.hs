@@ -20,6 +20,7 @@ import Control.Lens (LensLike', has)
 import "cryptonite" Crypto.Random (ChaChaDRG, MonadPseudoRandom)
 import Data.Aeson (FromJSON, ToJSON, eitherDecode, encode)
 import qualified Data.Hashable as H
+import Data.Ratio ((%))
 import qualified Data.Text.Buildable
 import Data.Typeable (typeRep)
 import Fmt ((+|), (+||), (|+), (||+))
@@ -187,6 +188,18 @@ pickSmall = pick . Q.resize 5
 -- | Decrease required number of successful runs of the test case.
 divideMaxSuccessBy :: Int -> SpecWith a -> SpecWith a
 divideMaxSuccessBy times = modifyMaxSuccess $ max 1 . (`div` times)
+
+withProbability :: Monad m => Rational -> PropertyM m a -> PropertyM m (Maybe a)
+withProbability p action = do
+    dice <- pick $ choose (1, edges)
+    if dice % edges <= p
+        then Just <$> action
+        else pure Nothing
+  where
+    edges = 10000000
+
+withProbability_ :: Monad m => Rational -> PropertyM m a -> PropertyM m ()
+withProbability_ = void ... withProbability
 
 ----------------------------------------------------------------------------
 -- CLI interface testing
