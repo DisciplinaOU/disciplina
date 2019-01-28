@@ -102,7 +102,7 @@ educatorApiHandlers =
             commonGetProofs def{ pfCourse, pfStudent, pfAssignment }
 
       -- Certificates
-    , eGetCertificates = \_offset _limit _order _onlyCount ->
+    , eGetCertificates = \_offset _limit _sorting _onlyCount ->
             error "not implemented"
 
     , eGetCertificate = \_id ->

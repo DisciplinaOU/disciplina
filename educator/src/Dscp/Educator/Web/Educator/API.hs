@@ -12,6 +12,7 @@ module Dscp.Educator.Web.Educator.API
 import Network.HTTP.Media.MediaType ((//))
 import Servant
 import Servant.Generic
+import Servant.Util (SortingParamsOf)
 
 import Dscp.Core
 import Dscp.Crypto
@@ -255,7 +256,7 @@ type GetCertificates
     = "certificates"
     :> QueryParam "offset" Int
     :> QueryParam "limit" Int
-    :> QueryParam "order" Int
+    :> SortingParamsOf Certificate
     :> QueryFlag "onlyCount"
     :> Summary "Get the list of certificates created by Educator"
     :> Description "Gets all the certificates created by Educator. Each \

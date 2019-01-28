@@ -37,7 +37,7 @@ import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), withText)
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
 import Fmt (build, listF, (+|), (|+))
-import Servant.Util (ForResponseLog (..), buildListForResponse)
+import Servant.Util (type (?:), ForResponseLog (..), SortingParamTypesOf, buildListForResponse)
 
 import Dscp.Core
 import Dscp.Crypto
@@ -143,6 +143,13 @@ data Counted a = Counted
 mkCountedList :: Bool -> [a] -> Counted a
 mkCountedList onlyCount ls =
     Counted (length ls) (if onlyCount then Nothing else Just ls)
+
+---------------------------------------------------------------------------
+-- Sorting
+---------------------------------------------------------------------------
+
+type instance SortingParamTypesOf Certificate =
+    ["createdAt" ?: Timestamp, "student" ?: ItemDesc]
 
 ---------------------------------------------------------------------------
 -- Simple conversions

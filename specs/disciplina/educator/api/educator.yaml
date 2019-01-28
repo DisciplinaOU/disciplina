@@ -672,7 +672,7 @@ paths:
       parameters:
         - $ref: '#/components/parameters/Offset'
         - $ref: '#/components/parameters/Limit'
-        - $ref: '#/components/parameters/Order'
+        - $ref: '#/components/parameters/SortingSpec'
         - $ref: '#/components/parameters/OnlyCount'
       responses:
         200:
@@ -857,14 +857,18 @@ components:
       schema:
         type: integer
         format: int32
-    Order:
+    SortingSpec:
       in: query
-      name: order
-      description: Return results in ascending or descending order (ascending by default).
+      name: sortBy
+      description: >-
+        Allows to sort on certificate creation date (`createdAt` field) and
+        student's name (`student` field).
       required: false
+      allowEmptyValue: true
       schema:
         type: string
-        enum: [asc, desc]
+        description: How to sort responses.
+        example: asc(field1),desc(field2)
 
   responses:
     Unauthorized:
