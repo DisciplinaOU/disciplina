@@ -12,7 +12,7 @@ module Dscp.Educator.Web.Student.API
 
 import Servant
 import Servant.Generic
-import Servant.Util (SortingParamsOf)
+import Servant.Util (PaginationParams, PaginationSettings (DefPageSize), SortingParamsOf)
 
 import qualified Dscp.Core as Core
 import Dscp.Crypto (Hash)
@@ -56,9 +56,10 @@ type GetCourses
     = "courses"
     :> QueryParam "isEnrolled" IsEnrolled
     :> QueryFlag "onlyCount"
+    :> SortingParamsOf CourseStudentInfo
+    :> PaginationParams ('DefPageSize 100)
     :> Summary "Get Educator's courses"
     :> Description "Gets a list of Educator's courses, both enrolled and available."
-    :> SortingParamsOf CourseStudentInfo
     :> Verb 'GET 200 '[DSON] [CourseStudentInfo]
 
 type GetCourse
@@ -77,10 +78,11 @@ type GetAssignments
     :> QueryParam "type" Core.DocumentType
     :> QueryParam "isFinal" IsFinal
     :> QueryFlag "onlyCount"
+    :> SortingParamsOf AssignmentStudentInfo
+    :> PaginationParams ('DefPageSize 100)
     :> Summary "Get student's assignments"
     :> Description "Gets a list of student's assignments. Filter parameters are \
                    \used to specify specific course, type, etc."
-    :> SortingParamsOf AssignmentStudentInfo
     :> Verb 'GET 200 '[DSON] [AssignmentStudentInfo]
 
 type GetAssignment
@@ -100,10 +102,11 @@ type GetSubmissions
     :> QueryParam "assignment" (Hash Core.Assignment)
     :> QueryParam "type" Core.DocumentType
     :> QueryFlag "onlyCount"
+    :> SortingParamsOf SubmissionStudentInfo
+    :> PaginationParams ('DefPageSize 100)
     :> Summary "Get student's submissions"
     :> Description "Gets a list of student's submissions. Filter parameters are \
                    \used to specify specific course, assignment, etc."
-    :> SortingParamsOf SubmissionStudentInfo
     :> Verb 'GET 200 '[DSON] [SubmissionStudentInfo]
 
 type AddSubmission

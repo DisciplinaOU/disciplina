@@ -50,6 +50,7 @@ executables:
       - aeson-pretty
       - bytestring
       - containers
+      - data-default
       - disciplina-core
       - disciplina-witness
       - disciplina-educator

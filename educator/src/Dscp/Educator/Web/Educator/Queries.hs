@@ -22,6 +22,8 @@ import Data.Default (Default)
 import Data.List (groupBy)
 import Data.Time.Clock (getCurrentTime)
 import Servant (err501)
+import Servant.Util (PaginationSpec)
+import Servant.Util.Beam.Postgres (paginate_)
 
 import Dscp.Core
 import Dscp.Crypto
@@ -73,9 +75,10 @@ educatorRemoveStudent student = do
 
 educatorGetStudents
     :: MonadEducatorWebQuery m
-    => Maybe Course -> DBT t m [StudentInfo]
-educatorGetStudents courseF = do
-    runSelectMap StudentInfo . select $ do
+    => Maybe Course -> PaginationSpec -> DBT t m [StudentInfo]
+educatorGetStudents courseF pagination =
+    runSelectMap StudentInfo . select $
+    paginate_ pagination $ do
         student <- all_ (esStudents es)
         whenJust courseF $ \course ->
             link_ (esStudentCourses es) (pk_ student :-: valPk_ course)
@@ -83,9 +86,11 @@ educatorGetStudents courseF = do
 
 educatorGetCourses
     :: DBM m
-    => Maybe Student -> DBT t m [CourseEducatorInfo]
-educatorGetCourses studentF = do
-    res :: [(Course, ItemDesc, Maybe Subject)] <- runSelect $ select query
+    => Maybe Student -> PaginationSpec -> DBT t m [CourseEducatorInfo]
+educatorGetCourses studentF pagination = do
+    res :: [(Course, ItemDesc, Maybe Subject)] <-
+        runSelect . select $
+        paginate_ pagination query
     return
         -- group "subject" fields for the same courses
         [ CourseEducatorInfo{ ciId, ciDesc, ciSubjects }
@@ -141,9 +146,11 @@ educatorGetAssignment assignH =
 educatorGetAssignments
     :: MonadEducatorWebQuery m
     => EducatorGetAssignmentsFilters
+    -> PaginationSpec
     -> DBT t m [AssignmentEducatorInfo]
-educatorGetAssignments filters = do
-    runSelectMap educatorAssignmentInfoFromRow . select $ do
+educatorGetAssignments filters pagination =
+    runSelectMap educatorAssignmentInfoFromRow . select $
+    paginate_ pagination $ do
         assignment <- all_ (esAssignments es)
 
         guard_ $ filterMatchesPk_ (afCourse filters) (arCourse assignment)
@@ -175,9 +182,11 @@ educatorGetSubmission subH = do
 educatorGetSubmissions
     :: MonadEducatorWebQuery m
     => EducatorGetSubmissionsFilters
+    -> PaginationSpec
     -> DBT t m [SubmissionEducatorInfo]
-educatorGetSubmissions filters = do
-    runSelectMap educatorSubmissionInfoFromRow . select $ do
+educatorGetSubmissions filters pagination =
+    runSelectMap educatorSubmissionInfoFromRow . select $
+    paginate_ pagination $ do
         submission <- all_ (esSubmissions es)
         assignment <- related_ (esAssignments es) (srAssignment submission)
 

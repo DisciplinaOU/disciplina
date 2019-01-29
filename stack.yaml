@@ -31,7 +31,7 @@ extra-deps:
 
 
 - git: https://github.com/serokell/servant-util.git
-  commit: c84803a4a66fd1cb0e6623fdcc71b1203c17b426
+  commit: c504caf8bc7a668cdcab329796b3e1a1962b7dd7
   subdirs:
     - servant-util
     - servant-util-beam-pg

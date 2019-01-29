@@ -29,30 +29,31 @@ studentApiHandlers student =
     {
       -- Courses
 
-      sGetCourses = \isEnrolledF _onlyCount sorting ->
-        transact $ studentGetCourses student isEnrolledF sorting
+      sGetCourses = \isEnrolledF _onlyCount sorting pagination ->
+        transact $ studentGetCourses student isEnrolledF sorting pagination
 
     , sGetCourse = \course ->
         transact $ studentGetCourse student course
 
       -- Assignments
 
-    , sGetAssignments = \afCourse afDocType afIsFinal _onlyCount sorting ->
+    , sGetAssignments = \afCourse afDocType afIsFinal _onlyCount sorting pagination ->
         transact $
             studentGetAssignments student
                 def{ afCourse, afDocType, afIsFinal }
-                sorting
+                sorting pagination
 
     , sGetAssignment = \assignH ->
         transact $ studentGetAssignment student assignH
 
-      -- Submissions`
+      -- Submissions
 
-    , sGetSubmissions = \sfCourse sfAssignmentHash sfDocType _onlyCount sorting ->
+    , sGetSubmissions = \sfCourse sfAssignmentHash sfDocType _onlyCount sorting
+                         pagination ->
         invoke $
         studentGetSubmissions student
             def{ sfCourse, sfAssignmentHash, sfDocType }
-            sorting
+            sorting pagination
 
     , sAddSubmission = \newSub ->
         studentMakeSubmissionVerified student newSub
