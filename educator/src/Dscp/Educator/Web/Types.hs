@@ -66,19 +66,19 @@ type MonadEducatorWeb ctx m =
 -- | Whether student is enrolled into a course.
 newtype IsEnrolled = IsEnrolled
     { unIsEnrolled :: Bool
-    } deriving (Eq, Show)
+    } deriving (Eq, Show, Generic)
 
 -- | Whether assignment is final in course.
 newtype IsFinal = IsFinal
     { unIsFinal :: Bool
-    } deriving (Eq, Show)
+    } deriving (Eq, Show, Generic)
 
 makePrisms ''IsFinal
 
 -- | Whether submission is graded.
 newtype IsGraded = IsGraded
     { unIsGraded :: Bool
-    } deriving (Eq, Show)
+    } deriving (Eq, Show, Generic)
 
 -- | Whether transaction has been published into public chain.
 newtype HasProof = HasProof { unHasProof :: Bool }

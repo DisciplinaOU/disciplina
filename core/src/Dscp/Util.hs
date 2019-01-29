@@ -10,6 +10,7 @@ module Dscp.Util
        , Seed (..)
        , execUnmasked
        , fromIntegralChecked
+       , proxyOf
 
          -- * Exceptions processing
        , wrapRethrow
@@ -154,6 +155,10 @@ fromIntegralChecked x =
     in if fromIntegral r == x
           then r
           else error "Integral overflow"
+
+-- | Get a proxy for the given type.
+proxyOf :: a -> Proxy a
+proxyOf _ = Proxy
 
 -----------------------------------------------------------
 -- Exceptions processing

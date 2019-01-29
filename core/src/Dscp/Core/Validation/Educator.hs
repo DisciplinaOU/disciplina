@@ -56,7 +56,7 @@ data WrongSubmissionSignature
       -- ^ Signature doesn't match the student who performs the request.
     | SubmissionSignatureInvalid [SubmissionValidationFailure]
       -- ^ Submission is invalid on itself.
-    deriving (Eq, Show)
+    deriving (Eq, Show, Generic)
 
 instance Exception WrongSubmissionSignature
 

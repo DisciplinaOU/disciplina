@@ -49,9 +49,11 @@ library:
     - servant-generic
     - servant-client-core
     - servant-server
+    - servant-swagger
     - servant-util
     - servant-util-beam-pg
     - snowdrop-util
+    - swagger2
     - template-haskell
     - text
     - text-format

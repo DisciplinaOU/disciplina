@@ -17,25 +17,24 @@ import Data.Aeson.TH (deriveJSON)
 import Data.Reflection (Reifies (..))
 import qualified Data.Text.Buildable as B
 import Data.Typeable (cast)
-import Servant (ServantErr (..), err400, err403, err503)
+import Servant (ServantErr (..), err403)
 import Servant.Util (SimpleJSON)
 
 import Dscp.Core.Validation
 import Dscp.DB.SQL (SQLRequestsNumberExceeded)
 import Dscp.Educator.DB (DomainError (..))
-import Dscp.Educator.Web.Util
+import Dscp.Educator.Web.Util ()
 import Dscp.Web.Class
+import Dscp.Web.Types
 
 -- | Any error backend may return.
 data StudentAPIError
-    = BadSubmissionSignature WrongSubmissionSignature
-      -- ^ Submission signature doesn't match the student nor has valid format.
-    | SomeDomainError DomainError
+    = SomeDomainError DomainError
       -- ^ Entity is missing or getting duplicated.
-    | InvalidFormat
-      -- ^ Decoding failed.
-    | ServiceUnavailable !Text
-      -- ^ Service is overloaded with requests.
+    | BadSubmissionSignature WrongSubmissionSignature
+      -- ^ Submission signature doesn't match the student nor has valid format.
+    | SomeGeneralBackendError GeneralBackendError
+      -- ^ Common backend errors.
     deriving (Show, Eq, Generic, Typeable)
 
 makePrisms ''StudentAPIError
@@ -45,10 +44,7 @@ instance Buildable StudentAPIError where
         "Bad submission signature: " <> B.build err
     build (SomeDomainError err) =
         "Database error: " <> B.build err
-    build InvalidFormat =
-        "Invalid format of the request"
-    build (ServiceUnavailable msg) =
-        "Service unavailable: " <> B.build msg
+    build (SomeGeneralBackendError err) = B.build err
 
 instance Exception StudentAPIError where
     fromException e@(SomeException e') =
@@ -56,7 +52,8 @@ instance Exception StudentAPIError where
         [ cast e'
         , BadSubmissionSignature <$> fromException e
         , SomeDomainError        <$> fromException e
-        , ServiceUnavailable . pretty @SQLRequestsNumberExceeded <$> fromException e
+        , SomeGeneralBackendError . ServiceUnavailable .
+             pretty @SQLRequestsNumberExceeded <$> fromException e
         ]
 
 ---------------------------------------------------------------------------
@@ -66,25 +63,29 @@ instance Exception StudentAPIError where
 deriveJSON defaultOptions ''WrongSubmissionSignature
 deriveJSON defaultOptions ''StudentAPIError
 
+instance HasErrorTag WrongSubmissionSignature where
+    errorTag = \case
+        FakeSubmissionSignature{}    -> "FakeSubmissionSignature"
+        SubmissionSignatureInvalid{} -> "SubmissionSignatureInvalid"
+
 instance HasErrorTag StudentAPIError where
     errorTag = \case
-        BadSubmissionSignature err -> case err of
-            FakeSubmissionSignature{}    -> "FakeSubmissionSignature"
-            SubmissionSignatureInvalid{} -> "SubmissionSignatureInvalid"
-        InvalidFormat ->        "InvalidFormat"
-        ServiceUnavailable{} -> "ServiceUnavailable"
-        SomeDomainError err -> domainErrorToShortJSON err
+        BadSubmissionSignature err -> errorTag err
+        SomeDomainError err -> errorTag err
+        SomeGeneralBackendError err -> errorTag err
 
 ---------------------------------------------------------------------------
 -- Functions
 ---------------------------------------------------------------------------
 
+instance ToServantErr WrongSubmissionSignature where
+    toServantErrNoBody _ = err403
+
 instance ToServantErr StudentAPIError where
     toServantErrNoBody = \case
-        BadSubmissionSignature{} -> err403
-        InvalidFormat{}          -> err400
-        ServiceUnavailable{}     -> err503
-        SomeDomainError err -> domainToServantErrNoReason err
+        BadSubmissionSignature err -> toServantErrNoBody err
+        SomeDomainError err -> toServantErrNoBody err
+        SomeGeneralBackendError err -> toServantErrNoBody err
 
 instance FromServantErr StudentAPIError
 

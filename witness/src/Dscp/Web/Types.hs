@@ -4,16 +4,25 @@
 module Dscp.Web.Types
        ( NetworkAddress (..)
        , parseNetAddr
+       , GeneralBackendError (..)
        , AsClientT
        ) where
 
+import Data.Aeson.Options (defaultOptions)
+import Data.Aeson.TH (deriveJSON)
+import qualified Data.Text.Buildable as B
 import Fmt (Buildable (..), (+|), (|+))
+import Servant (err400, err503)
 import Servant.Client (Client)
 import Servant.Generic ((:-))
+import Test.QuickCheck.Arbitrary.Generic (genericArbitrary)
 import Text.Parsec (eof, many1, parse, sepBy)
 import Text.Parsec.Char (char, digit)
 import qualified Text.Parsec.String as Parsec
 import qualified Text.Show
+
+import Dscp.Util.Test (Arbitrary (..))
+import Dscp.Web.Class
 
 data NetworkAddress = NetworkAddress
     { naHost :: !Text
@@ -46,6 +55,39 @@ parseNetAddr st =
     parseWord n = do x <- fromMaybe (error "unexpected") . readMaybe <$> many1 digit
                      when ((x :: Integer) > 2 ^ (n :: Integer) - 1) $ fail "invalid"
                      return $ fromIntegral x
+
+---------------------------------------------------------------------------
+-- Errors
+---------------------------------------------------------------------------
+
+-- | General server errors.
+data GeneralBackendError
+    = InvalidFormat
+      -- ^ Decoding failed.
+    | ServiceUnavailable Text
+      -- ^ Service is overloaded with requests.
+    deriving (Show, Eq, Generic)
+
+deriveJSON defaultOptions ''GeneralBackendError
+
+instance Buildable GeneralBackendError where
+    build InvalidFormat =
+        "Invalid format of the request"
+    build (ServiceUnavailable msg) =
+        "Service unavailable: " <> B.build msg
+
+instance HasErrorTag GeneralBackendError where
+    errorTag = \case
+        InvalidFormat -> "InvalidFormat"
+        ServiceUnavailable{} -> "ServiceUnavailable"
+
+instance ToServantErr GeneralBackendError where
+    toServantErrNoBody = \case
+        InvalidFormat{} -> err400
+        ServiceUnavailable{} -> err503
+
+instance Arbitrary GeneralBackendError where
+    arbitrary = genericArbitrary
 
 ---------------------------------------------------------------------------
 -- Servant

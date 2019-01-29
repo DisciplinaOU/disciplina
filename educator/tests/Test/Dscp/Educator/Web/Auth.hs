@@ -9,7 +9,7 @@ import Servant.Client (GenResponse (..), ServantError (..))
 import Servant.Generic (AsServerT, fromServant, toServant)
 import Servant.Mock (HasMock (..), mock)
 import Servant.QuickCheck (withServantServerAndContext)
-import Servant.Util (PaginationParams, SortingParams)
+import Servant.Util (ErrorResponses, PaginationParams, SortingParams, Tag)
 
 import Dscp.Core
 import Dscp.Crypto
@@ -29,6 +29,15 @@ instance (HasMock subApi ctx, HasServer (SortingParams params :> subApi) ctx) =>
 instance (HasMock subApi ctx, HasServer (PaginationParams :> subApi) ctx) =>
          HasMock (PaginationParams :> subApi) ctx where
     mock _ pc _ = mock (Proxy @subApi) pc
+
+instance (HasMock subApi ctx, HasServer (Tag name :> subApi) ctx) =>
+         HasMock (Tag name :> subApi) ctx where
+    mock _ pc = mock (Proxy @subApi) pc
+
+instance (HasMock subApi ctx, HasServer (ErrorResponses err :> subApi) ctx) =>
+         HasMock (ErrorResponses err :> subApi) ctx where
+    mock _ pc = mock (Proxy @subApi) pc
+
 
 requesterSK :: SecretKeyData
 requesterSK = detGen 12543 arbitrary

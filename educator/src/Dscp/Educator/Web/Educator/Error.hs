@@ -22,7 +22,7 @@ import Dscp.Educator.DB (DomainError)
 import Servant (ServantErr (..), err400, err503)
 import Servant.Util (SimpleJSON)
 
-import Dscp.Educator.Web.Util
+import Dscp.Educator.Web.Util ()
 import Dscp.Web.Class
 
 -- | Any error backend may return.
@@ -60,7 +60,7 @@ instance Exception EducatorAPIError where
 instance HasErrorTag EducatorAPIError where
     errorTag = \case
         InvalidFormat        -> "InvalidFormat"
-        SomeDomainError err  -> domainErrorToShortJSON err
+        SomeDomainError err  -> errorTag err
         ServiceUnavailable{} -> "ServiceUnavailable"
 
 ---------------------------------------------------------------------------
@@ -73,7 +73,7 @@ instance ToServantErr EducatorAPIError where
     toServantErrNoBody = \case
         InvalidFormat        -> err400
         ServiceUnavailable{} -> err503
-        SomeDomainError err  -> domainToServantErrNoReason err
+        SomeDomainError err  -> toServantErrNoBody err
 
 instance FromServantErr EducatorAPIError
 

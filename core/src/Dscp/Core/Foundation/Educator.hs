@@ -19,6 +19,7 @@ module Dscp.Core.Foundation.Educator
     , Grade (..)
     , mkGrade
     , Language (..)
+    , gradeToNum
     , EducatorId
     , Assignment (..)
     , AssignmentType (..)
@@ -185,6 +186,9 @@ mkGrade :: Word8 -> Maybe Grade
 mkGrade a =
     let g = UnsafeGrade a
     in g <$ guard (g >= minBound && g <= maxBound)
+
+gradeToNum :: Num i => Grade -> i
+gradeToNum (UnsafeGrade g) = fromIntegral g
 
 -- | Student is identified by their public address.
 type Student = Address
