@@ -18,20 +18,27 @@ let
       ${source}
     '';
   };
-in
 
-rec {
-  disciplina = symlinkJoin {
-    name = "disciplina";
-    paths = with project; map haskell.lib.justStaticExecutables [
+  justDataOutputs = drv: lib.optional (drv ? data) drv.data;
+
+  server-packages = with project; [
       disciplina-educator
       disciplina-faucet
       disciplina-tools
       disciplina-witness
-    ];
+  ];
+in
+
+project // rec {
+  disciplina = symlinkJoin {
+    name = "disciplina";
+    paths = map haskell.lib.justStaticExecutables server-packages;
   };
 
-  inherit (project) disciplina-tools;
+  disciplina-data = symlinkJoin {
+    name = "disciplina-data";
+    paths = lib.concatMap justDataOutputs server-packages;
+  };
 
   disciplina-config = runCommand "disciplina-config.yaml" {} "cp ${./config.yaml} $out";
 

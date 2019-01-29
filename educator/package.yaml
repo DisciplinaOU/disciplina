@@ -107,3 +107,6 @@ executables:
       - disciplina-educator
       - loot-log
       - optparse-applicative
+
+data-files:
+  - database/*.sql
