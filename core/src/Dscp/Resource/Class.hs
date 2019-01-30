@@ -14,11 +14,13 @@ module Dscp.Resource.Class
 
 import Control.Lens (makeLenses)
 import Control.Monad.Component (ComponentM, buildComponent)
-import Loot.Base.HasLens (HasLens (..))
+import Loot.Base.HasLens (HasLens (..), HasLens')
 import Loot.Log.Rio (LoggingIO)
+import Time (sec)
 
 import Dscp.Resource.Logging (LoggingParamsRec)
 import Dscp.Rio (RIO, runRIO)
+import Dscp.Util.TimeLimit
 
 -- | Contains parameters required for most of resources allocation.
 data InitParams = InitParams
@@ -46,10 +48,15 @@ class AllocResource resource where
 
 -- | 'buildComponent' for 'ReaderT'.
 buildComponentR
-    :: Text
+    :: (HasLens' r LoggingIO)
+    => Text
     -> RIO r a
     -> (a -> RIO r ())
     -> ReaderT r ComponentM a
 buildComponentR desc allocate release =
     ReaderT $
-      \r -> buildComponent desc (runRIO r allocate) (runRIO r . release)
+      \r -> buildComponent desc
+                (runRIO r allocate)
+                (runRIO r . boundTeardown . release)
+  where
+    boundTeardown = boundExecution_ (sec 3) (desc <> " teardown")

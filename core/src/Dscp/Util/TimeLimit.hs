@@ -11,13 +11,23 @@ module Dscp.Util.TimeLimit
        , logWarningWaitOnce
        , logWarningWaitLinear
        , logWarningWaitInf
+
+         -- * Action boundExecution
+       , boundExecution
+       , boundExecution_
        ) where
 
 import Fmt ((+|), (+||), (|+), (||+))
-import Loot.Log (MonadLogging, logWarning)
-import Time (KnownRat, Microsecond, Second, Time, floorUnit, threadDelay, toUnit)
+import Loot.Log (MonadLogging, logError, logWarning)
+import Time (KnownRat, KnownUnitName, Microsecond, Second, Time, floorUnit, threadDelay, toUnit)
 import UnliftIO (MonadUnliftIO)
-import UnliftIO.Async (withAsyncWithUnmask)
+import UnliftIO.Async (async, asyncWithUnmask, cancel, uninterruptibleCancel, waitEither,
+                       withAsyncWithUnmask)
+import qualified UnliftIO.Exception as UIO
+
+----------------------------------------------------------------------------
+-- Warn
+----------------------------------------------------------------------------
 
 -- | Data type to represent waiting strategy for printing warnings
 -- if action take too much time.
@@ -86,3 +96,40 @@ logWarningWaitLinear = logWarningLongAction . WaitLinear . toUnit
 -- with parameter @1.3@. Accepts 'Second'.
 logWarningWaitInf :: (CanLogInParallel m, KnownRat u) => Time u -> Text -> m a -> m a
 logWarningWaitInf = logWarningLongAction . (`WaitGeometric` 1.7) . toUnit
+
+----------------------------------------------------------------------------
+-- Kill
+----------------------------------------------------------------------------
+
+-- | Execute the given action no longer than for the given amount of time.
+--
+-- Unlike in 'timeout', the action will be killed asynchronously - this may help when
+-- you are not sure whether will it die smoothly (e.g. because it is uninterruptibly
+-- blocked on some operation or makes FFI calls).
+boundExecution
+    :: (MonadUnliftIO m, MonadLogging m, KnownRat u, KnownUnitName u)
+    => Time u -> Text -> m a -> m (Maybe a)
+boundExecution time desc action =
+    UIO.mask $ \restore -> do
+        -- further we cannot use 'restore' since 'boundExecution' call can happen
+        -- under masked state (e.g. in resources cleanup), and this state would be inherited.
+        timerAsync <- asyncWithUnmask $ \unmask -> unmask (threadDelay time)
+        actionAsync <- asyncWithUnmask $ \unmask -> unmask action
+
+        res <- restore $ waitEither timerAsync actionAsync
+        case res of
+            Left () -> do
+                void . async $ cancel actionAsync
+                restore logTimeouted
+                return Nothing
+            Right a -> do
+                uninterruptibleCancel timerAsync
+                return (Just a)
+  where
+    logTimeouted =
+        logError $ "Action " +|| desc ||+ " timeouted (after " +|| time ||+ ")"
+
+boundExecution_
+    :: (MonadUnliftIO m, MonadLogging m, KnownRat u, KnownUnitName u)
+    => Time u -> Text -> m a -> m ()
+boundExecution_ = void ... boundExecution
