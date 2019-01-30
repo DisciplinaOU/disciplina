@@ -12,6 +12,7 @@ that you have installed the following native dependencies:
 - GMP
 - OpenSSL
 - pkg-config
+- Postgres
 - RocksDB
 - ZeroMQ
 - zlib
