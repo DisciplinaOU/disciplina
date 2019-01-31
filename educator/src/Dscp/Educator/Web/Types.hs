@@ -82,17 +82,6 @@ newtype IsGraded = IsGraded
 newtype HasProof = HasProof { unHasProof :: Bool }
     deriving (Eq, Show)
 
-data StudentInfo = StudentInfo
-    { siAddr :: Student
-    } deriving (Show, Eq, Ord, Generic)
-
-data GradeInfo = GradeInfo
-    { giSubmissionHash :: (Hash Submission)
-    , giGrade          :: Grade
-    , giTimestamp      :: Timestamp
-    , giHasProof       :: Bool
-    } deriving (Show, Eq, Ord, Generic)
-
 data BlkProofInfo = BlkProofInfo
     { bpiBlockHash       :: PrivateHeaderHash
     , bpiMtreeSerialized :: (EncodeSerialised Base64Encoded (EmptyMerkleProof PrivateTx))
@@ -116,19 +105,6 @@ instance Buildable (IsFinal) where
 instance Buildable (IsGraded) where
     build (IsGraded{..}) =
       "{ is enrolled = " +| unIsGraded |+
-      " }"
-
-instance Buildable (StudentInfo) where
-    build (StudentInfo{..}) =
-      "{ address = " +| siAddr |+
-      " }"
-
-instance Buildable (GradeInfo) where
-    build (GradeInfo{..}) =
-      "{ submission hash = " +| giSubmissionHash |+
-      ", grade = " +| giGrade |+
-      ", timestamp = " +| giTimestamp |+
-      ", has proof = " +| giHasProof |+
       " }"
 
 instance Buildable (BlkProofInfo) where

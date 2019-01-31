@@ -27,7 +27,11 @@ module Dscp.Core.Foundation.Educator
     , SubmissionSig
     , SignedSubmission (..)
     , SubmissionWitness (..)
+    , CertificateFullInfo (..)
     , CertificateMeta (..)
+    , CertificateGrade (..)
+    , StudentInfo (..)
+    , GradeInfo (..)
     , EducationForm (..)
     , documentType
     , _aDocumentType
@@ -97,7 +101,7 @@ import qualified Data.ByteArray as BA
 import qualified Data.Text as T
 import Data.Time.Calendar (Day (..))
 import Data.Time.Clock (UTCTime (..), diffTimeToPicoseconds, picosecondsToDiffTime)
-import Fmt (build, genericF, mapF, (+|), (|+))
+import Fmt (build, genericF, listF, mapF, (+|), (|+))
 
 import Dscp.Core.Foundation.Address (Address (..))
 import Dscp.Crypto
@@ -339,6 +343,72 @@ data CertificateMeta = CertificateMeta
 
 data EducationForm = Fulltime | Parttime | Fullpart
     deriving (Show, Eq, Generic, Enum, Bounded)
+
+-- | Datatype which combines certificate meta with its ID.
+data Certificate = Certificate
+    { cId   :: Hash CertificateMeta
+    , cMeta :: CertificateMeta
+    } deriving (Show, Eq, Generic)
+
+-- | Datatype which contains information about the grade which
+-- gets included into the certificate.
+data CertificateGrade = CertificateGrade
+    { cgSubject :: ItemDesc
+    , cgLang    :: Language
+    , cgHours   :: Int
+    , cgCredits :: Maybe Int
+    , cgGrade   :: Grade
+    } deriving (Show, Eq, Generic)
+
+data Language = EN | RU
+    deriving (Show, Eq, Generic)
+
+-- | Datatype which contains all the info about certificate. This
+-- datatype represents a request body for 'AddCertificate' endpoint.
+data CertificateFullInfo = CertificateFullInfo
+    { cfiMeta   :: CertificateMeta
+    , cfiGrades :: [CertificateGrade]
+    } deriving (Show, Eq, Generic)
+
+data StudentInfo = StudentInfo
+    { siAddr :: Student
+    } deriving (Show, Eq, Ord, Generic)
+
+data GradeInfo = GradeInfo
+    { giSubmissionHash :: (Hash Submission)
+    , giGrade          :: Grade
+    , giTimestamp      :: Timestamp
+    , giHasProof       :: Bool
+    } deriving (Show, Eq, Ord, Generic)
+
+instance Buildable (StudentInfo) where
+    build (StudentInfo{..}) =
+      "{ address = " +| siAddr |+
+      " }"
+
+instance Buildable (GradeInfo) where
+    build (GradeInfo{..}) =
+      "{ submission hash = " +| giSubmissionHash |+
+      ", grade = " +| giGrade |+
+      ", timestamp = " +| giTimestamp |+
+      ", has proof = " +| giHasProof |+
+      " }"
+
+instance Buildable Certificate where
+    build Certificate {..} =
+        "{ id = "+|cId|+", meta = "+|cMeta|+" }"
+
+instance Buildable CertificateGrade where
+    build CertificateGrade {..} =
+        "{ subject = "+|cgSubject|+
+        ", hours = "+|cgHours|+
+        ", credits = "+|cgCredits|+
+        ", grade = "+|cgGrade|+" }"
+
+instance Buildable CertificateFullInfo where
+    build CertificateFullInfo {..} =
+        "{ meta = "+|cfiMeta|+
+        ", grades = "+|listF cfiGrades|+" }"
 
 instance Buildable EducationForm where
     build = show

@@ -107,32 +107,6 @@ data SubmissionEducatorInfo = SubmissionEducatorInfo
 eaDocumentType :: AssignmentEducatorInfo -> DocumentType
 eaDocumentType = documentType . aiContentsHash
 
--- | Datatype which combines certificate meta with its ID.
-data Certificate = Certificate
-    { cId   :: Hash CertificateMeta
-    , cMeta :: CertificateMeta
-    } deriving (Show, Eq, Generic)
-
--- | Datatype which contains information about the grade which
--- gets included into the certificate.
-data CertificateGrade = CertificateGrade
-    { cgSubject :: ItemDesc
-    , cgLang    :: Language
-    , cgHours   :: Int
-    , cgCredits :: Int
-    , cgGrade   :: Grade
-    } deriving (Show, Eq, Generic)
-
--- | Datatype which contains all the info about certificate. This
--- datatype represents a request body for 'AddCertificate' endpoint.
-data CertificateFullInfo = CertificateFullInfo
-    { cfiMeta   :: CertificateMeta
-    , cfiGrades :: [CertificateGrade]
-    } deriving (Show, Eq, Generic)
-
-data Language = EN | RU
-    deriving (Show, Eq, Generic)
-
 -- | Makes a 'Certificate' from 'CertificateMeta'.
 mkCertificate :: CertificateMeta -> Certificate
 mkCertificate meta = Certificate (hash meta) meta
@@ -270,22 +244,6 @@ instance Buildable (SubmissionEducatorInfo) where
       ", content hash = " +| siContentsHash |+
       ", assignment hash = " +| siAssignmentHash |+
       " }"
-
-instance Buildable Certificate where
-    build Certificate {..} =
-        "{ id = "+|cId|+", meta = "+|cMeta|+" }"
-
-instance Buildable CertificateGrade where
-    build CertificateGrade {..} =
-        "{ subject = "+|cgSubject|+
-        ", hours = "+|cgHours|+
-        ", credits = "+|cgCredits|+
-        ", grade = "+|cgGrade|+" }"
-
-instance Buildable CertificateFullInfo where
-    build CertificateFullInfo {..} =
-        "{ meta = "+|cfiMeta|+
-        ", grades = "+|listF cfiGrades|+" }"
 
 instance Buildable (ForResponseLog EducatorInfo) where
     build (ForResponseLog EducatorInfo{..})=

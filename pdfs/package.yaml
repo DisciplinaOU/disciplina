@@ -7,13 +7,18 @@ library:
   <<: *lib-common
 
   dependencies:
+    - contravariant
     - bytestring
     - base64-bytestring
     - directory
+    - disciplina-core
     - hashable
     - path
     - path-io
     - pandoc
+    - text
+    - text-printer
+    - time
     - typed-process
     - temporary
 
