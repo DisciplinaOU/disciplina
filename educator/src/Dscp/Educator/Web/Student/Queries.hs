@@ -17,8 +17,8 @@ module Dscp.Educator.Web.Student.Queries
 import Control.Lens (from, mapping)
 import Data.Coerce (coerce)
 import Data.Default (Default)
-import Servant.Util (SortingSpecOf)
-import Servant.Util.Beam.Postgres (SortingSpecApp (..), bySpec_, fieldSort_)
+import Servant.Util (PaginationSpec, SortingSpecOf)
+import Servant.Util.Beam.Postgres (SortingSpecApp (..), bySpec_, fieldSort_, paginate_)
 
 import Dscp.Core
 import Dscp.Crypto (Hash)
@@ -87,9 +87,11 @@ studentGetCourses
     => Id Student
     -> Maybe IsEnrolled
     -> SortingSpecOf CourseStudentInfo
+    -> PaginationSpec
     -> DBT 'WithinTx m [CourseStudentInfo]
-studentGetCourses studentId (coerce -> isEnrolledF) sorting = do
+studentGetCourses studentId (coerce -> isEnrolledF) sorting pagination = do
     courses <- runSelect . select $
+        paginate_ pagination $
         orderBy_ (bySpec_ sorting . mkSortingSpecApp) $ do
             course <- all_ (esCourses es)
             whenJust isEnrolledF $ \isEnrolled -> do
@@ -183,21 +185,23 @@ studentGetAssignments
     => Student
     -> StudentGetAssignmentsFilters
     -> SortingSpecOf AssignmentStudentInfo
+    -> PaginationSpec
     -> DBT 'WithinTx m [AssignmentStudentInfo]
-studentGetAssignments student filters sorting = do
-    assignments <- runSelectMap (arHash &&& assignmentFromRow) . select $ do
-        assignment <-
-            orderBy_ (bySpec_ sorting . mkSortingSpecApp) $
-            all_ (esAssignments es)
+studentGetAssignments student filters sorting pagination = do
+    assignments <- runSelectMap (arHash &&& assignmentFromRow) . select $
+        paginate_ pagination $ do
+            assignment <-
+                orderBy_ (bySpec_ sorting . mkSortingSpecApp) $
+                all_ (esAssignments es)
 
-        link_ (esStudentAssignments es) (valPk_ student :-: pk_ assignment)
+            link_ (esStudentAssignments es) (valPk_ student :-: pk_ assignment)
 
-        guard_ $ filterMatchesPk_ (afCourse filters) (arCourse assignment)
-        guard_ $ filterMatches_ assignTypeF (arType assignment)
-        whenJust (afDocType filters) $ \docType ->
-            guard_ (eqDocTypeQ docType (arContentsHash assignment))
+            guard_ $ filterMatchesPk_ (afCourse filters) (arCourse assignment)
+            guard_ $ filterMatches_ assignTypeF (arType assignment)
+            whenJust (afDocType filters) $ \docType ->
+                guard_ (eqDocTypeQ docType (arContentsHash assignment))
 
-        return assignment
+            return assignment
 
     forM assignments $ \(assignH, assignment) ->
         studentComplementAssignmentInfo student assignH assignment
@@ -233,9 +237,11 @@ studentGetSubmissions
     => Student
     -> StudentGetSubmissionsFilters
     -> SortingSpecOf SubmissionStudentInfo
+    -> PaginationSpec
     -> DBT t m [SubmissionStudentInfo]
-studentGetSubmissions student filters sorting = do
+studentGetSubmissions student filters sorting pagination = do
     runSelectMap studentSubmissionInfoFromRow . select $
+        paginate_ pagination $
         orderBy_ (bySpec_ sorting . mkSortingSpecApp) $ do
             submission <- all_ (esSubmissions es)
 

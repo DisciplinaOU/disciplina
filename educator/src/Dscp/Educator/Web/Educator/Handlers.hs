@@ -7,6 +7,7 @@ module Dscp.Educator.Web.Educator.Handlers
 
 import Data.Default (def)
 import Servant (Handler)
+import Servant.Util.Dummy (paginate)
 import UnliftIO (UnliftIO (..))
 
 import Dscp.DB.SQL
@@ -32,8 +33,8 @@ educatorApiHandlers =
 
       -- Students
 
-    , eGetStudents = \mCourse _mIsEnrolled onlyCount ->
-        fmap (mkCountedList onlyCount) $ invoke $ educatorGetStudents mCourse
+    , eGetStudents = \mCourse _mIsEnrolled onlyCount pagination ->
+        fmap (mkCountedList onlyCount) $ invoke $ educatorGetStudents mCourse pagination
 
     , eAddStudent = \(NewStudent student) ->
         void . invoke $ createStudent student
@@ -52,8 +53,8 @@ educatorApiHandlers =
 
       -- Courses
 
-    , eGetCourses = \mStudent onlyCount ->
-        fmap (mkCountedList onlyCount) $ invoke $ educatorGetCourses mStudent
+    , eGetCourses = \mStudent onlyCount pagination ->
+        fmap (mkCountedList onlyCount) $ invoke $ educatorGetCourses mStudent pagination
 
     , eAddCourse = \(NewCourse mcid desc subjects) ->
         transact $ createCourse CourseDetails
@@ -67,9 +68,9 @@ educatorApiHandlers =
 
       -- Assignments
 
-    , eGetAssignments = \afCourse afStudent afIsFinal _afSince afOnlyCount ->
+    , eGetAssignments = \afCourse afStudent afIsFinal _afSince afOnlyCount pagination ->
             fmap (mkCountedList afOnlyCount) $ invoke $
-            educatorGetAssignments def{ afCourse, afStudent, afIsFinal }
+            educatorGetAssignments def{ afCourse, afStudent, afIsFinal } pagination
 
     , eAddAssignment = \_autoAssign na -> do
         void . transact $ createAssignment (requestToAssignment na)
@@ -77,9 +78,12 @@ educatorApiHandlers =
 
       -- Submissions
 
-    , eGetSubmissions = \sfCourse sfStudent sfAssignmentHash _sfIsGraded _sfSince sfOnlyCount ->
+    , eGetSubmissions = \sfCourse sfStudent sfAssignmentHash _sfIsGraded _sfSince
+                         sfOnlyCount pagination ->
             fmap (mkCountedList sfOnlyCount) $ invoke $
-            educatorGetSubmissions def{ sfCourse, sfStudent, sfAssignmentHash }
+            educatorGetSubmissions
+                def{ sfCourse, sfStudent, sfAssignmentHash }
+                pagination
 
     , eGetSubmission =
         invoke ... educatorGetSubmission
@@ -103,9 +107,9 @@ educatorApiHandlers =
             commonGetProofs def{ pfCourse, pfStudent, pfAssignment }
 
       -- Certificates
-    , eGetCertificates = \offset limit _sorting onlyCount ->
+    , eGetCertificates = \_sorting pagination onlyCount ->
             pure $ mkCountedList onlyCount $
-            take (fromMaybe 100 limit) $ drop (fromMaybe 0 offset) certificateListEx
+            paginate pagination certificateListEx
 
     , eGetCertificate = \_id ->
             pure "<THIS IS NOT A PDF YET>"

@@ -31,7 +31,7 @@ spec_Educator_API_queries = specWithTempPostgresServer $ do
             students <- pickSmall listUnique
             lift $ forM_ students createStudent
 
-            students' <- lift $ educatorGetStudents Nothing
+            students' <- lift $ educatorGetStudents Nothing def
             return $ sort students' === sort (map StudentInfo students)
 
         it "Filtering works" $ sqlPropertyM $ do
@@ -44,8 +44,8 @@ spec_Educator_API_queries = specWithTempPostgresServer $ do
                 enrollStudentToCourse student2 course1
                 enrollStudentToCourse student1 course2
 
-            res1 <- lift $ educatorGetStudents (Just course1)
-            res2 <- lift $ educatorGetStudents (Just course2)
+            res1 <- lift $ educatorGetStudents (Just course1) def
+            res2 <- lift $ educatorGetStudents (Just course2) def
             return $ sort res1 === sort (map StudentInfo students)
                 .&&. res2 === one (StudentInfo student1)
 
@@ -56,7 +56,7 @@ spec_Educator_API_queries = specWithTempPostgresServer $ do
                               pickSmall (listOf genCourseNoSubjects)
             lift $ forM_ coursesDetails createCourse
 
-            courses' <- lift $ educatorGetCourses Nothing
+            courses' <- lift $ educatorGetCourses Nothing def
             let coursesBone = coursesDetails <&>
                               \(CourseDetails courseId desc subjs) ->
                                   (courseId, desc, subjs)
@@ -78,8 +78,8 @@ spec_Educator_API_queries = specWithTempPostgresServer $ do
                 enrollStudentToCourse student2 course1
                 enrollStudentToCourse student1 course2
 
-            res1 <- lift $ educatorGetCourses (Just student1)
-            res2 <- lift $ educatorGetCourses (Just student2)
+            res1 <- lift $ educatorGetCourses (Just student1) def
+            res2 <- lift $ educatorGetCourses (Just student2) def
             return $ sort (map ciId res1) === sort courses
                 .&&. map ciId res2 === one (course1)
 
@@ -116,7 +116,7 @@ spec_Educator_API_queries = specWithTempPostgresServer $ do
                 void $ createAssignment assignment
                 setStudentAssignment student (hash assignment)
 
-            res <- lift $ educatorGetAssignments def{ afStudent = Just student }
+            res <- lift $ educatorGetAssignments def{ afStudent = Just student } def
             return $ res === one AssignmentEducatorInfo
                 { aiHash = hash assignment
                 , aiCourseId = _aCourseId assignment
@@ -161,7 +161,7 @@ spec_Educator_API_queries = specWithTempPostgresServer $ do
             lift $ prepareForAssignments env
             -- even after this ^ there should be no submissions
 
-            submissions <- lift $ educatorGetSubmissions def
+            submissions <- lift $ educatorGetSubmissions def def
             return $ submissions === []
 
         it "Returns existing submission properly" $
@@ -172,7 +172,7 @@ spec_Educator_API_queries = specWithTempPostgresServer $ do
 
             lift $ prepareAndCreateSubmission env
 
-            res <- lift $ educatorGetSubmissions def
+            res <- lift $ educatorGetSubmissions def def
             return $ res === one SubmissionEducatorInfo
                 { siHash = hash submission
                 , siContentsHash = _sContentsHash submission
@@ -193,7 +193,7 @@ spec_Educator_API_queries = specWithTempPostgresServer $ do
                 mapM_ createSignedSubmission sigSubs
                 mapM_ createTransaction txs
 
-            submissions' <- lift $ educatorGetSubmissions def
+            submissions' <- lift $ educatorGetSubmissions def def
             let submissionsAndGrades' =
                     map (siHash &&& fmap giGrade . siGrade) submissions'
             let submissionsAndGrades = txs <&> \tx ->
@@ -221,6 +221,7 @@ spec_Educator_API_queries = specWithTempPostgresServer $ do
             submissions <- lift $ educatorGetSubmissions
                 def{ sfStudent = Just student, sfCourse = courseIdF
                     , sfAssignmentHash = assignHF, sfDocType = docTypeF }
+                def
 
             let submissions' =
                   map (\(s, _) -> educatorLiftSubmission s Nothing) $

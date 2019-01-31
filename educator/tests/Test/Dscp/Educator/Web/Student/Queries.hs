@@ -172,7 +172,7 @@ spec_Student_API_queries = specWithTempPostgresServer $ do
                 _ <- createStudent student1
                 _ <- createCourseSimple 1
 
-                courses <- studentGetCourses student1 Nothing def
+                courses <- studentGetCourses student1 Nothing def def
                 return . not $ any ciIsEnrolled courses
 
         it "Student gets enrolled when he asks to" $
@@ -181,7 +181,7 @@ spec_Student_API_queries = specWithTempPostgresServer $ do
                 _ <- createCourseSimple 1
                 enrollStudentToCourse student1 courseId1
 
-                courses <- studentGetCourses student1 Nothing def
+                courses <- studentGetCourses student1 Nothing def def
                 let Just course1 = find (\c -> ciId c == courseId1) courses
                 return (ciIsEnrolled course1)
 
@@ -194,7 +194,7 @@ spec_Student_API_queries = specWithTempPostgresServer $ do
 
                 _ <- lift $ createCourse courseDetails
 
-                courses <- lift $ studentGetCourses student1 Nothing def
+                courses <- lift $ studentGetCourses student1 Nothing def def
                 return $ courses === one CourseStudentInfo
                     { ciId = courseId
                     , ciDesc = cdDesc courseDetails
@@ -214,7 +214,7 @@ spec_Student_API_queries = specWithTempPostgresServer $ do
                 mapM_ (enrollStudentToCourse student2)
                       [courseId1, courseId2]
 
-                courses <- studentGetCourses student1 Nothing def
+                courses <- studentGetCourses student1 Nothing def def
                                <&> sortOn ciDesc
                 return (map ciIsEnrolled courses === [True, False])
 
@@ -227,7 +227,7 @@ spec_Student_API_queries = specWithTempPostgresServer $ do
 
                 (notEnrolled, enrolled) <-
                     forOf each (False, True) $ \isEnrolled ->
-                        studentGetCourses student1 (Just $ IsEnrolled isEnrolled) def
+                        studentGetCourses student1 (Just $ IsEnrolled isEnrolled) def def
 
                 return $
                     map ciDesc enrolled === ["course 2"]
@@ -254,7 +254,7 @@ spec_Student_API_queries = specWithTempPostgresServer $ do
                     }
 
                 courseInfo <- expectOne "courses" <$>
-                              studentGetCourses student Nothing def
+                              studentGetCourses student Nothing def def
                 actualGrades <-
                     fmap catMaybes . forM sigSubs $ \sigSub -> do
                         mgrade <- studentGetGrade . hash $ _ssSubmission sigSub
@@ -327,7 +327,7 @@ spec_Student_API_queries = specWithTempPostgresServer $ do
                 _ <- createAssignment assignment1
                 _ <- enrollStudentToCourse student1 course
                 _ <- setStudentAssignment student1 (hash assignment1)
-                assignments <- studentGetAssignments student1 def def
+                assignments <- studentGetAssignments student1 def def def
                 return $ all (isNothing . aiLastSubmission) assignments
 
         it "Returns existing assignment properly and only related to student" $
@@ -343,7 +343,7 @@ spec_Student_API_queries = specWithTempPostgresServer $ do
                 _ <- createAssignment needlessAssignment
                 _ <- setStudentAssignment student1 assignmentH
 
-                res <- studentGetAssignments student1 def def
+                res <- studentGetAssignments student1 def def def
                 return $ res === one AssignmentStudentInfo
                     { aiHash = hash assignment
                     , aiCourseId = _aCourseId assignment
@@ -373,7 +373,7 @@ spec_Student_API_queries = specWithTempPostgresServer $ do
 
                 assignments <- studentGetAssignments student1
                         def{ afCourse = courseF, afDocType = docTypeF, afIsFinal = isFinalF }
-                        def
+                        def def
 
                 let assignments' =
                         applyFilterOn aiCourseId courseF $
@@ -414,7 +414,7 @@ spec_Student_API_queries = specWithTempPostgresServer $ do
 
                 lift $ prepareAndCreateSubmissions env
 
-                assignments <- lift $ studentGetAssignments student def def
+                assignments <- lift $ studentGetAssignments student def def def
                 let lastSubs = map aiLastSubmission assignments
                     expectedSubmissions =
                         map hash $
@@ -470,7 +470,7 @@ spec_Student_API_queries = specWithTempPostgresServer $ do
 
                 lift $ prepareAndCreateSubmission env
 
-                res <- lift $ studentGetSubmissions owner1 def def
+                res <- lift $ studentGetSubmissions owner1 def def def
                 return $ res === one SubmissionStudentInfo
                     { siHash = hash someSubmission
                     , siContentsHash = _sContentsHash someSubmission
@@ -493,12 +493,12 @@ spec_Student_API_queries = specWithTempPostgresServer $ do
                       subToDel = tiOne $ cteSignedSubmissions env
 
                   prepareAndCreateSubmission env
-                  subBefore <- studentGetSubmissions student def def
+                  subBefore <- studentGetSubmissions student def def def
 
                   let submissionToDel = _ssSubmission subToDel
                   let submissionToDelH = hash submissionToDel
                   commonDeleteSubmission submissionToDelH (Just student)
-                  subAfter <- studentGetSubmissions student def def
+                  subAfter <- studentGetSubmissions student def def def
                   let expected =
                           filter (\s -> siHash s /= submissionToDelH) subBefore
 
@@ -557,7 +557,7 @@ spec_Student_API_queries = specWithTempPostgresServer $ do
                 transact $ prepareForSubmissions env
                 void $ studentMakeSubmissionVerified student submissionReq
 
-                res <- invoke $ studentGetSubmissions student def def
+                res <- invoke $ studentGetSubmissions student def def def
                 let submission = _ssSubmission sigSub
                 return $ res === [studentLiftSubmission submission Nothing]
 

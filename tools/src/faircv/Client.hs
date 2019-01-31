@@ -2,13 +2,14 @@ module Client where
 
 import Data.Traversable (for)
 
+import Data.Default (def)
 import Dscp.Core
 import Dscp.Crypto
 import Dscp.Educator.Web.Student
 import Dscp.Educator.Web.Types
-import Dscp.Witness.Web.Client
 import Dscp.Util
 import Dscp.Util.Aeson
+import Dscp.Witness.Web.Client
 
 import Test.QuickCheck
 
@@ -26,7 +27,7 @@ getProofs sc = do
 
 getAssignments :: StudentApiClient -> IO [AssignmentStudentInfo]
 getAssignments sc = do
-    hashes <- map aiHash <$> sGetAssignments sc Nothing Nothing Nothing False
+    hashes <- map aiHash <$> sGetAssignments sc Nothing Nothing Nothing False def
     for hashes $ sGetAssignment sc
 
 makeRandomSubmissionForAssignment :: SecretKey -> Hash Assignment -> IO NewSubmission
@@ -54,7 +55,7 @@ sendSubmission sc sub = do
 
 getAllCourses :: StudentApiClient -> IO [Course]
 getAllCourses sc = do
-    map ciId <$> sGetCourses sc Nothing False
+    map ciId <$> sGetCourses sc Nothing False def
 
 
 getFairCV :: IO FairCV

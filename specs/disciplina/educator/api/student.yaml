@@ -56,6 +56,8 @@ paths:
           schema:
             $ref: '#/components/schemas/SortingSpec'
         - $ref: '#/components/parameters/OnlyCount'
+        - $ref: '#/components/parameters/Offset'
+        - $ref: '#/components/parameters/Limit'
       responses:
         200:
           description: Successful operation
@@ -131,6 +133,8 @@ paths:
           description: Select only final/non-final assignments
           schema:
             type: boolean
+        - $ref: '#/components/parameters/Offset'
+        - $ref: '#/components/parameters/Limit'
       responses:
         200:
           description: Successful operation
@@ -188,6 +192,8 @@ paths:
         - $ref: '#/components/parameters/AssignmentFilter'
         - $ref: '#/components/parameters/DocumentTypeFilter'
         - $ref: '#/components/parameters/OnlyCount'
+        - $ref: '#/components/parameters/Offset'
+        - $ref: '#/components/parameters/Limit'
         - in: query
           name: sortBy
           description: Allows to sort on grades (`grade` field).
@@ -404,6 +410,22 @@ components:
       allowEmptyValue: true
       schema:
         type: boolean
+    Offset:
+      in: query
+      name: offset
+      description: Pagination parameter. How many items to skip from the beginning.
+      required: false
+      schema:
+        type: integer
+        format: int32
+    Limit:
+      in: query
+      name: limit
+      description: Pagination parameter. Maximum number of items to return.
+      required: false
+      schema:
+        type: integer
+        format: int32
 
   responses:
     Unauthorized:
