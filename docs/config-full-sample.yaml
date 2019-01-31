@@ -61,7 +61,7 @@ sample:
         - type: syslog
           app-name: "witness"
         # Minimum severity, log messages with a lower level are filtered out
-        min-level: Debug
+        min-severity: Debug
 
     # RocksDB parameters
     db:
@@ -148,27 +148,26 @@ sample:
     # Logging config for educator node. See option `witness.logging`.
     logging:
       default-name: "educator"
-      backends:
-      - type: stderr
-      - type: syslog
-        app-name: "educator"
-      min-level: Debug
+      config:
+        backends:
+        - type: stderr
+        - type: syslog
+          app-name: "educator"
+        min-severity: Debug
 
     # SQL DB params
     db:
-      # Params for connection to Postgres server.
-      mode:
-        # Connection string to Postgres server.
-        connString: "postgresql:///disciplina-educator"
-        # Number of concurrent DB connections.
-        # Optional. If not provided, calculated automatically
-        # accordingly to the number of threads which can run truly
-        # simultaneously on a machine (e. g. number of CPU cores, or
-        # number of CPU cores x 2 when hyperthreading is enabled)
-        connNum: 4
-        # Number of maximum number of threads which wait for DB connection
-        # to be free. Default: 200
-        maxPending: 100
+      # Connection string to Postgres server.
+      connString: "postgresql:///disciplina-educator"
+      # Number of concurrent DB connections.
+      # Optional. If not provided, calculated automatically
+      # accordingly to the number of threads which can run truly
+      # simultaneously on a machine (e. g. number of CPU cores, or
+      # number of CPU cores x 2 when hyperthreading is enabled)
+      connNum: 4
+      # Number of maximum number of threads which wait for DB connection
+      # to be free. Default: 200
+      maxPending: 100
 
     # Educator key params. Similar to `witness.keys.params.basic` config section.
     keys:
@@ -217,19 +216,19 @@ sample:
     # Logging config for faucet node. See option `witness.logging`.
     logging:
       default-name: "faucet"
-      backends:
-      - type: stderr
-      - type: syslog
-        app-name: "faucet"
-      min-level: Debug
+      config:
+        backends:
+        - type: stderr
+        - type: syslog
+          app-name: "faucet"
+        min-severity: Debug
 
 
     # Faucet config params. See option `witness.keys.params.basic`
     keys:
-      keyParams:
-        path: "faucet.key"
-        genNew: false
-        passphrase: "qwerty123"
+      path: "faucet.key"
+      genNew: false
+      passphrase: "qwerty123"
 
     # Paramerers of Faucet HTTP API
     api:
