@@ -4,6 +4,7 @@ import Servant.Client
 import Test.QuickCheck
 import Time.Units (threadDelay)
 
+import Data.Default (def)
 import Loot.Log
 
 import Dscp.Core
@@ -18,11 +19,11 @@ import Dscp.Witness.Web hiding (checkFairCV)
 import FaircvClient
 import FaircvOptions
 
-createActorOf :: SecretKey -> IO (PublicKey, Address)
-createActorOf sk = do
-    pk   <- return (toPublic sk)
-    addr <- return (mkAddr   pk)
-    return (pk, addr)
+createActorOf :: SecretKey -> (PublicKey, Address)
+createActorOf sk =
+    let pk = toPublic sk
+        addr = mkAddr pk
+    in (pk, addr)
 
 instance MonadLogging IO where
     log = putStrLn . fmtMessageColored
@@ -46,8 +47,8 @@ main = do
         secretFromSeed studentSeed
 
     -- make keys and addresses for educator and students
-    (_pk,  addr) <- createActorOf sk
-    (pkS, addrS) <- createActorOf skS
+    let (_pk,  addr) = createActorOf sk
+        (pkS, addrS) = createActorOf skS
 
     let infoToSubmission :: AssignmentStudentInfo -> Submission
         infoToSubmission assInfo = Submission
@@ -71,10 +72,10 @@ main = do
             newInfo <- sGetSubmission sClient $ siHash info
             case giHasProof <$> siGrade newInfo of
                 Just True -> waitForProofs infos
-                _ -> threadDelay refreshRate >> waitForProofs (info:infos)
+                _         -> threadDelay refreshRate >> waitForProofs (info:infos)
 
     -- Get all the available assignments for this student
-    assLst <- sGetAssignments sClient Nothing Nothing Nothing False
+    assLst <- sGetAssignments sClient Nothing Nothing Nothing False def
     -- Show a warning when there are not enough assignments available
     let assNum = length assLst
     when (assignmentNum > assNum) $ logWarning $
