@@ -28,7 +28,7 @@ instance HasErrorTag AccountException where
     errorTag = \case
         MTxNoOutputs{}                -> "NoOutputs"
         MTxDuplicateOutputs{}         -> "DuplicatedOutputs"
-        TransactionAlreadyExists{}    -> "TransactionAlreadyExists"
+        MTxAlreadyExists{}            -> "TransactionAlreadyExists"
         InsufficientFees{}            -> "InsufficientFees"
         SignatureIsMissing{}          -> "SignatureIsMissing"
         SignatureIsCorrupted{}        -> "SignatureIsCorrupted"
@@ -47,7 +47,7 @@ instance ToServantErr AccountException where
     toServantErrNoBody = \case
         MTxNoOutputs{}                -> err400
         MTxDuplicateOutputs{}         -> err400
-        TransactionAlreadyExists{}    -> err403
+        MTxAlreadyExists{}            -> err403
         InsufficientFees{}            -> err400
         SignatureIsMissing{}          -> err500
         SignatureIsCorrupted{}        -> err400

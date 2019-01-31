@@ -14,12 +14,13 @@ import Fmt (listF, listF', (+|), (+||), (|+), (||+))
 import Loot.Base.HasLens (lensOf)
 import Loot.Log (logDebug, logInfo, logWarning)
 import Time (ms, sec, threadDelay)
-import UnliftIO.Exception (withException)
+import UnliftIO.Exception (catchJust, withException)
 
 import Dscp.Config (option, sub)
 import Dscp.Core
 import Dscp.Crypto
 import Dscp.Network.Wrapped
+import Dscp.Snowdrop.Configuration
 import Dscp.Snowdrop.Mode
 import Dscp.Util
 import Dscp.Util.Concurrent.NotifyWait
@@ -142,8 +143,8 @@ makeRelay (RelayState input pipe failedTxs) =
             forever . recoverAll "Tx retranslation initializer" retryOnSpot $ do
                 (tx, inMempoolNotifier) <- atomically $ STM.readTBQueue input
                 checkThenRepublish tx
-                    `finallyNotify` inMempoolNotifier
-                    `catchAny` \e -> logDebug $ "Transaction failed: " +| e |+ ""
+                    & finallyNotify inMempoolNotifier
+                    & handleAny (\e -> logDebug $ "Transaction failed: " +| e |+ "")
 
     republisher = Worker
         "txRetranslationRepeater"
@@ -152,8 +153,9 @@ makeRelay (RelayState input pipe failedTxs) =
             recoverAll "Tx retranslation repeater" (constDelay (sec 1)) $ forever $ do
                 (_, PubTx tx) <- cliRecvUpdate btq (-1)
                 checkThenRepublish tx
-                    `catchAny` \e -> logWarning $
-                                     "Exception in republisher: " +| e |+ ""
+                    & handleAlreadyExists (\_ -> pass)
+                    & handleAny (\e -> logWarning $
+                                      "Exception in republisher: " +| e |+ "")
 
     -- Check that the transaction is neither failed nor in a mempool and republish it.
     checkThenRepublish tx = do
@@ -171,3 +173,5 @@ makeRelay (RelayState input pipe failedTxs) =
 
     addFailedTx entry@(tx, _) =
         atomically $ STM.modifyTVar failedTxs $ HashMap.insert (hash tx) entry
+
+    handleAlreadyExists = flip $ catchJust (^? _TransactionAlreadyExists)

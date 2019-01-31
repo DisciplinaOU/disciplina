@@ -127,3 +127,27 @@ echo 456 \
 See [example of use](/scripts/test/student-submissions-spam.sh).
 
 For **testing purposes** you will most probably want to always run `dscp-keygen --seed` and vary command only.
+
+## faircv
+
+This is a small tool to generate valid FairCVs. It will:
+- ask for available assignments
+- produce and post submisions for those assignments
+- wait for all submission to get a proof
+- produce a FairCV from these proofs
+- validate the FairCV and write it on file
+
+### Usage and Options
+
+At its minimum, the tool requires these 3 options:
+- `--witness-url` (or `-w`)  to use the witness API
+- `--educator-url` (or `-e`) to use the student API
+- `--key-file` (or `-k`)     to generate the educator keys
+
+There are other options, they can be listed by using `dscp-faircv --help`
+
+#### Example on a local cluster
+```bash
+dscp-faircv -w 127.0.0.1:8013 -e 127.0.0.1:8090 -k run/tmp/educator/educator.key
+```
+

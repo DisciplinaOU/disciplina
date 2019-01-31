@@ -246,4 +246,4 @@ spec_Money_tx_application = do
             let tx = makeTx properSteps txData
             lift $ do
                 applyTx tx
-                throwsPrism (_AccountError . _TransactionAlreadyExists) $ applyTx tx
+                throwsPrism (_AccountError . _MTxAlreadyExists) $ applyTx tx

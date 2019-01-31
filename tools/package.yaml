@@ -54,8 +54,10 @@ executables:
       - disciplina-core
       - disciplina-witness
       - disciplina-educator
+      - fmt
       - lens
       - loot-log
+      - o-clock
       - optparse-applicative
       - serialise
       - servant-client

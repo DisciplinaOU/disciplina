@@ -48,13 +48,4 @@ parseInputWithSecret = \case
         fromKeyfileContent pp content
     CommSecret n -> \input ->
          flip committeeDerive n <$> eitherToMaybe (mkCommitteeSecret input)
-    SecretFromSeed -> \input -> asum
-        [ do
-            -- we need this clause as soon as many code uses
-            -- 'withIntSeed' for generation, for instance list of students
-            -- known to educator in Student API
-            seed <- readMaybe @Word . toString @Text $ decodeUtf8 input
-            return $ withIntSeed (fromIntegral seed) genSecretKey
-        , do
-            return $ withSeed input genSecretKey
-        ]
+    SecretFromSeed -> secretFromSeed

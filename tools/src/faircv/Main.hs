@@ -1,32 +1,29 @@
-
 import Data.Aeson
-import qualified Data.Set as Set
-import Data.Time.Clock
-import Data.Traversable
+import Fmt ((+|), (|+))
 import Servant.Client
 import Test.QuickCheck
+import Time.Units (threadDelay)
 
+import Data.Default (def)
 import Loot.Log
 
 import Dscp.Core
 import Dscp.Crypto
+import Dscp.Educator.Web.Student
+import Dscp.Educator.Web.Types
 import Dscp.Resource.Keys
+import Dscp.Util (leftToFail, nothingToFail)
+import Dscp.Util.Test (detGenG)
 import Dscp.Witness.Web hiding (checkFairCV)
 
-import Client
+import FaircvClient
+import FaircvOptions
 
-createActor :: IO (SecretKey, PublicKey, Address)
-createActor = do
-    sk   <- genSecretKey
-    pk   <- return (toPublic sk)
-    addr <- return (mkAddr   pk)
-    return (sk, pk, addr)
-
-createActorOf :: SecretKey -> IO (PublicKey, Address)
-createActorOf sk = do
-    pk   <- return (toPublic sk)
-    addr <- return (mkAddr   pk)
-    return (pk, addr)
+createActorOf :: SecretKey -> (PublicKey, Address)
+createActorOf sk =
+    let pk = toPublic sk
+        addr = mkAddr pk
+    in (pk, addr)
 
 instance MonadLogging IO where
     log = putStrLn . fmtMessageColored
@@ -35,74 +32,70 @@ instance MonadLogging IO where
 
 main :: IO ()
 main = do
-    [url, skFile] <- getArgs
+    FaircvOptions {..} <- getFaircvOptions
 
-    wClient <- createWitnessClient =<< parseBaseUrl url
+    -- create the APIs clients
+    wClient <- createWitnessClient =<< parseBaseUrl witnessUrl
+    sClient <- createStudentApiClient =<< parseBaseUrl educatorUrl
 
-    store <- readStore skFile emptyPassPhrase
-
+    -- read educator's secret key from the file
+    store <- readStore secretKeyFile emptyPassPhrase
     sk <- return $ store^.krSecretKey
 
-    (pk,  addr)       <- createActorOf sk
-    (skS, pkS, addrS) <- createActor
+    -- make student secret key from a seed
+    skS <- nothingToFail "Could not make student secret key" $
+        secretFromSeed studentSeed
 
-    privateTxs <- for [1..10 :: Integer] $ \_ -> do
-        timestamp      <- toTimestamp <$> getCurrentTime
-        contentsHash   <- generate arbitrary
-        assignmentHash <- generate arbitrary
+    -- make keys and addresses for educator and students
+    let (_pk,  addr) = createActorOf sk
+        (pkS, addrS) = createActorOf skS
 
-        let sub = Submission
-                  { _sStudentId      = addrS
-                  , _sContentsHash   = contentsHash
-                  , _sAssignmentHash = assignmentHash
-                  }
-
-        return PrivateTx
-            { _ptGrade            = gA
-            , _ptTime             = timestamp
-            , _ptSignedSubmission = SignedSubmission
-                { _ssSubmission = sub
-                , _ssWitness    = SubmissionWitness
-                    { _swKey = pkS
-                    , _swSig = sign skS (hash sub)
-                    }
+    let infoToSubmission :: AssignmentStudentInfo -> Submission
+        infoToSubmission assInfo = Submission
+            { _sStudentId      = addrS
+            , _sContentsHash   = detGenG contentSeed arbitrary
+            , _sAssignmentHash = aiHash assInfo
+            }
+        toSignedSubmission :: Submission -> SignedSubmission
+        toSignedSubmission sbm = SignedSubmission
+            { _ssSubmission = sbm
+            , _ssWitness    = SubmissionWitness
+                { _swKey = pkS
+                , _swSig = sign skS $ hash sbm
                 }
             }
+        infoToNewSub :: AssignmentStudentInfo -> NewSubmission
+        infoToNewSub = signedSubmissionToRequest . toSignedSubmission . infoToSubmission
+        waitForProofs :: [SubmissionStudentInfo] -> IO ()
+        waitForProofs [] = return ()
+        waitForProofs (info:infos) = do
+            newInfo <- sGetSubmission sClient $ siHash info
+            case giHasProof <$> siGrade newInfo of
+                Just True -> waitForProofs infos
+                _         -> threadDelay refreshRate >> waitForProofs (info:infos)
 
-    tree <- return $ fromFoldable privateTxs
-    sig  <- return $ getMerkleRoot tree
+    -- Get all the available assignments for this student
+    assLst <- sGetAssignments sClient Nothing Nothing Nothing False def
+    -- Show a warning when there are not enough assignments available
+    let assNum = length assLst
+    when (assignmentNum > assNum) $ logWarning $
+        "Not enough assignments available, only " +|assNum|+ " will be used"
+    -- Make new submissions from the assignments
+    subInfos <- mapM (sendSubmission sClient . infoToNewSub) $ take assignmentNum assLst
 
-    hdr <- return PrivateBlockHeader
-        { _pbhPrevBlock = genesisHeaderHash addr
-        , _pbhBodyProof = sig
-        , _pbhAtgDelta  = mempty
-        }
+    -- Wait for the proofs to be available, then get them and make a faircv
+    logInfo "Submissions sent, waiting for proofs"
+    waitForProofs subInfos
+    proofs <- sGetProofs sClient Nothing False
 
-    ptx <- return PublicationTx
-        { ptAuthor     = addr
-        , ptFeesAmount = unsafeMkCoin (100 :: Integer)
-        , ptHeader     = hdr
-        }
+    fcvrs <- mapM (blkToFairCV addrS "John Doe" addr) proofs
+    fcv <- unReadyFairCV <$> leftToFail (mergeFairCVList fcvrs)
 
-    res <- wSubmitPublication wClient PublicationTxWitnessed
-        { ptwTx = ptx
-        , ptwWitness = PublicationTxWitness
-            { pwSig = sign sk (toPtxId ptx, pk, hdr)
-            , pwPk  = pk
-            }
-        }
+    -- Write the result in the specified file and show the validation result
+    logInfo "Writing result to file"
+    writeFile outputFile $ decodeUtf8 $ encode fcv
 
-    print res
-
-    Just proof <- return $ mkMerkleProof tree (Set.fromList [0..9])
-
-    fcv :: FairCV <- return $ unReadyFairCV $
-        singletonFCV addrS "John Doe" addr (hash hdr) (readyProof proof)
-
-    writeFile "fairCV-example.json" $ decodeUtf8 $ encode fcv
-
-    print =<< checkFairCV wClient fcv
-
-    -- sClient <- createStudentApiClient =<< parseBaseUrl "127.0.0.1:8090"
-    -- asses   <- getAssignments sClient
-    -- print asses
+    checkFairCV wClient fcv >>= \res ->
+        if fairCVFullyValid res
+        then logInfo "FairCV was successfully validated"
+        else logError "FairCV was not validated successfully"

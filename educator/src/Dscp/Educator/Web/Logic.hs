@@ -30,8 +30,7 @@ commonGetProofs filters = do
           , bpiMtreeSerialized = EncodeSerialised mtree
           , bpiTxs = txs
           }
-        | (bHash, mtree, indicedTxs) <- rawProofs
-        , let txs = map snd indicedTxs
+        | (bHash, mtree, txs) <- rawProofs
         ]
 
 getEducatorStatus

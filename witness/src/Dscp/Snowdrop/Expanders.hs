@@ -159,7 +159,7 @@ seqExpandersPublicationTx feesReceiverAddr (Fees minFee) =
             headerWasEarlier <- queryOneExists (PublicationHead phHash)
             let headerIsLast = prevHash == phHash
             when (headerWasEarlier || headerIsLast) $
-                throwLocalError PublicationLocalLoop
+                throwLocalError $ PublicationAlreadyExists ptxId
 
             let feeAmount = coinToInteger ptFeesAmount
             maybePub <- queryOne (PublicationsOf ptAuthor)
@@ -271,7 +271,7 @@ seqExpandersBalanceTx feesReceiverAddr (Fees minimalFees) =
         -- before we can add next changeset entry, we have to check our transaction is new
         txAlreadyExists <- queryOneExists txId
         when txAlreadyExists $
-            throwLocalError $ TransactionAlreadyExists txId
+            throwLocalError $ MTxAlreadyExists txId
 
         let miscChanges = txId ==> New (TxItself tw)
 

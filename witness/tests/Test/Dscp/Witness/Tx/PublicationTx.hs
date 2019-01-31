@@ -134,7 +134,7 @@ spec_Publication_tx_application = do
 
         lift $ do
             mapM_ submitPub (init badTws)
-            throwsPrism (_PublicationError . _PublicationLocalLoop) $
+            throwsPrism (_PublicationError . _PublicationAlreadyExists) $
                 submitPub (last badTws)
 
     it "Duplicated tx causes failure" $ witnessProperty $ do
@@ -147,7 +147,7 @@ spec_Publication_tx_application = do
         lift $ submitPub tw
         whenM (pick arbitrary) $
             void $ lift dumpBlock
-        lift . throwsPrism (_PublicationError . _PublicationLocalLoop) $
+        lift . throwsPrism (_PublicationError . _PublicationAlreadyExists) $
             submitPub tw
 
     it "Wrong signature is not fine" $ witnessProperty $ do
