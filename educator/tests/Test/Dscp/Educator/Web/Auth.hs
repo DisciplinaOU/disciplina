@@ -4,11 +4,12 @@ module Test.Dscp.Educator.Web.Auth
 
 import Data.Default (Default (..))
 import Network.HTTP.Types (statusCode)
-import Servant (Context (..), Handler, Server)
+import Servant ((:>), Context (..), Handler, HasServer, Server)
 import Servant.Client (GenResponse (..), ServantError (..))
 import Servant.Generic (AsServerT, fromServant, toServant)
-import Servant.Mock (mock)
+import Servant.Mock (HasMock (..), mock)
 import Servant.QuickCheck (withServantServerAndContext)
+import Servant.Util (PaginationParams, SortingParams)
 
 import Dscp.Core
 import Dscp.Crypto
@@ -20,6 +21,14 @@ import Dscp.Web.Class
 import Test.Dscp.Educator.Web.Instances ()
 
 {- We will test all auth on Student API -}
+
+instance (HasMock subApi ctx, HasServer (SortingParams params :> subApi) ctx) =>
+         HasMock (SortingParams params :> subApi) ctx where
+    mock _ pc _ = mock (Proxy @subApi) pc
+
+instance (HasMock subApi ctx, HasServer (PaginationParams settings :> subApi) ctx) =>
+         HasMock (PaginationParams settings :> subApi) ctx where
+    mock _ pc _ = mock (Proxy @subApi) pc
 
 requesterSK :: SecretKeyData
 requesterSK = detGen 12543 arbitrary
@@ -59,7 +68,7 @@ withServerClient config action =
 
 -- TODO: Maybe add a "ping" endpoint instead?
 doTrialRequest :: StudentApiClient -> Maybe SecretKeyData -> IO ()
-doTrialRequest cli sk = void $ sGetCourses (cli sk) Nothing False
+doTrialRequest cli sk = void $ sGetCourses (cli sk) Nothing False def
 
 modifyTrialEndpoint
     :: (forall m a. MonadIO m => Student -> m a -> m a)

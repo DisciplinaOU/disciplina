@@ -97,6 +97,7 @@ tests:
       - servant-server
       - servant-mock
       - servant-quickcheck
+      - servant-util
       - sqlite-simple
       - stm
       - tasty

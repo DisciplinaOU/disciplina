@@ -14,6 +14,7 @@ module Dscp.Resource.Keys.Types
 
     , KeyJson (..)
     , KeyfileContent
+    , krSecretKeyData
     , krSecretKey
     , krPublicKey
 

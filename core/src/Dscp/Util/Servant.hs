@@ -20,7 +20,7 @@ import Network.HTTP.Types.Method (StdMethod)
 import Servant.API ((:<|>) (..), (:>), Capture, Description, QueryFlag, QueryParam, ReqBody,
                     Summary, Verb)
 import Servant.Client.Core (Client)
-import Servant.Util (SortingParams)
+import Servant.Util (PaginationParams, SortingParams)
 
 -- Please anybody switch us to lts-12 already so that there is no need in this:
 class CanHoistClient m api where
@@ -43,6 +43,9 @@ instance CanHoistClient m api =>
 instance CanHoistClient m api =>
          CanHoistClient m (SortingParams params :> api) where
     hoistClientMonad pm _ = hoistClientMonad pm (Proxy @api)
+instance CanHoistClient m api =>
+         CanHoistClient m (PaginationParams setting :> api) where
+    hoistClientMonad pm _ hst cli arg = hoistClientMonad pm (Proxy @api) hst (cli arg)
 instance CanHoistClient m api =>
          CanHoistClient m (Summary msg :> api) where
     hoistClientMonad pm _ = hoistClientMonad pm (Proxy @api)

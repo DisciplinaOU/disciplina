@@ -19,12 +19,6 @@ import Dscp.Witness.Web hiding (checkFairCV)
 import FaircvClient
 import FaircvOptions
 
-createActorOf :: SecretKey -> (PublicKey, Address)
-createActorOf sk =
-    let pk = toPublic sk
-        addr = mkAddr pk
-    in (pk, addr)
-
 instance MonadLogging IO where
     log = putStrLn . fmtMessageColored
 
@@ -36,19 +30,21 @@ main = do
 
     -- create the APIs clients
     wClient <- createWitnessClient =<< parseBaseUrl witnessUrl
-    sClient <- createStudentApiClient =<< parseBaseUrl educatorUrl
+    sClientUnauth <- createStudentApiClient =<< parseBaseUrl educatorUrl
 
     -- read educator's secret key from the file
     store <- readStore secretKeyFile emptyPassPhrase
-    sk <- return $ store^.krSecretKey
+    let sk = store^.krSecretKeyData
 
     -- make student secret key from a seed
     skS <- nothingToFail "Could not make student secret key" $
-        secretFromSeed studentSeed
+        mkSecretKeyData <$> secretFromSeed studentSeed
 
-    -- make keys and addresses for educator and students
-    let (_pk,  addr) = createActorOf sk
-        (pkS, addrS) = createActorOf skS
+    -- make addresses for educator and students
+    let addr = skAddress sk
+        addrS = skAddress skS
+
+    let sClient = sClientUnauth (Just skS)
 
     let infoToSubmission :: AssignmentStudentInfo -> Submission
         infoToSubmission assInfo = Submission
@@ -60,8 +56,8 @@ main = do
         toSignedSubmission sbm = SignedSubmission
             { _ssSubmission = sbm
             , _ssWitness    = SubmissionWitness
-                { _swKey = pkS
-                , _swSig = sign skS $ hash sbm
+                { _swKey = skPublic skS
+                , _swSig = sign (skSecret skS) $ hash sbm
                 }
             }
         infoToNewSub :: AssignmentStudentInfo -> NewSubmission
