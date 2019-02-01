@@ -18,6 +18,7 @@ module Dscp.Core.Foundation.Educator
     , Student
     , Grade (..)
     , mkGrade
+    , Language (..)
     , EducatorId
     , Assignment (..)
     , AssignmentType (..)

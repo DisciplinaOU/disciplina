@@ -2,12 +2,16 @@
 module Pdf.FromLatex where
 
 import Control.Arrow ((&&&))
+import Data.Char (isSpace)
 import Data.Functor.Contravariant (Contravariant (..))
 import Data.Functor.Contravariant.Divisible (Divisible (..), Decidable (..), divided)
+import Data.Set (Set)
+import qualified Data.Set as Set (fromList, member)
 import Data.Time.Calendar
 import qualified Data.ByteString as BS
 import Text.Printer hiding ((<>))
 import qualified Data.Text.Lazy.Builder as Text
+import qualified Data.Text.Lazy as Text
 import Path.IO
 import Path
 import System.Directory
@@ -17,9 +21,27 @@ import System.Process.Typed
 import Dscp.Core.Foundation.Educator
 
 escapeInLatex :: Text -> Text
-escapeInLatex text = text
+escapeInLatex = unpack . escape . repack
+  where
+    escape = \case
+        '\\' : sp  : rest | isSpace   sp -> "\\textbackslash{ }" ++ escape rest
+        '\\' :       rest                -> "\\textbackslash"    ++ escape rest
+        '^'  :       rest                -> "\textasciicircum{}" ++ escape rest
+        '~'  :       rest                -> "\textasciitilde{}"  ++ escape rest
+        sp   :       rest | isSpace   sp -> " "                  ++ escape rest
+        ch   :       rest | isSimple  ch -> "\\" ++ [ch]         ++ escape rest
+        '"'  : ru  : rest | isRussian ru -> "<<"                 ++ escape (ru : rest)
+        ru   : '"' : rest | isRussian ru -> [ru] ++ ">>"         ++ escape rest
+        '"'  : en  : rest | isEnglish en -> "``"                 ++ escape (en : rest)
+        en   : '"' : rest | isEnglish en -> [en] ++ ['"']        ++ escape rest
+        ch   :       rest                -> ch                    : escape rest
+      where
+        isSimple = flip elem "{}&%$#_"
+        isEnglish ch = flip Set.member $ Set.fromList $ ['A'.. 'Z'] ++ ['a'.. 'z']
+        isRussian ch = flip Set.member $ Set.fromList $ ['А'.. 'Я'] ++ ['а'.. 'я']
 
 data MkLatex a = MkLatex (a -> Text.Builder)
+    deriving Decidable via Op
 
 instance Contravariant MkLatex where
     contramap f (MkLatex printer) = MkLatex (printer . f)
@@ -31,11 +53,14 @@ instance Divisible MkLatex where
 
     conquer = MkLatex (const "")
 
-instance Decidable MkLatex where
-    choose selector (MkLatex left) (MkLatex right) = MkLatex $
-        either left right . selector
+-- instance Decidable MkLatex where
+--     choose selector (MkLatex left) (MkLatex right) = MkLatex $
+--         either left right . selector
 
-    lose _ = ignore
+--     lose _ = ignore
+
+the :: Text.Builder -> MkLatex a
+the txt = custom (const txt)
 
 custom :: (a -> Text.Builder) -> MkLatex a
 custom = MkLatex
@@ -45,6 +70,12 @@ ignore = contramap (const ()) conquer
 
 split :: (a -> b) -> MkLatex b -> MkLatex a -> MkLatex a
 split proj = divide (proj &&& id)
+
+inBlock :: Text.Builder -> MkLatex a -> MkLatex a
+inBlock name make
+    = divide (const () &&& id) (the ("\\begin{" <> name <> "}"))
+    $ divide (id       &&& id) make
+    $ the ("\\end{" <> name <> "}")
 
 allThe :: MkLatex () -> MkLatex a -> MkLatex [a]
 allThe sep maker = aux
@@ -56,20 +87,43 @@ allThe sep maker = aux
         ignore
         (divided (divide (id &&& const ()) maker sep) aux)
 
-fullInfo :: MkLatex CertificateFullInfo
-fullInfo = divide (cfiMeta &&& cfiGrades) meta courses
+generate :: Language -> CertificateFullInfo -> Text
+generate lang cert = do
+    Text.toStrict $ Text.toLazyText $ make (lang, cert)
   where
+    MkLatex make = fullInfo
+
+fullInfo :: MkLatex (Language, CertificateFullInfo)
+fullInfo
+    = divided language
+    $ divide (cfiMeta &&& cfiGrades) meta courses
+  where
+    language = choose (\case RU -> Left (); EN -> Right ())
+        (command "documentclass[11pt, russian]" $ const [text "faircv"])
+        (command "documentclass[11pt, english]" $ const [text "faircv"])
+
     meta
-        = split cmStudentName      studentName
-        $ split cmStudentBirthDate studentBirthDate
+        = split cmStudentName               (command "Name"        $ pure . shown)
+        $ split cmStudentBirthDate          (command "DateOfBirth" $ formatDate)
+        $ inBlock "Diploma" diploma
+
+    diploma
+        = split (const ())                  (command "EducatorUrl"     $ pure . shown)
+        $ split (cmStartYear &&& cmEndYear) (command "EducationPeriod" $ showBoth)
+        $ split  cmNumber                   (command "DiplomaId"       $ pure . shown)
+        $ split  cmIssueDate                (command "DateOfIssue"     $ formatDate)
+        $ split  cmTitle                    (command "DegreeLevel"     $ pure . shown)
+        $ split  cmMajor                    (command "Major"           $ pure . shown)
+        $ split  cmSpecialization           (command "Minor"           $ pure . shown)
+        $ split  cmEducationForm             educationForm
         $ ignore
-      where
-        studentName      = custom $ command "Name"        . pure . shown
-        studentBirthDate = custom $ command "DateOfBirth" . pure . formatted
-          where
-            formatted day = shown d <> "//" <> shown m <> "//" <> shown y
-              where
-                (y, m, d) = toGregorian day
+
+    educationForm = choose
+        (\case
+            Parttime -> Left ()
+            _        -> Right ())
+        (command "PartTimeEducation" (const []))
+        ignore
 
     courses = allThe (custom $ const "\\\\") course
       where
@@ -86,11 +140,23 @@ fullInfo = divide (cfiMeta &&& cfiGrades) meta courses
                 <> maybe "---" shown cgCredits <> " & "
                 <> shown cgGrade
 
+    formatDate day = [shown d, shown m, shown y]
+      where
+        (y, m, d) = toGregorian day
+
+    showBoth (a, b) = [shown a, shown b]
+
 shown :: Show x => x -> Text.Builder
 shown = text . show
 
-command :: Text.Builder -> [Text.Builder] -> Text.Builder
-command name args = "\\" <> name <> mconcat (map (\arg -> "{" <> arg <> "}") args)
+command :: Text.Builder -> (a -> [Text.Builder]) -> MkLatex a
+command name prepare = MkLatex $ \a ->
+    "\\"
+    <> name
+    <> mconcat
+        (map
+            (\arg -> "{" <> arg <> "}")
+            (prepare a))
 
 {-
 -- | Datatype containing info about a certificate issued by Educator.
@@ -134,16 +200,6 @@ type Locale = Text
 --     , sCourses  :: [Course]
 --     }
 
--- data Diploma = Diploma
---     { dEducatorUrl     :: Text
---     , dEducationPeriod :: (Int, Int)
---     , dDiplomaId       :: Text
---     , dDegreeLevel     :: Text
---     , dMajor           :: Text
---     , dMinor           :: Text
---     , dPartTime        :: Bool
---     }
-
 -- data Course = Course
 --     { cName        :: Text
 --     , cLanguage    :: Text
@@ -154,7 +210,7 @@ type Locale = Text
 
 newtype ResourcePath = ResourcePath { unResourcePath :: FilePath }
 
-produce :: Locale -> StudentInfo -> ResourcePath -> IO ByteString
+produce :: Language -> CertificateFullInfo -> ResourcePath -> IO ByteString
 produce loc info (ResourcePath resources) = do
     withSystemTempDirectory "faircv" $ \dir -> do
         resPath <- parseRelDir resources
