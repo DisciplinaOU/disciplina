@@ -8,6 +8,7 @@ packages:
 - 'tools'
 - 'wallet'
 - 'faucet'
+- 'pdfs'
 
 extra-deps:
 - aeson-options-0.0.0

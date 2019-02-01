@@ -35,4 +35,5 @@ witnessServantHandlers =
     , wGetPublications = getPublications
     , wGetHashType = getHashType
     , wCheckFairCV = checkFairCV
+    , wCheckFairCVPDF = checkFairCVPDF
     }

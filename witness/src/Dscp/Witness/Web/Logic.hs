@@ -10,9 +10,11 @@ module Dscp.Witness.Web.Logic
        , getPublications
        , getHashType
        , checkFairCV
+       , checkFairCVPDF
        ) where
 
 import Codec.Serialise (serialise)
+import qualified Data.Aeson as Aeson (decode)
 import qualified Data.ByteString.Lazy as BS
 import Data.Coerce (coerce)
 import Data.Conduit ((.|))
@@ -21,6 +23,8 @@ import qualified Data.Conduit.Combinators as C
 import Data.Default (def)
 import qualified Data.Map.Strict as M
 import Fmt ((+|), (|+))
+
+import Pdf.Scanner as Pdf
 
 import Dscp.Core
 import Dscp.Crypto
@@ -33,6 +37,7 @@ import Dscp.Witness.Logic
 import Dscp.Witness.Mempool
 import qualified Dscp.Witness.Relay as Relay
 import Dscp.Witness.SDLock
+import Dscp.Witness.Web.Error
 import Dscp.Witness.Web.Types
 import qualified Snowdrop.Util as SD
 
@@ -234,3 +239,13 @@ checkFairCV =
         { fairCVCheckResults = results
         , fairCVFullyValid = all and results
         }
+
+checkFairCVPDF :: forall ctx m. WitnessWorkMode ctx m => ByteString -> m FairCVAndCheckResult
+checkFairCVPDF pdf = do
+    let maybeFairCV = do
+            fairCVencoded <- Pdf.project (Pdf.MaxSearchLength (Just 2048)) (Pdf.PDFBody pdf)
+            Aeson.decode $ BS.fromStrict fairCVencoded
+
+    fairCV   <- maybe (throwM InvalidFormat) pure maybeFairCV
+    checkRes <- checkFairCV fairCV
+    return $ FairCVAndCheckResult fairCV checkRes
