@@ -1,17 +1,24 @@
 
-module Pdf.FromLatex where
+module Pdf.FromLatex
+    ( produce
+    , testData
+    , ResourcePath(..)
+    , Language (..)
+    , CertificateFullInfo
+    )
+    where
 
 import Control.Arrow ((&&&))
 import Data.Char (isSpace)
 import Data.Functor.Contravariant (Contravariant (..))
 import Data.Functor.Contravariant.Divisible (Divisible (..), Decidable (..), divided)
-import Data.Set (Set)
 import qualified Data.Set as Set (fromList, member)
 import Data.Time.Calendar
 import qualified Data.ByteString as BS
 import Text.Printer hiding ((<>))
 import qualified Data.Text.Lazy.Builder as Text
 import qualified Data.Text.Lazy as Text
+import qualified Data.Text as Text.Strict
 import Path.IO
 import Path
 import System.Directory
@@ -21,7 +28,7 @@ import System.Process.Typed
 import Dscp.Core.Foundation.Educator
 
 escapeInLatex :: Text -> Text
-escapeInLatex = unpack . escape . repack
+escapeInLatex = Text.Strict.pack . escape . Text.Strict.unpack
   where
     escape = \case
         '\\' : sp  : rest | isSpace   sp -> "\\textbackslash{ }" ++ escape rest
@@ -35,13 +42,13 @@ escapeInLatex = unpack . escape . repack
         '"'  : en  : rest | isEnglish en -> "``"                 ++ escape (en : rest)
         en   : '"' : rest | isEnglish en -> [en] ++ ['"']        ++ escape rest
         ch   :       rest                -> ch                    : escape rest
+        []                               -> []
       where
-        isSimple = flip elem "{}&%$#_"
-        isEnglish ch = flip Set.member $ Set.fromList $ ['A'.. 'Z'] ++ ['a'.. 'z']
-        isRussian ch = flip Set.member $ Set.fromList $ ['А'.. 'Я'] ++ ['а'.. 'я']
+        isSimple  ch = ch `Set.member` Set.fromList "{}&%$#_"
+        isEnglish ch = ch `Set.member` Set.fromList (['A'.. 'Z'] ++ ['a'.. 'z'])
+        isRussian ch = ch `Set.member` Set.fromList (['А'.. 'Я'] ++ ['а'.. 'я'])
 
 data MkLatex a = MkLatex (a -> Text.Builder)
-    deriving Decidable via Op
 
 instance Contravariant MkLatex where
     contramap f (MkLatex printer) = MkLatex (printer . f)
@@ -53,11 +60,11 @@ instance Divisible MkLatex where
 
     conquer = MkLatex (const "")
 
--- instance Decidable MkLatex where
---     choose selector (MkLatex left) (MkLatex right) = MkLatex $
---         either left right . selector
+instance Decidable MkLatex where
+    choose selector (MkLatex left) (MkLatex right) = MkLatex $
+        either left right . selector
 
---     lose _ = ignore
+    lose _ = ignore
 
 the :: Text.Builder -> MkLatex a
 the txt = custom (const txt)
@@ -147,7 +154,7 @@ fullInfo
     showBoth (a, b) = [shown a, shown b]
 
 shown :: Show x => x -> Text.Builder
-shown = text . show
+shown = text . escapeInLatex . show
 
 command :: Text.Builder -> (a -> [Text.Builder]) -> MkLatex a
 command name prepare = MkLatex $ \a ->
@@ -176,8 +183,6 @@ data CertificateMeta = CertificateMeta
 data EducationForm = Fulltime | Parttime | Fullpart
     deriving (Show, Eq, Generic, Enum, Bounded)
 -}
-
-type Locale = Text
 
 -- data Date = Date
 --     { year  :: Int
@@ -212,12 +217,18 @@ newtype ResourcePath = ResourcePath { unResourcePath :: FilePath }
 
 produce :: Language -> CertificateFullInfo -> ResourcePath -> IO ByteString
 produce loc info (ResourcePath resources) = do
+    putStrLn ("md /tmp/dir..." :: Text)
     withSystemTempDirectory "faircv" $ \dir -> do
+        putStrLn ("cp res /tmp/dir..." :: Text)
         resPath <- parseRelDir resources
         tmpPath <- parseAbsDir dir
         copyDirRecur resPath tmpPath
 
-        let input = encodeUtf8 $ generate loc info
+        let theText = generate loc info
+        let input   = encodeUtf8 theText
+        putStrLn ("echo tmp.tex" :: Text)
+        writeFile "tmp.tex" theText
+        putStrLn ("cd /tmp/dir..." :: Text)
         withCurrentDirectory dir $ do
             let action =
                     runProcess
@@ -228,10 +239,53 @@ produce loc info (ResourcePath resources) = do
             -- LaTeX Warning: Label(s) may have changed. Rerun to get cross-references right.
             --
             -- That's why. And there's no picture behind header if only 1 action is run.
+            putStrLn ("xelatex /tmp/dir..." :: Text)
             _ <- action
+            putStrLn ("xelatex /tmp/dir..." :: Text)
             _ <- action
 
+            putStrLn ("Done!" :: Text)
             BS.readFile "texput.pdf"
+
+testData :: CertificateFullInfo
+testData = CertificateFullInfo
+    { cfiMeta = CertificateMeta
+        { cmSpecialization   = Just "\"Владение ~ черпаком & ведром\""
+        , cmMajor            = "123 Черпание\\dropTable{\"students\"}"
+        , cmTitle            = "Младший\nпомошник\rстаршего\tчерпальщика\\ \\\\ "
+        , cmNumber           = 100500
+        , cmEducationForm    = Parttime
+        , cmIssueDate        = fromGregorian 2015 5 13
+        , cmStartYear        = 2010
+        , cmEndYear          = 2015
+        , cmStudentName      = "Вася Пупкин"
+        , cmStudentBirthDate = fromGregorian 1990 2 3
+        }
+    , cfiGrades =
+        [ CertificateGrade
+            { cgGrade = minBound
+            , cgCredits = Just 132
+            , cgHours = 123
+            , cgLang = RU
+            , cgSubject = "Следование за обозом"
+            }
+        , CertificateGrade
+            { cgGrade = maxBound
+            , cgCredits = Nothing
+            , cgHours = 13
+            , cgLang = RU
+            , cgSubject = "Черпание"
+            }
+        , CertificateGrade
+            { cgGrade = minBound
+            , cgCredits = Just 34
+            , cgHours = 1
+            , cgLang = EN
+            , cgSubject = "Сопротивление холере"
+            }
+        ]
+    }
+
 {-
 testData :: StudentInfo
 testData = StudentInfo
