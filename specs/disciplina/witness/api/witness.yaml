@@ -382,10 +382,16 @@ paths:
               schema:
                 $ref: '#/components/schemas/FairCVAndCheckResult'
       requestBody:
-        $ref: '#/components/requestBodies/ByteString'
+        $ref: '#/components/requestBodies/PDF'
 
 components:
   requestBodies:
+    PDF:
+      content:
+        application/pdf:
+          schema:
+            $ref: '#/components/requestBodies/PDF'
+
     TxWitnessed:
       content:
         application/json:
