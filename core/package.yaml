@@ -57,6 +57,7 @@ library:
     - servant-server
     - servant-client-core
     - servant-generic
+    - servant-util
     - semver
     - snowdrop-util
     - stm

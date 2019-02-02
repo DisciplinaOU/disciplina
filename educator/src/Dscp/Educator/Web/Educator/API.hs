@@ -2,9 +2,9 @@
 
 module Dscp.Educator.Web.Educator.API
     ( EducatorApiEndpoints (..)
-    , EducatorAPI
+    , RawEducatorAPI
     , ProtectedEducatorAPI
-    , educatorAPI
+    , rawEducatorAPI
     , protectedEducatorAPI
     , EducatorApiHandlers
     ) where
@@ -46,16 +46,16 @@ data EducatorApiEndpoints route = EducatorApiEndpoints
     , eAddCertificate          :: route :- AddCertificate
     } deriving (Generic)
 
-type EducatorAPI =
-    "api" :> "educator" :> "v1" :> ToServant (EducatorApiEndpoints AsApi)
+type RawEducatorAPI = ToServant (EducatorApiEndpoints AsApi)
 
 type ProtectedEducatorAPI =
-    Auth' [EducatorAuth, NoAuth "educator"] () :> EducatorAPI
+    "api" :> "educator" :> "v1" :>
+    Auth' [EducatorAuth, NoAuth "educator"] () :> RawEducatorAPI
 
 type EducatorApiHandlers m = EducatorApiEndpoints (AsServerT m)
 
-educatorAPI :: Proxy EducatorAPI
-educatorAPI = Proxy
+rawEducatorAPI :: Proxy RawEducatorAPI
+rawEducatorAPI = Proxy
 
 protectedEducatorAPI :: Proxy ProtectedEducatorAPI
 protectedEducatorAPI = Proxy

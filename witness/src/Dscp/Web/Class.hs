@@ -8,13 +8,18 @@ module Dscp.Web.Class
     , toServantErrJustTag
     , unexpectedToServantErr
     , processServerErrors
+
+    , ClientError (..)
+    , servantToClientError
     ) where
 
 import Data.Aeson (FromJSON, ToJSON, decode, encode)
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (Options (..), deriveJSON)
+import qualified Data.Text.Buildable as B
 import Servant (Handler, ServantErr (..), err500, throwError)
 import Servant.Client (GenResponse (..), ServantError (..))
+import qualified Text.Show
 
 -- | Error kind identifier.
 type ErrorTag = Text
@@ -79,3 +84,25 @@ processServerErrors action =
     liftIO action
         `catch` (throwError . toServantErr @error)
         `catchAny` (throwError . unexpectedToServantErr)
+
+-- | Represents errors as we get them on client.
+data ClientError serverErr
+    = ApiClientError !serverErr
+      -- ^ API-specific exception with known semantics.
+    | SomeClientError !ServantError
+      -- ^ General errors (connection, authentication failures, e.t.c).
+
+instance Buildable err => Show (ClientError err) where
+    show = toString . pretty
+
+instance Buildable err => Buildable (ClientError err) where
+    build = \case
+        ApiClientError err -> B.build err
+        SomeClientError msg -> show msg
+
+instance (Typeable err, Buildable err) => Exception (ClientError err)
+
+-- | Consider cases of client errors.
+servantToClientError :: FromServantErr serverErr => ServantError -> ClientError serverErr
+servantToClientError err =
+    maybe (SomeClientError err) ApiClientError (fromServantError err)

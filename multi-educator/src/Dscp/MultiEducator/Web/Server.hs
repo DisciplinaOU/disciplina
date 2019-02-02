@@ -25,10 +25,10 @@ import UnliftIO (askUnliftIO)
 import Dscp.Config
 import Dscp.Educator.Web.Auth
 import Dscp.Educator.Web.Bot
-import Dscp.Educator.Web.Educator (EducatorAPI, convertEducatorApiHandler, educatorAPI,
-                                   educatorApiHandlers)
+import Dscp.Educator.Web.Educator (RawEducatorAPI, convertEducatorApiHandler, educatorApiHandlers,
+                                   rawEducatorAPI)
 import Dscp.Educator.Web.Student (ProtectedStudentAPI, StudentCheckAction (..),
-                                  convertStudentApiHandler, studentAPI, studentApiHandlers)
+                                  convertStudentApiHandler, rawStudentAPI, studentApiHandlers)
 import Dscp.MultiEducator.Config
 import Dscp.MultiEducator.Launcher.Mode (MultiCombinedWorkMode, MultiEducatorWorkMode,
                                          lookupEducator, normalToMulti)
@@ -50,10 +50,10 @@ type EducatorWebAPI =
 mkEducatorApiServer'
     :: forall ctx m. MultiEducatorWorkMode ctx m
     => Text
-    -> ServerT EducatorAPI m
+    -> ServerT RawEducatorAPI m
 mkEducatorApiServer' login =
     hoistServerWithContext
-        educatorAPI
+        rawEducatorAPI
         (Proxy :: Proxy '[])
         (\x -> lookupEducator login >>= \case
             Just c@(EducatorCtxWithCfg _) -> normalToMulti c x
@@ -91,7 +91,7 @@ mkStudentApiServer' nat botConfig = do
         return $ (\student -> getServer . addBotHandlers student . studentApiHandlers $ student)-}
   where
     getServer login handlers = hoistServerWithContext
-        studentAPI
+        rawStudentAPI
         (Proxy :: Proxy '[StudentCheckAction])
         (\x -> nat $ lookupEducator login >>= \case
             Just c@(EducatorCtxWithCfg _) -> normalToMulti c x

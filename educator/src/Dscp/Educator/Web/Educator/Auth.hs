@@ -27,6 +27,10 @@ instance IsAuth EducatorAuth () where
     type AuthArgs EducatorAuth = '[EducatorPublicKey]
     runAuth _ _ = educatorAuthCheck
 
+instance IsClientAuth EducatorAuth where
+    data ClientAuthData EducatorAuth = EducatorClientAuthData SecretKey
+    provideAuth req (EducatorClientAuthData sk) = signRequestBasic sk req
+
 ---------------------------------------------------------------------------
 -- Helpers
 ---------------------------------------------------------------------------

@@ -5,8 +5,8 @@ module Dscp.Educator.Web.Student.API
        ( StudentApiEndpoints (..)
        , ProtectedStudentAPI
        , protectedStudentAPI
-       , StudentAPI
-       , studentAPI
+       , RawStudentAPI
+       , rawStudentAPI
        , StudentApiHandlers
        ) where
 
@@ -34,16 +34,16 @@ data StudentApiEndpoints route = StudentApiEndpoints
     , sGetProofs        :: route :- GetProofs
     } deriving (Generic)
 
-type StudentAPI =
-    "api" :> "student" :> "v1" :> ToServant (StudentApiEndpoints AsApi)
+type RawStudentAPI = ToServant (StudentApiEndpoints AsApi)
 
 type ProtectedStudentAPI =
-    Auth' [StudentAuth, NoAuth "student"] Core.Student :> StudentAPI
+    "api" :> "student" :> "v1" :>
+    Auth' [StudentAuth, NoAuth "student"] Core.Student :> RawStudentAPI
 
 type StudentApiHandlers m = StudentApiEndpoints (AsServerT m)
 
-studentAPI :: Proxy StudentAPI
-studentAPI = Proxy
+rawStudentAPI :: Proxy RawStudentAPI
+rawStudentAPI = Proxy
 
 protectedStudentAPI :: Proxy ProtectedStudentAPI
 protectedStudentAPI = Proxy

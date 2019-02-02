@@ -5,9 +5,9 @@ module Test.Dscp.Educator.Web.Instances
 import Test.QuickCheck.Arbitrary.Generic (genericArbitrary, genericShrink)
 
 import Dscp.Educator.DB
-import Dscp.Educator.Web.Educator.Queries
-import Dscp.Educator.Web.Student.Queries
-import Dscp.Educator.Web.Types (IsFinal (..))
+import Dscp.Educator.Web.Educator
+import Dscp.Educator.Web.Student
+import Dscp.Educator.Web.Types
 import Dscp.Util.Test
 
 instance Arbitrary CourseDetails where
@@ -35,5 +35,25 @@ instance Arbitrary EducatorGetSubmissionsFilters where
     shrink = genericShrink
 
 instance Arbitrary GetProvenStudentTransactionsFilters where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
+
+instance Arbitrary CourseStudentInfo where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
+
+instance Arbitrary AssignmentStudentInfo where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
+
+instance Arbitrary SubmissionStudentInfo where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
+
+instance Arbitrary GradeInfo where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
+
+instance Arbitrary BlkProofInfo where
     arbitrary = genericArbitrary
     shrink = genericShrink
