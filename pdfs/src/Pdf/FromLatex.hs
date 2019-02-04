@@ -1,10 +1,21 @@
 
+{- |
+    This module contains tools to produce PDF from data and locale using Latex.
+-}
+
 module Pdf.FromLatex
-    ( produce
-    , testData
-    , ResourcePath(..)
+    ( -- * Re-exported from `disciplina-core`
+      CertificateFullInfo
     , Language (..)
-    , CertificateFullInfo
+
+      -- * Path to resources for latex generation
+    , ResourcePath(..)
+
+      -- * PDF generator
+    , produce
+
+      -- * Self-test data
+    , testData
     )
     where
 
@@ -27,6 +38,7 @@ import System.Process.Typed
 
 import Dscp.Core.Foundation.Educator
 
+-- | Escapes text, so it can be put inside latex code.
 escapeInLatex :: Text -> Text
 escapeInLatex = Text.Strict.pack . escape . Text.Strict.unpack
   where
@@ -48,11 +60,13 @@ escapeInLatex = Text.Strict.pack . escape . Text.Strict.unpack
         isEnglish ch = ch `Set.member` Set.fromList (['A'.. 'Z'] ++ ['a'.. 'z'])
         isRussian ch = ch `Set.member` Set.fromList (['А'.. 'Я'] ++ ['а'.. 'я'])
 
+-- | Generate latex from a.
 data MkLatex a = MkLatex (a -> Text.Builder)
 
 instance Contravariant MkLatex where
     contramap f (MkLatex printer) = MkLatex (printer . f)
 
+-- | After division, the results are joined with a newline.
 instance Divisible MkLatex where
     divide splitter ~(MkLatex left) ~(MkLatex right) = MkLatex $ \a -> do
         let (l, r) = splitter a
@@ -60,46 +74,57 @@ instance Divisible MkLatex where
 
     conquer = MkLatex (const "")
 
+-- | "If" procedure for `MkLatex`.
 instance Decidable MkLatex where
     choose selector ~(MkLatex left) ~(MkLatex right) = MkLatex $
         either left right . selector
 
     lose _ = ignore
 
+-- | Analog to `const`.
 the :: Text.Builder -> MkLatex a
 the txt = custom (const txt)
 
+-- | Custom conversion to `Text.Builder`.
 custom :: (a -> Text.Builder) -> MkLatex a
 custom = MkLatex
 
+-- | Produces nothing.
 ignore :: MkLatex a
 ignore = contramap (const ()) conquer
 
+-- | Take part of the structure, make latex and pass the document further.
 split :: (a -> b) -> MkLatex b -> MkLatex a -> MkLatex a
 split proj = divide (proj &&& id)
 
+-- | Wrap produced latex with "\\begin{name}\n ...\n\\end{name}".
 inBlock :: Text.Builder -> MkLatex a -> MkLatex a
 inBlock name make
     = divide (const () &&& id) (the ("\\begin{" <> name <> "}"))
     $ divide (id       &&& id) make
     $ the ("\\end{" <> name <> "}")
 
+-- | Analoguous to `sepBy` from Parsec.
 allThe :: Show a => MkLatex () -> MkLatex a -> MkLatex [a]
-allThe sep maker = choose
-    (\case
-        []     -> Left ()
-        x : xs -> Right (x, xs))
-    ignore
-    (divided
-        (divide (id &&& const ()) maker sep)
-        (allThe sep maker))
+allThe sep maker = aux
+    where
+        aux = choose
+            (\case
+                []     -> Left ()
+                x : xs -> Right (x, xs))
+            ignore
+            (divided
+                (divide (id &&& const ()) maker sep)
+                aux)
 
+-- | Generate latex certificate from locate and data.
 generate :: Language -> CertificateFullInfo -> Text
 generate lang cert = do
     Text.toStrict $ Text.toLazyText $ make (lang, cert)
   where
     MkLatex make = fullInfo
 
+-- | Converter for certificate data into latex.
 fullInfo :: MkLatex (Language, CertificateFullInfo)
 fullInfo
     = divided language
@@ -157,12 +182,14 @@ fullInfo
 
     showBoth (a, b) = [shown a, shown b]
 
+-- | For clarity.
 shown :: Show x => x -> Text.Builder
 shown = text . escapeInLatex . show
 
 shownDesc :: ItemDesc -> Text.Builder
 shownDesc = text . escapeInLatex . unItemDesc
 
+-- | Given command name and arg consumer, make a latex command.
 command :: Text.Builder -> (a -> [Text.Builder]) -> MkLatex a
 command name prepare = MkLatex $ \a ->
     "\\"
@@ -172,25 +199,30 @@ command name prepare = MkLatex $ \a ->
             (\arg -> "{" <> arg <> "}")
             (prepare a))
 
+-- | Type wrapper for latex resource path.
 newtype ResourcePath = ResourcePath { unResourcePath :: FilePath }
 
+-- | Generate a PDF-certificate and return it as a bytestring.
 produce :: Language -> CertificateFullInfo -> ResourcePath -> IO ByteString
 produce loc info (ResourcePath resources) = do
+
+    -- | Everyhting produced should be removed.
+    --   This may lead to /tmp exhaustion attack, unless /tmp or memory
+    --   is big enough.
     withSystemTempDirectory "faircv" $ \dir -> do
         resPath <- parseRelDir resources
         tmpPath <- parseAbsDir dir
 
+        -- | Latex reads and writes in the same dir - lets isolate it.
         copyDirRecur resPath tmpPath
 
         let theText = generate loc info
         let input   = encodeUtf8 theText
 
-        writeFile "tmp.tex" theText
-
         withCurrentDirectory dir $ do
             let action
                     = runProcess
-                    $ setStdin (byteStringInput input)
+                    $ setStdin (byteStringInput input)  -- feed the latex doc in directly
                     $ setStdout byteStringOutput
                     $ "xelatex"
 
@@ -202,6 +234,7 @@ produce loc info (ResourcePath resources) = do
 
             BS.readFile "texput.pdf"
 
+-- | Data for self-test.
 testData :: CertificateFullInfo
 testData = CertificateFullInfo
     { cfiMeta = CertificateMeta
