@@ -1,7 +1,7 @@
 
 import qualified Data.ByteString as BS
 
-import Pdf.FromLatex (ResourcePath (..), testData, produce)
+import Pdf.FromLatex (ResourcePath (..), Language (..), testData, produce)
 
 main :: IO ()
 main = do

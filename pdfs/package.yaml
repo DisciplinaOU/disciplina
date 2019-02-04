@@ -42,7 +42,6 @@ executables:
       - bytestring
       - text
 
-executables:
   dscp-generate-test-pdf:
     <<: *exec-common
     source-dirs: test-pdf

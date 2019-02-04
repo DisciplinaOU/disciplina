@@ -335,6 +335,7 @@ data CertificateMeta = CertificateMeta
     , cmStartYear        :: !Int
     , cmEndYear          :: !Int
     , cmEducationForm    :: !EducationForm
+    , cmEducatorName     :: !ItemDesc
     , cmNumber           :: !Integer
     , cmIssueDate        :: !Day
     , cmTitle            :: !ItemDesc
