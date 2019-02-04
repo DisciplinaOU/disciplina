@@ -41,6 +41,7 @@ module Dscp.Core.Arbitrary
 
 import qualified Data.Foldable
 import qualified Data.Text.Buildable
+import Data.Time.Calendar (toGregorian)
 import Data.Time.Clock (UTCTime, getCurrentTime)
 import Fmt ((+||), (||+))
 import qualified GHC.Exts as Exts
@@ -52,6 +53,7 @@ import qualified Text.Show
 import Dscp.Core.FairCV
 import Dscp.Core.Foundation
 import Dscp.Crypto
+import Dscp.Util
 import Dscp.Util.Test
 
 instance Arbitrary SecretKeyData where
@@ -118,8 +120,25 @@ instance Arbitrary EducationForm where
     arbitrary = arbitraryBoundedEnum
 
 instance Arbitrary CertificateMeta where
-    arbitrary = genericArbitrary
-    shrink = genericShrink
+    arbitrary = do
+        cmStudentName <- arbitrary
+        cmStudentBirthDate <- arbitrary
+        -- Start year should be after student birth date
+        let getYear date = fromInteger $ toGregorian date ^. _1
+            studentBirthYear = getYear cmStudentBirthDate
+        cmStartYear <- arbitrary `suchThat` (> studentBirthYear)
+        -- End year should be after start year
+        cmEndYear <- arbitrary `suchThat` (> cmStartYear)
+        cmEducationForm <- arbitrary
+        -- Document number should be large enough to resemble
+        -- actual diploma numbers
+        cmNumber <- arbitrary `suchThat` (> 1000000)
+        -- Document should be issued in the year when studies are ended
+        cmIssueDate <- arbitrary `suchThat` (\issueDate -> getYear issueDate == cmEndYear)
+        cmTitle <- arbitrary
+        cmMajor <- arbitrary
+        cmSpecialization <- arbitrary
+        return CertificateMeta {..}
 
 instance Arbitrary PrivateTx where
     arbitrary = PrivateTx <$> arbitrary <*> arbitrary <*> arbitrary
@@ -246,7 +265,8 @@ instance ArbitraryMixture BlockBody
 instance ArbitraryMixture Block
 
 instance Arbitrary ItemDesc where
-    arbitrary = arbitrary `suchThatMap` (rightToMaybe . toItemDesc)
+    arbitrary = (toBase64 @ByteString <$> arbitrary)
+                `suchThatMap` (rightToMaybe . toItemDesc)
 
 instance Arbitrary Timestamp where
     arbitrary = toTimestamp <$> arbitrary
