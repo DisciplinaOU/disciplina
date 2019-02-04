@@ -44,7 +44,7 @@ instance CanHoistClient m api =>
          CanHoistClient m (SortingParams params :> api) where
     hoistClientMonad pm _ = hoistClientMonad pm (Proxy @api)
 instance CanHoistClient m api =>
-         CanHoistClient m (PaginationParams setting :> api) where
+         CanHoistClient m (PaginationParams :> api) where
     hoistClientMonad pm _ hst cli arg = hoistClientMonad pm (Proxy @api) hst (cli arg)
 instance CanHoistClient m api =>
          CanHoistClient m (Summary msg :> api) where

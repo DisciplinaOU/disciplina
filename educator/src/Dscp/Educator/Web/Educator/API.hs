@@ -12,7 +12,7 @@ module Dscp.Educator.Web.Educator.API
 import Network.HTTP.Media.MediaType ((//))
 import Servant
 import Servant.Generic
-import Servant.Util (PaginationParams, PaginationSettings (DefPageSize), SortingParamsOf)
+import Servant.Util (PaginationParams, SortingParamsOf)
 
 import Dscp.Core
 import Dscp.Crypto
@@ -90,7 +90,7 @@ type GetStudents
     :> QueryParam "course" Course
     :> QueryParam "isEnrolled" IsEnrolled
     :> QueryFlag "onlyCount"
-    :> PaginationParams ('DefPageSize 100)
+    :> PaginationParams
     :> Summary "Get a list of all registered students' addresses"
     :> Get '[DSON] (Counted StudentInfo)
 
@@ -145,7 +145,7 @@ type GetCourses
     = "courses"
     :> QueryParam "student" Student
     :> QueryFlag "onlyCount"
-    :> PaginationParams ('DefPageSize 100)
+    :> PaginationParams
     :> Summary "Get all courses"
     :> Get '[DSON] (Counted CourseEducatorInfo)
 
@@ -172,7 +172,7 @@ type GetAssignments
     :> QueryParam "isFinal" IsFinal
     :> QueryParam "since" Timestamp
     :> QueryFlag "onlyCount"
-    :> PaginationParams ('DefPageSize 100)
+    :> PaginationParams
     :> Summary "Get all assignments"
     :> Get '[DSON] (Counted AssignmentEducatorInfo)
 
@@ -195,7 +195,7 @@ type GetSubmissions
     :> QueryParam "isGraded" IsGraded
     :> QueryParam "since" Timestamp
     :> QueryFlag "onlyCount"
-    :> PaginationParams ('DefPageSize 100)
+    :> PaginationParams
     :> Summary "Get all submissions"
     :> Description "Gets a list of all submissions done by all students. \
                   \This method is inaccessible by students."
@@ -259,7 +259,7 @@ type GetProofs
 type GetCertificates
     = "certificates"
     :> SortingParamsOf Certificate
-    :> PaginationParams ('DefPageSize 100)
+    :> PaginationParams
     :> QueryFlag "onlyCount"
     :> Summary "Get the list of certificates created by Educator"
     :> Description "Gets all the certificates created by Educator. Each \

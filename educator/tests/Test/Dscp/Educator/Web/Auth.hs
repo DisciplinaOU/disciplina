@@ -26,8 +26,8 @@ instance (HasMock subApi ctx, HasServer (SortingParams params :> subApi) ctx) =>
          HasMock (SortingParams params :> subApi) ctx where
     mock _ pc _ = mock (Proxy @subApi) pc
 
-instance (HasMock subApi ctx, HasServer (PaginationParams settings :> subApi) ctx) =>
-         HasMock (PaginationParams settings :> subApi) ctx where
+instance (HasMock subApi ctx, HasServer (PaginationParams :> subApi) ctx) =>
+         HasMock (PaginationParams :> subApi) ctx where
     mock _ pc _ = mock (Proxy @subApi) pc
 
 requesterSK :: SecretKeyData

@@ -41,7 +41,7 @@ module Dscp.Core.Arbitrary
 
 import qualified Data.Foldable
 import qualified Data.Text.Buildable
-import Data.Time.Calendar (toGregorian)
+import Data.Time.Calendar (fromGregorian, toGregorian)
 import Data.Time.Clock (UTCTime, getCurrentTime)
 import Fmt ((+||), (||+))
 import qualified GHC.Exts as Exts
@@ -132,9 +132,12 @@ instance Arbitrary CertificateMeta where
         cmEducationForm <- arbitrary
         -- Document number should be large enough to resemble
         -- actual diploma numbers
-        cmNumber <- arbitrary `suchThat` (> 1000000)
+        cmNumber <- (+ 1000000) <$> arbitrary
         -- Document should be issued in the year when studies are ended
-        cmIssueDate <- arbitrary `suchThat` (\issueDate -> getYear issueDate == cmEndYear)
+        let setYear year date =
+                let (_, m, d) = toGregorian date
+                in fromGregorian (toInteger year) m d
+        cmIssueDate <- setYear cmEndYear <$> arbitrary
         cmTitle <- arbitrary
         cmMajor <- arbitrary
         cmSpecialization <- arbitrary
