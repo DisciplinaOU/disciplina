@@ -5,6 +5,7 @@ import qualified Data.Swagger as S
 import Options.Applicative (execParser, fullDesc, helper, info, progDesc)
 
 import Dscp.CommonCLI
+import Dscp.Educator.Web.Educator.Swagger
 import Dscp.Educator.Web.Student.Swagger
 import Dscp.Web.Swagger
 
@@ -13,7 +14,8 @@ main = do
     options <- getSwaggerOptions
 
     let swagger = case soSwaggerAPI options of
-            StudentAPI -> studentAPISwagger
+            StudentAPI  -> studentAPISwagger
+            EducatorAPI -> educatorAPISwagger
 
     let modSwagger = case soHost options of
             Nothing   -> id

@@ -160,7 +160,7 @@ instance (HasId a, Buildable (Id a)) =>
 
 instance KnownSymbol d => Buildable (ForResponseLog (PaginatedList d a)) where
     build (ForResponseLog PaginatedList{..}) =
-        "" +| length plItems |+ " " +| symbolValT @d |+ ""
+        "" +| length plItems |+ " " +| symbolValT @d @Text |+ ""
 
 instance Buildable (ForResponseLog HashIs) where
     build (ForResponseLog hashIs) = genericF hashIs

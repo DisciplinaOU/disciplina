@@ -15,6 +15,7 @@ import Control.Lens (makePrisms)
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
 import Data.Reflection (Reifies (..))
+import Data.Swagger (ToSchema (..))
 import qualified Data.Text.Buildable as B
 import Data.Typeable (cast)
 import Servant (ServantErr (..), err403)
@@ -24,7 +25,10 @@ import Dscp.Core.Validation
 import Dscp.DB.SQL (SQLRequestsNumberExceeded)
 import Dscp.Educator.DB (DomainError (..))
 import Dscp.Educator.Web.Util ()
+import Dscp.Util
+import Dscp.Util.Constructors
 import Dscp.Web.Class
+import Dscp.Web.Swagger
 import Dscp.Web.Types
 
 -- | Any error backend may return.
@@ -75,7 +79,7 @@ instance HasErrorTag StudentAPIError where
         SomeGeneralBackendError err -> errorTag err
 
 ---------------------------------------------------------------------------
--- Functions
+-- Error instances
 ---------------------------------------------------------------------------
 
 instance ToServantErr WrongSubmissionSignature where
@@ -88,6 +92,29 @@ instance ToServantErr StudentAPIError where
         SomeGeneralBackendError err -> toServantErrNoBody err
 
 instance FromServantErr StudentAPIError
+
+---------------------------------------------------------------------------
+-- Swagger instances
+---------------------------------------------------------------------------
+
+instance EnumHasDescription WrongSubmissionSignature where
+    enumDocDescription p = errorCaseDocDesc @UnsafeFiller p $ \case
+        SubmissionSignatureInvalid{} ->
+            "Signature does not match to claimed submission author."
+        FakeSubmissionSignature{} ->
+            "Claimed owner of submission does not match to authenticated user."
+
+instance EnumHasDescription StudentAPIError where
+    enumDocDescription = gEnumDocDesc $ \case
+        BadSubmissionSignature err -> enumDocDescription (proxyOf err)
+        SomeDomainError err -> enumDocDescription (proxyOf err)
+        SomeGeneralBackendError err -> enumDocDescription (proxyOf err)
+
+instance ToSchema StudentAPIError where
+    declareNamedSchema _ =
+        declareSimpleSchema "ErrResponse" $
+        errResponseSchema $ do
+            setDocEnumDescription @StudentAPIError
 
 ---------------------------------------------------------------------------
 -- Other

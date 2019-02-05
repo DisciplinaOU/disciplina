@@ -24,6 +24,8 @@ type instance ParamDescription ItemDesc =
 type instance ParamDescription Timestamp =
     "Time in ISO format. \
     \Passed value is automatically rounded to microseconds precision."
+type instance ParamDescription Address =
+    "Disciplina address."
 type instance ParamDescription (Hash a) =
     "Hex-encoded blake2b hash value."
 type instance ParamDescription Course =
@@ -42,12 +44,20 @@ type instance ParamDescription SubmissionWitness =
 -- ToParamSchema instances
 ----------------------------------------------------------------------------
 
+instance ToParamSchema Address where
+    toParamSchema _ = mempty &: do
+        S.type_ .= S.SwaggerString
+        S.format ?= "base58"
+
 instance ToParamSchema (Hash a) where
     toParamSchema _ = mempty &: do
         S.type_ .= S.SwaggerString
         S.format ?= "hex"
 
 instance ToParamSchema Course where
+    toParamSchema _ = idParamSchema
+
+instance ToParamSchema Subject where
     toParamSchema _ = idParamSchema
 
 instance ToParamSchema Timestamp where
@@ -62,18 +72,25 @@ instance ToParamSchema DocumentType where
 
 instance ToSchema ItemDesc where
     declareNamedSchema p =
-        return . S.named "Description" $ mempty &: do
+        declareSimpleSchema "Description" $ mempty &: do
             S.type_ .= S.SwaggerString
             setParamDescription p
 
 instance ToSchema Timestamp where
     declareNamedSchema p =
-        return . S.named "Timestamp" $ S.timeSchema timestampFormat &: do
+        declareSimpleSchema "Timestamp" $ S.timeSchema timestampFormat &: do
             setParamDescription p
+            setExample timestampEx
+
+instance ToSchema Address where
+    declareNamedSchema p =
+        declareSimpleSchema "Address" $ S.byteSchema &: do
+            setParamDescription p
+            setExample addressEx
 
 instance ToSchema (Hash a) where
     declareNamedSchema p =
-        return . S.named "Hash" $ S.byteSchema &: do
+        declareSimpleSchema "Hash" $ S.byteSchema &: do
             setParamDescription p
             setExample $ hash @Text "example"
 
@@ -93,7 +110,7 @@ instance ToSchema a => ToSchema (EncodeSerialised Base64Encoded a) where
 
 instance ToSchema Grade where
     declareNamedSchema p =
-        return . S.named "Grade" $ mempty &: do
+        declareSimpleSchema "Grade" $ mempty &: do
             S.type_ .= S.SwaggerInteger
             S.minimum_ ?= gradeToNum minBound
             S.maximum_ ?= gradeToNum maxBound
@@ -101,7 +118,7 @@ instance ToSchema Grade where
 
 instance ToSchema SubmissionWitness where
     declareNamedSchema p =
-        return . S.named "SubmissionWitness" $ S.byteSchema &: do
+        declareSimpleSchema "SubmissionWitness" $ S.byteSchema &: do
             setParamDescription p
 
 instance ToSchema (EmptyMerkleProof PrivateTx) where

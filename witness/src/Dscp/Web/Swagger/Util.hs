@@ -8,9 +8,11 @@ module Dscp.Web.Swagger.Util
 
          -- * Utilities
        , ParamDescription
+       , QueryFlagDescription
        , dscpSchemaOptions
        , setParamDescription
        , setExample
+       , declareSimpleSchema
        , inDeclaredSchema
        , newtypeDeclareNamedSchema
        , gToParamSchema
@@ -18,6 +20,7 @@ module Dscp.Web.Swagger.Util
        , idParamSchema
        , idDeclareNamedSchema
        , timestampFormat
+       , errResponseSchema
 
          -- * Enum & errors documentation
        , errorDocNoDesc
@@ -41,7 +44,7 @@ import qualified Data.Text as T
 import Data.Typeable (typeRep)
 import Fmt ((+|), (|+))
 import qualified GHC.Generics as G
-import GHC.TypeLits (KnownSymbol, Symbol)
+import GHC.TypeLits (AppendSymbol, KnownSymbol, Symbol)
 import Servant ((:<|>), (:>), Capture', Description, NoContent, QueryFlag, QueryParam',
                 ServantErr (..), StdMethod, Verb)
 import Servant.Swagger (HasSwagger (..))
@@ -52,7 +55,7 @@ import Dscp.Util.Constructors
 import Dscp.Web.Class
 
 ----------------------------------------------------------------------------
--- General
+-- Global swagger options
 ----------------------------------------------------------------------------
 
 makePrisms ''S.Referenced
@@ -72,6 +75,59 @@ setSerokellDocMeta = do
         S.description ?= "Find out more about Swagger"
         S.url .= URL "http://swagger.io"
 
+-- | Cut path prefix, remain only semantically significant parts.
+type family CutApiPrefix api where
+    CutApiPrefix ((path :: Symbol) :> api) = CutApiPrefix api
+    CutApiPrefix api = api
+
+-- | Get path prefix.
+type family ExtractApiPrefix api :: Symbol where
+    ExtractApiPrefix ((path :: Symbol) :> api) =
+        "/" `AppendSymbol` path `AppendSymbol` ExtractApiPrefix api
+    ExtractApiPrefix api = ""
+
+-- | Description of parameter.
+--
+-- When defining 'ToSchema' instances you have to refer to this type family manually using
+-- 'setParamDescription' function; 'ToParamSchema' instances does not allow specifying
+-- a description and this is done automatically at a higher level (via 'SwaggerrizeApi').
+type family ParamDescription p :: Symbol
+
+-- | Replacement for 'QueryFlag' which has a better documentation.
+data SwaggerQueryFlag (name :: Symbol)
+
+-- | Defines swagger description for the given `QueryFlag` parameter.
+type family QueryFlagDescription (name :: Symbol) :: Symbol
+
+type instance QueryFlagDescription "onlyCount" =
+    "If this parameter is present, return only the total count of items."
+
+instance (HasSwagger subApi, KnownSymbol name, KnownSymbol (QueryFlagDescription name)) =>
+         HasSwagger (SwaggerQueryFlag name :> subApi) where
+    toSwagger _ = toSwagger (Proxy @(QueryFlag name :> subApi)) &: do
+        zoom (S.allOperations . S.parameters . _head . _Inline) $ do
+            paramName <- use S.name
+            E.assert (name == paramName) pass
+            S.description ?= desc
+      where
+        name = symbolValT @name
+        desc = symbolValT @(QueryFlagDescription name)
+
+-- | Like 'Capture', but does not modify description of 404 error (which looks
+-- pretty like robot-generated).
+data SwaggerCapture (mods :: [*]) (sym :: Symbol) a
+
+instance (HasSwagger (Capture' mods sym a :> api), HasSwagger api) =>
+         HasSwagger (SwaggerCapture mods sym a :> api) where
+    toSwagger _ =
+        toSwagger (Proxy @(Capture' mods sym a :> api)) &: do
+            desc404L .= fromMaybe "" pureDesc404
+      where
+        desc404L :: Traversal' Swagger Text
+        desc404L = S.allOperations . S.responses . S.responses .
+                   ix 404 . _Inline . S.description
+        pureDesc404 = toSwagger (Proxy @api) ^? desc404L
+
 {- | This applies following transformations to API for the sake of better swagger
 documentation.
 
@@ -79,23 +135,23 @@ documentation.
 swagger is generated).
 
 * `Capture`s and `QueryParam`s are attached a description according to
-'ParamDescription' type family.
+'ParamDescription' type family (default description is empty).
 
 * @QueryFlag name@ occurences are attached descriptions according to
-@ParamsDescription (QueryFlagDescription name)@
+@ParamsDescription (QueryFlagDescription name)@ (there is no description by default).
 -}
 type family SwaggerrizeApi api where
     SwaggerrizeApi ((path :: Symbol) :> api) =
         path :> SwaggerrizeApi api
 
     SwaggerrizeApi (Capture' mods sym a :> api) =
-        Capture' (Description (ParamDescription a) ': mods) sym a :> SwaggerrizeApi api
+        SwaggerCapture (Description (ParamDescription a) ': mods) sym a :> SwaggerrizeApi api
 
     SwaggerrizeApi (QueryParam' mods sym a :> api) =
         QueryParam' (Description (ParamDescription a) ': mods) sym a :> SwaggerrizeApi api
 
     SwaggerrizeApi (QueryFlag name :> api) =
-        QueryFlagParam name :> SwaggerrizeApi api
+        SwaggerQueryFlag name :> SwaggerrizeApi api
 
     SwaggerrizeApi (arg :> api) =
         arg :> SwaggerrizeApi api
@@ -109,39 +165,14 @@ type family SwaggerrizeApi api where
     SwaggerrizeApi (Verb (method :: StdMethod) (code :: Nat) ctx a) =
         Verb method code ctx a
 
--- | Description of parameter.
--- This is what you would want to refer to when defining 'ToParamSchema' and 'ToSchema'
--- instances, also see 'setParamDescription'.
-type family ParamDescription p :: Symbol
-
--- | Replacement for 'QueryFlag' which has a better documentation.
-data QueryFlagParam (name :: Symbol)
-
--- | Description of a given `QueryFlag` parameter.
-type family QueryFlagDescription (name :: Symbol) :: Symbol
-
-type instance QueryFlagDescription "onlyCount" =
-    "If this parameter is present, return only the total count of items."
-
-instance (HasSwagger subApi, KnownSymbol name, KnownSymbol (QueryFlagDescription name)) =>
-         HasSwagger (QueryFlagParam name :> subApi) where
-    toSwagger _ = toSwagger (Proxy @(QueryFlag name :> subApi)) &: do
-        zoom (S.allOperations . S.parameters . _head . _Inline) $ do
-            paramName <- use S.name
-            E.assert (name == paramName) pass
-            S.description ?= desc
-      where
-        name = symbolValT @name
-        desc = symbolValT @(QueryFlagDescription name)
-
 -- | Apply some beautiness to automatically generated spec.
 swaggerPostfixes :: Swagger -> Swagger
 swaggerPostfixes = execState $ do
     -- Neat responses descriptions.
     zoom (S.allOperations . S.responses . S.responses) $ do
-        ix 200 . _Inline . S.description .= "Successfull operation."
-        ix 201 . _Inline . S.description .= "Created."
-        ix 202 . _Inline . S.description .= "Accepted."
+        ix 200 . _Inline . S.description .= "Successfull operation"
+        ix 201 . _Inline . S.description .= "Created"
+        ix 202 . _Inline . S.description .= "Accepted"
 
     -- Servant-swagger can mention 400 response code itself and it even enlists
     -- parameters which may cause this response.
@@ -151,14 +182,19 @@ swaggerPostfixes = execState $ do
     zoom S.allOperations $ do
         params <- use S.parameters
         unless (null params) $
-            at 400 ?= S.Inline (mempty & S.description .~ "Invalid entries format.")
+            at 400 ?= S.Inline (mempty & S.description .~ "Invalid entries format")
 
 -- | Generate swagger documentation in a specific format we used to.
 toAwesomeSwagger
     :: forall api.
-       HasSwagger (SwaggerrizeApi api)
+       ( HasSwagger (SwaggerrizeApi (CutApiPrefix api))
+       , KnownSymbol (ExtractApiPrefix api)
+       )
     => Proxy api -> Swagger
-toAwesomeSwagger _ = swaggerPostfixes $ toSwagger (Proxy @(SwaggerrizeApi api))
+toAwesomeSwagger _ =
+    toSwagger (Proxy @(SwaggerrizeApi (CutApiPrefix api))) &: do
+        modify swaggerPostfixes
+        S.basePath ?= symbolValT @(ExtractApiPrefix api)
 
 -- | Build a swagger documentation.
 encodeSwagger :: Swagger -> LByteString
@@ -187,6 +223,10 @@ setParamDescription _ = S.description ?= symbolValT @(ParamDescription a)
 -- | Set the given item as example.
 setExample :: (S.HasExample s (Maybe Value), ToJSON a) => a -> State s ()
 setExample item = S.example ?= toJSON item
+
+-- | The most straitforward implementation of 'ToSchema'.
+declareSimpleSchema :: Text -> Schema -> Declare (S.Definitions S.Schema) S.NamedSchema
+declareSimpleSchema name schema = return $ S.named name schema
 
 -- | Modify the schema in an implementation of 'ToSchema'.
 inDeclaredSchema
@@ -229,14 +269,29 @@ idParamSchema = mempty &: do
 -- | Implementation of 'declareNamedSchema' for identifiers.
 idDeclareNamedSchema
     :: forall a proxy.
-       (Typeable a, KnownSymbol (ParamDescription a))
+       ( Typeable a
+       , S.ToParamSchema a
+       , KnownSymbol (ParamDescription a)
+       )
     => proxy a -> Declare (S.Definitions S.Schema) S.NamedSchema
 idDeclareNamedSchema pa =
-    return . S.named (show $ typeRep pa) $ mempty &: do
+    declareSimpleSchema (show $ typeRep pa) $ (S.paramSchemaToSchema pa) &: do
         setParamDescription pa
 
 timestampFormat :: IsString s => s
 timestampFormat = "yyyy-mm-ddThh:MM:ss.ffffffZ"
+
+-- | Template for error schema (corresponding to `ErrResponse`).
+errResponseSchema :: State Schema () -> Schema
+errResponseSchema errTagSchemaModifier = mempty &: do
+    S.type_ .= S.SwaggerObject
+    S.required .= ["error"]
+    zoom S.properties $ do
+        at "error" ?= errSchema
+    S.description ?= "Describes a respose error."
+  where
+    errSchema = S.toSchemaRef (Proxy @String) &: do
+        zoom _Inline $ errTagSchemaModifier
 
 ----------------------------------------------------------------------------
 -- Enum descriptions

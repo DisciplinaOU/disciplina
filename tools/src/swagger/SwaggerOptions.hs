@@ -15,6 +15,7 @@ import Dscp.Util.Constructors
 -- | All our APIs.
 data SwaggerAPI
     = StudentAPI
+    | EducatorAPI
     deriving (Generic)
 
 -- | APIs names, should correspond to 'swaggerAPIReadM'.
@@ -23,12 +24,14 @@ swaggerAPINames =
     T.intercalate ", " $ map show $
     enlistConstructors @UnsafeFiller <&> \case
         StudentAPI -> "student" :: Text
+        EducatorAPI -> "educator"
 
 swaggerAPIReadM :: ReadM SwaggerAPI
 swaggerAPIReadM = eitherReader $ \case
-    "student" -> pure StudentAPI
-    other -> fail $ "Unknown API name " <> show other <>
-                    ", allowed values: " <> toString swaggerAPINames
+    "student" -> Right StudentAPI
+    "educator" -> Right EducatorAPI
+    other -> Left $ "Unknown API name " <> show other <> ", " <>
+                    "allowed values: " <> toString swaggerAPINames
 
 data SwaggerOptions = SwaggerOptions
     { soSwaggerAPI :: SwaggerAPI

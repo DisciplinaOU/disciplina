@@ -325,8 +325,8 @@ infixl 9 &:
 -- Adopted functions which work with strings
 -----------------------------------------------------------
 
-symbolValT :: forall s. KnownSymbol s => Text
-symbolValT = toText $ symbolVal (Proxy @s)
+symbolValT :: forall sym s. (KnownSymbol sym, IsString s) => s
+symbolValT = fromString $ symbolVal (Proxy @sym)
 
 -----------------------------------------------------------
 -- Helper to establish notion of SQL/db ID

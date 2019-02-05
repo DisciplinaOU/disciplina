@@ -28,6 +28,7 @@ module Dscp.Core.Arbitrary
       -- * Examples
     , studentEx
     , studentSKEx
+    , addressEx
     , courseEx
     , assignmentEx
     , signedSubmissionEx
@@ -458,6 +459,9 @@ studentSKEx = withIntSeed 123 genSecretKey
 
 studentEx :: Student
 studentEx = mkAddr $ toPublic studentSKEx
+
+addressEx :: Address
+addressEx = studentEx
 
 courseEx :: Course
 courseEx = Course 7

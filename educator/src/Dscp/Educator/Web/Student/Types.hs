@@ -23,6 +23,7 @@ module Dscp.Educator.Web.Student.Types
 
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
+import Data.Swagger (ToSchema (..))
 import Fmt (blockListF, build, (+|), (|+))
 import Servant.Util (type (?:), ForResponseLog (..), SortingParamTypesOf, buildListForResponse)
 
@@ -32,6 +33,7 @@ import Dscp.DB.SQL.Util
 import Dscp.Educator.DB
 import Dscp.Educator.Web.Types
 import Dscp.Util
+import Dscp.Web.Swagger
 
 data NewSubmission = NewSubmission
     { nsAssignmentHash :: (Hash Assignment)
@@ -177,6 +179,24 @@ deriveJSON defaultOptions ''NewSubmission
 deriveJSON defaultOptions ''CourseStudentInfo
 deriveJSON defaultOptions ''AssignmentStudentInfo
 deriveJSON defaultOptions ''SubmissionStudentInfo
+
+---------------------------------------------------------------------------
+-- Swagger instances
+---------------------------------------------------------------------------
+
+instance ToSchema NewSubmission where
+    declareNamedSchema p =
+        inDeclaredSchema (gDeclareNamedSchema p) $
+            setExample $ signedSubmissionToRequest signedSubmissionEx
+
+instance ToSchema CourseStudentInfo where
+    declareNamedSchema = gDeclareNamedSchema
+
+instance ToSchema AssignmentStudentInfo where
+    declareNamedSchema = gDeclareNamedSchema
+
+instance ToSchema SubmissionStudentInfo where
+    declareNamedSchema = gDeclareNamedSchema
 
 ---------------------------------------------------------------------------
 -- Sorting parameters

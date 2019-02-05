@@ -12,7 +12,7 @@ module Dscp.Educator.Web.Educator.API
 import Pdf.Scanner (PDFBody (..))
 import Servant
 import Servant.Generic
-import Servant.Util (PaginationParams, SortingParamsOf)
+import Servant.Util (type ( #: ), ExceptionalResponses, PaginationParams, SortingParamsOf, Tag)
 
 import Dscp.Core
 import Dscp.Crypto
@@ -67,6 +67,7 @@ protectedEducatorAPI = Proxy
 
 type GetStatus
     = "status"
+    :> Tag "General"
     :> Get '[DSON] EducatorInfo
 
 ---------------------------------------------------------------------------
@@ -79,50 +80,78 @@ type GetStudents
     :> QueryParam "isEnrolled" IsEnrolled
     :> QueryFlag "onlyCount"
     :> PaginationParams
+    :> Tag "Students"
     :> Summary "Get a list of all registered students' addresses"
     :> Get '[DSON] (Counted StudentInfo)
 
 type AddStudent
     = "students"
+    :> Tag "Students"
     :> Summary "Add a new student address to a database"
     :> ReqBody '[DSON] NewStudent
+    :> ExceptionalResponses EducatorAPIError
+       '[ 409 #: "Student already exists."
+        ]
     :> PostCreated '[DSON] ()
 
 type DeleteStudent
     = "students" :> Capture "student" Student
+    :> Tag "Students"
     :> Summary "Remove a student from a database"
     :> Description "Removes a student only if he's not currently \
                     \attending any course. We will not automatically \
                     \perform a cascade deletion, because it will make \
                     \this operation particularly dangerous. If a student \
                     \attends any course, an error will be raised."
+    :> ExceptionalResponses EducatorAPIError
+       '[ 403 #: "Student cannot be deleted, as he is currently attending a course."
+        , 404 #: "Student does not exist."
+        ]
     :> Delete '[DSON] ()
 
 type AddStudentCourse
     = "students" :> Capture "student" Student
     :> "courses"
+    :> Tag "Students"
+    :> Tag "Courses"
     :> Summary "Enroll a student in a new course"
     :> Description "Given existing student and course, enroll the \
                     \student to the course."
     :> ReqBody '[DSON] NewStudentCourse
+    :> ExceptionalResponses EducatorAPIError
+       '[ 403 #: "Course with given ID does not exist."
+        , 404 #: "Student with given address not found."
+        , 409 #: "Student is already enrolled on this course."
+        ]
     :> PostCreated '[DSON] ()
 
 type AddStudentAssignment
     = "students" :> Capture "student" Student
     :> "assignments"
+    :> Tag "Students"
     :> Summary "Assign an assignment to a student"
     :> Description "Assigns a new assignment to a student in scope of \
                     \given course."
     :> ReqBody '[DSON] NewStudentAssignment
+    :> ExceptionalResponses EducatorAPIError
+       '[ 403 #: "Assignment with given hash does not exist."
+        , 404 #: "Student with given address not found."
+        , 409 #: "Student is already subscribed on the assignment."
+        ]
     :> PostCreated '[DSON] ()
 
 type DeleteStudentAssignment
     = "students"    :> Capture "student" Student
     :> "assignments" :> Capture "assignment" (Hash Assignment)
+    :> Tag "Students"
+    :> Tag "Assignments"
     :> Summary "Unassign an assignment from a student"
     :> Description "If given student has been assigned a given \
                     \assignment, then unassigns it from them, otherwise \
                     \raises error."
+    :> ExceptionalResponses EducatorAPIError
+       '[ 404 #: "Given student didn't have given assignment."
+        ]
     :> Delete '[DSON] ()
 
 ---------------------------------------------------------------------------
@@ -134,11 +163,13 @@ type GetCourses
     :> QueryParam "student" Student
     :> QueryFlag "onlyCount"
     :> PaginationParams
+    :> Tag "Courses"
     :> Summary "Get all courses"
     :> Get '[DSON] (Counted CourseEducatorInfo)
 
 type AddCourse
     = "courses"
+    :> Tag "Courses"
     :> Summary "Add a new course to a database"
     :> ReqBody '[DSON] NewCourse
     :> PostCreated '[DSON] Course
@@ -146,7 +177,11 @@ type AddCourse
 
 type GetCourse
     = "course" :> Capture "course" Course
+    :> Tag "Courses"
     :> Summary "Get info about a course"
+    :> ExceptionalResponses EducatorAPIError
+       '[ 404 #: "Course with given ID not found."
+        ]
     :> Get '[DSON] CourseEducatorInfo
 
 ---------------------------------------------------------------------------
@@ -161,14 +196,19 @@ type GetAssignments
     :> QueryParam "since" Timestamp
     :> QueryFlag "onlyCount"
     :> PaginationParams
+    :> Tag "Assignments"
     :> Summary "Get all assignments"
     :> Get '[DSON] (Counted AssignmentEducatorInfo)
 
 type AddAssignment
     = "assignments"
     :> Summary "Add assignment to a course"
+    :> Tag "Assignments"
     :> QueryFlag "autoAssign"
     :> ReqBody '[DSON] NewAssignment
+    :> ExceptionalResponses EducatorAPIError
+       '[ 409 #: "Exactly the same assignment already exists,"
+        ]
     :> PostCreated '[DSON] ()
 
 ---------------------------------------------------------------------------
@@ -184,6 +224,7 @@ type GetSubmissions
     :> QueryParam "since" Timestamp
     :> QueryFlag "onlyCount"
     :> PaginationParams
+    :> Tag "Submissions"
     :> Summary "Get all submissions"
     :> Description "Gets a list of all submissions done by all students. \
                   \This method is inaccessible by students."
@@ -191,15 +232,24 @@ type GetSubmissions
 
 type GetSubmission
     = "submissions" :> Capture "submission" (Hash Submission)
+    :> Tag "Submissions"
     :> Summary "Get info about a submission"
     :> Description "Gets a submission data by given submission hash."
+    :> ExceptionalResponses EducatorAPIError
+       '[ 404 #: "Submission with given hash not found."
+        ]
     :> Get '[DSON] SubmissionEducatorInfo
 
 type DeleteSubmission
     = "submissions" :> Capture "submission" (Hash Submission)
+    :> Tag "Submissions"
     :> Summary "Delete a submission"
     :> Description "Deletes a submission from a database. Only ungraded \
                     \submissions can be deleted."
+    :> ExceptionalResponses EducatorAPIError
+       '[ 403 #: "Submission has already been graded and cannot be deleted."
+        , 404 #: "Submission with given hash not found."
+        ]
     :> Delete '[DSON] ()
 
 ---------------------------------------------------------------------------
@@ -214,12 +264,14 @@ type GetGrades
     :> QueryParam "isFinal" IsFinal
     :> QueryParam "since" Timestamp
     :> QueryFlag "onlyCount"
+    :> Tag "Grades"
     :> Summary "Get all grades"
     :> Description "Gets a list of all grades performed by all students."
     :> Get '[DSON] (Counted GradeInfo)
 
 type AddGrade
     = "grades"
+    :> Tag "Grades"
     :> Summary "Post a new grade"
     :> Description "Posts a new grade with a given body."
     :> ReqBody '[DSON] NewGrade
@@ -235,6 +287,7 @@ type GetProofs
     :> QueryParam "student" Student
     :> QueryParam "assignment" (Hash Assignment)
     :> QueryFlag "onlyCount"
+    :> Tag "Proofs"
     :> Summary "Get proofs of all student's activity"
     :> Description "Gets all private transactions related to a student \
                     \together with corresponding Merkle proofs."
@@ -249,6 +302,7 @@ type GetCertificates
     :> SortingParamsOf Certificate
     :> PaginationParams
     :> QueryFlag "onlyCount"
+    :> Tag "Certificates"
     :> Summary "Get the list of certificates created by Educator"
     :> Description "Gets all the certificates created by Educator. Each \
                    \entry contains certificate metadata and certificate ID."
@@ -256,14 +310,22 @@ type GetCertificates
 
 type GetCertificate
     = "certificate" :> Capture "certificate" (Hash CertificateMeta)
+    :> Tag "Certificates"
     :> Summary "Get the certificate by ID"
     :> Description "Gets the PDF certificate with FairCV JSON included as \
                    \metadata by ID"
+    :> ExceptionalResponses EducatorAPIError
+       '[ 404 #: "Certificate with given hash not found."
+        ]
     :> Get '[PDF] PDFBody
 
 type AddCertificate
     = "certificates"
+    :> Tag "Certificates"
     :> Summary "Create a new certificate"
     :> Description "Creates a new certificate given metadata and the grades."
     :> ReqBody '[DSON] CertificateFullInfo
+    :> ExceptionalResponses EducatorAPIError
+       '[ 409 #: "Exactly the same certificate already exists."
+        ]
     :> PostCreated '[DSON] Certificate

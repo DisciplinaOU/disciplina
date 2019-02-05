@@ -36,17 +36,6 @@ deriving instance ToJSON Timestamp
 instance FromJSON Timestamp where
     parseJSON v = toTimestamp <$> parseJSON @UTCTime v
 
-instance ToJSON EducationForm where
-    toJSON Fulltime = String "fulltime"
-    toJSON Parttime = String "parttime"
-    toJSON Fullpart = String "fullpart"
-instance FromJSON EducationForm where
-    parseJSON = withText "EducationForm" $ \case
-        "fulltime" -> pure Fulltime
-        "parttime" -> pure Parttime
-        "fullpart" -> pure Fullpart
-        other -> fail $ "invalid constructor: " ++ toString other
-
 instance ToJSON Address where
     toJSON = String . toText
 instance FromJSON Address where
@@ -201,6 +190,7 @@ deriveJSON defaultOptions ''PublicationTxWitness
 deriveJSON defaultOptions ''PublicationTxWitnessed
 deriveJSON defaultOptions ''PublicationTx
 deriveJSON defaultOptions ''FeeCoefficients
+deriveJSON dscpAesonOptions ''EducationForm
 
 deriveFromJSON defaultOptions ''Committee
 deriveJSON defaultOptions ''GenesisDistributionElem
