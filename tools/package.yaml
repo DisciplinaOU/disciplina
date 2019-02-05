@@ -66,3 +66,14 @@ executables:
     default-extensions:
       - CPP
       - DeriveAnyClass
+  dscp-swagger:
+    <<: *exec-common
+    source-dirs: src/swagger
+    dependencies:
+      - bytestring
+      - disciplina-core
+      - disciplina-witness
+      - disciplina-educator
+      - optparse-applicative
+      - swagger2
+      - text
