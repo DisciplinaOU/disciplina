@@ -31,7 +31,6 @@ extra-deps:
 - servant-quickcheck-0.0.6.0
 - HList-0.5.0.0
 
-
 - git: https://github.com/serokell/servant-util.git
   commit: 15adfc61a9c0ae6c2656507cad3a70fd2eef20b2
   subdirs:

@@ -7,9 +7,21 @@ library:
   <<: *lib-common
 
   dependencies:
+    - contravariant
+    - containers
     - bytestring
     - base64-bytestring
+    - directory
+    - disciplina-core
     - hashable
+    - path
+    - path-io
+    - pandoc
+    - text
+    - text-printer
+    - time
+    - typed-process
+    - temporary
 
 tests:
   disciplina-witness-test:
@@ -24,7 +36,15 @@ tests:
 executables:
   dscp-inject-json-into-pdf:
     <<: *exec-common
-    source-dirs: app
+    source-dirs: inject
+    dependencies:
+      - disciplina-pdfs
+      - bytestring
+      - text
+
+  dscp-generate-test-pdf:
+    <<: *exec-common
+    source-dirs: test-pdf
     dependencies:
       - disciplina-pdfs
       - bytestring

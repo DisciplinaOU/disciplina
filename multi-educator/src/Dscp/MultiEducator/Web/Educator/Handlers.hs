@@ -30,4 +30,3 @@ multiEducatorApiHandlers jwtSettings cookieSettings =
         case (result,) <$> mApplyCookies of
             Just (True, applyCookies) -> return $ applyCookies NoContent
             _ -> throwM err401
-

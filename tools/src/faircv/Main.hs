@@ -10,7 +10,6 @@ import Loot.Log
 import Dscp.Core
 import Dscp.Crypto
 import Dscp.Educator.Web.Student
-import Dscp.Educator.Web.Types
 import Dscp.Resource.Keys
 import Dscp.Util (leftToFail, nothingToFail)
 import Dscp.Util.Test (detGenG)

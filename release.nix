@@ -53,7 +53,7 @@ rec {
   '';
 
   disciplina-trailing-whitespace = runCheck ''
-    for f in $(find ${source} -type f); do
+    for f in $(find ${source} -type f -not -name "*.jpg" -not -name "*.png" -not -name "*.otf"); do
       ${haskellPackages.tw}/bin/tw $f
     done
   '';
