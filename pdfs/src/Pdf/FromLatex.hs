@@ -110,14 +110,14 @@ newtype ResourcePath = ResourcePath { unResourcePath :: FilePath }
 produce :: Language -> CertificateFullInfo -> ResourcePath -> IO ByteString
 produce loc info (ResourcePath resources) = do
 
-    -- | Everyhting produced should be removed.
-    --   This may lead to /tmp exhaustion attack, unless /tmp or memory
-    --   is big enough.
+    -- Everyhting produced should be removed.
+    -- This may lead to /tmp exhaustion attack, unless /tmp or memory
+    -- is big enough.
     withSystemTempDirectory "faircv" $ \dir -> do
         resPath <- parseRelDir resources
         tmpPath <- parseAbsDir dir
 
-        -- | Latex reads and writes in the same dir - lets isolate it.
+        -- Latex reads and writes in the same dir - lets isolate it.
         copyDirRecur resPath tmpPath
 
         let theText = generate loc info
