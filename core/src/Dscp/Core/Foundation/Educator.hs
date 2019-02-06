@@ -31,6 +31,7 @@ module Dscp.Core.Foundation.Educator
     , CertificateFullInfo (..)
     , CertificateMeta (..)
     , CertificateGrade (..)
+    , Certificate (..)
     , StudentInfo (..)
     , GradeInfo (..)
     , EducationForm (..)
