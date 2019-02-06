@@ -50,7 +50,7 @@
     BoldItalicFont = ProximaNova-BoldItalic.otf
 ]
 
-\titleformat{\section}         % Customise the \section command 
+\titleformat{\section}         % Customise the \section command
   {\Huge\bf\centering} % Make the \section headers large (\Large),
                                % small capitals (\scshape) and left aligned (\raggedright)
   {}{0em}                      % Can be used to give a prefix to all sections, like 'Section ...'
@@ -104,7 +104,7 @@
             \begin{Huge}
                 \textbf{\PrintName}
             \end{Huge}
-            
+
             \vspace*{10pt}
             \begin{Large}
                 \tr{Date of birth:}\textbf{\PrintDateOfBirth}
@@ -128,9 +128,9 @@
             \Icon{url}\PrintEducatorUrl
         \end{center}
     \fi
-    
+
     \setlength{\parskip}{12pt}%
-    
+
     \vspace*{15pt}
 
     \ifdefined\EducationPeriodDefined%
@@ -149,9 +149,9 @@
             \hline
         \end{tabularx}
     \fi
-    
+
     \vspace*{30pt}
-    
+
     \setlength\extrarowheight{12pt}%
     \begin{tabularx}{\textwidth}{%
             @{} c @{}%
@@ -166,15 +166,15 @@
             \fi%
             \\
         \fi
-        
+
         \ifdefined\PrintDegreeLevel
             \Icon{degree-level} & \tr{Degree} & \textbf{\PrintDegreeLevel} \\
         \fi
-        
+
         \ifdefined\PrintMajor
             \Icon{major} & \tr{Major} & \textbf{\PrintMajor} \\
         \fi
-        
+
         \ifdefined\PrintMinor
             \Icon{minor} & \tr{Minor} & \textbf{\PrintMinor} \\
         \fi
