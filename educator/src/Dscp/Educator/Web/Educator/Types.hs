@@ -114,7 +114,7 @@ data SubmissionEducatorInfo = SubmissionEducatorInfo
     , siWitness        :: SubmissionWitness
     } deriving (Show, Eq, Generic)
 
-eaDocumentType :: AssignmentEducatorInfo -> DocumentType
+eaDocumentType :: AssignmentEducatorInfo -> DocumentType Assignment
 eaDocumentType = documentType . aiContentsHash
 
 -- | Makes a 'Certificate' from 'CertificateMeta'.

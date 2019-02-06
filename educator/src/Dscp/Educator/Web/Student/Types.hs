@@ -68,7 +68,7 @@ data SubmissionStudentInfo = SubmissionStudentInfo
     , siGrade          :: (Maybe GradeInfo)
     } deriving (Show, Eq, Generic)
 
-saDocumentType :: AssignmentStudentInfo -> DocumentType
+saDocumentType :: AssignmentStudentInfo -> DocumentType Assignment
 saDocumentType = documentType . aiContentsHash
 
 ---------------------------------------------------------------------------

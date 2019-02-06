@@ -55,7 +55,7 @@ instance Serialise Assignment
 instance Serialise AssignmentType
 instance Serialise SubmissionWitness
 instance Serialise SignedSubmission
-instance Serialise DocumentType
+instance Serialise (DocumentType a)
 
 instance Serialise Day where
     encode = encode . toModifiedJulianDay

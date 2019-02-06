@@ -112,10 +112,10 @@ instance Arbitrary AssignmentType where
 genCommonAssignmentType :: Gen AssignmentType
 genCommonAssignmentType = frequency [(5, pure Regular), (1, pure CourseFinal)]
 
-instance Arbitrary DocumentType where
+instance Arbitrary (DocumentType a) where
     arbitrary = elements [Offline, Online]
 
-genCommonDocumentType :: Gen DocumentType
+genCommonDocumentType :: Gen (DocumentType a)
 genCommonDocumentType = frequency [(5, pure Offline), (1, pure Online)]
 
 instance Arbitrary EducationForm where

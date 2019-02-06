@@ -6,6 +6,7 @@ import Data.Swagger (ToParamSchema (..), ToSchema (..))
 import qualified Data.Swagger as S
 import qualified Data.Swagger.Internal.ParamSchema as S
 import qualified Data.Swagger.Internal.Schema as S
+import GHC.TypeLits (KnownSymbol)
 
 import Dscp.Core
 import Dscp.Crypto
@@ -26,16 +27,26 @@ type instance ParamDescription Timestamp =
     \Passed value is automatically rounded to microseconds precision."
 type instance ParamDescription Address =
     "Disciplina address."
-type instance ParamDescription (Hash a) =
+type instance ParamDescription (Hash ()) =
     "Hex-encoded blake2b hash value."
+type instance ParamDescription (Hash Assignment) =
+    "Hex-encoded blake2b hash value of assignment."
+type instance ParamDescription (Hash Submission) =
+    "Hex-encoded blake2b hash value of submission."
+type instance ParamDescription (Hash PrivateBlockHeader) =
+    "Hex-encoded blake2b hash value of private block."
+type instance ParamDescription (Hash CertificateMeta) =
+    "Hex-encoded blake2b hash value of certificate meta."
 type instance ParamDescription Course =
     "Course ID."
 type instance ParamDescription Subject =
     "Subject ID."
 type instance ParamDescription Grade =
     "Grade for submission."
-type instance ParamDescription DocumentType =
-    "Type of assignment or submission."
+type instance ParamDescription (DocumentType Assignment) =
+    "Type of assignment."
+type instance ParamDescription (DocumentType Submission) =
+    "Type of submission."
 type instance ParamDescription SubmissionWitness =
     "Concatenated student public key and submission hash signed with \
     \student secret key."
@@ -63,7 +74,7 @@ instance ToParamSchema Subject where
 instance ToParamSchema Timestamp where
     toParamSchema _ = S.timeParamSchema timestampFormat
 
-instance ToParamSchema DocumentType where
+instance ToParamSchema (DocumentType a) where
     toParamSchema = gToParamSchema
 
 ----------------------------------------------------------------------------
@@ -88,7 +99,7 @@ instance ToSchema Address where
             setParamDescription p
             setExample addressEx
 
-instance ToSchema (Hash a) where
+instance KnownSymbol (ParamDescription (Hash a)) => ToSchema (Hash a) where
     declareNamedSchema p =
         declareSimpleSchema "Hash" $ S.byteSchema &: do
             setParamDescription p
@@ -98,6 +109,8 @@ instance {-# OVERLAPPING #-} ToSchema (Hash Raw) where
     declareNamedSchema _ = do
         inDeclaredSchema (declareNamedSchema (Proxy @(Hash ()))) $ do
              setExample offlineHash
+             S.description ?= "Contents hash (e.g. contents of assignment is a problem \
+                              \statement, contents of submission is a text of solution."
 
 instance ToSchema Course where
     declareNamedSchema = idDeclareNamedSchema

@@ -82,7 +82,7 @@ type GetAssignments
     = "assignments"
     :> Tag "Assignments"
     :> FilterParam "course" Core.Course
-    :> FilterParam "type" Core.DocumentType
+    :> FilterParam "type" (Core.DocumentType Core.Assignment)
     :> FilterParam "isFinal" IsFinal
     :> QueryFlag "onlyCount"
     :> SortingParamsOf AssignmentStudentInfo
@@ -112,7 +112,7 @@ type GetSubmissions
     = "submissions"
     :> FilterParam "course" Core.Course
     :> FilterParam "assignment" (Hash Core.Assignment)
-    :> FilterParam "type" Core.DocumentType
+    :> FilterParam "type" (Core.DocumentType Core.Submission)
     :> QueryFlag "onlyCount"
     :> SortingParamsOf SubmissionStudentInfo
     :> PaginationParams

@@ -213,7 +213,7 @@ deriving instance ToHttpApiData IsGraded
 
 type instance ParamDescription IsEnrolled =
     "`True` when the student is currently enrolled to the course, \
-    \`False` when the course is only available for the student."
+    \`False` when the course is yet only available for the student."
 type instance ParamDescription IsFinal =
     "Whether assignment is final/non-final."
 
