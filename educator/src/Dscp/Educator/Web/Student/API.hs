@@ -21,6 +21,7 @@ import Dscp.Educator.Web.Student.Auth
 import Dscp.Educator.Web.Student.Error (DSON, StudentAPIError)
 import Dscp.Educator.Web.Student.Types
 import Dscp.Educator.Web.Types
+import Dscp.Web.Swagger
 
 data StudentApiEndpoints route = StudentApiEndpoints
     { sGetCourses       :: route :- GetCourses
@@ -54,7 +55,7 @@ protectedStudentAPI = Proxy
 
 type GetCourses
     = "courses"
-    :> QueryParam "isEnrolled" IsEnrolled
+    :> FilterParam "isEnrolled" IsEnrolled
     :> QueryFlag "onlyCount"
     :> SortingParamsOf CourseStudentInfo
     :> PaginationParams
@@ -80,9 +81,9 @@ type GetCourse
 type GetAssignments
     = "assignments"
     :> Tag "Assignments"
-    :> QueryParam "course" Core.Course
-    :> QueryParam "type" Core.DocumentType
-    :> QueryParam "isFinal" IsFinal
+    :> FilterParam "course" Core.Course
+    :> FilterParam "type" Core.DocumentType
+    :> FilterParam "isFinal" IsFinal
     :> QueryFlag "onlyCount"
     :> SortingParamsOf AssignmentStudentInfo
     :> PaginationParams
@@ -109,9 +110,9 @@ type GetAssignment
 
 type GetSubmissions
     = "submissions"
-    :> QueryParam "course" Core.Course
-    :> QueryParam "assignment" (Hash Core.Assignment)
-    :> QueryParam "type" Core.DocumentType
+    :> FilterParam "course" Core.Course
+    :> FilterParam "assignment" (Hash Core.Assignment)
+    :> FilterParam "type" Core.DocumentType
     :> QueryFlag "onlyCount"
     :> SortingParamsOf SubmissionStudentInfo
     :> PaginationParams
@@ -164,7 +165,7 @@ type DeleteSubmission
 type GetProofs
     = "proofs"
     :> Tag "Proofs"
-    :> QueryParam "since" Core.Timestamp
+    :> FilterParamSince "since" Core.Timestamp
     :> QueryFlag "onlyCount"
     :> Summary "Get available proofs for student"
     :> Description "Gets private transactions together with corresponding Merkle \

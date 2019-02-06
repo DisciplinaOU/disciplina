@@ -9,6 +9,8 @@ module Dscp.Web.Swagger.Util
          -- * Utilities
        , ParamDescription
        , QueryFlagDescription
+       , FilterParam
+       , FilterParamSince
        , dscpSchemaOptions
        , setParamDescription
        , setExample
@@ -45,10 +47,11 @@ import Data.Typeable (typeRep)
 import Fmt ((+|), (|+))
 import qualified GHC.Generics as G
 import GHC.TypeLits (AppendSymbol, KnownSymbol, Symbol)
-import Servant ((:<|>), (:>), Capture', Description, NoContent, QueryFlag, QueryParam',
-                ServantErr (..), StdMethod, Verb)
+import Servant ((:<|>), (:>), Capture', Description, NoContent, Optional, QueryFlag, QueryParam',
+                ServantErr (..), StdMethod, Strict, Verb)
 import Servant.Swagger (HasSwagger (..))
 
+import Dscp.Core
 import Dscp.Util
 import Dscp.Util.Aeson
 import Dscp.Util.Constructors
@@ -128,6 +131,44 @@ instance (HasSwagger (Capture' mods sym a :> api), HasSwagger api) =>
                    ix 404 . _Inline . S.description
         pureDesc404 = toSwagger (Proxy @api) ^? desc404L
 
+-- | Type of filtering parameter.
+data FilterParamType
+    = MatchingFilter
+      -- ^ Exact value match.
+    | SinceFilter
+      -- ^ Timestamp is greater than a given one.
+
+-- | Modifier for 'QueryParam\'', it effectively affects only swagger documentation.
+data FilterParamMod (ft :: FilterParamType)
+
+-- | Behaves like 'QueryParam', but documentation will mention that provided value
+-- is used as filter.
+type FilterParamExt ft = QueryParam' [Optional, Strict, FilterParamMod ft]
+
+type FilterParam = FilterParamExt 'MatchingFilter
+type FilterParamSince = FilterParamExt 'SinceFilter
+
+-- | Wrapper which changes 'ParamDescription' type instance for a type so that
+-- it mentions type's purpose (being a filter).
+data MentionAsFilter (ft :: FilterParamType) a
+
+type instance ParamDescription (MentionAsFilter 'MatchingFilter a) =
+    "Filter result items by given value - " `AppendSymbol` ParamDescription a
+
+type instance ParamDescription (MentionAsFilter 'SinceFilter Timestamp) =
+    "Return only items starting with the given time."
+
+-- | Gets some version of 'ParamDescription' depending on the given modificators.
+type family RequiredParamDescription mods a where
+    RequiredParamDescription '[] a =
+        ParamDescription a
+
+    RequiredParamDescription (FilterParamMod ft ': ms) a =
+        RequiredParamDescription ms (MentionAsFilter ft a)
+
+    RequiredParamDescription (m ': ms) a =
+        RequiredParamDescription ms a
+
 {- | This applies following transformations to API for the sake of better swagger
 documentation.
 
@@ -148,7 +189,8 @@ type family SwaggerrizeApi api where
         SwaggerCapture (Description (ParamDescription a) ': mods) sym a :> SwaggerrizeApi api
 
     SwaggerrizeApi (QueryParam' mods sym a :> api) =
-        QueryParam' (Description (ParamDescription a) ': mods) sym a :> SwaggerrizeApi api
+        QueryParam' (Description (RequiredParamDescription mods a) ': mods) sym a
+        :> SwaggerrizeApi api
 
     SwaggerrizeApi (QueryFlag name :> api) =
         SwaggerQueryFlag name :> SwaggerrizeApi api

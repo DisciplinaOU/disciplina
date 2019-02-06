@@ -21,6 +21,7 @@ import Dscp.Educator.Web.Educator.Auth
 import Dscp.Educator.Web.Educator.Error
 import Dscp.Educator.Web.Educator.Types
 import Dscp.Educator.Web.Types
+import Dscp.Web.Swagger
 import Dscp.Witness.Web.ContentTypes
 
 data EducatorApiEndpoints route = EducatorApiEndpoints
@@ -76,8 +77,8 @@ type GetStatus
 
 type GetStudents
     = "students"
-    :> QueryParam "course" Course
-    :> QueryParam "isEnrolled" IsEnrolled
+    :> FilterParam "course" Course
+    :> FilterParam "isEnrolled" IsEnrolled
     :> QueryFlag "onlyCount"
     :> PaginationParams
     :> Tag "Students"
@@ -160,7 +161,7 @@ type DeleteStudentAssignment
 
 type GetCourses
     = "courses"
-    :> QueryParam "student" Student
+    :> FilterParam "student" Student
     :> QueryFlag "onlyCount"
     :> PaginationParams
     :> Tag "Courses"
@@ -190,10 +191,10 @@ type GetCourse
 
 type GetAssignments
     = "assignments"
-    :> QueryParam "course" Course
-    :> QueryParam "student" Student
-    :> QueryParam "isFinal" IsFinal
-    :> QueryParam "since" Timestamp
+    :> FilterParam "course" Course
+    :> FilterParam "student" Student
+    :> FilterParam "isFinal" IsFinal
+    :> FilterParamSince "since" Timestamp
     :> QueryFlag "onlyCount"
     :> PaginationParams
     :> Tag "Assignments"
@@ -217,11 +218,11 @@ type AddAssignment
 
 type GetSubmissions
     = "submissions"
-    :> QueryParam "course" Course
-    :> QueryParam "student" Student
-    :> QueryParam "assignment" (Hash Assignment)
-    :> QueryParam "isGraded" IsGraded
-    :> QueryParam "since" Timestamp
+    :> FilterParam "course" Course
+    :> FilterParam "student" Student
+    :> FilterParam "assignment" (Hash Assignment)
+    :> FilterParam "isGraded" IsGraded
+    :> FilterParamSince "since" Timestamp
     :> QueryFlag "onlyCount"
     :> PaginationParams
     :> Tag "Submissions"
@@ -258,11 +259,11 @@ type DeleteSubmission
 
 type GetGrades
     = "grades"
-    :> QueryParam "course" Course
-    :> QueryParam "student" Student
-    :> QueryParam "assignment" (Hash Assignment)
-    :> QueryParam "isFinal" IsFinal
-    :> QueryParam "since" Timestamp
+    :> FilterParam "course" Course
+    :> FilterParam "student" Student
+    :> FilterParam "assignment" (Hash Assignment)
+    :> FilterParam "isFinal" IsFinal
+    :> FilterParamSince "since" Timestamp
     :> QueryFlag "onlyCount"
     :> Tag "Grades"
     :> Summary "Get all grades"
@@ -283,9 +284,9 @@ type AddGrade
 
 type GetProofs
     = "proofs"
-    :> QueryParam "course" Course
-    :> QueryParam "student" Student
-    :> QueryParam "assignment" (Hash Assignment)
+    :> FilterParam "course" Course
+    :> FilterParam "student" Student
+    :> FilterParam "assignment" (Hash Assignment)
     :> QueryFlag "onlyCount"
     :> Tag "Proofs"
     :> Summary "Get proofs of all student's activity"

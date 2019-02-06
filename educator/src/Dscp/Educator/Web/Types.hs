@@ -212,11 +212,10 @@ deriving instance ToHttpApiData IsGraded
 ---------------------------------------------------------------------------
 
 type instance ParamDescription IsEnrolled =
-    "If set to `true`, show only courses in which student is currently \
-    \enrolled, if set to `false` - show only available courses, otherwise \
-    \should all of them."
+    "`True` when the student is currently enrolled to the course, \
+    \`False` when the course is only available for the student."
 type instance ParamDescription IsFinal =
-    "Select only final/non-final assignments."
+    "Whether assignment is final/non-final."
 
 
 instance ToParamSchema IsEnrolled where
