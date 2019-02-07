@@ -50,6 +50,13 @@ data SubmissionValidationFailure
         , svfSubmissionSig    :: !SubmissionSig }
     deriving (Eq, Show)
 
+data CertificationValidationFailure
+    = CertificationSignatureMismatch
+      { csmCertificationHash   :: !(Hash Submission)
+      , csmCertificationSigKey :: !PublicKey
+      , csmCertificationSig    :: !(Signature CertificateGrade)
+      }
+
 -- | Any issues with submission signature content.
 data WrongSubmissionSignature
     = FakeSubmissionSignature
@@ -122,6 +129,30 @@ validateSubmission ss =
           )
         ]
 
+validateSubmission
+    :: SignedSubmission
+    -> Either [SubmissionValidationFailure] ()
+validateSubmission ss =
+    let submission = ss^.ssSubmission
+        witnessKey = ss^.ssWitness.swKey
+        witnessSign = ss^.ssWitness.swSig
+        subAddrHash = submission^.sStudentId.to addrHash
+        witnessSigValid = verify witnessKey (hash submission) witnessSign
+        witnessKeyValid = hash witnessKey == subAddrHash
+    in verifyGeneric
+        [ (witnessKeyValid,
+            SubmissionPublicKeyMismatch { svfExpectedPubKey = subAddrHash
+                                        , svfActualPubKey   = hash witnessKey
+                                        }
+          )
+        , (witnessSigValid,
+            SubmissionSignatureMismatch { svfSubmissionHash   = hash submission
+                                        , svfSubmissionSig    = witnessSign
+                                        , svfSubmissionSigKey = witnessKey
+                                        }
+          )
+        ]
+
 -- | Checks that
 -- 1. 'SignedSubmission' is valid;
 -- 2. It was actually signed by a student who makes a request.
@@ -144,19 +175,20 @@ verifyStudentSubmission author ss = do
 --    for given submission
 validatePrivateBlk :: PrivateBlock -> Either [BlockValidationFailure] ()
 validatePrivateBlk pb =
-    let subs =_pbbTxs (_pbBody pb)
-        merkleRoot = getMerkleRoot (fromFoldable subs)
-        headerVer = validateHeader (_pbHeader pb) merkleRoot
+    let subs        = _pbbTxs (_pbBody pb)
+        merkleRoot  = getMerkleRoot (fromFoldable subs)
+        headerVer   = validateHeader (_pbHeader pb) merkleRoot
         headerValid = verifyGeneric headerVer
-        subValid = foldl' (\acc sub -> validateSub sub `mappendLefts` acc)
-                   pass subs
+        subValid    = foldl' (\acc sub -> validateSub sub `mappendLefts` acc)
+                      pass subs
     in headerValid `mappendLefts` subValid
   where
     validateHeader PrivateBlockHeader {..} merkleRoot =
         [ (_pbhBodyProof == merkleRoot,
-          MerkleSignatureMismatch { bvfExpectedSig     = _pbhBodyProof
-                                  , bvfActualMerkleSig =  merkleRoot
-                                  }
+          MerkleSignatureMismatch
+            { bvfExpectedSig     = _pbhBodyProof
+            , bvfActualMerkleSig =  merkleRoot
+            }
           )
         ]
     validateSub sub =

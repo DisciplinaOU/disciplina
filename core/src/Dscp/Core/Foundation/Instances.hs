@@ -32,8 +32,13 @@ instance HasId PrivateBlock where
 
 -- | Transactions
 instance Serialise PrivateTx
+instance Serialise PrivateGrade
+instance Serialise PrivateCertification
 instance Serialise PrivateTxWitness
 instance Serialise PrivateTxAux
+instance Serialise CertificateGrade
+instance Serialise SignedCertificateGrade
+instance Serialise Language
 
 instance HasId PrivateTx where
     type Id PrivateTx = Hash PrivateTx

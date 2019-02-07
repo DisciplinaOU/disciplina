@@ -173,6 +173,18 @@ instance Arbitrary CertificateName where
 instance Arbitrary PrivateTx where
     arbitrary = PrivateTx <$> arbitrary <*> arbitrary <*> arbitrary
 
+instance Arbitrary PrivateTxGrade where
+    arbitrary = genericArbitrary
+    shrink    = genericShrink
+
+instance Arbitrary PrivateGrade where
+    arbitrary = genericArbitrary
+    shrink    = genericShrink
+
+instance Arbitrary PrivateCertification where
+    arbitrary = genericArbitrary
+    shrink    = genericShrink
+
 instance Arbitrary ATGSubjectChange where
     arbitrary = genericArbitrary
     shrink    = genericShrink

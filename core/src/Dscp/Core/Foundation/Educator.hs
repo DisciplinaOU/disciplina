@@ -32,6 +32,7 @@ module Dscp.Core.Foundation.Educator
     , CertificateMeta (..)
     , CertificateGrade (..)
     , CertificateIssuerInfo (..)
+    , SignedCertificateGrade (..)
     , Certificate (..)
     , CertificateName (..)
     , StudentInfo (..)
@@ -57,6 +58,8 @@ module Dscp.Core.Foundation.Educator
 
     -- * Private transactions
     , PrivateTx (..)
+    , PrivateGrade (..)
+    , PrivateCertification (..)
     , PrivateTxWitness (..)
     , PrivateTxAux (..)
 
@@ -68,6 +71,11 @@ module Dscp.Core.Foundation.Educator
     , ptTime
     , ptwKey
     , ptwSig
+    , pcGrade
+    , pcStudent
+    , scgKey
+    , scgSig
+    , scgCertificateGrade
 
     -- * Basic types
     , PrivateHeaderHash
@@ -101,7 +109,7 @@ module Dscp.Core.Foundation.Educator
     ) where
 
 import Control.Exception as E
-import Control.Lens (Getter, makeLenses, to)
+import Control.Lens (Getter, makeLenses, makePrisms, to)
 import qualified Data.ByteArray as BA
 import qualified Data.Text as T
 import Data.Time.Calendar (Day (..))
@@ -367,10 +375,10 @@ data CertificateGrade = CertificateGrade
     , cgCredits :: Maybe Word32
     , cgScale   :: GradingScale
     , cgGrade   :: Grade
-    } deriving (Show, Eq, Generic)
+    } deriving (Show, Eq, Ord, Generic)
 
 data Language = EN | RU
-    deriving (Show, Eq, Generic)
+    deriving (Show, Eq, Ord, Generic)
 
 -- | Datatype which contains all the info about certificate. This
 -- datatype represents a request body for 'AddCertificate' endpoint.
@@ -458,8 +466,24 @@ instance Buildable CertificateName where
 -- Transactions
 ----------------------------------------------------------------------------
 
+data PrivateTx
+    = PrivateTxGrade !PrivateGrade
+    | PrivateTxCertification !PrivateCertification
+      deriving (Show, Eq, Ord, Generic)
+
+data PrivateCertification = PrivateCertification
+    { _pcGrade   :: !SignedCertificateGrade
+    , _pcStudent :: !Student
+    } deriving (Show, Eq, Ord, Generic)
+
+data SignedCertificateGrade = SignedCertificateGrade
+    { _scgCertificateGrade :: !CertificateGrade
+    , _scgKey              :: !PublicKey
+    , _scgSig              :: !(Signature CertificateGrade)
+    } deriving (Show, Eq, Ord, Generic)
+
 -- | Private transaction.
-data PrivateTx = PrivateTx
+data PrivateGrade = PrivateGrade
     { _ptSignedSubmission :: !SignedSubmission
     -- ^ Every transaction contains one signed student submission
     , _ptGrade            :: !Grade
@@ -493,7 +517,10 @@ data PrivateTxAux = PrivateTxAux
     , _ptaWitness :: !PrivateTxWitness
     } deriving (Show, Eq, Generic)
 
-makeLenses ''PrivateTx
+makePrisms ''PrivateTx
+makeLenses ''PrivateGrade
+makeLenses ''SignedCertificateGrade
+makeLenses ''PrivateCertification
 makeLenses ''PrivateTxWitness
 makeLenses ''PrivateTxAux
 
