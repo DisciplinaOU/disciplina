@@ -10,6 +10,7 @@ import Dscp.Core.Arbitrary
 import Dscp.Crypto
 import Dscp.Educator.Web.Bot
 import Dscp.Educator.Web.Student
+import Dscp.Educator.Web.Types
 import Dscp.Util.Test
 import Test.QuickCheck.Monadic (pick)
 
@@ -35,13 +36,15 @@ spec_StudentApiWithBotQueries :: Spec
 spec_StudentApiWithBotQueries = specWithTempPostgresServer $ do
     it "Student gets assigned on courses on first request" $
         educatorProperty $ \seed -> do
-            StudentApiEndpoints{..} <- initializeBot (testBotParams seed) (pure testBotHandlers)
-            courses <- sGetCourses Nothing False def def
+            StudentApiEndpoints{..} <- initializeBot (testBotParams seed) $
+                                       testBotHandlers <$ botProvideInitSetting student
+            courses <- sGetCourses (Just (IsEnrolled True)) False def def
             return (not $ null courses)
 
     it "Student gets some assignments on first request" $
         educatorProperty $ \seed -> do
-            StudentApiEndpoints{..} <- initializeBot (testBotParams seed) (pure testBotHandlers)
+            StudentApiEndpoints{..} <- initializeBot (testBotParams seed) $
+                                       testBotHandlers <$ botProvideInitSetting student
             assignments <- sGetAssignments Nothing Nothing Nothing False def def
             return (not $ null assignments)
 
