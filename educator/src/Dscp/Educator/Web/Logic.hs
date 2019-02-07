@@ -22,16 +22,15 @@ commonGetProofs
     :: MonadEducatorWebQuery m
     => GetProvenStudentTransactionsFilters
     -> DBT 'WithinTx m [BlkProofInfo]
-commonGetProofs filters = do
-    rawProofs <- getProvenStudentTransactions filters
-    return
-        [ BlkProofInfo
-          { bpiBlockHash = bHash
-          , bpiMtreeSerialized = EncodeSerialised mtree
-          , bpiTxs = txs
-          }
-        | (bHash, mtree, txs) <- rawProofs
-        ]
+commonGetProofs filters =
+    map toBlkProofInfo <$> getProvenStudentTransactions filters
+  where
+    toBlkProofInfo (bHash, mtree, txs) =
+        BlkProofInfo
+        { bpiBlockHash = bHash
+        , bpiMtreeSerialized = EncodeSerialised mtree
+        , bpiTxs = txs
+        }
 
 getEducatorStatus
     :: MonadEducatorWeb ctx m

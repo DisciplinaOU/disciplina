@@ -10,6 +10,7 @@ module Dscp.Util
        , Seed (..)
        , execUnmasked
        , fromIntegralChecked
+       , groupToAssoc
 
          -- * Exceptions processing
        , wrapRethrow
@@ -77,7 +78,9 @@ import Control.Monad.Except (MonadError (..))
 import Data.ByteArray (ByteArrayAccess)
 import Data.ByteArray.Encoding (Base (..), convertFromBase, convertToBase)
 import qualified Data.ByteString.Lazy as BSL
+import qualified Data.Map as M
 import Data.Typeable (typeRep)
+import qualified GHC.Exts as Exts
 import GHC.TypeLits (KnownSymbol, symbolVal)
 import UnliftIO (MonadUnliftIO)
 import qualified UnliftIO.Async as UIO
@@ -154,6 +157,12 @@ fromIntegralChecked x =
     in if fromIntegral r == x
           then r
           else error "Integral overflow"
+
+groupToAssoc :: Ord k => [(k, v)] -> [(k, NonEmpty v)]
+groupToAssoc =
+    M.toList . fmap Exts.fromList . foldl' push M.empty
+  where
+    push acc a = M.insertWith (++) (fst a) [snd a] acc
 
 -----------------------------------------------------------
 -- Exceptions processing

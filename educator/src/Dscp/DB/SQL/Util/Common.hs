@@ -30,7 +30,7 @@ import Prelude hiding (_1, _2)
 import Data.Coerce (coerce)
 import qualified Database.Beam.Backend.SQL as Beam
 import Database.Beam.Migrate (HasDefaultSqlDataType (..))
-import Database.Beam.Postgres as BeamReexport (PgJSONB (..))
+import Database.Beam.Postgres as BeamReexport (PgJSONB (..), arrayOf_)
 import qualified Database.Beam.Postgres as Beam
 import Database.Beam.Query as BeamReexport (QExpr, QGenExpr (..), aggregate_, all_, as_, asc_,
                                             countAll_, default_, delete, desc_, exists_, filter_,

@@ -15,8 +15,8 @@ module Dscp.Educator.Web.Util.Count
 import Database.Beam.Backend (FromBackendRow)
 import Database.Beam.Backend.SQL (Sql92SelectSelectTableSyntax, Sql92SelectTableExpressionSyntax)
 import Database.Beam.Postgres (Postgres)
-import Database.Beam.Postgres.Syntax (PgSelectSyntax)
-import Database.Beam.Query (Q, QExprToIdentity, QGenExpr, SqlSelect, just_, nothing_)
+import Database.Beam.Postgres.Syntax (PgExpressionSyntax, PgSelectSyntax)
+import Database.Beam.Query (Q, QGenExpr, SqlSelect, just_, nothing_)
 import Database.Beam.Query.Internal (ProjectibleWithPredicate, QNested, QValueContext, ValueContext)
 import Database.Beam.Schema (C, Nullable)
 import Servant.Util (PaginationSpec)
@@ -93,6 +93,24 @@ onlyCountRows query = do
     cCount <- countRows query
     return Counted{ cCount, cItems = Nothing }
 
+-- | This is a best-effort attempt to implement an inverse of
+-- 'Database.Beam.Query.QExprToIdentity'.
+-- Without it, using `endpointSelect` would be extremely painful.
+type family IdentityToQExpr ctx syntax s a where
+    IdentityToQExpr ctx syntax s (table _) = table (QGenExpr ctx syntax s)
+    IdentityToQExpr ctx syntax s (Maybe (table _)) = table (Nullable (QGenExpr ctx syntax s))
+    IdentityToQExpr ctx syntax s () = ()
+    IdentityToQExpr ctx syntax s (a, b) =
+        ( IdentityToQExpr ctx syntax s a
+        , IdentityToQExpr ctx syntax s b
+        )
+    IdentityToQExpr ctx syntax s (a, b, c) =
+        ( IdentityToQExpr ctx syntax s a
+        , IdentityToQExpr ctx syntax s b
+        , IdentityToQExpr ctx syntax s c
+        )
+    IdentityToQExpr ctx syntax s a = QGenExpr ctx syntax s a
+
 -- | Template for @GET@ endpoints returning many items.
 endpointSelect
     :: forall r a db t m.
@@ -101,11 +119,11 @@ endpointSelect
        )
     => Bool
     -> PaginationSpec
-    -> (QExprToIdentity r -> a)
-    -> (forall s. Q PgSelectSyntax db s r)
+    -> (r -> a)
+    -> (forall s. Q PgSelectSyntax db s (IdentityToQExpr QValueContext PgExpressionSyntax s r))
     -> DBT t m (Counted a)
 endpointSelect onlyCount pagination mapper query
     | onlyCount = onlyCountRows query
     | otherwise =
-        fmap (mkCountedList True) . runSelectMap mapper . select $
+        fmap toCountedList . runSelectMap mapper . select $
         paginate_ pagination query

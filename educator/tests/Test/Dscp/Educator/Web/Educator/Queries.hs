@@ -31,7 +31,7 @@ spec_Educator_API_queries = specWithTempPostgresServer $ do
             students <- pickSmall listUnique
             lift $ forM_ students createStudent
 
-            students' <- lift $ educatorGetStudents Nothing def
+            (cItems -> Just students') <- lift $ educatorGetStudents Nothing False def
             return $ sort students' === sort (map StudentInfo students)
 
         it "Filtering works" $ sqlPropertyM $ do

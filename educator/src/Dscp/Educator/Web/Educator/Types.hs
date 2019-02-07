@@ -16,6 +16,7 @@ module Dscp.Educator.Web.Educator.Types
       -- * Responses
     , Counted (..)
     , mkCountedList
+    , toCountedList
     , EducatorInfo (..)
     , CourseEducatorInfo (..)
     , AssignmentEducatorInfo (..)
@@ -30,6 +31,7 @@ module Dscp.Educator.Web.Educator.Types
     , educatorLiftAssignment
     , educatorLiftSubmission
     , requestToAssignment
+    , educatorCourseInfoFromRow
     , educatorAssignmentInfoFromRow
     , educatorSubmissionInfoFromRow
     ) where
@@ -127,6 +129,10 @@ mkCountedList :: Bool -> [a] -> Counted a
 mkCountedList onlyCount ls =
     Counted (L.genericLength ls) (if onlyCount then Nothing else Just ls)
 
+-- | Makes a 'Counted' from a list
+toCountedList :: [a] -> Counted a
+toCountedList = mkCountedList False
+
 ---------------------------------------------------------------------------
 -- Sorting
 ---------------------------------------------------------------------------
@@ -167,6 +173,14 @@ requestToAssignment NewAssignment{..} =
     , _aContentsHash = naContentsHash
     , _aType = naIsFinal ^. from assignmentTypeRaw
     , _aDesc = naDesc
+    }
+
+educatorCourseInfoFromRow :: (Course, ItemDesc, Vector Subject) -> CourseEducatorInfo
+educatorCourseInfoFromRow (ciId, ciDesc, toList -> ciSubjects) =
+    CourseEducatorInfo
+    { ciId
+    , ciDesc
+    , ciSubjects
     }
 
 educatorAssignmentInfoFromRow :: AssignmentRow -> AssignmentEducatorInfo

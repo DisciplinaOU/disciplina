@@ -67,7 +67,8 @@ studentApiHandlers student =
       -- Proofs
 
     , sGetProofs = \pfSince _onlyCount ->
-        transact $ commonGetProofs def{ pfSince, pfStudent = Just student }
+        transact $ commonGetProofs
+            def{ pfSince, pfStudent = Just student }
     }
 
 convertStudentApiHandler

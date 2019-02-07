@@ -24,15 +24,14 @@ module Dscp.Educator.Web.Educator.Queries
     , educatorGetCertificates
     ) where
 
-import Control.Lens (from, mapping, traversed, _Just)
+import Control.Lens (from, mapping)
 import Data.Default (Default)
-import Data.List (groupBy)
 import Data.Time.Clock (getCurrentTime)
 import Loot.Base.HasLens (lensOf)
 import qualified Pdf.FromLatex as Pdf
 import Pdf.Scanner (PDFBody)
 import Servant (err501)
-import Servant.Util (PaginationSpec, SortingSpecOf, HList (HNil), (.*.))
+import Servant.Util (PaginationSpec, SortingSpecOf, HList (HNil), (.*.), fullContent)
 import Servant.Util.Beam.Postgres (bySpec_, fieldSort_, paginate_)
 
 import Dscp.Core
@@ -48,20 +47,6 @@ import Dscp.Educator.Web.Types
 import Dscp.Resource.Keys
 import Dscp.Educator.Web.Util
 import Dscp.Util
-
-import Database.Beam.Backend (Exposed, FromBackendRow)
-import Database.Beam.Backend.SQL (Sql92SelectSelectTableSyntax, Sql92SelectTableExpressionSyntax)
-import Database.Beam.Postgres (Postgres)
-import Database.Beam.Postgres.Syntax (PgExpressionSyntax, PgSelectSyntax)
-import Database.Beam.Query (Q, QGenExpr, SqlSelect, just_, nothing_)
-import Database.Beam.Query.Internal (Q)
-import Database.Beam.Query.Internal (ProjectibleWithPredicate, QNested, QValueContext, ValueContext)
-import Database.Beam.Schema (Beamable, C, Nullable)
-import Dscp.DB.SQL
-import Dscp.Educator.Web.Educator.Types
-import Servant.Util (PaginationSpec)
-import Servant.Util.Beam.Postgres (paginate_)
-
 
 ----------------------------------------------------------------------------
 -- Filters for endpoints
@@ -117,27 +102,20 @@ educatorGetCourses
     => Maybe Student
     -> Bool
     -> PaginationSpec
-    -> DBT t m [CourseEducatorInfo]
-educatorGetCourses studentF _onlyCount pagination = do
-    res :: [(Course, ItemDesc, Maybe Subject)] <-
-        runSelect . select $
-        paginate_ pagination query
-    return
-        -- group "subject" fields for the same courses
-        [ CourseEducatorInfo{ ciId, ciDesc, ciSubjects }
-        | course@((ciId, ciDesc, _) : _) <- groupBy ((==) `on` view _1) res
-        , let ciSubjects = course ^.. traversed . _3 . _Just
-        ]
-  where
-    query = do
+    -> DBT t m (Counted CourseEducatorInfo)
+educatorGetCourses studentF onlyCount pagination =
+    endpointSelect onlyCount pagination educatorCourseInfoFromRow $ do
         course <- all_ (esCourses es)
 
         whenJust studentF $ \student ->
             link_ (esStudentCourses es) (valPk_ student :-: pk_ course)
 
-        subject <- leftJoin_ (all_ $ esSubjects es)
-                              ((`references_` course) . srCourse)
-        return (crId course, crDesc course, srId subject)
+        let subjectIds = arrayOf_ $ do
+                subject <- all_ (esSubjects es)
+                guard_ (srCourse subject `references_` course)
+                return $ srId subject
+
+        return (crId course, crDesc course, subjectIds)
 
 educatorGetCourse
     :: MonadEducatorWebQuery m
@@ -240,12 +218,9 @@ educatorGetGrades
     -> Maybe (Hash Assignment)
     -> Maybe IsFinal
     -> Bool
-    -> DBT t m [GradeInfo]
+    -> DBT t m (Counted GradeInfo)
 educatorGetGrades courseIdF studentF assignmentF isFinalF onlyCount =
-    runSelectMap gradeInfoFromRow . select $
-        query
-  where
-    query = do
+    endpointSelect onlyCount fullContent gradeInfoFromRow $ do
         privateTx <- all_ (esTransactions es)
         submission <- related_ (esSubmissions es) (trSubmission privateTx)
         assignment <- related_ (esAssignments es) (srAssignment submission)
