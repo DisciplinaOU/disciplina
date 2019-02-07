@@ -1,5 +1,9 @@
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE QuasiQuotes    #-}
+{-# LANGUAGE DeriveAnyClass            #-}
+{-# LANGUAGE NoMonomorphismRestriction #-}
+{-# LANGUAGE QuasiQuotes               #-}
+
+{-# LANGUAGE PartialTypeSignatures     #-}
+{-# OPTIONS_GHC -Wno-partial-type-signatures #-}
 
 module Dscp.Educator.Web.Educator.Queries
     ( EducatorGetAssignmentsFilters (..)
@@ -45,6 +49,20 @@ import Dscp.Resource.Keys
 import Dscp.Educator.Web.Util
 import Dscp.Util
 
+import Database.Beam.Backend (Exposed, FromBackendRow)
+import Database.Beam.Backend.SQL (Sql92SelectSelectTableSyntax, Sql92SelectTableExpressionSyntax)
+import Database.Beam.Postgres (Postgres)
+import Database.Beam.Postgres.Syntax (PgExpressionSyntax, PgSelectSyntax)
+import Database.Beam.Query (Q, QGenExpr, SqlSelect, just_, nothing_)
+import Database.Beam.Query.Internal (Q)
+import Database.Beam.Query.Internal (ProjectibleWithPredicate, QNested, QValueContext, ValueContext)
+import Database.Beam.Schema (Beamable, C, Nullable)
+import Dscp.DB.SQL
+import Dscp.Educator.Web.Educator.Types
+import Servant.Util (PaginationSpec)
+import Servant.Util.Beam.Postgres (paginate_)
+
+
 ----------------------------------------------------------------------------
 -- Filters for endpoints
 ----------------------------------------------------------------------------
@@ -88,12 +106,11 @@ educatorGetStudents
     :: MonadEducatorWebQuery m
     => Maybe Course -> Bool -> PaginationSpec -> DBT t m (Counted StudentInfo)
 educatorGetStudents courseF onlyCount pagination =
-    runCountedSelectMap StudentInfo . select $
-        countPaginate_ onlyCount pagination $ do
-            student <- all_ (esStudents es)
-            whenJust courseF $ \course ->
-                link_ (esStudentCourses es) (pk_ student :-: valPk_ course)
-            return (srAddr student)
+    endpointSelect onlyCount pagination (StudentInfo . srAddr) $ do
+        student <- all_ (esStudents es)
+        whenJust courseF $ \course ->
+            link_ (esStudentCourses es) (pk_ student :-: valPk_ course)
+        return student
 
 educatorGetCourses
     :: DBM m
@@ -164,8 +181,7 @@ educatorGetAssignments
     -> PaginationSpec
     -> DBT t m (Counted AssignmentEducatorInfo)
 educatorGetAssignments filters onlyCount pagination =
-    runCountedSelectMap educatorAssignmentInfoFromRow . select $
-    countPaginate_ onlyCount pagination $ do
+    endpointSelect onlyCount pagination educatorAssignmentInfoFromRow $ do
         assignment <- all_ (esAssignments es)
 
         guard_ $ filterMatchesPk_ (afCourse filters) (arCourse assignment)
@@ -197,11 +213,11 @@ educatorGetSubmission subH = do
 educatorGetSubmissions
     :: MonadEducatorWebQuery m
     => EducatorGetSubmissionsFilters
+    -> Bool
     -> PaginationSpec
-    -> DBT t m [SubmissionEducatorInfo]
-educatorGetSubmissions filters pagination =
-    runSelectMap educatorSubmissionInfoFromRow . select $
-    paginate_ pagination $ do
+    -> DBT t m (Counted SubmissionEducatorInfo)
+educatorGetSubmissions filters onlyCount pagination =
+    endpointSelect onlyCount pagination educatorSubmissionInfoFromRow $ do
         submission <- all_ (esSubmissions es)
         assignment <- related_ (esAssignments es) (srAssignment submission)
 
@@ -224,10 +240,10 @@ educatorGetGrades
     -> Maybe (Hash Assignment)
     -> Maybe IsFinal
     -> Bool
-    -> DBT t m (Counted GradeInfo)
+    -> DBT t m [GradeInfo]
 educatorGetGrades courseIdF studentF assignmentF isFinalF onlyCount =
-    runCountedSelectMap gradeInfoFromRow . select $
-        counting_ onlyCount query
+    runSelectMap gradeInfoFromRow . select $
+        query
   where
     query = do
         privateTx <- all_ (esTransactions es)

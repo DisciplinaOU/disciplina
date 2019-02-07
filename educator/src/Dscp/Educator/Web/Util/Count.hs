@@ -7,13 +7,16 @@ module Dscp.Educator.Web.Util.Count
     , countPaginate_
     , runCountedSelect
     , runCountedSelectMap
+
+    , onlyCountRows
+    , endpointSelect
     ) where
 
 import Database.Beam.Backend (FromBackendRow)
 import Database.Beam.Backend.SQL (Sql92SelectSelectTableSyntax, Sql92SelectTableExpressionSyntax)
 import Database.Beam.Postgres (Postgres)
 import Database.Beam.Postgres.Syntax (PgSelectSyntax)
-import Database.Beam.Query (Q, QGenExpr, SqlSelect, just_, nothing_)
+import Database.Beam.Query (Q, QExprToIdentity, QGenExpr, SqlSelect, just_, nothing_)
 import Database.Beam.Query.Internal (ProjectibleWithPredicate, QNested, QValueContext, ValueContext)
 import Database.Beam.Schema (C, Nullable)
 import Servant.Util (PaginationSpec)
@@ -59,9 +62,9 @@ countPaginate_ countOnly pagination
 fromBeamCounted :: [CountedT a Identity] -> Counted a
 fromBeamCounted = \case
     [] -> Counted{ cCount = 0, cItems = Just [] }  -- TODO: is it ok to show both diregard "onlyCount" value?
-    ((Just c, _) : _) -> Counted{ cCount = c, cItems = Nothing }
+    ((Just c, _) : _) -> Counted{ cCount = fromIntegral c, cItems = Nothing }
     cs -> Counted
-          { cCount = length cs
+          { cCount = fromIntegral $ length cs
           , cItems = Just $ map (fromMaybe (error ":shrug:") . snd) cs
           }
 
@@ -79,3 +82,30 @@ runCountedSelect
     => SqlSelect PgSelectSyntax (CountedT a Identity)
     -> DBT t m (Counted a)
 runCountedSelect = runCountedSelectMap id
+
+
+
+-- | Return 'Counted' without actual elements.
+onlyCountRows
+    :: MonadIO m
+    => Q PgSelectSyntax db (QNested _) a -> DBT t m (Counted b)
+onlyCountRows query = do
+    cCount <- countRows query
+    return Counted{ cCount, cItems = Nothing }
+
+-- | Template for @GET@ endpoints returning many items.
+endpointSelect
+    :: forall r a db t m.
+       ( MonadIO m
+       , _
+       )
+    => Bool
+    -> PaginationSpec
+    -> (QExprToIdentity r -> a)
+    -> (forall s. Q PgSelectSyntax db s r)
+    -> DBT t m (Counted a)
+endpointSelect onlyCount pagination mapper query
+    | onlyCount = onlyCountRows query
+    | otherwise =
+        fmap (mkCountedList True) . runSelectMap mapper . select $
+        paginate_ pagination query
