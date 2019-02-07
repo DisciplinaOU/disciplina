@@ -2,7 +2,7 @@
 
 -- | Utils for educator servers.
 
-module Dscp.Educator.Web.Util
+module Dscp.Educator.Web.Instances
      ( domainErrorToShortJSON
      , domainToServantErrNoReason
      ) where
