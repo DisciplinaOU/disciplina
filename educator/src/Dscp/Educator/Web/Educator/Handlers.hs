@@ -32,7 +32,7 @@ educatorApiHandlers =
       -- Students
 
     , eGetStudents = \mCourse _mIsEnrolled onlyCount pagination ->
-        fmap (mkCountedList onlyCount) $ invoke $ educatorGetStudents mCourse pagination
+        invoke $ educatorGetStudents mCourse onlyCount pagination
 
     , eAddStudent = \(NewStudent student) ->
         void . invoke $ createStudent student
@@ -52,7 +52,7 @@ educatorApiHandlers =
       -- Courses
 
     , eGetCourses = \mStudent onlyCount pagination ->
-        fmap (mkCountedList onlyCount) $ invoke $ educatorGetCourses mStudent pagination
+        invoke $ educatorGetCourses mStudent onlyCount pagination
 
     , eAddCourse = \(NewCourse mcid desc subjects) ->
         transact $ createCourse CourseDetails
@@ -92,8 +92,7 @@ educatorApiHandlers =
       -- Grades
 
     , eGetGrades = \course student assignment isFinalF _since onlyCount ->
-            fmap (mkCountedList onlyCount) $ invoke $
-            educatorGetGrades course student assignment isFinalF
+            invoke $ educatorGetGrades course student assignment isFinalF onlyCount
 
     , eAddGrade = \(NewGrade subH grade) ->
             transact $ educatorPostGrade subH grade

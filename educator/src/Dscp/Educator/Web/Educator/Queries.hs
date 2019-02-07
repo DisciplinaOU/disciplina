@@ -42,6 +42,7 @@ import Dscp.Educator.Web.Educator.Types
 import Dscp.Educator.Web.Queries
 import Dscp.Educator.Web.Types
 import Dscp.Resource.Keys
+import Dscp.Educator.Web.Util
 import Dscp.Util
 
 ----------------------------------------------------------------------------
@@ -85,19 +86,22 @@ educatorRemoveStudent student = do
 
 educatorGetStudents
     :: MonadEducatorWebQuery m
-    => Maybe Course -> PaginationSpec -> DBT t m [StudentInfo]
-educatorGetStudents courseF pagination =
-    runSelectMap StudentInfo . select $
-    paginate_ pagination $ do
-        student <- all_ (esStudents es)
-        whenJust courseF $ \course ->
-            link_ (esStudentCourses es) (pk_ student :-: valPk_ course)
-        return (srAddr student)
+    => Maybe Course -> Bool -> PaginationSpec -> DBT t m (Counted StudentInfo)
+educatorGetStudents courseF onlyCount pagination =
+    runCountedSelectMap StudentInfo . select $
+        countPaginate_ onlyCount pagination $ do
+            student <- all_ (esStudents es)
+            whenJust courseF $ \course ->
+                link_ (esStudentCourses es) (pk_ student :-: valPk_ course)
+            return (srAddr student)
 
 educatorGetCourses
     :: DBM m
-    => Maybe Student -> PaginationSpec -> DBT t m [CourseEducatorInfo]
-educatorGetCourses studentF pagination = do
+    => Maybe Student
+    -> Bool
+    -> PaginationSpec
+    -> DBT t m [CourseEducatorInfo]
+educatorGetCourses studentF _onlyCount pagination = do
     res :: [(Course, ItemDesc, Maybe Subject)] <-
         runSelect . select $
         paginate_ pagination query
@@ -156,11 +160,12 @@ educatorGetAssignment assignH =
 educatorGetAssignments
     :: MonadEducatorWebQuery m
     => EducatorGetAssignmentsFilters
+    -> Bool
     -> PaginationSpec
-    -> DBT t m [AssignmentEducatorInfo]
-educatorGetAssignments filters pagination =
-    runSelectMap educatorAssignmentInfoFromRow . select $
-    paginate_ pagination $ do
+    -> DBT t m (Counted AssignmentEducatorInfo)
+educatorGetAssignments filters onlyCount pagination =
+    runCountedSelectMap educatorAssignmentInfoFromRow . select $
+    countPaginate_ onlyCount pagination $ do
         assignment <- all_ (esAssignments es)
 
         guard_ $ filterMatchesPk_ (afCourse filters) (arCourse assignment)
@@ -218,9 +223,13 @@ educatorGetGrades
     -> Maybe Student
     -> Maybe (Hash Assignment)
     -> Maybe IsFinal
-    -> DBT t m [GradeInfo]
-educatorGetGrades courseIdF studentF assignmentF isFinalF =
-    runSelectMap gradeInfoFromRow . select $ do
+    -> Bool
+    -> DBT t m (Counted GradeInfo)
+educatorGetGrades courseIdF studentF assignmentF isFinalF onlyCount =
+    runCountedSelectMap gradeInfoFromRow . select $
+        counting_ onlyCount query
+  where
+    query = do
         privateTx <- all_ (esTransactions es)
         submission <- related_ (esSubmissions es) (trSubmission privateTx)
         assignment <- related_ (esAssignments es) (srAssignment submission)

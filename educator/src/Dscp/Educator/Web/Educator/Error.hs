@@ -22,7 +22,7 @@ import Dscp.Educator.DB (DomainError)
 import Servant (ServantErr (..), err400, err503)
 import Servant.Util (SimpleJSON)
 
-import Dscp.Educator.Web.Util
+import Dscp.Educator.Web.Instances
 import Dscp.Web.Class
 
 -- | Any error backend may return.

@@ -1,4 +1,5 @@
-{-# LANGUAGE StrictData #-}
+{-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE StrictData    #-}
 
 -- | Types specific to educator API.
 
@@ -117,7 +118,7 @@ mkCertificate meta = Certificate (hash meta) meta
 data Counted a = Counted
     { cCount :: Int
     , cItems :: Maybe [a]
-    } deriving (Show, Eq, Generic)
+    } deriving (Show, Eq, Functor, Generic)
 
 -- | Makes a 'Counted' from a list, omitting the list itself if
 -- @onlyCount@ flag is set
@@ -300,10 +301,10 @@ instance Buildable (ForResponseLog [Certificate]) where
 instance Buildable (ForResponseLog [a]) =>
          Buildable (ForResponseLog (Counted a)) where
     build (ForResponseLog (Counted n mbLs)) =
-        "Counted { n = "+|n|+", items = "+|mbItems mbLs|+" }"
+        "Counted { n = "+|n|+", items: "+|mbItems mbLs|+" }"
       where
         mbItems Nothing   = "omitted"
-        mbItems (Just ls) = build (ForResponseLog ls)
+        mbItems (Just ls) = "\n" <> build (ForResponseLog ls)
 
 ---------------------------------------------------------------------------
 -- JSON instances

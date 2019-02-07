@@ -23,7 +23,7 @@ import Servant.Util (SimpleJSON)
 import Dscp.Core.Validation
 import Dscp.DB.SQL (SQLRequestsNumberExceeded)
 import Dscp.Educator.DB (DomainError (..))
-import Dscp.Educator.Web.Util
+import Dscp.Educator.Web.Instances
 import Dscp.Web.Class
 
 -- | Any error backend may return.
