@@ -47,7 +47,6 @@ import Servant.Server.Internal.RoutingApplication (DelayedIO, addAuthCheck, dela
 import Servant.Util (ApiCanLogArg (..), ApiHasArgClass (..))
 
 import Dscp.Crypto
-
 import Dscp.Util
 import Dscp.Util.Type
 import Dscp.Util.Servant
@@ -92,7 +91,7 @@ instance ( HasServer api ctx
                 _ -> delayedFailFatal $ err401 { errHeaders = [("WWW-Authenticate", authMsg)] }
 
 instance ApiHasArgClass (Auth' auths res) where
-    apiArgName = const "Authenticate"
+    apiArgName = const "authenticated"
 
 instance ApiCanLogArg (Auth' auths res)
 
