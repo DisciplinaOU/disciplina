@@ -31,6 +31,12 @@ extra-deps:
 - servant-quickcheck-0.0.6.0
 - HList-0.5.0.0
 
+# Fixes bug with `concurrently` not waiting for its children to die
+# (this bug causes our node terminatation before all workers/resources cleaned up)
+- async-2.2.1
+- lifted-async-0.10.0.3
+
+
 - git: https://github.com/serokell/servant-util.git
   commit: 15adfc61a9c0ae6c2656507cad3a70fd2eef20b2
   subdirs:
@@ -39,6 +45,9 @@ extra-deps:
 
 - git: https://github.com/serokell/auth-data-structures.git
   commit: 4a95f4dd32a82195f49ceb0113c9f05bc260ca7d
+
+- git: https://github.com/serokell/log-warper.git
+  commit: 5b3c68fb2c71df45c7589a2ecff011659221d279
 
 - git: https://github.com/serokell/blockchain-util.git
   commit: 9a28a192c55cb61735ffc0c899fbd80815e1dd2c # volhovm/dscp193
@@ -68,7 +77,7 @@ extra-deps:
 - primitive-0.6.4.0
 
 - git: https://github.com/serokell/lootbox.git
-  commit: ec3caaedd6b41e783e3266c7f15e5598576f6aa5
+  commit: a8aa300902942feefb3413ccc6fa59db7fe33366
   subdirs:
     - code/base
     - code/config
@@ -107,6 +116,10 @@ extra-deps:
 # for monitoring
 - git: https://github.com/serokell/mon.git
   commit: 19d35c9895468c22397187420fe9e63379aef4db
+
+# for fixed networking
+- git: https://github.com/serokell/zeromq-haskell
+  commit: 714ac20981b2d346609fd896a1af4d31eb6d1162
 
 # Lootbox dependencies end #
 
