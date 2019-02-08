@@ -333,11 +333,10 @@ instance Buildable DocumentType where
 data CertificateMeta = CertificateMeta
     { cmStudentName      :: !ItemDesc
     , cmStudentBirthDate :: !Day
-    , cmStartYear        :: !Int
-    , cmEndYear          :: !Int
+    , cmStartYear        :: !Word16
+    , cmEndYear          :: !Word16
     , cmEducationForm    :: !EducationForm
-    , cmEducatorName     :: !ItemDesc
-    , cmNumber           :: !Integer
+    , cmNumber           :: !Natural
     , cmIssueDate        :: !Day
     , cmTitle            :: !ItemDesc
     , cmMajor            :: !ItemDesc
@@ -423,7 +422,7 @@ instance Buildable CertificateMeta where
         ", startYear = "+|cmStartYear|+
         ", endYear = "+|cmEndYear|+
         ", educationForm = "+|cmEducationForm|+
-        ", number = "+|cmNumber|+
+        ", number = "+|toInteger cmNumber|+
         ", issueDate = "+|cmIssueDate|+
         ", title = "+|cmTitle|+
         ", major = "+|cmMajor|+

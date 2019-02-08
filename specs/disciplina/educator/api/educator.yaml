@@ -1141,7 +1141,8 @@ components:
           type: string
           enum: [fulltime, parttime, fullpart]
         number:
-          type: string
+          type: integer
+          format: int64
         issueDate:
           type: string
           format: date

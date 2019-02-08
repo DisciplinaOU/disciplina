@@ -8,6 +8,8 @@ module Pdf.FromLatex
       CertificateFullInfo
     , Language (..)
 
+      -- * Info about the Educator
+    , CertificateIssuerInfo (..)
       -- * Path to resources for latex generation
     , ResourcePath(..)
 
@@ -20,12 +22,12 @@ module Pdf.FromLatex
     where
 
 import Control.Arrow ((&&&))
-import Data.Time.Calendar
-import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.Text.Lazy as Text
 import Data.Text.Lazy.Builder as Text
-import Path.IO
+import Data.Time.Calendar
 import Path
+import Path.IO
 import System.Directory
 import System.IO.Temp
 import System.Process.Typed
@@ -35,20 +37,27 @@ import Dscp.Core.Foundation.Educator
 
 import Pdf.MkLatex
 
--- | Generate latex certificate from locate and data.
-generate :: Language -> CertificateFullInfo -> Text
-generate lang cert = do
-    Text.toStrict $ Text.toLazyText $ make (lang, cert)
+-- | Datatype containing information about Educator which issued
+-- the certificate, required in order to render a certificate.
+data CertificateIssuerInfo = CertificateIssuerInfo
+    { ciiName :: ItemDesc
+    , ciiUrl  :: ItemDesc
+    } deriving (Show, Eq, Generic)
+
+-- | Generate latex certificate from locale, Educator name and data.
+generate :: Language -> CertificateIssuerInfo -> CertificateFullInfo -> Text
+generate lang ciInfo cert =
+    Text.toStrict $ Text.toLazyText $ make (lang, (ciInfo, cert))
   where
     MkLatex make = fullInfo
 
 -- | Converter for certificate data into latex.
-fullInfo :: MkLatex (Language, CertificateFullInfo)
+fullInfo :: MkLatex (Language, (CertificateIssuerInfo, CertificateFullInfo))
 fullInfo
-    = divided         language
-    $ split   cfiMeta personal
+    = divided               language
+    $ split (cfiMeta . snd) personal
     $ inBlock "document"
-        $ divide (cfiMeta &&& cfiGrades)
+        $ divide (id &&& (cfiGrades . snd))
             meta
             courses
   where
@@ -64,12 +73,13 @@ fullInfo
 
     meta
         = split (const ())                  (command "MakeHeader"  $ const [])
-        $ split cmEducatorName              (command "section"     $ pure . shownDesc)
-        $ inBlock "Diploma" diploma
+        $ split (ciiName . fst)              (command "section"     $ pure . shownDesc)
+        $ split (ciiUrl . fst)               (command "EducatorUrl" $ pure . shownDesc)
+        $ split (cfiMeta . snd)             (inBlock "Diploma"       diploma)
+        $ ignore
 
     diploma
-        = split (const ())                  (command "EducatorUrl"     $ const ["http://example.com/"])
-        $ split (cmStartYear &&& cmEndYear) (command "EducationPeriod" $ showBoth)
+        = split (cmStartYear &&& cmEndYear) (command "EducationPeriod" $ showBoth)
         $ split  cmNumber                   (command "DiplomaId"       $ pure . shown)
         $ split  cmIssueDate                (command "DateOfIssue"     $ formatDate)
         $ split  cmTitle                    (command "DegreeLevel"     $ pure . shownDesc)
@@ -107,8 +117,8 @@ fullInfo
 newtype ResourcePath = ResourcePath { unResourcePath :: FilePath }
 
 -- | Generate a PDF-certificate and return it as a bytestring.
-produce :: Language -> CertificateFullInfo -> ResourcePath -> IO ByteString
-produce loc info (ResourcePath resources) = do
+produce :: Language -> CertificateIssuerInfo -> CertificateFullInfo -> ResourcePath -> IO LByteString
+produce loc ciInfo info (ResourcePath resources) =
 
     -- Everyhting produced should be removed.
     -- This may lead to /tmp exhaustion attack, unless /tmp or memory
@@ -120,7 +130,7 @@ produce loc info (ResourcePath resources) = do
         -- Latex reads and writes in the same dir - lets isolate it.
         copyDirRecur resPath tmpPath
 
-        let theText = generate loc info
+        let theText = generate loc ciInfo info
         let input   = encodeUtf8 theText
 
         withCurrentDirectory dir $ do
@@ -136,7 +146,7 @@ produce loc info (ResourcePath resources) = do
             _ <- action
             _ <- action
 
-            BS.readFile "texput.pdf"
+            LBS.readFile "texput.pdf"
 
 -- | Data for self-test.
 testData :: CertificateFullInfo
@@ -147,7 +157,6 @@ testData = CertificateFullInfo
         , cmTitle            = "Младший\nпомошник\rстаршего\tчерпальщика\\ \\\\ "
         , cmNumber           = 100500
         , cmEducationForm    = Parttime
-        , cmEducatorName     = "Абыр Валг"
         , cmIssueDate        = fromGregorian 2015 5 13
         , cmStartYear        = 2010
         , cmEndYear          = 2015

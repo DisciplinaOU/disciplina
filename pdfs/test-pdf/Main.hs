@@ -1,9 +1,11 @@
 
-import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as LBS
 
-import Pdf.FromLatex (ResourcePath (..), Language (..), testData, produce)
+import Pdf.FromLatex (CertificateIssuerInfo (..), Language (..), ResourcePath (..), produce,
+                      testData)
 
 main :: IO ()
 main = do
-    thing <- produce RU testData (ResourcePath "pdfs/template")
-    BS.writeFile "result.pdf" thing
+    thing <- produce RU (CertificateIssuerInfo "Абыр Валг" "http://example.com")
+             testData (ResourcePath "pdfs/template")
+    LBS.writeFile "result.pdf" thing
