@@ -25,7 +25,9 @@ import Dscp.Educator.Web.Auth
 data StudentAuth
 
 -- | Action to get students' public keys
-newtype StudentCheckAction = StudentCheckAction (PublicKey -> IO Bool)
+newtype StudentCheckAction = StudentCheckAction
+    { runStudentCheckAction :: Address -> IO Bool
+    }
 
 instance IsAuth StudentAuth Student where
     type AuthArgs StudentAuth = '[StudentCheckAction]
@@ -36,7 +38,7 @@ instance IsClientAuth StudentAuth where
     provideAuth req (StudentClientAuthData sk) = signRequestBasic sk req
 
 -- | Creates a check action supplying it with the current context.
-mkStudentActionM :: MonadUnliftIO m => (PublicKey -> m Bool) -> m StudentCheckAction
+mkStudentActionM :: MonadUnliftIO m => (Address -> m Bool) -> m StudentCheckAction
 mkStudentActionM action = do
     UnliftIO unliftIO <- askUnliftIO
     return . StudentCheckAction $ \pk -> unliftIO (action pk)
@@ -49,7 +51,7 @@ mkStudentActionM action = do
 studentAuthCheck :: StudentCheckAction -> AuthCheck Student
 studentAuthCheck (StudentCheckAction checkStudent) = do
     pk <- checkAuthBasic
-    good <- liftIO $ checkStudent pk
+    good <- liftIO $ checkStudent (mkAddr pk)
     guard good
     return $ mkAddr pk
 

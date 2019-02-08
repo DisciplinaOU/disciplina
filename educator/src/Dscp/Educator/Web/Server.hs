@@ -22,7 +22,6 @@ import Servant.Util (methodsCoveringAPI, serverWithLogging)
 import UnliftIO (askUnliftIO)
 
 import Dscp.Config
-import Dscp.Core (mkAddr)
 import Dscp.DB.SQL
 import Dscp.Educator.Config
 import Dscp.Educator.DB (existsStudent)
@@ -81,16 +80,14 @@ mkStudentApiServer nat host botConfig = case botConfig ^. tree #params . selecti
         initializeBot (botConfig ^. tree #params . peekBranch #enabled) $ do
             let server = getServer $
                     \student -> addBotHandlers student $ studentApiHandlers student
-            checkAction <- mkStudentActionM $ \pk -> do
-                let student = mkAddr pk
+            checkAction <- mkStudentActionM $ \student -> do
                 botProvideInitSetting student
                 return True
             return (checkAction, server)
     "disabled" -> do
         let server = getServer studentApiHandlers
-        checkAction <- mkStudentActionM $ \pk ->
-              let addr = mkAddr pk
-              in invoke $ existsStudent addr
+        checkAction <- mkStudentActionM $ \addr ->
+              invoke $ existsStudent addr
         return (checkAction, server)
     other -> error $ "unknown EducatorBotConfig type: " <> fromString other
   where
@@ -125,6 +122,8 @@ serveEducatorAPIsReal withWitnessApi = do
     educatorKeyResources <- view (lensOf @(KeyResources EducatorNode))
     (studentCheckAction, studentApiServer) <-
           mkStudentApiServer (convertStudentApiHandler unliftIO) serverAddress botConfig
+    whenNoAuth studentAPINoAuth $
+        liftIO . void . runStudentCheckAction studentCheckAction
 
     let educatorPublicKey = EducatorPublicKey $ educatorKeyResources ^. krPublicKey
     let srvCtx = educatorPublicKey :. educatorAPINoAuth :.
