@@ -117,6 +117,10 @@ extra-deps:
 - git: https://github.com/serokell/mon.git
   commit: 19d35c9895468c22397187420fe9e63379aef4db
 
+# for fixed networking
+- git: https://github.com/serokell/zeromq-haskell
+  commit: 714ac20981b2d346609fd896a1af4d31eb6d1162
+
 # Lootbox dependencies end #
 
 # for snowdrop, will be removed
