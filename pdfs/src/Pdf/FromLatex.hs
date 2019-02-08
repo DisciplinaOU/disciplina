@@ -9,7 +9,7 @@ module Pdf.FromLatex
     , Language (..)
 
       -- * Info about the Educator
-    , EducatorInfo (..)
+    , CertificateIssuerInfo (..)
       -- * Path to resources for latex generation
     , ResourcePath(..)
 
@@ -37,22 +37,22 @@ import Dscp.Core.Foundation.Educator
 
 import Pdf.MkLatex
 
--- | Datatype containing information about Educator which is
--- required in order to render a certificate.
-data EducatorInfo = EducatorInfo
-    { eiName :: ItemDesc
-    , eiUrl  :: ItemDesc
+-- | Datatype containing information about Educator which issued
+-- the certificate, required in order to render a certificate.
+data CertificateIssuerInfo = CertificateIssuerInfo
+    { ciiName :: ItemDesc
+    , ciiUrl  :: ItemDesc
     } deriving (Show, Eq, Generic)
 
 -- | Generate latex certificate from locale, Educator name and data.
-generate :: Language -> EducatorInfo -> CertificateFullInfo -> Text
-generate lang eInfo cert =
-    Text.toStrict $ Text.toLazyText $ make (lang, (eInfo, cert))
+generate :: Language -> CertificateIssuerInfo -> CertificateFullInfo -> Text
+generate lang ciInfo cert =
+    Text.toStrict $ Text.toLazyText $ make (lang, (ciInfo, cert))
   where
     MkLatex make = fullInfo
 
 -- | Converter for certificate data into latex.
-fullInfo :: MkLatex (Language, (EducatorInfo, CertificateFullInfo))
+fullInfo :: MkLatex (Language, (CertificateIssuerInfo, CertificateFullInfo))
 fullInfo
     = divided               language
     $ split (cfiMeta . snd) personal
@@ -73,8 +73,8 @@ fullInfo
 
     meta
         = split (const ())                  (command "MakeHeader"  $ const [])
-        $ split (eiName . fst)              (command "section"     $ pure . shownDesc)
-        $ split (eiUrl . fst)               (command "EducatorUrl" $ pure . shownDesc)
+        $ split (ciiName . fst)              (command "section"     $ pure . shownDesc)
+        $ split (ciiUrl . fst)               (command "EducatorUrl" $ pure . shownDesc)
         $ split (cfiMeta . snd)             (inBlock "Diploma"       diploma)
         $ ignore
 
@@ -117,8 +117,8 @@ fullInfo
 newtype ResourcePath = ResourcePath { unResourcePath :: FilePath }
 
 -- | Generate a PDF-certificate and return it as a bytestring.
-produce :: Language -> EducatorInfo -> CertificateFullInfo -> ResourcePath -> IO LByteString
-produce loc eInfo info (ResourcePath resources) =
+produce :: Language -> CertificateIssuerInfo -> CertificateFullInfo -> ResourcePath -> IO LByteString
+produce loc ciInfo info (ResourcePath resources) =
 
     -- Everyhting produced should be removed.
     -- This may lead to /tmp exhaustion attack, unless /tmp or memory
@@ -130,7 +130,7 @@ produce loc eInfo info (ResourcePath resources) =
         -- Latex reads and writes in the same dir - lets isolate it.
         copyDirRecur resPath tmpPath
 
-        let theText = generate loc eInfo info
+        let theText = generate loc ciInfo info
         let input   = encodeUtf8 theText
 
         withCurrentDirectory dir $ do
