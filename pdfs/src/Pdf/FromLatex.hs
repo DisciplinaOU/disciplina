@@ -8,6 +8,8 @@ module Pdf.FromLatex
       CertificateFullInfo
     , Language (..)
 
+      -- * Info about the Educator
+    , EducatorInfo (..)
       -- * Path to resources for latex generation
     , ResourcePath(..)
 
@@ -35,15 +37,22 @@ import Dscp.Core.Foundation.Educator
 
 import Pdf.MkLatex
 
+-- | Datatype containing information about Educator which is
+-- required in order to render a certificate.
+data EducatorInfo = EducatorInfo
+    { eiName :: ItemDesc
+    , eiUrl  :: ItemDesc
+    } deriving (Show, Eq, Generic)
+
 -- | Generate latex certificate from locale, Educator name and data.
-generate :: Language -> ItemDesc -> CertificateFullInfo -> Text
-generate lang educatorName cert =
-    Text.toStrict $ Text.toLazyText $ make (lang, (educatorName, cert))
+generate :: Language -> EducatorInfo -> CertificateFullInfo -> Text
+generate lang eInfo cert =
+    Text.toStrict $ Text.toLazyText $ make (lang, (eInfo, cert))
   where
     MkLatex make = fullInfo
 
 -- | Converter for certificate data into latex.
-fullInfo :: MkLatex (Language, (ItemDesc, CertificateFullInfo))
+fullInfo :: MkLatex (Language, (EducatorInfo, CertificateFullInfo))
 fullInfo
     = divided               language
     $ split (cfiMeta . snd) personal
@@ -64,13 +73,13 @@ fullInfo
 
     meta
         = split (const ())                  (command "MakeHeader"  $ const [])
-        $ split fst                         (command "section"     $ pure . shownDesc)
+        $ split (eiName . fst)              (command "section"     $ pure . shownDesc)
+        $ split (eiUrl . fst)               (command "EducatorUrl" $ pure . shownDesc)
         $ split (cfiMeta . snd)             (inBlock "Diploma"       diploma)
         $ ignore
 
     diploma
-        = split (const ())                  (command "EducatorUrl"     $ const ["http://example.com/"])
-        $ split (cmStartYear &&& cmEndYear) (command "EducationPeriod" $ showBoth)
+        = split (cmStartYear &&& cmEndYear) (command "EducationPeriod" $ showBoth)
         $ split  cmNumber                   (command "DiplomaId"       $ pure . shown)
         $ split  cmIssueDate                (command "DateOfIssue"     $ formatDate)
         $ split  cmTitle                    (command "DegreeLevel"     $ pure . shownDesc)
@@ -108,8 +117,8 @@ fullInfo
 newtype ResourcePath = ResourcePath { unResourcePath :: FilePath }
 
 -- | Generate a PDF-certificate and return it as a bytestring.
-produce :: Language -> ItemDesc -> CertificateFullInfo -> ResourcePath -> IO LByteString
-produce loc educatorName info (ResourcePath resources) =
+produce :: Language -> EducatorInfo -> CertificateFullInfo -> ResourcePath -> IO LByteString
+produce loc eInfo info (ResourcePath resources) =
 
     -- Everyhting produced should be removed.
     -- This may lead to /tmp exhaustion attack, unless /tmp or memory
@@ -121,7 +130,7 @@ produce loc educatorName info (ResourcePath resources) =
         -- Latex reads and writes in the same dir - lets isolate it.
         copyDirRecur resPath tmpPath
 
-        let theText = generate loc educatorName info
+        let theText = generate loc eInfo info
         let input   = encodeUtf8 theText
 
         withCurrentDirectory dir $ do
