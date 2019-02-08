@@ -20,7 +20,7 @@ module Pdf.FromLatex
     where
 
 import Control.Arrow ((&&&))
-import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.Text.Lazy as Text
 import Data.Text.Lazy.Builder as Text
 import Data.Time.Calendar
@@ -108,8 +108,8 @@ fullInfo
 newtype ResourcePath = ResourcePath { unResourcePath :: FilePath }
 
 -- | Generate a PDF-certificate and return it as a bytestring.
-produce :: Language -> ItemDesc -> CertificateFullInfo -> ResourcePath -> IO ByteString
-produce loc educatorName info (ResourcePath resources) = do
+produce :: Language -> ItemDesc -> CertificateFullInfo -> ResourcePath -> IO LByteString
+produce loc educatorName info (ResourcePath resources) =
 
     -- Everyhting produced should be removed.
     -- This may lead to /tmp exhaustion attack, unless /tmp or memory
@@ -137,7 +137,7 @@ produce loc educatorName info (ResourcePath resources) = do
             _ <- action
             _ <- action
 
-            BS.readFile "texput.pdf"
+            LBS.readFile "texput.pdf"
 
 -- | Data for self-test.
 testData :: CertificateFullInfo
