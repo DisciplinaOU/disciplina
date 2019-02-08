@@ -31,6 +31,12 @@ extra-deps:
 - servant-quickcheck-0.0.6.0
 - HList-0.5.0.0
 
+# Fixes bug with `concurrently` not waiting for its children to die
+# (this bug causes our node terminatation before all workers/resources cleaned up)
+- async-2.2.1
+- lifted-async-0.10.0.3
+
+
 - git: https://github.com/serokell/servant-util.git
   commit: 15adfc61a9c0ae6c2656507cad3a70fd2eef20b2
   subdirs:
@@ -39,6 +45,9 @@ extra-deps:
 
 - git: https://github.com/serokell/auth-data-structures.git
   commit: 4a95f4dd32a82195f49ceb0113c9f05bc260ca7d
+
+- git: https://github.com/serokell/log-warper.git
+  commit: 5b3c68fb2c71df45c7589a2ecff011659221d279
 
 - git: https://github.com/serokell/blockchain-util.git
   commit: 9a28a192c55cb61735ffc0c899fbd80815e1dd2c # volhovm/dscp193
