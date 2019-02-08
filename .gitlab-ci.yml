@@ -1,0 +1,19 @@
+stages:
+  - build
+
+variables:
+  REPOSITORY_URL_STAGE: 122754137306.dkr.ecr.us-west-2.amazonaws.com/witness:$CI_COMMIT_SHA
+  REPOSITORY_URL_PROD: someurl:$CI_COMMIT_SHA
+
+build:
+  stage: build
+  image: &base-haskell-ci-image haskell:8.2.2
+  variables:
+    TESTVAR: TESTVAL
+  cache: &deps-cache
+    key: "$CI_JOB_ID-haskell-deps"
+    paths:
+      - .stack-work
+  dependencies: []
+  script:
+    - stack build --only-dependencies
