@@ -46,6 +46,9 @@ See [configuration section](/docs/config.md) document.
   ```bash
   > ./scripts/launch/node.sh educator
   ```
+
+  **Note:** you need Postgres server to be set up, see 'Prerequisites' section of script above first.
+
   To launch educator with bot to automatically react on student's actions:
 
   ```bash
@@ -56,7 +59,8 @@ See [configuration section](/docs/config.md) document.
 
 You will need to run Postgres server in order for `stack exec disciplina-educator` to work.
 
-Or run the [test script](/scripts/test/educator.sh) which does that for you
-(with nix, execute `nix-build -A disciplina-educator`).
+Or run the [test script](/scripts/test/educator.sh) which does that for you.
+**Nix users** need to have `nix: pure: false` in their stack config in order to use this script.
+
 Server still requires a bit of general tunning, if you have just installed your Postgres server
 read [`educator.sh`'s](/scripts/test/educator.sh) 'Prerequisites' section first.
