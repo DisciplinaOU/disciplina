@@ -19,10 +19,11 @@ mkTestPrivateTx :: Id Course -- ^ course id
             -> PrivateTx
 mkTestPrivateTx courseId grade addrKey (witnessPKey, witnessSKey) =
     PrivateTxGrade $
-        PrivateTx { _ptSignedSubmission = mkSignedSubmission
-                  , _ptGrade = grade
-                  , _ptTime = time
-                  }
+        PrivateGrade
+            { _ptSignedSubmission = mkSignedSubmission
+            , _ptGrade = grade
+            , _ptTime = time
+            }
   where
      time :: Timestamp
      time =

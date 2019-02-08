@@ -2,13 +2,11 @@ module Dscp.Educator.DB.DSL.Interpret.SimpleTxDB
        ( runSimpleTxDBQuery
        ) where
 
-import Control.Lens (filtered, makePrisms, traversed)
+import Control.Lens (filtered, makePrisms, to, traversed, (#))
 import Data.List (intersect, union)
 import Data.Map.Strict (Map)
 
-import Dscp.Core (Assignment (..), Course (..), SignedSubmission (..), Subject,
-                  activityTypeGraphIndexed, hasPathFromTo)
-import Dscp.Core.Foundation.Educator (PrivateTx (..))
+import Dscp.Core
 import Dscp.Crypto (hash)
 import Dscp.Educator.DB.DSL.Class (MonadSearchTxObj (..), Obj, ObjHashEq (..), QueryObj (..),
                                    QueryTx (..), QueryTxs (..), RunQuery (..), TxIdEq (..),
@@ -59,7 +57,7 @@ evalSimpleTxsQuery (SELECTTxs _ (TxHasSubjectId sId)) = do
     subjToCourseMap <- asks sdbCourseIdToSubjectId
     let txs = db ^.. traversed
                   . _SSTx
-                  . filtered (subjectIdHasCourseId subjToCourseMap . getTxCourseId)
+                  . filtered (maybe False (subjectIdHasCourseId subjToCourseMap) . getTxCourseId)
     return txs
   where subjectIdHasCourseId subjToCourseMap courseId =
           case any (== sId) <$> Map.lookup courseId subjToCourseMap of
@@ -71,14 +69,18 @@ evalSimpleTxsQuery (SELECTTxs _ (_ :== grade)) = do
     db <- asks sdbGetSimpleObj
     return $ db ^.. traversed
                  . _SSTx
+                 . _PrivateTxGrade
                  . filtered ((== grade)._ptGrade)
+                 . to (_PrivateTxGrade #)
 
 -- | Evaluator for query: find Txs in db with grade >= g
 evalSimpleTxsQuery (SELECTTxs _ (_ :>= grade)) = do
     db <- asks sdbGetSimpleObj
     return $ db ^.. traversed
                  . _SSTx
+                 . _PrivateTxGrade
                  . filtered ((>= grade)._ptGrade)
+                 . to (_PrivateTxGrade #)
 
 -- | Evaluator for AND query
 evalSimpleTxsQuery (SELECTTxs _ (a :& b)) =
@@ -94,7 +96,7 @@ evalSimpleTxsQuery (SELECTTxs _ (TxHasDescendantOfSubjectId sId)) = do
     subjToCourseMap <- asks sdbCourseIdToSubjectId
     let txs = db ^.. traversed
                   . _SSTx
-                  . filtered (hasDescendantOf subjToCourseMap . getTxCourseId)
+                  . filtered (maybe False (hasDescendantOf subjToCourseMap) . getTxCourseId)
     return txs
   where hasDescendantOf subjToCourseMap courseId =
           case any (isDescendantOf sId) <$> Map.lookup courseId subjToCourseMap of
@@ -142,7 +144,7 @@ runSimpleTxDBQuery dbTx dbObj query =
         cId4 = Course 4
         cId5 = Course 5
 
-getTxCourseId :: PrivateTx -> Id Course
-getTxCourseId tx = _aCourseId (getAssignment (_ssSubmission (_ptSignedSubmission tx)))
+getTxCourseId :: PrivateTx -> Maybe (Id Course)
+getTxCourseId tx = tx^?_PrivateTxGrade.ptSignedSubmission.ssSubmission.to getAssignment.aCourseId
   where
     getAssignment = error "Some magic should happen here here"

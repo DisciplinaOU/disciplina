@@ -185,6 +185,13 @@ instance Arbitrary PrivateCertification where
     arbitrary = genericArbitrary
     shrink    = genericShrink
 
+instance Arbitrary SignedCertificateGrade where
+    arbitrary = do
+        cg <- arbitrary
+        pk <- arbitrary
+        return (SignedCertificateGrade cg (toPublic pk) (sign pk (hash cg)))
+    shrink    = genericShrink
+
 instance Arbitrary ATGSubjectChange where
     arbitrary = genericArbitrary
     shrink    = genericShrink
@@ -460,7 +467,7 @@ genCoreTestEnv p = do
           <+> pksItem
           <+> submissionsItem
     txsItem <- forM sigSubsItem $ \sigSub ->
-        PrivateTx <$> pure sigSub <*> arbitrary <*> arbitrary
+        (PrivateTxGrade ... PrivateGrade) <$> pure sigSub <*> arbitrary <*> arbitrary
     return CoreTestEnv
         { cteStudents             = studentsItem
         , cteCourses              = fmap _aCourseId assignmentsItem
@@ -510,7 +517,7 @@ gradeEx = detGen 123 arbitrary
 
 privateTxEx :: PrivateTx
 privateTxEx =
-    PrivateTx
+    PrivateTxGrade $ PrivateGrade
     { _ptSignedSubmission = signedSubmissionEx
     , _ptGrade = gradeEx
     , _ptTime = timestampEx

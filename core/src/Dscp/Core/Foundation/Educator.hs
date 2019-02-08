@@ -62,6 +62,9 @@ module Dscp.Core.Foundation.Educator
     , PrivateCertification (..)
     , PrivateTxWitness (..)
     , PrivateTxAux (..)
+    , _PrivateTxGrade
+    , _PrivateTxCertification
+    , getPrivateTxType
 
     -- * Lenses
     , ptaTx
@@ -471,6 +474,11 @@ data PrivateTx
     | PrivateTxCertification !PrivateCertification
       deriving (Show, Eq, Ord, Generic)
 
+getPrivateTxType :: PrivateTx -> Int
+getPrivateTxType = \case
+    PrivateTxGrade         {} -> 0
+    PrivateTxCertification {} -> 1
+
 data PrivateCertification = PrivateCertification
     { _pcGrade   :: !SignedCertificateGrade
     , _pcStudent :: !Student
@@ -479,7 +487,7 @@ data PrivateCertification = PrivateCertification
 data SignedCertificateGrade = SignedCertificateGrade
     { _scgCertificateGrade :: !CertificateGrade
     , _scgKey              :: !PublicKey
-    , _scgSig              :: !(Signature CertificateGrade)
+    , _scgSig              :: !(Signature (Hash CertificateGrade))
     } deriving (Show, Eq, Ord, Generic)
 
 -- | Private transaction.

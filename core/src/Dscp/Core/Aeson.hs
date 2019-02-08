@@ -180,6 +180,10 @@ deriveJSON defaultOptions ''CertificateIssuerInfo
 deriveJSON defaultOptions ''CertificateMeta
 deriveJSON defaultOptions ''PrivateTx
 deriveJSON defaultOptions ''PrivateGrade
+deriveJSON defaultOptions ''PrivateCertification
+deriveJSON defaultOptions ''SignedCertificateGrade
+deriveJSON defaultOptions ''CertificateGrade
+deriveJSON defaultOptions ''Language
 deriveJSON defaultOptions ''PrivateBlockHeader
 deriveJSON defaultOptions ''Header
 deriveJSON defaultOptions ''TxInAcc

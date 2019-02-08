@@ -537,15 +537,34 @@ createTransaction trans = do
     _ <- getSignedSubmission subHash `assertJustPresent`
         SubmissionDomain subHash
 
-    rewrapAlreadyExists (TransactionDomain ptid) $
+    rewrapAlreadyExists (TransactionDomain ptid) $ do
         runInsert . insert (esTransactions es) . insertValue $
             TransactionRow
-            { trHash = ptid
-            , trSubmission = packPk subHash
-            , trGrade = trans^.ptGrade
-            , trCreationTime = trans^.ptTime
-            , trIdx = TxInMempool
+            { trId = ptid
+            , trType = trans^.to getPrivateTxType
             }
+
+        case trans of
+            PrivateTxGrade grade -> do
+                runInsert . insert (esTransactions es) . insertValue $
+                    GradeRow
+                    { grHash = ptid
+                    , grSubmission = packPk subHash
+                    , grGrade = trans^.ptGrade
+                    , grCreationTime = trans^.ptTime
+                    , grIdx = TxInMempool
+                    }
+            PrivateTxCertification cert -> do
+                runInsert . insert (esTransactions es) . insertValue $
+                    CertificateRow
+                    { crStudent     = cert.^pcStudent
+                    , crLanguage    = cert^.pcGrade.scgCertificateGrade.cgLang
+                    , crHours       = cert^.pcGrade.scgCertificateGrade.cgHours
+                    , crCredits     = cert^.pcGrade.scgCertificateGrade.cgCredits
+                    , crGrade       = cert^.pcGrade.scgCertificateGrade.cgGrade
+                    , crIdx         = TxInMempool
+                    }
+
 
     return ptid
 

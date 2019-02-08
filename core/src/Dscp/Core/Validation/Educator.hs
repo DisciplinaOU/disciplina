@@ -5,11 +5,13 @@
 module Dscp.Core.Validation.Educator
        ( BlockValidationFailure (..)
        , SubmissionValidationFailure (..)
+       , CertificationValidationFailure (..)
        , WrongSubmissionSignature (..)
        , _FakeSubmissionSignature
        , _SubmissionSignatureInvalid
        , validateSubmission
        , verifyStudentSubmission
+       , verifyCertificate
        , validatePrivateBlk
        ) where
 
@@ -35,6 +37,10 @@ data BlockValidationFailure
       -- | Submission failure
     | SubmissionInvalid
         { bvfSubmissionFailure :: !SubmissionValidationFailure }
+
+    | CertificateInvalid
+        { bvfCertificationFailure :: !CertificationValidationFailure }
+
     deriving (Eq)
 
 -- | Submission validation failures
@@ -52,10 +58,11 @@ data SubmissionValidationFailure
 
 data CertificationValidationFailure
     = CertificationSignatureMismatch
-      { csmCertificationHash   :: !(Hash Submission)
-      , csmCertificationSigKey :: !PublicKey
-      , csmCertificationSig    :: !(Signature CertificateGrade)
+      { cvfCertificationHash   :: !(Hash CertificateGrade)
+      , cvfCertificationSigKey :: !PublicKey
+      , cvfCertificationSig    :: !(Signature (Hash CertificateGrade))
       }
+    deriving (Eq, Show)
 
 -- | Any issues with submission signature content.
 data WrongSubmissionSignature
@@ -73,7 +80,15 @@ instance Show BlockValidationFailure where
 instance Buildable BlockValidationFailure where
     build MerkleSignatureMismatch {..} =
       [qc|Merkle tree root signature mismatch. Expected {bvfExpectedSig} got {bvfActualMerkleSig}|]
-    build (SubmissionInvalid x) = build x
+    build (CertificateInvalid x) = build x
+    build (SubmissionInvalid  x) = build x
+
+instance Buildable CertificationValidationFailure where
+    build CertificationSignatureMismatch {..} =
+      mconcat [ [qc|Certification signature mismatch.|]
+              , [qc| Certificate data {cvfCertificationHash} with signature {cvfCertificationSig}|]
+              , [qc| does not correspond to public key {cvfCertificationSigKey}|]
+              ]
 
 instance Buildable SubmissionValidationFailure where
     build SubmissionPublicKeyMismatch {..} =
@@ -129,29 +144,15 @@ validateSubmission ss =
           )
         ]
 
-validateSubmission
-    :: SignedSubmission
-    -> Either [SubmissionValidationFailure] ()
-validateSubmission ss =
-    let submission = ss^.ssSubmission
-        witnessKey = ss^.ssWitness.swKey
-        witnessSign = ss^.ssWitness.swSig
-        subAddrHash = submission^.sStudentId.to addrHash
-        witnessSigValid = verify witnessKey (hash submission) witnessSign
-        witnessKeyValid = hash witnessKey == subAddrHash
-    in verifyGeneric
-        [ (witnessKeyValid,
-            SubmissionPublicKeyMismatch { svfExpectedPubKey = subAddrHash
-                                        , svfActualPubKey   = hash witnessKey
-                                        }
-          )
-        , (witnessSigValid,
-            SubmissionSignatureMismatch { svfSubmissionHash   = hash submission
-                                        , svfSubmissionSig    = witnessSign
-                                        , svfSubmissionSigKey = witnessKey
-                                        }
-          )
-        ]
+verifyCertificate
+    :: SignedCertificateGrade
+    -> Either [CertificationValidationFailure] ()
+verifyCertificate (SignedCertificateGrade cg pk sig) =
+    let cgHash = hash cg
+    in
+        if verify pk cgHash sig
+        then Right ()
+        else Left $ [CertificationSignatureMismatch cgHash pk sig]
 
 -- | Checks that
 -- 1. 'SignedSubmission' is valid;
@@ -179,9 +180,11 @@ validatePrivateBlk pb =
         merkleRoot  = getMerkleRoot (fromFoldable subs)
         headerVer   = validateHeader (_pbHeader pb) merkleRoot
         headerValid = verifyGeneric headerVer
-        subValid    = foldl' (\acc sub -> validateSub sub `mappendLefts` acc)
-                      pass subs
-    in headerValid `mappendLefts` subValid
+        ptxValid    =
+            foldl' (\acc ptx -> validatePtx ptx
+              `mappendLefts` acc)
+                pass subs
+    in headerValid `mappendLefts` ptxValid
   where
     validateHeader PrivateBlockHeader {..} merkleRoot =
         [ (_pbhBodyProof == merkleRoot,
@@ -191,6 +194,11 @@ validatePrivateBlk pb =
             }
           )
         ]
-    validateSub sub =
-        first (map SubmissionInvalid) $
-        validateSubmission (_ptSignedSubmission sub)
+    validatePtx = \case
+        PrivateTxGrade pg ->
+          first (fmap SubmissionInvalid) $
+            validateSubmission (pg^.ptSignedSubmission)
+
+        PrivateTxCertification cert ->
+          first (fmap CertificateInvalid) $
+            verifyCertificate (cert^.pcGrade)

@@ -32,6 +32,11 @@ import Dscp.Util.FileEmbed
 -- Tables
 ----------------------------------------------------------------------------
 
+data TransactionRowT f = TransactionRow
+    { trId   :: C f (Hash PrivateTx)
+    , trType :: C f  Int
+    } deriving (Generic)
+
 data CourseRowT f = CourseRow
     { crId   :: C f Course
     , crDesc :: C f ItemDesc
@@ -64,12 +69,22 @@ data SubmissionRowT f = SubmissionRow
     , srAssignment   :: PrimaryKey AssignmentRowT f
     } deriving (Generic)
 
-data TransactionRowT f = TransactionRow
-    { trHash         :: C f (Hash PrivateTx)
-    , trGrade        :: C f Grade
-    , trCreationTime :: C f Timestamp
-    , trIdx          :: C f TxBlockIdx
-    , trSubmission   :: PrimaryKey SubmissionRowT f
+data GradeRowT f = GradeRow
+    { grHash         :: PrimaryKey TransactionRowT f
+    , grGrade        :: C f Grade
+    , grCreationTime :: C f Timestamp
+    , grIdx          :: C f TxBlockIdx
+    , grSubmission   :: PrimaryKey SubmissionRowT f
+    } deriving (Generic)
+
+data CertificateRowT f = CertificateRow
+    { crHash         :: PrimaryKey TransactionRowT f
+    , crStudent      :: PrimaryKey StudentRowT f
+    , crLanguage     :: C f Language
+    , crHours        :: C f Int
+    , crCredits      :: C f (Maybe Int)
+    , crGrade        :: C f Grade
+    , crIdx          :: C f TxBlockIdx
     } deriving (Generic)
 
 -- We need `idx` field to be able to perform queries like "get N last blocks" efficiently.
@@ -90,18 +105,17 @@ data CertificateRowT f = CertificateRow
     } deriving (Generic)
 
 data EducatorSchema f = EducatorSchema
-    { esCourses             :: f (TableEntity CourseRowT)
-    , esSubjects            :: f (TableEntity SubjectRowT)
-    , esStudents            :: f (TableEntity StudentRowT)
+    { esCourses             :: f (TableEntity   CourseRowT)
+    , esSubjects            :: f (TableEntity   SubjectRowT)
+    , esStudents            :: f (TableEntity   StudentRowT)
     , esStudentCourses      :: f (TableEntity $ RelationT 'MxM StudentRowT CourseRowT)
-    , esAssignments         :: f (TableEntity AssignmentRowT)
+    , esAssignments         :: f (TableEntity   AssignmentRowT)
     , esStudentAssignments  :: f (TableEntity $ RelationT 'MxM StudentRowT AssignmentRowT)
-    , esSubmissions         :: f (TableEntity SubmissionRowT)
-    , esTransactions        :: f (TableEntity TransactionRowT)
-    , esBlocks              :: f (TableEntity BlockRowT)
+    , esSubmissions         :: f (TableEntity   SubmissionRowT)
+    , esTransactions        :: f (TableEntity   TransactionRowT)
+    , esBlocks              :: f (TableEntity   BlockRowT)
     , esBlockTxs            :: f (TableEntity $ RelationT 'Mx1 TransactionRowT BlockRowT)
-
-    , esCertificates        :: f (TableEntity CertificateRowT)
+    , esCertificates        :: f (TableEntity   CertificateRowT)
     , esCertificatesVersion :: f (TableEntity $ SingletonT Word32)
     } deriving (Generic)
 
@@ -109,14 +123,20 @@ data EducatorSchema f = EducatorSchema
 -- Aliases
 ----------------------------------------------------------------------------
 
-type CourseRow = CourseRowT Identity
-type SubjectRow = SubjectRowT Identity
-type StudentRow = StudentRowT Identity
-type AssignmentRow = AssignmentRowT Identity
-type SubmissionRow = SubmissionRowT Identity
+type GradeRow       = GradeRowT       Identity
+type CertificateRow = CertificateRowT Identity
+type CourseRow      = CourseRowT      Identity
+type SubjectRow     = SubjectRowT     Identity
+type StudentRow     = StudentRowT     Identity
+type AssignmentRow  = AssignmentRowT  Identity
+type SubmissionRow  = SubmissionRowT  Identity
 type TransactionRow = TransactionRowT Identity
+<<<<<<< HEAD
 type BlockRow = BlockRowT Identity
 type CertificateRow = CertificateRowT Identity
+=======
+type BlockRow       = BlockRowT       Identity
+>>>>>>> [DSCP-452] Saved
 
 ----------------------------------------------------------------------------
 -- Connection with core types
@@ -143,12 +163,12 @@ submissionFromRow SubmissionRow{..} =
     , _ssWitness = srSignature
     }
 
-privateTxFromRow :: (TransactionRow, SubmissionRow) -> PrivateTx
-privateTxFromRow (TransactionRow{..}, sub) =
-    PrivateTx
+privateGradeFromRow :: (GradeRow, SubmissionRow) -> PrivateGrade
+privateGradeFromRow (GradeRow{..}, sub) =
+    PrivateGrade
     { _ptSignedSubmission = submissionFromRow sub
-    , _ptGrade = trGrade
-    , _ptTime = trCreationTime
+    , _ptGrade = grGrade
+    , _ptTime = grCreationTime
     }
 
 pbHeaderFromRow :: BlockRow -> PrivateBlockHeader
@@ -191,7 +211,7 @@ instance Table SubmissionRowT where
 instance Table TransactionRowT where
     newtype PrimaryKey TransactionRowT f = TransactionRowId (C f (Id PrivateTx))
         deriving (Generic)
-    primaryKey = TransactionRowId . trHash
+    primaryKey = TransactionRowId . trId
 
 instance Table BlockRowT where
     newtype PrimaryKey BlockRowT f = BlockRowId (C f BlockIdx)
