@@ -121,6 +121,8 @@ multi_educator_params="
 --student-api-no-auth 3BAyX5pNpoFrLJcP5bZ2kXihBfmBVLprSyP1RhcPPddm6Dw42jzEPXZz22
 --publication-period 15s
 --pdf-resource-path ../pdfs/template
+--aaa-service-url https://stage-teachmeplease-aaa.stage.tchmpls.com
+--aaa-public-key 2gSNy2wKSaI4YtGZe_Eaxsdv_BLCfi5kkT9xvxt_O0k
 "
 # Note: Student address in --student-api-no-auth parameter corresponds to secret
 # key with seed 456 (use dscp-keygen to generate one)

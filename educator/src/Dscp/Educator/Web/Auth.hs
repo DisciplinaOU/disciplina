@@ -7,6 +7,7 @@ module Dscp.Educator.Web.Auth
        ( Auth'
        , AuthData (..)
        , checkAuthBasic
+       , checkJWitness
        , AuthToken (..)
 
        , IsClientAuth (..)
@@ -16,6 +17,7 @@ module Dscp.Educator.Web.Auth
        , NoAuthData
        , NoAuthContext (..)
 
+       , authTimeout
        , requestEndpoint
        , createAuthToken
        , makeTestAuthToken

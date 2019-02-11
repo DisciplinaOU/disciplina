@@ -23,13 +23,14 @@ import Time (Second, Time)
 import Dscp.Config
 import Dscp.DB.SQL
 import Dscp.Educator.Web.Config
-import Dscp.MultiEducator.Launcher.Params (MultiEducatorKeyParams)
+import Dscp.MultiEducator.Launcher.Params
 import Dscp.Witness.Config
 
 type MultiEducatorConfig = WitnessConfig ++
     '[ "educator" ::<
        '[ "db" ::< PostgresRealParams
         , "keys" ::: MultiEducatorKeyParams
+        , "aaa" ::< MultiEducatorAAAConfig
         , "api" ::< EducatorWebConfig
         , "publishing" ::<
            '[ "period" ::: Time Second

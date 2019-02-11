@@ -1,35 +1,36 @@
 {-# LANGUAGE DataKinds     #-}
 {-# LANGUAGE TypeOperators #-}
 
--- | Necessary types and implementation for Educator authenthication
+-- | Necessary types and implementation for Educator authentication
 module Dscp.MultiEducator.Web.Educator.Auth
-       ( LookupEducator (..)
-       , EducatorAuthResult (..)
+       ( EducatorAuthToken (..)
        , EducatorAuthData (..)
+       , MultiEducatorAuth
+       , MultiEducatorPublicKey (..)
        ) where
 
+import Crypto.Error (onCryptoFailure)
+import Crypto.JOSE.Types (Base64Octets (..))
+import Crypto.JWT (NumericDate (..))
+import Crypto.PubKey.Ed25519 (publicKey)
+import Data.Aeson (FromJSON(..), ToJSON(..), decodeStrict)
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
-import Servant.Auth.Server (FromJWT, ToJWT)
+import Data.Time.Clock (addUTCTime, getCurrentTime)
+import Servant.Auth.Server (FromJWT, ToJWT, AuthCheck)
+import Servant.Auth.Server.Internal.Class (IsAuth(..))
 
-import Dscp.DB.SQL (SQL)
-import Dscp.Educator.Launcher.Mode (EducatorNode)
-import Dscp.Resource.Keys (KeyResources)
+import Dscp.Crypto
+import Dscp.Educator.Web.Auth
+
+import qualified Data.ByteArray as BA
 
 ---------------------------------------------------------------------------
 -- Data types
 ---------------------------------------------------------------------------
 
--- data EducatorAuth
-
-newtype LookupEducator = LookupEducator (Text -> IO (Maybe (KeyResources EducatorNode, SQL)))
-
-data EducatorAuthResult
-    = EducatorNotFound
-    | EducatorData (KeyResources EducatorNode) SQL
-
 newtype EducatorAuthData = EducatorAuthData
-    { eadLogin :: Text
+    { eadId :: Text
     }
 
 deriveJSON defaultOptions ''EducatorAuthData
@@ -37,21 +38,59 @@ deriveJSON defaultOptions ''EducatorAuthData
 instance FromJWT EducatorAuthData
 instance ToJWT EducatorAuthData
 
-{-
-instance IsAuth EducatorAuth EducatorAuthResult where
-    type AuthArgs EducatorAuth = '[LookupEducator, JWTSettings]
+data EducatorAuthToken = EducatorAuthToken
+    { eatData :: EducatorAuthData
+    , eatExp  :: NumericDate
+    }
+
+deriveJSON defaultOptions ''EducatorAuthToken
+
+instance FromJWT EducatorAuthToken
+instance ToJWT EducatorAuthToken
+
+---------------------------------------------------------------------------
+-- Data types
+---------------------------------------------------------------------------
+
+-- | Custom authentication type for auth-servant
+data MultiEducatorAuth
+
+-- | Type that holds MultiEducator's public key
+newtype MultiEducatorPublicKey = MultiEducatorPublicKey PublicKey deriving Show
+
+instance IsAuth MultiEducatorAuth EducatorAuthToken where
+    type AuthArgs MultiEducatorAuth = '[MultiEducatorPublicKey]
     runAuth _ _ = multiEducatorAuthCheck
+
+instance IsClientAuth MultiEducatorAuth where
+    data ClientAuthData MultiEducatorAuth = MultiEducatorClientAuthData SecretKey
+    provideAuth req (MultiEducatorClientAuthData sk) = signRequestBasic sk req
+
+-- | Custom JSON instance for 'MultiEducatorPublicKey':
+-- they use 'Base64Octets' for encoding and decoding
+instance ToJSON MultiEducatorPublicKey where
+    toJSON (MultiEducatorPublicKey pk) =
+        toJSON . Base64Octets . BA.convert $ unAbstractPk pk
+
+instance FromJSON MultiEducatorPublicKey where
+    parseJSON = fmap (MultiEducatorPublicKey . toDscpPubKey) . parseJSON
+      where
+        toDscpPubKey = onCryptoFailure (error . show) AbstractPK . toCryptoPubKey
+        toCryptoPubKey (Base64Octets rpk) = publicKey rpk
 
 ---------------------------------------------------------------------------
 -- Helpers
 ---------------------------------------------------------------------------
 
--- | This function returns AuthCheck that checks the signature of the JWT.
-multiEducatorAuthCheck :: LookupEducator -> JWTSettings -> AuthCheck EducatorAuthResult
-multiEducatorAuthCheck (LookupEducator lookupEducator) jwtSettings = do
-    (JWTData login) <- jwtAuthCheck jwtSettings
-    liftIO (lookupEducator login) >>= \case
-        Just (key, db) -> return $ EducatorData key db
-        Nothing -> return $ EducatorNotFound
-
--}
+-- | Checks the signature of the JWT and returns an 'EducatorAuthToken'
+multiEducatorAuthCheck :: MultiEducatorPublicKey -> AuthCheck EducatorAuthToken
+multiEducatorAuthCheck (MultiEducatorPublicKey mpk) = do
+    (pk, payload) <- checkJWitness
+    educatorAuthToken <- maybe mempty pure $ decodeStrict payload
+    -- Check expiration time
+    currentTime <- liftIO getCurrentTime
+    let NumericDate expirationTime = eatExp educatorAuthToken
+    guard (currentTime < addUTCTime authTimeout expirationTime)
+    -- Remember about timing attacks
+    guard (pk `constTimeEq` mpk)
+    return educatorAuthToken
