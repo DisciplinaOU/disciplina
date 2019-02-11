@@ -15,6 +15,7 @@ import qualified Data.Text as T
 
 import Dscp.Core
 import Dscp.Crypto
+import Dscp.Educator.Logic.Submission
 import Dscp.Educator.Web.Auth
 import Dscp.Educator.Web.Student.Types
 import Dscp.Resource.Keys
@@ -66,24 +67,11 @@ readPrettyOption = \case
     other -> Left $ "Unknown prettiness option: " <> other
 
 mkSignedSubmissionExample :: SecretKey -> Seed Text -> NewSubmission
-mkSignedSubmissionExample secret (Seed seed) =
+mkSignedSubmissionExample (mkSecretKeyData -> sk) (Seed seed) =
     -- [Note: examples-in-bot] we assume that 'assignmentEx'
     -- is an existing assignment in educator bot
-    let submission =
-            Submission
-            { _sStudentId = mkAddr $ toPublic secret
-            , _sContentsHash = detGenG seed arbitrary
-            , _sAssignmentHash = hash assignmentEx
-            }
-        signedSubmission =
-            SignedSubmission
-            { _ssSubmission = submission
-            , _ssWitness = SubmissionWitness
-                { _swKey = toPublic secret
-                , _swSig = sign secret (hash submission)
-                }
-            }
-    in signedSubmissionToRequest signedSubmission
+    signedSubmissionToRequest $
+    makeSignedSubmission sk (hash assignmentEx) (detGenG seed arbitrary)
 
 ----------------------------------------------------------------------------
 -- Commands

@@ -5,6 +5,7 @@
 module Dscp.Educator.Web.Educator.Auth
        ( EducatorPublicKey (..)
        , EducatorAuth
+       , ClientAuthData (EducatorClientAuthData)
        ) where
 
 import Servant.Auth.Server (AuthCheck (..))

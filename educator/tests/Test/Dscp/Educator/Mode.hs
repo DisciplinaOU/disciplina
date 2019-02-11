@@ -12,7 +12,12 @@ module Test.Dscp.Educator.Mode
 import Prelude hiding (fold)
 
 import Control.Lens (makeLenses, (?~))
+import GHC.IO.Unsafe
 import qualified Loot.Log as Log
+import qualified Pdf.FromLatex as Pdf
+import System.Directory (getCurrentDirectory)
+import System.Environment (lookupEnv)
+import System.FilePath.Posix ((</>))
 import qualified Test.Hspec as Hspec
 import Test.QuickCheck (ioProperty, resize)
 import Test.QuickCheck.Monadic (PropertyM, monadic, stop)
@@ -42,6 +47,7 @@ data TestEducatorCtx = TestEducatorCtx
     { _tecEducatorDb       :: SQL
     , _tecWitnessDb        :: DB.Plugin
     , _tecKeys             :: KeyResources EducatorNode
+    , _tecPdfResourcePath  :: Pdf.ResourcePath
     , _tecWitnessKeys      :: KeyResources WitnessNode
     , _tecWitnessVariables :: TestWitnessVariables
     , _tecLogging          :: Log.Logging IO
@@ -53,6 +59,25 @@ deriveHasLens 'tecWitnessVariables ''TestEducatorCtx ''WitnessVariables
 deriveHasLens 'tecWitnessVariables ''TestEducatorCtx ''TestWitnessVariables
 
 type TestEducatorM = RIO TestEducatorCtx
+
+instance MonadFail TestEducatorM where
+    fail = error . toText
+
+resourcePathVarName :: String
+resourcePathVarName = "PDF_RESOURCE_PATH"
+
+testResourcePath :: Pdf.ResourcePath
+testResourcePath = unsafePerformIO $ do
+    mpath <- lookupEnv resourcePathVarName
+    path <- case mpath of
+        Nothing -> do
+            cd <- getCurrentDirectory
+            let path = "../pdfs/template"
+            putTextLn $ "No env variable " <> show resourcePathVarName <> " set, \
+                        \assuming that PDF templates are in " <> show (cd </> path)
+            return path
+        Just path -> pure path
+    return (Pdf.ResourcePath path)
 
 runTestSqlM :: PostgresTestServer -> TestEducatorM a -> IO a
 runTestSqlM testDb action =
@@ -67,6 +92,7 @@ runTestSqlM testDb action =
         let _tecKeys = KeyResources $ mkSecretKeyData testSomeGenesisSecret
         let _tecEducatorDb = db
         let _tecLogging = testLogging
+        let _tecPdfResourcePath = testResourcePath
         let ctx = TestEducatorCtx{..}
         runRIO ctx $ markWithinWriteSDLockUnsafe applyGenesisBlock
 

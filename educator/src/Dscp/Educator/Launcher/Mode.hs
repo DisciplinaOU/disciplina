@@ -17,7 +17,8 @@ module Dscp.Educator.Launcher.Mode
     ) where
 
 import Control.Lens (makeLenses)
-import Loot.Base.HasLens (HasLens')
+import Loot.Base.HasLens (HasCtx)
+import qualified Pdf.FromLatex as Pdf
 
 import Dscp.DB.CanProvideDB as DB
 import Dscp.DB.SQL (SQL)
@@ -41,12 +42,12 @@ type EducatorOnlyWorkMode ctx m =
 
     , HasEducatorConfig
 
-    , MonadReader ctx m
-
-    , HasLens' ctx DB.Plugin
-    , HasLens' ctx SQL
-    , HasLens' ctx (KeyResources EducatorNode)
-    , MonadThrow m
+    , HasCtx ctx m
+        [ DB.Plugin
+        , SQL
+        , KeyResources EducatorNode
+        , Pdf.ResourcePath
+        ]
     )
 
 -- | Set of typeclasses which define capabilities both of Educator and Witness.

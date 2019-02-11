@@ -113,9 +113,6 @@ data HashIs
 deriving instance (Eq (Id a), Eq a) => Eq (PaginatedList d a)
 deriving instance (Show (Id a), Show a) => Show (PaginatedList d a)
 
-instance Buildable ByteString where
-    build _ = "<binary data, omitted>"
-
 instance HasId a => HasId (WithBlockInfo a) where
     type Id (WithBlockInfo a) = Id a
     getId WithBlockInfo{..} = getId wbiItem

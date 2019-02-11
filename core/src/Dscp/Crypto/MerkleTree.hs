@@ -11,6 +11,7 @@ module Dscp.Crypto.MerkleTree
 
        , MerkleProof (..)
        , mpSize
+       , merkleProofFromList
        , drawProofNode
        , mkMerkleProof
        , mkMerkleProofSingle
@@ -180,23 +181,29 @@ instance HasHash a => Exts.IsList (MerkleTree a) where
 
     toList = F.toList
 
--- | Construct a @'MerkleNode'@ over a non-empty list
-nodeFromList :: HasHash a => NonEmpty a -> MerkleNode a
-nodeFromList lst@(a :| as) = tree
+-- | Construct some merkle tree-like structure over a non-empty list.
+merkleFromList
+    :: HasHash a
+    => (a -> node a) -> (node a -> node a -> node a) -> NonEmpty a -> node a
+merkleFromList toLeaf toBranch lst@(a :| as) = tree
   where
     (tree, assert_ null -> ()) = go (0, uLen - 1) `runState` (a : as)
 
     uLen = length lst
 
     go (lo, hi)
-        | lo == hi  = mkLeaf <$> pop
-        | otherwise = mkBranch <$> go (lo, mid) <*> go (mid + 1, hi)
+        | lo == hi  = toLeaf <$> pop
+        | otherwise = toBranch <$> go (lo, mid) <*> go (mid + 1, hi)
       where
         mid = (lo + hi) `div` 2
 
     pop = state $ \case
         []    -> error "nodeFromList: impossible"
         c : s -> (c, s)
+
+-- | Construct a @'MerkleNode'@ over a non-empty list
+nodeFromList :: HasHash a => NonEmpty a -> MerkleNode a
+nodeFromList = merkleFromList mkLeaf mkBranch
 
 -- | Returns root of merkle tree. Returns @'emptyHash'@, if tree is empty.
 getMerkleRoot :: MerkleTree a -> MerkleSignature a
@@ -271,6 +278,10 @@ readyProof proof = UnsafeMerkleProofReady (reconstructRoot proof) proof
 -- the proof were fetched.
 mprSize :: MerkleProofReady a -> Word32
 mprSize = msSize . mprRoot
+
+-- | Construct a @'MerkleProof'@ over a non-empty list
+merkleProofFromList :: HasHash a => NonEmpty a -> MerkleProof a
+merkleProofFromList = merkleFromList ProofLeaf ProofBranch
 
 -- | Merges two already validated Merkle proofs, checking that all common
 -- inner nodes match.

@@ -23,7 +23,7 @@ import Dscp.Witness
 -- | Form and store a new private block made up from hanging private transactions.
 dumpPrivateBlock :: EducatorWorkMode ctx m => m (Maybe PrivateBlockHeader)
 dumpPrivateBlock = do
-    mblock <- transact $ createPrivateBlock Nothing
+    mblock <- transact $ dumpNonChainedTransactions Nothing
     case mblock of
         Nothing ->
             logInfo "No private chain updates, skipping private block creation"

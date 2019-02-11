@@ -16,16 +16,19 @@ module Dscp.DB.SQL.Util.Common
      , selectByPk
      , existsWithPk
      , deleteByPk
+     , coerceQExpr
      , currentTimestampUtc_
      , filterMatches_
      , filterMatchesPk_
      , getNextPrimaryKey
+     , jsonVal_
      ) where
 
 import Prelude hiding (_1, _2)
 
 import Data.Coerce (coerce)
 import qualified Database.Beam.Backend.SQL as Beam
+import Database.Beam.Postgres as BeamReexport (PgJSONB (..))
 import qualified Database.Beam.Postgres as Beam
 import Database.Beam.Query as BeamReexport (QGenExpr (..), aggregate_, all_, as_, asc_, countAll_,
                                             default_, delete, desc_, exists_, filter_, guard_,
@@ -143,6 +146,11 @@ deleteByPk tbl key = do
     changes <- runDelete $ delete tbl (valPk_ key `references_`)
     return (anyAffected changes)
 
+-- | Safely coerce one Beam SQL expression to another assuming that
+-- both expressions are represented in SQL engine in the same way.
+coerceQExpr :: Coercible a b => QGenExpr ctx syntax s a -> QGenExpr ctx syntax s b
+coerceQExpr = coerce
+
 -- | SQL CURRENT_TIMESTAMP function.
 currentTimestampUtc_
     :: forall ctxt syntax s.
@@ -196,3 +204,6 @@ getNextPrimaryKey tbl = do
         [Nothing] -> error "Unexpected Nothing"
         [Just x]  -> x + 1
         _ : _ : _ -> error "Too many rows"
+
+jsonVal_ :: _ => a -> QGenExpr ctx syntax s (PgJSONB a)
+jsonVal_ = val_ . PgJSONB

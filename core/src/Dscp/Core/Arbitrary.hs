@@ -35,6 +35,7 @@ module Dscp.Core.Arbitrary
     , gradeEx
     , privateTxEx
     , submissionWitnessEx
+    , certificateIssuerInfoEx
     , utcTimeEx
     , timestampEx
     ) where
@@ -142,6 +143,22 @@ instance Arbitrary CertificateMeta where
         cmMajor <- arbitrary
         cmSpecialization <- arbitrary
         return CertificateMeta {..}
+
+instance Arbitrary Language where
+    arbitrary = genericArbitrary
+    shrink    = genericShrink
+
+instance Arbitrary CertificateGrade where
+    arbitrary = genericArbitrary
+    shrink    = genericShrink
+
+instance Arbitrary CertificateFullInfo where
+    arbitrary = genericArbitrary
+    shrink    = genericShrink
+
+instance Arbitrary CertificateIssuerInfo where
+    arbitrary = genericArbitrary
+    shrink    = genericShrink
 
 instance Arbitrary PrivateTx where
     arbitrary = PrivateTx <$> arbitrary <*> arbitrary <*> arbitrary
@@ -476,6 +493,13 @@ privateTxEx =
 
 submissionWitnessEx :: SubmissionWitness
 submissionWitnessEx = _ssWitness signedSubmissionEx
+
+certificateIssuerInfoEx :: CertificateIssuerInfo
+certificateIssuerInfoEx =
+    CertificateIssuerInfo
+    { ciiName = "Grimpy Cat University"
+    , ciiUrl = "example@gmail.com"
+    }
 
 ----------------------------------------------------------------------------
 -- Orphans

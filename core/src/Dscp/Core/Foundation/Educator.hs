@@ -31,6 +31,7 @@ module Dscp.Core.Foundation.Educator
     , CertificateFullInfo (..)
     , CertificateMeta (..)
     , CertificateGrade (..)
+    , CertificateIssuerInfo (..)
     , Certificate (..)
     , StudentInfo (..)
     , GradeInfo (..)
@@ -51,6 +52,8 @@ module Dscp.Core.Foundation.Educator
     , swSig
     , ssSubmission
     , ssWitness
+    , certificateStudentNameField
+    , certificateIssueDateField
 
     -- * Private transactions
     , PrivateTx (..)
@@ -343,6 +346,22 @@ data CertificateMeta = CertificateMeta
     , cmSpecialization   :: !(Maybe ItemDesc)
     } deriving (Show, Eq, Generic)
 
+-- | Student name as it appears in JSON.
+certificateStudentNameField :: Text
+certificateStudentNameField = "studentName"
+
+-- | Certificate issue date as it appears in JSON.
+certificateIssueDateField :: Text
+certificateIssueDateField = "issueDate"
+
+-- TODO: I guess within DSCP-467 I will need to define
+-- `instance {To,From}JSON CertificateMeta` via
+-- https://github.com/agrafix/highjson, this will help us to
+--
+-- 1. Assign custom field names while preseving overall JSON instance derivation easy.
+-- Then we can reuse those names.
+-- 2. Provide a swagger description for each field.
+
 data EducationForm = Fulltime | Parttime | Fullpart
     deriving (Show, Eq, Generic, Enum, Bounded)
 
@@ -357,8 +376,8 @@ data Certificate = Certificate
 data CertificateGrade = CertificateGrade
     { cgSubject :: ItemDesc
     , cgLang    :: Language
-    , cgHours   :: Int
-    , cgCredits :: Maybe Int
+    , cgHours   :: Word32
+    , cgCredits :: Maybe Word32
     , cgGrade   :: Grade
     } deriving (Show, Eq, Generic)
 
@@ -369,7 +388,7 @@ data Language = EN | RU
 -- datatype represents a request body for 'AddCertificate' endpoint.
 data CertificateFullInfo = CertificateFullInfo
     { cfiMeta   :: CertificateMeta
-    , cfiGrades :: [CertificateGrade]
+    , cfiGrades :: NonEmpty CertificateGrade
     } deriving (Show, Eq, Generic)
 
 data StudentInfo = StudentInfo
@@ -382,6 +401,13 @@ data GradeInfo = GradeInfo
     , giTimestamp      :: Timestamp
     , giHasProof       :: Bool
     } deriving (Show, Eq, Ord, Generic)
+
+-- | Datatype containing information about Educator which issued
+-- the certificate, required in order to render a certificate.
+data CertificateIssuerInfo = CertificateIssuerInfo
+    { ciiName :: ItemDesc
+    , ciiUrl  :: ItemDesc
+    } deriving (Show, Eq, Generic)
 
 instance Buildable (StudentInfo) where
     build (StudentInfo{..}) =

@@ -1,13 +1,10 @@
 
-import Test.QuickCheck (property, Arbitrary (..))
-import Data.ByteString.Char8 as LBS
+import Test.QuickCheck (property)
+import Test.QuickCheck.Instances ()
 
 import Pdf.Scanner
 
-import Test.Hspec (hspec, describe, it)
-
-instance Arbitrary LBS.ByteString where
-    arbitrary = LBS.pack `fmap` arbitrary
+import Test.Hspec (describe, hspec, it)
 
 main :: IO ()
 main = hspec $ do

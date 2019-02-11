@@ -38,6 +38,7 @@ import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), withText)
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
 import Fmt (build, listF, (+|), (|+))
+import Pdf.Scanner (PDFBody (..))
 import Servant.Util (type (?:), ForResponseLog (..), SortingParamTypesOf, buildListForResponse)
 
 import Dscp.Core
@@ -128,7 +129,7 @@ mkCountedList onlyCount ls =
 ---------------------------------------------------------------------------
 
 type instance SortingParamTypesOf Certificate =
-    ["createdAt" ?: Timestamp, "student" ?: ItemDesc]
+    ["createdAt" ?: PgJSONB Timestamp, "studentName" ?: PgJSONB ItemDesc]
 
 ---------------------------------------------------------------------------
 -- Simple conversions
@@ -277,11 +278,11 @@ instance Buildable (ForResponseLog CertificateGrade) where
 instance Buildable (ForResponseLog CertificateFullInfo) where
     build (ForResponseLog CertificateFullInfo {..}) =
         "{ meta = "+|cfiMeta|+
-        ", grades = "+|buildListForResponse (take 4) (ForResponseLog cfiGrades)|+" }"
+        ", grades = "+|buildListForResponse (take 4) (ForResponseLog $ toList cfiGrades)|+" }"
 
 -- Instance for PDF contents
-instance Buildable (ForResponseLog LByteString) where
-    build _ = "<binary data>"
+instance Buildable (ForResponseLog PDFBody) where
+    build _ = "<pdf>"
 
 instance Buildable (ForResponseLog [CourseEducatorInfo]) where
     build = buildListForResponse (take 6)

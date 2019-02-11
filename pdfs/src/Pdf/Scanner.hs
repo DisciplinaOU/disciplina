@@ -1,28 +1,32 @@
 
 module Pdf.Scanner (inject, project, insertionMark, PDFBody (..), MaxSearchLength (..)) where
 
-import Data.ByteString.Char8  as LBS
-import Data.ByteString.Base64 as LBS
+import qualified Data.ByteString.Base64 as Base64
+import qualified Data.ByteString.Lazy.Char8 as LBS
 import Data.Hashable
+import Fmt (Buildable (..))
 
 newtype PDFBody = PDFBody { getPDFBody :: LBS.ByteString }
+    deriving (NFData)
+
+instance Buildable PDFBody where
+    build _ = "<pdf>"
 
 newtype MaxSearchLength = MaxSearchLength { getMaxSearchLength :: Maybe Int }
 
-inject :: MaxSearchLength -> LBS.ByteString -> PDFBody -> Maybe PDFBody
+inject :: MaxSearchLength -> ByteString -> PDFBody -> Maybe PDFBody
 inject
     (fromMaybe maxBound . getMaxSearchLength -> quota)
      thing
     (PDFBody text)
   =
-    let base64    = LBS.encode thing
+    let base64    = LBS.fromStrict $ Base64.encode thing
         commented = "\n%" <> fairCVStartMark <> "{" <> base64 <> "}%"
     in  do
         place <- findFromEnd quota insertionMark text
         return $ PDFBody $ insertAt place commented text
-  where
 
-project :: MaxSearchLength -> PDFBody -> Maybe LBS.ByteString
+project :: MaxSearchLength -> PDFBody -> Maybe ByteString
 project
     (fromMaybe maxBound . getMaxSearchLength -> quota)
     (PDFBody text)
@@ -32,9 +36,9 @@ project
         piece = LBS.takeWhile (not . (== '}')) after
 
     either (const Nothing) pure
-        $ LBS.decode piece
+        $ Base64.decode (LBS.toStrict piece)
 
-findFromEnd :: Int -> LBS.ByteString -> LBS.ByteString -> Maybe Int
+findFromEnd :: Int -> LBS.ByteString -> LBS.ByteString -> Maybe Int64
 findFromEnd quota what text = do
     guard $ not $ LBS.null what
     guard $ not $ LBS.null text
@@ -48,11 +52,11 @@ findFromEnd quota what text = do
         then Just i
         else go (q - 1) (i - 1)
 
-equalsFrom :: Int -> LBS.ByteString -> LBS.ByteString -> Bool
+equalsFrom :: Int64 -> LBS.ByteString -> LBS.ByteString -> Bool
 equalsFrom offset what text = do
     what == LBS.take (LBS.length what) (LBS.drop offset text)
 
-insertAt :: Int -> LBS.ByteString -> LBS.ByteString -> LBS.ByteString
+insertAt :: Int64 -> LBS.ByteString -> LBS.ByteString -> LBS.ByteString
 insertAt place what text =
     let (before, after) = LBS.splitAt place text
     in   before <> what <> after

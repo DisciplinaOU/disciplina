@@ -35,8 +35,8 @@ import Test.Hspec.QuickCheck as T (modifyMaxSuccess)
 import Test.QuickCheck as T (Arbitrary (..), Fixed (..), Gen, Property, Testable (..), conjoin,
                              cover, elements, expectFailure, forAll, frequency, infiniteList,
                              infiniteListOf, ioProperty, label, listOf, listOf1, once, oneof,
-                             property, sublistOf, suchThat, suchThatMap, vectorOf, (.&&.), (===),
-                             (==>))
+                             property, sublistOf, suchThat, suchThatMap, total, vectorOf, (.&&.),
+                             (===), (==>))
 import Test.QuickCheck (shuffle, sized)
 import qualified Test.QuickCheck as Q
 import Test.QuickCheck.Arbitrary.Generic as T (genericArbitrary, genericShrink)

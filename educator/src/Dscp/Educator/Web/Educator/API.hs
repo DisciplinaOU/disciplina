@@ -9,7 +9,7 @@ module Dscp.Educator.Web.Educator.API
     , EducatorApiHandlers
     ) where
 
-import Network.HTTP.Media.MediaType ((//))
+import Pdf.Scanner (PDFBody (..))
 import Servant
 import Servant.Generic
 import Servant.Util (PaginationParams, SortingParamsOf)
@@ -21,6 +21,7 @@ import Dscp.Educator.Web.Educator.Auth
 import Dscp.Educator.Web.Educator.Error
 import Dscp.Educator.Web.Educator.Types
 import Dscp.Educator.Web.Types
+import Dscp.Witness.Web.ContentTypes
 
 data EducatorApiEndpoints route = EducatorApiEndpoints
     { eGetStatus               :: route :- GetStatus
@@ -59,19 +60,6 @@ rawEducatorAPI = Proxy
 
 protectedEducatorAPI :: Proxy ProtectedEducatorAPI
 protectedEducatorAPI = Proxy
-
----------------------------------------------------------------------------
--- Content-type 'application/pdf'
----------------------------------------------------------------------------
-
-data PDF
-
-instance Accept PDF where
-    contentType _ = "application" // "pdf"
-instance MimeRender PDF LByteString where
-    mimeRender _ = id
-instance MimeUnrender PDF LByteString where
-    mimeUnrender _ = Right . id
 
 ---------------------------------------------------------------------------
 -- General
@@ -271,7 +259,7 @@ type GetCertificate
     :> Summary "Get the certificate by ID"
     :> Description "Gets the PDF certificate with FairCV JSON included as \
                    \metadata by ID"
-    :> Get '[PDF] LByteString
+    :> Get '[PDF] PDFBody
 
 type AddCertificate
     = "certificates"

@@ -25,7 +25,8 @@ import Control.Arrow ((&&&))
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.Text.Lazy as Text
 import Data.Text.Lazy.Builder as Text
-import Data.Time.Calendar (fromGregorian, toGregorian)
+import Data.Time.Calendar
+import GHC.Exts (fromList)
 import qualified System.Directory as D
 import System.FilePath.Posix ((</>))
 import System.IO.Temp (withSystemTempDirectory)
@@ -36,13 +37,7 @@ import Text.Printer (text)
 import Dscp.Core.Foundation.Educator
 
 import Pdf.MkLatex
-
--- | Datatype containing information about Educator which issued
--- the certificate, required in order to render a certificate.
-data CertificateIssuerInfo = CertificateIssuerInfo
-    { ciiName :: ItemDesc
-    , ciiUrl  :: ItemDesc
-    } deriving (Show, Eq, Generic)
+import Pdf.Scanner
 
 -- | Generate latex certificate from locale, Educator name and data.
 generate :: Language -> CertificateIssuerInfo -> CertificateFullInfo -> Text
@@ -57,7 +52,7 @@ fullInfo
     = divided               language
     $ split (cfiMeta . snd) personal
     $ inBlock "document"
-        $ divide (id &&& (cfiGrades . snd))
+        $ divide (id &&& (toList . cfiGrades . snd))
             meta
             courses
   where
@@ -117,8 +112,8 @@ fullInfo
 newtype ResourcePath = ResourcePath { unResourcePath :: FilePath }
 
 -- | Generate a PDF-certificate and return it as a bytestring.
-produce :: Language -> CertificateIssuerInfo -> CertificateFullInfo -> ResourcePath -> IO LByteString
-produce loc ciInfo info (ResourcePath resPath) =
+produce :: MonadIO m => Language -> CertificateIssuerInfo -> CertificateFullInfo -> ResourcePath -> m PDFBody
+produce loc ciInfo info (ResourcePath resPath) = liftIO $
 
     -- Everyhting produced should be removed.
     -- This may lead to /tmp exhaustion attack, unless /tmp or memory
@@ -144,7 +139,7 @@ produce loc ciInfo info (ResourcePath resPath) =
         _ <- action
 
         pdf <- LBS.readFile (tmpPath </> "texput.pdf")
-        evaluateNF pdf
+        evaluateNF $ PDFBody pdf
 
 copyDirectory :: FilePath -> FilePath -> IO ()
 copyDirectory from to = do
@@ -173,7 +168,7 @@ testData = CertificateFullInfo
         , cmStudentName      = "Вася Пупкин"
         , cmStudentBirthDate = fromGregorian 1990 2 3
         }
-    , cfiGrades =
+    , cfiGrades = fromList
         [ CertificateGrade
             { cgGrade = minBound
             , cgCredits = Just 132

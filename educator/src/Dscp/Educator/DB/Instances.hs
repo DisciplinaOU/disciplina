@@ -13,6 +13,7 @@ import Database.Beam.Backend.SQL.SQL92 (HasSqlValueSyntax (..), IsSql92Expressio
 import Database.Beam.Postgres.Syntax (PgValueSyntax)
 import Database.Beam.Query (HasSqlEqualityCheck (..))
 import Database.PostgreSQL.Simple.FromField (FromField (..))
+import Pdf.Scanner (PDFBody (..))
 
 import Dscp.Core
 import Dscp.Crypto
@@ -121,6 +122,9 @@ deriving instance IsPgValue Grade
 deriving instance FromField BlockIdx
 deriving instance IsPgValue BlockIdx
 
+deriving instance FromField PDFBody
+deriving instance IsPgValue PDFBody
+
 {- Custom instances -}
 
 instance FromField TxBlockIdx where
@@ -166,6 +170,7 @@ GenFromBackendRow(MerkleSignature a)
 GenFromBackendRow(EmptyMerkleTree a)
 GenFromBackendRow(ATGDelta)
 GenFromBackendRow(CertificateMeta)
+GenFromBackendRow(PDFBody)
 
 ----------------------------------------------------------------------------
 -- Other instances

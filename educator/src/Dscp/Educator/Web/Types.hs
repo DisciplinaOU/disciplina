@@ -24,6 +24,7 @@ module Dscp.Educator.Web.Types
          -- * Conversions
        , assignmentTypeRaw
        , gradeInfoFromRow
+       , certificateFromRow
        ) where
 
 import Control.Lens (Iso', from, iso, makePrisms)
@@ -33,6 +34,7 @@ import Data.Aeson.TH (deriveJSON)
 import Fmt (build, (+|), (+||), (|+), (||+))
 import Loot.Base.HasLens (HasCtx)
 import Loot.Log (ModifyLogName, MonadLogging)
+import qualified Pdf.FromLatex as Pdf
 import Servant (FromHttpApiData (..), ToHttpApiData)
 import Servant.Util (ForResponseLog (..), buildForResponse, buildListForResponse)
 
@@ -54,7 +56,7 @@ type MonadEducatorWebQuery m =
 
 type MonadEducatorWeb ctx m =
     ( WitnessWorkMode ctx m
-    , HasCtx ctx m '[SQL, KeyResources EducatorNode]
+    , HasCtx ctx m '[SQL, KeyResources EducatorNode, Pdf.ResourcePath]
     )
 
 ---------------------------------------------------------------------------
@@ -162,6 +164,13 @@ gradeInfoFromRow TransactionRow{..} =
     , giGrade = trGrade
     , giTimestamp = trCreationTime
     , giHasProof = trIdx /= TxInMempool
+    }
+
+certificateFromRow :: (Hash CertificateMeta, PgJSONB CertificateMeta) -> Certificate
+certificateFromRow (cId, meta) =
+    Certificate
+    { cId
+    , cMeta = case meta of PgJSONB m -> m
     }
 
 ---------------------------------------------------------------------------

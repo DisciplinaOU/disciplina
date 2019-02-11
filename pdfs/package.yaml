@@ -7,13 +7,14 @@ library:
   <<: *lib-common
 
   dependencies:
-    - contravariant
-    - containers
     - bytestring
     - base64-bytestring
+    - contravariant
+    - containers
     - directory
     - disciplina-core
     - filepath
+    - fmt
     - hashable
     - pandoc
     - text
@@ -31,6 +32,7 @@ tests:
       - disciplina-pdfs
       - hspec
       - QuickCheck
+      - quickcheck-instances
 
 executables:
   dscp-inject-json-into-pdf:
