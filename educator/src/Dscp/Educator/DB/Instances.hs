@@ -4,6 +4,7 @@
 module Dscp.Educator.DB.Instances () where
 
 import Codec.Serialise as Codec (deserialise)
+import qualified Data.Aeson as Aeson
 import qualified Data.ByteArray as BA
 import Data.Time.Clock (UTCTime)
 import Database.Beam.Backend (BackendFromField, BeamBackend, FromBackendRow (..))
@@ -48,6 +49,14 @@ instance FromField (TYPE) where \
     fromField field ty = \
         leftToPanic . fromByteArray @(TYPE) @ByteString <$> fromField field ty
 
+#define JsonInstanceEnc(TYPE) \
+instance IsPgValue (TYPE) where \
+    sqlValueSyntax = sqlValueSyntax . Aeson.encode
+
+#define JsonInstanceDec(TYPE) \
+instance FromField (TYPE) where \
+    fromField field ty = leftToPanic . Aeson.eitherDecode <$> fromField field ty
+
 #define EnumInstanceEnc(TYPE) \
 instance IsPgValue (TYPE) where \
     sqlValueSyntax = sqlValueSyntax . fromEnum
@@ -88,6 +97,11 @@ CodecInstanceDec(MerkleSignature a)
 
 CodecInstanceEnc(EmptyMerkleTree a)
 CodecInstanceDec(EmptyMerkleTree a)
+
+{- Instances via JSON -}
+
+JsonInstanceEnc(CertificateMeta)
+JsonInstanceDec(CertificateMeta)
 
 {- Newtype-derived instances -}
 
@@ -151,6 +165,7 @@ GenFromBackendRow(SubmissionWitness)
 GenFromBackendRow(MerkleSignature a)
 GenFromBackendRow(EmptyMerkleTree a)
 GenFromBackendRow(ATGDelta)
+GenFromBackendRow(CertificateMeta)
 
 ----------------------------------------------------------------------------
 -- Other instances

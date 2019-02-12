@@ -60,6 +60,7 @@ module Dscp.Educator.DB.Queries
        , getPrivateBlockIdxByHash
        , getPrivateBlocksAfter
        , getPrivateBlocksAfterHash
+       , getCertificateMeta
        , createPrivateBlock
        , createSignedSubmission
        , setStudentAssignment
@@ -67,6 +68,7 @@ module Dscp.Educator.DB.Queries
        , createStudent
        , createAssignment
        , createTransaction
+       , createCertificateMeta
        ) where
 
 
@@ -531,3 +533,19 @@ getTransaction ptid = do
         privateTx <- related_ (esTransactions es) (valPk_ ptid)
         submission <- related_ (esSubmissions es) (trSubmission privateTx)
         return (privateTx, submission)
+
+getCertificateMeta
+    :: MonadIO m
+    => Hash CertificateMeta -> DBT t m (Maybe CertificateMeta)
+getCertificateMeta = selectByPk crMeta (esCertificates es)
+
+createCertificateMeta
+    :: MonadIO m
+    => CertificateMeta -> LByteString -> DBT t m ()
+createCertificateMeta meta pdf =
+    runInsert . insert (esCertificates es) $ insertValue
+        CertificateRow
+        { crHash = hash meta
+        , crMeta = meta
+        , crPdf = pdf
+        }
