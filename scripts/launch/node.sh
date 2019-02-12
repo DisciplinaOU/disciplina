@@ -73,7 +73,7 @@ fi
 if [[ "$no_clean" != true ]]; then
     rm -rf $tmp_files
     if [[ $sql_db_name != "" ]]; then
-        dropdb --if-exists $sql_db_name 2> /dev/null
+        dropdb --if-exists $sql_db_name
     fi
 fi
 
@@ -93,7 +93,7 @@ fi
 
 # Create database
 if [[ $sql_db_name != "" ]]; then
-    createdb $sql_db_name 2> /dev/null || :
+    createdb $sql_db_name || echo "Further trying to use an existing database"
     psql $sql_db_name -tAc \
          "alter database \"$sql_db_name\" set client_min_messages to warning" \
          > /dev/null
