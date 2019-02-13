@@ -63,13 +63,15 @@ studentIsCourseFinished
     => Id Student -> Course -> DBT t m Bool
 studentIsCourseFinished studentId' courseId' =
     checkExists $ do
-        privateTx <- all_ (esTransactions es)
-        submission <- related_ (esSubmissions es) (trSubmission privateTx)
-        assignment <- related_ (esAssignments es) (srAssignment submission)
-        guard_ (arType assignment ==. val_ CourseFinal)
+        privateGrade <- all_     (esGrades      es)
+        submission   <- related_ (esSubmissions es) (grSubmission privateGrade)
+        assignment   <- related_ (esAssignments es) (srAssignment submission)
+
+        guard_ (arType    assignment ==. val_ CourseFinal)
         guard_ (srStudent submission ==. valPk_ studentId')
-        guard_ (arCourse assignment ==. valPk_ courseId')
-        guard_ (isPositiveGradeQ (trGrade privateTx))
+        guard_ (arCourse  assignment ==. valPk_ courseId')
+
+        guard_ (isPositiveGradeQ (grGrade privateGrade))
 
 studentGetCourse
     :: MonadEducatorWebQuery m
@@ -117,10 +119,10 @@ studentGetGrade
     => Hash Submission -> DBT 'WithinTx m (Maybe GradeInfo)
 studentGetGrade submissionH = do
     mgrade <- listToMaybeWarnM . runSelect . select $ do
-        ptx <- all_ (esTransactions es)
-        let SubmissionRowId subH = trSubmission ptx
+        ptx <- all_ (esGrades es)
+        let SubmissionRowId subH = grSubmission ptx
         guard_ (subH ==. val_ submissionH)
-        return $ (trGrade ptx, trCreationTime ptx, subH, trIdx ptx)
+        return $ (grGrade ptx, grCreationTime ptx, subH, grIdx ptx)
 
     forM mgrade $ \(giGrade, giTimestamp, giSubmissionHash, blkIdx) -> do
         let giHasProof = blkIdx /= TxInMempool
@@ -197,7 +199,8 @@ studentGetAssignments student filters sorting pagination = do
             link_ (esStudentAssignments es) (valPk_ student :-: pk_ assignment)
 
             guard_ $ filterMatchesPk_ (afCourse filters) (arCourse assignment)
-            guard_ $ filterMatches_ assignTypeF (arType assignment)
+            guard_ $ filterMatches_    assignTypeF       (arType   assignment)
+
             whenJust (afDocType filters) $ \docType ->
                 guard_ (eqDocTypeQ docType (arContentsHash assignment))
 
@@ -222,12 +225,15 @@ studentGetSubmission student subH = do
     submissions <- runSelectMap studentSubmissionInfoFromRow . select $ do
         submission <- related_ (esSubmissions es) (valPk_ subH)
         assignment <- related_ (esAssignments es) (srAssignment submission)
+
         link_ (esStudentAssignments es) (valPk_ student :-: pk_ assignment)
 
-        mPrivateTx <- leftJoin_ (all_ $ esTransactions es)
-                                ((`references_` submission) . trSubmission)
+        mPrivateGrade <- leftJoin_
+            (all_ $ esGrades es)
+            ((`references_` submission) . grSubmission)
 
-        return (submission, mPrivateTx)
+        return (submission, mPrivateGrade)
+
     listToMaybeWarn submissions
         >>= nothingToThrow (AbsentError $ SubmissionDomain subH)
 
@@ -250,14 +256,16 @@ studentGetSubmissions student filters sorting pagination = do
 
             guard_ $ filterMatchesPk_ (sfCourse filters) (arCourse assignment)
             guard_ $ filterMatchesPk_ (sfAssignmentHash filters) (srAssignment submission)
+
             whenJust (sfDocType filters) $ \docType ->
                 guard_ (eqDocTypeQ docType (arContentsHash assignment))
 
-            mPrivateTx <- leftJoin_ (all_ $ esTransactions es)
-                                    ((`references_` submission) . trSubmission)
+            mPrivateGrade <- leftJoin_
+                (all_ $ esGrades es)
+                ((`references_` submission) . grSubmission)
 
-            return (submission, mPrivateTx)
+            return (submission, mPrivateGrade)
   where
-    mkSortingSpecApp (_, TransactionRow{..}) =
-        fieldSort @"grade" trGrade .*.
+    mkSortingSpecApp (_, GradeRow{..}) =
+        fieldSort_ @"grade" grGrade .*.
         HNil

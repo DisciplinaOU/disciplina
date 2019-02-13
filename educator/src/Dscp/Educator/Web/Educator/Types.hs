@@ -184,7 +184,7 @@ educatorAssignmentInfoFromRow AssignmentRow{..} =
     , aiIsFinal = arType ^. assignmentTypeRaw
     }
 
-educatorSubmissionInfoFromRow :: (SubmissionRow, Maybe TransactionRow) -> SubmissionEducatorInfo
+educatorSubmissionInfoFromRow :: (SubmissionRow, Maybe GradeRow) -> SubmissionEducatorInfo
 educatorSubmissionInfoFromRow (SubmissionRow{..}, tx) =
     SubmissionEducatorInfo
     { siHash = srHash
@@ -315,14 +315,17 @@ instance Buildable (ForResponseLog [a]) =>
 ---------------------------------------------------------------------------
 
 deriveJSON defaultOptions ''NewStudent
+deriveJSON defaultOptions ''AssignmentEducatorInfo
+deriveJSON defaultOptions ''Certificate
+deriveJSON defaultOptions ''Counted
+deriveJSON defaultOptions ''CourseEducatorInfo
+deriveJSON defaultOptions ''EducatorInfo
+deriveJSON defaultOptions ''NewAssignment
 deriveJSON defaultOptions ''NewCourse
 deriveJSON defaultOptions ''NewGrade
-deriveJSON defaultOptions ''NewAssignment
-deriveJSON defaultOptions ''NewStudentCourse
+deriveJSON defaultOptions ''NewStudent
 deriveJSON defaultOptions ''NewStudentAssignment
-deriveJSON defaultOptions ''EducatorInfo
-deriveJSON defaultOptions ''CourseEducatorInfo
-deriveJSON defaultOptions ''AssignmentEducatorInfo
+deriveJSON defaultOptions ''NewStudentCourse
 deriveJSON defaultOptions ''SubmissionEducatorInfo
 deriveJSON defaultOptions ''Certificate
 deriveJSON defaultOptions ''CertificateGrade

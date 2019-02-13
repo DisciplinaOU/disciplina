@@ -65,6 +65,8 @@ module Dscp.Core.Foundation.Educator
     , _PrivateTxGrade
     , _PrivateTxCertification
     , getPrivateTxType
+    , ptxTypeGrade
+    , ptxTypeCertification
 
     -- * Lenses
     , ptaTx
@@ -381,7 +383,7 @@ data CertificateGrade = CertificateGrade
     } deriving (Show, Eq, Ord, Generic)
 
 data Language = EN | RU
-    deriving (Show, Eq, Ord, Generic)
+    deriving (Show, Eq, Ord, Enum, Bounded, Generic)
 
 -- | Datatype which contains all the info about certificate. This
 -- datatype represents a request body for 'AddCertificate' endpoint.
@@ -476,8 +478,12 @@ data PrivateTx
 
 getPrivateTxType :: PrivateTx -> Int
 getPrivateTxType = \case
-    PrivateTxGrade         {} -> 0
-    PrivateTxCertification {} -> 1
+    PrivateTxGrade         {} -> ptxTypeGrade
+    PrivateTxCertification {} -> ptxTypeCertification
+
+ptxTypeGrade, ptxTypeCertification :: Int
+ptxTypeGrade = 0
+ptxTypeCertification = 1
 
 data PrivateCertification = PrivateCertification
     { _pcGrade   :: !SignedCertificateGrade

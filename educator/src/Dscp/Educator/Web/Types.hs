@@ -167,13 +167,13 @@ assignmentTypeRaw = iso forth back . from _IsFinal
         Regular     -> False
         CourseFinal -> True
 
-gradeInfoFromRow :: TransactionRow -> GradeInfo
-gradeInfoFromRow TransactionRow{..} =
+gradeInfoFromRow :: GradeRow -> GradeInfo
+gradeInfoFromRow GradeRow{..} =
     GradeInfo
-    { giSubmissionHash = unpackPk trSubmission
-    , giGrade = trGrade
-    , giTimestamp = trCreationTime
-    , giHasProof = trIdx /= TxInMempool
+    { giSubmissionHash = unpackPk grSubmission
+    , giGrade = grGrade
+    , giTimestamp = grCreationTime
+    , giHasProof = grIdx /= TxInMempool
     }
 
 certificateFromRow :: (Hash CertificateMeta, PgJSONB CertificateMeta) -> Certificate

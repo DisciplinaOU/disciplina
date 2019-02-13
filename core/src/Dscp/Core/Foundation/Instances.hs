@@ -5,6 +5,7 @@ module Dscp.Core.Foundation.Instances where
 import Codec.Serialise (Serialise (..))
 import Codec.Serialise.Decoding (decodeListLen, decodeWord)
 import Codec.Serialise.Encoding (encodeListLen, encodeWord)
+import Data.Coerce (coerce)
 import Data.Time.Calendar (Day (..))
 
 import Dscp.Core.Foundation.Coin
@@ -40,9 +41,19 @@ instance Serialise CertificateGrade
 instance Serialise SignedCertificateGrade
 instance Serialise Language
 
+instance HasId PrivateGrade where
+    type Id PrivateGrade = Hash PrivateGrade
+    getId = hash
+
+instance HasId PrivateCertification where
+    type Id PrivateCertification = Hash PrivateCertification
+    getId = hash
+
 instance HasId PrivateTx where
     type Id PrivateTx = Hash PrivateTx
-    getId = hash
+    getId = \case
+        PrivateTxGrade         grade -> coerce (getId grade)
+        PrivateTxCertification cert  -> coerce (getId cert)
 
 -- TODO: move to well-specified serialisation instead of generic one.
 deriving instance Serialise Course

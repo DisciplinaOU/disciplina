@@ -117,6 +117,8 @@ data EducatorSchema f = EducatorSchema
     , esBlockTxs            :: f (TableEntity $ RelationT 'Mx1 TransactionRowT BlockRowT)
     , esCertificates        :: f (TableEntity   CertificateRowT)
     , esCertificatesVersion :: f (TableEntity $ SingletonT Word32)
+    , esGrades              :: f (TableEntity   GradeRowT)
+    , esCertificates        :: f (TableEntity   CertificateRowT)
     } deriving (Generic)
 
 ----------------------------------------------------------------------------
@@ -131,12 +133,9 @@ type StudentRow     = StudentRowT     Identity
 type AssignmentRow  = AssignmentRowT  Identity
 type SubmissionRow  = SubmissionRowT  Identity
 type TransactionRow = TransactionRowT Identity
-<<<<<<< HEAD
-type BlockRow = BlockRowT Identity
+type BlockRow       = BlockRowT Identity
 type CertificateRow = CertificateRowT Identity
-=======
 type BlockRow       = BlockRowT       Identity
->>>>>>> [DSCP-452] Saved
 
 ----------------------------------------------------------------------------
 -- Connection with core types
@@ -223,6 +222,16 @@ instance Table CertificateRowT where
         deriving (Generic)
     primaryKey = HashTableId . crHash
 
+instance Table GradeRowT where
+    newtype PrimaryKey GradeRowT f = GradeRowId (PrimaryKey TransactionRowT f)
+        deriving (Generic)
+    primaryKey = GradeRowId . grHash
+
+instance Table CertificateRowT where
+    newtype PrimaryKey CertificateRowT f = CertificateRowId (PrimaryKey TransactionRowT f)
+        deriving (Generic)
+    primaryKey = CertificateRowId . crHash
+
 ----------------------------------------------------------------------------
 -- 'Beamable' instances
 ----------------------------------------------------------------------------
@@ -247,6 +256,9 @@ instance Beamable (PrimaryKey TransactionRowT)
 
 instance Beamable BlockRowT
 instance Beamable (PrimaryKey BlockRowT)
+
+instance Beamable GradeRowT
+instance Beamable (PrimaryKey GradeRowT)
 
 instance Beamable CertificateRowT
 instance Beamable (PrimaryKey CertificateRowT)
