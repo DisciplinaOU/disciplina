@@ -11,7 +11,7 @@ import Dscp.Core
 import Dscp.Crypto
 import Dscp.Educator.Web.Student
 import Dscp.Resource.Keys
-import Dscp.Util (leftToFail, nothingToFail)
+import Dscp.Util (leftToFail)
 import Dscp.Util.Test (detGenG)
 import Dscp.Witness.Web hiding (checkFairCV)
 
@@ -36,8 +36,7 @@ main = do
     let sk = store^.krSecretKeyData
 
     -- make student secret key from a seed
-    skS <- nothingToFail "Could not make student secret key" $
-        mkSecretKeyData <$> secretFromSeed studentSeed
+    let skS = mkSecretKeyData $ secretFromSeed studentSeed
 
     -- make addresses for educator and students
     let addr = skAddress sk
