@@ -12,6 +12,34 @@ let
       pg_tmp stop -d $(echo ''${TEST_PG_CONN_STRING#*=} | sed 's:%2F:/:g') || :
     '';
   });
+  addLatex = drv: pkgs.haskell.lib.overrideCabal drv (old: {
+    libraryToolDepends = (old.libraryToolDepends or []) ++
+      [ (texlive.combine {
+          inherit (texlive)
+            collection-basic
+            collection-fontsrecommended
+            collection-langcyrillic
+            collection-xetex
+            scheme-basic
+            extsizes
+            titlesec
+            url
+            hyperref
+            xltxtra
+            geometry
+            background
+            realscripts
+            datetime2
+            tracklang
+            etoolbox
+            everypage
+            xkeyval
+            xcolor
+            pgf
+            fontspec;
+        })
+      ];
+  });
 in
 stackToNix {
   # TODO: properly fix this in stack-to-nix
@@ -27,7 +55,10 @@ stackToNix {
   ];
   inherit shell;
   overrides = self: previous: {
-    disciplina-educator = withPostgreSQL previous.disciplina-educator;
+    disciplina-educator =
+      (withPostgreSQL
+        (addLatex previous.disciplina-educator)
+      );
 
     HList = pkgs.haskell.lib.overrideCabal previous.HList (o: {
       preCompileBuildDriver = ''
