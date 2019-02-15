@@ -111,6 +111,7 @@ educator_params="
 --educator-api-no-auth
 --student-api-no-auth 3BAyX5pNpoFrLJcP5bZ2kXihBfmBVLprSyP1RhcPPddm6Dw42jzEPXZz22
 --publication-period 15s
+--pdf-resource-path ../pdfs/template
 "
 multi_educator_params="
 --educator-key-dir $files/educator.key
@@ -119,13 +120,14 @@ multi_educator_params="
 --educator-api-no-auth
 --student-api-no-auth 3BAyX5pNpoFrLJcP5bZ2kXihBfmBVLprSyP1RhcPPddm6Dw42jzEPXZz22
 --publication-period 15s
+--pdf-resource-path ../pdfs/template
 "
 # Note: Student address in --student-api-no-auth parameter corresponds to secret
 # key with seed 456 (use dscp-keygen to generate one)
 
 # witness params (and educator's as well)
 witness_params="
---appdir ./tmp/
+--appdir ./run/
 --config ./config.yaml
 --config-key singleton
 --bind 127.0.0.1:4010:4011
@@ -139,7 +141,7 @@ witness_params="
 
 # parameters for faucet
 faucet_params="
---appdir ./tmp/
+--appdir ./run/
 --faucet-listen 127.0.0.1:8095
 --witness-backend $witness_web_addr
 --translated-amount 20

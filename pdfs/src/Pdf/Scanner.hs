@@ -1,5 +1,12 @@
 
-module Pdf.Scanner (inject, project, insertionMark, PDFBody (..), MaxSearchLength (..)) where
+module Pdf.Scanner
+    ( inject
+    , project
+    , insertionMark
+    , PDFBody(..)
+    , writePdf
+    , MaxSearchLength(..)
+    ) where
 
 import qualified Data.ByteString.Base64 as Base64
 import qualified Data.ByteString.Lazy.Char8 as LBS
@@ -11,6 +18,9 @@ newtype PDFBody = PDFBody { getPDFBody :: LBS.ByteString }
 
 instance Buildable PDFBody where
     build _ = "<pdf>"
+
+writePdf :: MonadIO m => FilePath -> PDFBody -> m ()
+writePdf path (PDFBody pdf) = liftIO $ LBS.writeFile path pdf
 
 newtype MaxSearchLength = MaxSearchLength { getMaxSearchLength :: Maybe Int }
 
