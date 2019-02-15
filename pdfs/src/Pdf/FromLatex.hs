@@ -29,7 +29,8 @@ import Data.Time.Calendar (fromGregorian, toGregorian)
 import qualified System.Directory as D
 import System.FilePath.Posix ((</>))
 import System.IO.Temp (withSystemTempDirectory)
-import System.Process.Typed (byteStringInput, byteStringOutput, runProcess, setStdin, setStdout)
+import System.Process.Typed (byteStringInput, byteStringOutput, runProcess, setStdin, setStdout,
+                             setWorkingDir)
 import Text.Printer (text)
 
 import Dscp.Core.Foundation.Educator
@@ -129,20 +130,21 @@ produce loc ciInfo info (ResourcePath resPath) =
         let theText = generate loc ciInfo info
         let input   = encodeUtf8 theText
 
-        D.withCurrentDirectory tmpPath $ do
-            let action
-                    = runProcess
-                    $ setStdin (byteStringInput input)  -- feed the latex doc in directly
-                    $ setStdout byteStringOutput
-                    $ "xelatex"
+        let action
+                = runProcess
+                $ setWorkingDir tmpPath
+                $ setStdin (byteStringInput input)  -- feed the latex doc in directly
+                $ setStdout byteStringOutput
+                $ "xelatex"
 
-            -- LaTeX Warning: Label(s) may have changed. Rerun to get cross-references right.
-            --
-            -- That's why. And there's no picture behind header if only 1 action is run.
-            _ <- action
-            _ <- action
+        -- LaTeX Warning: Label(s) may have changed. Rerun to get cross-references right.
+        --
+        -- That's why. And there's no picture behind header if only 1 action is run.
+        _ <- action
+        _ <- action
 
-            LBS.readFile "texput.pdf"
+        pdf <- LBS.readFile (tmpPath </> "texput.pdf")
+        evaluateNF pdf
 
 copyDirectory :: FilePath -> FilePath -> IO ()
 copyDirectory from to = do
