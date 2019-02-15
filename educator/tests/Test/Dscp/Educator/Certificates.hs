@@ -1,10 +1,10 @@
-{-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE OverloadedLists #-}
 
 module Test.Dscp.Educator.Certificates where
 
 import Data.Default (def)
 import qualified Pdf.FromLatex as Pdf
-import Servant.Util (fullContent)
+import Servant.Util (asc, fullContent)
 
 import Dscp.DB.SQL
 import Dscp.Educator
@@ -47,11 +47,14 @@ spec_Educator_certificates = specWithTempPostgresServer $ do
                     -- return $ counterexample "FairCV is not verified" $
                     --          fairCVFullyValid $ fcacrCheckResult checkRes
 
-            it "Sorting on certificates works" $ educatorPropertyM $ do
+            it "Sorting certificates on creation day works" $ educatorPropertyM $ do
                 n <- pick $ choose (0, 5)
                 certs <- pickSmall $ replicateM n arbitrary
-                sorting <- pick arbitrary
 
                 lift $ do
                     forM_ certs educatorAddCertificate
-                    void . invoke $ educatorGetCertificates sorting fullContent
+                    certs' <- invoke $ educatorGetCertificates [asc #createdAt] fullContent
+
+                    return $ map cMeta certs'
+                             ===
+                             sortOn cmIssueDate (map cfiMeta certs)

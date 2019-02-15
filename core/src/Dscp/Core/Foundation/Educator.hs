@@ -52,8 +52,6 @@ module Dscp.Core.Foundation.Educator
     , swSig
     , ssSubmission
     , ssWitness
-    , certificateStudentNameField
-    , certificateIssueDateField
 
     -- * Private transactions
     , PrivateTx (..)
@@ -345,22 +343,6 @@ data CertificateMeta = CertificateMeta
     , cmMajor            :: !ItemDesc
     , cmSpecialization   :: !(Maybe ItemDesc)
     } deriving (Show, Eq, Generic)
-
--- | Student name as it appears in JSON.
-certificateStudentNameField :: Text
-certificateStudentNameField = "studentName"
-
--- | Certificate issue date as it appears in JSON.
-certificateIssueDateField :: Text
-certificateIssueDateField = "issueDate"
-
--- TODO: I guess within DSCP-467 I will need to define
--- `instance {To,From}JSON CertificateMeta` via
--- https://github.com/agrafix/highjson, this will help us to
---
--- 1. Assign custom field names while preseving overall JSON instance derivation easy.
--- Then we can reuse those names.
--- 2. Provide a swagger description for each field.
 
 data EducationForm = Fulltime | Parttime | Fullpart
     deriving (Show, Eq, Generic, Enum, Bounded)

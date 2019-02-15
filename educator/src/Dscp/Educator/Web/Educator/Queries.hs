@@ -24,13 +24,12 @@ import Control.Lens (from, mapping, traversed, _Just)
 import Data.Default (Default)
 import Data.List (groupBy)
 import Data.Time.Clock (getCurrentTime)
-import Database.Beam.Postgres ((->$))
 import Loot.Base.HasLens (lensOf)
 import qualified Pdf.FromLatex as Pdf
 import Pdf.Scanner (PDFBody)
 import Servant (err501)
-import Servant.Util (PaginationSpec, SortingSpecOf)
-import Servant.Util.Beam.Postgres (SortingSpecApp (..), bySpec_, fieldSort_, paginate_)
+import Servant.Util (PaginationSpec, SortingSpecOf, HList (HNil), (.*.))
+import Servant.Util.Beam.Postgres (bySpec_, fieldSort_, paginate_)
 
 import Dscp.Core
 import Dscp.Crypto
@@ -304,9 +303,6 @@ educatorGetCertificates sorting pagination =
         return (crHash certificate, crMeta certificate)
   where
     sortingSpecApp CertificateRow{..} =
-        -- TODO: very weird that this works
-        fieldSort_ @"createdAt"
-            (crMeta ->$ val_ certificateIssueDateField) :>:
-        fieldSort_ @"studentName"
-            (crMeta ->$ val_ certificateStudentNameField) :>:
-        SortingSpecAppEnd
+        fieldSort_ @"createdAt" (crMeta ->>$. #cmIssueDate) .*.
+        fieldSort_ @"studentName" (crMeta ->>$. #cmStudentName) .*.
+        HNil

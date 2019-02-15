@@ -37,6 +37,7 @@ import Control.Lens (from)
 import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), withText)
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
+import Data.Time.Calendar (Day)
 import Fmt (build, listF, (+|), (|+))
 import Pdf.Scanner (PDFBody (..))
 import Servant.Util (type (?:), ForResponseLog (..), SortingParamTypesOf, buildListForResponse)
@@ -129,7 +130,7 @@ mkCountedList onlyCount ls =
 ---------------------------------------------------------------------------
 
 type instance SortingParamTypesOf Certificate =
-    ["createdAt" ?: PgJSONB Timestamp, "studentName" ?: PgJSONB ItemDesc]
+    ["createdAt" ?: Day, "studentName" ?: ItemDesc]
 
 ---------------------------------------------------------------------------
 -- Simple conversions

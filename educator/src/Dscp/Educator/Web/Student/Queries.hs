@@ -17,8 +17,8 @@ module Dscp.Educator.Web.Student.Queries
 import Control.Lens (from, mapping)
 import Data.Coerce (coerce)
 import Data.Default (Default)
-import Servant.Util (PaginationSpec, SortingSpecOf)
-import Servant.Util.Beam.Postgres (SortingSpecApp (..), bySpec_, fieldSort_, paginate_)
+import Servant.Util (HList (HNil), PaginationSpec, SortingSpecOf, (.*.))
+import Servant.Util.Beam.Postgres (bySpec_, fieldSort_, paginate_)
 
 import Dscp.Core
 import Dscp.Crypto (Hash)
@@ -108,9 +108,9 @@ studentGetCourses studentId (coerce -> isEnrolledF) sorting pagination = do
         return CourseStudentInfo{ ciId = courseId, .. }
   where
     mkSortingSpecApp (courseId, desc) =
-        fieldSort_ @"id" courseId :>:
-        fieldSort_ @"desc" desc :>:
-        SortingSpecAppEnd
+        fieldSort_ @"id" courseId .*.
+        fieldSort_ @"desc" desc .*.
+        HNil
 
 studentGetGrade
     :: MonadEducatorWebQuery m
@@ -208,9 +208,9 @@ studentGetAssignments student filters sorting pagination = do
   where
     assignTypeF = afIsFinal filters ^. mapping (from assignmentTypeRaw)
     mkSortingSpecApp AssignmentRow{..} =
-        fieldSort_ @"course" (unpackPk arCourse) :>:
-        fieldSort_ @"desc" arDesc :>:
-        SortingSpecAppEnd
+        fieldSort_ @"course" (unpackPk arCourse) .*.
+        fieldSort_ @"desc" arDesc .*.
+        HNil
 
 -- | Get exactly one assignment.
 studentGetSubmission
@@ -259,5 +259,5 @@ studentGetSubmissions student filters sorting pagination = do
             return (submission, mPrivateTx)
   where
     mkSortingSpecApp (_, TransactionRow{..}) =
-        fieldSort_ @"grade" trGrade :>:
-        SortingSpecAppEnd
+        fieldSort_ @"grade" trGrade .*.
+        HNil

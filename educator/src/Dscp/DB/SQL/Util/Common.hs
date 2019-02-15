@@ -21,20 +21,21 @@ module Dscp.DB.SQL.Util.Common
      , filterMatches_
      , filterMatchesPk_
      , getNextPrimaryKey
-     , jsonVal_
+     , unsafeCast_
      ) where
 
 import Prelude hiding (_1, _2)
 
 import Data.Coerce (coerce)
 import qualified Database.Beam.Backend.SQL as Beam
+import Database.Beam.Migrate (HasDefaultSqlDataType (..))
 import Database.Beam.Postgres as BeamReexport (PgJSONB (..))
 import qualified Database.Beam.Postgres as Beam
-import Database.Beam.Query as BeamReexport (QGenExpr (..), aggregate_, all_, as_, asc_, countAll_,
-                                            default_, delete, desc_, exists_, filter_, guard_,
-                                            insert, insertValues, leftJoin_, limit_, max_, orderBy_,
-                                            references_, related_, select, update, val_, (&&.),
-                                            (/=.), (<-.), (==.), (>.), (>=.), (||.))
+import Database.Beam.Query as BeamReexport (QExpr, QGenExpr (..), aggregate_, all_, as_, asc_,
+                                            countAll_, default_, delete, desc_, exists_, filter_,
+                                            guard_, insert, insertValues, leftJoin_, limit_, max_,
+                                            orderBy_, references_, related_, select, update, val_,
+                                            (&&.), (/=.), (<-.), (==.), (>.), (>=.), (||.))
 import qualified Database.Beam.Query as Beam
 import qualified Database.Beam.Query.Internal as Beam
 import Database.Beam.Schema (PrimaryKey, TableEntity)
@@ -205,5 +206,12 @@ getNextPrimaryKey tbl = do
         [Just x]  -> x + 1
         _ : _ : _ -> error "Too many rows"
 
-jsonVal_ :: _ => a -> QGenExpr ctx syntax s (PgJSONB a)
-jsonVal_ = val_ . PgJSONB
+-- | Apply @cast@ SQL function.
+unsafeCast_
+    :: forall b a ctx syntax s.
+       ( HasDefaultSqlDataType (Beam.Sql92ExpressionCastTargetSyntax syntax) b
+       , Beam.IsSql92ExpressionSyntax syntax
+       )
+    => QGenExpr ctx syntax s a -> QGenExpr ctx syntax s b
+unsafeCast_ (QExpr expr) = QExpr $ \tblPrefix ->
+    Beam.castE (expr tblPrefix) (defaultSqlDataType (Proxy @b) True)

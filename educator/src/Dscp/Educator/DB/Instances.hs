@@ -10,7 +10,8 @@ import Data.Time.Clock (UTCTime)
 import Database.Beam.Backend (BackendFromField, BeamBackend, FromBackendRow (..))
 import Database.Beam.Backend.SQL.SQL92 (HasSqlValueSyntax (..), IsSql92ExpressionSyntax,
                                         Sql92ExpressionValueSyntax)
-import Database.Beam.Postgres.Syntax (PgValueSyntax)
+import Database.Beam.Migrate (HasDefaultSqlDataType (..))
+import Database.Beam.Postgres.Syntax (PgDataTypeSyntax, PgValueSyntax)
 import Database.Beam.Query (HasSqlEqualityCheck (..))
 import Database.PostgreSQL.Simple.FromField (FromField (..))
 import Pdf.Scanner (PDFBody (..))
@@ -189,3 +190,7 @@ GenHasSqlEqualityCheck(TxBlockIdx)
 GenHasSqlEqualityCheck(BlockIdx)
 GenHasSqlEqualityCheck(Hash a)
 GenHasSqlEqualityCheck(AssignmentType)
+
+
+instance HasDefaultSqlDataType PgDataTypeSyntax ItemDesc where
+    defaultSqlDataType _ = defaultSqlDataType (Proxy @Text)

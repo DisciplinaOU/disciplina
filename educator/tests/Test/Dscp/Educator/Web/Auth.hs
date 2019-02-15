@@ -68,7 +68,7 @@ withServerClient config action =
 
 -- TODO: Maybe add a "ping" endpoint instead?
 doTrialRequest :: StudentApiClient -> Maybe SecretKeyData -> IO ()
-doTrialRequest cli sk = void $ sGetCourses (cli sk) Nothing False def
+doTrialRequest cli sk = void $ sGetCourses (cli sk) Nothing False def def
 
 modifyTrialEndpoint
     :: (forall m a. MonadIO m => Student -> m a -> m a)
