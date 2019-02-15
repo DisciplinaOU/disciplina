@@ -25,12 +25,12 @@ import Control.Arrow ((&&&))
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.Text.Lazy as Text
 import Data.Text.Lazy.Builder as Text
-import Data.Time.Calendar
-import Path
-import Path.IO
-import System.Directory
-import System.IO.Temp
-import System.Process.Typed
+import Data.Time.Calendar (fromGregorian, toGregorian)
+import qualified System.Directory as D
+import System.FilePath.Posix ((</>))
+import System.IO.Temp (withSystemTempDirectory)
+import System.Process.Typed (byteStringInput, byteStringOutput, runProcess, setStdin, setStdout,
+                             setWorkingDir)
 import Text.Printer (text)
 
 import Dscp.Core.Foundation.Educator
@@ -118,35 +118,45 @@ newtype ResourcePath = ResourcePath { unResourcePath :: FilePath }
 
 -- | Generate a PDF-certificate and return it as a bytestring.
 produce :: Language -> CertificateIssuerInfo -> CertificateFullInfo -> ResourcePath -> IO LByteString
-produce loc ciInfo info (ResourcePath resources) =
+produce loc ciInfo info (ResourcePath resPath) =
 
     -- Everyhting produced should be removed.
     -- This may lead to /tmp exhaustion attack, unless /tmp or memory
     -- is big enough.
-    withSystemTempDirectory "faircv" $ \dir -> do
-        resPath <- parseRelDir resources
-        tmpPath <- parseAbsDir dir
-
+    withSystemTempDirectory "faircv" $ \tmpPath -> do
         -- Latex reads and writes in the same dir - lets isolate it.
-        copyDirRecur resPath tmpPath
+        copyDirectory resPath tmpPath
 
         let theText = generate loc ciInfo info
         let input   = encodeUtf8 theText
 
-        withCurrentDirectory dir $ do
-            let action
-                    = runProcess
-                    $ setStdin (byteStringInput input)  -- feed the latex doc in directly
-                    $ setStdout byteStringOutput
-                    $ "xelatex"
+        let action
+                = runProcess
+                $ setWorkingDir tmpPath
+                $ setStdin (byteStringInput input)  -- feed the latex doc in directly
+                $ setStdout byteStringOutput
+                $ "xelatex"
 
-            -- LaTeX Warning: Label(s) may have changed. Rerun to get cross-references right.
-            --
-            -- That's why. And there's no picture behind header if only 1 action is run.
-            _ <- action
-            _ <- action
+        -- LaTeX Warning: Label(s) may have changed. Rerun to get cross-references right.
+        --
+        -- That's why. And there's no picture behind header if only 1 action is run.
+        _ <- action
+        _ <- action
 
-            LBS.readFile "texput.pdf"
+        pdf <- LBS.readFile (tmpPath </> "texput.pdf")
+        evaluateNF pdf
+
+copyDirectory :: FilePath -> FilePath -> IO ()
+copyDirectory from to = do
+    isDir <- D.doesDirectoryExist from
+    if isDir
+    then do
+        D.createDirectoryIfMissing True to
+        subs <- D.listDirectory from
+        forM_ subs $ \sub ->
+             copyDirectory (from </> sub) (to </> sub)
+    else
+        D.copyFile from to
 
 -- | Data for self-test.
 testData :: CertificateFullInfo

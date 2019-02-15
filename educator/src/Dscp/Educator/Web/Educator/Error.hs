@@ -74,7 +74,6 @@ instance ToServantErr EducatorAPIError where
         InvalidFormat        -> err400
         ServiceUnavailable{} -> err503
         SomeDomainError err  -> domainToServantErrNoReason err
-    toServantErr = toServantErrJustTag
 
 instance FromServantErr EducatorAPIError
 

@@ -48,4 +48,4 @@ parseInputWithSecret = \case
         fromKeyfileContent pp content
     CommSecret n -> \input ->
          flip committeeDerive n <$> eitherToMaybe (mkCommitteeSecret input)
-    SecretFromSeed -> secretFromSeed
+    SecretFromSeed -> Just . secretFromSeed

@@ -21,14 +21,13 @@ constTimeEq
 constTimeEq b1 b2 = CU.constTimeEq (convert b1) (convert b2)
 
 -- | This is how we generate secret keys from user-supplied seed
-secretFromSeed :: ByteString -> Maybe SecretKey
-secretFromSeed input = asum
-    [ do
+secretFromSeed :: ByteString -> SecretKey
+secretFromSeed input =
+    fromMaybe (withSeed input genSecretKey) secretFromIntSeed
+  where
+    secretFromIntSeed = do
         -- we need this clause as soon as many code uses
         -- 'withIntSeed' for generation, for instance list of students
         -- known to educator in Student API
         seed <- readMaybe @Word . toString @Text $ decodeUtf8 input
         return $ withIntSeed (fromIntegral seed) genSecretKey
-    , do
-        return $ withSeed input genSecretKey
-    ]
