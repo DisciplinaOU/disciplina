@@ -58,7 +58,7 @@ insertAt place what text =
     in   before <> what <> after
 
 insertionMark :: LBS.ByteString
-insertionMark = "\ntrailer"
+insertionMark = "\nstartxref"
 
 fairCVStartMark :: LBS.ByteString
 fairCVStartMark = text <> ":" <> show (hash text)
