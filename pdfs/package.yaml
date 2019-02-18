@@ -50,3 +50,6 @@ executables:
       - disciplina-pdfs
       - bytestring
       - text
+
+data-files:
+  - template/**/*
