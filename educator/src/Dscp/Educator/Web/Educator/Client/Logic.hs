@@ -1,6 +1,9 @@
 module Dscp.Educator.Web.Educator.Client.Logic
        ( EducatorApiClientError
        , EducatorApiClient
+       , EducatorApiClientM
+       , EducatorApiClientNoAuth
+       , EducatorApiClientNoAuthM
        , hoistEducatorApiClient
        , createEducatorApiClient
        ) where
@@ -9,7 +12,10 @@ import Servant.Client (ClientM, client, runClientM)
 import Servant.Generic (fromServant)
 import Servant.Util ()
 
+import Dscp.Core
+import Dscp.Educator.Web.Auth
 import Dscp.Educator.Web.Educator.API
+import Dscp.Educator.Web.Educator.Auth
 import Dscp.Educator.Web.Educator.Error
 import Dscp.Util
 import Dscp.Web
@@ -17,7 +23,17 @@ import Dscp.Web
 -- | Exceptions which can appear from the client.
 type EducatorApiClientError = ClientError EducatorAPIError
 
-type EducatorApiClientM m = EducatorApiEndpoints (AsClientT m)
+
+-- | Client handlers for Educator API with preset authentication.
+type EducatorApiClientNoAuthM m = EducatorApiEndpoints (AsClientT m)
+
+type EducatorApiClientNoAuth = EducatorApiClientNoAuthM IO
+
+-- | Client handlers for Educator API.
+-- You have to provide it with secret key of a student unless authenticaion is disabled,
+-- in which case it is optional.
+type EducatorApiClientM m = Maybe SecretKeyData -> EducatorApiClientNoAuthM m
+
 type EducatorApiClient = EducatorApiClientM IO
 
 -- | Hoists existing @'EducatorApiClient'@ to another monad.
@@ -59,6 +75,8 @@ createEducatorApiClient netAddr = do
         nat act = runClientM act cliEnv
               >>= leftToThrow (servantToClientError @EducatorAPIError)
 
-    let es :: EducatorApiEndpoints (AsClientT ClientM)
-        es = fromServant $ client rawEducatorAPI
-    return $ hoistEducatorApiClient nat es
+    let mkCliAuth = CliAuthData . EducatorClientAuthData . skSecret
+
+    let es :: Maybe SecretKeyData -> EducatorApiEndpoints (AsClientT ClientM)
+        es mSk = fromServant $ client protectedEducatorAPI (fmap mkCliAuth mSk)
+    return $ \mEducatorSk -> hoistEducatorApiClient nat (es mEducatorSk)

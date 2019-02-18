@@ -64,6 +64,14 @@ instance Serialise Day where
 instance Serialise EducationForm
 instance Serialise CertificateMeta
 
+instance HasId CertificateMeta where
+    type Id CertificateMeta = Hash CertificateMeta
+    getId = hash
+
+instance HasId CertificateFullInfo where
+    type Id CertificateFullInfo = Id CertificateMeta
+    getId = getId . cfiMeta
+
 instance Serialise Submission where
     encode (Submission s c a) = mconcat
         [ encodeListLen 4

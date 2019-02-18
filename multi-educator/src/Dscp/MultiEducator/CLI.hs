@@ -11,7 +11,7 @@ module Dscp.MultiEducator.CLI
 import Loot.Config (OptModParser, uplift, (.::), (.:<), (<*<))
 import Options.Applicative (Parser, help, long, metavar, strOption)
 
-import Dscp.Educator.CLI (educatorWebConfigParser, postgresParamsParser, publishingPeriodParser)
+import Dscp.Educator.CLI
 import Dscp.MultiEducator.Config (MultiEducatorConfig)
 import Dscp.MultiEducator.Launcher.Params (MultiEducatorKeyParams (..))
 import Dscp.Witness.CLI (witnessConfigParser)
@@ -31,5 +31,7 @@ multiEducatorConfigParser =
          #api .:< educatorWebConfigParser <*<
          #publishing .:<
              (#period .:: publishingPeriodParser
-             )
+             ) <*<
+         #certificates .:<
+            (#resources .:: pdfResourcesPathParser)
         )

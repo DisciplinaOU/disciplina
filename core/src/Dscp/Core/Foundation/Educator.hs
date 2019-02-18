@@ -31,6 +31,7 @@ module Dscp.Core.Foundation.Educator
     , CertificateFullInfo (..)
     , CertificateMeta (..)
     , CertificateGrade (..)
+    , CertificateIssuerInfo (..)
     , Certificate (..)
     , StudentInfo (..)
     , GradeInfo (..)
@@ -357,8 +358,8 @@ data Certificate = Certificate
 data CertificateGrade = CertificateGrade
     { cgSubject :: ItemDesc
     , cgLang    :: Language
-    , cgHours   :: Int
-    , cgCredits :: Maybe Int
+    , cgHours   :: Word32
+    , cgCredits :: Maybe Word32
     , cgGrade   :: Grade
     } deriving (Show, Eq, Generic)
 
@@ -369,7 +370,7 @@ data Language = EN | RU
 -- datatype represents a request body for 'AddCertificate' endpoint.
 data CertificateFullInfo = CertificateFullInfo
     { cfiMeta   :: CertificateMeta
-    , cfiGrades :: [CertificateGrade]
+    , cfiGrades :: NonEmpty CertificateGrade
     } deriving (Show, Eq, Generic)
 
 data StudentInfo = StudentInfo
@@ -382,6 +383,13 @@ data GradeInfo = GradeInfo
     , giTimestamp      :: Timestamp
     , giHasProof       :: Bool
     } deriving (Show, Eq, Ord, Generic)
+
+-- | Datatype containing information about Educator which issued
+-- the certificate, required in order to render a certificate.
+data CertificateIssuerInfo = CertificateIssuerInfo
+    { ciiName :: ItemDesc
+    , ciiUrl  :: ItemDesc
+    } deriving (Show, Eq, Generic)
 
 instance Buildable (StudentInfo) where
     build (StudentInfo{..}) =

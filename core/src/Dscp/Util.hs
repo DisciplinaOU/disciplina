@@ -349,3 +349,10 @@ dieGracefully :: (MonadLogging m, MonadCatch m) => Text -> m () -> m ()
 dieGracefully desc action =
     action `catchAny` \e -> do
         logError $ fromString $ "Exception in " <> toString desc <> ": " <> show e
+
+-----------------------------------------------------------
+-- Instances
+-----------------------------------------------------------
+
+instance (n1 ~ n2) => IsLabel n1 (Proxy n2) where
+    fromLabel = Proxy

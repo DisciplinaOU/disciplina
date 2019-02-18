@@ -8,6 +8,7 @@ module Dscp.Educator.CLI
     , educatorWebConfigParser
     , educatorConfigParser
     , publishingPeriodParser
+    , pdfResourcesPathParser
     ) where
 
 import Loot.Config (OptModParser, uplift, (.:+), (.:-), (.::), (.:<), (<*<))
@@ -109,6 +110,13 @@ educatorWebConfigParser =
     #educatorAPINoAuth .:: educatorApiNoAuthParser <*<
     #studentAPINoAuth .:: studentApiNoAuthParser
 
+pdfResourcesPathParser :: Parser FilePath
+pdfResourcesPathParser = strOption $
+    long "pdf-resource-path" <>
+    metavar "FILEPATH" <>
+    help "Path to PDF templates. When relative path is specified, \
+         \application directory is considered its root."
+
 educatorConfigParser :: OptModParser EducatorConfig
 educatorConfigParser =
     uplift witnessConfigParser <*<
@@ -117,5 +125,7 @@ educatorConfigParser =
          #keys .:< educatorKeyParamsParser <*<
          #api .:< educatorWebConfigParser <*<
          #publishing .:<
-            (#period .:: publishingPeriodParser)
+            (#period .:: publishingPeriodParser) <*<
+         #certificates .:<
+            (#resources .:: pdfResourcesPathParser)
         )

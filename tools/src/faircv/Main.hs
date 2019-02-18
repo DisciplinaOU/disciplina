@@ -9,6 +9,7 @@ import Loot.Log
 
 import Dscp.Core
 import Dscp.Crypto
+import Dscp.Educator.Logic.Submission
 import Dscp.Educator.Web.Student
 import Dscp.Resource.Keys
 import Dscp.Util (leftToFail)
@@ -44,22 +45,12 @@ main = do
 
     let sClient = sClientUnauth (Just skS)
 
-    let infoToSubmission :: AssignmentStudentInfo -> Submission
-        infoToSubmission assInfo = Submission
-            { _sStudentId      = addrS
-            , _sContentsHash   = detGenG contentSeed arbitrary
-            , _sAssignmentHash = aiHash assInfo
-            }
-        toSignedSubmission :: Submission -> SignedSubmission
-        toSignedSubmission sbm = SignedSubmission
-            { _ssSubmission = sbm
-            , _ssWitness    = SubmissionWitness
-                { _swKey = skPublic skS
-                , _swSig = sign (skSecret skS) $ hash sbm
-                }
-            }
+    let infoToSignedSubmission :: AssignmentStudentInfo -> SignedSubmission
+        infoToSignedSubmission assInfo =
+            makeSignedSubmission skS (aiHash assInfo) (detGenG contentSeed arbitrary)
+
         infoToNewSub :: AssignmentStudentInfo -> NewSubmission
-        infoToNewSub = signedSubmissionToRequest . toSignedSubmission . infoToSubmission
+        infoToNewSub = signedSubmissionToRequest . infoToSignedSubmission
         waitForProofs :: [SubmissionStudentInfo] -> IO ()
         waitForProofs [] = return ()
         waitForProofs (info:infos) = do
@@ -69,7 +60,7 @@ main = do
                 _         -> threadDelay refreshRate >> waitForProofs (info:infos)
 
     -- Get all the available assignments for this student
-    assLst <- sGetAssignments sClient Nothing Nothing Nothing False def
+    assLst <- sGetAssignments sClient Nothing Nothing Nothing False def def
     -- Show a warning when there are not enough assignments available
     let assNum = length assLst
     when (assignmentNum > assNum) $ logWarning $

@@ -16,22 +16,26 @@ module Dscp.DB.SQL.Util.Common
      , selectByPk
      , existsWithPk
      , deleteByPk
+     , coerceQExpr
      , currentTimestampUtc_
      , filterMatches_
      , filterMatchesPk_
      , getNextPrimaryKey
+     , unsafeCast_
      ) where
 
 import Prelude hiding (_1, _2)
 
 import Data.Coerce (coerce)
 import qualified Database.Beam.Backend.SQL as Beam
+import Database.Beam.Migrate (HasDefaultSqlDataType (..))
+import Database.Beam.Postgres as BeamReexport (PgJSONB (..))
 import qualified Database.Beam.Postgres as Beam
-import Database.Beam.Query as BeamReexport (QGenExpr (..), aggregate_, all_, as_, asc_, countAll_,
-                                            default_, delete, desc_, exists_, filter_, guard_,
-                                            insert, insertValues, leftJoin_, limit_, max_, orderBy_,
-                                            references_, related_, select, update, val_, (&&.),
-                                            (/=.), (<-.), (==.), (>.), (>=.), (||.))
+import Database.Beam.Query as BeamReexport (QExpr, QGenExpr (..), aggregate_, all_, as_, asc_,
+                                            countAll_, default_, delete, desc_, exists_, filter_,
+                                            guard_, insert, insertValues, leftJoin_, limit_, max_,
+                                            orderBy_, references_, related_, select, update, val_,
+                                            (&&.), (/=.), (<-.), (==.), (>.), (>=.), (||.))
 import qualified Database.Beam.Query as Beam
 import qualified Database.Beam.Query.Internal as Beam
 import Database.Beam.Schema (PrimaryKey, TableEntity)
@@ -143,6 +147,11 @@ deleteByPk tbl key = do
     changes <- runDelete $ delete tbl (valPk_ key `references_`)
     return (anyAffected changes)
 
+-- | Safely coerce one Beam SQL expression to another assuming that
+-- both expressions are represented in SQL engine in the same way.
+coerceQExpr :: Coercible a b => QGenExpr ctx syntax s a -> QGenExpr ctx syntax s b
+coerceQExpr = coerce
+
 -- | SQL CURRENT_TIMESTAMP function.
 currentTimestampUtc_
     :: forall ctxt syntax s.
@@ -196,3 +205,13 @@ getNextPrimaryKey tbl = do
         [Nothing] -> error "Unexpected Nothing"
         [Just x]  -> x + 1
         _ : _ : _ -> error "Too many rows"
+
+-- | Apply @cast@ SQL function.
+unsafeCast_
+    :: forall b a ctx syntax s.
+       ( HasDefaultSqlDataType (Beam.Sql92ExpressionCastTargetSyntax syntax) b
+       , Beam.IsSql92ExpressionSyntax syntax
+       )
+    => QGenExpr ctx syntax s a -> QGenExpr ctx syntax s b
+unsafeCast_ (QExpr expr) = QExpr $ \tblPrefix ->
+    Beam.castE (expr tblPrefix) (defaultSqlDataType (Proxy @b) True)

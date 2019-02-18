@@ -23,6 +23,7 @@ domainErrorToShortJSON = \case
         SubmissionDomain{}                    -> "SubmissionNotFound"
         TransactionDomain{}                   -> "TransactionNotFound"
         BlockWithIndexDomain{}                -> "BlockWithIndexNotFound"
+        CertificateDomain{}                   -> "CertificateNotFound"
     AlreadyPresentError dom -> case dom of
         CourseDomain{}                        -> "CourseAlreadyExists"
         StudentDomain{}                       -> "StudentAlreadyExists"
@@ -32,6 +33,7 @@ domainErrorToShortJSON = \case
         SubmissionDomain{}                    -> "SubmissionAlreadyExists"
         TransactionDomain{}                   -> "TransactionAlreadyExists"
         BlockWithIndexDomain{}                -> "BlockWithIndexAlreadyExists"
+        CertificateDomain{}                   -> "CertificateAlreadyExists"
     SemanticError err -> case err of
         StudentIsActiveError{}     -> "StudentIsActive"
         DeletingGradedSubmission{} -> "DeletingGradedSubmission"
@@ -47,5 +49,6 @@ domainToServantErrNoReason = \case
         SubmissionDomain{}                    -> err404
         TransactionDomain{}                   -> err404
         BlockWithIndexDomain{}                -> err500
+        CertificateDomain{}                   -> err404
     AlreadyPresentError _ -> err409
     SemanticError{} -> err403

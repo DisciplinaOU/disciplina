@@ -10,9 +10,11 @@ import Data.Time.Clock (UTCTime)
 import Database.Beam.Backend (BackendFromField, BeamBackend, FromBackendRow (..))
 import Database.Beam.Backend.SQL.SQL92 (HasSqlValueSyntax (..), IsSql92ExpressionSyntax,
                                         Sql92ExpressionValueSyntax)
-import Database.Beam.Postgres.Syntax (PgValueSyntax)
+import Database.Beam.Migrate (HasDefaultSqlDataType (..))
+import Database.Beam.Postgres.Syntax (PgDataTypeSyntax, PgValueSyntax)
 import Database.Beam.Query (HasSqlEqualityCheck (..))
 import Database.PostgreSQL.Simple.FromField (FromField (..))
+import Pdf.Scanner (PDFBody (..))
 
 import Dscp.Core
 import Dscp.Crypto
@@ -121,6 +123,9 @@ deriving instance IsPgValue Grade
 deriving instance FromField BlockIdx
 deriving instance IsPgValue BlockIdx
 
+deriving instance FromField PDFBody
+deriving instance IsPgValue PDFBody
+
 {- Custom instances -}
 
 instance FromField TxBlockIdx where
@@ -166,6 +171,7 @@ GenFromBackendRow(MerkleSignature a)
 GenFromBackendRow(EmptyMerkleTree a)
 GenFromBackendRow(ATGDelta)
 GenFromBackendRow(CertificateMeta)
+GenFromBackendRow(PDFBody)
 
 ----------------------------------------------------------------------------
 -- Other instances
@@ -184,3 +190,7 @@ GenHasSqlEqualityCheck(TxBlockIdx)
 GenHasSqlEqualityCheck(BlockIdx)
 GenHasSqlEqualityCheck(Hash a)
 GenHasSqlEqualityCheck(AssignmentType)
+
+
+instance HasDefaultSqlDataType PgDataTypeSyntax ItemDesc where
+    defaultSqlDataType _ = defaultSqlDataType (Proxy @Text)

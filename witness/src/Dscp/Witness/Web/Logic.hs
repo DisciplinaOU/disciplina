@@ -14,8 +14,8 @@ module Dscp.Witness.Web.Logic
        ) where
 
 import Codec.Serialise (serialise)
-import qualified Data.Aeson as Aeson (decode)
-import qualified Data.ByteString.Lazy as BS
+import qualified Data.Aeson as Aeson
+import qualified Data.ByteString.Lazy as LBS
 import Data.Coerce (coerce)
 import Data.Conduit ((.|))
 import qualified Data.Conduit as C
@@ -24,7 +24,7 @@ import Data.Default (def)
 import qualified Data.Map.Strict as M
 import Fmt ((+|), (|+))
 
-import Pdf.Scanner as Pdf
+import qualified Pdf.Scanner as Pdf
 
 import Dscp.Core
 import Dscp.Crypto
@@ -75,7 +75,7 @@ toBlockInfo includeTxs block = do
         , biHeader = bHeader block
         , biIsGenesis = block == genesisBlock
         , biSince = getSlotSince . hSlotId . bHeader $ block
-        , biSize = BS.length . serialise $ block
+        , biSize = LBS.length . serialise $ block
         , biTransactionCount = length txs
         , biTotalOutput = leftToPanic . sumCoins $ txTotalOutput . unGTxWitnessed <$> txs
         , biTotalFees = Coin 0  -- TODO
@@ -240,11 +240,14 @@ checkFairCV =
         , fairCVFullyValid = all and results
         }
 
-checkFairCVPDF :: forall ctx m. WitnessWorkMode ctx m => ByteString -> m FairCVAndCheckResult
+checkFairCVPDF
+    :: forall ctx m.
+       WitnessWorkMode ctx m
+    => Pdf.PDFBody -> m FairCVAndCheckResult
 checkFairCVPDF pdf = do
     let maybeFairCV = do
-            fairCVencoded <- Pdf.project (Pdf.MaxSearchLength (Just 2048)) (Pdf.PDFBody pdf)
-            Aeson.decode $ BS.fromStrict fairCVencoded
+            fairCVencoded <- Pdf.project (Pdf.MaxSearchLength (Just 2048)) pdf
+            Aeson.decodeStrict fairCVencoded
 
     fairCV   <- maybe (throwM InvalidFormat) pure maybeFairCV
     checkRes <- checkFairCV fairCV

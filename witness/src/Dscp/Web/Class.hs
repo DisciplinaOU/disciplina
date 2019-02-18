@@ -67,7 +67,7 @@ class HasErrorTag e => FromServantErr e where
         FailureResponse Response{..} <- pure err
         errResponse <- decode @(ErrResponse e) responseBody
         return $ erContent errResponse
-              ?: error "fromServantError: no error content"
+          ?: error "fromServantError: no error content"
 
 -- | Handle all previously uncaught errors.
 unexpectedToServantErr :: SomeException -> ServantErr

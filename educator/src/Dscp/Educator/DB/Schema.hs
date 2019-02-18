@@ -12,9 +12,11 @@ module Dscp.Educator.DB.Schema
 import Prelude hiding (_1, _2)
 
 import Database.Beam.Backend (runNoReturn)
+import Database.Beam.Postgres (PgJSONB)
 import Database.Beam.Postgres.Syntax (PgCommandSyntax (..), PgCommandType (..), emit)
 import Database.Beam.Schema.Tables (Beamable, C, Database, DatabaseSettings, Table (..),
                                     TableEntity, defaultDbSettings)
+import Pdf.Scanner (PDFBody)
 
 import Dscp.Core
 import Dscp.Crypto
@@ -82,8 +84,8 @@ data BlockRowT f = BlockRow
 
 data CertificateRowT f = CertificateRow
     { crHash :: C f (Hash CertificateMeta)
-    , crMeta :: C f CertificateMeta
-    , crPdf  :: C f LByteString
+    , crMeta :: C f (PgJSONB CertificateMeta)
+    , crPdf  :: C f PDFBody
     } deriving (Generic)
 
 data EducatorSchema f = EducatorSchema

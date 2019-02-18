@@ -14,20 +14,21 @@ library:
     - aeson-options
     - ansi-terminal
     - beam-core
+    - beam-migrate
     - beam-postgres
     - bytestring
     - containers
     - data-default
-    - directory
     - disciplina-core
+    - disciplina-pdfs
     - disciplina-witness
+    - directory
     - exceptions
     - filepath
     - fmt
     - interpolatedstring-perl6
     - jose
     - http-types
-    - http-media
     - lens
     - loot-base
     - loot-config
@@ -37,6 +38,8 @@ library:
     - mtl
     - optparse-applicative
     - o-clock
+    - path
+    - path-io
     - postgresql-simple
     - reflection
     - safe-exceptions >= 0.1.4
@@ -77,7 +80,9 @@ tests:
       - disciplina-core
       - disciplina-witness
       - disciplina-educator
+      - disciplina-pdfs
       - directory
+      - filepath
       - fmt
       - generic-arbitrary
       - hspec-core

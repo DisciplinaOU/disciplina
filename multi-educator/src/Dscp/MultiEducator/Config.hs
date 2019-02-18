@@ -34,6 +34,9 @@ type MultiEducatorConfig = WitnessConfig ++
         , "publishing" ::<
            '[ "period" ::: Time Second
             ]
+        , "certificates" ::<
+           '[ "resources" ::: FilePath
+            ]
         ]
      ]
 

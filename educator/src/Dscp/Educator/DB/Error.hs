@@ -63,6 +63,9 @@ data DomainErrorItem
     | BlockWithIndexDomain
         { deBlockIdx :: BlockIdx }
 
+    | CertificateDomain
+        { deCertificateMeta :: Id CertificateMeta }
+
     deriving (Show, Typeable, Eq)
 
 -- | Logical errors.
@@ -96,6 +99,8 @@ instance Buildable DomainErrorItem where
         "Transaction { id="+|id_|+" }"
     build (BlockWithIndexDomain idx) =
         "Block { idx="+|idx|+" }"
+    build (CertificateDomain meta) =
+        "Certificate { meta="+|meta|+" }"
 
 instance Buildable DatabaseSemanticError where
     build (StudentIsActiveError id_) =

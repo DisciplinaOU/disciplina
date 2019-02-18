@@ -39,7 +39,7 @@ mergeFairCVList (fcv:fcvs) =
 
 getAssignments :: StudentApiClientNoAuth -> IO [AssignmentStudentInfo]
 getAssignments sc = do
-    hashes <- map aiHash <$> sGetAssignments sc Nothing Nothing Nothing False def
+    hashes <- map aiHash <$> sGetAssignments sc Nothing Nothing Nothing False def def
     for hashes $ sGetAssignment sc
 
 makeRandomSubmissionForAssignment :: SecretKey -> Hash Assignment -> IO NewSubmission
@@ -67,7 +67,7 @@ sendSubmission sc sub = do
 
 getAllCourses :: StudentApiClientNoAuth -> IO [Course]
 getAllCourses sc = do
-    map ciId <$> sGetCourses sc Nothing False def
+    map ciId <$> sGetCourses sc Nothing False def def
 
 
 getFairCV :: IO FairCV

@@ -47,7 +47,10 @@ module Dscp.Educator.DB.Queries
        , isAssignedToStudent
        , existsCourse
        , existsStudent
+       , existsAssignment
        , existsSubmission
+       , existsTransaction
+       , existsCertificateMeta
 
          -- * Destructive actions
        , CourseDetails (..)
@@ -60,15 +63,15 @@ module Dscp.Educator.DB.Queries
        , getPrivateBlockIdxByHash
        , getPrivateBlocksAfter
        , getPrivateBlocksAfterHash
-       , getCertificateMeta
        , createPrivateBlock
+       , dumpNonChainedTransactions
        , createSignedSubmission
        , setStudentAssignment
        , createCourse
        , createStudent
        , createAssignment
        , createTransaction
-       , createCertificateMeta
+       , createCertificate
        ) where
 
 
@@ -77,8 +80,10 @@ import Data.Default (Default (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Time.Clock (getCurrentTime)
+import Database.Beam.Postgres (PgJSONB (..))
 import GHC.Exts (fromList)
 import Loot.Base.HasLens (HasCtx)
+import Pdf.Scanner (PDFBody)
 import Snowdrop.Util (OldestFirst (..))
 
 import Dscp.Core
@@ -313,10 +318,11 @@ firstBlockTxIdx = 0
 
 createPrivateBlock
     :: (DBM m, HasCtx ctx m '[KeyResources EducatorNode])
-    => Maybe ATGDelta -> DBT 'WithinTx m (Maybe PrivateBlockHeader)
-createPrivateBlock delta = runMaybeT $ do
+    => [PrivateTx]
+    -> Maybe ATGDelta
+    -> DBT 'WithinTx m (Maybe PrivateBlockHeader)
+createPrivateBlock txs delta = runMaybeT $ do
     (prev, idx) <- lift getLastBlockIdAndIdx
-    txs         <- lift getAllNonChainedTransactions
 
     let tree = fromList txs
         root = getMerkleRoot tree
@@ -355,6 +361,14 @@ createPrivateBlock delta = runMaybeT $ do
             txId <:-:> bid
 
     return hdr
+
+dumpNonChainedTransactions
+    :: (DBM m, HasCtx ctx m '[KeyResources EducatorNode])
+    => Maybe ATGDelta
+    -> DBT 'WithinTx m (Maybe PrivateBlockHeader)
+dumpNonChainedTransactions atgDelta = do
+    txs <- getAllNonChainedTransactions
+    createPrivateBlock txs atgDelta
 
 createSignedSubmission
     :: DBM m
@@ -463,8 +477,17 @@ existsCourse = existsWithPk (esCourses es)
 existsStudent :: MonadIO m => Id Student -> DBT t m Bool
 existsStudent = existsWithPk (esStudents es)
 
+existsAssignment :: MonadIO m => Id Assignment -> DBT t m Bool
+existsAssignment = existsWithPk (esAssignments es)
+
 existsSubmission :: MonadIO m => Id Submission -> DBT t m Bool
 existsSubmission = existsWithPk (esSubmissions es)
+
+existsTransaction :: MonadIO m => Id PrivateTx -> DBT t m Bool
+existsTransaction = existsWithPk (esTransactions es)
+
+existsCertificateMeta :: MonadIO m => Id CertificateMeta -> DBT t m Bool
+existsCertificateMeta = existsWithPk (esCertificates es)
 
 createStudent :: DBM m => Student -> DBT t m (Id Student)
 createStudent student = do
@@ -534,18 +557,14 @@ getTransaction ptid = do
         submission <- related_ (esSubmissions es) (trSubmission privateTx)
         return (privateTx, submission)
 
-getCertificateMeta
-    :: MonadIO m
-    => Hash CertificateMeta -> DBT t m (Maybe CertificateMeta)
-getCertificateMeta = selectByPk crMeta (esCertificates es)
-
-createCertificateMeta
-    :: MonadIO m
-    => CertificateMeta -> LByteString -> DBT t m ()
-createCertificateMeta meta pdf =
-    runInsert . insert (esCertificates es) $ insertValue
-        CertificateRow
-        { crHash = hash meta
-        , crMeta = meta
-        , crPdf = pdf
-        }
+createCertificate
+    :: DBM m
+    => CertificateMeta -> PDFBody -> DBT t m ()
+createCertificate meta pdf =
+    rewrapAlreadyExists (CertificateDomain (getId meta)) $
+        runInsert . insert (esCertificates es) $ insertValue
+            CertificateRow
+            { crHash = hash meta
+            , crMeta = PgJSONB meta
+            , crPdf = pdf
+            }

@@ -308,7 +308,7 @@ spec_Educator_API_queries = specWithTempPostgresServer $ do
             lift $ do
                 prepareAndCreateSubmissions env
                 void $ createTransaction ptx
-                mblock <- createPrivateBlock Nothing
+                mblock <- dumpNonChainedTransactions Nothing
                 let !_ = mblock ?: error "No private block created"
                 return ()
 
@@ -329,9 +329,9 @@ spec_Educator_API_queries = specWithTempPostgresServer $ do
                 prepareAndCreateSubmissions env
                 void $ createTransaction ptx1
                 void $ createTransaction ptx2
-                mblock1 <- createPrivateBlock Nothing
+                mblock1 <- dumpNonChainedTransactions Nothing
                 void $ createTransaction ptx3
-                mblock2 <- createPrivateBlock Nothing
+                mblock2 <- dumpNonChainedTransactions Nothing
                 let !_ = (mblock1 >> mblock2) ?: error "No private blocks created"
                 return ()
 
