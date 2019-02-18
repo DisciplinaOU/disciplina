@@ -17,6 +17,7 @@ library:
     - data-default
     - directory
     - direct-sqlite
+    - disciplina-pdfs
     - disciplina-core
     - disciplina-witness
     - disciplina-educator

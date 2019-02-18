@@ -10,6 +10,7 @@ module Dscp.MultiEducator.Launcher.Resource
        ) where
 
 import Control.Lens (makeLenses)
+import qualified Pdf.FromLatex as Pdf
 
 import Dscp.Config
 import qualified Dscp.Educator.Config as E
@@ -30,6 +31,7 @@ newtype EducatorContexts = EducatorContexts (Map Text EducatorCtxWithCfg)
 data MultiEducatorResources = MultiEducatorResources
     { _merWitnessResources :: !Witness.WitnessResources
     , _merEducatorData     :: !(TVar EducatorContexts)
+    , _merPdfResourcePath  :: !Pdf.ResourcePath
     }
 
 makeLenses ''MultiEducatorResources
@@ -41,10 +43,12 @@ deriveHasLens 'merWitnessResources ''MultiEducatorResources ''NetServResources
 instance AllocResource MultiEducatorResources where
     type Deps MultiEducatorResources = MultiEducatorConfigRec
     allocResource educatorCfg = do
-        --let cfg = educatorCfg ^. sub #educator
+        let cfg = educatorCfg ^. sub #educator
         let witnessCfg = rcast educatorCfg
         _merWitnessResources <- withWitnessConfig witnessCfg $
                                allocResource witnessCfg
         _merEducatorData <- atomically $ newTVar (EducatorContexts mempty)
-        --let appDir = Witness._wrAppDir _merWitnessResources
+        let appDir = Witness._wrAppDir _merWitnessResources
+        _merPdfResourcePath <- allocResource
+            (cfg ^. sub #certificates . option #resources, appDir)
         return MultiEducatorResources {..}

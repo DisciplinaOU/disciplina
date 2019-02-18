@@ -26,6 +26,7 @@ import qualified Data.Map as M
 import Loot.Base.HasLens (HasLens', lensOf)
 import Loot.Config (option, sub)
 import Loot.Log (LoggingIO)
+import qualified Pdf.FromLatex as Pdf
 import System.Directory (createDirectoryIfMissing)
 import System.FilePath.Posix ((</>))
 
@@ -144,6 +145,7 @@ loadEducator _new login mpassphrase = do
             { _erWitnessResources = ctx ^. lensOf @MultiEducatorResources . lensOf @W.WitnessResources
             , _erKeys = key
             , _erDB = db
+            , _erPdfResourcePath = ctx ^. lensOf @MultiEducatorResources . lensOf @Pdf.ResourcePath
             }
         educatorContext = E.EducatorContext
             { _ecResources = educatorResources

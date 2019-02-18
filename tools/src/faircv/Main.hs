@@ -60,7 +60,7 @@ main = do
                 _         -> threadDelay refreshRate >> waitForProofs (info:infos)
 
     -- Get all the available assignments for this student
-    assLst <- sGetAssignments sClient Nothing Nothing Nothing False def
+    assLst <- sGetAssignments sClient Nothing Nothing Nothing False def def
     -- Show a warning when there are not enough assignments available
     let assNum = length assLst
     when (assignmentNum > assNum) $ logWarning $

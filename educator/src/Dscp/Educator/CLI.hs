@@ -8,6 +8,7 @@ module Dscp.Educator.CLI
     , educatorWebConfigParser
     , educatorConfigParser
     , publishingPeriodParser
+    , pdfResourcesPathParser
     ) where
 
 import Loot.Config (OptModParser, uplift, (.:+), (.:-), (.::), (.:<), (<*<))
