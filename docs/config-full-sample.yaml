@@ -211,6 +211,10 @@ sample:
     publishing:
       period: 30s
 
+    # Parameters for certificates generator
+    certificates:
+      resources: "/var/lib/disciplina/certificate-templates"
+
   # Faucet config
   faucet:
     # Logging config for faucet node. See option `witness.logging`.
