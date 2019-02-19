@@ -41,6 +41,7 @@ rec {
     paths = lib.concatMap justDataOutputs server-packages;
   };
 
+  inherit (pkgs) pdf-generator-xelatex;
   inherit (project) disciplina-tools;
 
   disciplina-config = runCommand "disciplina-config.yaml" {} "cp ${./config.yaml} $out";

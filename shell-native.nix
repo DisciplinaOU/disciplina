@@ -18,30 +18,7 @@ stdenv.mkDerivation rec {
     rocksdb
     zeromq
     zlib
-    (texlive.combine {
-      inherit (texlive)
-        collection-basic
-        collection-fontsrecommended
-        collection-langcyrillic
-        collection-xetex
-        scheme-basic
-        extsizes
-        titlesec
-        url
-        hyperref
-        xltxtra
-        geometry
-        background
-        realscripts
-        datetime2
-        tracklang
-        etoolbox
-        everypage
-        xkeyval
-        xcolor
-        pgf
-        fontspec;
-    })
+    pdf-generator-xelatex
   ];
 
   shellHook = ''
