@@ -2,20 +2,28 @@
 {-# LANGUAGE TypeFamilyDependencies #-}
 
 module Dscp.Util.Migration
-    ( EditionType (..)
+    ( -- * Migration datatypes
+      EditionType (..)
     , PrevEditionRef (..)
     , Migratable (..)
 
-    , ensureUpToDate
+      -- * Performing migration
+    , FullMigration (..)
+    , fullMigrationDesc
+    , prepareMigration
     , verifyVersionsGrowth
     ) where
 
 import qualified Data.SemVer as V
-import Fmt (Buildable (..), (+|), (|+))
-import Loot.Log (ModifyLogName, MonadLogging, Name, logDebug, modifyLogName)
+import qualified Data.Sequence as Seq
+import Fmt (Buildable (..), Builder, (+|), (|+))
 import qualified Text.Show
 
 import Dscp.Util
+
+----------------------------------------------------------------------------
+-- Basis
+----------------------------------------------------------------------------
 
 -- | Edition type.
 data EditionType a
@@ -52,27 +60,20 @@ class Migratable (edition :: *) where
 
     -- | Constraints on migration monad.
     type MigrationActionConstr edition (m :: * -> *) :: Constraint
-    type MigrationActionConstr edition m = ()
+    type MigrationActionConstr edition m = Monad m
 
     -- | Perform migration from previous version to the current one.
-    -- You *have to* make sure that if a migration step throws exception then state
-    -- is rollbacked (if possible).
     migrate
         :: (Monad m, MigrationActionConstr edition m)
         => PreviousEditionObject (MigrationEditionType edition)
         -> m (EditionObject edition)
 
-    -- | Read value from the database (or whatever else), assuming
-    -- that the database version matches this edition.
-    readEdition
-        :: (Monad m, MigrationActionConstr edition m)
-        => m (EditionObject edition)
-
-
+-- | Get previous version of migratable object.
 type family PreviousEditionObject (et :: EditionType *) where
     PreviousEditionObject 'BaseEdition = ()
     PreviousEditionObject ('EditionExtending e) = EditionObject e
 
+-- | Summary constraint required to run any migration to the given edition.
 type AllMigrarionActionsConstrs edition m =
     ( MigrationActionConstr edition m
     , AllMigrationActionsConstrs' (MigrationEditionType edition) m
@@ -82,27 +83,36 @@ type family AllMigrationActionsConstrs' (et :: EditionType *) m :: Constraint wh
     AllMigrationActionsConstrs' 'BaseEdition _ = ()
     AllMigrationActionsConstrs' ('EditionExtending e) m = AllMigrarionActionsConstrs e m
 
+----------------------------------------------------------------------------
+-- Gathering migration plan
+----------------------------------------------------------------------------
+
+-- TODO: split into modules
+
 -- | Some inconsistency in versions.
-data VersionException
+data MigrationVersioningException
     = -- | Version in storage in too high and is not mentioned in our code.
       StoredVersionIsTooHigh
       { veStored :: V.Version
       , veActual :: V.Version
       }
-      -- | Version in storage is lower than the very first version.
-    | StoredVersionIsTooLow
+    | -- | Version in storage is lower than the very first version.
+      StoredVersionIsTooLow
       { veStored :: V.Version
       , veBase   :: V.Version
       }
-      -- | Version in storage somehow occured between two neighbor versions
+    | -- | Version in storage somehow occured between two neighbor versions
       -- in code.
-    | StoredVersionLostMidway
+      StoredVersionLostMidway
       { veStored :: V.Version
       , veLower  :: V.Version
       , veHigher :: V.Version
       }
 
-instance Buildable VersionException where
+instance Show MigrationVersioningException where
+    show = toString . pretty
+
+instance Buildable MigrationVersioningException where
     build = \case
         StoredVersionIsTooHigh{..} ->
             "Version " <> V.toBuilder veStored <> " is higher than \
@@ -115,79 +125,124 @@ instance Buildable VersionException where
             \between two actual neighbor versions " <>
             V.toBuilder veLower <> " and " <> V.toBuilder veHigher
 
--- | Migration exception.
-data MigrationException
-    = VersionError VersionException
-    | StoreReadFailed SomeException
-    | MigrationFailed
-      { mfFrom  :: V.Version
-      , mfTo    :: V.Version
-      , mfError :: SomeException
-      }
+instance Exception MigrationVersioningException
+
+-- | One of migration steps has raised an error.
+data MigrationException = MigrationException
+    { mfFrom  :: V.Version
+    , mfTo    :: V.Version
+    , mfError :: SomeException
+    }
 
 instance Show MigrationException where
     show = toString . pretty
 
 instance Buildable MigrationException where
-    build = \case
-        VersionError err -> build err
-        StoreReadFailed (SomeException err) -> show err
-        MigrationFailed{..} ->
-            "Migration " +| V.toBuilder mfFrom |+ " -> " +| V.toBuilder mfTo |+
-            "failed: " +| case mfError of SomeException e -> show @String e |+ ""
+    build MigrationException{..} =
+        "Migration " +| V.toBuilder mfFrom |+ " -> " +| V.toBuilder mfTo |+
+        "failed: " +| case mfError of SomeException e -> show @String e |+ ""
 
 instance Exception MigrationException
 
--- | Perform required migrations from a given version to the actual one.
-ensureUpToDate
-    :: forall edition m.
-       ( Migratable edition
-       , MonadCatch m, MonadLogging m, ModifyLogName m
-       , AllMigrarionActionsConstrs edition m
-       )
-    => Name -> V.Version -> m (EditionObject edition)
-ensureUpToDate migrationName storedVersion =
-    modifyLogName (<> "migrate" <> migrationName) $
-        ensureUpToDateRec Nothing storedVersion <* logDebug "Migration complete"
+-- | Requires the following list of constraints to hold for each edition
+-- starting from the given one down.
+type family ForEachEditionUpTo (constrs :: [* -> Constraint]) edition :: Constraint where
+    ForEachEditionUpTo constrs edition =
+        ( Each constrs '[EditionObject edition]
+        , ForEachEditionUpTo' constrs (MigrationEditionType edition)
+        )
 
-ensureUpToDateRec
-    :: forall edition m.
+type family ForEachEditionUpTo' (constrs :: [* -> Constraint]) (et :: EditionType *)
+              :: Constraint where
+    ForEachEditionUpTo' constrs 'BaseEdition = ()
+    ForEachEditionUpTo' constrs ('EditionExtending e) = ForEachEditionUpTo constrs e
+
+-- | Information about migration between two adjacent versions.
+data MigrationStepMeta = MigrationStepMeta
+    { fmsVersionFrom :: V.Version
+    , fmsVersionTo   :: V.Version
+    }
+
+-- | Migration from some version to the @edition@ version.
+--
+-- The object you migrate from will satisfy every constraint in @constrs@ list
+-- (for that, of course, object of each edition in the chain has to satisfy those).
+--
+-- Monad @m@ is the one where 'migrate' is executed and should satisfy
+-- 'MigrationActionConstr' constraint for every edition in the chain.
+data FullMigration constrs m edition =
+    forall curObj. Each constrs '[curObj] => FullMigration
+    { runFullMigration   :: curObj -> m (EditionObject edition)
+    , fullMigrationSteps :: Seq.Seq MigrationStepMeta
+    }
+
+-- | Migration which does nothing.
+fmLeaveAsIs
+    :: (Applicative m, Each constrs '[EditionObject edition])
+    => FullMigration constrs m edition
+fmLeaveAsIs = FullMigration pure mempty
+
+-- | Make a full description of prepared migration.
+fullMigrationDesc :: FullMigration constrs m edition -> Builder
+fullMigrationDesc fm = case toList (fullMigrationSteps fm) of
+    [] -> "Data in storage is up to date"
+    (step : steps) ->
+        let versions = fmsVersionFrom step : map fmsVersionTo (step : steps)
+            versionsT = mconcat $ intersperse " -> " $ map show versions
+        in "Going to perform a migration: " <> versionsT
+
+-- | Perform required migrations from a given version to the actual one.
+prepareMigration
+    :: forall edition n constrs m.
        ( Migratable edition
-       , AllMigrarionActionsConstrs edition m
-       , MonadCatch m, MonadLogging m
+       , ForEachEditionUpTo constrs edition
+       , MonadThrow m
+       , MonadCatch n, AllMigrarionActionsConstrs edition n
        )
-    => Maybe V.Version -> V.Version -> m (EditionObject edition)
-ensureUpToDateRec lastTopDownVersion storedVersion
+    => V.Version -> m (FullMigration constrs n edition)
+prepareMigration storedVersion =
+    prepareMigrationRec Nothing storedVersion
+
+prepareMigrationRec
+    :: forall edition n constrs m.
+       ( Migratable edition
+       , ForEachEditionUpTo constrs edition
+       , MonadThrow m
+       , MonadCatch n, AllMigrarionActionsConstrs edition n
+       )
+    => Maybe V.Version -> V.Version -> m (FullMigration constrs n edition)
+prepareMigrationRec lastTopDownVersion storedVersion
     | curVersion < storedVersion =
         case lastTopDownVersion of
             Nothing ->
-                throwM $ VersionError StoredVersionIsTooHigh
+                throwM $ StoredVersionIsTooHigh
                 { veStored = storedVersion, veActual = curVersion }
             Just higherVersion ->
-                throwM $ VersionError StoredVersionLostMidway
+                throwM $ StoredVersionLostMidway
                 { veStored = storedVersion, veLower = curVersion
                 , veHigher = higherVersion }
 
-    | curVersion == storedVersion = do
-        case lastTopDownVersion of
-            Nothing -> logDebug "Storage is up to date"
-            Just _ -> logDebug $ "Storage version is " +| V.toBuilder curVersion
-                              |+ ", preparing migration"
-        readEdition & wrapRethrow StoreReadFailed
+    | curVersion == storedVersion =
+        return fmLeaveAsIs
 
     | otherwise = case previousEditionRef @edition of
         NullEditionRef ->
-            throwM $ VersionError StoredVersionIsTooLow
+            throwM $ StoredVersionIsTooLow
             { veStored = storedVersion, veBase = curVersion }
 
         PrevEditionRef (_ :: Proxy pe) -> do
-            prev <- ensureUpToDateRec (Just curVersion) storedVersion
-
-            logDebug $ "Migrating to version " +| V.toBuilder curVersion |+ ""
-            cur <- migrate prev
-                 & wrapRethrow (MigrationFailed (editionVersion @pe) curVersion)
-            logDebug $ "Finished migration to version " +| V.toBuilder curVersion |+ ""
-            return cur
+            FullMigration{..} <- prepareMigrationRec @pe @n @constrs
+                                 (Just curVersion) storedVersion
+            return FullMigration
+                { runFullMigration = \base -> do
+                    prev <- runFullMigration base
+                    migrate prev &
+                        wrapRethrow (MigrationException (editionVersion @pe) curVersion)
+                , fullMigrationSteps = fullMigrationSteps Seq.|> MigrationStepMeta
+                        { fmsVersionFrom = editionVersion @pe
+                        , fmsVersionTo = curVersion
+                        }
+                }
   where
     curVersion = editionVersion @edition
 
@@ -210,6 +265,7 @@ verifyVersionsGrowth =
 
 
 data V0 = V0 Int
+    deriving (Show)
 
 instance Migratable V0 where
     type MigrationEditionType V0 = 'BaseEdition
@@ -219,8 +275,6 @@ instance Migratable V0 where
     type MigrationActionConstr V0 m = MonadReader Int m
 
     migrate () = V0 <$> ask
-
-    readEdition = return $ V0 10
 
 data V1 = V1 Int Text
 
@@ -232,5 +286,3 @@ instance Migratable V1 where
     type MigrationActionConstr V1 m = MonadState Double m
 
     migrate (V0 i) = return (V1 i "")
-
-    readEdition = return $ V1 10 "kek"
