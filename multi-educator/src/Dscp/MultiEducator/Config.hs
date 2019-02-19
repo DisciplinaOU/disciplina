@@ -35,7 +35,8 @@ type MultiEducatorConfig = WitnessConfig ++
            '[ "period" ::: Time Second
             ]
         , "certificates" ::<
-           '[ "resources" ::: FilePath
+           '[ "latex" ::: FilePath
+            , "resources" ::: FilePath
             ]
         ]
      ]
@@ -49,6 +50,7 @@ defaultMultiEducatorConfig :: MultiEducatorConfigRecP
 defaultMultiEducatorConfig = upcast defaultWitnessConfig
     & sub #educator . sub #db .~ defaultPostgresRealParams
     & sub #educator . sub #api . sub #botConfig . tree #params . selection ?~ "disabled"
+    & sub #educator . sub #certificates . option #latex ?~ "xelatex"
 
 -- instance (HasEducatorConfig, cfg ~ WitnessConfigRec) => Given cfg where
 --     given = rcast (given @EducatorConfigRec)

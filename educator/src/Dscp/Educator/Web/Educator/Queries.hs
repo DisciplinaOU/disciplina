@@ -265,8 +265,9 @@ educatorAddCertificate
     :: MonadEducatorWeb ctx m
     => CertificateFullInfo -> m ()
 educatorAddCertificate cert = do
+    pdfLatexPath <- view (lensOf @Pdf.LatexPath)
     pdfResPath <- view (lensOf @Pdf.ResourcePath)
-    pdfRaw <- Pdf.produce RU certificateIssuerInfoEx cert pdfResPath
+    pdfRaw <- Pdf.produce RU certificateIssuerInfoEx cert pdfLatexPath pdfResPath
 
     transact $ do
         txs <- addCertificateGrades (cfiMeta cert) (cfiGrades cert)

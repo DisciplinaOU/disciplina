@@ -31,6 +31,7 @@ newtype EducatorContexts = EducatorContexts (Map Text EducatorCtxWithCfg)
 data MultiEducatorResources = MultiEducatorResources
     { _merWitnessResources :: !Witness.WitnessResources
     , _merEducatorData     :: !(TVar EducatorContexts)
+    , _merPdfLatexPath     :: !Pdf.LatexPath
     , _merPdfResourcePath  :: !Pdf.ResourcePath
     }
 
@@ -49,6 +50,7 @@ instance AllocResource MultiEducatorResources where
                                allocResource witnessCfg
         _merEducatorData <- atomically $ newTVar (EducatorContexts mempty)
         let appDir = Witness._wrAppDir _merWitnessResources
+        _merPdfLatexPath <- allocResource $ cfg ^. sub #certificates . option #latex
         _merPdfResourcePath <- allocResource
             (cfg ^. sub #certificates . option #resources, appDir)
         return MultiEducatorResources {..}

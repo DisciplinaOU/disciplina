@@ -47,6 +47,7 @@ data TestEducatorCtx = TestEducatorCtx
     { _tecEducatorDb       :: SQL
     , _tecWitnessDb        :: DB.Plugin
     , _tecKeys             :: KeyResources EducatorNode
+    , _tecPdfLatexPath     :: Pdf.LatexPath
     , _tecPdfResourcePath  :: Pdf.ResourcePath
     , _tecWitnessKeys      :: KeyResources WitnessNode
     , _tecWitnessVariables :: TestWitnessVariables
@@ -65,6 +66,9 @@ instance MonadFail TestEducatorM where
 
 resourcePathVarName :: String
 resourcePathVarName = "PDF_RESOURCE_PATH"
+
+testLatexPath :: Pdf.LatexPath
+testLatexPath = Pdf.LatexPath "xelatex"
 
 testResourcePath :: Pdf.ResourcePath
 testResourcePath = unsafePerformIO $ do
@@ -92,6 +96,7 @@ runTestSqlM testDb action =
         let _tecKeys = KeyResources $ mkSecretKeyData testSomeGenesisSecret
         let _tecEducatorDb = db
         let _tecLogging = testLogging
+        let _tecPdfLatexPath = testLatexPath
         let _tecPdfResourcePath = testResourcePath
         let ctx = TestEducatorCtx{..}
         runRIO ctx $ markWithinWriteSDLockUnsafe applyGenesisBlock

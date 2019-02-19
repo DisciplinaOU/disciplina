@@ -10,6 +10,8 @@ module Pdf.FromLatex
 
       -- * Info about the Educator
     , CertificateIssuerInfo (..)
+      -- * Path to LaTeX generator implementation (i. e. `xelatex`)
+    , LatexPath (..)
       -- * Path to resources for latex generation
     , ResourcePath(..)
 
@@ -30,8 +32,8 @@ import GHC.Exts (fromList)
 import qualified System.Directory as D
 import System.FilePath.Posix ((</>))
 import System.IO.Temp (withSystemTempDirectory)
-import System.Process.Typed (byteStringInput, byteStringOutput, runProcess, setStdin, setStdout,
-                             setWorkingDir)
+import System.Process.Typed (byteStringInput, byteStringOutput, proc, runProcess, setStdin,
+                             setStdout, setWorkingDir)
 import Text.Printer (text)
 
 import Dscp.Core.Foundation.Educator
@@ -108,14 +110,28 @@ fullInfo
     showBoth (a, b) = [shown a, shown b]
     shownDesc       = text . escapeInLatex . unItemDesc
 
+-- | Type wrapper for latex executable path
+newtype LatexPath = LatexPath
+    { unLatexPath :: FilePath
+    } deriving (Show, Eq)
+
 -- | Type wrapper for latex resource path.
-newtype ResourcePath = ResourcePath { unResourcePath :: FilePath }
+newtype ResourcePath = ResourcePath
+    { unResourcePath :: FilePath
+    } deriving (Show, Eq)
 
 -- | Generate a PDF-certificate and return it as a bytestring.
-produce :: MonadIO m => Language -> CertificateIssuerInfo -> CertificateFullInfo -> ResourcePath -> m PDFBody
-produce loc ciInfo info (ResourcePath resPath) = liftIO $
+produce ::
+       MonadIO m
+    => Language
+    -> CertificateIssuerInfo
+    -> CertificateFullInfo
+    -> LatexPath
+    -> ResourcePath
+    -> m PDFBody
+produce loc ciInfo info (LatexPath xelatex) (ResourcePath resPath) = liftIO $
 
-    -- Everyhting produced should be removed.
+    -- Everything produced should be removed.
     -- This may lead to /tmp exhaustion attack, unless /tmp or memory
     -- is big enough.
     withSystemTempDirectory "faircv" $ \tmpPath -> do
@@ -130,7 +146,7 @@ produce loc ciInfo info (ResourcePath resPath) = liftIO $
                 $ setWorkingDir tmpPath
                 $ setStdin (byteStringInput input)  -- feed the latex doc in directly
                 $ setStdout byteStringOutput
-                $ "xelatex"
+                $ proc xelatex []
 
         -- LaTeX Warning: Label(s) may have changed. Rerun to get cross-references right.
         --

@@ -46,6 +46,7 @@ type EducatorOnlyWorkMode ctx m =
         [ DB.Plugin
         , SQL
         , KeyResources EducatorNode
+        , Pdf.LatexPath
         , Pdf.ResourcePath
         ]
     )

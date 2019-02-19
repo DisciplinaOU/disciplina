@@ -145,6 +145,7 @@ loadEducator _new login mpassphrase = do
             { _erWitnessResources = ctx ^. lensOf @MultiEducatorResources . lensOf @W.WitnessResources
             , _erKeys = key
             , _erDB = db
+            , _erPdfLatexPath = ctx ^. lensOf @MultiEducatorResources . lensOf @Pdf.LatexPath
             , _erPdfResourcePath = ctx ^. lensOf @MultiEducatorResources . lensOf @Pdf.ResourcePath
             }
         educatorContext = E.EducatorContext
