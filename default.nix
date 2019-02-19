@@ -13,32 +13,7 @@ let
     '';
   });
   addLatex = drv: pkgs.haskell.lib.overrideCabal drv (old: {
-    libraryToolDepends = (old.libraryToolDepends or []) ++
-      [ (texlive.combine {
-          inherit (texlive)
-            collection-basic
-            collection-fontsrecommended
-            collection-langcyrillic
-            collection-xetex
-            scheme-basic
-            extsizes
-            titlesec
-            url
-            hyperref
-            xltxtra
-            geometry
-            background
-            realscripts
-            datetime2
-            tracklang
-            etoolbox
-            everypage
-            xkeyval
-            xcolor
-            pgf
-            fontspec;
-        })
-      ];
+    libraryToolDepends = (old.libraryToolDepends or []) ++ [ pkgs.pdf-generator-xelatex ];
   });
 in
 stackToNix {

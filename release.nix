@@ -18,19 +18,30 @@ let
       ${source}
     '';
   };
+
+  justDataOutputs = drv: lib.optional (drv ? data) drv.data;
+
+  server-packages = with project; [
+    disciplina-educator
+    disciplina-faucet
+    disciplina-tools
+    disciplina-witness
+    disciplina-pdfs
+  ];
 in
 
 rec {
   disciplina = symlinkJoin {
     name = "disciplina";
-    paths = with project; map haskell.lib.justStaticExecutables [
-      disciplina-educator
-      disciplina-faucet
-      disciplina-tools
-      disciplina-witness
-    ];
+    paths = map haskell.lib.justStaticExecutables server-packages;
   };
 
+  disciplina-data = symlinkJoin {
+    name = "disciplina-data";
+    paths = lib.concatMap justDataOutputs server-packages;
+  };
+
+  inherit (pkgs) pdf-generator-xelatex;
   inherit (project) disciplina-tools;
 
   disciplina-config = runCommand "disciplina-config.yaml" {} "cp ${./config.yaml} $out";

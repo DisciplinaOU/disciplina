@@ -56,7 +56,7 @@ type MonadEducatorWebQuery m =
 
 type MonadEducatorWeb ctx m =
     ( WitnessWorkMode ctx m
-    , HasCtx ctx m '[SQL, KeyResources EducatorNode, Pdf.ResourcePath]
+    , HasCtx ctx m '[SQL, KeyResources EducatorNode, Pdf.LatexPath, Pdf.ResourcePath]
     )
 
 ---------------------------------------------------------------------------

@@ -211,6 +211,13 @@ sample:
     publishing:
       period: 30s
 
+    # Parameters for certificates generator
+    certificates:
+      # Path to LaTeX executable (resolved against $PATH). `xelatex` is used by default.
+      latex: "xelatex"
+      # Path to the directory with LaTeX templates
+      resources: "/var/lib/disciplina/certificate-templates"
+
   # Faucet config
   faucet:
     # Logging config for faucet node. See option `witness.logging`.
