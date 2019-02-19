@@ -100,8 +100,10 @@ type GetAssignment
     = "assignments" :> Capture "assignment" (Hash Core.Assignment)
     :> Tag "Assignments"
     :> Summary "Get info about an assignment"
-    :> Description "Gets an assignment info by given submission hash. Returns \
-                   \404 if a student tries to get an assignment which is not assigned to them."
+    :> Description "Gets an assignment info by given submission hash."
+    :> ExceptionalResponses StudentAPIError
+       '[ 404 #: "This assignment is not assigned to the student."
+        ]
     :> Verb 'GET 200 '[DSON] AssignmentStudentInfo
 
 ---------------------------------------------------------------------------
@@ -139,8 +141,7 @@ type GetSubmission
     = "submissions" :> Capture "submission" (Hash Core.Submission)
     :> Tag "Submissions"
     :> Summary "Get info about a submission"
-    :> Description "Gets a submission data by given submission hash. Returns a 404 \
-                   \if a student tries to get a submission which is not their own."
+    :> Description "Gets a submission data by given submission hash."
    :> ExceptionalResponses StudentAPIError
        '[ 404 #: "Submission with given hash was not found (or a user has no rights to \
                  \look it up)"
