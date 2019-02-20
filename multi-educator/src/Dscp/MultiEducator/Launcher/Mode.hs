@@ -25,7 +25,6 @@ import Control.Lens (makeLenses, (?~))
 import qualified Data.Map as M
 import Loot.Base.HasLens (HasLens', lensOf)
 import Loot.Config (option, sub)
-import Loot.Log (LoggingIO)
 import qualified Pdf.FromLatex as Pdf
 import System.Directory (createDirectoryIfMissing)
 import System.FilePath ((<.>), (</>))
@@ -38,12 +37,11 @@ import Dscp.Educator.DB (prepareEducatorSchema)
 import Dscp.Educator.Launcher.Marker (EducatorNode)
 import qualified Dscp.Educator.Launcher.Mode as E
 import qualified Dscp.Educator.Launcher.Resource as E
-import qualified Dscp.Launcher.Mode as Basic
 import Dscp.MultiEducator.Config
 import Dscp.MultiEducator.Launcher.Params (MultiEducatorKeyParams (..))
 import Dscp.MultiEducator.Launcher.Resource (EducatorContexts (..), EducatorCtxWithCfg (..),
                                              MultiEducatorResources (..))
-import Dscp.Resource.AppDir (getOSAppDir)
+import Dscp.Resource.AppDir (AppDir)
 import Dscp.Resource.Keys (linkStore)
 import Dscp.Resource.Network
 import Dscp.Rio (RIO, runRIO)
@@ -56,18 +54,10 @@ import qualified Dscp.Witness as W
 
 -- | Set of typeclasses which define capabilities of bare Educator node.
 type MultiEducatorWorkMode ctx m =
-    ( Basic.BasicWorkMode m
+    ( W.WitnessWorkMode ctx m
 
-    , HasWitnessConfig
     , HasMultiEducatorConfig
-
-    , MonadReader ctx m
-
-    , HasLens' ctx LoggingIO
     , HasLens' ctx (TVar EducatorContexts)
-
-    -- It's easier to just have these two lenses instead of reconstructing
-    -- the full educator context in multiToNormal from other lenses
     , HasLens' ctx MultiEducatorResources
     , HasLens' ctx W.WitnessVariables
     )
@@ -120,12 +110,7 @@ lookupEducator login = do
 loadEducator :: (MultiEducatorWorkMode ctx m) => Text -> Maybe PassPhrase -> m EducatorCtxWithCfg
 loadEducator login mpassphrase = do
     -- TODO: add hashing
-    let appDirParam = multiEducatorConfig ^. sub #witness . sub #appDir
-    appDir <- case appDirParam ^. tree #param . selection of
-        "os" -> getOSAppDir
-        "specific" -> pure $
-            appDirParam ^. tree #param . peekBranch #specific . option #path
-        sel -> error $ "unknown AppDir type: " <> fromString sel
+    appDir <- view $ lensOf @AppDir
     ctx <- ask
     let resources = ctx ^. lensOf @MultiEducatorResources
         (MultiEducatorKeyParams keyDir) = multiEducatorConfig ^. sub #educator . option #keys

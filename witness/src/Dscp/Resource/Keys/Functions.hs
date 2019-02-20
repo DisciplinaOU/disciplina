@@ -27,8 +27,8 @@ import Dscp.Core
 import Dscp.Crypto
 import Dscp.Resource.AppDir
 import Dscp.Resource.Keys.Error (KeyInitError (..), rewrapKeyIOErrors)
-import Dscp.Resource.Keys.Types (BaseKeyParamsRec, CommitteeParamsRec,
-                                 KeyJson (..), KeyResources (..), KeyfileContent)
+import Dscp.Resource.Keys.Types (BaseKeyParamsRec, CommitteeParamsRec, KeyJson (..),
+                                 KeyResources (..), KeyfileContent)
 import Dscp.System (checkFileMode, mode600, setMode, whenPosix)
 import Dscp.Util (leftToThrow)
 import Dscp.Util.Aeson (EncodeSerialised (..), Versioned (..))
@@ -63,7 +63,7 @@ fromKeyfileContent pp (Versioned content) = fromSecretJson pp content
 storePath
     :: Buildable (Proxy node)
     => BaseKeyParamsRec -> AppDir -> Proxy node -> FilePath
-storePath baseKeyParams appDir nodeNameP =
+storePath baseKeyParams (AppDir appDir) nodeNameP =
     fromMaybe defPath (baseKeyParams ^. option #path)
   where
     defPath = appDir </> (nodeNameP |+ ".key")

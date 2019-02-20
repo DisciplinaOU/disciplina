@@ -32,6 +32,7 @@ import Dscp.Educator.Arbitrary ()
 import Dscp.Educator.Config
 import Dscp.Educator.Launcher
 import Dscp.Educator.TestConfig
+import Dscp.Resource.AppDir
 import Dscp.Resource.Keys
 import Dscp.Rio
 import Dscp.Util
@@ -52,6 +53,7 @@ data TestEducatorCtx = TestEducatorCtx
     , _tecWitnessKeys      :: KeyResources WitnessNode
     , _tecWitnessVariables :: TestWitnessVariables
     , _tecLogging          :: Log.Logging IO
+    , _tecAppDir           :: AppDir
     }
 makeLenses ''TestEducatorCtx
 deriveHasLensDirect ''TestEducatorCtx
@@ -98,6 +100,7 @@ runTestSqlM testDb action =
         let _tecLogging = testLogging
         let _tecPdfLatexPath = testLatexPath
         let _tecPdfResourcePath = testResourcePath
+        let _tecAppDir = error "AppDir is not defined"
         let ctx = TestEducatorCtx{..}
         runRIO ctx $ markWithinWriteSDLockUnsafe applyGenesisBlock
 
