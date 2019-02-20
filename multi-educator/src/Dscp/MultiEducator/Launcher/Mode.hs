@@ -28,7 +28,7 @@ import Loot.Config (option, sub)
 import Loot.Log (LoggingIO)
 import qualified Pdf.FromLatex as Pdf
 import System.Directory (createDirectoryIfMissing)
-import System.FilePath.Posix ((</>))
+import System.FilePath ((<.>), (</>))
 
 import Dscp.Config
 import Dscp.Crypto
@@ -128,15 +128,15 @@ loadEducator login mpassphrase = do
         sel -> error $ "unknown AppDir type: " <> fromString sel
     ctx <- ask
     let resources = ctx ^. lensOf @MultiEducatorResources
-        (MultiEducatorKeyParams keyFile) = multiEducatorConfig ^. sub #educator . option #keys
+        (MultiEducatorKeyParams keyDir) = multiEducatorConfig ^. sub #educator . option #keys
         db = resources ^. lensOf @SQL
     -- set the DB schema name and create it if it's not ready
     setSchemaName db ("educator_" <> login)
     prepareEducatorSchema db
-    liftIO $ createDirectoryIfMissing True (appDir </> keyFile)
+    liftIO $ createDirectoryIfMissing True keyDir
     -- read key from file and creates one if it does not exist yet
     let keyParams = finaliseDeferredUnsafe $ mempty
-            & option #path       ?~ Just keyFile
+            & option #path       ?~ Just (keyDir </> toString login <.> "key")
             & option #genNew     ?~ True
             & option #passphrase ?~ mpassphrase
     key <- withCoreConfig (rcast multiEducatorConfig) $ linkStore keyParams appDir

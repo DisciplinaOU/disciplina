@@ -114,7 +114,7 @@ educator_params="
 --pdf-resource-path ../pdfs/template
 "
 multi_educator_params="
---educator-key-dir $files/educator.key
+--educator-key-dir $files/multieducator
 --sql-conn-str "postgresql:///$sql_db_name"
 --educator-listen 127.0.0.1:8090
 --educator-api-no-auth
