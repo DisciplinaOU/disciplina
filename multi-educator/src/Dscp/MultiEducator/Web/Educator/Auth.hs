@@ -17,6 +17,7 @@ import Data.Aeson (FromJSON (..), ToJSON (..), decodeStrict)
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
 import Data.Time.Clock (addUTCTime, getCurrentTime)
+import Fmt (build)
 import Servant.Auth.Server (AuthCheck, FromJWT, ToJWT)
 import Servant.Auth.Server.Internal.Class (IsAuth (..))
 
@@ -37,6 +38,9 @@ deriveJSON defaultOptions ''EducatorAuthData
 
 instance FromJWT EducatorAuthData
 instance ToJWT EducatorAuthData
+
+instance Buildable EducatorAuthData where
+    build (EducatorAuthData eId) = "\"" <> build eId <> "\""
 
 data EducatorAuthToken = EducatorAuthToken
     { eatData :: EducatorAuthData

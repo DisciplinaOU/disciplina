@@ -17,7 +17,7 @@ import Servant ((:<|>) (..), Context (..), Handler, ServantErr (..), Server, Ser
                 StdMethod (..), err405, hoistServerWithContext, serveWithContext)
 import Servant.Auth.Server.Internal.ThrowAll (throwAll)
 import Servant.Generic (toServant)
-import Servant.Util (methodsCoveringAPI)
+import Servant.Util (methodsCoveringAPI, serverWithLogging)
 import UnliftIO (askUnliftIO)
 
 import Dscp.Config
@@ -34,7 +34,7 @@ import Dscp.MultiEducator.Launcher.Params (MultiEducatorAAAConfigRec)
 import Dscp.MultiEducator.Web.Educator (MultiEducatorAPI, MultiStudentAPI, multiEducatorAPI,
                                         multiStudentAPI)
 import Dscp.MultiEducator.Web.Educator.Auth
-import Dscp.Web (serveWeb)
+import Dscp.Web (buildServantLogConfig, serveWeb)
 import Dscp.Web.Metrics (responseTimeMetric)
 import Dscp.Witness.Web
 
@@ -153,10 +153,12 @@ serveEducatorAPIsReal withWitnessApi = do
           then mkWitnessAPIServer (convertWitnessHandler unliftIO)
           else throwAll err405{ errBody = "Witness API disabled at this port" }
     let metricsEndpoint = witnessConfig ^. sub #witness . option #metricsEndpoint
+    lc <- buildServantLogConfig (<> "web")
     serveWeb serverAddress $
       responseTimeMetric metricsEndpoint $
       educatorCors $
-      serveWithContext (Proxy @EducatorWebAPI) srvCtx $
+      serverWithLogging lc (Proxy @EducatorWebAPI) $ \api ->
+      serveWithContext api srvCtx $
          educatorApiServer
          :<|>
          studentApiServer
