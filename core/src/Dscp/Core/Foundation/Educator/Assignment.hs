@@ -1,7 +1,10 @@
 
 module Dscp.Core.Foundation.Educator.Assignment where
 
+import Control.Lens (Getter, makeLenses, to)
+
 import Dscp.Core.Foundation.Educator.Course
+import Dscp.Core.Foundation.Educator.DocumentType
 import Dscp.Core.Foundation.Educator.ItemDesc
 import Dscp.Crypto
 import Dscp.Util

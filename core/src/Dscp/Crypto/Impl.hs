@@ -29,7 +29,11 @@ module Dscp.Crypto.Impl
        , unsafeSign
        , verify
        , unsafeVerify
-       , Signed (..)
+
+         -- * Evenlope with a sign
+       , Signed
+       , signed
+       , unsign
 
          -- * Other
        , Raw
@@ -147,8 +151,24 @@ unsafeVerify = unsafeAbstractVerify
 data Signed msg = Signed
     { sgMessage   :: msg
     , sgPublicKey :: PublicKey
-    , sgSignature :: Signature msg
+    , sgSignature :: Signature (Id msg)
     } deriving (Eq, Show, Generic)
+
+-- | Thrown if signed object has invalid signature.
+--   Expected to be immidiately catched by client code and somehow rethrown.
+data SignatureIsInvalid = SignatureIsInvalid
+    deriving (Show)
+
+instance Exception SignatureIsInvalid
+
+signed :: (HasId a, HasSignature (Id a)) => SecretKey -> a -> Signed a
+signed sk a = Signed a (toPublic sk) (sign sk (a^.idOf))
+
+unsign :: (MonadThrow m, HasId a, HasSignature (Id a)) => Signed a -> m a
+unsign (Signed obj pk sig) =
+    if   verify pk (obj^.idOf) sig
+    then return obj
+    else throwM SignatureIsInvalid
 
 instance Buildable msg => Buildable (Signed msg) where
     build Signed{..} = "Signed { sig: " +| build sgSignature |+

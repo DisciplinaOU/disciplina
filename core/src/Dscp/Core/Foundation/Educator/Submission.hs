@@ -1,7 +1,7 @@
 
 module Dscp.Core.Foundation.Educator.Submission where
 
-import Control.Lens (Getter, makeLenses, makePrisms, to)
+import Control.Lens (Getter, makeLenses, to)
 
 import Dscp.Core.Foundation.Educator.Student
 import Dscp.Core.Foundation.Educator.Assignment
@@ -19,21 +19,11 @@ data Submission = Submission
     -- ^ Assignment of this submission
     } deriving (Eq, Ord, Show, Generic)
 
--- | A hash which indicates that a submission or an assignment
--- are offline.
--- TODO: make a more comprehensible and easily documentable value?...
-offlineHash :: Hash Raw
-offlineHash = unsafeHash ("offline" :: ByteString)
-
 _sDocumentType :: Submission -> DocumentType
 _sDocumentType = documentType . _sContentsHash
 
 sDocumentType :: Getter Submission DocumentType
 sDocumentType = to _sDocumentType
-
-instance HasHash Submission => HasId Submission where
-    type Id Submission = Hash Submission
-    getId = hash
 
 -- | Type alias for Submission signature.
 type SubmissionSig = Signature (Id Submission)
@@ -51,6 +41,10 @@ data SignedSubmission = SignedSubmission
     , _ssWitness    :: !SubmissionWitness
     -- ^ Submission witness
     } deriving (Eq, Ord, Show, Generic)
+
+instance HasHash Submission => HasId Submission where
+    type Id Submission = Hash Submission
+    getId = hash
 
 instance HasHash Submission => HasId SignedSubmission where
     type Id SignedSubmission = Hash Submission

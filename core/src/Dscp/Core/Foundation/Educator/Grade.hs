@@ -21,3 +21,10 @@ mkGrade :: Word8 -> Maybe Grade
 mkGrade a =
     let g = UnsafeGrade a
     in  g <$ guard (g >= minBound && g <= maxBound)
+
+data GradeInfo = GradeInfo
+    { giSubmissionHash :: (Hash Submission)
+    , giGrade          :: Grade
+    , giTimestamp      :: Timestamp
+    , giHasProof       :: Bool
+    } deriving (Show, Eq, Ord, Generic)

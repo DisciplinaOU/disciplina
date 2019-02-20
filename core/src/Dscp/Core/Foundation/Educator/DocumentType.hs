@@ -16,3 +16,9 @@ documentType :: Hash Raw -> DocumentType
 documentType h
     | h == offlineHash = Offline
     | otherwise        = Online
+
+-- | A hash which indicates that a submission or an assignment
+-- are offline.
+-- TODO: make a more comprehensible and easily documentable value?...
+offlineHash :: Hash Raw
+offlineHash = unsafeHash ("offline" :: ByteString)
