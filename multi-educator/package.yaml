@@ -14,6 +14,7 @@ library:
     - aeson-options
     - bytestring
     - containers
+    - cryptonite
     - data-default
     - directory
     - direct-sqlite
@@ -32,6 +33,7 @@ library:
     - loot-config
     - loot-log
     - loot-network
+    - memory
     - mtl
     - optparse-applicative
     - o-clock
@@ -40,6 +42,7 @@ library:
     - safe-exceptions >= 0.1.4
     - serialise
     - servant-auth-server
+    - servant-client-core
     - servant-generic
     - servant-server
     - servant-util

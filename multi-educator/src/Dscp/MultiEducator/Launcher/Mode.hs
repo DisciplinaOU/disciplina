@@ -43,6 +43,7 @@ import Dscp.MultiEducator.Config
 import Dscp.MultiEducator.Launcher.Params (MultiEducatorKeyParams (..))
 import Dscp.MultiEducator.Launcher.Resource (EducatorContexts (..), EducatorCtxWithCfg (..),
                                              MultiEducatorResources (..))
+import Dscp.Resource.AppDir (getOSAppDir)
 import Dscp.Resource.Keys (linkStore)
 import Dscp.Resource.Network
 import Dscp.Rio (RIO, runRIO)
@@ -107,42 +108,41 @@ deriveHasLens 'mecWitnessVars ''MultiEducatorContext ''W.WitnessVariables
 
 -- | This function transforms normal workmode into multi-workmode using login.
 -- It returns Nothing is login was not found
-lookupEducator :: MultiEducatorWorkMode ctx m => Text -> m (Maybe EducatorCtxWithCfg)
+lookupEducator :: MultiEducatorWorkMode ctx m => Text -> m EducatorCtxWithCfg
 lookupEducator login = do
     mctx <- ask
-    let MultiEducatorResources{ _merEducatorData }
-            = mctx ^. lensOf @MultiEducatorResources
-    fmap (\(EducatorContexts ctxs) -> M.lookup login ctxs) . atomically $ readTVar _merEducatorData
+    let MultiEducatorResources{..} = mctx ^. lensOf @MultiEducatorResources
+    EducatorContexts ctxs <- atomically $ readTVar _merEducatorData
+    maybe (loadEducator login Nothing) return $ M.lookup login ctxs
+    -- TODO lookupEducator should probably take a Maybe PassPhrase
+    -- or the relationship with loadEducator should be different/removed
 
-loadEducator :: (MultiEducatorWorkMode ctx m) => Bool -> Text -> Maybe PassPhrase -> m Bool
-loadEducator _new login mpassphrase = do
+loadEducator :: (MultiEducatorWorkMode ctx m) => Text -> Maybe PassPhrase -> m EducatorCtxWithCfg
+loadEducator login mpassphrase = do
     -- TODO: add hashing
     let appDirParam = multiEducatorConfig ^. sub #witness . sub #appDir
-        appDir = case appDirParam ^. tree #param . selection of
-            "os" -> ""
-            "specific" ->
-                appDirParam ^. tree #param . peekBranch #specific . option #path
-            sel -> error $ "unknown AppDir type: " <> fromString sel
-    let (MultiEducatorKeyParams path) = multiEducatorConfig ^. sub #educator . option #keys
-        prepareDb = do
-            let realPar = multiEducatorConfig ^. sub #educator . sub #db
-            db <- openPostgresDB (PostgresParams $ PostgresReal realPar)
-            setSchemaName db ("educator_" <> login)
-            prepareEducatorSchema db
-            return (db, realPar)
-    (db, _dbParam) <- prepareDb
-    liftIO $ createDirectoryIfMissing True (appDir </> path)
-    let keyFile = path  -- TODO [DSCP-449]: remove entirely
-        -- FIXME
-        keyParams = finaliseDeferredUnsafe $ mempty
+    appDir <- case appDirParam ^. tree #param . selection of
+        "os" -> getOSAppDir
+        "specific" -> pure $
+            appDirParam ^. tree #param . peekBranch #specific . option #path
+        sel -> error $ "unknown AppDir type: " <> fromString sel
+    ctx <- ask
+    let resources = ctx ^. lensOf @MultiEducatorResources
+        (MultiEducatorKeyParams keyFile) = multiEducatorConfig ^. sub #educator . option #keys
+        db = resources ^. lensOf @SQL
+    -- set the DB schema name and create it if it's not ready
+    setSchemaName db ("educator_" <> login)
+    prepareEducatorSchema db
+    liftIO $ createDirectoryIfMissing True (appDir </> keyFile)
+    -- read key from file and creates one if it does not exist yet
+    let keyParams = finaliseDeferredUnsafe $ mempty
             & option #path       ?~ Just keyFile
-            & option #genNew     ?~ False
+            & option #genNew     ?~ True
             & option #passphrase ?~ mpassphrase
     key <- withCoreConfig (rcast multiEducatorConfig) $ linkStore keyParams appDir
-    -- FIXME: DB is not closed
-    ctx <- ask
+    -- build up a new educator context with config
     let educatorResources = E.EducatorResources
-            { _erWitnessResources = ctx ^. lensOf @MultiEducatorResources . lensOf @W.WitnessResources
+            { _erWitnessResources = resources ^. lensOf @W.WitnessResources
             , _erKeys = key
             , _erDB = db
             , _erPdfLatexPath = ctx ^. lensOf @MultiEducatorResources . lensOf @Pdf.LatexPath
@@ -152,16 +152,18 @@ loadEducator _new login mpassphrase = do
             { _ecResources = educatorResources
             , _ecWitnessVars = ctx ^. lensOf @W.WitnessVariables
             }
-        --newCfg' = E.defaultEducatorConfig
-        --    & (sub #educator . option #db ?~ dbParam)
-        --    . (sub #educator . option #keys ?~ E.EducatorKeyParams keyParams)
-        newCfg = error "no config"
-    atomically $ modifyTVar' (ctx ^. lensOf @(TVar EducatorContexts))
-        $ \(EducatorContexts ctxs) -> EducatorContexts $
-            case M.lookup login ctxs of
-                Just _ -> ctxs
-                Nothing -> M.insert login (E.withEducatorConfig newCfg $ EducatorCtxWithCfg educatorContext) ctxs
-    return True
+        newCfg = (finaliseDeferredUnsafe mempty) -- not great but it actually works
+            & sub #core .~ multiEducatorConfig ^. sub #core
+            & sub #witness .~ multiEducatorConfig ^. sub #witness
+            & sub #educator . sub #db .~ multiEducatorConfig ^. sub #educator . sub #db
+            & sub #educator . sub #keys . sub #keyParams .~ keyParams
+            & sub #educator . sub #api .~ multiEducatorConfig ^. sub #educator . sub #api
+            & sub #educator . sub #publishing .~ multiEducatorConfig ^. sub #educator . sub #publishing
+        educatorCtxWithCfg = E.withEducatorConfig newCfg $ EducatorCtxWithCfg educatorContext
+    -- add to/update the educator context map with the newly made one
+    atomically $ modifyTVar' (_merEducatorData resources) $ \(EducatorContexts ctxs) ->
+        EducatorContexts $ M.insert login educatorCtxWithCfg ctxs
+    return educatorCtxWithCfg
 
 normalToMulti :: MultiEducatorWorkMode ctx m => EducatorCtxWithCfg -> E.EducatorRealMode a -> m a
 normalToMulti (EducatorCtxWithCfg ctx) = runRIO ctx

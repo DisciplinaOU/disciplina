@@ -13,6 +13,7 @@ import Control.Lens (makeLenses)
 import qualified Pdf.FromLatex as Pdf
 
 import Dscp.Config
+import Dscp.DB.SQL (SQL)
 import qualified Dscp.Educator.Config as E
 import qualified Dscp.Educator.Launcher.Mode as E
 import Dscp.MultiEducator.Config
@@ -25,11 +26,11 @@ data EducatorCtxWithCfg where
     EducatorCtxWithCfg :: E.HasEducatorConfig => E.EducatorContext -> EducatorCtxWithCfg
 newtype EducatorContexts = EducatorContexts (Map Text EducatorCtxWithCfg)
 
--- SQL resource should be here too (in the future).
 -- | Datatype which contains resources required by all Disciplina nodes
 -- to start working.
 data MultiEducatorResources = MultiEducatorResources
     { _merWitnessResources :: !Witness.WitnessResources
+    , _merDB               :: !SQL
     , _merEducatorData     :: !(TVar EducatorContexts)
     , _merPdfLatexPath     :: !Pdf.LatexPath
     , _merPdfResourcePath  :: !Pdf.ResourcePath
@@ -45,9 +46,10 @@ instance AllocResource MultiEducatorResources where
     type Deps MultiEducatorResources = MultiEducatorConfigRec
     allocResource educatorCfg = do
         let cfg = educatorCfg ^. sub #educator
-        let witnessCfg = rcast educatorCfg
+            witnessCfg = rcast educatorCfg
         _merWitnessResources <- withWitnessConfig witnessCfg $
                                allocResource witnessCfg
+        _merDB <- allocResource $ cfg ^. sub #db
         _merEducatorData <- atomically $ newTVar (EducatorContexts mempty)
         let appDir = Witness._wrAppDir _merWitnessResources
         _merPdfLatexPath <- allocResource $ cfg ^. sub #certificates . option #latex

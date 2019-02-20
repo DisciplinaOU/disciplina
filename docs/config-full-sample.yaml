@@ -217,6 +217,12 @@ sample:
       latex: "xelatex"
       # Path to the directory with LaTeX templates
       resources: "/var/lib/disciplina/certificate-templates"
+    # These are options for the AAA microservice, only used by the multi-educator
+    aaa:
+      # URL of the AAA microservice
+      serviceUrl: "https://aaa.service.dscp.com"
+      # Public key of the microservice, used for JWT validation
+      publicKey: "Rdx2rUYesuu6EOBSt27Po85W5k-S4EU6uoSQxrDYUXc"
 
   # Faucet config
   faucet:
