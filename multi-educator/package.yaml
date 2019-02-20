@@ -41,12 +41,14 @@ library:
     - reflection
     - safe-exceptions >= 0.1.4
     - serialise
+    - serokell-util
     - servant-auth-server
     - servant-client-core
     - servant-generic
     - servant-server
     - servant-util
     - singleton-bool
+    - stm
     - sqlite-simple
     - template-haskell
     - text
