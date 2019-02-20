@@ -23,12 +23,17 @@ module Dscp.MultiEducator.Launcher.Mode
 
 import Control.Concurrent.STM (retry)
 import Control.Lens (at, makeLenses, zoom, (?~), _Wrapped')
+import Fmt ((+|), (|+))
 import Loot.Base.HasLens (HasLens', lensOf)
 import Loot.Config (option, sub)
+import Loot.Log (logDebug)
+import Loot.Network.Class (NetworkingCli, NetworkingServ)
+import Loot.Network.ZMQ (ZmqTcp)
 import qualified Pdf.FromLatex as Pdf
 import Serokell.Util (modifyTVarS)
 import System.Directory (createDirectoryIfMissing)
 import System.FilePath ((<.>), (</>))
+import UnliftIO (async)
 
 import Dscp.Config
 import Dscp.Crypto
@@ -38,9 +43,11 @@ import Dscp.Educator.DB (prepareEducatorSchema)
 import Dscp.Educator.Launcher.Marker (EducatorNode)
 import qualified Dscp.Educator.Launcher.Mode as E
 import qualified Dscp.Educator.Launcher.Resource as E
+import Dscp.Educator.Workers
 import Dscp.MultiEducator.Config
 import Dscp.MultiEducator.Launcher.Params (MultiEducatorKeyParams (..))
 import Dscp.MultiEducator.Launcher.Resource
+import Dscp.Network
 import Dscp.Resource.AppDir (AppDir)
 import Dscp.Resource.Keys (linkStore)
 import Dscp.Resource.Network
@@ -60,6 +67,9 @@ type MultiEducatorWorkMode ctx m =
     , HasLens' ctx (TVar EducatorContexts)
     , HasLens' ctx MultiEducatorResources
     , HasLens' ctx W.WitnessVariables
+
+    , NetworkingCli ZmqTcp m
+    , NetworkingServ ZmqTcp m
     )
 
 -- | Set of typeclasses which define capabilities both of Educator and Witness.
@@ -137,6 +147,7 @@ lookupEducator login = do
 
 loadEducator :: (MultiEducatorWorkMode ctx m) => Text -> Maybe PassPhrase -> m LoadedEducatorContext
 loadEducator login mpassphrase = do
+    logDebug $ "Loading educator " +| login |+ ""
     -- TODO: add hashing
     appDir <- view $ lensOf @AppDir
     ctx <- ask
@@ -173,11 +184,18 @@ loadEducator login mpassphrase = do
             & sub #educator . sub #api . option #educatorAPINoAuth .~
                 error "Do not touch, multi-educator has already run the server"
             & sub #educator . sub #publishing .~ multiEducatorConfig ^. sub #educator . sub #publishing
-        educatorCtxWithCfg = E.withEducatorConfig newCfg $ LoadedEducatorContext educatorContext
-    return educatorCtxWithCfg
+
+    workerAsyncs <- E.withEducatorConfig newCfg $ runRIO educatorContext $
+        mapM (async . runWorker identity) $ educatorWorkers
+
+    let loadedEducatorCtx = E.withEducatorConfig newCfg $ LoadedEducatorContext
+            { lecCtx = educatorContext
+            , lecWorkerHandlers = workerAsyncs
+            }
+    return loadedEducatorCtx
 
 normalToMulti :: MultiEducatorWorkMode ctx m => LoadedEducatorContext -> E.EducatorRealMode a -> m a
-normalToMulti (LoadedEducatorContext ctx) = runRIO ctx
+normalToMulti LoadedEducatorContext{..} = runRIO lecCtx
 
 ----------------------------------------------------------------------------
 -- Sanity check

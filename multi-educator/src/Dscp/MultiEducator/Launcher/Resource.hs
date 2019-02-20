@@ -13,6 +13,7 @@ module Dscp.MultiEducator.Launcher.Resource
 
 import Control.Lens (makeLenses, Wrapped (..))
 import qualified Pdf.FromLatex as Pdf
+import UnliftIO.Async (Async)
 
 import Dscp.Config
 import Dscp.DB.SQL (SQL)
@@ -29,6 +30,7 @@ data LoadedEducatorContext where
     LoadedEducatorContext
         :: E.HasEducatorConfig
         => { lecCtx :: E.EducatorContext
+           , lecWorkerHandlers :: [Async ()]
            }
         -> LoadedEducatorContext
 
