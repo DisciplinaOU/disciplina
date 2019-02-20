@@ -113,13 +113,26 @@ module Dscp.Core.Foundation.Educator
     , ATG (..)
     ) where
 
+import Dscp.Core.Foundation.Educator.Assignment as M
+import Dscp.Core.Foundation.Educator.ATGDelta as M
+import Dscp.Core.Foundation.Educator.Certificate as M
+import Dscp.Core.Foundation.Educator.Course as M
+import Dscp.Core.Foundation.Educator.DocumentType as M
+import Dscp.Core.Foundation.Educator.Educator as M
+import Dscp.Core.Foundation.Educator.Grade as M
+import Dscp.Core.Foundation.Educator.ItemDesc as M
+import Dscp.Core.Foundation.Educator.Orphans ()
+import Dscp.Core.Foundation.Educator.Student as M
+import Dscp.Core.Foundation.Educator.Subject as M
+import Dscp.Core.Foundation.Educator.Submission as M
+import Dscp.Core.Foundation.Educator.Timestamp as M
+
 import Control.Exception as E
 import Control.Lens (Getter, makeLenses, makePrisms, to)
 import qualified Data.ByteArray as BA
 import qualified Data.Text as T
 import Data.Time.Calendar (Day (..))
 import Data.Time.Clock (UTCTime (..), diffTimeToPicoseconds, picosecondsToDiffTime)
-import Fmt (build, genericF, listF, mapF, (+|), (|+))
 
 import Dscp.Core.Foundation.Address (Address (..))
 import Dscp.Crypto

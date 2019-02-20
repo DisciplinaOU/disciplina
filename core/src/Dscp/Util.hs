@@ -71,6 +71,7 @@ module Dscp.Util
 
          -- * Re-exports
        , module Snowdrop.Util
+       , build, genericF, listF, mapF, (+|), (|+)
        ) where
 
 import Codec.Serialise (Serialise, serialise)
@@ -91,6 +92,7 @@ import Loot.Log (ModifyLogName (..), MonadLogging, NameSelector (CallstackName),
 import Snowdrop.Util (NewestFirst (..), OldestFirst (..))
 
 import Dscp.Crypto.ByteArray (FromByteArray (..))
+import Dscp.Util.Format (build, genericF, listF, mapF, (+|), (|+))
 
 deriving instance Container (b a) => Container (OldestFirst b a)
 deriving instance Container (b a) => Container (NewestFirst b a)
