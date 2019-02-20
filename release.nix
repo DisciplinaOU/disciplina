@@ -23,6 +23,7 @@ let
 
   server-packages = with project; [
     disciplina-educator
+    disciplina-multi-educator
     disciplina-faucet
     disciplina-tools
     disciplina-witness
