@@ -5,6 +5,10 @@
 
 module Dscp.Educator.CLI
     ( postgresParamsParser
+    , educatorBotConfigParser
+    , noAuthContextParser
+    , educatorApiNoAuthParser
+    , studentApiNoAuthParser
     , educatorWebConfigParser
     , educatorConfigParser
     , publishingPeriodParser

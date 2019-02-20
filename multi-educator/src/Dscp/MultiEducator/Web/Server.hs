@@ -31,8 +31,8 @@ import Dscp.MultiEducator.Config
 import Dscp.MultiEducator.Launcher.Mode (MultiCombinedWorkMode, MultiEducatorWorkMode,
                                          lookupEducator, normalToMulti)
 import Dscp.MultiEducator.Launcher.Params (MultiEducatorAAAConfigRec)
-import Dscp.MultiEducator.Web.Educator (MultiEducatorAPI, MultiStudentAPI,
-                                        multiEducatorAPI, multiStudentAPI)
+import Dscp.MultiEducator.Web.Educator (MultiEducatorAPI, MultiStudentAPI, multiEducatorAPI,
+                                        multiStudentAPI)
 import Dscp.MultiEducator.Web.Educator.Auth
 import Dscp.Web (serveWeb)
 import Dscp.Web.Metrics (responseTimeMetric)
@@ -64,9 +64,9 @@ mkMultiEducatorApiServer
 mkMultiEducatorApiServer _aaaConfig nat =
     hoistServerWithContext
         multiEducatorAPI
-        (Proxy :: Proxy '[MultiEducatorPublicKey])
+        (Proxy :: Proxy '[MultiEducatorPublicKey, NoAuthContext "multi-educator"])
         nat
-        (\(EducatorAuthToken {..}) -> mkEducatorApiServer' $ eadId eatData)
+        (\eData -> mkEducatorApiServer' $ eadId eData)
 
 mkStudentApiServer'
     :: forall ctx m. MultiEducatorWorkMode ctx m
@@ -133,6 +133,7 @@ serveEducatorAPIsReal withWitnessApi = do
         serverAddress     = webCfg ^. sub #serverParams . option #addr
         botConfig         = webCfg ^. sub #botConfig
         studentAPINoAuth  = webCfg ^. option #studentAPINoAuth
+        educatorAPINoAuth = webCfg ^. option #multiEducatorAPINoAuth
         aaaSettings       = multiEducatorConfig ^. sub #educator . sub #aaa
 
     studentCheckAction <- createStudentCheckAction botConfig
@@ -141,6 +142,7 @@ serveEducatorAPIsReal withWitnessApi = do
             educatorPublicKey :.
             studentCheckAction :.
             studentAPINoAuth :.
+            educatorAPINoAuth :.
             EmptyContext
 
     logInfo $ "Serving Student API on "+|serverAddress|+""

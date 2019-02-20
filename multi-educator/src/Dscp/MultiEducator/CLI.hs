@@ -10,13 +10,15 @@ module Dscp.MultiEducator.CLI
 
 import Data.Aeson (eitherDecodeStrict')
 import Loot.Config (OptModParser, uplift, (.::), (.:<), (<*<))
-import Options.Applicative (Parser, help, long, metavar, strOption, option, eitherReader)
+import Options.Applicative (Parser, eitherReader, help, long, metavar, option, strOption)
 import Servant.Client.Core (BaseUrl, parseBaseUrl)
 
+import Dscp.CommonCLI
 import Dscp.Educator.CLI
-import Dscp.MultiEducator.Config (MultiEducatorConfig)
-import Dscp.MultiEducator.Launcher.Params (MultiEducatorKeyParams (..), MultiEducatorAAAConfig)
-import Dscp.MultiEducator.Web.Educator.Auth (MultiEducatorPublicKey)
+import Dscp.Educator.Web.Auth
+import Dscp.MultiEducator.Config
+import Dscp.MultiEducator.Launcher.Params (MultiEducatorAAAConfig, MultiEducatorKeyParams (..))
+import Dscp.MultiEducator.Web.Educator.Auth (EducatorAuthData (..), MultiEducatorPublicKey)
 import Dscp.Witness.CLI (witnessConfigParser)
 
 import qualified Data.ByteString as BS
@@ -46,6 +48,19 @@ multiEducatorAAAConfigParser =
       where
         addQuotationMarks bs = BS.intercalate bs ["\"", "\""]
 
+multiEducatorApiNoAuthParser :: Parser (NoAuthContext "multi-educator")
+multiEducatorApiNoAuthParser = noAuthContextParser . fmap EducatorAuthData . strOption $
+    long "educator-api-no-auth" <>
+    help "Make authentication into Educator API of multi-educator optional. \
+         \Accepts educator id used when request is unauthenticated."
+
+multiEducatorWebConfigParser :: OptModParser MultiEducatorWebConfig
+multiEducatorWebConfigParser =
+    #serverParams .:< serverParamsParser "Educator" <*<
+    #botConfig .:< educatorBotConfigParser <*<
+    #multiEducatorAPINoAuth .:: multiEducatorApiNoAuthParser <*<
+    #studentAPINoAuth .:: studentApiNoAuthParser
+
 multiEducatorConfigParser :: OptModParser MultiEducatorConfig
 multiEducatorConfigParser =
     uplift witnessConfigParser <*<
@@ -53,7 +68,7 @@ multiEducatorConfigParser =
         (#db .:< postgresParamsParser <*<
          #keys .:: multiEducatorKeyParamsParser <*<
          #aaa .:< multiEducatorAAAConfigParser <*<
-         #api .:< educatorWebConfigParser <*<
+         #api .:< multiEducatorWebConfigParser <*<
          #publishing .:<
              (#period .:: publishingPeriodParser
              ) <*<

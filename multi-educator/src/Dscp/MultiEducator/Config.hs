@@ -4,7 +4,9 @@
 -- | All educator's configurations.
 
 module Dscp.MultiEducator.Config
-    ( MultiEducatorConfig
+    ( MultiEducatorWebConfig
+    , MultiEducatorWebConfigRec
+    , MultiEducatorConfig
     , MultiEducatorConfigRec
     , HasMultiEducatorConfig
     , defaultMultiEducatorConfig
@@ -22,16 +24,27 @@ import Time (Second, Time)
 
 import Dscp.Config
 import Dscp.DB.SQL
-import Dscp.Educator.Web.Config
+import Dscp.Educator.Web.Auth
+import Dscp.Educator.Web.Bot.Params
 import Dscp.MultiEducator.Launcher.Params
+import Dscp.Web
 import Dscp.Witness.Config
+
+type MultiEducatorWebConfig =
+    '[ "serverParams"           ::< ServerParams
+     , "botConfig"              ::< EducatorBotConfig
+     , "multiEducatorAPINoAuth" ::: NoAuthContext "multi-educator"
+     , "studentAPINoAuth"       ::: NoAuthContext "student"
+     ]
+
+type MultiEducatorWebConfigRec = ConfigRec 'Final MultiEducatorWebConfig
 
 type MultiEducatorConfig = WitnessConfig ++
     '[ "educator" ::<
        '[ "db" ::< PostgresRealParams
         , "keys" ::: MultiEducatorKeyParams
         , "aaa" ::< MultiEducatorAAAConfig
-        , "api" ::< EducatorWebConfig
+        , "api" ::< MultiEducatorWebConfig
         , "publishing" ::<
            '[ "period" ::: Time Second
             ]
