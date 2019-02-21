@@ -25,6 +25,8 @@ library:
     - digest
     - directory
     - exceptions
+    - file-embed
+    - filepath
     - fmt
     - generic-arbitrary
     - gitrev

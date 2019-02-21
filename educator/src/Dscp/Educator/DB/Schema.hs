@@ -17,15 +17,16 @@ import Database.Beam.Postgres.Syntax (PgCommandSyntax (..), PgCommandType (..), 
 import Database.Beam.Schema.Tables (Beamable, C, Database, DatabaseSettings, Table (..),
                                     TableEntity, defaultDbSettings)
 import Pdf.Scanner (PDFBody)
+import System.FilePath.Posix ((</>))
 
 import Dscp.Core
 import Dscp.Crypto
 import Dscp.DB.SQL.Functions
 import Dscp.DB.SQL.Util
 import Dscp.Educator.DB.BlockData
-import Dscp.Educator.DB.FileQuoter
 import Dscp.Educator.DB.Instances ()
 import Dscp.Util
+import Dscp.Util.FileEmbed
 
 ----------------------------------------------------------------------------
 -- Tables
@@ -244,7 +245,8 @@ educatorSchema = defaultDbSettings
 
 -- | Schema definition in raw SQL.
 schemaDefinition :: IsString s => s
-schemaDefinition = [qFile|./database/schema.sql|]
+schemaDefinition =
+    $(embedSubprojectStringFile "educator" ("database" </> "schema.sql"))
 
 -- | Create tables if absent.
 ensureSchemaIsSetUp :: MonadIO m => DBT 'WithinTx m ()
