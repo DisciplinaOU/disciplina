@@ -25,14 +25,12 @@ import Time (Second, Time)
 import Dscp.Config
 import Dscp.DB.SQL
 import Dscp.Educator.Web.Auth
-import Dscp.Educator.Web.Bot.Params
 import Dscp.MultiEducator.Launcher.Params
 import Dscp.Web
 import Dscp.Witness.Config
 
 type MultiEducatorWebConfig =
     '[ "serverParams"           ::< ServerParams
-     , "botConfig"              ::< EducatorBotConfig
      , "multiEducatorAPINoAuth" ::: NoAuthContext "multi-educator"
      , "studentAPINoAuth"       ::: NoAuthContext "student"
      ]
@@ -63,7 +61,6 @@ type HasMultiEducatorConfig = Given MultiEducatorConfigRec
 defaultMultiEducatorConfig :: MultiEducatorConfigRecP
 defaultMultiEducatorConfig = upcast defaultWitnessConfig
     & sub #educator . sub #db .~ defaultPostgresRealParams
-    & sub #educator . sub #api . sub #botConfig . tree #params . selection ?~ "disabled"
     & sub #educator . sub #certificates . option #latex ?~ "xelatex"
 
 -- instance (HasEducatorConfig, cfg ~ WitnessConfigRec) => Given cfg where

@@ -57,7 +57,6 @@ multiEducatorApiNoAuthParser = noAuthContextParser . fmap EducatorAuthData . str
 multiEducatorWebConfigParser :: OptModParser MultiEducatorWebConfig
 multiEducatorWebConfigParser =
     #serverParams .:< serverParamsParser "Educator" <*<
-    #botConfig .:< educatorBotConfigParser <*<
     #multiEducatorAPINoAuth .:: multiEducatorApiNoAuthParser <*<
     #studentAPINoAuth .:: studentApiNoAuthParser
 
