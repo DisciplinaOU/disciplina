@@ -171,9 +171,6 @@ instance Arbitrary CertificateName where
         <*> arbitrary
 
 instance Arbitrary PrivateTx where
-    arbitrary = PrivateTx <$> arbitrary <*> arbitrary <*> arbitrary
-
-instance Arbitrary PrivateTxGrade where
     arbitrary = genericArbitrary
     shrink    = genericShrink
 
