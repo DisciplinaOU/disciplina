@@ -14,7 +14,7 @@ import Dscp.MultiEducator.Web.Educator.Auth (MultiEducatorPublicKey)
 -- | Educator key parameters.
 newtype MultiEducatorKeyParams = MultiEducatorKeyParams
     { unMultiEducatorKeyParams :: FilePath
-      -- ^ Educator key folder
+      -- ^ Path to educator key folder.
     } deriving (Eq, Show, FromJSON)
 
 -- | AAA microservice configuration
