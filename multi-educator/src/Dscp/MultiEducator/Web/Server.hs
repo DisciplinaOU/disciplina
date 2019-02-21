@@ -30,7 +30,7 @@ import Dscp.MultiEducator.Config
 import Dscp.MultiEducator.Launcher.Mode (MultiCombinedWorkMode, MultiEducatorWorkMode,
                                          lookupEducator, normalToMulti)
 import Dscp.MultiEducator.Launcher.Params (MultiEducatorAAAConfigRec)
-import Dscp.MultiEducator.Web.Educator (MultiEducatorAPI, MultiStudentAPI, multiEducatorAPI)
+import Dscp.MultiEducator.Web.Educator
 import Dscp.MultiEducator.Web.Educator.Auth
 import Dscp.Web (buildServantLogConfig, serveWeb)
 import Dscp.Web.Metrics (responseTimeMetric)
@@ -64,7 +64,10 @@ mkMultiEducatorApiServer _aaaConfig nat =
         multiEducatorAPI
         (Proxy :: Proxy '[MultiEducatorPublicKey, NoAuthContext "multi-educator"])
         nat
-        (\eData -> mkEducatorApiServer' $ eadId eData)
+        (protected :<|> public)
+  where
+    protected = mkEducatorApiServer' . eadId
+    public = toServant certificatesApiHandlers
 
 mkStudentApiServer
     :: forall ctx m. MultiEducatorWorkMode ctx m
