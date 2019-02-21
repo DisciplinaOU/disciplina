@@ -1195,12 +1195,17 @@ components:
             - StudentNotFound
             - CourseNotFound
             - AssignmentNotFound
+            - CertificateNotFound
             - StudentAlreadyExists
             - CourseAlreadyExists
             - AssignmentAlreadyExists
+            - CertificateAlreadyExists
             - StudentDoesNotAttendCourse
-            - StudentIsActive
+            - StudentAlreadyAttendsCourse
+            - StudentAlreadyHasAssignment
             - StudentHasNoAssignment
+            - StudentIsActive
+            - DeletingGradedSubmission
           description: |-
             Error type:
               * `InvalidFormat` - Failed to deserialise one of parameters.
