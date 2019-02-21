@@ -157,7 +157,8 @@ loadEducator login mpassphrase = do
             & sub #witness .~ multiEducatorConfig ^. sub #witness
             & sub #educator . sub #db .~ multiEducatorConfig ^. sub #educator . sub #db
             & sub #educator . sub #keys . sub #keyParams .~ keyParams
-            & sub #educator . sub #api .~ multiEducatorConfig ^. sub #educator . sub #api
+            & sub #educator . sub #api . option #educatorAPINoAuth .~
+                error "Do not touch, multi-educator has already run the server"
             & sub #educator . sub #publishing .~ multiEducatorConfig ^. sub #educator . sub #publishing
         educatorCtxWithCfg = E.withEducatorConfig newCfg $ EducatorCtxWithCfg educatorContext
     -- add to/update the educator context map with the newly made one

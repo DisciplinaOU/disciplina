@@ -176,7 +176,7 @@ sample:
         genNew: false
         passphrase: "qwerty123"
 
-    # Student API params
+    # Student & Educator API params
     api:
       # HTTP server params
       serverParams:
@@ -206,6 +206,11 @@ sample:
       educatorAPINoAuth:
         enabled: true
         data: []
+      # For multi-educator case, whether authentication in Educator API should be optional.
+      multiEducatorAPINoAuth:
+        enabled: true
+        # Id of educator pretending to be the requests author.
+        data: The principal
 
     # Private blocks publishing params
     publishing:

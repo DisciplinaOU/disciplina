@@ -13,12 +13,13 @@ import Crypto.Error (onCryptoFailure)
 import Crypto.JOSE.Types (Base64Octets (..))
 import Crypto.JWT (NumericDate (..))
 import Crypto.PubKey.Ed25519 (publicKey)
-import Data.Aeson (FromJSON(..), ToJSON(..), decodeStrict)
+import Data.Aeson (FromJSON (..), ToJSON (..), decodeStrict)
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
 import Data.Time.Clock (addUTCTime, getCurrentTime)
-import Servant.Auth.Server (FromJWT, ToJWT, AuthCheck)
-import Servant.Auth.Server.Internal.Class (IsAuth(..))
+import Fmt (build)
+import Servant.Auth.Server (AuthCheck, FromJWT, ToJWT)
+import Servant.Auth.Server.Internal.Class (IsAuth (..))
 
 import Dscp.Crypto
 import Dscp.Educator.Web.Auth
@@ -37,6 +38,9 @@ deriveJSON defaultOptions ''EducatorAuthData
 
 instance FromJWT EducatorAuthData
 instance ToJWT EducatorAuthData
+
+instance Buildable EducatorAuthData where
+    build (EducatorAuthData eId) = "\"" <> build eId <> "\""
 
 data EducatorAuthToken = EducatorAuthToken
     { eatData :: EducatorAuthData
@@ -58,7 +62,7 @@ data MultiEducatorAuth
 -- | Type that holds MultiEducator's public key
 newtype MultiEducatorPublicKey = MultiEducatorPublicKey PublicKey deriving Show
 
-instance IsAuth MultiEducatorAuth EducatorAuthToken where
+instance IsAuth MultiEducatorAuth EducatorAuthData where
     type AuthArgs MultiEducatorAuth = '[MultiEducatorPublicKey]
     runAuth _ _ = multiEducatorAuthCheck
 
@@ -82,8 +86,8 @@ instance FromJSON MultiEducatorPublicKey where
 -- Helpers
 ---------------------------------------------------------------------------
 
--- | Checks the signature of the JWT and returns an 'EducatorAuthToken'
-multiEducatorAuthCheck :: MultiEducatorPublicKey -> AuthCheck EducatorAuthToken
+-- | Checks the signature of the JWT and returns an 'EducatorAuthData'
+multiEducatorAuthCheck :: MultiEducatorPublicKey -> AuthCheck EducatorAuthData
 multiEducatorAuthCheck (MultiEducatorPublicKey mpk) = do
     (pk, payload) <- checkJWitness
     educatorAuthToken <- maybe mempty pure $ decodeStrict payload
@@ -93,4 +97,10 @@ multiEducatorAuthCheck (MultiEducatorPublicKey mpk) = do
     guard (currentTime < addUTCTime authTimeout expirationTime)
     -- Remember about timing attacks
     guard (pk `constTimeEq` mpk)
-    return educatorAuthToken
+    return $ eatData educatorAuthToken
+
+---------------------------------------------------------------------------
+-- No auth
+---------------------------------------------------------------------------
+
+type instance NoAuthData "multi-educator" = EducatorAuthData

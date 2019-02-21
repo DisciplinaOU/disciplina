@@ -20,7 +20,8 @@ import Dscp.MultiEducator.Web.Educator.Auth
 type MultiEducatorAPI =
     "api" :> "educator" :> "v1" :> ProtectedMultiEducatorAPI
 
-type ProtectedMultiEducatorAPI = Auth' '[MultiEducatorAuth] EducatorAuthToken :> RawEducatorAPI
+type ProtectedMultiEducatorAPI =
+    Auth' '[MultiEducatorAuth, NoAuth "multi-educator"] EducatorAuthData :> RawEducatorAPI
 
 type MultiStudentAPI = Capture "educator" Text :> ProtectedStudentAPI
 
