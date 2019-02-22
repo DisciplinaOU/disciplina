@@ -62,8 +62,7 @@ data NewStudent = NewStudent
     } deriving (Show, Eq, Generic)
 
 data NewCourse = NewCourse
-    { ncId       :: Maybe Course
-    , ncDesc     :: ItemDesc
+    { ncDesc     :: ItemDesc
     , ncSubjects :: [Subject]
     } deriving (Show, Eq, Generic)
 
@@ -206,8 +205,7 @@ instance Buildable (NewStudent) where
 
 instance Buildable (NewCourse) where
     build (NewCourse{..}) =
-      "{ course id = " +| ncId |+
-      ", description = " +| ncDesc |+
+      "{ description = " +| ncDesc |+
       ", subjects = " +| listF ncSubjects |+
       " }"
 
