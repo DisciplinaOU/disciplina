@@ -1,5 +1,5 @@
 -- | Core swagger instances.
-module Dscp.Web.Swagger.Core () where
+module Dscp.Web.Swagger.Instances.Core () where
 
 import Control.Lens ((.=), (?=))
 import Data.Swagger (ToParamSchema (..), ToSchema (..))
@@ -13,7 +13,7 @@ import Dscp.Crypto
 import Dscp.Util
 import Dscp.Util.Aeson
 import Dscp.Util.Constructors
-import Dscp.Web.Swagger.Util
+import Dscp.Web.Swagger.Generation
 import Dscp.Web.Types
 
 ----------------------------------------------------------------------------
@@ -54,6 +54,9 @@ type instance ParamDescription SubmissionWitness =
 ----------------------------------------------------------------------------
 -- ToParamSchema instances
 ----------------------------------------------------------------------------
+
+timestampFormat :: IsString s => s
+timestampFormat = "yyyy-mm-ddThh:MM:ss.ffffffZ"
 
 instance ToParamSchema Address where
     toParamSchema _ = mempty &: do
