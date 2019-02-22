@@ -56,7 +56,9 @@ library:
     - servant-client
     - servant-server
     - servant-generic
+    - servant-swagger
     - servant-util
+    - swagger2
     - serokell-util
     - snowdrop-block
     - snowdrop-core

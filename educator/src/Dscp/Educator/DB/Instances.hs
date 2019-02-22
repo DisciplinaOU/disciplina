@@ -72,8 +72,8 @@ instance FromField (TYPE) where \
 EnumInstanceEnc(AssignmentType)
 EnumInstanceDec(AssignmentType)
 
-EnumInstanceEnc(DocumentType)
-EnumInstanceDec(DocumentType)
+EnumInstanceEnc(DocumentType a)
+EnumInstanceDec(DocumentType a)
 
 {- Instances via FromByteArray -}
 

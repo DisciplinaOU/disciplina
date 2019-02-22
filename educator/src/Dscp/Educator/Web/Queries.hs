@@ -29,7 +29,7 @@ es = educatorSchema
 
 eqDocTypeQ
     :: _
-    => DocumentType
+    => DocumentType a
     -> QGenExpr syntax ctx s (Hash Raw)
     -> QGenExpr syntax ctx s Bool
 eqDocTypeQ docType contentsHash = case docType of

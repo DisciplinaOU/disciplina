@@ -21,7 +21,7 @@ import Dscp.Core.Genesis
 import Dscp.Core.Governance
 import Dscp.Crypto
 import Dscp.Util (Base (Base16, Base64), leftToFail, nothingToFail)
-import Dscp.Util.Aeson (parseJSONSerialise, toJSONSerialise)
+import Dscp.Util.Aeson (dscpAesonOptions, parseJSONSerialise, toJSONSerialise)
 
 ---------------------------------------------------------------------------
 -- Manual instances
@@ -35,36 +35,6 @@ instance FromJSON ItemDesc where
 deriving instance ToJSON Timestamp
 instance FromJSON Timestamp where
     parseJSON v = toTimestamp <$> parseJSON @UTCTime v
-
--- | TODO: make a generic instance generation for these enum-like instances
-instance ToJSON AssignmentType where
-    toJSON Regular     = String "regular"
-    toJSON CourseFinal = String "courseFinal"
-instance FromJSON AssignmentType where
-    parseJSON = withText "AssignmentType" $ \case
-        "regular"     -> pure Regular
-        "courseFinal" -> pure CourseFinal
-        other -> fail $ "invalid constructor: " ++ toString other
-
-instance ToJSON DocumentType where
-    toJSON Offline = String "offline"
-    toJSON Online  = String "online"
-instance FromJSON DocumentType where
-    parseJSON = withText "DocumentType" $ \case
-        "online" -> pure Online
-        "offline" -> pure Offline
-        other -> fail $ "invalid constructor: " ++ toString other
-
-instance ToJSON EducationForm where
-    toJSON Fulltime = String "fulltime"
-    toJSON Parttime = String "parttime"
-    toJSON Fullpart = String "fullpart"
-instance FromJSON EducationForm where
-    parseJSON = withText "EducationForm" $ \case
-        "fulltime" -> pure Fulltime
-        "parttime" -> pure Parttime
-        "fullpart" -> pure Fullpart
-        other -> fail $ "invalid constructor: " ++ toString other
 
 instance ToJSON Address where
     toJSON = String . toText
@@ -203,6 +173,8 @@ deriving instance FromJSON GenesisDistribution
 deriveJSON defaultOptions ''Assignment
 deriveJSON defaultOptions ''Submission
 deriveJSON defaultOptions ''SignedSubmission
+deriveJSON dscpAesonOptions ''DocumentType  -- TODO: apply everywhere
+deriveJSON dscpAesonOptions ''AssignmentType
 deriveJSON defaultOptions ''CertificateMeta
 deriveJSON defaultOptions ''PrivateTx
 deriveJSON defaultOptions ''PrivateBlockHeader
@@ -218,6 +190,7 @@ deriveJSON defaultOptions ''PublicationTxWitness
 deriveJSON defaultOptions ''PublicationTxWitnessed
 deriveJSON defaultOptions ''PublicationTx
 deriveJSON defaultOptions ''FeeCoefficients
+deriveJSON dscpAesonOptions ''EducationForm
 
 deriveFromJSON defaultOptions ''Committee
 deriveJSON defaultOptions ''GenesisDistributionElem

@@ -1,6 +1,7 @@
 module Dscp.Util.FileEmbed
     ( embedSomeStringFile
     , embedSubprojectStringFile
+    , embedResourceStringFile
     ) where
 
 import Data.FileEmbed (embedStringFile)
@@ -17,8 +18,7 @@ embedSomeStringFile paths = do
         fail $ "All paths refer to non-existing file: " <> (show paths)
     embedStringFile path
 
--- | Safely embed a file assuming that you are in a root of stack
--- subproject with the given name.
+-- | Safely embed a file from the given subproject.
 --
 -- Use of plain 'embedStringFile' works well until you build in the same
 -- subproject where the file is located, but building dependent subproject
@@ -27,3 +27,9 @@ embedSubprojectStringFile :: String -> FilePath -> TH.Q TH.Exp
 embedSubprojectStringFile subproject relPath =
     embedSomeStringFile $
         map (</> relPath) [".", subproject, ".." </> subproject]
+
+-- | Safely embed a resource file assuming that you are in a root of stack
+-- subproject with the given name.
+embedResourceStringFile :: FilePath -> TH.Q TH.Exp
+embedResourceStringFile path =
+    embedSomeStringFile $ map (</> path) [".", ".."]

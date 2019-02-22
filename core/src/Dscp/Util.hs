@@ -10,6 +10,7 @@ module Dscp.Util
        , Seed (..)
        , execUnmasked
        , fromIntegralChecked
+       , proxyOf
 
          -- * Exceptions processing
        , wrapRethrow
@@ -154,6 +155,10 @@ fromIntegralChecked x =
     in if fromIntegral r == x
           then r
           else error "Integral overflow"
+
+-- | Get a proxy for the given type.
+proxyOf :: a -> Proxy a
+proxyOf _ = Proxy
 
 -----------------------------------------------------------
 -- Exceptions processing
@@ -320,8 +325,8 @@ infixl 9 &:
 -- Adopted functions which work with strings
 -----------------------------------------------------------
 
-symbolValT :: forall s. KnownSymbol s => Text
-symbolValT = toText $ symbolVal (Proxy @s)
+symbolValT :: forall sym s. (KnownSymbol sym, IsString s) => s
+symbolValT = fromString $ symbolVal (Proxy @sym)
 
 -----------------------------------------------------------
 -- Helper to establish notion of SQL/db ID

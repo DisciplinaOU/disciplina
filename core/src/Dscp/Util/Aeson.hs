@@ -14,15 +14,20 @@ module Dscp.Util.Aeson
     , toJSONSerialise
     , parseJSONSerialise
 
+    , dscpAesonOptions
+
     , mergeObjects
     ) where
 
 import Codec.Serialise (Serialise, deserialiseOrFail, serialise)
-import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), object, withObject, withText, (.:), (.=))
+import Data.Aeson (FromJSON (..), Options (..), ToJSON (..), Value (..), object, withObject,
+                   withText, (.:), (.=))
+import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.Types (Parser)
 import Data.ByteArray (ByteArray, ByteArrayAccess)
 import qualified Data.ByteArray as BA
 import qualified Data.ByteString.Lazy as LBS
+import Data.Char (toLower)
 import qualified Data.HashMap.Strict as HM
 import Data.Reflection (Reifies (..))
 import qualified Data.SemVer as SemVer
@@ -117,6 +122,15 @@ parseJSONSerialise base v =
     parseJSON v
     >>= leftToFail . fromBase base
     >>= leftToFail . first (show @Text) . deserialiseOrFail . LBS.fromStrict
+
+-- | Default aeson options we apply everything.
+dscpAesonOptions :: Options
+dscpAesonOptions = defaultOptions
+    { constructorTagModifier = headToLower
+    }
+  where
+    headToLower []       = []
+    headToLower (c : cs) = toLower c : cs
 
 ---------------------------------------------------------------------------
 -- Helpers

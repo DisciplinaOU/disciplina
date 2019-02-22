@@ -31,6 +31,7 @@ import Control.Lens (Iso', from, iso, makePrisms)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
+import Data.Swagger (ToParamSchema (..), ToSchema (..))
 import Fmt (build, (+|), (+||), (|+), (||+))
 import Loot.Base.HasLens (HasCtx)
 import Loot.Log (ModifyLogName, MonadLogging)
@@ -45,6 +46,7 @@ import Dscp.Educator.DB
 import Dscp.Educator.Launcher.Marker
 import Dscp.Resource.Keys
 import Dscp.Util.Aeson
+import Dscp.Web.Swagger
 import Dscp.Witness.Launcher.Context
 
 type MonadEducatorWebQuery m =
@@ -66,19 +68,19 @@ type MonadEducatorWeb ctx m =
 -- | Whether student is enrolled into a course.
 newtype IsEnrolled = IsEnrolled
     { unIsEnrolled :: Bool
-    } deriving (Eq, Show)
+    } deriving (Eq, Show, Generic)
 
 -- | Whether assignment is final in course.
 newtype IsFinal = IsFinal
     { unIsFinal :: Bool
-    } deriving (Eq, Show)
+    } deriving (Eq, Show, Generic)
 
 makePrisms ''IsFinal
 
 -- | Whether submission is graded.
 newtype IsGraded = IsGraded
     { unIsGraded :: Bool
-    } deriving (Eq, Show)
+    } deriving (Eq, Show, Generic)
 
 -- | Whether transaction has been published into public chain.
 newtype HasProof = HasProof { unHasProof :: Bool }
@@ -204,3 +206,36 @@ deriving instance FromHttpApiData IsGraded
 deriving instance ToHttpApiData IsEnrolled
 deriving instance ToHttpApiData IsFinal
 deriving instance ToHttpApiData IsGraded
+
+---------------------------------------------------------------------------
+-- Swagger instances
+---------------------------------------------------------------------------
+
+type instance ParamDescription IsEnrolled =
+    "`true` when the student is currently enrolled to the course, \
+    \`false` when the course is yet only available for the student."
+type instance ParamDescription IsFinal =
+    "Whether assignment is final/non-final."
+
+
+instance ToParamSchema IsEnrolled where
+    toParamSchema = gToParamSchema
+
+instance ToParamSchema IsFinal where
+    toParamSchema = gToParamSchema
+
+instance ToParamSchema IsGraded where
+    toParamSchema = gToParamSchema
+
+
+instance ToSchema IsFinal where
+    declareNamedSchema = newtypeDeclareNamedSchema @Bool
+
+instance ToSchema StudentInfo where
+    declareNamedSchema = gDeclareNamedSchema
+
+instance ToSchema GradeInfo where
+    declareNamedSchema = gDeclareNamedSchema
+
+instance ToSchema BlkProofInfo where
+    declareNamedSchema = gDeclareNamedSchema

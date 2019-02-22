@@ -13,14 +13,12 @@ module Dscp.Util.Servant
     ( CanHoistClient (..)
     ) where
 
-import Prelude hiding (log)
-
 import GHC.TypeLits (Symbol)
 import Network.HTTP.Types.Method (StdMethod)
-import Servant.API ((:<|>) (..), (:>), Capture, Description, QueryFlag, QueryParam, ReqBody,
+import Servant.API ((:<|>) (..), (:>), Capture, Description, QueryFlag, QueryParam', ReqBody,
                     Summary, Verb)
 import Servant.Client.Core (Client)
-import Servant.Util (PaginationParams, SortingParams)
+import Servant.Util (ErrorResponses, PaginationParams, SortingParams, Tag)
 
 -- Please anybody switch us to lts-12 already so that there is no need in this:
 class CanHoistClient m api where
@@ -32,7 +30,7 @@ instance CanHoistClient m api =>
          CanHoistClient m (Capture name a :> api) where
     hoistClientMonad pm _ hst cli arg = hoistClientMonad pm (Proxy @api) hst (cli arg)
 instance CanHoistClient m api =>
-         CanHoistClient m (QueryParam name a :> api) where
+         CanHoistClient m (QueryParam' mods name a :> api) where
     hoistClientMonad pm _ hst cli arg = hoistClientMonad pm (Proxy @api) hst (cli arg)
 instance CanHoistClient m api =>
          CanHoistClient m (QueryFlag name :> api) where
@@ -51,6 +49,10 @@ instance CanHoistClient m api =>
     hoistClientMonad pm _ = hoistClientMonad pm (Proxy @api)
 instance CanHoistClient m api =>
          CanHoistClient m (Description msg :> api) where
+    hoistClientMonad pm _ = hoistClientMonad pm (Proxy @api)
+instance CanHoistClient m api => CanHoistClient m (Tag name :> api) where
+    hoistClientMonad pm _ = hoistClientMonad pm (Proxy @api)
+instance CanHoistClient m api => CanHoistClient m (ErrorResponses err :> api) where
     hoistClientMonad pm _ = hoistClientMonad pm (Proxy @api)
 instance (CanHoistClient m api1, CanHoistClient m api2) =>
          CanHoistClient m (api1 :<|> api2) where

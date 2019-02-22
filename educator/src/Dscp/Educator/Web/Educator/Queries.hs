@@ -51,7 +51,7 @@ import Dscp.Util
 data EducatorGetAssignmentsFilters = EducatorGetAssignmentsFilters
     { afCourse  :: Maybe Course
     , afStudent :: Maybe Student
-    , afDocType :: Maybe DocumentType
+    , afDocType :: Maybe (DocumentType Assignment)
     , afIsFinal :: Maybe IsFinal
     } deriving (Show, Generic)
 
@@ -60,7 +60,7 @@ deriving instance Default EducatorGetAssignmentsFilters
 data EducatorGetSubmissionsFilters = EducatorGetSubmissionsFilters
     { sfCourse         :: Maybe Course
     , sfStudent        :: Maybe Student
-    , sfDocType        :: Maybe DocumentType
+    , sfDocType        :: Maybe (DocumentType Submission)
     , sfAssignmentHash :: Maybe $ Hash Assignment
     } deriving (Show, Generic)
 

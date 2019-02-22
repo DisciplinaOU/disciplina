@@ -19,6 +19,7 @@ module Dscp.Core.Foundation.Educator
     , Grade (..)
     , mkGrade
     , Language (..)
+    , gradeToNum
     , EducatorId
     , Assignment (..)
     , AssignmentType (..)
@@ -186,6 +187,9 @@ mkGrade a =
     let g = UnsafeGrade a
     in g <$ guard (g >= minBound && g <= maxBound)
 
+gradeToNum :: Num i => Grade -> i
+gradeToNum (UnsafeGrade g) = fromIntegral g
+
 -- | Student is identified by their public address.
 type Student = Address
 
@@ -245,24 +249,24 @@ offlineHash = unsafeHash ("offline" :: ByteString)
 
 -- | Datatype to represent the notion of "offline"- and "online"-ness
 -- of assignments and submissions.
-data DocumentType = Online | Offline
+data DocumentType a = Online | Offline
     deriving (Eq, Ord, Show, Enum, Generic)
 
-documentType :: Hash Raw -> DocumentType
+documentType :: Hash Raw -> DocumentType a
 documentType h
     | h == offlineHash = Offline
     | otherwise        = Online
 
-_aDocumentType :: Assignment -> DocumentType
+_aDocumentType :: Assignment -> DocumentType Assignment
 _aDocumentType = documentType . _aContentsHash
 
-aDocumentType :: Getter Assignment DocumentType
+aDocumentType :: Getter Assignment (DocumentType Assignment)
 aDocumentType = to _aDocumentType
 
-_sDocumentType :: Submission -> DocumentType
+_sDocumentType :: Submission -> DocumentType Submission
 _sDocumentType = documentType . _sContentsHash
 
-sDocumentType :: Getter Submission DocumentType
+sDocumentType :: Getter Submission (DocumentType Submission)
 sDocumentType = to _sDocumentType
 
 instance HasHash Submission => HasId Submission where
@@ -327,7 +331,7 @@ instance Buildable Course where
 instance Buildable () where
     build _ = ""
 
-instance Buildable DocumentType where
+instance Buildable (DocumentType a) where
     build = genericF
 
 -- | Datatype containing info about a certificate issued by Educator.

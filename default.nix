@@ -26,7 +26,6 @@ stackToNix {
     "/config.yaml"
     "/scripts"
     "/secrets"
-    "/specs"
   ];
   inherit shell;
   overrides = self: previous: {

@@ -37,7 +37,7 @@ import Dscp.Educator.Web.Types
 
 data StudentGetAssignmentsFilters = StudentGetAssignmentsFilters
     { afCourse  :: Maybe Course
-    , afDocType :: Maybe DocumentType
+    , afDocType :: Maybe $ DocumentType Assignment
     , afIsFinal :: Maybe IsFinal
     } deriving (Show, Generic)
 
@@ -46,7 +46,7 @@ deriving instance Default StudentGetAssignmentsFilters
 data StudentGetSubmissionsFilters = StudentGetSubmissionsFilters
     { sfCourse         :: Maybe Course
     , sfAssignmentHash :: Maybe $ Hash Assignment
-    , sfDocType        :: Maybe DocumentType
+    , sfDocType        :: Maybe $ DocumentType Submission
     } deriving (Show, Generic)
 
 deriving instance Default StudentGetSubmissionsFilters

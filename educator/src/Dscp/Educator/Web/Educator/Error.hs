@@ -15,24 +15,26 @@ import Control.Lens (makePrisms)
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
 import Data.Reflection (Reifies (..))
+import Data.Swagger (ToSchema (..))
 import qualified Data.Text.Buildable as B
 import Data.Typeable (cast)
 import Dscp.DB.SQL (SQLRequestsNumberExceeded)
 import Dscp.Educator.DB (DomainError)
-import Servant (ServantErr (..), err400, err503)
+import Servant (ServantErr (..))
 import Servant.Util (SimpleJSON)
 
-import Dscp.Educator.Web.Util
+import Dscp.Educator.Web.Util ()
+import Dscp.Util
 import Dscp.Web.Class
+import Dscp.Web.Swagger
+import Dscp.Web.Types
 
 -- | Any error backend may return.
 data EducatorAPIError
     = SomeDomainError DomainError
       -- ^ Something not found or already exists.
-    | InvalidFormat
-      -- ^ Failed to decode something.
-    | ServiceUnavailable !Text
-      -- ^ Service is overloaded with requests.
+    | SomeGeneralBackendError GeneralBackendError
+      -- ^ Common backend errors.
     deriving (Show, Eq, Generic)
 
 makePrisms ''EducatorAPIError
@@ -40,17 +42,15 @@ makePrisms ''EducatorAPIError
 instance Buildable EducatorAPIError where
     build (SomeDomainError err) =
         "Database error: " <> B.build err
-    build InvalidFormat =
-        "Invalid format of the request"
-    build (ServiceUnavailable msg) =
-        "Service unavailable: " <> B.build msg
+    build (SomeGeneralBackendError err) = B.build err
 
 instance Exception EducatorAPIError where
     fromException e@(SomeException e') =
         asum
         [ cast e'
         , SomeDomainError <$> fromException e
-        , ServiceUnavailable . pretty @SQLRequestsNumberExceeded <$> fromException e
+        , SomeGeneralBackendError . ServiceUnavailable .
+             pretty @SQLRequestsNumberExceeded <$> fromException e
         ]
 
 ---------------------------------------------------------------------------
@@ -59,9 +59,8 @@ instance Exception EducatorAPIError where
 
 instance HasErrorTag EducatorAPIError where
     errorTag = \case
-        InvalidFormat        -> "InvalidFormat"
-        SomeDomainError err  -> domainErrorToShortJSON err
-        ServiceUnavailable{} -> "ServiceUnavailable"
+        SomeDomainError err -> errorTag err
+        SomeGeneralBackendError err -> errorTag err
 
 ---------------------------------------------------------------------------
 -- Functions
@@ -71,11 +70,25 @@ deriveJSON defaultOptions ''EducatorAPIError
 
 instance ToServantErr EducatorAPIError where
     toServantErrNoBody = \case
-        InvalidFormat        -> err400
-        ServiceUnavailable{} -> err503
-        SomeDomainError err  -> domainToServantErrNoReason err
+        SomeDomainError err  -> toServantErrNoBody err
+        SomeGeneralBackendError err  -> toServantErrNoBody err
 
 instance FromServantErr EducatorAPIError
+
+---------------------------------------------------------------------------
+-- Swagger instances
+---------------------------------------------------------------------------
+
+instance EnumHasDescription EducatorAPIError where
+    enumDocDescription = gEnumDocDesc $ \case
+        SomeDomainError err -> enumDocDescription (proxyOf err)
+        SomeGeneralBackendError err -> enumDocDescription (proxyOf err)
+
+instance ToSchema EducatorAPIError where
+    declareNamedSchema _ =
+        declareSimpleSchema "ErrResponse" $
+        errResponseSchema $ do
+            setDocEnumDescription @EducatorAPIError
 
 ---------------------------------------------------------------------------
 -- Other

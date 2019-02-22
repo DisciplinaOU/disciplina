@@ -34,7 +34,7 @@ data DomainError
     = AbsentError DomainErrorItem
     | AlreadyPresentError DomainErrorItem
     | SemanticError DatabaseSemanticError
-    deriving (Show, Eq)
+    deriving (Show, Eq, Generic)
 
 data DomainErrorItem
     = CourseDomain
@@ -66,7 +66,7 @@ data DomainErrorItem
     | CertificateDomain
         { deCertificateMeta :: Id CertificateMeta }
 
-    deriving (Show, Typeable, Eq)
+    deriving (Show, Typeable, Eq, Generic)
 
 -- | Logical errors.
 data DatabaseSemanticError
@@ -74,7 +74,7 @@ data DatabaseSemanticError
       -- ^ Student can't be deleted because it has activities.
     | DeletingGradedSubmission (Id Submission)
       -- ^ Submission has potentially published grade and thus can't be deleted.
-    deriving (Show, Eq)
+    deriving (Show, Eq, Generic)
 
 makePrisms ''DomainError
 makePrisms ''DomainErrorItem

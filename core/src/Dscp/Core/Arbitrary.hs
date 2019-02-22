@@ -28,6 +28,7 @@ module Dscp.Core.Arbitrary
       -- * Examples
     , studentEx
     , studentSKEx
+    , addressEx
     , courseEx
     , assignmentEx
     , signedSubmissionEx
@@ -111,10 +112,10 @@ instance Arbitrary AssignmentType where
 genCommonAssignmentType :: Gen AssignmentType
 genCommonAssignmentType = frequency [(5, pure Regular), (1, pure CourseFinal)]
 
-instance Arbitrary DocumentType where
+instance Arbitrary (DocumentType a) where
     arbitrary = elements [Offline, Online]
 
-genCommonDocumentType :: Gen DocumentType
+genCommonDocumentType :: Gen (DocumentType a)
 genCommonDocumentType = frequency [(5, pure Offline), (1, pure Online)]
 
 instance Arbitrary EducationForm where
@@ -458,6 +459,9 @@ studentSKEx = withIntSeed 123 genSecretKey
 
 studentEx :: Student
 studentEx = mkAddr $ toPublic studentSKEx
+
+addressEx :: Address
+addressEx = studentEx
 
 courseEx :: Course
 courseEx = Course 7

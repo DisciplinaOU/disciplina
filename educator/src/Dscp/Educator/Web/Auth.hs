@@ -1,4 +1,5 @@
-{-# LANGUAGE GADTs #-}
+{-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE ExistentialQuantification #-}
 
 -- | Necessary types and implementation for web server authenthication
 -- TODO: move all authentication stuff not directly related to Educator
@@ -25,6 +26,7 @@ module Dscp.Educator.Web.Auth
        , signRequestBasic
        ) where
 
+import Control.Lens (at, (<>~), (?~))
 import Crypto.JOSE (Error, decodeCompact, encodeCompact)
 import Data.Aeson (FromJSON (..), decodeStrict, encode, withObject, (.:))
 import Data.Aeson.Options (defaultOptions)
@@ -33,10 +35,12 @@ import qualified Data.ByteString as BS
 import Data.ByteString.Builder (toLazyByteString)
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.List as L (lookup)
+import qualified Data.Swagger as S
 import Data.Time.Clock (NominalDiffTime, UTCTime, diffUTCTime, getCurrentTime)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Data.Typeable (cast)
 import GHC.TypeLits (ErrorMessage (..), Symbol, TypeError)
+import qualified GHC.Exts as Exts
 import Network.Wai (Request, rawPathInfo, requestHeaders)
 import Servant ((:>), HasServer, ServantErr (..), ServerT, err401, hoistServerWithContext, route)
 import Servant.Auth.Server (AuthCheck (..), AuthResult (..))
@@ -46,11 +50,14 @@ import Servant.Client.Core (RunClient (..))
 import qualified Servant.Client.Core.Internal.Request as Cli
 import Servant.Server.Internal.RoutingApplication (DelayedIO, addAuthCheck, delayedFailFatal,
                                                    withRequest)
+import Servant.Swagger (HasSwagger (..))
 import Servant.Util (ApiCanLogArg (..), ApiHasArgClass (..))
+import System.FilePath.Posix ((</>))
 
 import Dscp.Crypto
 import Dscp.Util
 import Dscp.Util.Type
+import Dscp.Util.FileEmbed
 import Dscp.Util.Servant
 
 ---------------------------------------------------------------------------
@@ -338,3 +345,44 @@ instance FromJSON (NoAuthData s) => FromJSON (NoAuthContext s) where
         if enabled
             then NoAuthOnContext <$> (o .: "data")
             else pure NoAuthOffContext
+
+---------------------------------------------------------------------------
+-- Documentation
+---------------------------------------------------------------------------
+
+-- | Name of this authentication as mentioned in swagger.
+educatorAuthDocName :: Text
+educatorAuthDocName = "EducatorAuth"
+
+instance HasSwagger subApi => HasSwagger (Auth' auths a :> subApi) where
+    toSwagger _ = toSwagger (Proxy @subApi)
+        & S.security <>~ [S.SecurityRequirement requirement]
+        & S.securityDefinitions . at "EducatorAuth" ?~ securityScheme
+        & S.responses . at response401Name ?~ response401
+        & S.allOperations . S.responses . S.responses . at 401 ?~
+            S.Ref (S.Reference response401Name)
+      where
+        requirement = Exts.fromList [(educatorAuthDocName, [])]
+        securityScheme = S.SecurityScheme
+            { S._securitySchemeType = S.SecuritySchemeApiKey S.ApiKeyParams
+                { S._apiKeyName = "Authorization"
+                , S._apiKeyIn = S.ApiKeyHeader
+                }
+            , S._securitySchemeDescription = Just educatorAuthDocDesc
+            }
+        response401Name = "Unauthorized"
+        response401 = mempty
+            & S.description .~ "Unauthorized"
+            & S.headers . at "WWW-Authenticate" ?~
+                (mempty & S.type_ .~ S.SwaggerString)
+
+educatorAuthDocDesc :: Text
+educatorAuthDocDesc =
+    $(embedResourceStringFile $ foldr1 (</>)
+        [ "specs"
+        , "disciplina"
+        , "educator"
+        , "api"
+        , "authentication.md"
+        ]
+     )

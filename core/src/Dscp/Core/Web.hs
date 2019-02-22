@@ -19,11 +19,11 @@ instance FromHttpApiData Address where
 deriving instance ToHttpApiData Course
 deriving instance FromHttpApiData Course
 
-instance ToHttpApiData DocumentType where
+instance ToHttpApiData (DocumentType a) where
     toQueryParam Offline = "offline"
     toQueryParam Online  = "online"
 
-instance FromHttpApiData DocumentType where
+instance FromHttpApiData (DocumentType a) where
     parseQueryParam "offline" = Right Offline
     parseQueryParam "online"  = Right Online
     parseQueryParam other     = Left $ "invalid document type: " <> other
