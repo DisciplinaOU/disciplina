@@ -77,7 +77,6 @@ module Dscp.Educator.DB.Queries
 
 import Control.Exception.Safe (catchJust)
 import Data.Default (Default (..))
-import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Time.Clock (getCurrentTime)
 import Database.Beam.Postgres (PgJSONB (..))
@@ -201,9 +200,9 @@ getProvenStudentTransactions filters = do
     txsBlockList <- getTxsBlockMap
 
     -- Bake `blockId -> [(tx, idx)]` map.
-    let txsBlockMap = groupToAssocWith txsBlockList
+    let txsBlockMap = groupToAssoc txsBlockList
                   -- TODO: remove if transaction order is not needed to be preserved
-                  <&> (<&> reverse)
+                  <&> (<&> reverse . toList)
 
     results <- forM txsBlockMap $ \(blockId, transactions) -> do
         (blockHash, tree) <- getMerkleTreeAndHash blockId
@@ -216,12 +215,6 @@ getProvenStudentTransactions filters = do
 
     return [(blockHash, proof, txs) | (blockHash, Just proof, txs) <- results]
   where
-    groupToAssocWith :: Ord k => [(k, v)] -> [(k, [v])]
-    groupToAssocWith =
-        Map.toList . foldl' push Map.empty
-      where
-        push acc a = Map.insertWith (++) (fst a) [snd a] acc
-
     getTxsBlockMap :: DBT t m [(BlockIdx, PrivateTx)]
     getTxsBlockMap =
         runSelectMap rearrange . select $

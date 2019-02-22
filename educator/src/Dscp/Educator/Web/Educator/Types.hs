@@ -1,4 +1,5 @@
-{-# LANGUAGE StrictData #-}
+{-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE StrictData    #-}
 
 -- | Types specific to educator API.
 
@@ -15,6 +16,7 @@ module Dscp.Educator.Web.Educator.Types
       -- * Responses
     , Counted (..)
     , mkCountedList
+    , toCountedList
     , EducatorInfo (..)
     , CourseEducatorInfo (..)
     , AssignmentEducatorInfo (..)
@@ -29,6 +31,7 @@ module Dscp.Educator.Web.Educator.Types
     , educatorLiftAssignment
     , educatorLiftSubmission
     , requestToAssignment
+    , educatorCourseInfoFromRow
     , educatorAssignmentInfoFromRow
     , educatorSubmissionInfoFromRow
     ) where
@@ -37,6 +40,7 @@ import Control.Lens (from)
 import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), withText)
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
+import qualified Data.List as L
 import Data.Time.Calendar (Day)
 import Fmt (build, listF, (+|), (|+))
 import Pdf.Scanner (PDFBody (..))
@@ -115,15 +119,19 @@ mkCertificate meta = Certificate (hash meta) meta
 
 -- | Special wrapper for list which includes its length
 data Counted a = Counted
-    { cCount :: Int
+    { cCount :: Word32
     , cItems :: Maybe [a]
-    } deriving (Show, Eq, Generic)
+    } deriving (Show, Eq, Functor, Generic)
 
 -- | Makes a 'Counted' from a list, omitting the list itself if
 -- @onlyCount@ flag is set
 mkCountedList :: Bool -> [a] -> Counted a
 mkCountedList onlyCount ls =
-    Counted (length ls) (if onlyCount then Nothing else Just ls)
+    Counted (L.genericLength ls) (if onlyCount then Nothing else Just ls)
+
+-- | Makes a 'Counted' from a list
+toCountedList :: [a] -> Counted a
+toCountedList = mkCountedList False
 
 ---------------------------------------------------------------------------
 -- Sorting
@@ -165,6 +173,14 @@ requestToAssignment NewAssignment{..} =
     , _aContentsHash = naContentsHash
     , _aType = naIsFinal ^. from assignmentTypeRaw
     , _aDesc = naDesc
+    }
+
+educatorCourseInfoFromRow :: (Course, ItemDesc, Vector Subject) -> CourseEducatorInfo
+educatorCourseInfoFromRow (ciId, ciDesc, toList -> ciSubjects) =
+    CourseEducatorInfo
+    { ciId
+    , ciDesc
+    , ciSubjects
     }
 
 educatorAssignmentInfoFromRow :: AssignmentRow -> AssignmentEducatorInfo
@@ -300,10 +316,10 @@ instance Buildable (ForResponseLog [Certificate]) where
 instance Buildable (ForResponseLog [a]) =>
          Buildable (ForResponseLog (Counted a)) where
     build (ForResponseLog (Counted n mbLs)) =
-        "Counted { n = "+|n|+", items = "+|mbItems mbLs|+" }"
+        "Counted { n = "+|n|+", items: "+|mbItems mbLs|+" }"
       where
         mbItems Nothing   = "omitted"
-        mbItems (Just ls) = build (ForResponseLog ls)
+        mbItems (Just ls) = "\n" <> build (ForResponseLog ls)
 
 ---------------------------------------------------------------------------
 -- JSON instances

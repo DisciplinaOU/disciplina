@@ -5,6 +5,7 @@
 
 module Dscp.DB.SQL.Util.Common
      ( module BeamReexport
+     , countRows
      , checkExists
      , insertValue
      , insertExpression
@@ -29,7 +30,7 @@ import Prelude hiding (_1, _2)
 import Data.Coerce (coerce)
 import qualified Database.Beam.Backend.SQL as Beam
 import Database.Beam.Migrate (HasDefaultSqlDataType (..))
-import Database.Beam.Postgres as BeamReexport (PgJSONB (..))
+import Database.Beam.Postgres as BeamReexport (PgJSONB (..), arrayOf_)
 import qualified Database.Beam.Postgres as Beam
 import Database.Beam.Query as BeamReexport (QExpr, QGenExpr (..), aggregate_, all_, as_, asc_,
                                             countAll_, default_, delete, desc_, exists_, filter_,
@@ -48,14 +49,20 @@ import Dscp.Core
 import Dscp.DB.SQL.Functions
 import Dscp.Util
 
--- | Check whether the query returns any row.
-checkExists
-    :: (MonadIO m)
-    => Beam.Q Beam.PgSelectSyntax db (Beam.QNested _) () -> DBT t m Bool
-checkExists query =
-    fmap ((> 0) . oneOrError) $
+-- | Return only number of rows produced by a query.
+countRows
+    :: MonadIO m
+    => Beam.Q Beam.PgSelectSyntax db (Beam.QNested _) a -> DBT t m Word32
+countRows query =
+    fmap (fromIntegral . oneOrError) $
     runSelect . select $
     aggregate_ (\_ -> countAll_) (query $> as_ @Int 1)
+
+-- | Check whether the query returns any row.
+checkExists
+    :: MonadIO m
+    => Beam.Q Beam.PgSelectSyntax db (Beam.QNested _) () -> DBT t m Bool
+checkExists = fmap (> 0) . countRows
 
 -- | Build a 'SqlInsertValues' from concrete table value.
 insertValue :: _ => table Identity -> Beam.SqlInsertValues syntax (table (Beam.QExpr _ s))
