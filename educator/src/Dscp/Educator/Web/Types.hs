@@ -44,6 +44,7 @@ import Dscp.Crypto
 import Dscp.DB.SQL
 import Dscp.Educator.DB
 import Dscp.Educator.Launcher.Marker
+import Dscp.Educator.Launcher.Resource (CertificateIssuerResource)
 import Dscp.Resource.Keys
 import Dscp.Util.Aeson
 import Dscp.Web.Swagger
@@ -58,7 +59,13 @@ type MonadEducatorWebQuery m =
 
 type MonadEducatorWeb ctx m =
     ( WitnessWorkMode ctx m
-    , HasCtx ctx m '[SQL, KeyResources EducatorNode, Pdf.LatexPath, Pdf.ResourcePath]
+    , HasCtx ctx m
+       '[ SQL
+        , KeyResources EducatorNode
+        , Pdf.LatexPath
+        , Pdf.ResourcePath
+        , CertificateIssuerResource
+        ]
     )
 
 ---------------------------------------------------------------------------

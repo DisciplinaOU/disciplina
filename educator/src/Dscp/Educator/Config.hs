@@ -22,6 +22,7 @@ import Loot.Config ((:::), (::<), ConfigKind (Final, Partial), ConfigRec, upcast
 import Time (Second, Time)
 
 import Dscp.Config
+import Dscp.Core.Foundation.Educator (ItemDesc (..))
 import Dscp.DB.SQL
 import Dscp.Educator.Launcher.Params
 import Dscp.Educator.Web.Config
@@ -39,6 +40,10 @@ type EducatorConfig = WitnessConfig ++
         , "certificates" ::<
            '[ "latex" ::: FilePath
             , "resources" ::: FilePath
+            , "issuer" ::<
+               '[ "name" ::: ItemDesc
+                , "website" ::: ItemDesc
+                ]
             ]
         ]
      ]

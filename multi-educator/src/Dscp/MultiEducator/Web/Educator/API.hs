@@ -59,7 +59,7 @@ type MultiEducatorAPI =
     "api" :> "educator" :> "v1" :> ProtectedMultiEducatorAPI
 
 type ProtectedMultiEducatorAPI =
-    Auth' '[MultiEducatorAuth, NoAuth "multi-educator"] EducatorAuthData :> RawEducatorAPI
+    Auth' '[MultiEducatorAuth, NoAuth "multi-educator"] EducatorAuthLogin :> RawEducatorAPI
 
 multiEducatorAPI :: Proxy MultiEducatorAPI
 multiEducatorAPI = Proxy

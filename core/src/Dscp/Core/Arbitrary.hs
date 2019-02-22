@@ -504,8 +504,8 @@ submissionWitnessEx = _ssWitness signedSubmissionEx
 certificateIssuerInfoEx :: CertificateIssuerInfo
 certificateIssuerInfoEx =
     CertificateIssuerInfo
-    { ciiName = "Grimpy Cat University"
-    , ciiUrl = "example@gmail.com"
+    { ciiName    = "Grimpy Cat University"
+    , ciiWebsite = "example@gmail.com"
     }
 
 ----------------------------------------------------------------------------

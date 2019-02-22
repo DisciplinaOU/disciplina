@@ -112,6 +112,8 @@ educator_params="
 --student-api-no-auth 3BAyX5pNpoFrLJcP5bZ2kXihBfmBVLprSyP1RhcPPddm6Dw42jzEPXZz22
 --publication-period 15s
 --pdf-resource-path ../pdfs/template
+--cert-issuer-name "Grimpy Cat University"
+--cert-issuer-url example@gmail.com
 "
 multi_educator_params="
 --educator-key-dir $files/multieducator

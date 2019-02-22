@@ -396,8 +396,8 @@ data GradeInfo = GradeInfo
 -- | Datatype containing information about Educator which issued
 -- the certificate, required in order to render a certificate.
 data CertificateIssuerInfo = CertificateIssuerInfo
-    { ciiName :: ItemDesc
-    , ciiUrl  :: ItemDesc
+    { ciiName    :: ItemDesc
+    , ciiWebsite :: ItemDesc
     } deriving (Show, Eq, Generic)
 
 instance Buildable (StudentInfo) where

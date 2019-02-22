@@ -5,6 +5,8 @@
 module Dscp.MultiEducator.Web.Educator.Auth
        ( EducatorAuthToken (..)
        , EducatorAuthData (..)
+       , EducatorAuthLogin (..)
+       , educatorAuthLoginSimple
        , MultiEducatorAuth
        , MultiEducatorPublicKey (..)
        ) where
@@ -17,7 +19,7 @@ import Data.Aeson (FromJSON (..), ToJSON (..), decodeStrict)
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
 import Data.Time.Clock (addUTCTime, getCurrentTime)
-import Fmt (build)
+import Fmt (build, (+||), (||+))
 import Servant.Auth.Server (AuthCheck, FromJWT, ToJWT)
 import Servant.Auth.Server.Internal.Class (IsAuth (..))
 
@@ -52,6 +54,21 @@ deriveJSON defaultOptions ''EducatorAuthToken
 instance FromJWT EducatorAuthToken
 instance ToJWT EducatorAuthToken
 
+data EducatorAuthLogin = EducatorAuthLogin
+    { ealData  :: EducatorAuthData
+    , ealToken :: ByteString
+    }
+
+instance ToJSON EducatorAuthLogin where
+    toJSON (EducatorAuthLogin {..}) = toJSON ealData
+
+instance FromJSON EducatorAuthLogin where
+    parseJSON = fmap (\ealData -> EducatorAuthLogin {..}) . parseJSON
+      where ealToken = mempty
+
+instance Buildable EducatorAuthLogin where
+    build (EducatorAuthLogin {..}) = build ealData <> "("+||ealToken||+")"
+
 ---------------------------------------------------------------------------
 -- Data types
 ---------------------------------------------------------------------------
@@ -63,7 +80,7 @@ data MultiEducatorAuth
 newtype MultiEducatorPublicKey = MultiEducatorPublicKey PublicKey
     deriving (Show, Eq)
 
-instance IsAuth MultiEducatorAuth EducatorAuthData where
+instance IsAuth MultiEducatorAuth EducatorAuthLogin where
     type AuthArgs MultiEducatorAuth = '[MultiEducatorPublicKey]
     runAuth _ _ = multiEducatorAuthCheck
 
@@ -87,9 +104,11 @@ instance FromJSON MultiEducatorPublicKey where
 -- Helpers
 ---------------------------------------------------------------------------
 
--- | Checks the signature of the JWT and returns an 'EducatorAuthData'
-multiEducatorAuthCheck :: MultiEducatorPublicKey -> AuthCheck EducatorAuthData
+-- | Checks the signature of the JWT and returns an 'EducatorAuthLogin'
+multiEducatorAuthCheck :: MultiEducatorPublicKey -> AuthCheck EducatorAuthLogin
 multiEducatorAuthCheck (MultiEducatorPublicKey mpk) = do
+    request <- ask
+    ealToken <- maybe mempty pure $ authBearerToken request
     (pk, payload) <- checkJWitness
     educatorAuthToken <- maybe mempty pure $ decodeStrict payload
     -- Check expiration time
@@ -98,10 +117,17 @@ multiEducatorAuthCheck (MultiEducatorPublicKey mpk) = do
     guard (currentTime < addUTCTime authTimeout expirationTime)
     -- Remember about timing attacks
     guard (pk `constTimeEq` mpk)
-    return $ eatData educatorAuthToken
+    let ealData = eatData educatorAuthToken
+    return $ EducatorAuthLogin {..}
+
+educatorAuthLoginSimple :: Text -> EducatorAuthLogin
+educatorAuthLoginSimple eadId = EducatorAuthLogin {..}
+  where
+    ealData = EducatorAuthData {..}
+    ealToken = mempty
 
 ---------------------------------------------------------------------------
 -- No auth
 ---------------------------------------------------------------------------
 
-type instance NoAuthData "multi-educator" = EducatorAuthData
+type instance NoAuthData "multi-educator" = EducatorAuthLogin

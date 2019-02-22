@@ -4,17 +4,25 @@
 
 module Dscp.Educator.Launcher.Resource
        ( EducatorResources (..)
+       , CertificateIssuerResource (..)
        , erWitnessResources
+       , erDB
+       , erKeys
+       , erPdfLatexPath
+       , erPdfResourcePath
+       , erPdfCertIssuerRes
        ) where
 
 import Control.Lens (makeLenses)
 import Fmt ((+|), (|+))
 import Loot.Log (logDebug)
 import qualified Pdf.FromLatex as Pdf
+import Servant.Client.Core.Internal.BaseUrl
 import System.Directory (doesDirectoryExist, findExecutable)
 import System.FilePath.Posix (isRelative, (</>))
 
 import Dscp.Config
+import Dscp.Core.Foundation.Educator (ItemDesc)
 import Dscp.DB.SQL (SQL)
 import Dscp.Educator.Config
 import Dscp.Educator.DB.Resource ()
@@ -28,6 +36,12 @@ import Dscp.Util.Exceptions
 import Dscp.Util.HasLens
 import qualified Dscp.Witness.Launcher.Resource as Witness
 
+-- | Educator Resource that either has the info 'CertificateIssuerInfo' itself
+-- or enough info to contact a server that has it
+data CertificateIssuerResource
+    = KnownIssuerInfo Pdf.CertificateIssuerInfo
+    | FromServiceIssuerInfo BaseUrl ByteString
+
 -- | Datatype which contains resources required by all Disciplina nodes
 -- to start working.
 data EducatorResources = EducatorResources
@@ -36,6 +50,7 @@ data EducatorResources = EducatorResources
     , _erKeys             :: !(KeyResources EducatorNode)
     , _erPdfLatexPath     :: !Pdf.LatexPath
     , _erPdfResourcePath  :: !Pdf.ResourcePath
+    , _erPdfCertIssuerRes :: !CertificateIssuerResource
     }
 
 makeLenses ''EducatorResources
@@ -79,6 +94,11 @@ instance AllocResource Pdf.ResourcePath where
                 throwM $ DirectoryDoesNotExist "pdf templates" resPath
             return $ Pdf.ResourcePath resPath
 
+instance AllocResource CertificateIssuerResource where
+    type Deps CertificateIssuerResource = (ItemDesc, ItemDesc)
+    allocResource (ciiName, ciiWebsite) =
+        return . KnownIssuerInfo $ Pdf.CertificateIssuerInfo {..}
+
 instance AllocResource EducatorResources where
     type Deps EducatorResources = EducatorConfigRec
     allocResource educatorCfg = do
@@ -92,4 +112,8 @@ instance AllocResource EducatorResources where
         _erPdfLatexPath <- allocResource $ cfg ^. sub #certificates . option #latex
         _erPdfResourcePath <- allocResource ( cfg ^. sub #certificates . option #resources
                                             , appDir )
+        _erPdfCertIssuerRes <- allocResource
+            ( cfg ^. sub #certificates . sub #issuer . option #name
+            , cfg ^. sub #certificates . sub #issuer . option #website
+            )
         return EducatorResources {..}

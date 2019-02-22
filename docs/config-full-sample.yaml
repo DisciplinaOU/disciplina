@@ -222,6 +222,10 @@ sample:
       latex: "xelatex"
       # Path to the directory with LaTeX templates
       resources: "/var/lib/disciplina/certificate-templates"
+      # Info about the certificates issuer, to be used in Pdf generation
+      issuer:
+        name: Grimpy Cat University
+        website: example.grimpy.cat.com
     # These are options for the AAA microservice, only used by the multi-educator
     aaa:
       # URL of the AAA microservice

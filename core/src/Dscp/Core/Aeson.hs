@@ -28,7 +28,8 @@ import Dscp.Util.Aeson (dscpAesonOptions, parseJSONSerialise, toJSONSerialise)
 ---------------------------------------------------------------------------
 
 -- TODO [DSCP-416]: Move
-deriving instance ToJSON ItemDesc
+instance ToJSON ItemDesc where
+    toJSON = toJSON . unItemDesc
 instance FromJSON ItemDesc where
     parseJSON v = leftToFail . toItemDesc =<< parseJSON @Text v
 
@@ -175,6 +176,7 @@ deriveJSON defaultOptions ''Submission
 deriveJSON defaultOptions ''SignedSubmission
 deriveJSON dscpAesonOptions ''DocumentType  -- TODO: apply everywhere
 deriveJSON dscpAesonOptions ''AssignmentType
+deriveJSON defaultOptions ''CertificateIssuerInfo
 deriveJSON defaultOptions ''CertificateMeta
 deriveJSON defaultOptions ''PrivateTx
 deriveJSON defaultOptions ''PrivateBlockHeader

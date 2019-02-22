@@ -2,6 +2,7 @@
 
 module Dscp.Educator.Web.Educator.Error
        ( EducatorAPIError (..)
+       , ThirdPartyRequestError (..)
 
        , ErrResponse (..)
 
@@ -16,13 +17,13 @@ import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
 import Data.Reflection (Reifies (..))
 import Data.Swagger (ToSchema (..))
-import qualified Data.Text.Buildable as B
 import Data.Typeable (cast)
-import Dscp.DB.SQL (SQLRequestsNumberExceeded)
-import Dscp.Educator.DB (DomainError)
+import Fmt (build, (+|), (|+))
 import Servant (ServantErr (..))
 import Servant.Util (SimpleJSON)
 
+import Dscp.DB.SQL (SQLRequestsNumberExceeded)
+import Dscp.Educator.DB (DomainError)
 import Dscp.Educator.Web.Util ()
 import Dscp.Util
 import Dscp.Web.Class
@@ -41,8 +42,8 @@ makePrisms ''EducatorAPIError
 
 instance Buildable EducatorAPIError where
     build (SomeDomainError err) =
-        "Database error: " <> B.build err
-    build (SomeGeneralBackendError err) = B.build err
+        "Database error: " <> build err
+    build (SomeGeneralBackendError err) = build err
 
 instance Exception EducatorAPIError where
     fromException e@(SomeException e') =
@@ -52,6 +53,21 @@ instance Exception EducatorAPIError where
         , SomeGeneralBackendError . ServiceUnavailable .
              pretty @SQLRequestsNumberExceeded <$> fromException e
         ]
+
+-- | Error resulting from requests made with a third-party service
+data ThirdPartyRequestError
+    = NonPositiveStatusCodeError Int
+    | NonDecodableResponseError String
+    deriving (Show, Eq, Generic)
+
+instance Buildable ThirdPartyRequestError where
+    build = \case
+      NonPositiveStatusCodeError statusCode ->
+          "Expected a 200 status code, received"+|statusCode|+"instead"
+      NonDecodableResponseError err ->
+          "Could not decode the response body" <> build err
+
+instance Exception ThirdPartyRequestError
 
 ---------------------------------------------------------------------------
 -- JSON instances
