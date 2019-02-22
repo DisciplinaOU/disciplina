@@ -4,8 +4,6 @@ module Dscp.MultiEducator.Web.Educator.Handlers
        ( certificatesApiHandlers
        ) where
 
-import Loot.Base.HasLens (lensOf)
-
 import Dscp.DB.SQL
 import Dscp.Educator.Web.Educator
 import Dscp.MultiEducator.Launcher.Mode
@@ -16,8 +14,7 @@ certificatesApiHandlers
     :: forall m ctx. MultiEducatorWorkMode ctx m
     => CertificatesApiHandlers m
 certificatesApiHandlers = CertificatesApiEndpoints
-    { cGetCertificate = \(CertificateName eId cId) -> do
-            db <- view (lensOf @SQL)
-            setSchemaName db $ educatorSchemaName eId
-            invoke $ educatorGetCertificate cId
+    { cGetCertificate = \(CertificateName eId cId) -> invoke $ do
+            setConnSchemaName $ educatorSchemaName eId
+            educatorGetCertificate cId
     }
