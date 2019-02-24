@@ -34,7 +34,7 @@ import Pdf.Scanner (PDFBody)
 import Servant (err501)
 import Servant.Client.Core.Internal.BaseUrl (showBaseUrl)
 import Servant.Util (PaginationSpec, SortingSpecOf, HList (HNil), (.*.))
-import Servant.Util.Beam.Postgres (bySpec_, fieldSort_, paginate_)
+import Servant.Util.Beam.Postgres (fieldSort, paginate_, sortBy_)
 
 import Dscp.Core
 import Dscp.Crypto
@@ -331,11 +331,11 @@ educatorGetCertificates sorting pagination =
     runSelectMap certificateFromRow . select $
     paginate_ pagination $ do
         certificate <-
-            orderBy_ (bySpec_ sorting . sortingSpecApp) $ do
+            sortBy_ sorting sortingSpecApp $ do
             all_ (esCertificates es)
         return (crHash certificate, crMeta certificate)
   where
     sortingSpecApp CertificateRow{..} =
-        fieldSort_ @"createdAt" (crMeta ->>$. #cmIssueDate) .*.
-        fieldSort_ @"studentName" (crMeta ->>$. #cmStudentName) .*.
+        fieldSort @"createdAt" (crMeta ->>$. #cmIssueDate) .*.
+        fieldSort @"studentName" (crMeta ->>$. #cmStudentName) .*.
         HNil

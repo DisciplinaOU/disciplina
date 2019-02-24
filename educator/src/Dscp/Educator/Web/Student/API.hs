@@ -4,7 +4,9 @@
 module Dscp.Educator.Web.Student.API
        ( StudentApiEndpoints (..)
        , ProtectedStudentAPI
+       , FullStudentAPI
        , protectedStudentAPI
+       , fullStudentAPI
        , RawStudentAPI
        , rawStudentAPI
        , StudentApiHandlers
@@ -38,8 +40,11 @@ data StudentApiEndpoints route = StudentApiEndpoints
 type RawStudentAPI = ToServant (StudentApiEndpoints AsApi)
 
 type ProtectedStudentAPI =
-    "api" :> "student" :> "v1" :>
     Auth' [StudentAuth, NoAuth "student"] Core.Student :> RawStudentAPI
+
+type FullStudentAPI =
+    "api" :> "student" :> "v1" :>
+    (WithSwaggerUI ProtectedStudentAPI)
 
 type StudentApiHandlers m = StudentApiEndpoints (AsServerT m)
 
@@ -48,6 +53,9 @@ rawStudentAPI = Proxy
 
 protectedStudentAPI :: Proxy ProtectedStudentAPI
 protectedStudentAPI = Proxy
+
+fullStudentAPI :: Proxy FullStudentAPI
+fullStudentAPI = Proxy
 
 ---------------------------------------------------------------------------
 -- Courses

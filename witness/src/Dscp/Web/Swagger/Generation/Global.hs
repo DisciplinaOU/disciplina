@@ -12,8 +12,8 @@ import Data.Aeson.Encoding (encodingToLazyByteString)
 import Data.Swagger (Swagger, URL (..))
 import qualified Data.Swagger as S
 import GHC.TypeLits (AppendSymbol, KnownSymbol, Symbol)
-import Servant ((:<|>), (:>), Capture', Description, NoContent, QueryFlag, QueryParam', StdMethod,
-                Verb)
+import Servant ((:<|>), (:>), Capture', Description, NoContent, QueryFlag, QueryParam', Raw,
+                StdMethod, Verb)
 import Servant.Swagger (HasSwagger (..))
 
 import Dscp.Util
@@ -93,6 +93,8 @@ type family SwaggerrizeApi api where
 
     SwaggerrizeApi (Verb (method :: StdMethod) (code :: Nat) ctx a) =
         Verb method code ctx a
+
+    SwaggerrizeApi Raw = Raw
 
 -- | Apply some beautiness to automatically generated spec.
 swaggerPostfixes :: Swagger -> Swagger

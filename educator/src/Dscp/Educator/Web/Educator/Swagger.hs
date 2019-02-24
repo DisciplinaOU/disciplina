@@ -16,7 +16,7 @@ import Dscp.Web.Types
 
 -- | Swagger documentation for Educator API.
 educatorAPISwagger :: Maybe NetworkAddress -> Swagger
-educatorAPISwagger mhost = toAwesomeSwagger protectedEducatorAPI &: do
+educatorAPISwagger mhost = toAwesomeSwagger fullEducatorAPI &: do
     setSerokellDocMeta
 
     zoom S.info $ do
