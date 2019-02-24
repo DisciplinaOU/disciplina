@@ -1,6 +1,7 @@
 -- | Top-level swagger entries and global transformations.
 module Dscp.Web.Swagger.Generation.Global
-    ( toAwesomeSwagger
+    ( networkAddressToSwaggerHost
+    , toAwesomeSwagger
     , setSerokellDocMeta
     , encodeSwagger
     ) where
@@ -17,8 +18,16 @@ import Servant.Swagger (HasSwagger (..))
 
 import Dscp.Util
 import Dscp.Web.Swagger.Generation.Class
+import Dscp.Web.Types
 
 makePrisms ''S.Referenced
+
+networkAddressToSwaggerHost :: NetworkAddress -> S.Host
+networkAddressToSwaggerHost addr =
+    S.Host
+    { S._hostName = toString $ naHost addr
+    , S._hostPort = Just . fromIntegral $ naPort addr
+    }
 
 -- | Apply all meta info which is fixed for this project.
 setSerokellDocMeta :: State Swagger ()

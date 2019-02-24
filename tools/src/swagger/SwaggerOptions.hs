@@ -11,6 +11,7 @@ import Options.Applicative (Parser, ReadM, eitherReader, help, long, metavar, op
                             strOption)
 
 import Dscp.Util.Constructors
+import Dscp.Web.Types
 
 -- | All our APIs.
 data SwaggerAPI
@@ -36,7 +37,7 @@ swaggerAPIReadM = eitherReader $ \case
 data SwaggerOptions = SwaggerOptions
     { soSwaggerAPI :: SwaggerAPI
     , soOutput     :: Maybe FilePath
-    , soHost       :: Maybe String
+    , soHost       :: Maybe NetworkAddress
     }
 
 swaggerOptionsParser :: Parser SwaggerOptions
@@ -54,9 +55,9 @@ swaggerOptionsParser = do
         , help "Print the swagger specification to the given file. \
                \If not specified, the specification will be printed to stdout"
         ]
-    soHost <- optional . strOption $ mconcat
+    soHost <- optional . option (eitherReader parseNetAddr) $ mconcat
         [ long "host"
-        , metavar "ADDR:PORT"
+        , metavar "HOST:PORT"
         , help "Override the default value for 'host' field. \
                \Useful when documenation is going to be served in Swagger UI \
                \and requests via it should refer to a given server."

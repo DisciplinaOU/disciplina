@@ -1,7 +1,6 @@
 import SwaggerOptions
 
 import qualified Data.ByteString.Lazy as LBS
-import qualified Data.Swagger as S
 import Options.Applicative (execParser, fullDesc, helper, info, progDesc)
 
 import Dscp.CommonCLI
@@ -12,17 +11,13 @@ import Dscp.Web.Swagger
 main :: IO ()
 main = do
     options <- getSwaggerOptions
+    let mhost = soHost options
 
     let swagger = case soSwaggerAPI options of
-            StudentAPI  -> studentAPISwagger
-            EducatorAPI -> educatorAPISwagger
+            StudentAPI  -> studentAPISwagger mhost
+            EducatorAPI -> educatorAPISwagger mhost
 
-    let modSwagger = case soHost options of
-            Nothing   -> id
-            Just host -> S.host .~ Just (fromString host)
-
-    let swagger' = modSwagger swagger
-    let encoded = encodeSwagger swagger'
+    let encoded = encodeSwagger swagger
 
     case soOutput options of
         Nothing     -> LBS.hPut stdout encoded

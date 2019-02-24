@@ -8,5 +8,5 @@ import Dscp.Web.Swagger
 
 spec_Educator_API_swagger :: Spec
 spec_Educator_API_swagger = do
-    it "Builds without errors" . once $ do
-        total $ encodeSwagger educatorAPISwagger
+    it "Builds without errors" . once $ \addr -> do
+        total $ encodeSwagger (educatorAPISwagger addr)

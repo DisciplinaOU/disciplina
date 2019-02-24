@@ -12,21 +12,24 @@ import qualified Data.Swagger as S
 import Dscp.Educator.Web.Student.API
 import Dscp.Util
 import Dscp.Web.Swagger
+import Dscp.Web.Types
 
 -- | Swagger documentation for Student API.
-studentAPISwagger :: Swagger
-studentAPISwagger = toAwesomeSwagger protectedStudentAPI &: do
+studentAPISwagger :: Maybe NetworkAddress -> Swagger
+studentAPISwagger mhost = toAwesomeSwagger protectedStudentAPI &: do
     setSerokellDocMeta
 
     zoom S.info $ do
         S.title .= "Disciplina Student API"
         S.version .= "1.0.0"
 
-    S.host ?= "localhost:8090"
+    S.host .= fmap networkAddressToSwaggerHost mhost
     S.schemes ?= [Http, Https]
 
 -- | Write documentation to file, for testing purposes.
 -- Normally you can use "dscp-swagger" executable to build documentation.
 writeStudentAPISwagger :: FilePath -> IO ()
 writeStudentAPISwagger file =
-    liftIO $ LBS.writeFile file (encodeSwagger studentAPISwagger)
+    liftIO $ LBS.writeFile file (encodeSwagger $ studentAPISwagger demoAddr)
+  where
+    demoAddr = Just $ NetworkAddress "localhost" 8090
