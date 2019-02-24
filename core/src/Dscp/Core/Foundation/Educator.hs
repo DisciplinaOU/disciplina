@@ -37,6 +37,7 @@ module Dscp.Core.Foundation.Educator
     , StudentInfo (..)
     , GradeInfo (..)
     , EducationForm (..)
+    , GradingScale (..)
     , documentType
     , _aDocumentType
     , aDocumentType
@@ -351,6 +352,9 @@ data CertificateMeta = CertificateMeta
 data EducationForm = Fulltime | Parttime | Fullpart
     deriving (Show, Eq, Generic, Enum, Bounded)
 
+data GradingScale = RusDiff | RusNonDiff
+    deriving (Show, Eq, Generic, Enum, Bounded)
+
 -- | Datatype which combines certificate meta with its ID.
 data Certificate = Certificate
     { cId   :: Hash CertificateMeta
@@ -364,6 +368,7 @@ data CertificateGrade = CertificateGrade
     , cgLang    :: Language
     , cgHours   :: Word32
     , cgCredits :: Maybe Word32
+    , cgScale   :: GradingScale
     , cgGrade   :: Grade
     } deriving (Show, Eq, Generic)
 

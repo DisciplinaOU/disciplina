@@ -96,12 +96,25 @@ fullInfo
       where
         course
             = custom
-            $ \CertificateGrade { cgSubject, cgLang, cgHours, cgCredits, cgGrade = UnsafeGrade grade} -> ""
+            $ \CertificateGrade { cgSubject, cgLang, cgHours, cgCredits, cgScale, cgGrade = UnsafeGrade grade} -> ""
                 <> shownDesc cgSubject <> " & "
                 <> shown     cgLang    <> " & "
                 <> shown     cgHours   <> " & "
                 <> maybe "---" shown cgCredits <> " & "
-                <> shown     grade
+                <> renderGrade cgLang cgScale grade
+
+        renderGrade _ RusDiff grade
+            | grade >= 100 = "5"
+            | grade >= 80 = "4"
+            | grade >= 60 = "3"
+            | grade >= 40 = "2"
+            | otherwise = "1"
+        renderGrade RU RusNonDiff grade
+            | grade >= 100 = "зачёт"
+            | otherwise = "незачёт"
+        renderGrade EN RusNonDiff grade
+            | grade >= 100 = "passed"
+            | otherwise = "not passed"
 
     formatDate day = [shown d, shown m, shown y]
       where
@@ -190,6 +203,7 @@ testData = CertificateFullInfo
             , cgCredits = Just 132
             , cgHours = 123
             , cgLang = RU
+            , cgScale = RusNonDiff
             , cgSubject = "Следование за обозом"
             }
         , CertificateGrade
@@ -197,6 +211,7 @@ testData = CertificateFullInfo
             , cgCredits = Nothing
             , cgHours = 13
             , cgLang = RU
+            , cgScale = RusDiff
             , cgSubject = "Черпание"
             }
         , CertificateGrade
@@ -204,6 +219,7 @@ testData = CertificateFullInfo
             , cgCredits = Just 34
             , cgHours = 1
             , cgLang = EN
+            , cgScale = RusNonDiff
             , cgSubject = "Сопротивление холере"
             }
         ]
