@@ -62,7 +62,7 @@ library:
 tests:
   disciplina-multi-educator-test:
     <<: *test-common
-    
+
     build-tools:
       - tasty-discover
 

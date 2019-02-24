@@ -35,6 +35,7 @@ type MultiEducatorWebConfig =
      , "studentAPINoAuth"       ::: NoAuthContext "student"
      ]
 
+type MultiEducatorWebConfigRecP = ConfigRec 'Partial MultiEducatorWebConfig
 type MultiEducatorWebConfigRec = ConfigRec 'Final MultiEducatorWebConfig
 
 type MultiEducatorConfig = WitnessConfig ++
@@ -61,7 +62,13 @@ type HasMultiEducatorConfig = Given MultiEducatorConfigRec
 defaultMultiEducatorConfig :: MultiEducatorConfigRecP
 defaultMultiEducatorConfig = upcast defaultWitnessConfig
     & sub #educator . sub #db .~ defaultPostgresRealParams
+    & sub #educator . sub #api .~ defaultMultiEducatorWebConfig
     & sub #educator . sub #certificates . option #latex ?~ "xelatex"
+
+defaultMultiEducatorWebConfig :: MultiEducatorWebConfigRecP
+defaultMultiEducatorWebConfig = mempty
+    & option #multiEducatorAPINoAuth ?~ NoAuthOffContext
+    & option #studentAPINoAuth ?~ NoAuthOffContext
 
 -- instance (HasEducatorConfig, cfg ~ WitnessConfigRec) => Given cfg where
 --     given = rcast (given @EducatorConfigRec)

@@ -27,7 +27,7 @@ import Control.Lens (at, makeLenses, zoom, (?~), _Wrapped')
 import Fmt ((+|), (|+))
 import Loot.Base.HasLens (HasLens', lensOf)
 import Loot.Config (option, sub)
-import Loot.Log (logDebug)
+import Loot.Log (logDebug, logInfo)
 import Loot.Network.Class (NetworkingCli, NetworkingServ)
 import Loot.Network.ZMQ (ZmqTcp)
 import qualified Pdf.FromLatex as Pdf
@@ -163,7 +163,9 @@ loadEducator login mpassphrase = do
     -- open the new DB connection
     db <- openPostgresDB (PostgresParams $ PostgresReal dbParams)
     -- set the DB schema name and create it if it's not ready
-    setSchemaName db $ educatorSchemaName login
+    let schema = educatorSchemaName login
+    logInfo $ "Creating a schema with name `"+|schema|+"`"
+    setSchemaName db schema
     prepareEducatorSchema db
     liftIO $ createDirectoryIfMissing True keyDir
     -- read key from file and creates one if it does not exist yet
