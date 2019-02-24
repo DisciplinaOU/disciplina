@@ -1,4 +1,20 @@
 openapi: 3.0.0
+info:
+  description: >-
+    This is an HTTP API for interacting with Disciplina Educator node on
+    Educator side. It is meant to be used for integrating external systems, CRMs
+    and CMSs with Disciplina
+  version: 1.0.0
+  title: Disciplina Educator API
+  termsOfService: 'https://disciplina.io/tnc.pdf'
+  contact:
+    email: hi@serokell.io
+  license:
+    name: Apache 2.0
+    url: 'http://www.apache.org/licenses/LICENSE-2.0.html'
+externalDocs:
+  description: Find out more about Swagger
+  url: 'http://swagger.io'
 servers:
   - url: 'https://localhost:8090/api/educator/v1'
   - url: 'http://localhost:8090/api/educator/v1'
@@ -193,7 +209,7 @@ paths:
           description: Student is already enrolled on this course
           content:
             application/json:
-              sschema:
+              schema:
                 $ref: '#/components/schemas/ErrResponse'
       requestBody:
         content:
@@ -1206,3 +1222,32 @@ components:
 
               * `StudentIsActive` - Can not delete a student because he is attending a course.
               * `DeletingGradedSubmission` - Attempt to delete an already graded submission.
+  securitySchemes:
+    EducatorAuth:
+      type: apiKey
+      name: Authorization
+      in: header
+      description: |
+        Authentication system requires a JWS in Authorization header in `Bearer <JWS>` format. Example header:
+        ```
+        Authorization: Bearer eyJhbGciOiJFZERTQSIsImp3ayI6eyJjcnYiOiJFZDI1NTE5IiwieCI6InFlU3ZrUzZnaW9CcjRlX2I2em8zTWlPT1NYQW90VjkwdDVLajNsMjh5cm8iLCJrdHkiOiJPS1AifX0.eyJwYXRoIjoiL2FwaS9lZHVjYXRvci92MS9zdHVkZW50cyIsInRpbWUiOiIyMDI1LTAxLTAxVDAwOjAwOjAwWiJ9.0_sRvkXTaJTlnLHSjReH70VNFOLx0kdGHDmiDWhUr6H25UCvc5kPD6qn9pDlUwe0uKMpQCGIt_v4hnwWcfVlDA
+        ```
+
+        JWS header MUST contain "jwk" parameter ([RFC7515, section 4.1.3](https://tools.ietf.org/html/rfc7515#section-4.1.3)) with a
+        public JWK corresponding to the signature. JWK MUST have key type "OKP" and curve type "Ed25519", public key parameter "x"
+        should be encoded via base64Url (accordingly to [RFC8037](https://tools.ietf.org/html/rfc8037)). Example JWK:
+        ```
+        { "kty": "OKP", "crv": "Ed25519", "x": "2qbm2mPrVVW_yFsHUMzNt3hLdalGLTN8ucI4e-Cn6fI" }
+        ```
+        This JWK represents a Disciplina public key of an Educator. The whole JWS should be created via the Educator's secret key.
+        JWS payload MUST be a JSON object with fields "path" and "time". Field "path" should contain the endpoint URL path and "time"
+        should contain the time the request has been made in [ISO-8601](https://en.wikipedia.org/wiki/ISO_8601) format. Example JWS
+        payload:
+        ```
+        {
+          "time": "2025-01-01T00:00:00.000000000Z",
+          "path": "/api/educator/v1/students"
+        }
+        ```
+        If the request's raw path doesn't match the one in "path" or "time" is more than 5 minutes behind the server current time,
+        the authentication process will fail.
