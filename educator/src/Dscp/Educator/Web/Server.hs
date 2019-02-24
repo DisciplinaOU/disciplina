@@ -8,7 +8,6 @@ module Dscp.Educator.Web.Server
        ) where
 
 import Data.Proxy (Proxy (..))
-import Data.Reflection (Reifies, reify)
 import Fmt ((+|), (|+))
 import Loot.Base.HasLens (lensOf)
 import Loot.Log (logInfo)
@@ -19,7 +18,7 @@ import Servant ((:<|>) (..), Context (..), Handler, ServantErr (..), Server, Std
                 hoistServerWithContext, serveWithContext)
 import Servant.Auth.Server.Internal.ThrowAll (throwAll)
 import Servant.Generic (toServant)
-import Servant.Util (LoggingApi, ServantLogConfig (..), methodsCoveringAPI)
+import Servant.Util (methodsCoveringAPI, serverWithLogging)
 import UnliftIO (askUnliftIO)
 
 import Dscp.Config
@@ -134,15 +133,10 @@ serveEducatorAPIsReal withWitnessApi = do
     serveWeb serverAddress $
       responseTimeMetric metricsEndpoint $
       educatorCors $
-      reify lc $ \logConfigP ->
-      serveWithContext (servedApi logConfigP) srvCtx $
+      serverWithLogging lc (Proxy @EducatorWebAPI) $ \api ->
+      serveWithContext api srvCtx $
           educatorApiServer
           :<|>
           studentApiServer
           :<|>
           witnessApiServer
-      where
-          servedApi
-            :: Reifies config ServantLogConfig
-            => Proxy config -> Proxy (LoggingApi config EducatorWebAPI)
-          servedApi _ = Proxy

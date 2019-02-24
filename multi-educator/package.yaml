@@ -59,6 +59,19 @@ library:
     - wai
     - wai-cors
 
+tests:
+  disciplina-multi-educator-test:
+    <<: *test-common
+    
+    build-tools:
+      - tasty-discover
+
+    dependencies:
+      - disciplina-core
+      - disciplina-multi-educator
+      - tasty
+      - tasty-hspec
+
 executables:
   dscp-multi-educator:
     <<: *exec-common

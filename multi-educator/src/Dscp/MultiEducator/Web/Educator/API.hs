@@ -6,6 +6,8 @@
 module Dscp.MultiEducator.Web.Educator.API
     ( CertificatesApiEndpoints (..)
     , CertificatesApiHandlers
+    , CertificatesAPI
+    , certificatesAPI
     , MultiEducatorAPI
     , multiEducatorAPI
     , MultiStudentAPI
@@ -22,23 +24,19 @@ import Dscp.MultiEducator.Web.Educator.Auth
 import Dscp.MultiEducator.Web.Educator.Types
 import Dscp.Witness.Web.ContentTypes
 
+---------------------------------------------------------------------------
+-- Certificates API
+---------------------------------------------------------------------------
+
 -- | Endpoints of public certificate API.
 data CertificatesApiEndpoints route = CertificatesApiEndpoints
     { cGetCertificate :: route :- GetCertificatePublic
     } deriving (Generic)
 
-type CertificatesAPI = ToServant (CertificatesApiEndpoints AsApi)
 type CertificatesApiHandlers m = CertificatesApiEndpoints (AsServerT m)
 
-type MultiEducatorAPI =
-    "api" :> "educator" :> "v1" :> ProtectedMultiEducatorAPI
-    :<|>
-    "api" :> "certificates" :> "v1" :> CertificatesAPI
-
-type ProtectedMultiEducatorAPI =
-    Auth' '[MultiEducatorAuth, NoAuth "multi-educator"] EducatorAuthData :> RawEducatorAPI
-
-type MultiStudentAPI = Capture "educator" Text :> ProtectedStudentAPI
+type CertificatesAPI =
+    "api" :> "certificates" :> "v1" :> ToServant (CertificatesApiEndpoints AsApi)
 
 -- | Endpoint for getting a certificate by full ID.
 type GetCertificatePublic
@@ -50,8 +48,27 @@ type GetCertificatePublic
         \and `<certificate-hash>` is a hash of certificate meta."
     :> Get '[PDF] PDFBody
 
+certificatesAPI :: Proxy CertificatesAPI
+certificatesAPI = Proxy
+
+---------------------------------------------------------------------------
+-- Educator API
+---------------------------------------------------------------------------
+
+type MultiEducatorAPI =
+    "api" :> "educator" :> "v1" :> ProtectedMultiEducatorAPI
+
+type ProtectedMultiEducatorAPI =
+    Auth' '[MultiEducatorAuth, NoAuth "multi-educator"] EducatorAuthData :> RawEducatorAPI
+
 multiEducatorAPI :: Proxy MultiEducatorAPI
 multiEducatorAPI = Proxy
+
+---------------------------------------------------------------------------
+-- Student API
+---------------------------------------------------------------------------
+
+type MultiStudentAPI = Capture "educator" Text :> ProtectedStudentAPI
 
 multiStudentAPI :: Proxy MultiStudentAPI
 multiStudentAPI = Proxy
