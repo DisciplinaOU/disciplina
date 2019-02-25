@@ -57,7 +57,7 @@ instance ToJWT EducatorAuthToken
 data EducatorAuthLogin = EducatorAuthLogin
     { ealData  :: EducatorAuthData
     , ealToken :: ByteString
-    }
+    } deriving (Show, Eq)
 
 instance ToJSON EducatorAuthLogin where
     toJSON (EducatorAuthLogin {..}) = toJSON ealData
