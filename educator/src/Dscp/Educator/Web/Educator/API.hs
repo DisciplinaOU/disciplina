@@ -7,6 +7,8 @@ module Dscp.Educator.Web.Educator.API
     , rawEducatorAPI
     , protectedEducatorAPI
     , EducatorApiHandlers
+    -- * Re-export for using in packages dependent on `disciplina-educator`
+    , PDFBody (..)
     ) where
 
 import Pdf.Scanner (PDFBody (..))

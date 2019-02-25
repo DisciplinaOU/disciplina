@@ -14,7 +14,7 @@ import Network.HTTP.Types.Header (hAuthorization, hContentType)
 import Network.Wai (Middleware)
 import Network.Wai.Middleware.Cors (CorsResourcePolicy (..), cors, simpleCorsResourcePolicy)
 import Servant ((:<|>) (..), Context (..), Handler, ServantErr (..), Server, ServerT,
-                StdMethod (..), err405, hoistServerWithContext, serveWithContext)
+                StdMethod (..), err405, hoistServer, hoistServerWithContext, serveWithContext)
 import Servant.Auth.Server.Internal.ThrowAll (throwAll)
 import Servant.Generic (toServant)
 import Servant.Util (methodsCoveringAPI, serverWithLogging)
@@ -30,16 +30,17 @@ import Dscp.MultiEducator.Config
 import Dscp.MultiEducator.Launcher.Mode (MultiCombinedWorkMode, MultiEducatorWorkMode,
                                          lookupEducator, normalToMulti)
 import Dscp.MultiEducator.Launcher.Params (MultiEducatorAAAConfigRec)
-import Dscp.MultiEducator.Web.Educator (MultiEducatorAPI, MultiStudentAPI, multiEducatorAPI)
-import Dscp.MultiEducator.Web.Educator.Auth
+import Dscp.MultiEducator.Web.Educator
 import Dscp.Web (buildServantLogConfig, serveWeb)
 import Dscp.Web.Metrics (responseTimeMetric)
 import Dscp.Witness.Web
 
-type EducatorWebAPI =
+type MultiEducatorWebAPI =
     MultiEducatorAPI
     :<|>
     MultiStudentAPI
+    :<|>
+    CertificatesAPI
     :<|>
     WitnessAPI
 
@@ -64,7 +65,7 @@ mkMultiEducatorApiServer _aaaConfig nat =
         multiEducatorAPI
         (Proxy :: Proxy '[MultiEducatorPublicKey, NoAuthContext "multi-educator"])
         nat
-        (\eData -> mkEducatorApiServer' $ eadId eData)
+        (mkEducatorApiServer' . eadId)
 
 mkStudentApiServer
     :: forall ctx m. MultiEducatorWorkMode ctx m
@@ -77,6 +78,13 @@ mkStudentApiServer nat =
             (Proxy :: Proxy '[StudentCheckAction])
             (\x -> nat $ lookupEducator login >>= \c -> normalToMulti c x)
             (toServant $ studentApiHandlers student)
+
+mkCertificatesApiServer
+    :: forall ctx m. MultiEducatorWorkMode ctx m
+    => (forall x. m x -> Handler x)
+    -> Server CertificatesAPI
+mkCertificatesApiServer nat =
+    hoistServer certificatesAPI nat $ toServant certificatesApiHandlers
 
 -- | Create an action which checks whether or not the
 -- student is a valid API user.
@@ -102,7 +110,7 @@ educatorCors = cors $ const $ Just $
       -- authentication prevents CSRF attacks, and API is public anyway.
       corsOrigins = Nothing
     , corsRequestHeaders = [hContentType, hAuthorization]
-    , corsMethods = methodsCoveringAPI @['GET, 'POST, 'PUT, 'DELETE] @EducatorWebAPI
+    , corsMethods = methodsCoveringAPI @['GET, 'POST, 'PUT, 'DELETE] @MultiEducatorWebAPI
     }
 
 serveEducatorAPIsReal :: MultiCombinedWorkMode ctx m => Bool -> m ()
@@ -117,14 +125,15 @@ serveEducatorAPIsReal withWitnessApi = do
     let educatorPublicKey = aaaSettings ^. option #publicKey
         srvCtx =
             educatorPublicKey :.
+            educatorAPINoAuth :.
             studentCheckAction :.
             studentAPINoAuth :.
-            educatorAPINoAuth :.
             EmptyContext
 
     logInfo $ "Serving Student API on "+|serverAddress|+""
     unliftIO <- askUnliftIO
     let educatorApiServer = mkMultiEducatorApiServer aaaSettings (convertEducatorApiHandler unliftIO)
+        certificatesApiServer = mkCertificatesApiServer (convertEducatorApiHandler unliftIO)
     studentApiServer <- mkStudentApiServer (convertStudentApiHandler unliftIO)
     let witnessApiServer = if withWitnessApi
           then mkWitnessAPIServer (convertWitnessHandler unliftIO)
@@ -132,12 +141,14 @@ serveEducatorAPIsReal withWitnessApi = do
     let metricsEndpoint = witnessConfig ^. sub #witness . option #metricsEndpoint
     lc <- buildServantLogConfig (<> "web")
     serveWeb serverAddress $
-      responseTimeMetric metricsEndpoint $
-      educatorCors $
-      serverWithLogging lc (Proxy @EducatorWebAPI) $ \api ->
-      serveWithContext api srvCtx $
-         educatorApiServer
-         :<|>
-         studentApiServer
-         :<|>
-         witnessApiServer
+        responseTimeMetric metricsEndpoint $
+        educatorCors $
+        serverWithLogging lc (Proxy @MultiEducatorWebAPI) $ \api ->
+        serveWithContext api srvCtx $
+            educatorApiServer
+            :<|>
+            studentApiServer
+            :<|>
+            certificatesApiServer
+            :<|>
+            witnessApiServer

@@ -18,6 +18,7 @@ module Dscp.MultiEducator.Launcher.Mode
     , mecWitnessVars
     , lookupEducator
     , loadEducator
+    , educatorSchemaName
     , normalToMulti
     ) where
 
@@ -26,7 +27,7 @@ import Control.Lens (at, makeLenses, zoom, (?~), _Wrapped')
 import Fmt ((+|), (|+))
 import Loot.Base.HasLens (HasLens', lensOf)
 import Loot.Config (option, sub)
-import Loot.Log (logDebug)
+import Loot.Log (logDebug, logInfo)
 import Loot.Network.Class (NetworkingCli, NetworkingServ)
 import Loot.Network.ZMQ (ZmqTcp)
 import qualified Pdf.FromLatex as Pdf
@@ -65,6 +66,10 @@ type MultiEducatorWorkMode ctx m =
 
     , HasMultiEducatorConfig
     , HasLens' ctx (TVar EducatorContexts)
+    , HasLens' ctx SQL
+
+    -- It's easier to just have these two lenses instead of reconstructing
+    -- the full educator context in multiToNormal from other lenses
     , HasLens' ctx MultiEducatorResources
     , HasLens' ctx W.WitnessVariables
 
@@ -153,9 +158,14 @@ loadEducator login mpassphrase = do
     ctx <- ask
     let resources = ctx ^. lensOf @MultiEducatorResources
         (MultiEducatorKeyParams keyDir) = multiEducatorConfig ^. sub #educator . option #keys
-        db = resources ^. lensOf @SQL
+        dbParams = multiEducatorConfig ^. sub #educator . sub #db
+
+    -- open the new DB connection
+    db <- openPostgresDB (PostgresParams $ PostgresReal dbParams)
     -- set the DB schema name and create it if it's not ready
-    setSchemaName db ("educator_" <> login)
+    let schema = educatorSchemaName login
+    logInfo $ "Creating a schema with name `"+|schema|+"`"
+    setSchemaName db schema
     prepareEducatorSchema db
     liftIO $ createDirectoryIfMissing True keyDir
     -- read key from file and creates one if it does not exist yet
@@ -179,7 +189,7 @@ loadEducator login mpassphrase = do
         newCfg = (finaliseDeferredUnsafe mempty) -- not great but it actually works
             & sub #core .~ multiEducatorConfig ^. sub #core
             & sub #witness .~ multiEducatorConfig ^. sub #witness
-            & sub #educator . sub #db .~ multiEducatorConfig ^. sub #educator . sub #db
+            & sub #educator . sub #db .~ dbParams
             & sub #educator . sub #keys . sub #keyParams .~ keyParams
             & sub #educator . sub #api . option #educatorAPINoAuth .~
                 error "Do not touch, multi-educator has already run the server"
@@ -193,6 +203,10 @@ loadEducator login mpassphrase = do
             , lecWorkerHandlers = workerAsyncs
             }
     return loadedEducatorCtx
+
+-- | Returns database schema name for an educator with given ID.
+educatorSchemaName :: Text -> Text
+educatorSchemaName eId = "educator_" <> eId
 
 normalToMulti :: MultiEducatorWorkMode ctx m => LoadedEducatorContext -> E.EducatorRealMode a -> m a
 normalToMulti LoadedEducatorContext{..} = runRIO lecCtx

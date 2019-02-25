@@ -32,7 +32,7 @@ import qualified Data.ByteArray as BA
 
 newtype EducatorAuthData = EducatorAuthData
     { eadId :: Text
-    }
+    } deriving (Show, Eq)
 
 deriveJSON defaultOptions ''EducatorAuthData
 
@@ -60,7 +60,8 @@ instance ToJWT EducatorAuthToken
 data MultiEducatorAuth
 
 -- | Type that holds MultiEducator's public key
-newtype MultiEducatorPublicKey = MultiEducatorPublicKey PublicKey deriving Show
+newtype MultiEducatorPublicKey = MultiEducatorPublicKey PublicKey
+    deriving (Show, Eq)
 
 instance IsAuth MultiEducatorAuth EducatorAuthData where
     type AuthArgs MultiEducatorAuth = '[MultiEducatorPublicKey]

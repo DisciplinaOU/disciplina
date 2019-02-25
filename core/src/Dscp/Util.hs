@@ -47,6 +47,8 @@ module Dscp.Util
        , fromBase
        , toBase64
        , fromBase64
+       , toBase64Url
+       , fromBase64Url
        , toHex
        , fromHex
 
@@ -287,13 +289,15 @@ fromBase base =
     fromByteArray @ba @ByteString
 
 -- These are compatible with fmt.
-toBase64, toHex :: ByteArrayAccess ba => ba -> Text
-toBase64 = toBase Base64
-toHex    = toBase Base16
+toBase64, toBase64Url, toHex :: ByteArrayAccess ba => ba -> Text
+toBase64    = toBase Base64
+toBase64Url = toBase Base64URLUnpadded
+toHex       = toBase Base16
 
-fromBase64, fromHex :: FromByteArray ba => Text -> Either String ba
-fromBase64 = fromBase Base64
-fromHex    = fromBase Base16
+fromBase64, fromBase64Url, fromHex :: FromByteArray ba => Text -> Either String ba
+fromBase64    = fromBase Base64
+fromBase64Url = fromBase Base64URLUnpadded
+fromHex       = fromBase Base16
 
 -----------------------------------------------------------
 -- Lens fun
