@@ -29,13 +29,13 @@ spec_Educator_certificates = specWithTempPostgresServer $ do
         describe "Certificate endpoints" $ do
             it "Can add a certificate" $ educatorPropertyM $ do
                 cert <- pickSmall arbitrary
-                lift $ educatorAddCertificate cert
+                void $ lift $ educatorAddCertificate cert
 
             it "Added certificate is fetchable" $ educatorPropertyM $ do
                 cert <- pickSmall arbitrary
 
                 lift $ do
-                    educatorAddCertificate cert
+                    void $ educatorAddCertificate cert
 
                     [cId -> certId] <- invoke $ educatorGetCertificates def def
                     pdf <- invoke $ educatorGetCertificate certId

@@ -113,7 +113,7 @@ educatorApiHandlers =
             invoke ... educatorGetCertificate
 
     , eAddCertificate = \cert@(CertificateFullInfo meta _) -> do
-            educatorAddCertificate cert
+            void $ educatorAddCertificate cert
             pure $ mkCertificate meta
     }
 

@@ -33,7 +33,7 @@ import Database.Beam.Postgres as BeamReexport (PgJSONB (..))
 import qualified Database.Beam.Postgres as Beam
 import Database.Beam.Query as BeamReexport (QExpr, QGenExpr (..), aggregate_, all_, as_, asc_,
                                             countAll_, default_, delete, desc_, exists_, filter_,
-                                            guard_, insert, insertValues, leftJoin_, limit_, max_,
+                                            guard_, in_, insert, insertValues, leftJoin_, limit_, max_,
                                             orderBy_, references_, related_, select, update, val_,
                                             (&&.), (/=.), (<-.), (==.), (>.), (>=.), (||.))
 import qualified Database.Beam.Query as Beam

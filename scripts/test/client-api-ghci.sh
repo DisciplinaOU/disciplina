@@ -60,7 +60,7 @@ putTextLn ""
 
 EOL
 
-cd educator || :
+# cd educator || :
 stack ghci disciplina-educator --ghci-options "-ghci-script $prepare_ghci"
 
 rm $prepare_ghci

@@ -12,12 +12,16 @@ import Dscp.Core
 import Dscp.Crypto (hash, unsafeHash)
 import Dscp.DB.SQL
 import Dscp.Educator.DB
+import Dscp.Educator.Logic.Publishing (updateMempoolWithPublications)
+import Dscp.Educator.Web.Educator.Queries (educatorAddCertificate)
 import Dscp.Educator.Web.Queries
 import Dscp.Educator.Web.Student
 import Dscp.Educator.Web.Types
 import Dscp.Util
 import Dscp.Util.Rethrow
 import Dscp.Util.Test
+import Dscp.Witness.Web.Logic
+import Dscp.Witness.Web.Types (fcacrCheckResult)
 
 import Test.Dscp.DB.SQL.Mode
 import Test.Dscp.Educator.Mode
@@ -92,7 +96,7 @@ spec_Student_API_queries :: Spec
 spec_Student_API_queries = specWithTempPostgresServer $ do
   describe "Courses" $ do
     describe "getCourse" $ do
-        it "Student is not enrolled initially" $
+        xit "Student is not enrolled initially" $
             sqlProperty $ \() -> do
                 _ <- createStudent student1
                 _ <- createCourseSimple 1
@@ -609,3 +613,10 @@ spec_Student_API_queries = specWithTempPostgresServer $ do
             let positiveGrades' = filter isPositiveGrade $ map _ptGrade txs
 
             return $ sort positiveGrades === sort positiveGrades'
+
+    describe "checkFairCVPDF" $ do
+        it "FairCV PDF validation works correctly" $ educatorProperty $ \info -> do
+            cert <- educatorAddCertificate info
+            _ <- updateMempoolWithPublications
+            check <- checkFairCVPDF cert
+            return (fairCVFullyValid $ fcacrCheckResult check)

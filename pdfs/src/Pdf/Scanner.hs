@@ -2,6 +2,8 @@
 module Pdf.Scanner
     ( inject
     , project
+    , exclude
+    , unInject
     , insertionMark
     , PDFBody(..)
     , writePdf
@@ -14,7 +16,7 @@ import Data.Hashable
 import Fmt (Buildable (..))
 
 newtype PDFBody = PDFBody { getPDFBody :: LBS.ByteString }
-    deriving (NFData)
+    deriving (Eq, Show, NFData, Generic)
 
 instance Buildable PDFBody where
     build _ = "<pdf>"
@@ -36,16 +38,25 @@ inject
         place <- findFromEnd quota insertionMark text
         return $ PDFBody $ insertAt place commented text
 
+exclude :: MaxSearchLength -> PDFBody -> Maybe PDFBody
+exclude msl body = snd <$> unInject msl body
+
 project :: MaxSearchLength -> PDFBody -> Maybe ByteString
-project
+project msl body = fst <$> unInject msl body
+
+unInject :: MaxSearchLength -> PDFBody -> Maybe (ByteString, PDFBody)
+unInject
     (fromMaybe maxBound . getMaxSearchLength -> quota)
     (PDFBody text)
   = do
     place <- findFromEnd quota fairCVStartMark text
-    let after = LBS.drop (place + LBS.length fairCVStartMark + 1) text
-        piece = LBS.takeWhile (not . (== '}')) after
+    let after  = LBS.drop (place + LBS.length fairCVStartMark + 1) text
+        piece  = LBS.takeWhile (not . (== '}')) after
+        source = LBS.take (place - 2) text <> LBS.drop (place + LBS.length piece + LBS.length fairCVStartMark + 1 + 2) text
 
-    either (const Nothing) pure
+    either
+        (const Nothing)
+        (\json -> pure (json, PDFBody source))
         $ Base64.decode (LBS.toStrict piece)
 
 findFromEnd :: Int -> LBS.ByteString -> LBS.ByteString -> Maybe Int64
