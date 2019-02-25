@@ -67,7 +67,7 @@ instance AllocResource Pdf.LatexPath where
 
 instance AllocResource Pdf.ResourcePath where
     type Deps Pdf.ResourcePath = (FilePath, AppDir)
-    allocResource (userPath, appDir) =
+    allocResource (userPath, AppDir appDir) =
         buildComponentR "LaTeX resources path" preparePath (\_ -> pass)
       where
         resPath
@@ -77,7 +77,6 @@ instance AllocResource Pdf.ResourcePath where
             logDebug $ "Certificate PDF resources path will be " +| resPath |+ ""
             unlessM (liftIO $ doesDirectoryExist resPath) $
                 throwM $ DirectoryDoesNotExist "pdf templates" resPath
-            -- TODO: maybe let's also check that "xelatex" can be found?
             return $ Pdf.ResourcePath resPath
 
 instance AllocResource EducatorResources where

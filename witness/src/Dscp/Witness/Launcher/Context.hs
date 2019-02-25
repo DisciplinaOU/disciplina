@@ -29,6 +29,7 @@ import Loot.Network.ZMQ as Z
 import Dscp.DB.CanProvideDB (Plugin)
 import qualified Dscp.Launcher.Mode as Basic
 import Dscp.Network ()
+import Dscp.Resource.AppDir
 import Dscp.Resource.Keys (KeyResources)
 import Dscp.Resource.Network
 import Dscp.Rio (RIO)
@@ -63,6 +64,7 @@ type WitnessWorkMode ctx m =
         , SDLock
         , Plugin
         , TimeActions
+        , AppDir
         ]
     )
 

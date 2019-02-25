@@ -11,6 +11,7 @@ import Loot.Log (Logging (..))
 import Dscp.Config
 import Dscp.DB.CanProvideDB as DB
 import Dscp.DB.CanProvideDB.Pure as PureDB
+import Dscp.Resource.AppDir
 import Dscp.Resource.Keys
 import Dscp.Rio
 import Dscp.Util
@@ -27,6 +28,7 @@ data TestWitnessCtx = TestWitnessCtx
     , _twcLogging :: Logging IO
     , _twcKeys    :: KeyResources WitnessNode
     , _twcDb      :: DB.Plugin
+    , _twcAppDir  :: AppDir
     }
 
 makeLenses ''TestWitnessCtx
@@ -54,6 +56,7 @@ runWitnessTestMode action =
         _twcDb   <- PureDB.plugin <$> liftIO PureDB.newCtxVar
         _twcVars <- mkTestWitnessVariables (_twcKeys ^. krPublicKey) _twcDb
         let _twcLogging = testLogging
+        let _twcAppDir = error "AppDir is not defined"
         let ctx = TestWitnessCtx{..}
 
         runRIO ctx $ do

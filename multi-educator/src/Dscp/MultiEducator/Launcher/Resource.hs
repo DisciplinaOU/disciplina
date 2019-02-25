@@ -4,13 +4,16 @@
 
 module Dscp.MultiEducator.Launcher.Resource
        ( EducatorContexts (..)
-       , EducatorCtxWithCfg (..)
+       , LoadedEducatorContext (..)
+       , MaybeLoadedEducatorContext (..)
        , MultiEducatorResources (..)
        , merWitnessResources
+       , merEducatorData
        ) where
 
-import Control.Lens (makeLenses)
+import Control.Lens (makeLenses, Wrapped (..))
 import qualified Pdf.FromLatex as Pdf
+import UnliftIO.Async (Async)
 
 import Dscp.Config
 import Dscp.DB.SQL (SQL)
@@ -22,9 +25,26 @@ import Dscp.Resource.Network (NetServResources)
 import Dscp.Util.HasLens
 import qualified Dscp.Witness.Launcher.Resource as Witness
 
-data EducatorCtxWithCfg where
-    EducatorCtxWithCfg :: E.HasEducatorConfig => E.EducatorContext -> EducatorCtxWithCfg
-newtype EducatorContexts = EducatorContexts (Map Text EducatorCtxWithCfg)
+-- | Context and related stuff of a single educator.
+data LoadedEducatorContext where
+    LoadedEducatorContext
+        :: E.HasEducatorConfig
+        => { lecCtx :: E.EducatorContext
+           , lecWorkerHandlers :: [Async ()]
+           }
+        -> LoadedEducatorContext
+
+data MaybeLoadedEducatorContext
+      -- | Educator is not yet loaded, please retry later.
+    = YetLoadingEducatorContext
+      -- | Educator context has been loaded.
+    | FullyLoadedEducatorContext LoadedEducatorContext
+
+-- | Contexts of every loaded educator.
+newtype EducatorContexts = EducatorContexts (Map Text MaybeLoadedEducatorContext)
+    deriving (Generic)
+
+instance Wrapped EducatorContexts
 
 -- | Datatype which contains resources required by all Disciplina nodes
 -- to start working.
