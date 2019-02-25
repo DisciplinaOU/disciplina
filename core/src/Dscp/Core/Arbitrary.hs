@@ -121,6 +121,9 @@ genCommonDocumentType = frequency [(5, pure Offline), (1, pure Online)]
 instance Arbitrary EducationForm where
     arbitrary = arbitraryBoundedEnum
 
+instance Arbitrary GradingScale where
+    arbitrary = arbitraryBoundedEnum
+
 instance Arbitrary CertificateMeta where
     arbitrary = do
         cmStudentName <- arbitrary

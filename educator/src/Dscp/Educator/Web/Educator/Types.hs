@@ -403,6 +403,9 @@ instance ToSchema Certificate where
 instance ToSchema EducationForm where
     declareNamedSchema = gDeclareNamedSchema
 
+instance ToSchema GradingScale where
+    declareNamedSchema = gDeclareNamedSchema
+
 instance ToSchema CertificateGrade where
     declareNamedSchema = gDeclareNamedSchema
 

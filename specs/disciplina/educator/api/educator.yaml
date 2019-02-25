@@ -1165,6 +1165,7 @@ components:
       type: object
       required:
         - subject
+        - scale
         - grade
       properties:
         subject:
@@ -1178,6 +1179,14 @@ components:
         credits:
           type: integer
           format: int32
+        scale:
+          type: string
+          enum: [rusDiff, rusNonDiff]
+          description: >-
+            Grading scale sets up how the integer grades are interpreted.
+            Scales are the following:
+              * Russian differentiated (`rusDiff`): 5 = 100, 4 = 80, 3 = 60, 2 = 40
+              * Russian non-differentiated (`rusNonDiff`): "zachot" = 100, "nezachot" = 0
         grade:
           type: integer
           format: int32

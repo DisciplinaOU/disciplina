@@ -191,6 +191,7 @@ deriveJSON defaultOptions ''PublicationTxWitnessed
 deriveJSON defaultOptions ''PublicationTx
 deriveJSON defaultOptions ''FeeCoefficients
 deriveJSON dscpAesonOptions ''EducationForm
+deriveJSON dscpAesonOptions ''GradingScale
 
 deriveFromJSON defaultOptions ''Committee
 deriveJSON defaultOptions ''GenesisDistributionElem
