@@ -13,6 +13,8 @@ module Dscp.Educator.Launcher.Mode
 
       -- * Implementations
     , EducatorContext (..)
+    , ecResources
+    , ecWitnessVars
     , EducatorRealMode
     ) where
 
@@ -24,7 +26,7 @@ import Dscp.DB.CanProvideDB as DB
 import Dscp.DB.SQL (SQL)
 import Dscp.Educator.Config (HasEducatorConfig, withEducatorConfig)
 import Dscp.Educator.Launcher.Marker (EducatorNode)
-import Dscp.Educator.Launcher.Resource (EducatorResources)
+import Dscp.Educator.Launcher.Resource (CertificateIssuerResource, EducatorResources)
 import qualified Dscp.Launcher.Mode as Basic
 import Dscp.Resource.Keys (KeyResources)
 import Dscp.Resource.Network
@@ -48,6 +50,7 @@ type EducatorOnlyWorkMode ctx m =
         , KeyResources EducatorNode
         , Pdf.LatexPath
         , Pdf.ResourcePath
+        , CertificateIssuerResource
         ]
     )
 
@@ -70,7 +73,7 @@ data EducatorContext = EducatorContext
     { _ecResources   :: !EducatorResources
       -- ^ Resources, allocated from params.
     , _ecWitnessVars :: !W.WitnessVariables
-      -- ^ Wintess variables (non-resources).
+      -- ^ Witness variables (non-resources).
     }
 
 makeLenses ''EducatorContext

@@ -70,8 +70,8 @@ fullInfo
 
     meta
         = split (const ())                  (command "MakeHeader"  $ const [])
-        $ split (ciiName . fst)              (command "section"     $ pure . shownDesc)
-        $ split (ciiUrl . fst)               (command "EducatorUrl" $ pure . shownDesc)
+        $ split (ciiName . fst)             (command "section"     $ pure . shownDesc)
+        $ split (ciiWebsite . fst)          (command "EducatorUrl" $ pure . shownDesc)
         $ split (cfiMeta . snd)             (inBlock "Diploma"       diploma)
         $ ignore
 

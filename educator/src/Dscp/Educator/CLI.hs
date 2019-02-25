@@ -15,11 +15,14 @@ module Dscp.Educator.CLI
     , pdfResourcesPathParser
     ) where
 
+import Control.Arrow (left)
 import Loot.Config (OptModParser, uplift, (.:+), (.:-), (.::), (.:<), (<*<))
-import Options.Applicative (Parser, auto, flag', help, long, metavar, option, strOption)
+import Options.Applicative (Parser, auto, eitherReader, flag', help, long, metavar,
+                            option, strOption)
 import Time (Second, Time)
 
 import Dscp.CommonCLI
+import Dscp.Core.Foundation.Educator (ItemDesc (..), toItemDesc)
 import Dscp.DB.SQL
 import Dscp.Educator.Config
 import Dscp.Educator.Launcher.Params (EducatorKeyParams)
@@ -121,6 +124,18 @@ pdfResourcesPathParser = strOption $
     help "Path to PDF templates. When relative path is specified, \
          \application directory is considered its root."
 
+pdfIssuerNameParser :: Parser ItemDesc
+pdfIssuerNameParser = option (eitherReader $ left toString . toItemDesc . fromString) $
+    long "cert-issuer-name" <>
+    metavar "TEXT" <>
+    help "Name of the certificate issuer"
+
+pdfIssuerUrlParser :: Parser ItemDesc
+pdfIssuerUrlParser = option (eitherReader $ left toString . toItemDesc . fromString) $
+    long "cert-issuer-url" <>
+    metavar "TEXT" <>
+    help "Url of the certificate issuer"
+
 educatorConfigParser :: OptModParser EducatorConfig
 educatorConfigParser =
     uplift witnessConfigParser <*<
@@ -131,5 +146,10 @@ educatorConfigParser =
          #publishing .:<
             (#period .:: publishingPeriodParser) <*<
          #certificates .:<
-            (#resources .:: pdfResourcesPathParser)
+            (#resources .:: pdfResourcesPathParser <*<
+             #issuer .:<
+               (#name .:: pdfIssuerNameParser <*<
+                #website .:: pdfIssuerUrlParser
+               )
+            )
         )

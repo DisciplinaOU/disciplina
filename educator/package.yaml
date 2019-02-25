@@ -28,6 +28,8 @@ library:
     - fmt
     - interpolatedstring-perl6
     - jose
+    - http-client
+    - http-client-tls
     - http-types
     - lens
     - loot-base

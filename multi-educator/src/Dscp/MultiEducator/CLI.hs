@@ -18,7 +18,7 @@ import Dscp.Educator.CLI
 import Dscp.Educator.Web.Auth
 import Dscp.MultiEducator.Config
 import Dscp.MultiEducator.Launcher.Params (MultiEducatorAAAConfig, MultiEducatorKeyParams (..))
-import Dscp.MultiEducator.Web.Educator.Auth (EducatorAuthData (..), MultiEducatorPublicKey)
+import Dscp.MultiEducator.Web.Educator.Auth (MultiEducatorPublicKey, educatorAuthLoginSimple)
 import Dscp.Witness.CLI (witnessConfigParser)
 
 import qualified Data.ByteString as BS
@@ -49,7 +49,7 @@ multiEducatorAAAConfigParser =
         addQuotationMarks bs = BS.intercalate bs ["\"", "\""]
 
 multiEducatorApiNoAuthParser :: Parser (NoAuthContext "multi-educator")
-multiEducatorApiNoAuthParser = noAuthContextParser . fmap EducatorAuthData . strOption $
+multiEducatorApiNoAuthParser = noAuthContextParser . fmap educatorAuthLoginSimple . strOption $
     long "educator-api-no-auth" <>
     help "Make authentication into Educator API of multi-educator optional. \
          \Accepts educator id used when request is unauthenticated."

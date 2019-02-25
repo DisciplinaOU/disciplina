@@ -18,6 +18,7 @@ module Dscp.Educator.Web.Auth
        , NoAuthData
        , NoAuthContext (..)
 
+       , authBearerToken
        , authTimeout
        , requestEndpoint
        , createAuthToken

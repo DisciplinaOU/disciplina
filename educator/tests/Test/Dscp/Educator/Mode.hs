@@ -54,6 +54,7 @@ data TestEducatorCtx = TestEducatorCtx
     , _tecWitnessVariables :: TestWitnessVariables
     , _tecLogging          :: Log.Logging IO
     , _tecAppDir           :: AppDir
+    , _tecIssuerInfo       :: CertificateIssuerResource
     }
 makeLenses ''TestEducatorCtx
 deriveHasLensDirect ''TestEducatorCtx
@@ -101,6 +102,7 @@ runTestSqlM testDb action =
         let _tecPdfLatexPath = testLatexPath
         let _tecPdfResourcePath = testResourcePath
         let _tecAppDir = error "AppDir is not defined"
+        let _tecIssuerInfo = KnownIssuerInfo certificateIssuerInfoEx
         let ctx = TestEducatorCtx{..}
         runRIO ctx $ markWithinWriteSDLockUnsafe applyGenesisBlock
 

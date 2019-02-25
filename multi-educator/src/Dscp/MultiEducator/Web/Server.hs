@@ -46,13 +46,13 @@ type MultiEducatorWebAPI =
 
 mkEducatorApiServer'
     :: forall ctx m. MultiEducatorWorkMode ctx m
-    => Text
+    => EducatorAuthLogin
     -> ServerT RawEducatorAPI m
-mkEducatorApiServer' login =
+mkEducatorApiServer' educatorAuthLogin =
     hoistServerWithContext
         rawEducatorAPI
         (Proxy :: Proxy '[])
-        (\x -> lookupEducator login >>= \c -> normalToMulti c x)
+        (\x -> lookupEducator educatorAuthLogin >>= \c -> normalToMulti c x)
         (toServant educatorApiHandlers)
 
 mkMultiEducatorApiServer
@@ -65,18 +65,18 @@ mkMultiEducatorApiServer _aaaConfig nat =
         multiEducatorAPI
         (Proxy :: Proxy '[MultiEducatorPublicKey, NoAuthContext "multi-educator"])
         nat
-        (mkEducatorApiServer' . eadId)
+        mkEducatorApiServer'
 
 mkStudentApiServer
     :: forall ctx m. MultiEducatorWorkMode ctx m
     => (forall x. m x -> Handler x)
     -> m (Server MultiStudentAPI)
 mkStudentApiServer nat =
-    return $ \login student ->
+    return $ \login student -> let ealogin = educatorAuthLoginSimple login in
         hoistServerWithContext
             rawStudentAPI
             (Proxy :: Proxy '[StudentCheckAction])
-            (\x -> nat $ lookupEducator login >>= \c -> normalToMulti c x)
+            (\x -> nat $ lookupEducator ealogin >>= \c -> normalToMulti c x)
             (toServant $ studentApiHandlers student)
 
 mkCertificatesApiServer
