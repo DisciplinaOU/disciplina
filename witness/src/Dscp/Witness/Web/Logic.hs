@@ -246,7 +246,7 @@ checkFairCVPDF
     => Pdf.PDFBody -> m FairCVAndCheckResult
 checkFairCVPDF pdf = do
     let maybeFairCV = do
-            fairCVencoded <- Pdf.project (Pdf.MaxSearchLength (Just 2048)) pdf
+            fairCVencoded <- Pdf.project (Pdf.MaxSearchLength Nothing) pdf
             Aeson.decodeStrict fairCVencoded
 
     fairCV   <- maybe (throwM InvalidFormat) pure maybeFairCV
