@@ -23,7 +23,7 @@ module Dscp.MultiEducator.Launcher.Mode
     ) where
 
 import Control.Concurrent.STM (retry)
-import Control.Lens (at, makeLenses, traversed, zoom, (?~), _Wrapped')
+import Control.Lens (at, makeLenses, traversed, zoom, (?~))
 import Fmt ((+|), (|+))
 import Loot.Base.HasLens (HasLens', lensOf)
 import Loot.Config (option, sub)
@@ -68,7 +68,7 @@ type MultiEducatorWorkMode ctx m =
     ( W.WitnessWorkMode ctx m
 
     , HasMultiEducatorConfig
-    , HasLens' ctx (TVar EducatorContexts)
+    , HasLens' ctx EducatorContextsVar
     , HasLens' ctx SQL
 
     -- It's easier to just have these two lenses instead of reconstructing
@@ -121,14 +121,15 @@ lookupEducator
     => EducatorAuthLogin
     -> m LoadedEducatorContext
 lookupEducator educatorAuthLogin = do
-    educatorContexts <- view $ lensOf @MultiEducatorResources . merEducatorData
+    EducatorContextsVar educatorContexts <-
+        view $ lensOf @MultiEducatorResources . merEducatorData
 
     let educatorId = eadId $ ealData educatorAuthLogin
         withEducatorContextAtomically
             :: MonadIO m
             => StateT (Maybe MaybeLoadedEducatorContext) STM a -> m a
         withEducatorContextAtomically =
-            atomically . modifyTVarS educatorContexts . zoom (_Wrapped' . at educatorId)
+            atomically . modifyTVarS educatorContexts . zoom (at educatorId)
 
     mask_ $ do
         mctx <- withEducatorContextAtomically $ do
