@@ -3,6 +3,7 @@ module Dscp.MultiEducator.Launcher.Resource
        (
        ) where
 
+import Control.Concurrent.STM.TVar (swapTVar)
 import Loot.Log (logWarning)
 import UnliftIO.Async (forConcurrently_)
 
@@ -11,6 +12,7 @@ import Dscp.DB.SQL
 import Dscp.MultiEducator.Config
 import Dscp.MultiEducator.Launcher.Context
 import Dscp.MultiEducator.Launcher.Educator.Context
+import Dscp.MultiEducator.Launcher.Educator.Load
 import Dscp.Resource.Class (AllocResource (..), buildComponentR)
 import qualified Dscp.Witness.Launcher.Resource as Witness
 
@@ -18,20 +20,27 @@ instance AllocResource EducatorContextsVar where
     type Deps EducatorContextsVar = ()
     allocResource () =
         buildComponentR "Educator contexts var"
-            (newTVarIO mempty)
+            newEducatorContexts
             shutdownAllContexts
       where
-        shutdownAllContexts ctxsVar = do
-            ctxs <- atomically $ readTVar ctxsVar
-            -- TODO [DSCP-494]: prevent further insertions to the context var
+        newEducatorContexts = newTVarIO $ ActiveEducatorContexts mempty
+        shutdownAllContexts ctxsVar =
+            atomically (swapTVar ctxsVar TerminatedEducatorContexts) >>= \case
+                TerminatedEducatorContexts ->
+                    logWarning "Extra attempt to terminate all educator contexts"
 
-            forConcurrently_ ctxs $ \case
-                YetLoadingEducatorContext ->
-                    logWarning "Educator context is being loaded during shutdown."
-                    -- TODO [DSCP-494] Do something smarter
-                FullyLoadedEducatorContext _ctx ->
-                    -- TODO [DSCP-494] Terminate normally
-                    pass
+                ActiveEducatorContexts ctxs' ->
+                    forConcurrently_ ctxs' $ \case
+                        LockedEducatorContext ->
+                            -- can do nothing, once the one who has taken a lock
+                            -- completes his operation (load or unload) he will find
+                            -- out that new contexts are not accepted and will have
+                            -- to handle this situation himself
+                            pass
+
+                        FullyLoadedEducatorContext ctx ->
+                            -- TODO: throw 'MultiEducatorIsTerminating' exception to context users
+                            unloadEducator ctx
 
 instance AllocResource MultiEducatorResources where
     type Deps MultiEducatorResources = MultiEducatorConfigRec

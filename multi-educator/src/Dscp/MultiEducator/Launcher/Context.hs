@@ -1,13 +1,15 @@
 -- | Context of multi-educator node.
 module Dscp.MultiEducator.Launcher.Context
-       ( EducatorContexts
+       ( EducatorContextsMap
+       , EducatorContexts (..)
        , EducatorContextsVar
        , MultiEducatorResources (..)
+       , _ActiveEducatorContexts
        , merWitnessResources
        , merEducatorData
        ) where
 
-import Control.Lens (makeLenses)
+import Control.Lens (makeLenses, makePrisms)
 import qualified Pdf.FromLatex as Pdf
 
 import Dscp.DB.SQL
@@ -17,8 +19,18 @@ import Dscp.Resource.Network (NetServResources)
 import Dscp.Util.HasLens
 import qualified Dscp.Witness.Launcher.Resource as Witness
 
+-- | For each educator - its context state.
+type EducatorContextsMap = Map EducatorUUID MaybeLoadedEducatorContext
+
 -- | State of active educator contexts.
-type EducatorContexts = Map EducatorUUID MaybeLoadedEducatorContext
+data EducatorContexts
+    = -- | Some contexts are in use.
+      ActiveEducatorContexts EducatorContextsMap
+      -- | Multi-educator is terminating and does not accept further
+      -- contexts.
+    | TerminatedEducatorContexts
+
+makePrisms ''EducatorContexts
 
 -- | Contexts of every loaded educator.
 type EducatorContextsVar = TVar EducatorContexts
