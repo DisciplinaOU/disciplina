@@ -71,9 +71,13 @@ executables:
     source-dirs: src/swagger
     dependencies:
       - bytestring
+      - containers
+      - data-default
       - disciplina-core
       - disciplina-witness
       - disciplina-educator
+      - disciplina-multi-educator
       - optparse-applicative
       - swagger2
+      - tagged
       - text

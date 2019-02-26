@@ -1,11 +1,13 @@
 import SwaggerOptions
 
 import qualified Data.ByteString.Lazy as LBS
+import Data.Tagged (untag)
 import Options.Applicative (execParser, fullDesc, helper, info, progDesc)
 
 import Dscp.CommonCLI
 import Dscp.Educator.Web.Educator.Swagger
 import Dscp.Educator.Web.Student.Swagger
+import Dscp.MultiEducator.Web.Swagger
 import Dscp.Web.Swagger
 
 main :: IO ()
@@ -14,8 +16,11 @@ main = do
     let mhost = soHost options
 
     let swagger = case soSwaggerAPI options of
-            StudentAPI  -> studentAPISwagger mhost
-            EducatorAPI -> educatorAPISwagger mhost
+            EducatorAPI      -> untag $ educatorAPISwagger mhost
+            StudentAPI       -> untag $ studentAPISwagger mhost
+            MultiEducatorAPI -> untag $ multiEducatorAPISwagger mhost
+            MultiStudentAPI  -> untag $ multiStudentAPISwagger mhost
+            CertificatesAPI  -> untag $ certificatesAPISwagger mhost
 
     let encoded = encodeSwagger swagger
 

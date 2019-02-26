@@ -50,6 +50,8 @@ library:
     - singleton-bool
     - stm
     - sqlite-simple
+    - swagger2
+    - tagged
     - template-haskell
     - text
     - text-format

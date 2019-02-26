@@ -26,6 +26,7 @@ import System.FilePath.Posix ((</>))
 
 import Dscp.Crypto
 import Dscp.Educator.Web.Auth
+import Dscp.MultiEducator.Types
 import Dscp.Util.FileEmbed
 
 import qualified Data.ByteArray as BA
@@ -35,7 +36,7 @@ import qualified Data.ByteArray as BA
 ---------------------------------------------------------------------------
 
 newtype EducatorAuthData = EducatorAuthData
-    { eadId :: Text
+    { eadId :: EducatorId
     } deriving (Show, Eq)
 
 deriveJSON defaultOptions ''EducatorAuthData
@@ -44,7 +45,7 @@ instance FromJWT EducatorAuthData
 instance ToJWT EducatorAuthData
 
 instance Buildable EducatorAuthData where
-    build (EducatorAuthData eId) = "\"" <> build eId <> "\""
+    build (EducatorAuthData eId) = build eId
 
 data EducatorAuthToken = EducatorAuthToken
     { eatData :: EducatorAuthData
@@ -121,7 +122,7 @@ multiEducatorAuthCheck (MultiEducatorPublicKey mpk) = do
     let ealData = eatData educatorAuthToken
     return $ EducatorAuthLogin {..}
 
-educatorAuthLoginSimple :: Text -> EducatorAuthLogin
+educatorAuthLoginSimple :: EducatorId -> EducatorAuthLogin
 educatorAuthLoginSimple eadId = EducatorAuthLogin {..}
   where
     ealData = EducatorAuthData {..}

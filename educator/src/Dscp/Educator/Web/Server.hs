@@ -57,7 +57,7 @@ mkEducatorApiServer
     -> NetworkAddress
     -> Server FullEducatorAPI
 mkEducatorApiServer nat host =
-    withSwaggerUI (educatorAPISwagger (Just host)) protectedEducatorAPI $
+    withSwaggerUI protectedEducatorAPI (educatorAPISwagger (Just host)) $
         hoistServerWithContext
             protectedEducatorAPI
             (Proxy :: Proxy '[EducatorPublicKey, NoAuthContext "educator"])
@@ -95,7 +95,7 @@ mkStudentApiServer nat host botConfig = case botConfig ^. tree #params . selecti
     other -> error $ "unknown EducatorBotConfig type: " <> fromString other
   where
     getServer handlers =
-        withSwaggerUI (studentAPISwagger (Just host)) protectedStudentAPI $
+        withSwaggerUI Proxy (studentAPISwagger (Just host)) $
             hoistServerWithContext
                 protectedStudentAPI
                 (Proxy :: Proxy '[StudentCheckAction, NoAuthContext "student"])

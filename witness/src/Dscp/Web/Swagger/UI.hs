@@ -8,6 +8,7 @@ module Dscp.Web.Swagger.UI
 import Control.Lens ((.=), (?=))
 import qualified Data.Swagger as S
 import qualified Data.Swagger.Internal.Schema as S
+import Data.Tagged (Tagged (..))
 import Servant ((:<|>) (..), (:>), Server)
 import Servant.Swagger.UI (SwaggerSchemaUI, SwaggerUiHtml, swaggerSchemaUIServer)
 import Servant.Util (Tag)
@@ -23,8 +24,13 @@ type SwaggerUI =
 type WithSwaggerUI api = api :<|> SwaggerUI
 
 -- | Attach a UI serving given documentation to the given server.
-withSwaggerUI :: S.Swagger -> Proxy api -> Server api -> Server (WithSwaggerUI api)
-withSwaggerUI swagger _ server = server :<|> swaggerSchemaUIServer swagger
+withSwaggerUI
+    :: Proxy api
+    -> Tagged api S.Swagger
+    -> Server api
+    -> Server (WithSwaggerUI api)
+withSwaggerUI _ (Tagged swagger) server =
+    server :<|> swaggerSchemaUIServer swagger
 
 ----------------------------------------------------------------------------
 -- Instances

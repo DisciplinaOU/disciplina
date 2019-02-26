@@ -8,6 +8,7 @@ import Control.Lens (zoom, (.=), (?=))
 import qualified Data.ByteString.Lazy as LBS
 import Data.Swagger (Scheme (..), Swagger)
 import qualified Data.Swagger as S
+import Data.Tagged (Tagged (..), untag)
 
 import Dscp.Educator.Web.Educator.API
 import Dscp.Util
@@ -15,8 +16,8 @@ import Dscp.Web.Swagger
 import Dscp.Web.Types
 
 -- | Swagger documentation for Educator API.
-educatorAPISwagger :: Maybe NetworkAddress -> Swagger
-educatorAPISwagger mhost = toAwesomeSwagger fullEducatorAPI &: do
+educatorAPISwagger :: Maybe NetworkAddress -> Tagged ProtectedEducatorAPI Swagger
+educatorAPISwagger mhost = Tagged $ toAwesomeSwagger fullEducatorAPI &: do
     setSerokellDocMeta
 
     zoom S.info $ do
@@ -30,6 +31,6 @@ educatorAPISwagger mhost = toAwesomeSwagger fullEducatorAPI &: do
 -- Normally you can use "dscp-swagger" executable to build documentation.
 writeEducatorAPISwagger :: FilePath -> IO ()
 writeEducatorAPISwagger file =
-    liftIO $ LBS.writeFile file (encodeSwagger $ educatorAPISwagger demoAddr)
+    liftIO $ LBS.writeFile file (encodeSwagger . untag $ educatorAPISwagger demoAddr)
   where
     demoAddr = Just $ NetworkAddress "localhost" 8090
