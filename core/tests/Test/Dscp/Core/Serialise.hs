@@ -46,3 +46,4 @@ spec_coreHttpApi :: Spec
 spec_coreHttpApi = describe "Core datatypes HttpApiData serialisation" $ do
     httpApiRoundtripProp @Address
     httpApiRoundtripProp @GTxId
+    httpApiRoundtripProp @CertificateName

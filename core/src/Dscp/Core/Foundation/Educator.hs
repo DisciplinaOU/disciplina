@@ -34,6 +34,7 @@ module Dscp.Core.Foundation.Educator
     , CertificateGrade (..)
     , CertificateIssuerInfo (..)
     , Certificate (..)
+    , CertificateName (..)
     , StudentInfo (..)
     , GradeInfo (..)
     , EducationForm (..)
@@ -400,6 +401,12 @@ data CertificateIssuerInfo = CertificateIssuerInfo
     , ciiWebsite :: ItemDesc
     } deriving (Show, Eq, Generic)
 
+-- | Datatype which is used for encoding a full certificate ID.
+data CertificateName = CertificateName
+    { cnEducatorId    :: Text
+    , cnCertificateId :: Hash CertificateMeta
+    } deriving (Show, Eq, Generic)
+
 instance Buildable (StudentInfo) where
     build (StudentInfo{..}) =
       "{ address = " +| siAddr |+
@@ -444,6 +451,11 @@ instance Buildable CertificateMeta where
         ", title = "+|cmTitle|+
         ", major = "+|cmMajor|+
         ", specialization = "+|cmSpecialization|+" }"
+
+instance Buildable CertificateName where
+    build (CertificateName eId cId) =
+        "certificate { educator-id = "+|eId|+", hash = "+|build cId|+"}"
+
 
 ----------------------------------------------------------------------------
 -- Transactions

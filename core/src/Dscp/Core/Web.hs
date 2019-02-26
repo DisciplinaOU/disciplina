@@ -2,10 +2,13 @@
 
 module Dscp.Core.Web () where
 
+import Data.List (span)
 import Servant.API
+import System.FilePath (splitExtension)
 
 import Dscp.Core.Foundation
 import Dscp.Crypto.Web ()
+import Dscp.Util
 
 ---------------------------------------------------------------------------
 -- FromHttpApiData/ToHttpApiData instances
@@ -36,3 +39,18 @@ instance FromHttpApiData Timestamp where
     parseQueryParam t =
         -- Rounding here since Postgres rounds all timestamps it receives anyway
         toTimestamp <$> parseQueryParam t
+
+instance ToHttpApiData CertificateName where
+    toUrlPiece (CertificateName eId cId) =
+        toBase64Url @ByteString (encodeUtf8 $ eId <> ":" <> toHex cId) <> ".pdf"
+
+instance FromHttpApiData CertificateName where
+    parseUrlPiece txt = do
+        let (name', ext) = splitExtension $ toString txt
+        when (ext /= ".pdf") $
+            fail "Wrong extension, `.pdf` is expected"
+        name <- decodeUtf8 <$> leftToFail (fromBase64Url @ByteString $ toText name')
+        let (eId, cId'') = span (/= ':') name
+            cId' = drop 1 cId''
+        cId <- parseUrlPiece $ toText cId'
+        return (CertificateName (toText eId) cId)
