@@ -16,7 +16,6 @@ extra-deps:
 - cryptonite-openssl-0.7
 - pretty-tree-0.1.0.0
 - time-units-1.0.0
-- componentm-0.0.0.2
 - serokell-util-0.8.0
 - formatting-6.2.5
 - typed-process-0.2.2.0
@@ -76,6 +75,12 @@ extra-deps:
 # (otherwise too many dependant packages refuse to build).
 - git: https://github.com/serokell/temporary.git
   commit: 102ed4671dd78c5d271f09756681aac2a41b6717
+
+# Fixes missing resources cleanup in case of async exception.
+- git: https://github.com/serokell/Haskell-componentm.git
+  commit: 7dc2850e50b095e384bc4d5216e0ff0c5d204438
+  subdirs:
+  - componentm
 
 # Required by co-log and co-log-core
 - contravariant-1.5

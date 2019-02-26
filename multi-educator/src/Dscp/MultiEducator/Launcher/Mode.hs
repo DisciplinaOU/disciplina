@@ -228,7 +228,7 @@ loadEducator educatorAuthLogin mpassphrase = do
 
     workerAsyncs <- E.withEducatorConfig newCfg $ runRIO educatorContext $
         let meWorkers = educatorWorkers
-                      & traversed . wIdL %~ (encodeUtf8 educatorId <>)
+                      & traversed . wIdL %~ (<> "_of_" <> encodeUtf8 educatorId)
         in mapM (async . runWorker identity) meWorkers
 
     let loadedEducatorCtx = E.withEducatorConfig newCfg $ LoadedEducatorContext
