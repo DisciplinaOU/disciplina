@@ -239,6 +239,10 @@ data Submission = Submission
     -- ^ Assignment of this submission
     } deriving (Eq, Ord, Show, Generic)
 
+instance Buildable Submission where
+    build (Submission {..}) = "Submission { student id = "+|_sStudentId|+
+        ", content hash  = "+|_sContentsHash|+", assignment hash  = "+|_sAssignmentHash|+" }"
+
 -- | A hash which indicates that a submission or an assignment
 -- are offline.
 -- TODO: make a more comprehensible and easily documentable value?...
@@ -280,6 +284,10 @@ data SubmissionWitness = SubmissionWitness
     , _swSig :: !SubmissionSig
     } deriving (Show, Eq, Ord, Generic)
 
+instance Buildable SubmissionWitness where
+    build (SubmissionWitness {..}) = "SubmissionWitness { public key = "
+        +|_swKey|+", submision signature = "+|_swSig|+" }"
+
 -- | Datatype for verifiable transaction (transaction with a witness)
 data SignedSubmission = SignedSubmission
     { _ssSubmission :: !Submission
@@ -287,6 +295,10 @@ data SignedSubmission = SignedSubmission
     , _ssWitness    :: !SubmissionWitness
     -- ^ Submission witness
     } deriving (Eq, Ord, Show, Generic)
+
+instance Buildable SignedSubmission where
+    build (SignedSubmission {..}) = "SignedSubmission { submission = "
+        +|_ssSubmission|+", witness = "+|_ssWitness|+" }"
 
 instance HasHash Submission => HasId SignedSubmission where
     type Id SignedSubmission = Hash Submission
@@ -467,6 +479,10 @@ data PrivateTx = PrivateTx
     , _ptTime             :: !Timestamp
     -- ^ Timestamp for this transaction
     } deriving (Show, Eq, Ord, Generic)
+
+instance Buildable PrivateTx where
+    build (PrivateTx {..}) = "PrivateTx { signed submission = "
+        +|_ptSignedSubmission|+", grade = "+|_ptGrade|+", time = "+|_ptTime|+" }"
 
 type PrivateTxId = Hash PrivateTx
 
