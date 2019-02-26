@@ -106,18 +106,18 @@ fi
 # educator-only params
 educator_params="
 --educator-keyfile $tmp_files/educator.key
---sql-conn-str "postgresql:///$sql_db_name"
+--sql-conn-str postgresql:///$sql_db_name
 --educator-listen 127.0.0.1:8090
 --educator-api-no-auth
 --student-api-no-auth 3BAyX5pNpoFrLJcP5bZ2kXihBfmBVLprSyP1RhcPPddm6Dw42jzEPXZz22
 --publication-period 15s
 --pdf-resource-path ../pdfs/template
---cert-issuer-name "Grimpy Cat University"
---cert-issuer-url example@gmail.com
+--cert-issuer-name \"University\"
+--cert-issuer-url university@example.com
 "
 multi_educator_params="
 --educator-key-dir $files/multieducator
---sql-conn-str "postgresql:///$sql_db_name"
+--sql-conn-str postgresql:///$sql_db_name
 --educator-listen 127.0.0.1:8090
 --educator-api-no-auth Principal
 --student-api-no-auth 3BAyX5pNpoFrLJcP5bZ2kXihBfmBVLprSyP1RhcPPddm6Dw42jzEPXZz22
