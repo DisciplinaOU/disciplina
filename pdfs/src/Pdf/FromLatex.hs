@@ -44,23 +44,23 @@ import Pdf.Scanner
 -- | Generate latex certificate from locale, Educator name and data.
 generate :: Language -> CertificateIssuerInfo -> CertificateFullInfo -> Text
 generate lang ciInfo cert =
-    Text.toStrict $ Text.toLazyText $ make (lang, (ciInfo, cert))
+    Text.toStrict $ Text.toLazyText $ make lang (ciInfo, cert)
   where
     MkLatex make = fullInfo
 
 -- | Converter for certificate data into latex.
-fullInfo :: MkLatex (Language, (CertificateIssuerInfo, CertificateFullInfo))
+fullInfo :: MkLatex (CertificateIssuerInfo, CertificateFullInfo)
 fullInfo
-    = divided               language
+    = split (const ())      language
     $ split (cfiMeta . snd) personal
     $ inBlock "document"
         $ divide (id &&& (toList . cfiGrades . snd))
             meta
             courses
   where
-    language = choose (\case RU -> Left (); EN -> Right ())
-        (command "documentclass[11pt, russian]" $ const [text "faircv"])
-        (command "documentclass[11pt, english]" $ const [text "faircv"])
+    language = localized $ \case
+        RU -> command "documentclass[11pt, russian]" $ const [text "faircv"]
+        EN -> command "documentclass[11pt, english]" $ const [text "faircv"]
 
     personal
         = split cmStudentName               (command "Name"        $ pure . shownDesc)
@@ -91,17 +91,16 @@ fullInfo
 
     courses =
         inBlock "Courses"
-            $ allThe (custom $ const "\\\\")
-                course
+            $ allThe (the "\\\\") course
       where
         course
             = custom
-            $ \CertificateGrade { cgSubject, cgLang, cgHours, cgCredits, cgScale, cgGrade = UnsafeGrade grade} -> ""
+            $ \lang CertificateGrade { cgSubject, cgLang, cgHours, cgCredits, cgScale, cgGrade = UnsafeGrade grade} -> ""
                 <> shownDesc cgSubject <> " & "
                 <> shown     cgLang    <> " & "
                 <> shown     cgHours   <> " & "
                 <> maybe "---" shown cgCredits <> " & "
-                <> renderGrade cgLang cgScale grade
+                <> renderGrade lang cgScale grade
 
         renderGrade _ RusDiff grade
             | grade >= 100 = "5"
