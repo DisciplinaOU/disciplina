@@ -26,6 +26,10 @@ module Dscp.Network.Wrapped
     , lcallback
 
     , Worker (..)
+    , wActionL
+    , wIdL
+    , wMsgTypesL
+    , wSubsL
     , runWorker
     , cliSend
     , CliRecvExc(..)
@@ -50,6 +54,7 @@ import Codec.Serialise (serialise)
 import Control.Concurrent (threadDelay)
 import Control.Concurrent.STM (orElse, retry)
 import Control.Concurrent.STM.TMVar (newEmptyTMVarIO, putTMVar, readTMVar)
+import Control.Lens (makeLensesWith)
 import qualified Data.ByteString.Char8 as BS8
 import qualified Data.ByteString.Lazy as BSL
 import Fmt ((+||), (||+))
@@ -66,6 +71,7 @@ import Time (sec)
 import UnliftIO (MonadUnliftIO)
 import UnliftIO.Async (withAsync)
 
+import Dscp.Util
 import Dscp.Util.Timing
 
 ----------------------------------------------------------------------------
@@ -187,6 +193,8 @@ data Worker m = Worker
     , wAction   :: !(ClientEnv NetTag -> m Void)
       -- ^ Worker's action. Should never end.
     }
+
+makeLensesWith postfixLFields ''Worker
 
 runWorker ::
        forall m n. (NetworkingCli NetTag n, MonadMask n, MonadLogging n)

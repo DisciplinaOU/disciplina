@@ -23,7 +23,7 @@ module Dscp.MultiEducator.Launcher.Mode
     ) where
 
 import Control.Concurrent.STM (retry)
-import Control.Lens (at, makeLenses, zoom, (?~), _Wrapped')
+import Control.Lens (at, makeLenses, traversed, zoom, (?~), _Wrapped')
 import Fmt ((+|), (|+))
 import Loot.Base.HasLens (HasLens', lensOf)
 import Loot.Config (option, sub)
@@ -43,8 +43,8 @@ import Dscp.DB.SQL
 import qualified Dscp.Educator.Config as E
 import Dscp.Educator.DB (prepareEducatorSchema)
 import Dscp.Educator.Launcher.Marker (EducatorNode)
-import Dscp.Educator.Launcher.Resource (CertificateIssuerResource (..))
 import qualified Dscp.Educator.Launcher.Mode as E
+import Dscp.Educator.Launcher.Resource (CertificateIssuerResource (..))
 import qualified Dscp.Educator.Launcher.Resource as E
 import Dscp.Educator.Workers
 import Dscp.MultiEducator.Config
@@ -226,7 +226,9 @@ loadEducator educatorAuthLogin mpassphrase = do
                 error "Should not use certificate config, resource is made by multi-educator"
 
     workerAsyncs <- E.withEducatorConfig newCfg $ runRIO educatorContext $
-        mapM (async . runWorker identity) $ educatorWorkers
+        let meWorkers = educatorWorkers
+                      & traversed . wIdL %~ (encodeUtf8 educatorId <>)
+        in mapM (async . runWorker identity) meWorkers
 
     let loadedEducatorCtx = E.withEducatorConfig newCfg $ LoadedEducatorContext
             { lecCtx = educatorContext
