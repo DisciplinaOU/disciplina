@@ -4,11 +4,11 @@ module Dscp.MultiEducator.Web.Educator.Handlers
        ( certificatesApiHandlers
        ) where
 
+import Dscp.Core.Foundation.Educator
 import Dscp.DB.SQL
 import Dscp.Educator.Web.Educator
 import Dscp.MultiEducator.Launcher.Mode
 import Dscp.MultiEducator.Web.Educator.API
-import Dscp.MultiEducator.Web.Educator.Types
 
 certificatesApiHandlers
     :: forall m ctx. MultiEducatorWorkMode ctx m

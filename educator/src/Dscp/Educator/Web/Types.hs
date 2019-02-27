@@ -64,6 +64,7 @@ type MonadEducatorWeb ctx m =
         , KeyResources EducatorNode
         , Pdf.LatexPath
         , Pdf.ResourcePath
+        , Pdf.DownloadBaseUrl
         , CertificateIssuerResource
         ]
     )

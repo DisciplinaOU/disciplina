@@ -274,8 +274,9 @@ educatorAddCertificate
 educatorAddCertificate cert = do
     pdfLatexPath <- view (lensOf @Pdf.LatexPath)
     pdfResPath <- view (lensOf @Pdf.ResourcePath)
+    downloadBaseUrl <- view (lensOf @Pdf.DownloadBaseUrl)
     certificateIssuerInfo <- getCertificateIssuerInfo
-    pdfRaw <- Pdf.produce RU certificateIssuerInfo cert pdfLatexPath pdfResPath
+    pdfRaw <- Pdf.produce RU certificateIssuerInfo cert pdfLatexPath pdfResPath downloadBaseUrl
 
     transact $ do
         txs <- addCertificateGrades (cfiMeta cert) (cfiGrades cert)

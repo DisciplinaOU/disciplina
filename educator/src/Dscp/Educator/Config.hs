@@ -23,10 +23,12 @@ import Time (Second, Time)
 
 import Dscp.Config
 import Dscp.Core.Foundation.Educator (ItemDesc (..))
+import Dscp.Core.Web
 import Dscp.DB.SQL
 import Dscp.Educator.Launcher.Params
 import Dscp.Educator.Web.Config
 import Dscp.Resource.Keys
+import Dscp.Util
 import Dscp.Witness.Config
 
 type EducatorConfig = WitnessConfig ++
@@ -40,9 +42,11 @@ type EducatorConfig = WitnessConfig ++
         , "certificates" ::<
            '[ "latex" ::: FilePath
             , "resources" ::: FilePath
+            , "downloadBaseUrl" ::: BaseUrl
             , "issuer" ::<
                '[ "name" ::: ItemDesc
                 , "website" ::: ItemDesc
+                , "id" ::: Text
                 ]
             ]
         ]
@@ -59,6 +63,11 @@ defaultEducatorConfig = upcast defaultWitnessConfig
     & sub #educator . sub #keys . sub #keyParams .~ defaultBaseKeyParams
     & sub #educator . sub #api . sub #botConfig . tree #params . selection ?~ "disabled"
     & sub #educator . sub #certificates . option #latex ?~ "xelatex"
+    & sub #educator . sub #certificates . option #downloadBaseUrl ?~ defBaseUrl
+    & sub #educator . sub #certificates . sub #issuer . option #id ?~ "Principal"
+  where
+    defBaseUrl = nothingToPanic "url is correct" $
+                 parseBaseUrl "https://localhost/api/certificates/v1/cert"
 
 -- instance (HasEducatorConfig, cfg ~ WitnessConfigRec) => Given cfg where
 --     given = rcast (given @EducatorConfigRec)

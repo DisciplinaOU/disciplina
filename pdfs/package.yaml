@@ -16,12 +16,15 @@ library:
     - filepath
     - fmt
     - hashable
+    - JuicyPixels
     - pandoc
     - text
     - text-printer
     - time
     - typed-process
     - temporary
+    - qrcode-core
+    - qrcode-juicypixels
 
 tests:
   disciplina-witness-test:
@@ -47,6 +50,7 @@ executables:
     <<: *exec-common
     source-dirs: test-pdf
     dependencies:
+      - disciplina-core
       - disciplina-pdfs
       - bytestring
       - text

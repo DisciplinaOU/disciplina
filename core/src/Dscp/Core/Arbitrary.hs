@@ -164,6 +164,12 @@ instance Arbitrary CertificateIssuerInfo where
     arbitrary = genericArbitrary
     shrink    = genericShrink
 
+instance Arbitrary CertificateName where
+    arbitrary = CertificateName
+        <$> (toBase64Url @ByteString <$> arbitrary)
+            -- avoiding having ':' in educator ID
+        <*> arbitrary
+
 instance Arbitrary PrivateTx where
     arbitrary = PrivateTx <$> arbitrary <*> arbitrary <*> arbitrary
 
@@ -506,6 +512,7 @@ certificateIssuerInfoEx =
     CertificateIssuerInfo
     { ciiName    = "Grimpy Cat University"
     , ciiWebsite = "university@example.com"
+    , ciiId      = "Principal"
     }
 
 ----------------------------------------------------------------------------

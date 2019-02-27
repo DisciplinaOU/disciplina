@@ -201,8 +201,9 @@ loadEducator educatorAuthLogin mpassphrase = do
             { _erWitnessResources = resources ^. lensOf @W.WitnessResources
             , _erKeys = key
             , _erDB = db
-            , _erPdfLatexPath = ctx ^. lensOf @MultiEducatorResources . lensOf @Pdf.LatexPath
-            , _erPdfResourcePath = ctx ^. lensOf @MultiEducatorResources . lensOf @Pdf.ResourcePath
+            , _erPdfLatexPath = resources ^. lensOf @Pdf.LatexPath
+            , _erPdfResourcePath = resources ^. lensOf @Pdf.ResourcePath
+            , _erDownloadBaseUrl = resources ^. lensOf @Pdf.DownloadBaseUrl
             , _erPdfCertIssuerRes = certIssuerInfoRes
             }
         educatorContext = E.EducatorContext

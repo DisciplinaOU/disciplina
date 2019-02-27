@@ -17,11 +17,11 @@ module Dscp.MultiEducator.Web.Educator.API
 import Servant
 import Servant.Generic
 
+import Dscp.Core.Foundation.Educator
 import Dscp.Educator.Web.Auth
 import Dscp.Educator.Web.Educator.API
 import Dscp.Educator.Web.Student.API
 import Dscp.MultiEducator.Web.Educator.Auth
-import Dscp.MultiEducator.Web.Educator.Types
 import Dscp.Witness.Web.ContentTypes
 
 ---------------------------------------------------------------------------

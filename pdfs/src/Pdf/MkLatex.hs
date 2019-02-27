@@ -2,6 +2,7 @@
 module Pdf.MkLatex
     ( MkLatex (..)
     , the
+    , localized
     , custom
     , ignore
     , split
@@ -18,14 +19,15 @@ module Pdf.MkLatex
     where
 
 import Data.Functor.Contravariant (Contravariant (..))
-import Data.Functor.Contravariant.Divisible (Divisible (..), Decidable (..), divided)
+import Data.Functor.Contravariant.Divisible (Decidable (..), Divisible (..), divided)
 
-import           Data.Char (isSpace)
+import Data.Char (isSpace)
 import qualified Data.Set as Set (fromList, member)
 import qualified Data.Text as Text.Strict
-import           Data.Text.Lazy.Builder as Text
-
+import Data.Text.Lazy.Builder as Text
 import Text.Printer (text)
+
+import Dscp.Core.Foundation.Educator
 
 -- | Escapes text, so it can be put inside latex code.
 escapeInLatex :: Text -> Text
@@ -50,33 +52,40 @@ escapeInLatex = Text.Strict.pack . escape . Text.Strict.unpack
         isRussian ch = ch `Set.member` Set.fromList (['А'.. 'Я'] ++ ['а'.. 'я'])
 
 -- | Generate latex from a.
-data MkLatex a = MkLatex (a -> Text.Builder)
+data MkLatex a = MkLatex (Language -> a -> Text.Builder)
 
 instance Contravariant MkLatex where
-    contramap f (MkLatex printer) = MkLatex (printer . f)
+    contramap f (MkLatex printer) = MkLatex (\lang -> printer lang . f)
 
 -- | After division, the results are joined with a newline.
 instance Divisible MkLatex where
-    divide splitter ~(MkLatex left) ~(MkLatex right) = MkLatex $ \a -> do
-        let (l, r) = splitter a
-        left l <> "\n" <> right r
+    divide splitter ~(MkLatex left) ~(MkLatex right) =
+        MkLatex $ \lang a -> do
+            let (l, r) = splitter a
+            left lang l <> "\n" <> right lang r
 
-    conquer = MkLatex (const "")
+    conquer = MkLatex (const $ const "")
 
 -- | "If" procedure for `MkLatex`.
 instance Decidable MkLatex where
-    choose selector ~(MkLatex left) ~(MkLatex right) = MkLatex $
-        either left right . selector
+    choose selector ~(MkLatex left) ~(MkLatex right) = MkLatex $ \lang ->
+        either (left lang) (right lang) . selector
 
     lose _ = ignore
 
 -- | Analog to `const`.
 the :: Text.Builder -> MkLatex a
-the txt = custom (const txt)
+the txt = custom (const $ const txt)
 
 -- | Custom conversion to `Text.Builder`.
-custom :: (a -> Text.Builder) -> MkLatex a
+custom :: (Language -> a -> Text.Builder) -> MkLatex a
 custom = MkLatex
+
+-- | Choose some `Text.Builder` depending on language
+localized :: (Language -> MkLatex a) -> MkLatex a
+localized caseStmt = custom $ \lang ->
+    let MkLatex make = caseStmt lang
+    in make lang
 
 -- | Produces nothing.
 ignore :: MkLatex a
@@ -112,7 +121,7 @@ shown = text . escapeInLatex . show
 
 -- | Given command name and arg consumer, make a latex command.
 command :: Text.Builder -> (a -> [Text.Builder]) -> MkLatex a
-command name prepare = MkLatex $ \a ->
+command name prepare = MkLatex $ \_ a ->
     "\\"
     <> name
     <> mconcat

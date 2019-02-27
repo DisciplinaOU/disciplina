@@ -13,7 +13,7 @@ import Dscp.Core
 import Dscp.Crypto
 import Dscp.Wallet.Face
 import Dscp.Wallet.KeyStorage
-import Dscp.Web
+import Dscp.Web ()
 import Dscp.Witness.Logic.Tx
 import Dscp.Witness.Web.Client
 import Dscp.Witness.Web.Types
