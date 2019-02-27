@@ -31,7 +31,7 @@ newtype StudentCheckAction = StudentCheckAction
     }
 
 instance IsAuth StudentAuth Student where
-    type AuthArgs StudentAuth = '[StudentCheckAction]
+    type AuthArgs StudentAuth = '[StudentCheckAction, AuthTimeout]
     runAuth _ _ = studentAuthCheck
 
 instance IsClientAuth StudentAuth where
@@ -49,9 +49,9 @@ mkStudentActionM action = do
 ---------------------------------------------------------------------------
 
 -- | This function returns AuthCheck that checks the signature of the JWT.
-studentAuthCheck :: StudentCheckAction -> AuthCheck Student
-studentAuthCheck (StudentCheckAction checkStudent) = do
-    pk <- checkAuthBasic
+studentAuthCheck :: StudentCheckAction -> AuthTimeout -> AuthCheck Student
+studentAuthCheck (StudentCheckAction checkStudent) authTimeout = do
+    pk <- checkAuthBasic authTimeout
     good <- liftIO $ checkStudent (mkAddr pk)
     guard good
     return $ mkAddr pk

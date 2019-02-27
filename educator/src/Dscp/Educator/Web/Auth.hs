@@ -48,11 +48,11 @@ deriveJSON defaultOptions ''AuthData
 -- Helpers
 ---------------------------------------------------------------------------
 
-checkAuthBasic :: AuthCheck PublicKey
-checkAuthBasic = do
+checkAuthBasic :: AuthTimeout -> AuthCheck PublicKey
+checkAuthBasic authTimeout = do
     (pk, payload) <- checkJWitness
     authData <- maybe mempty pure $ decodeStrict payload
-    checkAuthData authData
+    checkAuthData (Just authTimeout) authData
     pure pk
 
 checkAuthData :: Maybe AuthTimeout -> AuthData -> AuthCheck ()

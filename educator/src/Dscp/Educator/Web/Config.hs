@@ -19,6 +19,7 @@ type EducatorWebConfig =
      , "botConfig"         ::< EducatorBotConfig
      , "educatorAPINoAuth" ::: NoAuthContext "educator"
      , "studentAPINoAuth"  ::: NoAuthContext "student"
+     , "authTimeout"       ::: AuthTimeout
      ]
 
 type EducatorWebConfigRecP = ConfigRec 'Partial EducatorWebConfig

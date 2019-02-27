@@ -206,6 +206,8 @@ sample:
       educatorAPINoAuth:
         enabled: true
         data: []
+      # Maximum difference allowed between current time and time of a request Authorization
+      authTimeout: 300s
       # For multi-educator case, whether authentication in Educator API should be optional.
       multiEducatorAPINoAuth:
         enabled: true

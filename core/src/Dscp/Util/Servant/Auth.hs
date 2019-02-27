@@ -13,6 +13,9 @@ module Dscp.Util.Servant.Auth
        , NoAuthContext (..)
        , whenNoAuth
 
+       , AuthTimeout (..)
+       , defaultAuthTimeout
+
        , authBearerToken
        , checkJWitness
        , checkAuthTime
@@ -41,6 +44,7 @@ import qualified Servant.Client.Core.Internal.Request as Cli
 import Servant.Server.Internal.RoutingApplication (DelayedIO, addAuthCheck, delayedFailFatal,
                                                    withRequest)
 import Servant.Util (ApiCanLogArg (..), ApiHasArgClass (..))
+import Time (Second, Time, minute, toNum, toUnit)
 
 import Dscp.Crypto
 import Dscp.Util
@@ -287,13 +291,8 @@ checkAuthTime
     -> AuthCheck ()
 checkAuthTime adTime mAuthTimeout = do
     curTime <- liftIO $ getCurrentTime
+    let authTimeout = maybe 0 (toNum @Second . unAuthTimeout) mAuthTimeout
     guard (diffUTCTime curTime adTime <= authTimeout)
-
--- | Authentication header timeout in seconds.
--- TODO: 1) make it configurable via config file
---       2) isn't 5 minutes too long?
-authTimeout :: NominalDiffTime
-authTimeout = 300
 
 -- | Get endpoint name from request.
 requestEndpoint :: Request -> Text

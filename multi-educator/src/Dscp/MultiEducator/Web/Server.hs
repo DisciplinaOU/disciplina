@@ -68,7 +68,7 @@ mkMultiEducatorApiServer _aaaConfig nat host =
     withSwaggerUI protectedMultiEducatorAPI (multiEducatorAPISwagger (Just host)) $
         hoistServerWithContext
             protectedMultiEducatorAPI
-            (Proxy :: Proxy '[MultiEducatorPublicKey, NoAuthContext "multi-educator"])
+            (Proxy :: Proxy '[MultiEducatorPublicKey, AuthTimeout, NoAuthContext "multi-educator"])
             nat
             mkEducatorApiServer'
 
@@ -83,7 +83,7 @@ mkStudentApiServer nat host =
         let ealogin = educatorAuthLoginSimple login
         in hoistServerWithContext
                 protectedStudentAPI
-                (Proxy :: Proxy '[StudentCheckAction, NoAuthContext "student"])
+                (Proxy :: Proxy '[StudentCheckAction, NoAuthContext "student", AuthTimeout])
                 (\x -> nat $ lookupEducator ealogin >>= \c -> normalToMulti c x)
                 (\student -> toServant $ studentApiHandlers student)
 
@@ -129,6 +129,7 @@ serveEducatorAPIsReal withWitnessApi = do
         serverAddress     = webCfg ^. sub #serverParams . option #addr
         studentAPINoAuth  = webCfg ^. option #studentAPINoAuth
         educatorAPINoAuth = webCfg ^. option #multiEducatorAPINoAuth
+        authTimeout       = webCfg ^. option #authTimeout
         aaaSettings       = multiEducatorConfig ^. sub #educator . sub #aaa
         metricsEndpoint   = witnessConfig ^. sub #witness . option #metricsEndpoint
 
@@ -139,6 +140,7 @@ serveEducatorAPIsReal withWitnessApi = do
             educatorAPINoAuth :.
             studentCheckAction :.
             studentAPINoAuth :.
+            authTimeout :.
             EmptyContext
 
     logInfo $ "Serving Student API on "+|serverAddress|+""

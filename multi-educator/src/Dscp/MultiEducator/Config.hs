@@ -34,6 +34,7 @@ type MultiEducatorWebConfig =
     '[ "serverParams"           ::< ServerParams
      , "multiEducatorAPINoAuth" ::: NoAuthContext "multi-educator"
      , "studentAPINoAuth"       ::: NoAuthContext "student"
+     , "authTimeout"            ::: AuthTimeout
      ]
 
 type MultiEducatorWebConfigRecP = ConfigRec 'Partial MultiEducatorWebConfig
@@ -71,6 +72,7 @@ defaultMultiEducatorWebConfig :: MultiEducatorWebConfigRecP
 defaultMultiEducatorWebConfig = mempty
     & option #multiEducatorAPINoAuth ?~ NoAuthOffContext
     & option #studentAPINoAuth ?~ NoAuthOffContext
+    & option #authTimeout ?~ defaultAuthTimeout
 
 -- instance (HasEducatorConfig, cfg ~ WitnessConfigRec) => Given cfg where
 --     given = rcast (given @EducatorConfigRec)

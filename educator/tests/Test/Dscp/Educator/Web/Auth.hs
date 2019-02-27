@@ -73,7 +73,7 @@ withServerClient config action =
         | otherwise = NoAuthOffContext :: NoAuthContext "student"
     noAuthStudent = detGen 5643 arbitrary
     studentCheckAction = StudentCheckAction (\_ -> return True)
-    ctx = studentCheckAction :. noAuthCtx :. EmptyContext
+    ctx = studentCheckAction :. noAuthCtx :. defaultAuthTimeout :. EmptyContext
 
 -- TODO: Maybe add a "ping" endpoint instead?
 doTrialRequest :: StudentApiClient -> Maybe SecretKeyData -> IO ()

@@ -58,7 +58,8 @@ multiEducatorWebConfigParser :: OptModParser MultiEducatorWebConfig
 multiEducatorWebConfigParser =
     #serverParams .:< serverParamsParser "Educator" <*<
     #multiEducatorAPINoAuth .:: multiEducatorApiNoAuthParser <*<
-    #studentAPINoAuth .:: studentApiNoAuthParser
+    #studentAPINoAuth .:: studentApiNoAuthParser <*<
+    #authTimeout .:: authTimeoutParser
 
 multiEducatorConfigParser :: OptModParser MultiEducatorConfig
 multiEducatorConfigParser =
