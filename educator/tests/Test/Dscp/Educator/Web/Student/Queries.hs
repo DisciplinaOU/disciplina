@@ -96,13 +96,13 @@ spec_Student_API_queries :: Spec
 spec_Student_API_queries = specWithTempPostgresServer $ do
   describe "Courses" $ do
     describe "getCourse" $ do
-        -- xit "Student is not enrolled initially" $
-        --     sqlProperty $ \() -> do
-        --         _ <- createStudent student1
-        --         _ <- createCourseSimple 1
+        xit "Student is not enrolled initially" $
+            sqlProperty $ \() -> do
+                _ <- createStudent student1
+                _ <- createCourseSimple 1
 
-        --         course <- studentGetCourse student1 courseId1
-        --         return (not $ ciIsEnrolled course)
+                course <- studentGetCourse student1 courseId1
+                return (not $ ciIsEnrolled course)
 
         it "Student gets enrolled when she asks to" $
             sqlProperty $ \() -> do
@@ -614,9 +614,9 @@ spec_Student_API_queries = specWithTempPostgresServer $ do
 
             return $ sort positiveGrades === sort positiveGrades'
 
-    describe "checkFairCVPDF" $ do
-        it "FairCV PDF validation works correctly" $ educatorProperty $ \info -> do
-            cert <- educatorAddCertificate info
-            _ <- updateMempoolWithPublications
-            check <- checkFairCVPDF cert
-            return (fairCVFullyValid $ fcacrCheckResult check)
+    -- describe "checkFairCVPDF" $ do
+    --     xit "FairCV PDF validation works correctly" $ educatorProperty $ \info -> do
+    --         cert <- educatorAddCertificate info
+    --         _ <- updateMempoolWithPublications
+    --         check <- checkFairCVPDF cert
+    --         return (fairCVFullyValid $ fcacrCheckResult check)
