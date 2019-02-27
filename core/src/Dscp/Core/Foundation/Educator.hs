@@ -399,6 +399,7 @@ data GradeInfo = GradeInfo
 data CertificateIssuerInfo = CertificateIssuerInfo
     { ciiName    :: ItemDesc
     , ciiWebsite :: ItemDesc
+    , ciiId      :: Text
     } deriving (Show, Eq, Generic)
 
 -- | Datatype which is used for encoding a full certificate ID.

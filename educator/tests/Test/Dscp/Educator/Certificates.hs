@@ -20,7 +20,8 @@ spec_Educator_certificates = specWithTempPostgresServer $ do
     divideMaxSuccessBy 10 $ do
         it "Can build a full student certificate flawlessly" $ \_ -> property $
             \lang issuer cert faircv -> ioProperty $ do
-                rawPdf <- Pdf.produce lang issuer cert testLatexPath testResourcePath
+                rawPdf <- Pdf.produce lang issuer cert
+                          testLatexPath testResourcePath testDownloadBaseUrl
                 pdf <- embedFairCVToCert faircv rawPdf
                 return $ total pdf
 

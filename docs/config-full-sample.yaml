@@ -222,6 +222,8 @@ sample:
       latex: "xelatex"
       # Path to the directory with LaTeX templates
       resources: "/var/lib/disciplina/certificate-templates"
+      # Base URL for downloading certificates
+      downloadBaseUrl: "https://example.com/api/certificates/v1/cert"
       # Info about the certificates issuer, to be used in Pdf generation
       issuer:
         name: Grimpy Cat University

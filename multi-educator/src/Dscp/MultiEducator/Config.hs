@@ -23,6 +23,7 @@ import Loot.Config ((:::), (::<), ConfigKind (Final, Partial), ConfigRec, upcast
 import Time (Second, Time)
 
 import Dscp.Config
+import Dscp.Core.Web (BaseUrl)
 import Dscp.DB.SQL
 import Dscp.Educator.Web.Auth
 import Dscp.MultiEducator.Launcher.Params
@@ -50,6 +51,7 @@ type MultiEducatorConfig = WitnessConfig ++
         , "certificates" ::<
            '[ "latex" ::: FilePath
             , "resources" ::: FilePath
+            , "downloadBaseUrl" ::: BaseUrl
             ]
         ]
      ]

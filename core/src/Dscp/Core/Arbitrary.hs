@@ -512,6 +512,7 @@ certificateIssuerInfoEx =
     CertificateIssuerInfo
     { ciiName    = "Grimpy Cat University"
     , ciiWebsite = "university@example.com"
+    , ciiId      = "Principal"
     }
 
 ----------------------------------------------------------------------------

@@ -1,9 +1,17 @@
--- | Instances for web.
+-- | Instances and reexports for web.
 
-module Dscp.Core.Web () where
+module Dscp.Core.Web
+       ( BaseUrl (..)
+       , parseBaseUrl
+       , showBaseUrl
+
+       , FromHttpApiData (..)
+       , ToHttpApiData (..)
+       ) where
 
 import Data.List (span)
 import Servant.API
+import Servant.Client.Core (BaseUrl (..), parseBaseUrl, showBaseUrl)
 import System.FilePath (splitExtension)
 
 import Dscp.Core.Foundation

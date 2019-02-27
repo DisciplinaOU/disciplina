@@ -57,6 +57,7 @@ data MultiEducatorResources = MultiEducatorResources
     , _merEducatorData     :: !EducatorContextsVar
     , _merPdfLatexPath     :: !Pdf.LatexPath
     , _merPdfResourcePath  :: !Pdf.ResourcePath
+    , _merDownloadBaseUrl  :: !Pdf.DownloadBaseUrl
     }
 
 makeLenses ''MultiEducatorResources
@@ -98,4 +99,5 @@ instance AllocResource MultiEducatorResources where
         _merPdfLatexPath <- allocResource $ cfg ^. sub #certificates . option #latex
         _merPdfResourcePath <- allocResource
             (cfg ^. sub #certificates . option #resources, appDir)
+        _merDownloadBaseUrl <- allocResource $ cfg ^. sub #certificates . option #downloadBaseUrl
         return MultiEducatorResources {..}

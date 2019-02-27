@@ -14,6 +14,8 @@ module Pdf.FromLatex
     , LatexPath (..)
       -- * Path to resources for latex generation
     , ResourcePath(..)
+      -- * Base url for download link in QR code
+    , DownloadBaseUrl (..)
 
       -- * PDF generator
     , produce
@@ -23,6 +25,9 @@ module Pdf.FromLatex
     )
     where
 
+import Codec.Picture (DynamicImage (..), savePngImage)
+import Codec.QRCode (ErrorLevel (..), QRImage (..), TextEncoding (..), defaultQRCodeOptions, encode)
+import Codec.QRCode.JuicyPixels (toImage)
 import Control.Arrow ((&&&))
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.Text.Lazy as Text
@@ -36,7 +41,9 @@ import System.Process.Typed (byteStringInput, byteStringOutput, proc, runProcess
                              setStdout, setWorkingDir)
 import Text.Printer (text)
 
-import Dscp.Core.Foundation.Educator
+import Dscp.Core.Foundation
+import Dscp.Core.Web
+import Dscp.Util
 
 import Pdf.MkLatex
 import Pdf.Scanner
@@ -65,7 +72,7 @@ fullInfo
     personal
         = split cmStudentName               (command "Name"        $ pure . shownDesc)
         $ split cmStudentBirthDate          (command "DateOfBirth" $ formatDate)
-        $ split (const ())                  (command "QR"          $ const ["images/example-qr"])
+        $ split (const ())                  (command "QR"          $ const ["qrcode"])
         $ ignore
 
     meta
@@ -132,6 +139,11 @@ newtype ResourcePath = ResourcePath
     { unResourcePath :: FilePath
     } deriving (Show, Eq)
 
+-- | Type wrapper for download base url for QR code link.
+newtype DownloadBaseUrl = DownloadBaseUrl
+    { unDownloadBaseUrl :: BaseUrl
+    } deriving (Show, Eq)
+
 -- | Generate a PDF-certificate and return it as a bytestring.
 produce ::
        MonadIO m
@@ -140,8 +152,12 @@ produce ::
     -> CertificateFullInfo
     -> LatexPath
     -> ResourcePath
+    -> DownloadBaseUrl
     -> m PDFBody
-produce loc ciInfo info (LatexPath xelatex) (ResourcePath resPath) = liftIO $
+produce loc ciInfo info
+    (LatexPath xelatex)
+    (ResourcePath resPath)
+    (DownloadBaseUrl url) = liftIO $
 
     -- Everything produced should be removed.
     -- This may lead to /tmp exhaustion attack, unless /tmp or memory
@@ -149,6 +165,8 @@ produce loc ciInfo info (LatexPath xelatex) (ResourcePath resPath) = liftIO $
     withSystemTempDirectory "faircv" $ \tmpPath -> do
         -- Latex reads and writes in the same dir - lets isolate it.
         copyDirectory resPath tmpPath
+
+        makeQr ciInfo info url (tmpPath </> "qrcode.png")
 
         let theText = generate loc ciInfo info
         let input   = encodeUtf8 theText
@@ -168,6 +186,28 @@ produce loc ciInfo info (LatexPath xelatex) (ResourcePath resPath) = liftIO $
 
         pdf <- LBS.readFile (tmpPath </> "texput.pdf")
         evaluateNF $ PDFBody pdf
+
+makeQr
+    :: MonadIO m
+    => CertificateIssuerInfo
+    -> CertificateFullInfo
+    -> BaseUrl
+    -> FilePath
+    -> m ()
+makeQr ciInfo info baseUrl path =
+    let eId = ciiId ciInfo
+        cId = getId $ cfiMeta info
+        cName = toUrlPiece $ CertificateName eId cId
+        prefix = toText $ showBaseUrl baseUrl
+
+        qrCode = nothingToPanic "Came up with too long URL" $
+            encode (defaultQRCodeOptions L) Iso8859_1 $
+            prefix <> "/" <> cName
+        resultImgSize = 328 -- size of original image in PDF
+        scale = resultImgSize `div` qrImageSize qrCode
+        image = toImage 4 scale qrCode
+
+    in liftIO $ savePngImage path (ImageY8 image)
 
 copyDirectory :: FilePath -> FilePath -> IO ()
 copyDirectory from to = do

@@ -50,6 +50,7 @@ data TestEducatorCtx = TestEducatorCtx
     , _tecKeys             :: KeyResources EducatorNode
     , _tecPdfLatexPath     :: Pdf.LatexPath
     , _tecPdfResourcePath  :: Pdf.ResourcePath
+    , _tecDownloadBaseUrl  :: Pdf.DownloadBaseUrl
     , _tecWitnessKeys      :: KeyResources WitnessNode
     , _tecWitnessVariables :: TestWitnessVariables
     , _tecLogging          :: Log.Logging IO
@@ -86,6 +87,11 @@ testResourcePath = unsafePerformIO $ do
         Just path -> pure path
     return (Pdf.ResourcePath path)
 
+testDownloadBaseUrl :: Pdf.DownloadBaseUrl
+testDownloadBaseUrl = Pdf.DownloadBaseUrl $
+    nothingToPanic "url is correct" $
+    parseBaseUrl "https://educator.disciplina.io/api/certificates/v1/cert"
+
 runTestSqlM :: PostgresTestServer -> TestEducatorM a -> IO a
 runTestSqlM testDb action =
     withEducatorConfig testEducatorConfig $
@@ -101,6 +107,7 @@ runTestSqlM testDb action =
         let _tecLogging = testLogging
         let _tecPdfLatexPath = testLatexPath
         let _tecPdfResourcePath = testResourcePath
+        let _tecDownloadBaseUrl = testDownloadBaseUrl
         let _tecAppDir = error "AppDir is not defined"
         let _tecIssuerInfo = KnownIssuerInfo certificateIssuerInfoEx
         let ctx = TestEducatorCtx{..}

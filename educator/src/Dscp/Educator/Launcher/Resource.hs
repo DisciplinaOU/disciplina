@@ -50,6 +50,7 @@ data EducatorResources = EducatorResources
     , _erKeys             :: !(KeyResources EducatorNode)
     , _erPdfLatexPath     :: !Pdf.LatexPath
     , _erPdfResourcePath  :: !Pdf.ResourcePath
+    , _erDownloadBaseUrl  :: !Pdf.DownloadBaseUrl
     , _erPdfCertIssuerRes :: !CertificateIssuerResource
     }
 
@@ -94,9 +95,13 @@ instance AllocResource Pdf.ResourcePath where
                 throwM $ DirectoryDoesNotExist "pdf templates" resPath
             return $ Pdf.ResourcePath resPath
 
+instance AllocResource Pdf.DownloadBaseUrl where
+    type Deps Pdf.DownloadBaseUrl = BaseUrl
+    allocResource = return . Pdf.DownloadBaseUrl
+
 instance AllocResource CertificateIssuerResource where
-    type Deps CertificateIssuerResource = (ItemDesc, ItemDesc)
-    allocResource (ciiName, ciiWebsite) =
+    type Deps CertificateIssuerResource = (ItemDesc, ItemDesc, Text)
+    allocResource (ciiName, ciiWebsite, ciiId) =
         return . KnownIssuerInfo $ Pdf.CertificateIssuerInfo {..}
 
 instance AllocResource EducatorResources where
@@ -112,8 +117,10 @@ instance AllocResource EducatorResources where
         _erPdfLatexPath <- allocResource $ cfg ^. sub #certificates . option #latex
         _erPdfResourcePath <- allocResource ( cfg ^. sub #certificates . option #resources
                                             , appDir )
+        _erDownloadBaseUrl <- allocResource $ cfg ^. sub #certificates . option #downloadBaseUrl
         _erPdfCertIssuerRes <- allocResource
             ( cfg ^. sub #certificates . sub #issuer . option #name
             , cfg ^. sub #certificates . sub #issuer . option #website
+            , cfg ^. sub #certificates . sub #issuer . option #id
             )
         return EducatorResources {..}
