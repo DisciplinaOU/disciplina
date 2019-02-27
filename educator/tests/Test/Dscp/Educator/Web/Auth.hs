@@ -13,9 +13,9 @@ import Servant.Util (ErrorResponses, PaginationParams, SortingParams, Tag)
 
 import Dscp.Core
 import Dscp.Crypto
-import Dscp.Educator.Web.Auth
 import Dscp.Educator.Web.Student
 import Dscp.Util.Test
+import Dscp.Util.Servant.Auth
 import Dscp.Web.Class
 
 import Test.Dscp.Educator.Web.Instances ()

@@ -25,8 +25,8 @@ import Time (Second, Time)
 import Dscp.Config
 import Dscp.Core.Web (BaseUrl)
 import Dscp.DB.SQL
-import Dscp.Educator.Web.Auth
 import Dscp.MultiEducator.Launcher.Params
+import Dscp.Util.Servant.Auth
 import Dscp.Web
 import Dscp.Witness.Config
 

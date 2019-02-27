@@ -21,7 +21,6 @@ import Servant.Util (methodsCoveringAPI, serverWithLogging)
 import UnliftIO (askUnliftIO)
 
 import Dscp.Config
-import Dscp.Educator.Web.Auth
 import Dscp.Educator.Web.Educator (RawEducatorAPI, convertEducatorApiHandler, educatorApiHandlers,
                                    rawEducatorAPI)
 import Dscp.Educator.Web.Student (StudentCheckAction (..), convertStudentApiHandler,
@@ -32,6 +31,7 @@ import Dscp.MultiEducator.Launcher.Mode (MultiCombinedWorkMode, MultiEducatorWor
 import Dscp.MultiEducator.Launcher.Params (MultiEducatorAAAConfigRec)
 import Dscp.MultiEducator.Web.Educator
 import Dscp.MultiEducator.Web.Swagger
+import Dscp.Util.Servant.Auth
 import Dscp.Web (buildServantLogConfig, serveWeb)
 import Dscp.Web.Metrics (responseTimeMetric)
 import Dscp.Web.Swagger.UI

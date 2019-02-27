@@ -8,10 +8,10 @@ module Dscp.Educator.Web.Config
 
 import Loot.Config ((:::), (::<), ConfigKind (Final, Partial), ConfigRec)
 
-import Dscp.Educator.Web.Auth
 import Dscp.Educator.Web.Bot.Params
 import Dscp.Educator.Web.Educator.Auth ()
 import Dscp.Educator.Web.Student.Auth ()
+import Dscp.Util.Servant.Auth
 import Dscp.Web
 
 type EducatorWebConfig =

@@ -231,7 +231,6 @@ instance Serialise Day where
     encode = encode . toModifiedJulianDay
     decode = ModifiedJulianDay <$> decode
 
--- consider that it is an Enum
 instance Serialise EducationForm where
     encode a = encodeListLen 1
             <> encodeWord (case a of

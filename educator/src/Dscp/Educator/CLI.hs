@@ -26,9 +26,9 @@ import Dscp.Core.Foundation.Educator (ItemDesc (..), toItemDesc)
 import Dscp.DB.SQL
 import Dscp.Educator.Config
 import Dscp.Educator.Launcher.Params (EducatorKeyParams)
-import Dscp.Educator.Web.Auth
 import Dscp.Educator.Web.Bot.Params
 import Dscp.Educator.Web.Config
+import Dscp.Util.Servant.Auth
 import Dscp.Witness.CLI (witnessConfigParser)
 
 postgresParamsParser :: OptModParser PostgresRealParams

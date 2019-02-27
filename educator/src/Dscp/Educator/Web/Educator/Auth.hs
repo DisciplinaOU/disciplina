@@ -13,6 +13,7 @@ import Servant.Auth.Server.Internal.Class (AuthArgs (..), IsAuth (..))
 
 import Dscp.Crypto
 import Dscp.Educator.Web.Auth
+import Dscp.Util.Servant.Auth
 
 ---------------------------------------------------------------------------
 -- Data types

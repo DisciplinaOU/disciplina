@@ -29,6 +29,7 @@ import Dscp.Crypto
 import Dscp.Educator.Web.Auth
 import Dscp.MultiEducator.Types
 import Dscp.Util.FileEmbed
+import Dscp.Util.Servant.Auth
 
 import qualified Data.ByteArray as BA
 

@@ -16,6 +16,7 @@ import UnliftIO (MonadUnliftIO, UnliftIO (..), askUnliftIO)
 import Dscp.Core
 import Dscp.Crypto
 import Dscp.Educator.Web.Auth
+import Dscp.Util.Servant.Auth
 
 ---------------------------------------------------------------------------
 -- Data types

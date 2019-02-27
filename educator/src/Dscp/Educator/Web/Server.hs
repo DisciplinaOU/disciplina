@@ -26,7 +26,6 @@ import Dscp.DB.SQL
 import Dscp.Educator.Config
 import Dscp.Educator.DB (existsStudent)
 import Dscp.Educator.Launcher.Mode (EducatorNode, EducatorWorkMode)
-import Dscp.Educator.Web.Auth
 import Dscp.Educator.Web.Bot
 import Dscp.Educator.Web.Educator (EducatorPublicKey (..), FullEducatorAPI,
                                    convertEducatorApiHandler, educatorApiHandlers,
@@ -37,6 +36,7 @@ import Dscp.Educator.Web.Student (FullStudentAPI, StudentCheckAction (..), conve
 import Dscp.Educator.Web.Student.Auth (mkStudentActionM)
 import Dscp.Educator.Web.Student.Swagger
 import Dscp.Resource.Keys (KeyResources, krPublicKey)
+import Dscp.Util.Servant.Auth
 import Dscp.Web (buildServantLogConfig, serveWeb)
 import Dscp.Web.Metrics (responseTimeMetric)
 import Dscp.Web.Swagger.UI
