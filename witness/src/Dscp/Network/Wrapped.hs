@@ -19,18 +19,23 @@ module Dscp.Network.Wrapped
     , fromSubType
 
     , Listener (..)
+    , hoistListener
     , runListener
+    , withListeners
     , servSend
     , servPub
     , simpleListener
     , lcallback
 
-    , Worker (..)
-    , wActionL
+    , Worker
     , wIdL
-    , wMsgTypesL
-    , wSubsL
+    , simpleWorker
+    , bootingWorker
+    , bootingWorker_
+    , netWorker
+    , hoistWorker
     , runWorker
+    , withWorkers
     , cliSend
     , CliRecvExc(..)
     , cliRecv
@@ -41,7 +46,7 @@ module Dscp.Network.Wrapped
     , withClient
     , withServer
 
-    -- reexports
+      -- reexports
     , ListenerEnv
     , ClientEnv
     , CallbackWrapper
@@ -69,9 +74,10 @@ import Loot.Network.Message (CallbackWrapper, Message (..), getMsgTag, handlerDe
 import Loot.Network.ZMQ.Common (ZmqTcp)
 import Time (sec)
 import UnliftIO (MonadUnliftIO)
-import UnliftIO.Async (withAsync)
+import UnliftIO.Async (Async, async, cancel, withAsync)
 
 import Dscp.Util
+import Dscp.Util.TimeLimit
 import Dscp.Util.Timing
 
 ----------------------------------------------------------------------------
@@ -127,17 +133,37 @@ data Listener m = Listener
       -- ^ Listener's action. Should never terminate.
     }
 
+hoistListener :: (forall a. m a -> n a) -> Listener m -> Listener n
+hoistListener f li = li{ lAction = f . lAction li }
+
 runListener ::
-       forall m n. (NetworkingServ NetTag n, MonadLogging n, MonadMask n)
-    => (forall x. m x -> n x)
-    -> Listener m
-    -> n ()
-runListener nat Listener{..} = do
+       forall m. (NetworkingServ NetTag m, MonadLogging m, MonadMask m, MonadUnliftIO m)
+    => Listener m
+    -> m (Async Void)
+runListener Listener{..} = do
     logDebug $ "Launching listner " +|| lId ||+ ""
     (lEnv :: ListenerEnv NetTag) <- registerListener @NetTag lId lMsgTypes
-    void (nat $ lAction lEnv)
-        `catchAny` (\e -> logError $ "Listener " +|| lId ||+ " stopped due to error: " +|| e ||+ "")
-        `finally` (logDebug $ "Listener " +|| lId ||+ " has exited")
+    async $ loop lEnv
+              `finally` (logDebug $ "Listener " +|| lId ||+ " has exited")
+  where
+    loop env =
+        lAction env `catchAny` \e -> do
+            logError $ "Listener " +|| lId ||+ " stopped due to error: " +|| e ||+ ""
+            lAction env
+
+withListeners
+    :: (NetworkingServ NetTag m, MonadMask m, MonadLogging m, MonadUnliftIO m)
+    => m [Listener m] -> m a -> m a
+withListeners listenersM action = do
+    listeners <- listenersM
+    bracket
+        (mapM (\l -> (l, ) <$> async (runListener l)) listeners)
+        (mapM terminate)
+        $ \_ -> action
+  where
+    terminate (listener, listenerAsync) =
+        logWarningWaitInf (sec 1) ("Listener " <> show (lId listener) <> " shutdown") $
+        cancel listenerAsync
 
 servSend :: forall d. Message MsgK d => ListenerEnv NetTag -> CliId NetTag -> d -> STM ()
 servSend btq cliId msg =
@@ -183,30 +209,77 @@ lcallback foo = handlerDecoded $ \cId -> either (const $ pass) (foo cId)
 -- Workers
 ----------------------------------------------------------------------------
 
-data Worker m = Worker
-    { wId       :: !ClientId
+data Worker m = forall pre. Worker
+    { wId        :: !ClientId
       -- ^ Worker's identity.
-    , wMsgTypes :: !(Set MsgType)
-      -- ^ Message types worker is supposed to receive.
-    , wSubs     :: !(Set Subscription)
-      -- ^ Worker's subscriptions.
-    , wAction   :: !(ClientEnv NetTag -> m Void)
+    , wBootstrap :: m pre
+      -- ^ Initialize necessary context. Fail here or never.
+    , wAction    :: !(pre -> m Void)
       -- ^ Worker's action. Should never end.
     }
 
 makeLensesWith postfixLFields ''Worker
 
-runWorker ::
-       forall m n. (NetworkingCli NetTag n, MonadMask n, MonadLogging n)
-    => (forall x. m x -> n x)
+-- | An action which will happen forever.
+simpleWorker :: Monad m => ClientId -> m () -> Worker m
+simpleWorker wId action = bootingWorker_ wId pass action
+
+-- | A worker with one-shot bootstrap and infinite main action.
+bootingWorker_ :: Monad m => ClientId -> m () -> m () -> Worker m
+bootingWorker_ wId boot action = bootingWorker wId boot (\() -> action)
+
+-- | A worker with context preparation.
+bootingWorker :: Monad m => ClientId -> m a -> (a -> m ()) -> Worker m
+bootingWorker wId boot action = Worker wId boot (forever . action)
+
+netWorker
+    :: NetworkingCli NetTag m
+    => ClientId
+    -> Set MsgType
+    -> Set Subscription
+    -> (ClientEnv NetTag -> m ())
     -> Worker m
-    -> n ()
-runWorker nat Worker{..} = do
+netWorker cId msgTypes subs action =
+    bootingWorker cId register action
+  where
+    register = registerClient @NetTag cId msgTypes subs
+
+hoistWorker :: (forall a. m a -> n a) -> Worker m -> Worker n
+hoistWorker f Worker{..} =
+    Worker
+    { wBootstrap = f wBootstrap
+    , wAction = \pre -> f $ wAction pre
+    , ..
+    }
+
+runWorker ::
+       forall m. (MonadMask m, MonadLogging m, MonadUnliftIO m)
+    => Worker m
+    -> m (Async Void)
+runWorker Worker{..} = do
     logDebug $ "Launching worker " +|| wId ||+ ""
-    (cEnv :: ClientEnv NetTag) <- registerClient @NetTag wId wMsgTypes wSubs
-    void (nat $ wAction cEnv)
-        `catchAny` (\e -> logError $ "Worker " +|| wId ||+ " stopped due to error: " +|| e ||+ "")
-        `finally` (logDebug $ "Worker " +|| wId ||+ " has exited")
+    pre <- wBootstrap
+    async $ loop pre
+              `finally` (logDebug $ "Worker " +|| wId ||+ " has exited")
+  where
+    loop pre =
+        wAction pre `catchAny` \e -> do
+            logError $ "Worker " +|| wId ||+ " stopped due to error: " +|| e ||+ ""
+            wAction pre
+
+withWorkers
+    :: (MonadMask m, MonadLogging m, MonadUnliftIO m)
+    => m [Worker m] -> m a -> m a
+withWorkers workersM action = do
+    workers <- workersM
+    bracket
+        (mapM (\w -> (w, ) <$> runWorker w) workers)
+        (mapM terminate)
+        $ \_ -> action
+  where
+    terminate (worker, workerAsync) =
+        logWarningWaitInf (sec 1) ("Worker " <> show (wId worker) <> " shutdown") $
+        cancel workerAsync
 
 cliSend ::
        forall d m. (Message MsgK d, NetworkingCli NetTag m, MonadIO m)

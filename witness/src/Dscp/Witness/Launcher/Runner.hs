@@ -51,8 +51,8 @@ formWitnessContext _wcResources = do
 -- `WitnessWorkMode` monad. Any synchronous exceptions are handled inside.
 launchWitnessRealMode
     :: WitnessConfigRec
-    -> (HasWitnessConfig => WitnessRealMode ())
-    -> IO ()
+    -> (HasWitnessConfig => WitnessRealMode Void)
+    -> IO a
 launchWitnessRealMode config action =
     exitSilentlyOnFailure $
     runResourceAllocation appDesc initParams (allocResource config) $

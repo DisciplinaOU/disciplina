@@ -3,14 +3,14 @@
 -- | Educator entry point.
 
 module Dscp.MultiEducator.Launcher.Entry
-    ( educatorEntry
+    ( multiEducatorEntry
     ) where
 
 import Control.Concurrent (threadDelay)
 import Loot.Log (logInfo)
 import UnliftIO.Async (async)
 
-import Dscp.Config (sub, tree, branch, whenConfigJust)
+import Dscp.Config (branch, sub, tree, whenConfigJust)
 import Dscp.MultiEducator.Config
 import Dscp.MultiEducator.Launcher.Mode
 import Dscp.MultiEducator.Web.Server
@@ -18,8 +18,8 @@ import Dscp.Network
 import Dscp.Witness.Launcher
 import Dscp.Witness.Web.Server
 
-educatorEntry :: MultiCombinedWorkMode ctx m => m ()
-educatorEntry =
+multiEducatorEntry :: MultiCombinedWorkMode ctx m => m Void
+multiEducatorEntry =
     withServer . withWitnessBackground $ do
         let witnessApiParams = witnessConfig ^. sub #witness . sub #api
             educatorServerParams = multiEducatorConfig ^.

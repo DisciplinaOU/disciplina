@@ -28,8 +28,8 @@ formFaucetContext _fcResources = do
 -- `FaucetWorkMode` monad. Any synchronous exceptions are handled inside.
 launchFaucetRealMode
     :: FaucetConfigRec
-    -> (HasFaucetConfig => FaucetRealMode ())
-    -> IO ()
+    -> (HasFaucetConfig => FaucetRealMode Void)
+    -> IO a
 launchFaucetRealMode config action =
     exitSilentlyOnFailure $
     runResourceAllocation appDesc initParams (allocResource config) $

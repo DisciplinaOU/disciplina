@@ -35,7 +35,7 @@ data LoadedEducatorContext where
     LoadedEducatorContext
         :: E.HasEducatorConfig
         => { lecCtx :: E.EducatorContext
-           , lecWorkerHandlers :: [Async ()]
+           , lecWorkerHandlers :: [Async Void]
            }
         -> LoadedEducatorContext
 

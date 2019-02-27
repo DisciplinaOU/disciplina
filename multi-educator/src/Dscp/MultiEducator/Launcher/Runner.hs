@@ -3,8 +3,8 @@
 -- | Helpers for starting an Educator node
 
 module Dscp.MultiEducator.Launcher.Runner
-    ( formEducatorContext
-    , launchEducatorRealMode
+    ( formMultiEducatorContext
+    , launchMultiEducatorRealMode
     ) where
 
 import Loot.Log (MonadLogging)
@@ -19,27 +19,27 @@ import Dscp.Rio (runRIO)
 import Dscp.Witness.Launcher
 
 -- | Make up Educator context from dedicated pack of allocated resources.
-formEducatorContext
+formMultiEducatorContext
     :: (MonadIO m, MonadCatch m, MonadLogging m, HasMultiEducatorConfig)
     => MultiEducatorResources
     -> m MultiEducatorContext
-formEducatorContext _mecResources = do
+formMultiEducatorContext _mecResources = do
     let wConfig = rcast multiEducatorConfig
     _mecWitnessVars <- withWitnessConfig wConfig $
         mkWitnessVariables (_merWitnessResources _mecResources)
     pure MultiEducatorContext{..}
 
 -- | Given params, allocate resources, construct node context and run
--- `EducatorWorkMode` monad. Any synchronous exceptions are handled inside.
-launchEducatorRealMode
+-- `MultiEducatorWorkMode` monad. Any synchronous exceptions are handled inside.
+launchMultiEducatorRealMode
     :: MultiEducatorConfigRec
-    -> (HasMultiEducatorConfig => MultiEducatorRealMode ())
-    -> IO ()
-launchEducatorRealMode config action =
+    -> (HasMultiEducatorConfig => MultiEducatorRealMode Void)
+    -> IO a
+launchMultiEducatorRealMode config action =
     exitSilentlyOnFailure $
     runResourceAllocation appDesc initParams (allocResource config) $
         \resources -> withMultiEducatorConfig config $ do
-            ctx <- formEducatorContext resources
+            ctx <- formMultiEducatorContext resources
             runRIO ctx action
   where
     appDesc = "Educator (real mode)"

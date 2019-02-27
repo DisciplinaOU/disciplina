@@ -32,6 +32,7 @@ import Dscp.Educator.Arbitrary ()
 import Dscp.Educator.Config
 import Dscp.Educator.Launcher
 import Dscp.Educator.TestConfig
+import Dscp.Network.Wrapped
 import Dscp.Resource.AppDir
 import Dscp.Resource.Keys
 import Dscp.Rio
@@ -111,9 +112,13 @@ runTestSqlM testDb action =
         let _tecAppDir = error "AppDir is not defined"
         let _tecIssuerInfo = KnownIssuerInfo certificateIssuerInfoEx
         let ctx = TestEducatorCtx{..}
+        let workers = [txRetranslatingWorker]
+
         runRIO ctx $ markWithinWriteSDLockUnsafe applyGenesisBlock
 
-        liftIO . rollbackInEnd $ runRIO ctx action
+        liftIO . rollbackInEnd $ runRIO ctx $
+            withWorkers (pure workers) $
+                action
   where
     committeeKeyParams :: CommitteeParamsRec
     committeeKeyParams = finaliseDeferredUnsafe $ mempty

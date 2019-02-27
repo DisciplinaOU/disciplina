@@ -75,5 +75,5 @@ runResourceAllocation desc params component main = do
   where
     initDesc = "Preliminary resource allocation"
 
-exitSilentlyOnFailure :: IO (Either e a) -> IO a
-exitSilentlyOnFailure action = action >>= either (\_ -> exitFailure) return
+exitSilentlyOnFailure :: IO (Either e Void) -> IO a
+exitSilentlyOnFailure action = action >>= either (\_ -> exitFailure) absurd

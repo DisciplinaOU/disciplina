@@ -96,9 +96,9 @@ getTipListener =
 ----------------------------------------------------------------------------
 
 txPublisher :: WitnessWorkMode ctx m => RelayState -> Listener m
-txPublisher (RelayState _ pipe _) = Listener
+txPublisher (RelayState _ output _) = Listener
     "txRetranslationPublisher"
     [] $ \btq -> do
         forever . recoverAll "Tx publisher" retryOnSpot $ atomically $ do
-            tx <- STM.readTBQueue pipe
+            tx <- STM.readTBQueue output
             servPub btq (PubTx tx)

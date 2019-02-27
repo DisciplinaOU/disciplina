@@ -8,29 +8,22 @@ module Dscp.Educator.Launcher.Entry
 
 import Control.Concurrent (threadDelay)
 import Loot.Log (logInfo)
-import Time (sec)
-import UnliftIO.Async (async, cancel)
+import UnliftIO.Async (async)
 
-import Dscp.Config (sub, tree, branch, whenConfigJust)
+import Dscp.Config (branch, sub, tree, whenConfigJust)
 import Dscp.Educator.Config
 import Dscp.Educator.Launcher.Mode
 import Dscp.Educator.Web.Server
 import Dscp.Educator.Workers
 import Dscp.Network
-import Dscp.Util.TimeLimit
 import Dscp.Witness.Launcher
 import Dscp.Witness.Web.Server
 
 -- | Listeners, workers and no interaction with user.
-withEducatorBackground :: FullEducatorWorkMode ctx m => m () -> m ()
+withEducatorBackground :: FullEducatorWorkMode ctx m => m a -> m a
 withEducatorBackground cont = do
-    mask $ \unmask -> do
-        logInfo "Forking educator workers"
-        workerAsyncs <- mapM (async . runWorker identity) educatorWorkers
-        unmask cont `finally` mapM terminate workerAsyncs
-  where
-    terminate =
-        logWarningWaitInf (sec 1) "Educator worker shutdown" . cancel
+    logInfo "Forking educator workers"
+    withWorkers (pure educatorWorkers) cont
 
 -- | Launch witness and educator servers.
 serveAPIs :: EducatorWorkMode ctx m => m ()
@@ -52,7 +45,7 @@ serveAPIs = do
         (not separateWitnessServer)
 
 -- | Entry point of educator node.
-educatorEntry :: FullEducatorWorkMode ctx m => m ()
+educatorEntry :: FullEducatorWorkMode ctx m => m a
 educatorEntry =
     withServer $
     withWitnessBackground $

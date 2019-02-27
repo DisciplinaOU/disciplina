@@ -11,6 +11,7 @@ import Loot.Log (Logging (..))
 import Dscp.Config
 import Dscp.DB.CanProvideDB as DB
 import Dscp.DB.CanProvideDB.Pure as PureDB
+import Dscp.Network.Wrapped
 import Dscp.Resource.AppDir
 import Dscp.Resource.Keys
 import Dscp.Rio
@@ -58,10 +59,12 @@ runWitnessTestMode action =
         let _twcLogging = testLogging
         let _twcAppDir = error "AppDir is not defined"
         let ctx = TestWitnessCtx{..}
+        let workers = [txRetranslatingWorker]
 
-        runRIO ctx $ do
-            markWithinWriteSDLockUnsafe applyGenesisBlock
-            action
+        runRIO ctx $
+            withWorkers (pure workers) $ do
+                markWithinWriteSDLockUnsafe applyGenesisBlock
+                action
   where
     committeeKeyParams :: CommitteeParamsRec
     committeeKeyParams = finaliseDeferredUnsafe $ mempty

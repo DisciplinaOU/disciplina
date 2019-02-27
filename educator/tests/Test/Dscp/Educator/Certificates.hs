@@ -10,6 +10,7 @@ import Dscp.DB.SQL
 import Dscp.Educator
 import Dscp.Educator.Web.Educator
 import Dscp.Util.Test
+import Dscp.Witness.Web
 
 import Test.Dscp.DB.SQL.Mode
 import Test.Dscp.Educator.Mode
@@ -39,14 +40,10 @@ spec_Educator_certificates = specWithTempPostgresServer $ do
                     [cId -> certId] <- invoke $ educatorGetCertificates def def
                     pdf <- invoke $ educatorGetCertificate certId
 
-                    return $ total pdf
-
-                    -- TODO: I would be happy to verify the certificate in place,
-                    -- but that's not possible yet, to be resolved in [DSCP-464].
-
-                    -- checkRes <- checkFairCVPDF pdf
-                    -- return $ counterexample "FairCV is not verified" $
-                    --          fairCVFullyValid $ fcacrCheckResult checkRes
+                    void updateMempoolWithPublications
+                    checkRes <- checkFairCVPDF pdf
+                    return $ counterexample "FairCV is not verified" $
+                             fairCVFullyValid $ fcacrCheckResult checkRes
 
             it "Sorting certificates on creation day works" $ educatorPropertyM $ do
                 n <- pick $ choose (0, 5)

@@ -10,17 +10,17 @@ import Dscp.MultiEducator
 
 main :: IO ()
 main = do
-    eConfig <- getEducatorConfig
+    eConfig <- getMultiEducatorConfig
     let wConfig = rcast eConfig
-    launchEducatorRealMode eConfig $
-        withWitnessConfig wConfig educatorEntry
+    launchMultiEducatorRealMode eConfig $
+        withWitnessConfig wConfig multiEducatorEntry
 
-getEducatorConfig :: IO MultiEducatorConfigRec
-getEducatorConfig = do
+getMultiEducatorConfig :: IO MultiEducatorConfigRec
+getMultiEducatorConfig = do
     let parser = (,) <$> configParamsParser <*> multiEducatorConfigParser
     (configParams, cliConfigMod) <- execParser $
         info (helper <*> versionOption <*> parser) $
-        fullDesc <> progDesc "Disciplina educator node."
+        fullDesc <> progDesc "Disciplina multi educator node."
     let wrapConfig cfg = cliConfigMod $ defaultMultiEducatorConfig <> cfg
     buildConfig configParams $
         fmap wrapConfig . fillMultiEducatorConfig

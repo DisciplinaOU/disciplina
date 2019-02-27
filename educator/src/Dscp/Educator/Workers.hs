@@ -32,7 +32,7 @@ educatorWorkers =
 -- | Periodically take hanging private transactions and form a new private block.
 privateBlockCreatorWorker :: EducatorWorkMode ctx m => Worker m
 privateBlockCreatorWorker =
-    Worker "privateBlockCreatorWorker" [] [] $ \_ -> bootstrap >> work
+    bootingWorker_ "privateBlockCreatorWorker" bootstrap work
   where
     period = educatorConfig ^. sub #educator . sub #publishing . option #period
     slotDuration =
@@ -49,7 +49,6 @@ privateBlockCreatorWorker =
                    (capDelay (minute 5) $ expBackoff (sec 1)) $
                    action
     work =
-        forever $
         withRecovery $
         notFasterThan period $
             void dumpPrivateBlock
@@ -57,8 +56,7 @@ privateBlockCreatorWorker =
 -- | Publish all hanging private blocks to public chain.
 publicationTxSubmitter :: forall m ctx. EducatorWorkMode ctx m => Worker m
 publicationTxSubmitter =
-    Worker "publicationTxSubmitter" [] [] $ \_ ->
-        forever $
+    simpleWorker "publicationTxSubmitter" $
         recoverAll actionName (capDelay (minute 5) $ expBackoff (sec 1)) $
         notFasterThan (sec 1) $
             void updateMempoolWithPublications

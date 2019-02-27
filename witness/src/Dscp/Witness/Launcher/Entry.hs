@@ -10,12 +10,10 @@ module Dscp.Witness.Launcher.Entry
 import Control.Concurrent (threadDelay)
 import Fmt ((+|), (|+))
 import Loot.Log (logDebug, logInfo)
-import Time (sec)
-import UnliftIO.Async (async, cancel)
+import UnliftIO.Async (async)
 
 import Dscp.Config (sub, whenConfigJust)
-import Dscp.Network (runListener, runWorker, withServer)
-import Dscp.Util.TimeLimit
+import Dscp.Network
 import Dscp.Witness.Config
 import Dscp.Witness.Launcher.Context
 import Dscp.Witness.Listeners
@@ -24,32 +22,20 @@ import Dscp.Witness.Web
 import Dscp.Witness.Workers
 
 -- | Listeners, workers and no interaction with user.
-withWitnessBackground :: FullWitnessWorkMode ctx m => m () -> m ()
+withWitnessBackground :: FullWitnessWorkMode ctx m => m a -> m a
 withWitnessBackground cont = do
     initStorage
 
     logInfo $ "Genesis header: " +| genesisHeader |+ ""
 
-    workers <- witnessWorkers
-    listeners <- witnessListeners
-
-    mask $ \unmask -> do
-        logInfo "Forking witness workers"
-        workerAsyncs <- mapM (async . runWorker identity) workers
-
-        logInfo "Forking witness listeners"
-        listenerAsyncs <- mapM (async . runListener identity) listeners
-
-        unmask cont
-            `finally` mapM terminate (workerAsyncs <> listenerAsyncs)
-  where
-    terminate =
-        logWarningWaitInf (sec 1) "Witness worker/listener shutdown" . cancel
+    logInfo "Forking witness workers and listeners"
+    withWorkers witnessWorkers . withListeners witnessListeners $
+        cont
 
 -- | Entry point of witness node.
-witnessEntry :: FullWitnessWorkMode ctx m => m ()
+witnessEntry :: FullWitnessWorkMode ctx m => m a
 witnessEntry =
-    withServer. withWitnessBackground $ do
+    withServer . withWitnessBackground $ do
         let mServerParams = witnessConfig ^. sub #witness . sub #api
         whenConfigJust mServerParams $ \serverParams -> do
             logInfo "Forking witness API server"
