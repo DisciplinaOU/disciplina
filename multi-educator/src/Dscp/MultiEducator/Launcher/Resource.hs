@@ -3,7 +3,8 @@
 -- | Resources used by Educator node
 
 module Dscp.MultiEducator.Launcher.Resource
-       ( EducatorContexts (..)
+       ( EducatorContexts
+       , EducatorContextsVar (..)
        , LoadedEducatorContext (..)
        , MaybeLoadedEducatorContext (..)
        , MultiEducatorResources (..)
@@ -11,17 +12,20 @@ module Dscp.MultiEducator.Launcher.Resource
        , merEducatorData
        ) where
 
-import Control.Lens (makeLenses, Wrapped (..))
+import Control.Lens (makeLenses)
+import Loot.Log (logWarning)
 import qualified Pdf.FromLatex as Pdf
-import UnliftIO.Async (Async)
+import Time (sec)
+import UnliftIO.Async (Async, forConcurrently_, cancel)
 
 import Dscp.Config
 import Dscp.DB.SQL (SQL)
 import qualified Dscp.Educator.Config as E
 import qualified Dscp.Educator.Launcher.Mode as E
 import Dscp.MultiEducator.Config
-import Dscp.Resource.Class (AllocResource (..))
+import Dscp.Resource.Class (AllocResource (..), buildComponentR)
 import Dscp.Resource.Network (NetServResources)
+import Dscp.Util.TimeLimit
 import Dscp.Util.HasLens
 import qualified Dscp.Witness.Launcher.Resource as Witness
 
@@ -40,18 +44,17 @@ data MaybeLoadedEducatorContext
       -- | Educator context has been loaded.
     | FullyLoadedEducatorContext LoadedEducatorContext
 
--- | Contexts of every loaded educator.
-newtype EducatorContexts = EducatorContexts (Map Text MaybeLoadedEducatorContext)
-    deriving (Generic)
+type EducatorContexts = Map Text MaybeLoadedEducatorContext
 
-instance Wrapped EducatorContexts
+-- | Contexts of every loaded educator.
+newtype EducatorContextsVar = EducatorContextsVar (TVar EducatorContexts)
 
 -- | Datatype which contains resources required by all Disciplina nodes
 -- to start working.
 data MultiEducatorResources = MultiEducatorResources
     { _merWitnessResources :: !Witness.WitnessResources
     , _merDB               :: !SQL
-    , _merEducatorData     :: !(TVar EducatorContexts)
+    , _merEducatorData     :: !EducatorContextsVar
     , _merPdfLatexPath     :: !Pdf.LatexPath
     , _merPdfResourcePath  :: !Pdf.ResourcePath
     }
@@ -62,6 +65,26 @@ deriveHasLensDirect ''MultiEducatorResources
 deriveHasLens 'merWitnessResources ''MultiEducatorResources ''Witness.WitnessResources
 deriveHasLens 'merWitnessResources ''MultiEducatorResources ''NetServResources
 
+instance AllocResource EducatorContextsVar where
+    type Deps EducatorContextsVar = ()
+    allocResource () =
+        fmap EducatorContextsVar $
+        buildComponentR "Educator contexts var"
+            (newTVarIO mempty)
+            shutdownAllContexts
+      where
+        shutdownAllContexts ctxsVar = do
+            ctxs <- atomically $ readTVar ctxsVar
+            -- TODO [DSCP-494]: prevent further insertions to the context var
+
+            forConcurrently_ ctxs $ \case
+                YetLoadingEducatorContext ->
+                    logWarning "Educator context is being loaded during shutdown."
+                    -- TODO [DSCP-494] Do something smarter
+                FullyLoadedEducatorContext ctx ->
+                    forM_ (lecWorkerHandlers ctx) $
+                        logWarningWaitInf (sec 1) "Educator worker shutdown" . cancel
+
 instance AllocResource MultiEducatorResources where
     type Deps MultiEducatorResources = MultiEducatorConfigRec
     allocResource educatorCfg = do
@@ -70,8 +93,8 @@ instance AllocResource MultiEducatorResources where
         _merWitnessResources <- withWitnessConfig witnessCfg $
                                allocResource witnessCfg
         _merDB <- allocResource $ cfg ^. sub #db
-        _merEducatorData <- atomically $ newTVar (EducatorContexts mempty)
         let appDir = Witness._wrAppDir _merWitnessResources
+        _merEducatorData <- allocResource ()
         _merPdfLatexPath <- allocResource $ cfg ^. sub #certificates . option #latex
         _merPdfResourcePath <- allocResource
             (cfg ^. sub #certificates . option #resources, appDir)

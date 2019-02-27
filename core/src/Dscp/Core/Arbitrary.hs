@@ -505,7 +505,7 @@ certificateIssuerInfoEx :: CertificateIssuerInfo
 certificateIssuerInfoEx =
     CertificateIssuerInfo
     { ciiName    = "Grimpy Cat University"
-    , ciiWebsite = "example@gmail.com"
+    , ciiWebsite = "university@example.com"
     }
 
 ----------------------------------------------------------------------------

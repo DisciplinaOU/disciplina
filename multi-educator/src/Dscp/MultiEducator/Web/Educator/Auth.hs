@@ -84,9 +84,8 @@ instance IsAuth MultiEducatorAuth EducatorAuthLogin where
     type AuthArgs MultiEducatorAuth = '[MultiEducatorPublicKey]
     runAuth _ _ = multiEducatorAuthCheck
 
-instance IsClientAuth MultiEducatorAuth where
-    data ClientAuthData MultiEducatorAuth = MultiEducatorClientAuthData SecretKey
-    provideAuth req (MultiEducatorClientAuthData sk) = signRequestBasic sk req
+-- We cannot implement 'IsClientAuth' since for that we would need
+-- multieducator AAA secret key.
 
 -- | Custom JSON instance for 'MultiEducatorPublicKey':
 -- they use 'Base64Octets' for encoding and decoding
