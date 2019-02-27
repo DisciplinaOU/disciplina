@@ -243,7 +243,8 @@ testLogging :: Log.Logging IO
 testLogging =
     Log.Logging
     { Log._log = \(Log.Message lvl _ msg) ->
-        when (lvl >= Log.Warning) $
+        when (lvl >= Log.Warning) $ do
+            putTextLn $ "[" <> show lvl <> "]: " <> msg
             throwM $ TestLoggedError lvl msg
     , Log._logName = return $ error "Logger name requested in test"
     }
