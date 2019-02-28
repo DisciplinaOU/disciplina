@@ -1,19 +1,78 @@
 stages:
   - build
+  - release
 
 variables:
-  REPOSITORY_URL_STAGE: 122754137306.dkr.ecr.us-west-2.amazonaws.com/witness:$CI_COMMIT_SHA
+  REPOSITORY_URL_STAGE: 122754137306.dkr.ecr.us-west-2.amazonaws.com/dscp:$CI_COMMIT_SHA
   REPOSITORY_URL_PROD: someurl:$CI_COMMIT_SHA
 
 build:
   stage: build
   image: &base-haskell-ci-image haskell:8.2.2
   variables:
-    TESTVAR: TESTVAL
+    STACK_ROOT: $CI_PROJECT_DIR/.stack
+    STACK_WORK: .stack-work
   cache: &deps-cache
-    key: "$CI_JOB_ID-haskell-deps"
+    key: "disciplina-haskell-deps"
     paths:
+      - .stack
       - .stack-work
+      - pdfs/.stack-work
+      - faucet/.stack-work
+      - tools/.stack-work
+      - core/.stack-work
+      - educator/.stack-work
+      - wallet/.stack-work
+      - witness/.stack-work
+      - multi-educator/.stack-work
+  artifacts:
+    name: "$CI_COMMIT_REF_NAME"
+    paths:
+      - .artifacts/
   dependencies: []
   script:
-    - stack build --only-dependencies
+    - ls -al
+    - ls -al .stack/ || echo "absent"
+    - ls -al .stack-work/ || echo "absent"
+    - apt -y update
+    - apt -y install pkg-config libpq-dev librocksdb-dev libssl-dev libghc-zeromq4-haskell-dev tree
+    - stack install --system-ghc --test --no-run-tests --local-bin-path .artifacts
+    - ls -al /root/.stack
+
+#test:
+#  stage: test
+#  image: &base-haskell-ci-image haskell:8.2.2
+#  variables:
+#    STACK_ROOT: $CI_PROJECT_DIR/.stack
+#    STACK_WORK: .stack-work
+#  cache:
+#    <<: *deps-cache
+#    policy: pull
+#  dependencies: []
+#  script:
+#    - ls -al
+#    - stack test
+
+release-stage:
+  stage: release
+  image: docker:18.09.0-git
+  services:
+    - docker:18.09.0-dind
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+    DOCKER_DRIVER: overlay2
+  only:
+    - dev
+    - gitlab
+  cache: {}
+  dependencies:
+    - build
+  before_script:
+    - apk add --no-cache curl jq python py-pip
+    - pip install awscli
+  script:
+    - export AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID_STAGE
+    - export AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_STAGE
+    - $(aws ecr get-login --no-include-email --region us-west-2)
+    - docker build -f Dockerfile.ci -t $REPOSITORY_URL_STAGE .
+    - docker push $REPOSITORY_URL_STAGE

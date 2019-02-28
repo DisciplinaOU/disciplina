@@ -1,0 +1,6 @@
+FROM debian:stretch
+RUN apt -y update \
+ && apt -y install libgmp10 libczmq4 librocksdb4.5 libssl1.1 libpq5 \
+ && rm -rf /var/lib/apt/lists/* COPY .artifacts/ /opt/dscp/
+
+
