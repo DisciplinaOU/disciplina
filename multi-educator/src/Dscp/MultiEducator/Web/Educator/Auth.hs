@@ -22,9 +22,11 @@ import Data.Time.Clock (addUTCTime, getCurrentTime)
 import Fmt (build, (+||), (||+))
 import Servant.Auth.Server (AuthCheck, FromJWT, ToJWT)
 import Servant.Auth.Server.Internal.Class (IsAuth (..))
+import System.FilePath.Posix ((</>))
 
 import Dscp.Crypto
 import Dscp.Educator.Web.Auth
+import Dscp.Util.FileEmbed
 
 import qualified Data.ByteArray as BA
 
@@ -137,3 +139,15 @@ type instance NoAuthData "multi-educator" = EducatorAuthLogin
 ---------------------------------------------------------------------------
 
 instance AuthHasSwagger MultiEducatorAuth where
+    authSecurityDoc = jwtSecurityDoc multieducatorAuthDocDesc
+
+multieducatorAuthDocDesc :: Text
+multieducatorAuthDocDesc =
+    $(embedResourceStringFile $ foldr1 (</>)
+        [ "specs"
+        , "disciplina"
+        , "multi-educator"
+        , "api"
+        , "authentication.md"
+        ]
+     )
