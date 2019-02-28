@@ -12,6 +12,7 @@ import Dscp.Core.Arbitrary
 -- import qualified Dscp.Crypto.MerkleTree as MerkleTree
 import Dscp.Educator.DB as DB
 import Dscp.Util
+import Dscp.Util.Rethrow
 
 import Test.Dscp.DB.SQL.Mode
 import Test.Dscp.Educator.Mode
@@ -62,14 +63,14 @@ spec_Instances = specWithTempPostgresServer $ do
 
             it "Assignment is not created if course does not exist" $
                 sqlProperty $ \(assignment) -> do
-                    throws @DomainError $ do
+                    expectRethrowing @DomainError $ do
                         _ <- DB.createAssignment assignment
                         return ()
 
         describe "Submissions" $ do
             it "Submission is not created unless Assignment exist" $
                 sqlProperty $ \submission -> do
-                    throws @DomainError $ do
+                    expectRethrowing @DomainError $ do
                         _ <- DB.createSignedSubmission submission
                         return ()
 
@@ -85,7 +86,7 @@ spec_Instances = specWithTempPostgresServer $ do
                     _ <- DB.createCourse           (simpleCourse course)
                     _ <- DB.createAssignment       assignment
 
-                    throws @DomainError $ do
+                    expectRethrowing @DomainError $ do
                         _ <- DB.createSignedSubmission sigSubmission
                         return ()
 
@@ -96,7 +97,7 @@ spec_Instances = specWithTempPostgresServer $ do
                     let assignment    = tiOne $ cteAssignments env
                         sigSubmission = tiOne $ cteSignedSubmissions env
 
-                    throws @DomainError $ do
+                    expectRethrowing @DomainError $ do
                         let submission = sigSubmission^.ssSubmission
                             course     = assignment^.aCourseId
                             student    = submission^.sStudentId

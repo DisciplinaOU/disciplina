@@ -223,8 +223,8 @@ botNoteCompletedAssignments student course completedAssigns =
       \courseAssigns ->
         forM_ courseAssigns $ \(WithDependencies assign deps) ->
             when (deps `S.isSubsetOf` completedAssigns) $
-                transact $
                 maybePresent $
+                transact $
                 setStudentAssignment student (getId assign)
 
 -- | Helper to invoke 'botNoteCompletedAssignments', accepts

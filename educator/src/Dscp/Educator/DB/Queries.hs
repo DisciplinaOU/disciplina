@@ -75,7 +75,6 @@ module Dscp.Educator.DB.Queries
        ) where
 
 
-import Control.Exception.Safe (catchJust)
 import Data.Default (Default (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -98,28 +97,28 @@ import Dscp.Educator.DB.Schema
 import Dscp.Educator.Launcher.Marker
 import Dscp.Resource.Keys
 import Dscp.Util
+import Dscp.Util.Rethrow
 
 -- | Short alias for @'educatorSchema'@ for convenience.
 es :: DatabaseSettings be EducatorSchema
 es = educatorSchema
 
 -- | Catch "unique" constraint violation and rethrow specific error.
-rewrapAlreadyExists :: MonadCatch m => DomainErrorItem -> m a -> m a
-rewrapAlreadyExists err action =
-    catchJust asAlreadyExistsError action
-        (\_ -> throwM $ AlreadyPresentError err)
+rewrapAlreadyExists :: MonadRethrow m => DomainErrorItem -> m a -> m a
+rewrapAlreadyExists err =
+    rethrowJust $ \e -> asAlreadyExistsError e $> AlreadyPresentError err
 
-assertExists :: MonadCatch m => m Bool -> DomainErrorItem -> m ()
+assertExists :: MonadThrow m => m Bool -> DomainErrorItem -> m ()
 assertExists action = assertJustPresent (bool Nothing (Just ()) <$> action)
 
-assertJustPresent :: MonadCatch m => m (Maybe a) -> DomainErrorItem -> m a
+assertJustPresent :: MonadThrow m => m (Maybe a) -> DomainErrorItem -> m a
 assertJustPresent action err =
     action >>= maybe (throwM $ AbsentError err) pure
 
 -- | Catch "foreign" constraint violation and rethrow specific error.
-rewrapReferenceGotInvalid :: (MonadCatch m, Exception e) => e -> m a -> m a
-rewrapReferenceGotInvalid err action =
-    catchJust asReferenceInvalidError action (\_ -> throwM err)
+rewrapReferenceGotInvalid :: (MonadRethrow m, Exception e) => e -> m a -> m a
+rewrapReferenceGotInvalid err =
+    rethrowJust $ \e -> asReferenceInvalidError e $> err
 
 type DBM m = (MonadIO m, MonadCatch m)
 
