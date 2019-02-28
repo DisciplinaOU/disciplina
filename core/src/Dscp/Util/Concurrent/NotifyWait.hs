@@ -88,12 +88,12 @@ wait (Waiter doWait) = do
     eventDesc = toText $ reflect (Proxy @desc)
 
 -- | Creates a wait-notify pair.
-newWaitPair :: MonadIO m => m (Notifier d, Waiter d)
+newWaitPair :: forall m desc text. (MonadIO m, Reifies desc text, ToText text) => m (Notifier desc, Waiter desc)
 newWaitPair = do
     eventResult <- newTVarIO (Nothing :: Maybe (Either SomeException ()))
     return
-        ( Notifier $ \res ->
-            atomically $ writeTVar eventResult (Just res)
+        ( Notifier $ \res -> atomically $
+            writeTVar eventResult (Just res)
         , Waiter $ atomically $
             readTVar eventResult >>= maybe retry return
         )

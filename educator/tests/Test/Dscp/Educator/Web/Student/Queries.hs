@@ -12,16 +12,12 @@ import Dscp.Core
 import Dscp.Crypto (hash, unsafeHash)
 import Dscp.DB.SQL
 import Dscp.Educator.DB
-import Dscp.Educator.Logic.Publishing (updateMempoolWithPublications)
-import Dscp.Educator.Web.Educator.Queries (educatorAddCertificate)
 import Dscp.Educator.Web.Queries
 import Dscp.Educator.Web.Student
 import Dscp.Educator.Web.Types
 import Dscp.Util
 import Dscp.Util.Rethrow
 import Dscp.Util.Test
-import Dscp.Witness.Web.Logic
-import Dscp.Witness.Web.Types (fcacrCheckResult)
 
 import Test.Dscp.DB.SQL.Mode
 import Test.Dscp.Educator.Mode
