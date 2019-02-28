@@ -58,3 +58,10 @@ studentAuthCheck (StudentCheckAction checkStudent) = do
 ---------------------------------------------------------------------------
 
 type instance NoAuthData "student" = Student
+
+---------------------------------------------------------------------------
+-- Documentation
+---------------------------------------------------------------------------
+
+instance AuthHasSwagger StudentAuth where
+    authSecurityDoc = jwtSecurityDoc educatorAuthDocDesc

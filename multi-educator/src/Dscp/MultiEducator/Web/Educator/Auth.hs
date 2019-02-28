@@ -130,3 +130,10 @@ educatorAuthLoginSimple eadId = EducatorAuthLogin {..}
 ---------------------------------------------------------------------------
 
 type instance NoAuthData "multi-educator" = EducatorAuthLogin
+
+
+---------------------------------------------------------------------------
+-- Documentation
+---------------------------------------------------------------------------
+
+instance AuthHasSwagger MultiEducatorAuth where
