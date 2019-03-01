@@ -31,8 +31,10 @@ warpSettings NetworkAddress {..} = Warp.defaultSettings
 
 serveWeb
     :: MonadIO m
-    => NetworkAddress -> Application -> m ()
-serveWeb addr = liftIO . Warp.runSettings (warpSettings addr)
+    => NetworkAddress -> Application -> m a
+serveWeb addr app = do
+    liftIO $ Warp.runSettings (warpSettings addr) app
+    return $ error "Server terminated early"
 
 -- | Grab logging context and build config for servant requests logging.
 buildServantLogConfig
