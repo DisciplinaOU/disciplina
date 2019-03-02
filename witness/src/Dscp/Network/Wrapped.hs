@@ -18,15 +18,6 @@ module Dscp.Network.Wrapped
     , subType
     , fromSubType
 
-    , Listener (..)
-    , hoistListener
-    , runListener
-    , withListeners
-    , servSend
-    , servPub
-    , simpleListener
-    , lcallback
-
     , Worker
     , wIdL
     , simpleWorker
@@ -37,7 +28,13 @@ module Dscp.Network.Wrapped
     , runWorker
     , withWorkers
     , cliSend
+
     , CliRecvExc(..)
+    , servSend
+    , servPub
+    , simpleListener
+    , callbacksListener
+    , lcallback
     , cliRecv
     , cliRecvResp
     , cliRecvUpdate
@@ -63,7 +60,7 @@ import Control.Lens (makeLensesWith)
 import qualified Data.ByteString.Char8 as BS8
 import qualified Data.ByteString.Lazy as BSL
 import Fmt ((+||), (||+))
-import Loot.Log (MonadLogging, logDebug, logError, logWarning)
+import Loot.Log (MonadLogging, logDebug, logWarning)
 import Loot.Network.BiTQueue (recvBtq, sendBtq)
 import Loot.Network.Class (CliId, ClientEnv, ClientId, ListenerEnv, ListenerId, MsgType (..),
                            NetworkingCli, NetworkingServ, NodeId, Subscription (..), registerClient,
@@ -114,96 +111,6 @@ subType = Subscription $ BS8.pack $ show $ getMsgTag @SubK @d
 -- | Same as 'fromMsgType', but for subscriptions.
 fromSubType :: Subscription -> Maybe Natural
 fromSubType (Subscription bs) = readMaybe (BS8.unpack bs)
-
----------------------------------------------------------------------------
--- Listeners
-----------------------------------------------------------------------------
-
--- Listeners are supposed to have one dispatcher only (and one receive
--- block only). When new messages come, response callback thread is
--- forked and this thread is allowed to send multiple messages
--- (directly, or publish).
-
-data Listener m = Listener
-    { lId       :: !ListenerId
-      -- ^ Listener id, should be unique.
-    , lMsgTypes :: !(Set MsgType)
-      -- ^ Message types listener is supposed to receive.
-    , lAction   :: !(ListenerEnv NetTag -> m Void)
-      -- ^ Listener's action. Should never terminate.
-    }
-
-hoistListener :: (forall a. m a -> n a) -> Listener m -> Listener n
-hoistListener f li = li{ lAction = f . lAction li }
-
-runListener ::
-       forall m. (NetworkingServ NetTag m, MonadLogging m, MonadMask m, MonadUnliftIO m)
-    => Listener m
-    -> m (Async Void)
-runListener Listener{..} = do
-    logDebug $ "Launching listner " +|| lId ||+ ""
-    (lEnv :: ListenerEnv NetTag) <- registerListener @NetTag lId lMsgTypes
-    async $ loop lEnv
-              `finally` (logDebug $ "Listener " +|| lId ||+ " has exited")
-  where
-    loop env =
-        lAction env `catchAny` \e -> do
-            logError $ "Listener " +|| lId ||+ " stopped due to error: " +|| e ||+ ""
-            lAction env
-
-withListeners
-    :: (NetworkingServ NetTag m, MonadMask m, MonadLogging m, MonadUnliftIO m)
-    => m [Listener m] -> m a -> m a
-withListeners listenersM action = do
-    listeners <- listenersM
-    bracket
-        (mapM (\l -> (l, ) <$> async (runListener l)) listeners)
-        (mapM terminate)
-        $ \_ -> action
-  where
-    terminate (listener, listenerAsync) =
-        logWarningWaitInf (sec 1) ("Listener " <> show (lId listener) <> " shutdown") $
-        cancel listenerAsync
-
-servSend :: forall d. Message MsgK d => ListenerEnv NetTag -> CliId NetTag -> d -> STM ()
-servSend btq cliId msg =
-    sendBtq btq $ L.Reply cliId (msgType @d) [BSL.toStrict $ serialise msg]
-
-servPub :: forall d. Message SubK d => ListenerEnv NetTag -> d -> STM ()
-servPub btq msg =
-    sendBtq btq $ L.Publish (subType @d) [BSL.toStrict $ serialise msg]
-
-simpleListener ::
-       forall m. (MonadIO m, MonadMask m, MonadLogging m)
-    => ListenerId
-    -> Set MsgType
-    -> (ListenerEnv NetTag -> [CallbackWrapper (CliId NetTag) m ()])
-    -> Listener m
-simpleListener lId lMsgTypes getCallbacks =
-    Listener {..}
-  where
-    -- todo use 'fmt' or something similar
-    lAction btq = do
-        logDebug $ "Listener " +|| lId ||+ " has started."
-        forever $
-            recoverAll ("Listener " +|| lId ||+ "") (constDelay (sec 2)) (action btq)
-    action btq = do
-        let callbacks = getCallbacks btq
-        (cliId,msgT,content) <- atomically $ recvBtq btq
-        case (fromMsgType msgT,content) of
-            (Just n,[d]) -> runCallbacksInt callbacks n d cliId >>= \case
-                Nothing ->
-                    logWarning $ "Listener " +|| lId ||+ "couldn't match on type (runCallbacksInt)"
-                _       -> pass
-            _            -> pass
-
--- for server, we just skip the message if we can't decode it, since
--- we have only one dispatcher.
-lcallback ::
-       forall d m. (Message MsgK d, Monad m)
-    => (CliId NetTag -> d -> m ())
-    -> CallbackWrapper (CliId NetTag) m ()
-lcallback foo = handlerDecoded $ \cId -> either (const $ pass) (foo cId)
 
 ----------------------------------------------------------------------------
 -- Workers
@@ -263,15 +170,15 @@ runWorker Worker{..} = do
               `finally` (logDebug $ "Worker " +|| wId ||+ " has exited")
   where
     loop pre =
-        wAction pre `catchAny` \e -> do
-            logError $ "Worker " +|| wId ||+ " stopped due to error: " +|| e ||+ ""
-            wAction pre
+        forever $
+            -- dispite we recover from errors, it's recommended to define its
+            -- own recovery in each worker
+            recoverAll ("Worker " +|| wId ||+ "") (expBackoff (sec 1)) (wAction pre)
 
 withWorkers
     :: (MonadMask m, MonadLogging m, MonadUnliftIO m)
-    => m [Worker m] -> m a -> m a
-withWorkers workersM action = do
-    workers <- workersM
+    => [Worker m] -> m a -> m a
+withWorkers workers action = do
     bracket
         (mapM (\w -> (w, ) <$> runWorker w) workers)
         (mapM terminate)
@@ -289,6 +196,15 @@ cliSend ::
     -> m ()
 cliSend btq nId msg =
     atomically $ sendBtq btq (nId, (msgType @d, [BSL.toStrict $ serialise msg]))
+
+---------------------------------------------------------------------------
+-- Listeners
+----------------------------------------------------------------------------
+
+-- Listeners are supposed to have one dispatcher only (and one receive
+-- block only). When new messages come, response callback thread is
+-- forked and this thread is allowed to send multiple messages
+-- (directly, or publish).
 
 data CliRecvExc
     = CRETimeout
@@ -312,6 +228,50 @@ type SendConstraint k d m
        , MonadUnliftIO m
        , MonadCatch m
        , MonadLogging m)
+
+servSend :: forall d. Message MsgK d => ListenerEnv NetTag -> CliId NetTag -> d -> STM ()
+servSend btq cliId msg =
+    sendBtq btq $ L.Reply cliId (msgType @d) [BSL.toStrict $ serialise msg]
+
+servPub :: forall d. Message SubK d => ListenerEnv NetTag -> d -> STM ()
+servPub btq msg =
+    sendBtq btq $ L.Publish (subType @d) [BSL.toStrict $ serialise msg]
+
+simpleListener
+    :: (MonadIO m, MonadLogging m, NetworkingServ NetTag m)
+    => ListenerId
+    -> Set MsgType
+    -> (ListenerEnv NetTag -> m ())
+    -> Worker m
+simpleListener lId msgTypes action =
+    bootingWorker lId register action
+  where
+    register = registerListener @NetTag lId msgTypes
+
+callbacksListener
+    :: (MonadIO m, MonadLogging m, NetworkingServ NetTag m)
+    => ListenerId
+    -> Set MsgType
+    -> (ListenerEnv NetTag -> [CallbackWrapper (CliId NetTag) m ()])
+    -> Worker m
+callbacksListener lId lMsgTypes getCallbacks =
+    simpleListener lId lMsgTypes $ \btq -> do
+        let callbacks = getCallbacks btq
+        (cliId,msgT,content) <- atomically $ recvBtq btq
+        case (fromMsgType msgT,content) of
+            (Just n,[d]) -> do
+                mres <- runCallbacksInt callbacks n d cliId
+                whenNothing mres $
+                    logWarning $ "Listener " +|| lId ||+ "couldn't match on type (runCallbacksInt)"
+            _            -> pass
+
+-- for server, we just skip the message if we can't decode it, since
+-- we have only one dispatcher.
+lcallback ::
+       forall d m. (Message MsgK d, Monad m)
+    => (CliId NetTag -> d -> m ())
+    -> CallbackWrapper (CliId NetTag) m ()
+lcallback foo = handlerDecoded $ \cId -> either (const $ pass) (foo cId)
 
 -- Timeout -- milliseconds, 0 if instant response is expected, -1 (any
 -- negative) if timeout should be disabled.

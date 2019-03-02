@@ -38,13 +38,12 @@ import Dscp.Witness.SDLock
 
 witnessWorkers
     :: FullWitnessWorkMode ctx m
-    => m [Worker m]
-witnessWorkers = do
-    return
-        [ blockUpdateWorker
-        , txRetranslatingWorker
-        , networkTxReceivingWorker
-        ]
+    => [Worker m]
+witnessWorkers =
+    [ blockUpdateWorker
+    , txRetranslatingWorker
+    , networkTxReceivingWorker
+    ]
 
 ----------------------------------------------------------------------------
 -- Updates

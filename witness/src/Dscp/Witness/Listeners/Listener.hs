@@ -25,24 +25,22 @@ import Dscp.Witness.Relay
 import Dscp.Witness.SDLock
 
 
-witnessListeners :: WitnessWorkMode ctx m => m [Listener m]
-witnessListeners = do
-    relayState <- view (lensOf @RelayState)
-    return
-        [ blockIssuingListener
-        , getBlocksListener
-        , getTipListener
-        , txPublisher relayState
-        ]
+witnessListeners :: FullWitnessWorkMode ctx m => [Worker m]
+witnessListeners =
+    [ blockIssuingListener
+    , getBlocksListener
+    , getTipListener
+    , txPublisher
+    ]
 
 ----------------------------------------------------------------------------
 -- Block creation
 ----------------------------------------------------------------------------
 
-blockIssuingListener :: forall ctx m. WitnessWorkMode ctx m => Listener m
+blockIssuingListener :: forall ctx m. FullWitnessWorkMode ctx m => Worker m
 blockIssuingListener =
-    Listener "blockIssuingListener" [] $ \btq ->
-        forever $ recoverAll "BlockIssuingListener" (constDelay (sec 2)) (action btq)
+    simpleListener "blockIssuingListener" [] $ \btq ->
+        recoverAll "BlockIssuingListener" (constDelay (sec 2)) (action btq)
   where
     action :: ListenerEnv NetTag -> m ()
     action btq = do
@@ -68,9 +66,9 @@ blockIssuingListener =
 -- Headers and blocks
 ----------------------------------------------------------------------------
 
-getBlocksListener :: WitnessWorkMode ctx m => Listener m
+getBlocksListener :: FullWitnessWorkMode ctx m => Worker m
 getBlocksListener =
-    simpleListener "getHeadersListener" [msgType @GetBlocksMsg] $ \btq ->
+    callbacksListener "getHeadersListener" [msgType @GetBlocksMsg] $ \btq ->
         [lcallback (respond btq)]
   where
     respond btq cliId (GetBlocksMsg{..}) = do
@@ -80,9 +78,9 @@ getBlocksListener =
         atomically $ servSend btq cliId response
         logDebug "getBlocksMsg: response sent"
 
-getTipListener :: WitnessWorkMode ctx m => Listener m
+getTipListener :: FullWitnessWorkMode ctx m => Worker m
 getTipListener =
-    simpleListener "getTipListener" [msgType @GetTipMsg] $ \btq ->
+    callbacksListener "getTipListener" [msgType @GetTipMsg] $ \btq ->
         [lcallback (respond btq)]
   where
     respond btq cliId GetTipMsg = do
@@ -95,10 +93,12 @@ getTipListener =
 -- Retranslator, publishing part
 ----------------------------------------------------------------------------
 
-txPublisher :: WitnessWorkMode ctx m => RelayState -> Listener m
-txPublisher (RelayState _ output _) = Listener
+txPublisher :: FullWitnessWorkMode ctx m => Worker m
+txPublisher = simpleListener
     "txRetranslationPublisher"
     [] $ \btq -> do
-        forever . recoverAll "Tx publisher" retryOnSpot $ atomically $ do
-            tx <- STM.readTBQueue output
-            servPub btq (PubTx tx)
+        recoverAll "Tx publisher" retryOnSpot $ do
+            RelayState _ output _ <- view $ lensOf @RelayState
+            atomically $ do
+                tx <- STM.readTBQueue output
+                servPub btq (PubTx tx)

@@ -117,7 +117,7 @@ runTestSqlM testDb action =
         runRIO ctx $ markWithinWriteSDLockUnsafe applyGenesisBlock
 
         liftIO . rollbackInEnd $ runRIO ctx $
-            withWorkers (pure workers) $
+            withWorkers workers $
                 action
   where
     committeeKeyParams :: CommitteeParamsRec

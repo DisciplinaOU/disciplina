@@ -23,7 +23,7 @@ import Dscp.Witness.Web.Server
 withEducatorBackground :: FullEducatorWorkMode ctx m => m a -> m a
 withEducatorBackground cont = do
     logInfo "Forking educator workers"
-    withWorkers (pure educatorWorkers) cont
+    withWorkers educatorWorkers cont
 
 -- | Launch witness and educator servers.
 serveAPIs :: EducatorWorkMode ctx m => m ()

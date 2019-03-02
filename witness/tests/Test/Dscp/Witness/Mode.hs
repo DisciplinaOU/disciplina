@@ -62,7 +62,7 @@ runWitnessTestMode action =
         let workers = [txRetranslatingWorker]
 
         runRIO ctx $
-            withWorkers (pure workers) $ do
+            withWorkers workers $ do
                 markWithinWriteSDLockUnsafe applyGenesisBlock
                 action
   where
