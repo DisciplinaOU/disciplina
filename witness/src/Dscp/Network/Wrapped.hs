@@ -24,7 +24,7 @@ module Dscp.Network.Wrapped
     , simpleWorker
     , bootingWorker
     , bootingWorker_
-    , netWorker
+    , clientWorker
     , hoistWorker
     , runWorker
     , withWorkers
@@ -33,8 +33,8 @@ module Dscp.Network.Wrapped
     , CliRecvExc(..)
     , servSend
     , servPub
-    , simpleListener
-    , callbacksListener
+    , serverWorker
+    , serverCallbacksWorker
     , lcallback
     , cliRecv
     , cliRecvResp
@@ -145,18 +145,6 @@ bootingWorker wId boot action = Worker wId boot (forever . action) defWorkerReco
 defWorkerRecovery :: forall m. Monad m => RetryPolicyM m
 defWorkerRecovery = capDelay (sec 20) $ expBackoff (sec 1)
 
-netWorker
-    :: NetworkingCli NetTag m
-    => ClientId
-    -> Set MsgType
-    -> Set Subscription
-    -> (ClientEnv NetTag -> m ())
-    -> Worker m
-netWorker cId msgTypes subs action =
-    bootingWorker cId register action
-  where
-    register = registerClient @NetTag cId msgTypes subs
-
 hoistWorker :: (forall a. m a -> n a) -> Worker m -> Worker n
 hoistWorker nat Worker{..} =
     Worker
@@ -192,6 +180,10 @@ withWorkers workers action = do
         logWarningWaitInf (sec 1) ("Worker " <> show (wId worker) <> " shutdown") $
         cancel workerAsync
 
+---------------------------------------------------------------------------
+-- Client components
+----------------------------------------------------------------------------
+
 cliSend ::
        forall d m. (Message MsgK d, NetworkingCli NetTag m, MonadIO m)
     => ClientEnv NetTag
@@ -201,8 +193,20 @@ cliSend ::
 cliSend btq nId msg =
     atomically $ sendBtq btq (nId, (msgType @d, [BSL.toStrict $ serialise msg]))
 
+clientWorker
+    :: NetworkingCli NetTag m
+    => ClientId
+    -> Set MsgType
+    -> Set Subscription
+    -> (ClientEnv NetTag -> m ())
+    -> Worker m
+clientWorker cId msgTypes subs action =
+    bootingWorker cId register action
+  where
+    register = registerClient @NetTag cId msgTypes subs
+
 ---------------------------------------------------------------------------
--- Listeners
+-- Server components
 ----------------------------------------------------------------------------
 
 -- Listeners are supposed to have one dispatcher only (and one receive
@@ -241,25 +245,25 @@ servPub :: forall d. Message SubK d => ListenerEnv NetTag -> d -> STM ()
 servPub btq msg =
     sendBtq btq $ L.Publish (subType @d) [BSL.toStrict $ serialise msg]
 
-simpleListener
+serverWorker
     :: (MonadIO m, MonadLogging m, NetworkingServ NetTag m)
     => ListenerId
     -> Set MsgType
     -> (ListenerEnv NetTag -> m ())
     -> Worker m
-simpleListener lId msgTypes action =
+serverWorker lId msgTypes action =
     bootingWorker lId register action
   where
     register = registerListener @NetTag lId msgTypes
 
-callbacksListener
+serverCallbacksWorker
     :: (MonadIO m, MonadLogging m, NetworkingServ NetTag m)
     => ListenerId
     -> Set MsgType
     -> (ListenerEnv NetTag -> [CallbackWrapper (CliId NetTag) m ()])
     -> Worker m
-callbacksListener lId lMsgTypes getCallbacks =
-    simpleListener lId lMsgTypes $ \btq -> do
+serverCallbacksWorker lId lMsgTypes getCallbacks =
+    serverWorker lId lMsgTypes $ \btq -> do
         let callbacks = getCallbacks btq
         (cliId,msgT,content) <- atomically $ recvBtq btq
         case (fromMsgType msgT,content) of

@@ -53,7 +53,7 @@ witnessWorkers =
 blockUpdateWorker :: forall ctx m. FullWitnessWorkMode ctx m => Worker m
 blockUpdateWorker =
     set wRecoveryL (constDelay (sec 5)) $
-    netWorker "blockUpdateWorker" [msgType @TipMsg, msgType @BlocksMsg] [subType @PubBlock] $
+    clientWorker "blockUpdateWorker" [msgType @TipMsg, msgType @BlocksMsg] [subType @PubBlock] $
     \btq -> bootstrap btq >> action btq
   where
     -- We ask for a tip on startup to synchronise.
@@ -169,7 +169,7 @@ txRetranslatingWorker =
 networkTxReceivingWorker :: FullWitnessWorkMode ctx m => Worker m
 networkTxReceivingWorker =
     set wRecoveryL (constDelay (sec 1)) $
-        netWorker "txRetranslationRepeater" [] [subType @PubTx] $ \btq -> do
+        clientWorker "txRetranslationRepeater" [] [subType @PubTx] $ \btq -> do
             (_, PubTx tx) <- cliRecvUpdate btq (-1)
             checkThenRepublish tx
                 & handleAlreadyExists (\_ -> pass)

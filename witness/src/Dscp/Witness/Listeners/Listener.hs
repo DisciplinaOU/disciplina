@@ -40,7 +40,7 @@ witnessListeners =
 blockIssuingListener :: forall ctx m. FullWitnessWorkMode ctx m => Worker m
 blockIssuingListener =
     set wRecoveryL (constDelay (sec 2)) $
-        simpleListener "blockIssuingListener" [] action
+        serverWorker "blockIssuingListener" [] action
   where
     action :: ListenerEnv NetTag -> m ()
     action btq = do
@@ -68,7 +68,7 @@ blockIssuingListener =
 
 getBlocksListener :: FullWitnessWorkMode ctx m => Worker m
 getBlocksListener =
-    callbacksListener "getHeadersListener" [msgType @GetBlocksMsg] $ \btq ->
+    serverCallbacksWorker "getHeadersListener" [msgType @GetBlocksMsg] $ \btq ->
         [lcallback (respond btq)]
   where
     respond btq cliId (GetBlocksMsg{..}) = do
@@ -80,7 +80,7 @@ getBlocksListener =
 
 getTipListener :: FullWitnessWorkMode ctx m => Worker m
 getTipListener =
-    callbacksListener "getTipListener" [msgType @GetTipMsg] $ \btq ->
+    serverCallbacksWorker "getTipListener" [msgType @GetTipMsg] $ \btq ->
         [lcallback (respond btq)]
   where
     respond btq cliId GetTipMsg = do
@@ -96,7 +96,7 @@ getTipListener =
 txPublisher :: FullWitnessWorkMode ctx m => Worker m
 txPublisher =
     set wRecoveryL retryOnSpot $
-        simpleListener "txRetranslationPublisher" [] $ \btq -> do
+        serverWorker "txRetranslationPublisher" [] $ \btq -> do
             RelayState _ output _ <- view $ lensOf @RelayState
             atomically $ do
                 tx <- STM.readTBQueue output
