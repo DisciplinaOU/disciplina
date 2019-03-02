@@ -31,6 +31,7 @@ extra-deps:
 - HList-0.5.0.0
 - qrcode-core-0.8.0
 - qrcode-juicypixels-0.8.0
+- retry-0.8.0.0
 
 # Fixes bug with `concurrently` not waiting for its children to die
 # (this bug causes our node terminatation before all workers/resources cleaned up)

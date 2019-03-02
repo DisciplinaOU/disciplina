@@ -52,8 +52,9 @@ witnessWorkers =
 -- | Worker listening to block updates.
 blockUpdateWorker :: forall ctx m. FullWitnessWorkMode ctx m => Worker m
 blockUpdateWorker =
-    netWorker "blockUpdateWorker" [msgType @TipMsg, msgType @BlocksMsg] [subType @PubBlock]
-    (\btq -> bootstrap btq >> action btq)
+    set wRecoveryL (constDelay (sec 5)) $
+    netWorker "blockUpdateWorker" [msgType @TipMsg, msgType @BlocksMsg] [subType @PubBlock] $
+    \btq -> bootstrap btq >> action btq
   where
     -- We ask for a tip on startup to synchronise.
     bootstrap :: ClientEnv NetTag -> m ()
@@ -81,12 +82,11 @@ blockUpdateWorker =
                 logDebug $ "Processing blocks"
                 applyManyBlocks blocks
 
-        recoverAll "Block update worker" (constDelay (sec 5)) $ do
-            logDebug "blockUpdateWorker: receiving"
-            cliRecv btq (-1) [ ccallback processPubBlock
-                             , ccallback processTipMsg
-                             , ccallback processBlocks
-                             ]
+        logDebug "blockUpdateWorker: receiving"
+        cliRecv btq (-1) [ ccallback processPubBlock
+                         , ccallback processTipMsg
+                         , ccallback processBlocks
+                         ]
 
     processNewBlock nId btq block = do
         let header = bHeader block
@@ -156,10 +156,10 @@ checkThenRepublish tx = do
 txRetranslatingWorker
     :: WitnessWorkMode ctx m
     => Worker m
-txRetranslatingWorker = simpleWorker "txRetranslationInitialiser" $ do
-    relay <- view (lensOf @RelayState)
-
-    recoverAll "Tx retranslation initializer" retryOnSpot $ do
+txRetranslatingWorker =
+    set wRecoveryL retryOnSpot $
+    simpleWorker "txRetranslationInitialiser" $ do
+        relay <- view (lensOf @RelayState)
         (tx, inMempoolNotifier) <- atomically $ STM.readTBQueue (_rsInput relay)
         checkThenRepublish tx
             & finallyNotify inMempoolNotifier
@@ -167,11 +167,9 @@ txRetranslatingWorker = simpleWorker "txRetranslationInitialiser" $ do
 
 -- | Handles incoming transactions.
 networkTxReceivingWorker :: FullWitnessWorkMode ctx m => Worker m
-networkTxReceivingWorker = netWorker
-    "txRetranslationRepeater"
-    []
-    [subType @PubTx] $ \btq -> do
-        recoverAll "Tx retranslation repeater" (constDelay (sec 1)) $ do
+networkTxReceivingWorker =
+    set wRecoveryL (constDelay (sec 1)) $
+        netWorker "txRetranslationRepeater" [] [subType @PubTx] $ \btq -> do
             (_, PubTx tx) <- cliRecvUpdate btq (-1)
             checkThenRepublish tx
                 & handleAlreadyExists (\_ -> pass)

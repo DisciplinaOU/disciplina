@@ -20,6 +20,7 @@ module Dscp.Network.Wrapped
 
     , Worker
     , wIdL
+    , wRecoveryL
     , simpleWorker
     , bootingWorker
     , bootingWorker_
@@ -57,6 +58,7 @@ import Control.Concurrent (threadDelay)
 import Control.Concurrent.STM (orElse, retry)
 import Control.Concurrent.STM.TMVar (newEmptyTMVarIO, putTMVar, readTMVar)
 import Control.Lens (makeLensesWith)
+import Control.Retry (RetryPolicyM, natTransformRetryPolicy)
 import qualified Data.ByteString.Char8 as BS8
 import qualified Data.ByteString.Lazy as BSL
 import Fmt ((+||), (||+))
@@ -119,10 +121,11 @@ fromSubType (Subscription bs) = readMaybe (BS8.unpack bs)
 data Worker m = forall pre. Worker
     { wId        :: !ClientId
       -- ^ Worker's identity.
-    , wBootstrap :: m pre
+    , wBootstrap :: !(m pre)
       -- ^ Initialize necessary context. Fail here or never.
     , wAction    :: !(pre -> m Void)
       -- ^ Worker's action. Should never end.
+    , wRecovery  :: !(RetryPolicyM m)
     }
 
 makeLensesWith postfixLFields ''Worker
@@ -137,7 +140,10 @@ bootingWorker_ wId boot action = bootingWorker wId boot (\() -> action)
 
 -- | A worker with context preparation.
 bootingWorker :: Monad m => ClientId -> m a -> (a -> m ()) -> Worker m
-bootingWorker wId boot action = Worker wId boot (forever . action)
+bootingWorker wId boot action = Worker wId boot (forever . action) defWorkerRecovery
+
+defWorkerRecovery :: forall m. Monad m => RetryPolicyM m
+defWorkerRecovery = capDelay (sec 20) $ expBackoff (sec 1)
 
 netWorker
     :: NetworkingCli NetTag m
@@ -152,10 +158,11 @@ netWorker cId msgTypes subs action =
     register = registerClient @NetTag cId msgTypes subs
 
 hoistWorker :: (forall a. m a -> n a) -> Worker m -> Worker n
-hoistWorker f Worker{..} =
+hoistWorker nat Worker{..} =
     Worker
-    { wBootstrap = f wBootstrap
-    , wAction = \pre -> f $ wAction pre
+    { wBootstrap = nat wBootstrap
+    , wAction = \pre -> nat $ wAction pre
+    , wRecovery = natTransformRetryPolicy nat wRecovery
     , ..
     }
 
@@ -170,10 +177,7 @@ runWorker Worker{..} = do
               `finally` (logDebug $ "Worker " +|| wId ||+ " has exited")
   where
     loop pre =
-        forever $
-            -- dispite we recover from errors, it's recommended to define its
-            -- own recovery in each worker
-            recoverAll ("Worker " +|| wId ||+ "") (expBackoff (sec 1)) (wAction pre)
+        forever $ recoverAll ("Worker " +|| wId ||+ "") wRecovery (wAction pre)
 
 withWorkers
     :: (MonadMask m, MonadLogging m, MonadUnliftIO m)
