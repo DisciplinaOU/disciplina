@@ -59,7 +59,7 @@ runWitnessTestMode action =
         let _twcLogging = testLogging
         let _twcAppDir = error "AppDir is not defined"
         let ctx = TestWitnessCtx{..}
-        let workers = [txRetranslatingWorker]
+        let workers = testWitnessWorkers
 
         runRIO ctx $
             withWorkers workers $ do

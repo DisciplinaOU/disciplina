@@ -112,7 +112,7 @@ runTestSqlM testDb action =
         let _tecAppDir = error "AppDir is not defined"
         let _tecIssuerInfo = KnownIssuerInfo certificateIssuerInfoEx
         let ctx = TestEducatorCtx{..}
-        let workers = [txRetranslatingWorker]
+        let workers = testWitnessWorkers
 
         runRIO ctx $ markWithinWriteSDLockUnsafe applyGenesisBlock
 
