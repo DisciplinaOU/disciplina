@@ -28,6 +28,7 @@ module Dscp.Core.Arbitrary
       -- * Examples
     , studentEx
     , studentSKEx
+    , addressEx
     , courseEx
     , assignmentEx
     , signedSubmissionEx
@@ -35,12 +36,14 @@ module Dscp.Core.Arbitrary
     , gradeEx
     , privateTxEx
     , submissionWitnessEx
+    , certificateIssuerInfoEx
     , utcTimeEx
     , timestampEx
     ) where
 
 import qualified Data.Foldable
 import qualified Data.Text.Buildable
+import Data.Time.Calendar (fromGregorian, toGregorian)
 import Data.Time.Clock (UTCTime, getCurrentTime)
 import Fmt ((+||), (||+))
 import qualified GHC.Exts as Exts
@@ -52,6 +55,7 @@ import qualified Text.Show
 import Dscp.Core.FairCV
 import Dscp.Core.Foundation
 import Dscp.Crypto
+import Dscp.Util
 import Dscp.Util.Test
 
 instance Arbitrary SecretKeyData where
@@ -108,18 +112,63 @@ instance Arbitrary AssignmentType where
 genCommonAssignmentType :: Gen AssignmentType
 genCommonAssignmentType = frequency [(5, pure Regular), (1, pure CourseFinal)]
 
-instance Arbitrary DocumentType where
+instance Arbitrary (DocumentType a) where
     arbitrary = elements [Offline, Online]
 
-genCommonDocumentType :: Gen DocumentType
+genCommonDocumentType :: Gen (DocumentType a)
 genCommonDocumentType = frequency [(5, pure Offline), (1, pure Online)]
 
 instance Arbitrary EducationForm where
     arbitrary = arbitraryBoundedEnum
 
+instance Arbitrary GradingScale where
+    arbitrary = arbitraryBoundedEnum
+
 instance Arbitrary CertificateMeta where
+    arbitrary = do
+        cmStudentName <- arbitrary
+        cmStudentBirthDate <- arbitrary
+        -- Start year should be after student birth date
+        let getYear date = fromInteger $ toGregorian date ^. _1
+            studentBirthYear = getYear cmStudentBirthDate
+        cmStartYear <- arbitrary `suchThat` (> studentBirthYear)
+        -- End year should be after start year
+        cmEndYear <- arbitrary `suchThat` (> cmStartYear)
+        cmEducationForm <- arbitrary
+        -- Document number should be large enough to resemble
+        -- actual diploma numbers
+        cmNumber <- (+ 1000000) <$> arbitrary
+        -- Document should be issued in the year when studies are ended
+        let setYear year date =
+                let (_, m, d) = toGregorian date
+                in fromGregorian (toInteger year) m d
+        cmIssueDate <- setYear cmEndYear <$> arbitrary
+        cmTitle <- arbitrary
+        cmMajor <- arbitrary
+        cmSpecialization <- arbitrary
+        return CertificateMeta {..}
+
+instance Arbitrary Language where
     arbitrary = genericArbitrary
-    shrink = genericShrink
+    shrink    = genericShrink
+
+instance Arbitrary CertificateGrade where
+    arbitrary = genericArbitrary
+    shrink    = genericShrink
+
+instance Arbitrary CertificateFullInfo where
+    arbitrary = genericArbitrary
+    shrink    = genericShrink
+
+instance Arbitrary CertificateIssuerInfo where
+    arbitrary = genericArbitrary
+    shrink    = genericShrink
+
+instance Arbitrary CertificateName where
+    arbitrary = CertificateName
+        <$> (toBase64Url @ByteString <$> arbitrary)
+            -- avoiding having ':' in educator ID
+        <*> arbitrary
 
 instance Arbitrary PrivateTx where
     arbitrary = PrivateTx <$> arbitrary <*> arbitrary <*> arbitrary
@@ -246,7 +295,8 @@ instance ArbitraryMixture BlockBody
 instance ArbitraryMixture Block
 
 instance Arbitrary ItemDesc where
-    arbitrary = arbitrary `suchThatMap` (rightToMaybe . toItemDesc)
+    arbitrary = (toBase64 @ByteString <$> arbitrary)
+                `suchThatMap` (rightToMaybe . toItemDesc)
 
 instance Arbitrary Timestamp where
     arbitrary = toTimestamp <$> arbitrary
@@ -419,6 +469,9 @@ studentSKEx = withIntSeed 123 genSecretKey
 studentEx :: Student
 studentEx = mkAddr $ toPublic studentSKEx
 
+addressEx :: Address
+addressEx = studentEx
+
 courseEx :: Course
 courseEx = Course 7
 
@@ -453,6 +506,14 @@ privateTxEx =
 
 submissionWitnessEx :: SubmissionWitness
 submissionWitnessEx = _ssWitness signedSubmissionEx
+
+certificateIssuerInfoEx :: CertificateIssuerInfo
+certificateIssuerInfoEx =
+    CertificateIssuerInfo
+    { ciiName    = "Grimpy Cat University"
+    , ciiWebsite = "university@example.com"
+    , ciiId      = "Principal"
+    }
 
 ----------------------------------------------------------------------------
 -- Orphans

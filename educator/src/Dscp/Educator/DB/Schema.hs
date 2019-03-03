@@ -12,18 +12,21 @@ module Dscp.Educator.DB.Schema
 import Prelude hiding (_1, _2)
 
 import Database.Beam.Backend (runNoReturn)
+import Database.Beam.Postgres (PgJSONB)
 import Database.Beam.Postgres.Syntax (PgCommandSyntax (..), PgCommandType (..), emit)
 import Database.Beam.Schema.Tables (Beamable, C, Database, DatabaseSettings, Table (..),
                                     TableEntity, defaultDbSettings)
+import Pdf.Scanner (PDFBody)
+import System.FilePath.Posix ((</>))
 
 import Dscp.Core
 import Dscp.Crypto
 import Dscp.DB.SQL.Functions
 import Dscp.DB.SQL.Util
 import Dscp.Educator.DB.BlockData
-import Dscp.Educator.DB.FileQuoter
 import Dscp.Educator.DB.Instances ()
 import Dscp.Util
+import Dscp.Util.FileEmbed
 
 ----------------------------------------------------------------------------
 -- Tables
@@ -80,17 +83,26 @@ data BlockRowT f = BlockRow
     , brMerkleTree   :: C f (EmptyMerkleTree PrivateTx)
     } deriving (Generic)
 
+data CertificateRowT f = CertificateRow
+    { crHash :: C f (Hash CertificateMeta)
+    , crMeta :: C f (PgJSONB CertificateMeta)
+    , crPdf  :: C f PDFBody
+    } deriving (Generic)
+
 data EducatorSchema f = EducatorSchema
-    { esCourses            :: f (TableEntity CourseRowT)
-    , esSubjects           :: f (TableEntity SubjectRowT)
-    , esStudents           :: f (TableEntity StudentRowT)
-    , esStudentCourses     :: f (TableEntity $ RelationT 'MxM StudentRowT CourseRowT)
-    , esAssignments        :: f (TableEntity AssignmentRowT)
-    , esStudentAssignments :: f (TableEntity $ RelationT 'MxM StudentRowT AssignmentRowT)
-    , esSubmissions        :: f (TableEntity SubmissionRowT)
-    , esTransactions       :: f (TableEntity TransactionRowT)
-    , esBlocks             :: f (TableEntity BlockRowT)
-    , esBlockTxs           :: f (TableEntity $ RelationT 'Mx1 TransactionRowT BlockRowT)
+    { esCourses             :: f (TableEntity CourseRowT)
+    , esSubjects            :: f (TableEntity SubjectRowT)
+    , esStudents            :: f (TableEntity StudentRowT)
+    , esStudentCourses      :: f (TableEntity $ RelationT 'MxM StudentRowT CourseRowT)
+    , esAssignments         :: f (TableEntity AssignmentRowT)
+    , esStudentAssignments  :: f (TableEntity $ RelationT 'MxM StudentRowT AssignmentRowT)
+    , esSubmissions         :: f (TableEntity SubmissionRowT)
+    , esTransactions        :: f (TableEntity TransactionRowT)
+    , esBlocks              :: f (TableEntity BlockRowT)
+    , esBlockTxs            :: f (TableEntity $ RelationT 'Mx1 TransactionRowT BlockRowT)
+
+    , esCertificates        :: f (TableEntity CertificateRowT)
+    , esCertificatesVersion :: f (TableEntity $ SingletonT Word32)
     } deriving (Generic)
 
 ----------------------------------------------------------------------------
@@ -104,6 +116,7 @@ type AssignmentRow = AssignmentRowT Identity
 type SubmissionRow = SubmissionRowT Identity
 type TransactionRow = TransactionRowT Identity
 type BlockRow = BlockRowT Identity
+type CertificateRow = CertificateRowT Identity
 
 ----------------------------------------------------------------------------
 -- Connection with core types
@@ -150,18 +163,6 @@ pbHeaderFromRow BlockRow{..} =
 -- 'Table' instances
 ----------------------------------------------------------------------------
 
-instance (Typeable a, Typeable b, Beamable (PrimaryKey a), Beamable (PrimaryKey b)) =>
-         Table (RelationT 'Mx1 a b) where
-    newtype PrimaryKey (RelationT 'Mx1 a b) f = Mx1RelationRowId (PrimaryKey a f)
-        deriving (Generic)
-    primaryKey (a :-: _) = Mx1RelationRowId a
-
-instance (Typeable a, Typeable b, Beamable (PrimaryKey a), Beamable (PrimaryKey b)) =>
-         Table (RelationT 'MxM a b) where
-    data PrimaryKey (RelationT 'MxM a b) f = MxMRelationRowId (PrimaryKey a f) (PrimaryKey b f)
-        deriving (Generic)
-    primaryKey (a :-: b) = MxMRelationRowId a b
-
 instance Table CourseRowT where
     newtype PrimaryKey CourseRowT f = CourseRowId (C f (Id Course))
         deriving (Generic)
@@ -197,18 +198,14 @@ instance Table BlockRowT where
         deriving (Generic)
     primaryKey = BlockRowId . brIdx
 
+instance Table CertificateRowT where
+    newtype PrimaryKey CertificateRowT f = HashTableId (C f (Hash CertificateMeta))
+        deriving (Generic)
+    primaryKey = HashTableId . crHash
+
 ----------------------------------------------------------------------------
 -- 'Beamable' instances
 ----------------------------------------------------------------------------
-
-instance (Beamable (PrimaryKey a), Beamable (PrimaryKey b)) =>
-         Beamable (RelationT t a b)
-
-instance (Beamable (PrimaryKey a)) =>
-         Beamable (PrimaryKey $ RelationT 'Mx1 a b)
-
-instance (Beamable (PrimaryKey a), Beamable (PrimaryKey b)) =>
-         Beamable (PrimaryKey $ RelationT 'MxM a b)
 
 instance Beamable CourseRowT
 instance Beamable (PrimaryKey CourseRowT)
@@ -231,6 +228,9 @@ instance Beamable (PrimaryKey TransactionRowT)
 instance Beamable BlockRowT
 instance Beamable (PrimaryKey BlockRowT)
 
+instance Beamable CertificateRowT
+instance Beamable (PrimaryKey CertificateRowT)
+
 ----------------------------------------------------------------------------
 -- Final
 ----------------------------------------------------------------------------
@@ -245,7 +245,8 @@ educatorSchema = defaultDbSettings
 
 -- | Schema definition in raw SQL.
 schemaDefinition :: IsString s => s
-schemaDefinition = [qFile|./database/schema.sql|]
+schemaDefinition =
+    $(embedSubprojectStringFile "educator" ("database" </> "schema.sql"))
 
 -- | Create tables if absent.
 ensureSchemaIsSetUp :: MonadIO m => DBT 'WithinTx m ()

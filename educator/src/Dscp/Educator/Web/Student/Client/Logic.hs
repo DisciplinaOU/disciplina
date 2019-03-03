@@ -15,7 +15,6 @@ import Servant.Generic (fromServant)
 import Servant.Util ()
 
 import Dscp.Core
-import Dscp.Crypto
 import Dscp.Educator.Web.Auth
 import Dscp.Educator.Web.Student.API
 import Dscp.Educator.Web.Student.Auth
@@ -65,11 +64,11 @@ createStudentApiClient netAddr = do
         nat act = runClientM act cliEnv
               >>= leftToThrow (servantToClientError @StudentAPIError)
 
-    let mkCliAuth = CliAuthData . StudentClientAuthData
+    let mkCliAuth = CliAuthData . StudentClientAuthData . skSecret
 
-    let es :: Maybe SecretKey -> StudentApiEndpoints (AsClientT ClientM)
+    let es :: Maybe SecretKeyData -> StudentApiEndpoints (AsClientT ClientM)
         es mSk = fromServant $ client protectedStudentAPI (fmap mkCliAuth mSk)
-    return $ \mStudentSk -> hoistStudentApiClient nat (es $ fmap skSecret mStudentSk)
+    return $ \mStudentSk -> hoistStudentApiClient nat (es mStudentSk)
 
 -- | Helper which performs a request to server.
 requestStudent

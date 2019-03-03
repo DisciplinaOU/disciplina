@@ -10,7 +10,7 @@ spec_coreSerialise = describe "Core datatypes binary serialisation" $ do
     serialiseRoundtripProp @Address
     serialiseRoundtripProp @AssignmentType
     serialiseRoundtripProp @Assignment
-    serialiseRoundtripProp @DocumentType
+    serialiseRoundtripProp @(DocumentType ())
     serialiseRoundtripProp @Grade
     serialiseRoundtripProp @Submission
     serialiseRoundtripProp @SubmissionWitness
@@ -28,7 +28,7 @@ spec_coreAeson = describe "Core datatypes JSON serialisation" $ do
     aesonRoundtripProp @Address
     aesonRoundtripProp @AssignmentType
     aesonRoundtripProp @Assignment
-    aesonRoundtripProp @DocumentType
+    aesonRoundtripProp @(DocumentType ())
     aesonRoundtripProp @Grade
     aesonRoundtripProp @Submission
     aesonRoundtripProp @SubmissionWitness
@@ -46,3 +46,4 @@ spec_coreHttpApi :: Spec
 spec_coreHttpApi = describe "Core datatypes HttpApiData serialisation" $ do
     httpApiRoundtripProp @Address
     httpApiRoundtripProp @GTxId
+    httpApiRoundtripProp @CertificateName

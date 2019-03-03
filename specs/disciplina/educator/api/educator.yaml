@@ -43,7 +43,7 @@ paths:
       tags:
         - General
       summary: Get information about the educator.
-      operationId: getStudents
+      operationId: getStatus
       responses:
         200:
           description: Returns educator status.
@@ -720,6 +720,7 @@ paths:
                   $ref: '#/components/schemas/CertificateMeta'
                 grades:
                   type: array
+                  minItems: 1
                   items:
                     $ref: '#/components/schemas/CertificateGrade'
         description: Content of the certificate
@@ -739,6 +740,14 @@ paths:
                 $ref: '#/components/schemas/ErrResponse'
         401:
           $ref: '#/components/responses/Unauthorized'
+        409:
+          description: >-
+            Certificate with the same 'meta' field already exists or certificate grade with such
+            combination of issue date and grade value already exists.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrResponse'
 
   /certificate/{certificate}:
     get:
@@ -870,7 +879,7 @@ components:
       name: sortBy
       description: >-
         Allows to sort on certificate creation date (`createdAt` field) and
-        student's name (`student` field).
+        student's name (`studentName` field).
       required: false
       allowEmptyValue: true
       schema:
@@ -1141,7 +1150,8 @@ components:
           type: string
           enum: [fulltime, parttime, fullpart]
         number:
-          type: string
+          type: integer
+          format: int64
         issueDate:
           type: string
           format: date
@@ -1155,6 +1165,7 @@ components:
       type: object
       required:
         - subject
+        - scale
         - grade
       properties:
         subject:
@@ -1168,6 +1179,14 @@ components:
         credits:
           type: integer
           format: int32
+        scale:
+          type: string
+          enum: [rusDiff, rusNonDiff]
+          description: >-
+            Grading scale sets up how the integer grades are interpreted.
+            Scales are the following:
+              * Russian differentiated (`rusDiff`): 5 = 100, 4 = 80, 3 = 60, 2 = 40
+              * Russian non-differentiated (`rusNonDiff`): "zachot" = 100, "nezachot" = 0
         grade:
           type: integer
           format: int32
@@ -1185,12 +1204,17 @@ components:
             - StudentNotFound
             - CourseNotFound
             - AssignmentNotFound
+            - CertificateNotFound
             - StudentAlreadyExists
             - CourseAlreadyExists
             - AssignmentAlreadyExists
+            - CertificateAlreadyExists
             - StudentDoesNotAttendCourse
-            - StudentIsActive
+            - StudentAlreadyAttendsCourse
+            - StudentAlreadyHasAssignment
             - StudentHasNoAssignment
+            - StudentIsActive
+            - DeletingGradedSubmission
           description: |-
             Error type:
               * `InvalidFormat` - Failed to deserialise one of parameters.
@@ -1198,12 +1222,14 @@ components:
               * `StudentNotFound` - Specified student does not exist.
               * `CourseNotFound` - Specified course does not exist.
               * `AssignmentNotFound` - Specified assignment does not exist.
+              * `CertificateNotFound` - Specified certificate does not exist.
 
               * `StudentAlreadyExists` - Student being added already exists.
               * `CourseAlreadyExists` - Course with such id already exists.
               * `AssignmentAlreadyExists` - Exactly the same assignment already exists.
-              * `StudentDoesNotAttendCourse` - Student does not attend the course.
+              * `CertificateAlreadyExists` - Certificate with exactly the same 'meta' field already exists.
 
+              * `StudentDoesNotAttendCourse` - Student does not attend the course.
               * `StudentAlreadyAttendsCourse` - Student already attends given course.
               * `StudentAlreadyHasAssignment` - Student is already subscribed on given assignment.
               * `StudentHasNoAssignment` - Given student didn't have given assignment.

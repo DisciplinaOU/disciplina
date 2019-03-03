@@ -4,14 +4,17 @@
 module Dscp.Educator.DB.Instances () where
 
 import Codec.Serialise as Codec (deserialise)
+import qualified Data.Aeson as Aeson
 import qualified Data.ByteArray as BA
 import Data.Time.Clock (UTCTime)
 import Database.Beam.Backend (BackendFromField, BeamBackend, FromBackendRow (..))
 import Database.Beam.Backend.SQL.SQL92 (HasSqlValueSyntax (..), IsSql92ExpressionSyntax,
                                         Sql92ExpressionValueSyntax)
-import Database.Beam.Postgres.Syntax (PgValueSyntax)
+import Database.Beam.Migrate (HasDefaultSqlDataType (..))
+import Database.Beam.Postgres.Syntax (PgDataTypeSyntax, PgValueSyntax)
 import Database.Beam.Query (HasSqlEqualityCheck (..))
 import Database.PostgreSQL.Simple.FromField (FromField (..))
+import Pdf.Scanner (PDFBody (..))
 
 import Dscp.Core
 import Dscp.Crypto
@@ -48,6 +51,14 @@ instance FromField (TYPE) where \
     fromField field ty = \
         leftToPanic . fromByteArray @(TYPE) @ByteString <$> fromField field ty
 
+#define JsonInstanceEnc(TYPE) \
+instance IsPgValue (TYPE) where \
+    sqlValueSyntax = sqlValueSyntax . Aeson.encode
+
+#define JsonInstanceDec(TYPE) \
+instance FromField (TYPE) where \
+    fromField field ty = leftToPanic . Aeson.eitherDecode <$> fromField field ty
+
 #define EnumInstanceEnc(TYPE) \
 instance IsPgValue (TYPE) where \
     sqlValueSyntax = sqlValueSyntax . fromEnum
@@ -61,8 +72,8 @@ instance FromField (TYPE) where \
 EnumInstanceEnc(AssignmentType)
 EnumInstanceDec(AssignmentType)
 
-EnumInstanceEnc(DocumentType)
-EnumInstanceDec(DocumentType)
+EnumInstanceEnc(DocumentType a)
+EnumInstanceDec(DocumentType a)
 
 {- Instances via FromByteArray -}
 
@@ -89,6 +100,11 @@ CodecInstanceDec(MerkleSignature a)
 CodecInstanceEnc(EmptyMerkleTree a)
 CodecInstanceDec(EmptyMerkleTree a)
 
+{- Instances via JSON -}
+
+JsonInstanceEnc(CertificateMeta)
+JsonInstanceDec(CertificateMeta)
+
 {- Newtype-derived instances -}
 
 deriving instance IsPgValue ItemDesc
@@ -106,6 +122,9 @@ deriving instance IsPgValue Grade
 
 deriving instance FromField BlockIdx
 deriving instance IsPgValue BlockIdx
+
+deriving instance FromField PDFBody
+deriving instance IsPgValue PDFBody
 
 {- Custom instances -}
 
@@ -151,6 +170,8 @@ GenFromBackendRow(SubmissionWitness)
 GenFromBackendRow(MerkleSignature a)
 GenFromBackendRow(EmptyMerkleTree a)
 GenFromBackendRow(ATGDelta)
+GenFromBackendRow(CertificateMeta)
+GenFromBackendRow(PDFBody)
 
 ----------------------------------------------------------------------------
 -- Other instances
@@ -169,3 +190,7 @@ GenHasSqlEqualityCheck(TxBlockIdx)
 GenHasSqlEqualityCheck(BlockIdx)
 GenHasSqlEqualityCheck(Hash a)
 GenHasSqlEqualityCheck(AssignmentType)
+
+
+instance HasDefaultSqlDataType PgDataTypeSyntax ItemDesc where
+    defaultSqlDataType _ = defaultSqlDataType (Proxy @Text)

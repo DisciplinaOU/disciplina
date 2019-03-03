@@ -4,61 +4,71 @@
 -- | Educator HTTP API definition.
 
 module Dscp.MultiEducator.Web.Educator.API
-    ( MultiEducatorApiEndpoints (..)
+    ( CertificatesApiEndpoints (..)
+    , CertificatesApiHandlers
+    , CertificatesAPI
+    , certificatesAPI
     , MultiEducatorAPI
-    , MultiEducatorAuthAPI
     , multiEducatorAPI
     , MultiStudentAPI
     , multiStudentAPI
-    , MultiEducatorApiHandlers
     ) where
 
 import Servant
-import Servant.Auth.Server
 import Servant.Generic
 
---import Dscp.Educator.Web.Auth
+import Dscp.Core.Foundation.Educator
+import Dscp.Educator.Web.Auth
 import Dscp.Educator.Web.Educator.API
-import Dscp.Educator.Web.Educator.Error
 import Dscp.Educator.Web.Student.API
 import Dscp.MultiEducator.Web.Educator.Auth
-import Dscp.MultiEducator.Web.Educator.Types
+import Dscp.Witness.Web.ContentTypes
 
-type MultiEducatorAuthAPI =
-    "api" :> "educator" :> "v1" :> ToServant (MultiEducatorApiEndpoints AsApi)
+---------------------------------------------------------------------------
+-- Certificates API
+---------------------------------------------------------------------------
 
-type MultiEducatorAPI = MultiEducatorAuthAPI :<|> ProtectedMultiEducatorAPI
+-- | Endpoints of public certificate API.
+data CertificatesApiEndpoints route = CertificatesApiEndpoints
+    { cGetCertificate :: route :- GetCertificatePublic
+    } deriving (Generic)
 
-type ProtectedMultiEducatorAPI = Auth '[JWT] EducatorAuthData :> RawEducatorAPI
+type CertificatesApiHandlers m = CertificatesApiEndpoints (AsServerT m)
 
-type MultiEducatorApiHandlers m = MultiEducatorApiEndpoints (AsServerT m)
+type CertificatesAPI =
+    "api" :> "certificates" :> "v1" :> ToServant (CertificatesApiEndpoints AsApi)
 
-type MultiStudentAPI = Capture "educator" Text :> ProtectedStudentAPI
+-- | Endpoint for getting a certificate by full ID.
+type GetCertificatePublic
+    = "cert" :> Capture "certificate" CertificateName
+    :> Summary "Get the certificate by ID"
+    :> Description "Gets the PDF certificate with FairCV JSON included as metadata by ID. \
+        \CertificateID is obtained as `base64url(\"<educator-UUID>:<certificate-hash>\")`, \
+        \where `<educator-UUID>` is the UUID assigned by AAA microservice to Educator, \
+        \and `<certificate-hash>` is a hash of certificate meta."
+    :> Get '[PDF] PDFBody
+
+certificatesAPI :: Proxy CertificatesAPI
+certificatesAPI = Proxy
+
+---------------------------------------------------------------------------
+-- Educator API
+---------------------------------------------------------------------------
+
+type MultiEducatorAPI =
+    "api" :> "educator" :> "v1" :> ProtectedMultiEducatorAPI
+
+type ProtectedMultiEducatorAPI =
+    Auth' '[MultiEducatorAuth, NoAuth "multi-educator"] EducatorAuthLogin :> RawEducatorAPI
 
 multiEducatorAPI :: Proxy MultiEducatorAPI
 multiEducatorAPI = Proxy
 
+---------------------------------------------------------------------------
+-- Student API
+---------------------------------------------------------------------------
+
+type MultiStudentAPI = Capture "educator" Text :> ProtectedStudentAPI
+
 multiStudentAPI :: Proxy MultiStudentAPI
 multiStudentAPI = Proxy
-
--- TODO [DSCP-176]: add a way to fetch ALL assignments, even whose which are not assigned to any student
-
-data MultiEducatorApiEndpoints route = MultiEducatorApiEndpoints
-    {
-      -- Students
-
-      meLogin :: route
-        :- "login"
-        :> Summary "Login with a name and password"
-        :> ReqBody '[DSON] LoginData
-        :> PostNoContent '[DSON] (Headers '[ Header "Set-Cookie" SetCookie
-                                           , Header "Set-Cookie" SetCookie] NoContent)
-
-    , meRegister :: route
-        :- "register"
-        :> Summary "Register a new educator with a login and password"
-        :> ReqBody '[DSON] LoginData
-        :> PostNoContent '[DSON] (Headers '[ Header "Set-Cookie" SetCookie
-                                           , Header "Set-Cookie" SetCookie] NoContent)
-
-   } deriving (Generic)

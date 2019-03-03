@@ -10,6 +10,7 @@ module Dscp.Util
        , Seed (..)
        , execUnmasked
        , fromIntegralChecked
+       , proxyOf
 
          -- * Exceptions processing
        , wrapRethrow
@@ -46,6 +47,8 @@ module Dscp.Util
        , fromBase
        , toBase64
        , fromBase64
+       , toBase64Url
+       , fromBase64Url
        , toHex
        , fromHex
 
@@ -154,6 +157,10 @@ fromIntegralChecked x =
     in if fromIntegral r == x
           then r
           else error "Integral overflow"
+
+-- | Get a proxy for the given type.
+proxyOf :: a -> Proxy a
+proxyOf _ = Proxy
 
 -----------------------------------------------------------
 -- Exceptions processing
@@ -282,13 +289,15 @@ fromBase base =
     fromByteArray @ba @ByteString
 
 -- These are compatible with fmt.
-toBase64, toHex :: ByteArrayAccess ba => ba -> Text
-toBase64 = toBase Base64
-toHex    = toBase Base16
+toBase64, toBase64Url, toHex :: ByteArrayAccess ba => ba -> Text
+toBase64    = toBase Base64
+toBase64Url = toBase Base64URLUnpadded
+toHex       = toBase Base16
 
-fromBase64, fromHex :: FromByteArray ba => Text -> Either String ba
-fromBase64 = fromBase Base64
-fromHex    = fromBase Base16
+fromBase64, fromBase64Url, fromHex :: FromByteArray ba => Text -> Either String ba
+fromBase64    = fromBase Base64
+fromBase64Url = fromBase Base64URLUnpadded
+fromHex       = fromBase Base16
 
 -----------------------------------------------------------
 -- Lens fun
@@ -320,8 +329,8 @@ infixl 9 &:
 -- Adopted functions which work with strings
 -----------------------------------------------------------
 
-symbolValT :: forall s. KnownSymbol s => Text
-symbolValT = toText $ symbolVal (Proxy @s)
+symbolValT :: forall sym s. (KnownSymbol sym, IsString s) => s
+symbolValT = fromString $ symbolVal (Proxy @sym)
 
 -----------------------------------------------------------
 -- Helper to establish notion of SQL/db ID
@@ -349,3 +358,10 @@ dieGracefully :: (MonadLogging m, MonadCatch m) => Text -> m () -> m ()
 dieGracefully desc action =
     action `catchAny` \e -> do
         logError $ fromString $ "Exception in " <> toString desc <> ": " <> show e
+
+-----------------------------------------------------------
+-- Instances
+-----------------------------------------------------------
+
+instance (n1 ~ n2) => IsLabel n1 (Proxy n2) where
+    fromLabel = Proxy

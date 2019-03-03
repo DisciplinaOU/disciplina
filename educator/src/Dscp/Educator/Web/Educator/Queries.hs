@@ -15,23 +15,40 @@ module Dscp.Educator.Web.Educator.Queries
     , educatorGetSubmissions
     , educatorGetGrades
     , educatorPostGrade
+    , educatorAddCertificate
+    , educatorGetCertificate
+    , educatorGetCertificates
     ) where
 
 import Control.Lens (from, mapping, traversed, _Just)
+import Data.Aeson (eitherDecode)
 import Data.Default (Default)
 import Data.List (groupBy)
 import Data.Time.Clock (getCurrentTime)
+import Loot.Base.HasLens (lensOf)
+import Network.HTTP.Client
+import Network.HTTP.Client.TLS
+import Network.HTTP.Types.Status (statusCode)
+import qualified Pdf.FromLatex as Pdf
+import Pdf.Scanner (PDFBody)
 import Servant (err501)
-import Servant.Util (PaginationSpec)
-import Servant.Util.Beam.Postgres (paginate_)
+import Servant.Client.Core.Internal.BaseUrl (showBaseUrl)
+import Servant.Util (PaginationSpec, SortingSpecOf, HList (HNil), (.*.))
+import Servant.Util.Beam.Postgres (bySpec_, fieldSort_, paginate_)
 
 import Dscp.Core
 import Dscp.Crypto
 import Dscp.DB.SQL
+import Dscp.Educator.Constants
 import Dscp.Educator.DB
+import Dscp.Educator.Launcher.Marker
+import Dscp.Educator.Launcher.Resource (CertificateIssuerResource (..))
+import Dscp.Educator.Logic.Certificates
+import Dscp.Educator.Web.Educator.Error
 import Dscp.Educator.Web.Educator.Types
 import Dscp.Educator.Web.Queries
 import Dscp.Educator.Web.Types
+import Dscp.Resource.Keys
 import Dscp.Util
 
 ----------------------------------------------------------------------------
@@ -41,7 +58,7 @@ import Dscp.Util
 data EducatorGetAssignmentsFilters = EducatorGetAssignmentsFilters
     { afCourse  :: Maybe Course
     , afStudent :: Maybe Student
-    , afDocType :: Maybe DocumentType
+    , afDocType :: Maybe (DocumentType Assignment)
     , afIsFinal :: Maybe IsFinal
     } deriving (Show, Generic)
 
@@ -50,7 +67,7 @@ deriving instance Default EducatorGetAssignmentsFilters
 data EducatorGetSubmissionsFilters = EducatorGetSubmissionsFilters
     { sfCourse         :: Maybe Course
     , sfStudent        :: Maybe Student
-    , sfDocType        :: Maybe DocumentType
+    , sfDocType        :: Maybe (DocumentType Submission)
     , sfAssignmentHash :: Maybe $ Hash Assignment
     } deriving (Show, Generic)
 
@@ -248,3 +265,77 @@ educatorPostGrade subH grade = do
             , trIdx = TxInMempool
             , trSubmission = packPk subH
             }
+
+-- | Creates a private block consisting of transactions built from certificate grades
+-- and generates a PDF certificate with embedded FairCV describing that block.
+educatorAddCertificate
+    :: MonadEducatorWeb ctx m
+    => CertificateFullInfo -> m ()
+educatorAddCertificate cert = do
+    pdfLatexPath <- view (lensOf @Pdf.LatexPath)
+    pdfResPath <- view (lensOf @Pdf.ResourcePath)
+    downloadBaseUrl <- view (lensOf @Pdf.DownloadBaseUrl)
+    certificateIssuerInfo <- getCertificateIssuerInfo
+    pdfRaw <- Pdf.produce RU certificateIssuerInfo cert pdfLatexPath pdfResPath downloadBaseUrl
+
+    transact $ do
+        txs <- addCertificateGrades (cfiMeta cert) (cfiGrades cert)
+        blkHeader <-
+            createPrivateBlock (toList @(NonEmpty _) txs) Nothing
+            <&> nothingToPanic "impossible: failed to make non-empty block"
+        -- This private block will be added to the public chain on itself shortly
+
+        eAddr <- ourAddress @EducatorNode
+        let sName = unItemDesc . cmStudentName $ cfiMeta cert
+        let faircv = privateBlockToFairCV blkHeader txs eAddr (defCertStudent, sName)
+        pdf <- embedFairCVToCert (unReadyFairCV faircv) pdfRaw
+
+        createCertificate (cfiMeta cert) pdf
+
+getCertificateIssuerInfo
+    :: MonadEducatorWeb ctx m
+    => m Pdf.CertificateIssuerInfo
+getCertificateIssuerInfo = view (lensOf @CertificateIssuerResource) >>= \case
+    KnownIssuerInfo info -> return info
+    FromServiceIssuerInfo baseUrl authToken -> do
+        response <- liftIO $ do
+            manager <- newManager tlsManagerSettings
+            initialRequest <- parseRequest $ showBaseUrl baseUrl
+            let request = initialRequest
+                    { requestHeaders =
+                        [ ("Authorization", authToken)
+                        , ("accept", "application/json")
+                        ]
+                    , checkResponse = throwStatusErrors
+                    }
+            responseBody <$> httpLbs request manager
+        leftToThrow NonDecodableResponseError $ eitherDecode response
+  where
+    throwStatusErrors _ res = let sCode = statusCode $ responseStatus res in
+        unless (200 <= sCode && sCode < 300) $
+            throwM $ NonPositiveStatusCodeError sCode
+
+educatorGetCertificate
+    :: MonadEducatorWebQuery m
+    => Hash CertificateMeta -> DBT t m PDFBody
+educatorGetCertificate certId =
+    selectByPk crPdf (esCertificates es) certId
+        >>= nothingToThrow (AbsentError $ CertificateDomain certId)
+
+educatorGetCertificates
+    :: MonadEducatorWebQuery m
+    => SortingSpecOf Certificate
+    -> PaginationSpec
+    -> DBT t m [Certificate]
+educatorGetCertificates sorting pagination =
+    runSelectMap certificateFromRow . select $
+    paginate_ pagination $ do
+        certificate <-
+            orderBy_ (bySpec_ sorting . sortingSpecApp) $ do
+            all_ (esCertificates es)
+        return (crHash certificate, crMeta certificate)
+  where
+    sortingSpecApp CertificateRow{..} =
+        fieldSort_ @"createdAt" (crMeta ->>$. #cmIssueDate) .*.
+        fieldSort_ @"studentName" (crMeta ->>$. #cmStudentName) .*.
+        HNil

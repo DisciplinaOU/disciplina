@@ -10,7 +10,9 @@ module Dscp.Crypto.Impl
        , HasHash
        , hash
        , unsafeHash
+       , seedHash
        , unsafeCastHash
+       , randomHash
 
          -- * Signing
        , SigScheme
@@ -34,16 +36,21 @@ module Dscp.Crypto.Impl
        ) where
 
 import Crypto.Error (CryptoFailable (..))
+import Crypto.Hash (digestFromByteString)
 import Crypto.Hash.Algorithms (Blake2b_256)
+import Crypto.Hash.IO (hashDigestSize)
 import "cryptonite" Crypto.Random (ChaChaDRG, MonadPseudoRandom, drgNewSeed, seedFromBinary,
                                    seedFromInteger, withDRG)
 import qualified Data.ByteString as BS
 import Fmt (build, (+|), (|+))
 
 import Dscp.Crypto.Hash (AbstractHash (..), CryptoniteFunc, HasAbstractHash (..), abstractHash)
+import Dscp.Crypto.Random (MonadRandom (..))
 import Dscp.Crypto.Signing (AbstractPK (..), AbstractSK (..), AbstractSig (..), CryptoEd25519,
-                            HasAbstractSignature (..), MonadRandom, SignatureScheme (..),
-                            abstractSign, abstractVerify)
+                            HasAbstractSignature (..), SignatureScheme (..), abstractSign,
+                            abstractVerify)
+
+import Dscp.Util
 
 ------------------------------------------------------
 -- Hashing
@@ -61,11 +68,21 @@ hash = abstractHash
 unsafeHash :: forall a b. HasHash a => a -> Hash b
 unsafeHash = unsafeAbstractHash
 
+seedHash :: Seed ByteString -> Hash a
+seedHash (Seed s) = unsafeHash s
+
 -- | Use hash of one entity verbatim as a hash of another entity.
 -- Useful, when we serialise them differently, but require them to have the same hash.
 -- Example: using hash of underlying concrete tx as id of generic tx.
 unsafeCastHash :: Hash a -> Hash b
 unsafeCastHash (AbstractHash hashResult) = AbstractHash hashResult
+
+-- | Produce a random hash value.
+randomHash :: MonadRandom m => m (Hash a)
+randomHash = do
+    bs :: ByteString <- getRandomBytes (hashDigestSize (error "untouched" :: Blake2b_256))
+    return . AbstractHash $
+        digestFromByteString bs ?: error "Wrong algorithm hash / size"
 
 ------------------------------------------------------
 -- Signing

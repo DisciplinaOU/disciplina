@@ -46,24 +46,7 @@ gcc: error: ./specs: Is a directory
 `gcc' failed in phase `gcc'. (Exit code: 1)
 ```
 
-*Solution:* unfortunately, the only known solution is to temporaly move `./specs` directory from the root of the project.
-
-#### `./database/schema` not found
-
-```
-/home/martoon/serokell/disciplina/educator/src/Dscp/DB/SQL/Schema.hs:16:10: error:
-    • Exception when trying to run compile-time code:
-        ./database/schema.sql: openFile: does not exist (No such file or directory)
-      Code: Language.Haskell.TH.Quote.quoteExp
-              qFile "./database/schema.sql"
-    • In the quasi-quotation: [qFile|./database/schema.sql|]
-   |
-16 | schema = [qFile|./database/schema.sql|]
-   |          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-Failed, three modules loaded.
-```
-
-*Solution:* unfortunately, the only known solution is to temporaly move `./educator/database` directory in the root of the project, or run `ghci` from `./educator` directory.
+*Solution:* this discussion has helped me (@martoon): https://github.com/raphlinus/pulldown-cmark/issues/122
 
 ## Contributions
 

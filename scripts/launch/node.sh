@@ -73,7 +73,7 @@ fi
 if [[ "$no_clean" != true ]]; then
     rm -rf $tmp_files
     if [[ $sql_db_name != "" ]]; then
-        dropdb --if-exists $sql_db_name 2> /dev/null
+        dropdb --if-exists $sql_db_name
     fi
 fi
 
@@ -93,7 +93,7 @@ fi
 
 # Create database
 if [[ $sql_db_name != "" ]]; then
-    createdb $sql_db_name 2> /dev/null || :
+    createdb $sql_db_name || echo "Further trying to use an existing database"
     psql $sql_db_name -tAc \
          "alter database \"$sql_db_name\" set client_min_messages to warning" \
          > /dev/null
@@ -106,26 +106,32 @@ fi
 # educator-only params
 educator_params="
 --educator-keyfile $tmp_files/educator.key
---sql-conn-str "postgresql:///$sql_db_name"
+--sql-conn-str postgresql:///$sql_db_name
 --educator-listen 127.0.0.1:8090
 --educator-api-no-auth
 --student-api-no-auth 3BAyX5pNpoFrLJcP5bZ2kXihBfmBVLprSyP1RhcPPddm6Dw42jzEPXZz22
 --publication-period 15s
+--pdf-resource-path ../pdfs/template
+--cert-issuer-name \"University\"
+--cert-issuer-url university@example.com
 "
 multi_educator_params="
---educator-key-dir $files/educator.key
---sql-conn-str "postgresql:///$sql_db_name"
+--educator-key-dir $files/multieducator
+--sql-conn-str postgresql:///$sql_db_name
 --educator-listen 127.0.0.1:8090
---educator-api-no-auth
+--educator-api-no-auth Principal
 --student-api-no-auth 3BAyX5pNpoFrLJcP5bZ2kXihBfmBVLprSyP1RhcPPddm6Dw42jzEPXZz22
 --publication-period 15s
+--pdf-resource-path ../pdfs/template
+--aaa-service-url https://stage-teachmeplease-aaa.stage.tchmpls.com
+--aaa-public-key 2gSNy2wKSaI4YtGZe_Eaxsdv_BLCfi5kkT9xvxt_O0k
 "
 # Note: Student address in --student-api-no-auth parameter corresponds to secret
 # key with seed 456 (use dscp-keygen to generate one)
 
 # witness params (and educator's as well)
 witness_params="
---appdir ./tmp/
+--appdir ./run/
 --config ./config.yaml
 --config-key singleton
 --bind 127.0.0.1:4010:4011
@@ -139,7 +145,7 @@ witness_params="
 
 # parameters for faucet
 faucet_params="
---appdir ./tmp/
+--appdir ./run/
 --faucet-listen 127.0.0.1:8095
 --witness-backend $witness_web_addr
 --translated-amount 20

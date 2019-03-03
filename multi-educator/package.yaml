@@ -14,9 +14,11 @@ library:
     - aeson-options
     - bytestring
     - containers
+    - cryptonite
     - data-default
     - directory
     - direct-sqlite
+    - disciplina-pdfs
     - disciplina-core
     - disciplina-witness
     - disciplina-educator
@@ -31,6 +33,7 @@ library:
     - loot-config
     - loot-log
     - loot-network
+    - memory
     - mtl
     - optparse-applicative
     - o-clock
@@ -38,11 +41,14 @@ library:
     - reflection
     - safe-exceptions >= 0.1.4
     - serialise
+    - serokell-util
     - servant-auth-server
+    - servant-client-core
     - servant-generic
     - servant-server
     - servant-util
     - singleton-bool
+    - stm
     - sqlite-simple
     - template-haskell
     - text
@@ -52,6 +58,19 @@ library:
     - unliftio
     - wai
     - wai-cors
+
+tests:
+  disciplina-multi-educator-test:
+    <<: *test-common
+
+    build-tools:
+      - tasty-discover
+
+    dependencies:
+      - disciplina-core
+      - disciplina-multi-educator
+      - tasty
+      - tasty-hspec
 
 executables:
   dscp-multi-educator:

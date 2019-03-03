@@ -34,7 +34,7 @@ data DomainError
     = AbsentError DomainErrorItem
     | AlreadyPresentError DomainErrorItem
     | SemanticError DatabaseSemanticError
-    deriving (Show, Eq)
+    deriving (Show, Eq, Generic)
 
 data DomainErrorItem
     = CourseDomain
@@ -63,7 +63,10 @@ data DomainErrorItem
     | BlockWithIndexDomain
         { deBlockIdx :: BlockIdx }
 
-    deriving (Show, Typeable, Eq)
+    | CertificateDomain
+        { deCertificateMeta :: Id CertificateMeta }
+
+    deriving (Show, Typeable, Eq, Generic)
 
 -- | Logical errors.
 data DatabaseSemanticError
@@ -71,7 +74,7 @@ data DatabaseSemanticError
       -- ^ Student can't be deleted because it has activities.
     | DeletingGradedSubmission (Id Submission)
       -- ^ Submission has potentially published grade and thus can't be deleted.
-    deriving (Show, Eq)
+    deriving (Show, Eq, Generic)
 
 makePrisms ''DomainError
 makePrisms ''DomainErrorItem
@@ -96,6 +99,8 @@ instance Buildable DomainErrorItem where
         "Transaction { id="+|id_|+" }"
     build (BlockWithIndexDomain idx) =
         "Block { idx="+|idx|+" }"
+    build (CertificateDomain meta) =
+        "Certificate { meta="+|meta|+" }"
 
 instance Buildable DatabaseSemanticError where
     build (StudentIsActiveError id_) =

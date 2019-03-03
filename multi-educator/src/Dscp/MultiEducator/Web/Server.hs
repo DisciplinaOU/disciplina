@@ -14,115 +14,88 @@ import Network.HTTP.Types.Header (hAuthorization, hContentType)
 import Network.Wai (Middleware)
 import Network.Wai.Middleware.Cors (CorsResourcePolicy (..), cors, simpleCorsResourcePolicy)
 import Servant ((:<|>) (..), Context (..), Handler, ServantErr (..), Server, ServerT,
-                StdMethod (..), err401, err405, hoistServerWithContext, serveWithContext)
-import Servant.Auth.Server (AuthResult (..), CookieSettings, JWTSettings, defaultCookieSettings,
-                            defaultJWTSettings, generateKey)
+                StdMethod (..), err405, hoistServer, hoistServerWithContext, serveWithContext)
 import Servant.Auth.Server.Internal.ThrowAll (throwAll)
 import Servant.Generic (toServant)
-import Servant.Util (methodsCoveringAPI)
+import Servant.Util (methodsCoveringAPI, serverWithLogging)
 import UnliftIO (askUnliftIO)
 
 import Dscp.Config
 import Dscp.Educator.Web.Auth
-import Dscp.Educator.Web.Bot
 import Dscp.Educator.Web.Educator (RawEducatorAPI, convertEducatorApiHandler, educatorApiHandlers,
                                    rawEducatorAPI)
-import Dscp.Educator.Web.Student (ProtectedStudentAPI, StudentCheckAction (..),
-                                  convertStudentApiHandler, rawStudentAPI, studentApiHandlers)
+import Dscp.Educator.Web.Student (StudentCheckAction (..), convertStudentApiHandler, rawStudentAPI,
+                                  studentApiHandlers)
 import Dscp.MultiEducator.Config
 import Dscp.MultiEducator.Launcher.Mode (MultiCombinedWorkMode, MultiEducatorWorkMode,
                                          lookupEducator, normalToMulti)
-import Dscp.MultiEducator.Launcher.Resource (EducatorCtxWithCfg (..))
-import Dscp.MultiEducator.Web.Educator (MultiEducatorAPI, MultiStudentAPI, multiEducatorAPI,
-                                        multiEducatorApiHandlers, multiStudentAPI)
-import Dscp.MultiEducator.Web.Educator.Auth
-import Dscp.Web (serveWeb)
+import Dscp.MultiEducator.Launcher.Params (MultiEducatorAAAConfigRec)
+import Dscp.MultiEducator.Web.Educator
+import Dscp.Web (buildServantLogConfig, serveWeb)
 import Dscp.Web.Metrics (responseTimeMetric)
 import Dscp.Witness.Web
 
-type EducatorWebAPI =
+type MultiEducatorWebAPI =
     MultiEducatorAPI
     :<|>
     MultiStudentAPI
+    :<|>
+    CertificatesAPI
     :<|>
     WitnessAPI
 
 mkEducatorApiServer'
     :: forall ctx m. MultiEducatorWorkMode ctx m
-    => Text
+    => EducatorAuthLogin
     -> ServerT RawEducatorAPI m
-mkEducatorApiServer' login =
+mkEducatorApiServer' educatorAuthLogin =
     hoistServerWithContext
         rawEducatorAPI
         (Proxy :: Proxy '[])
-        (\x -> lookupEducator login >>= \case
-            Just c@(EducatorCtxWithCfg _) -> normalToMulti c x
-            Nothing -> throwM err401
-        )
+        (\x -> lookupEducator educatorAuthLogin >>= \c -> normalToMulti c x)
         (toServant educatorApiHandlers)
 
 mkMultiEducatorApiServer
     :: forall ctx m. MultiEducatorWorkMode ctx m
-    => JWTSettings
-    -> CookieSettings
+    => MultiEducatorAAAConfigRec
     -> (forall x. m x -> Handler x)
     -> Server MultiEducatorAPI
-mkMultiEducatorApiServer jwtSet cookieSet nat =
+mkMultiEducatorApiServer _aaaConfig nat =
     hoistServerWithContext
         multiEducatorAPI
-        (Proxy :: Proxy '[JWTSettings, CookieSettings])
+        (Proxy :: Proxy '[MultiEducatorPublicKey, NoAuthContext "multi-educator"])
         nat
-        (toServant (multiEducatorApiHandlers jwtSet cookieSet) :<|> \case
-            (Authenticated (EducatorAuthData login)) -> mkEducatorApiServer' login
-            _ -> error "401" -- throwAll causes overlapping instances here, not sure how to solve this
-
-        )
-
-mkStudentApiServer'
-    :: forall ctx m. MultiEducatorWorkMode ctx m
-    => (forall x. m x -> Handler x)
-    -> EducatorBotConfigRec
-    -> m (Text -> Server ProtectedStudentAPI)
-mkStudentApiServer' nat botConfig = do
-    case botConfig ^. tree #params . selection of
-      _ {-EducatorBotOff-} -> return $ \login -> getServer login . studentApiHandlers
-      -- To initilialize the bot we need a database, how do we choose a database?
-      {-EducatorBotOn params -> initializeBot params $ do
-        return $ (\student -> getServer . addBotHandlers student . studentApiHandlers $ student)-}
-  where
-    getServer login handlers = hoistServerWithContext
-        rawStudentAPI
-        (Proxy :: Proxy '[StudentCheckAction])
-        (\x -> nat $ lookupEducator login >>= \case
-            Just c@(EducatorCtxWithCfg _) -> normalToMulti c x
-            Nothing -> throwM err401
-        )
-        (toServant handlers)
+        mkEducatorApiServer'
 
 mkStudentApiServer
     :: forall ctx m. MultiEducatorWorkMode ctx m
     => (forall x. m x -> Handler x)
-    -> EducatorBotConfigRec
     -> m (Server MultiStudentAPI)
-mkStudentApiServer nat botParams = do
-    studApi <- mkStudentApiServer' nat botParams
-    return $ hoistServerWithContext
-        multiStudentAPI
-        (Proxy :: Proxy '[StudentCheckAction, NoAuthContext "student"])
-        id
-        studApi
+mkStudentApiServer nat =
+    return $ \login student -> let ealogin = educatorAuthLoginSimple login in
+        hoistServerWithContext
+            rawStudentAPI
+            (Proxy :: Proxy '[StudentCheckAction])
+            (\x -> nat $ lookupEducator ealogin >>= \c -> normalToMulti c x)
+            (toServant $ studentApiHandlers student)
+
+mkCertificatesApiServer
+    :: forall ctx m. MultiEducatorWorkMode ctx m
+    => (forall x. m x -> Handler x)
+    -> Server CertificatesAPI
+mkCertificatesApiServer nat =
+    hoistServer certificatesAPI nat $ toServant certificatesApiHandlers
 
 -- | Create an action which checks whether or not the
 -- student is a valid API user.
 -- If bot is enabled, all students are allowed to use API.
 createStudentCheckAction
     :: forall ctx m. MultiEducatorWorkMode ctx m
-    => EducatorBotConfigRec
-    -> m StudentCheckAction
-createStudentCheckAction _ =
+    => m StudentCheckAction
+createStudentCheckAction =
     return . StudentCheckAction . const $ pure True
 {-
-createStudentCheckAction EducatorBotOff = do
+createStudentCheckAction = do
     db <- view (lensOf @SQL)
     return . StudentCheckAction $ \pk ->
         let addr = mkAddr pk
@@ -137,38 +110,45 @@ educatorCors = cors $ const $ Just $
       -- authentication prevents CSRF attacks, and API is public anyway.
       corsOrigins = Nothing
     , corsRequestHeaders = [hContentType, hAuthorization]
-    , corsMethods = methodsCoveringAPI @['GET, 'POST, 'PUT, 'DELETE] @EducatorWebAPI
+    , corsMethods = methodsCoveringAPI @['GET, 'POST, 'PUT, 'DELETE] @MultiEducatorWebAPI
     }
 
 serveEducatorAPIsReal :: MultiCombinedWorkMode ctx m => Bool -> m ()
 serveEducatorAPIsReal withWitnessApi = do
     let webCfg = multiEducatorConfig ^. sub #educator . sub #api
         serverAddress     = webCfg ^. sub #serverParams . option #addr
-        botConfig         = webCfg ^. sub #botConfig
         studentAPINoAuth  = webCfg ^. option #studentAPINoAuth
+        educatorAPINoAuth = webCfg ^. option #multiEducatorAPINoAuth
+        aaaSettings       = multiEducatorConfig ^. sub #educator . sub #aaa
 
-    studentCheckAction <- createStudentCheckAction botConfig
-    jwtKey <- liftIO $ generateKey
-    let jwtSettings = defaultJWTSettings jwtKey
-        cookieSettings = defaultCookieSettings
-    let srvCtx = cookieSettings :. jwtSettings :.
-                 studentCheckAction :. studentAPINoAuth :.
-                 EmptyContext
+    studentCheckAction <- createStudentCheckAction
+    let educatorPublicKey = aaaSettings ^. option #publicKey
+        srvCtx =
+            educatorPublicKey :.
+            educatorAPINoAuth :.
+            studentCheckAction :.
+            studentAPINoAuth :.
+            EmptyContext
 
     logInfo $ "Serving Student API on "+|serverAddress|+""
     unliftIO <- askUnliftIO
-    let educatorApiServer = mkMultiEducatorApiServer jwtSettings cookieSettings (convertEducatorApiHandler unliftIO)
-    studentApiServer <- mkStudentApiServer (convertStudentApiHandler unliftIO) botConfig
+    let educatorApiServer = mkMultiEducatorApiServer aaaSettings (convertEducatorApiHandler unliftIO)
+        certificatesApiServer = mkCertificatesApiServer (convertEducatorApiHandler unliftIO)
+    studentApiServer <- mkStudentApiServer (convertStudentApiHandler unliftIO)
     let witnessApiServer = if withWitnessApi
           then mkWitnessAPIServer (convertWitnessHandler unliftIO)
           else throwAll err405{ errBody = "Witness API disabled at this port" }
     let metricsEndpoint = witnessConfig ^. sub #witness . option #metricsEndpoint
+    lc <- buildServantLogConfig (<> "web")
     serveWeb serverAddress $
-      responseTimeMetric metricsEndpoint $
-      educatorCors $
-      serveWithContext (Proxy @EducatorWebAPI) srvCtx $
-         educatorApiServer
-         :<|>
-         studentApiServer
-         :<|>
-         witnessApiServer
+        responseTimeMetric metricsEndpoint $
+        educatorCors $
+        serverWithLogging lc (Proxy @MultiEducatorWebAPI) $ \api ->
+        serveWithContext api srvCtx $
+            educatorApiServer
+            :<|>
+            studentApiServer
+            :<|>
+            certificatesApiServer
+            :<|>
+            witnessApiServer

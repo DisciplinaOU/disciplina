@@ -1,0 +1,24 @@
+\newcommand{\ifeq}[3]{%
+    \def\a{#1}%
+    \def\b{#2}%
+    \ifx\a\b%
+        #3
+    \fi
+}
+
+\newcommand{\tr}[1]{%
+    \ifeq{#1}{Date of birth:}{Дата рождения:}%
+    \ifeq{#1}{Year of admission}{Год поступления}%
+    \ifeq{#1}{Year of graduation}{Год выпуска}%
+    \ifeq{#1}{Part-time education}{Форма обучения: \textbf{Заочно}}%
+    \ifeq{#1}{Full-time education}{Форма обучения: \textbf{Очно}}%
+    \ifeq{#1}{Diploma}{Диплом}%
+    \ifeq{#1}{Degree}{Присвоено звание}%
+    \ifeq{#1}{Major}{Специальность}%
+    \ifeq{#1}{Minor}{Специализация}%
+    \ifeq{#1}{Course}{Курс}%
+    \ifeq{#1}{Language}{Язык}%
+    \ifeq{#1}{Hours}{Часов}%
+    \ifeq{#1}{ECTS credits}{ECTS credits}%
+    \ifeq{#1}{Grade}{Оценка}%
+}

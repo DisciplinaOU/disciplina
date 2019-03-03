@@ -31,6 +31,7 @@ library:
     - hashable
     - http-types
     - http-client-tls
+    - http-media
     - interpolatedstring-perl6
     - generic-arbitrary
     - lens
@@ -55,7 +56,9 @@ library:
     - servant-client
     - servant-server
     - servant-generic
+    - servant-swagger
     - servant-util
+    - swagger2
     - serokell-util
     - snowdrop-block
     - snowdrop-core

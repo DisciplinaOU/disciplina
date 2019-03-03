@@ -1,6 +1,7 @@
 
-import Data.ByteString as LBS
-import Data.Text as Text
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as LBS
+import qualified Data.Text as Text
 
 import Pdf.Scanner
 
@@ -9,7 +10,7 @@ main = do
     getArgs >>= \case
         [pdf, json, out] -> do
             pdfText  <- LBS.readFile pdf
-            jsonText <- LBS.readFile json
+            jsonText <- BS.readFile json
 
             LBS.length pdfText `seq`
                 case inject (MaxSearchLength (Just 2048)) jsonText (PDFBody pdfText) of

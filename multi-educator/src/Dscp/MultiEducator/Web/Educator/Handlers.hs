@@ -1,33 +1,20 @@
--- | Educator API handlers
+-- | API handlers specific for multi educator.
 
 module Dscp.MultiEducator.Web.Educator.Handlers
-       ( multiEducatorApiHandlers
+       ( certificatesApiHandlers
        ) where
 
-import Servant (err401, NoContent(..))
-import Servant.Auth.Server (JWTSettings, CookieSettings, acceptLogin)
-
+import Dscp.Core.Foundation.Educator
+import Dscp.DB.SQL
+import Dscp.Educator.Web.Educator
 import Dscp.MultiEducator.Launcher.Mode
 import Dscp.MultiEducator.Web.Educator.API
-import Dscp.MultiEducator.Web.Educator.Types
-import Dscp.MultiEducator.Web.Educator.Auth
 
-multiEducatorApiHandlers
+certificatesApiHandlers
     :: forall m ctx. MultiEducatorWorkMode ctx m
-    => JWTSettings
-    -> CookieSettings
-    -> MultiEducatorApiHandlers m
-multiEducatorApiHandlers jwtSettings cookieSettings =
-    MultiEducatorApiEndpoints
-    {
-      meLogin = createOrLogin False
-    , meRegister = createOrLogin True
+    => CertificatesApiHandlers m
+certificatesApiHandlers = CertificatesApiEndpoints
+    { cGetCertificate = \(CertificateName eId cId) -> invoke $ do
+            setConnSchemaName $ educatorSchemaName eId
+            educatorGetCertificate cId
     }
-  where
-    createOrLogin create (LoginData ldLogin ldPassword) = do
-        result <- loadEducator create ldLogin ldPassword
-        mApplyCookies <- liftIO $ acceptLogin cookieSettings jwtSettings (EducatorAuthData ldLogin)
-        case (result,) <$> mApplyCookies of
-            Just (True, applyCookies) -> return $ applyCookies NoContent
-            _ -> throwM err401
-

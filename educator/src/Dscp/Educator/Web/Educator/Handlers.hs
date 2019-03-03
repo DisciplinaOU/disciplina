@@ -7,13 +7,11 @@ module Dscp.Educator.Web.Educator.Handlers
 
 import Data.Default (def)
 import Servant (Handler)
-import Servant.Util.Dummy (paginate)
 import UnliftIO (UnliftIO (..))
 
 import Dscp.DB.SQL
 import Dscp.Educator.DB
 import Dscp.Educator.Web.Educator.API
-import Dscp.Educator.Web.Educator.Arbitrary
 import Dscp.Educator.Web.Educator.Error
 import Dscp.Educator.Web.Educator.Queries
 import Dscp.Educator.Web.Educator.Types
@@ -107,14 +105,15 @@ educatorApiHandlers =
             commonGetProofs def{ pfCourse, pfStudent, pfAssignment }
 
       -- Certificates
-    , eGetCertificates = \_sorting pagination onlyCount ->
-            pure $ mkCountedList onlyCount $
-            paginate pagination certificateListEx
+    , eGetCertificates = \sorting pagination onlyCount ->
+            invoke $ fmap (mkCountedList onlyCount) $
+            educatorGetCertificates sorting pagination
 
-    , eGetCertificate = \_id ->
-            pure "<THIS IS NOT A PDF YET>"
+    , eGetCertificate =
+            invoke ... educatorGetCertificate
 
-    , eAddCertificate = \(CertificateFullInfo meta _) ->
+    , eAddCertificate = \cert@(CertificateFullInfo meta _) -> do
+            educatorAddCertificate cert
             pure $ mkCertificate meta
     }
 

@@ -13,6 +13,7 @@ module Dscp.Core.FairCV
        , singletonFCV
        , mergeFairCVs
        , addProof
+       , privateBlockToFairCV
 
          -- * Fair CV check result
        , FairCVCheckResult (..)
@@ -99,6 +100,18 @@ addProof
 addProof educatorAddr blkHash proof fcv@(FairCV sAddr sName _) =
     mergeFairCVs fcv $
     singletonFCV sAddr sName educatorAddr blkHash proof
+
+-- | Make a FairCV from one private block.
+privateBlockToFairCV
+    :: PrivateBlockHeader
+    -> NonEmpty PrivateTx
+    -> Address
+    -> (Address, Text)
+    -> FairCVReady
+privateBlockToFairCV blkHeader txs educator (student, studentName) =
+    let blkHash = hash blkHeader
+        proof = readyProof $ merkleProofFromList txs
+    in singletonFCV student studentName educator blkHash proof
 
 ---------------------------------------------------------------------------
 -- Fair CV check result

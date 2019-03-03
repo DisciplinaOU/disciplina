@@ -2,6 +2,7 @@
 
 module Dscp.Crypto.Random
        ( SecureRandomM(..)
+       , MonadRandom (..)
        , runSecureRandom
        , secureRandomBS
 

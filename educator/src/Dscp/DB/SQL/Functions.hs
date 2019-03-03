@@ -35,6 +35,8 @@ module Dscp.DB.SQL.Functions
 
          -- * Misc
        , withConnection
+       , createSchemaIfNotExists
+       , setConnSchemaName
        , setSchemaName
 
          -- * Internal
@@ -52,9 +54,8 @@ import qualified Database.Beam.Backend.SQL.BeamExtensions as Backend
 import Database.Beam.Postgres (Pg, PgCommandSyntax, PgDeleteSyntax, PgInsertSyntax, PgSelectSyntax,
                                PgUpdateSyntax, Postgres, runBeamPostgres, runBeamPostgresDebug)
 import qualified Database.Beam.Postgres.Conduit as Backend.Conduit
-import Database.Beam.Postgres.Syntax (PgCommandSyntax (..), PgCommandType (..), emit,
-                                      pgQuotedIdentifier)
-import Database.Beam.Query (QExpr, SqlDelete, SqlInsert, SqlInsertValues, SqlSelect, SqlUpdate)
+import Database.Beam.Postgres.Syntax (PgInsertSyntax (..), emit, pgQuotedIdentifier)
+import Database.Beam.Query (QExpr, SqlDelete, SqlInsert (..), SqlInsertValues, SqlSelect, SqlUpdate)
 import qualified Database.Beam.Query as Backend
 import Database.Beam.Schema (DatabaseEntity, TableEntity)
 import Database.PostgreSQL.Simple (Connection)
@@ -116,6 +117,9 @@ borrowConnection action = do
 -- | Execute a given action for every connection in pool, in parallel with no any other
 -- action.
 -- Pool will be emptied for a while.
+-- Note that this function is NOT thread-safe: two threads might empty
+-- out the pool concurrently, resulting in different actions performed
+-- for two disjoint subsets of connection pool.
 forEachConnection
     :: MonadIO m => SQL -> (Connection -> m ()) -> m ()
 forEachConnection sd action = do
@@ -379,18 +383,25 @@ countingRollbacks withTransaction action = do
 -- DBT runners
 ------------------------------------------------------------
 
--- | Run 'DBT' without carying about whether it assumes to be run in transaction
--- or not.
-invokeUnsafe
+-- | Run 'DBT' using a given connection without caring about
+-- whether it assumes to be run in transaction or not.
+invokeUnsafeConn
     :: (MonadUnliftIO m, HasCtx ctx m '[SQL])
-    => DBT t m a -> m a
-invokeUnsafe action = do
+    => Connection -> DBT t m a -> m a
+invokeUnsafeConn conn action = do
     mode <- views (lensOf @SQL) sqlTransactionsSwitch
-    borrowConnection $ runReaderT (runDBT $ actionWrapper mode action)
+    runReaderT (runDBT $ actionWrapper mode action) conn
   where
     actionWrapper = \case
         RealTransactions -> id
         TestTransactions -> withSavepoint  -- [Note: sql-transactions-in-tests]
+
+-- | Run 'DBT' without caring about whether it assumes to be run in transaction
+-- or not.
+invokeUnsafe
+    :: (MonadUnliftIO m, HasCtx ctx m '[SQL])
+    => DBT t m a -> m a
+invokeUnsafe = borrowConnection . flip invokeUnsafeConn
 
 -- | Run 'DBT'.
 invoke
@@ -398,20 +409,27 @@ invoke
     => DBT 'OutsideOfTransaction m a -> m a
 invoke = invokeUnsafe
 
+-- | Run a 'DBT' action within a transaction using a given connection.
+-- Note that the action may happen multiple times.
+transactConn
+    :: forall t ctx m a.
+       (MonadUnliftIO m, Log.MonadLogging m, HasCtx ctx m '[SQL], HasCallStack)
+    => RequiresTransaction t => Connection -> DBT t m a -> m a
+transactConn conn action = do
+    mode <- views (lensOf @SQL) sqlTransactionsSwitch
+    runReaderT (runDBT $ inTransaction mode action) conn
+  where
+    inTransaction = \case
+        RealTransactions -> countingRollbacks withTransactionSerializable
+        TestTransactions -> withSavepoint
+
 -- | Run a 'DBT' action within a transaction.
 -- Note that the action may happen multiple times.
 transact
     :: forall t ctx m a.
        (MonadUnliftIO m, Log.MonadLogging m, HasCtx ctx m '[SQL], HasCallStack)
     => RequiresTransaction t => DBT t m a -> m a
-transact action = do
-    mode <- views (lensOf @SQL) sqlTransactionsSwitch
-    borrowConnection $ \conn ->
-        runReaderT (runDBT $ inTransaction mode action) conn
-  where
-    inTransaction = \case
-        RealTransactions -> countingRollbacks withTransactionSerializable
-        TestTransactions -> withSavepoint
+transact = borrowConnection . flip transactConn
 
 -- | Helps to prevent using 'transact' when 'invoke' is enough.
 class RequiresTransaction (t :: TransactionalContext)
@@ -421,24 +439,26 @@ instance RequiresTransaction 'WithinTx
 -- Schema name
 ------------------------------------------------------------
 
-createSchemaIfNotExists :: MonadIO m => Text -> Connection -> m ()
-createSchemaIfNotExists schema conn =
-    liftIO . runBeamPostgres conn . runNoReturn $
-        PgCommandSyntax PgCommandTypeDataUpdate $
-            emit "create schema if not exists " <> pgQuotedIdentifier schema <> emit ";"
+-- | Creates a schema with given name.
+createSchemaIfNotExists :: MonadIO m => Text -> DBT t m ()
+createSchemaIfNotExists schema = runInsert $
+    SqlInsert $ PgInsertSyntax $
+    emit "create schema if not exists " <> pgQuotedIdentifier schema <> emit ";"
 
--- | Changes default database schema for the given connection.
-setConnSchemaName :: MonadIO m => Text -> Connection -> m ()
-setConnSchemaName schema conn =
-    liftIO . runBeamPostgres conn . runNoReturn $
-        PgCommandSyntax PgCommandTypeDataUpdate $
-            emit "set search_path to " <> pgQuotedIdentifier schema <> emit ";"
+-- | Sets a schema name for connection which is currently
+-- used in DBT context.
+setConnSchemaName :: MonadIO m => Text -> DBT t m ()
+setConnSchemaName schema = runInsert $
+    SqlInsert $ PgInsertSyntax $
+    emit "set search_path to " <> pgQuotedIdentifier schema <> emit ";"
 
 -- | Changes default database schema for the given database context.
+-- Note that this function is NOT transactional and NOT thread-safe.
 setSchemaName :: MonadIO m => SQL -> Text -> m ()
 setSchemaName db schema = do
-    runRIO db . borrowConnection $ createSchemaIfNotExists schema
-    forEachConnection db $ setConnSchemaName schema
+    runRIO db . invokeUnsafe $ createSchemaIfNotExists schema
+    forEachConnection db $ runReaderT $ runDBT $
+        setConnSchemaName schema
 
 ------------------------------------------------------------
 -- Misc

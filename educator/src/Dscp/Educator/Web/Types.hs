@@ -24,15 +24,18 @@ module Dscp.Educator.Web.Types
          -- * Conversions
        , assignmentTypeRaw
        , gradeInfoFromRow
+       , certificateFromRow
        ) where
 
 import Control.Lens (Iso', from, iso, makePrisms)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
+import Data.Swagger (ToParamSchema (..), ToSchema (..))
 import Fmt (build, (+|), (+||), (|+), (||+))
 import Loot.Base.HasLens (HasCtx)
 import Loot.Log (ModifyLogName, MonadLogging)
+import qualified Pdf.FromLatex as Pdf
 import Servant (FromHttpApiData (..), ToHttpApiData)
 import Servant.Util (ForResponseLog (..), buildForResponse, buildListForResponse)
 
@@ -41,8 +44,10 @@ import Dscp.Crypto
 import Dscp.DB.SQL
 import Dscp.Educator.DB
 import Dscp.Educator.Launcher.Marker
+import Dscp.Educator.Launcher.Resource (CertificateIssuerResource)
 import Dscp.Resource.Keys
 import Dscp.Util.Aeson
+import Dscp.Web.Swagger
 import Dscp.Witness.Launcher.Context
 
 type MonadEducatorWebQuery m =
@@ -54,7 +59,14 @@ type MonadEducatorWebQuery m =
 
 type MonadEducatorWeb ctx m =
     ( WitnessWorkMode ctx m
-    , HasCtx ctx m '[SQL, KeyResources EducatorNode]
+    , HasCtx ctx m
+       '[ SQL
+        , KeyResources EducatorNode
+        , Pdf.LatexPath
+        , Pdf.ResourcePath
+        , Pdf.DownloadBaseUrl
+        , CertificateIssuerResource
+        ]
     )
 
 ---------------------------------------------------------------------------
@@ -64,34 +76,23 @@ type MonadEducatorWeb ctx m =
 -- | Whether student is enrolled into a course.
 newtype IsEnrolled = IsEnrolled
     { unIsEnrolled :: Bool
-    } deriving (Eq, Show)
+    } deriving (Eq, Show, Generic)
 
 -- | Whether assignment is final in course.
 newtype IsFinal = IsFinal
     { unIsFinal :: Bool
-    } deriving (Eq, Show)
+    } deriving (Eq, Show, Generic)
 
 makePrisms ''IsFinal
 
 -- | Whether submission is graded.
 newtype IsGraded = IsGraded
     { unIsGraded :: Bool
-    } deriving (Eq, Show)
+    } deriving (Eq, Show, Generic)
 
 -- | Whether transaction has been published into public chain.
 newtype HasProof = HasProof { unHasProof :: Bool }
     deriving (Eq, Show)
-
-data StudentInfo = StudentInfo
-    { siAddr :: Student
-    } deriving (Show, Eq, Ord, Generic)
-
-data GradeInfo = GradeInfo
-    { giSubmissionHash :: (Hash Submission)
-    , giGrade          :: Grade
-    , giTimestamp      :: Timestamp
-    , giHasProof       :: Bool
-    } deriving (Show, Eq, Ord, Generic)
 
 data BlkProofInfo = BlkProofInfo
     { bpiBlockHash       :: PrivateHeaderHash
@@ -116,19 +117,6 @@ instance Buildable (IsFinal) where
 instance Buildable (IsGraded) where
     build (IsGraded{..}) =
       "{ is enrolled = " +| unIsGraded |+
-      " }"
-
-instance Buildable (StudentInfo) where
-    build (StudentInfo{..}) =
-      "{ address = " +| siAddr |+
-      " }"
-
-instance Buildable (GradeInfo) where
-    build (GradeInfo{..}) =
-      "{ submission hash = " +| giSubmissionHash |+
-      ", grade = " +| giGrade |+
-      ", timestamp = " +| giTimestamp |+
-      ", has proof = " +| giHasProof |+
       " }"
 
 instance Buildable (BlkProofInfo) where
@@ -188,6 +176,13 @@ gradeInfoFromRow TransactionRow{..} =
     , giHasProof = trIdx /= TxInMempool
     }
 
+certificateFromRow :: (Hash CertificateMeta, PgJSONB CertificateMeta) -> Certificate
+certificateFromRow (cId, meta) =
+    Certificate
+    { cId
+    , cMeta = case meta of PgJSONB m -> m
+    }
+
 ---------------------------------------------------------------------------
 -- JSON instances
 ---------------------------------------------------------------------------
@@ -219,3 +214,36 @@ deriving instance FromHttpApiData IsGraded
 deriving instance ToHttpApiData IsEnrolled
 deriving instance ToHttpApiData IsFinal
 deriving instance ToHttpApiData IsGraded
+
+---------------------------------------------------------------------------
+-- Swagger instances
+---------------------------------------------------------------------------
+
+type instance ParamDescription IsEnrolled =
+    "`true` when the student is currently enrolled to the course, \
+    \`false` when the course is yet only available for the student."
+type instance ParamDescription IsFinal =
+    "Whether assignment is final/non-final."
+
+
+instance ToParamSchema IsEnrolled where
+    toParamSchema = gToParamSchema
+
+instance ToParamSchema IsFinal where
+    toParamSchema = gToParamSchema
+
+instance ToParamSchema IsGraded where
+    toParamSchema = gToParamSchema
+
+
+instance ToSchema IsFinal where
+    declareNamedSchema = newtypeDeclareNamedSchema @Bool
+
+instance ToSchema StudentInfo where
+    declareNamedSchema = gDeclareNamedSchema
+
+instance ToSchema GradeInfo where
+    declareNamedSchema = gDeclareNamedSchema
+
+instance ToSchema BlkProofInfo where
+    declareNamedSchema = gDeclareNamedSchema

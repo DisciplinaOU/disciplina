@@ -9,7 +9,22 @@ library:
   dependencies:
     - bytestring
     - base64-bytestring
+    - contravariant
+    - containers
+    - directory
+    - disciplina-core
+    - filepath
+    - fmt
     - hashable
+    - JuicyPixels
+    - pandoc
+    - text
+    - text-printer
+    - time
+    - typed-process
+    - temporary
+    - qrcode-core
+    - qrcode-juicypixels
 
 tests:
   disciplina-witness-test:
@@ -20,12 +35,25 @@ tests:
       - disciplina-pdfs
       - hspec
       - QuickCheck
+      - quickcheck-instances
 
 executables:
   dscp-inject-json-into-pdf:
     <<: *exec-common
-    source-dirs: app
+    source-dirs: inject
     dependencies:
       - disciplina-pdfs
       - bytestring
       - text
+
+  dscp-generate-test-pdf:
+    <<: *exec-common
+    source-dirs: test-pdf
+    dependencies:
+      - disciplina-core
+      - disciplina-pdfs
+      - bytestring
+      - text
+
+data-files:
+  - template/**/*

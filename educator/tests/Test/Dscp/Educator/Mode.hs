@@ -12,7 +12,12 @@ module Test.Dscp.Educator.Mode
 import Prelude hiding (fold)
 
 import Control.Lens (makeLenses, (?~))
+import GHC.IO.Unsafe
 import qualified Loot.Log as Log
+import qualified Pdf.FromLatex as Pdf
+import System.Directory (getCurrentDirectory)
+import System.Environment (lookupEnv)
+import System.FilePath.Posix ((</>))
 import qualified Test.Hspec as Hspec
 import Test.QuickCheck (ioProperty, resize)
 import Test.QuickCheck.Monadic (PropertyM, monadic, stop)
@@ -27,6 +32,7 @@ import Dscp.Educator.Arbitrary ()
 import Dscp.Educator.Config
 import Dscp.Educator.Launcher
 import Dscp.Educator.TestConfig
+import Dscp.Resource.AppDir
 import Dscp.Resource.Keys
 import Dscp.Rio
 import Dscp.Util
@@ -42,9 +48,14 @@ data TestEducatorCtx = TestEducatorCtx
     { _tecEducatorDb       :: SQL
     , _tecWitnessDb        :: DB.Plugin
     , _tecKeys             :: KeyResources EducatorNode
+    , _tecPdfLatexPath     :: Pdf.LatexPath
+    , _tecPdfResourcePath  :: Pdf.ResourcePath
+    , _tecDownloadBaseUrl  :: Pdf.DownloadBaseUrl
     , _tecWitnessKeys      :: KeyResources WitnessNode
     , _tecWitnessVariables :: TestWitnessVariables
     , _tecLogging          :: Log.Logging IO
+    , _tecAppDir           :: AppDir
+    , _tecIssuerInfo       :: CertificateIssuerResource
     }
 makeLenses ''TestEducatorCtx
 deriveHasLensDirect ''TestEducatorCtx
@@ -53,6 +64,33 @@ deriveHasLens 'tecWitnessVariables ''TestEducatorCtx ''WitnessVariables
 deriveHasLens 'tecWitnessVariables ''TestEducatorCtx ''TestWitnessVariables
 
 type TestEducatorM = RIO TestEducatorCtx
+
+instance MonadFail TestEducatorM where
+    fail = error . toText
+
+resourcePathVarName :: String
+resourcePathVarName = "PDF_RESOURCE_PATH"
+
+testLatexPath :: Pdf.LatexPath
+testLatexPath = Pdf.LatexPath "xelatex"
+
+testResourcePath :: Pdf.ResourcePath
+testResourcePath = unsafePerformIO $ do
+    mpath <- lookupEnv resourcePathVarName
+    path <- case mpath of
+        Nothing -> do
+            cd <- getCurrentDirectory
+            let path = "../pdfs/template"
+            putTextLn $ "No env variable " <> show resourcePathVarName <> " set, \
+                        \assuming that PDF templates are in " <> show (cd </> path)
+            return path
+        Just path -> pure path
+    return (Pdf.ResourcePath path)
+
+testDownloadBaseUrl :: Pdf.DownloadBaseUrl
+testDownloadBaseUrl = Pdf.DownloadBaseUrl $
+    nothingToPanic "url is correct" $
+    parseBaseUrl "https://educator.disciplina.io/api/certificates/v1/cert"
 
 runTestSqlM :: PostgresTestServer -> TestEducatorM a -> IO a
 runTestSqlM testDb action =
@@ -67,6 +105,11 @@ runTestSqlM testDb action =
         let _tecKeys = KeyResources $ mkSecretKeyData testSomeGenesisSecret
         let _tecEducatorDb = db
         let _tecLogging = testLogging
+        let _tecPdfLatexPath = testLatexPath
+        let _tecPdfResourcePath = testResourcePath
+        let _tecDownloadBaseUrl = testDownloadBaseUrl
+        let _tecAppDir = error "AppDir is not defined"
+        let _tecIssuerInfo = KnownIssuerInfo certificateIssuerInfoEx
         let ctx = TestEducatorCtx{..}
         runRIO ctx $ markWithinWriteSDLockUnsafe applyGenesisBlock
 

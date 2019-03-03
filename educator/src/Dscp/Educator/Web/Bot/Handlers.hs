@@ -20,39 +20,16 @@ initializeBot params m = withBotSetting (mkBotSetting params) $ do
     botLog $ logInfo "Educator bot initiated"
     m
 
+-- | Make bot notice all related events like new submission of a student.
+-- This does not include actions which should happen on first activity of each
+-- student ('botProvideInitSettings'), which should be handled elsewhere (for instance,
+-- in autentification hook).
 addBotHandlers
     :: forall m ctx. (BotWorkMode ctx m, HasBotSetting)
     => Student -> StudentApiHandlers m -> StudentApiHandlers m
-addBotHandlers student StudentApiEndpoints{..} = botEndpoints
-  where
-    botEndpoints :: (BotWorkMode ctx m, HasBotSetting) => StudentApiHandlers m
-    botEndpoints = StudentApiEndpoints
-        { sGetCourses = \isEnrolledF onlyCount sorting pagination -> do
-            botProvideInitSetting student
-            sGetCourses isEnrolledF onlyCount sorting pagination
-
-        , sGetCourse = \course -> do
-            botProvideInitSetting student
-            sGetCourse course
-
-        , sGetAssignments = \courseIdF docTypeF isFinalF onlyCount sorting pagination -> do
-            botProvideInitSetting student
-            sGetAssignments courseIdF docTypeF isFinalF onlyCount sorting pagination
-
-        , sGetAssignment = \assignH -> do
-            botProvideInitSetting student
-            sGetAssignment assignH
-
-        , sGetSubmissions = \courseF assignHF docTypeF onlyCount sorting pagination -> do
-            botProvideInitSetting student
-            sGetSubmissions courseF assignHF docTypeF onlyCount sorting pagination
-
-        , sGetSubmission = \subH -> do
-            botProvideInitSetting student
-            sGetSubmission subH
-
-        , sAddSubmission = \newSub -> do
-            botProvideInitSetting student
+addBotHandlers student endpoints@StudentApiEndpoints{..} =
+    endpoints
+        { sAddSubmission = \newSub -> do
             res <- sAddSubmission newSub
 
             delayed $ do
@@ -72,12 +49,4 @@ addBotHandlers student StudentApiEndpoints{..} = botEndpoints
                 botProvideAdvancedSetting student
 
             return res
-
-        , sDeleteSubmission = \subH -> do
-            botProvideInitSetting student
-            sDeleteSubmission subH
-
-        , sGetProofs = \sinceF onlyCount -> do
-            botProvideInitSetting student
-            sGetProofs sinceF onlyCount
         }

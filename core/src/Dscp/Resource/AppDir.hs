@@ -9,13 +9,13 @@ module Dscp.Resource.AppDir
        , AppDirParamRec
        , AppDirParamRecP
 
-       , AppDir
+       , AppDir (..)
        , getOSAppDir
        ) where
 
 import Fmt ((+|), (|+))
+import Loot.Config ((::+), (::-), (:::), Config, PartialConfig)
 import Loot.Log (MonadLogging, logInfo)
-import Loot.Config ((:::), (::-), (::+), Config, PartialConfig)
 import System.Directory (XdgDirectory (XdgData), createDirectoryIfMissing, getXdgDirectory)
 import System.Environment (lookupEnv)
 import System.IO.Error (catchIOError, ioError, isDoesNotExistError)
@@ -40,7 +40,7 @@ type AppDirParamRec = Config AppDirParam
 type AppDirParamRecP = PartialConfig AppDirParam
 
 
-type AppDir = FilePath
+newtype AppDir = AppDir FilePath
 
 -- | Return folder for this application, which will be within directory next to
 -- other applications in the system, e.g. "~/.local/share/disciplina".
@@ -66,7 +66,7 @@ prepareAppDir dirConfig = do
     -- we would unlikely have logging context here
     logInfo $ "Application home directory will be at "+|appDir|+""
     liftIO $ createDirectoryIfMissing True appDir
-    return appDir
+    return $ AppDir appDir
 
 instance AllocResource AppDir where
     type Deps AppDir = AppDirParamRec

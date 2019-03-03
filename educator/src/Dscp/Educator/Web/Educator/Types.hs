@@ -33,11 +33,18 @@ module Dscp.Educator.Web.Educator.Types
     , educatorSubmissionInfoFromRow
     ) where
 
-import Control.Lens (from)
-import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), withText)
+import Control.Lens (at, from, (%=), (.=), (?=), _Just)
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
+import qualified Data.Aeson.TH as A
+import Data.Char (toLower)
+import Data.Swagger (ToSchema (..))
+import qualified Data.Swagger as S
+import qualified Data.Swagger.Declare as S
+import qualified Data.Swagger.Internal.Schema as S
+import Data.Time.Calendar (Day)
 import Fmt (build, listF, (+|), (|+))
+import Pdf.Scanner (PDFBody (..))
 import Servant.Util (type (?:), ForResponseLog (..), SortingParamTypesOf, buildListForResponse)
 
 import Dscp.Core
@@ -45,6 +52,9 @@ import Dscp.Crypto
 import Dscp.DB.SQL.Util
 import Dscp.Educator.DB.Schema
 import Dscp.Educator.Web.Types
+import Dscp.Util
+import Dscp.Util.Aeson
+import Dscp.Web.Swagger
 import Dscp.Witness.Web.Types
 
 data NewStudent = NewStudent
@@ -60,7 +70,7 @@ data NewCourse = NewCourse
 data NewGrade = NewGrade
     { ngSubmissionHash :: (Hash Submission)
     , ngGrade          :: Grade
-    }
+    } deriving (Generic)
 
 data NewAssignment = NewAssignment
     { naCourseId     :: Course
@@ -75,7 +85,7 @@ data NewStudentCourse = NewStudentCourse
 
 data NewStudentAssignment = NewStudentAssignment
     { nsaAssignmentHash :: Hash Assignment
-    }
+    } deriving (Generic)
 
 data EducatorInfo = EducatorInfo
     { eiAddress  :: Address
@@ -104,34 +114,8 @@ data SubmissionEducatorInfo = SubmissionEducatorInfo
     , siWitness        :: SubmissionWitness
     } deriving (Show, Eq, Generic)
 
-eaDocumentType :: AssignmentEducatorInfo -> DocumentType
+eaDocumentType :: AssignmentEducatorInfo -> DocumentType Assignment
 eaDocumentType = documentType . aiContentsHash
-
--- | Datatype which combines certificate meta with its ID.
-data Certificate = Certificate
-    { cId   :: Hash CertificateMeta
-    , cMeta :: CertificateMeta
-    } deriving (Show, Eq, Generic)
-
--- | Datatype which contains information about the grade which
--- gets included into the certificate.
-data CertificateGrade = CertificateGrade
-    { cgSubject :: ItemDesc
-    , cgLang    :: Language
-    , cgHours   :: Int
-    , cgCredits :: Int
-    , cgGrade   :: Grade
-    } deriving (Show, Eq, Generic)
-
--- | Datatype which contains all the info about certificate. This
--- datatype represents a request body for 'AddCertificate' endpoint.
-data CertificateFullInfo = CertificateFullInfo
-    { cfiMeta   :: CertificateMeta
-    , cfiGrades :: [CertificateGrade]
-    } deriving (Show, Eq, Generic)
-
-data Language = EN | RU
-    deriving (Show, Eq, Generic)
 
 -- | Makes a 'Certificate' from 'CertificateMeta'.
 mkCertificate :: CertificateMeta -> Certificate
@@ -154,7 +138,7 @@ mkCountedList onlyCount ls =
 ---------------------------------------------------------------------------
 
 type instance SortingParamTypesOf Certificate =
-    ["createdAt" ?: Timestamp, "student" ?: ItemDesc]
+    ["createdAt" ?: Day, "studentName" ?: ItemDesc]
 
 ---------------------------------------------------------------------------
 -- Simple conversions
@@ -271,22 +255,6 @@ instance Buildable (SubmissionEducatorInfo) where
       ", assignment hash = " +| siAssignmentHash |+
       " }"
 
-instance Buildable Certificate where
-    build Certificate {..} =
-        "{ id = "+|cId|+", meta = "+|cMeta|+" }"
-
-instance Buildable CertificateGrade where
-    build CertificateGrade {..} =
-        "{ subject = "+|cgSubject|+
-        ", hours = "+|cgHours|+
-        ", credits = "+|cgCredits|+
-        ", grade = "+|cgGrade|+" }"
-
-instance Buildable CertificateFullInfo where
-    build CertificateFullInfo {..} =
-        "{ meta = "+|cfiMeta|+
-        ", grades = "+|listF cfiGrades|+" }"
-
 instance Buildable (ForResponseLog EducatorInfo) where
     build (ForResponseLog EducatorInfo{..})=
       "{ address = " +| eiAddress |+
@@ -319,11 +287,10 @@ instance Buildable (ForResponseLog CertificateGrade) where
 instance Buildable (ForResponseLog CertificateFullInfo) where
     build (ForResponseLog CertificateFullInfo {..}) =
         "{ meta = "+|cfiMeta|+
-        ", grades = "+|buildListForResponse (take 4) (ForResponseLog cfiGrades)|+" }"
+        ", grades = "+|buildListForResponse (take 4) (ForResponseLog $ toList cfiGrades)|+" }"
 
--- Instance for PDF contents
-instance Buildable (ForResponseLog LByteString) where
-    build _ = "<binary data>"
+instance Buildable (ForResponseLog PDFBody) where
+    build _ = "<pdf>"
 
 instance Buildable (ForResponseLog [CourseEducatorInfo]) where
     build = buildListForResponse (take 6)
@@ -349,15 +316,6 @@ instance Buildable (ForResponseLog [a]) =>
 -- JSON instances
 ---------------------------------------------------------------------------
 
-instance ToJSON Language where
-    toJSON EN = String "en"
-    toJSON RU = String "ru"
-instance FromJSON Language where
-    parseJSON = withText "Language" $ \case
-        "en" -> pure EN
-        "ru" -> pure RU
-        other -> fail $ "invalid constructor: " ++ toString other
-
 deriveJSON defaultOptions ''NewStudent
 deriveJSON defaultOptions ''NewCourse
 deriveJSON defaultOptions ''NewGrade
@@ -372,3 +330,117 @@ deriveJSON defaultOptions ''Certificate
 deriveJSON defaultOptions ''CertificateGrade
 deriveJSON defaultOptions ''CertificateFullInfo
 deriveJSON defaultOptions ''Counted
+deriveJSON dscpAesonOptions{ A.constructorTagModifier = map toLower } ''Language
+
+---------------------------------------------------------------------------
+-- Swagger instances
+---------------------------------------------------------------------------
+
+type instance ParamDescription Coin =
+    "Coins amount."
+type instance ParamDescription PDFBody =
+    "Content of a PDF file."
+type instance ParamDescription IsGraded =
+    "Return only submissions with/without grade."
+
+type instance QueryFlagDescription "autoAssign" =
+    "Automatically subscribe all students attending related course to new \
+    \assignment."
+
+instance ToSchema a => ToSchema (Counted a) where
+    declareNamedSchema _ = do
+        S.declare $ mempty &: do
+            at countName ?= countSchema
+            whenJust (S.schemaName (Proxy @a)) $ \name ->
+                at name ?= S.toSchema (Proxy @a)
+
+        S.plain $ mempty &: do
+            S.type_ .= S.SwaggerObject
+            S.required .= ["count"]
+            S.properties .= mempty &: do
+                at "count" ?= S.Ref (S.Reference countName)
+                at "items" ?= S.toSchemaRef (Proxy @[a])
+      where
+        countName = "Count"
+        countSchema = mempty &: do
+            S.type_ .= S.SwaggerInteger
+            S.format ?= "int32"
+            S.description ?= "Count of items returned"
+
+instance ToSchema Coin where
+    declareNamedSchema p =
+        S.plain $ mempty &: do
+            S.type_ .= S.SwaggerInteger
+            S.format ?= "int32"
+            setParamDescription p
+
+instance ToSchema a => ToSchema (BlocksOrMempool a) where
+    declareNamedSchema _ =
+        S.plain $ mempty &: do
+            S.type_ .= S.SwaggerObject
+            S.required .= ["confirmed", "total"]
+            S.properties .= mempty &: do
+                at "confirmed" ?= S.toSchemaRef (Proxy @a) &: do
+                    _Inline . S.description . _Just %= ("From blockchain-only view. " <>)
+
+                at "total" ?= S.toSchemaRef (Proxy @a) &: do
+                    _Inline . S.description . _Just %=
+                        ("From view considering both chain and pending changes. " <>)
+
+instance ToSchema Language where
+    declareNamedSchema =
+        S.genericDeclareNamedSchema
+        dscpSchemaOptions{ S.constructorTagModifier = map toLower }
+
+instance ToSchema PDFBody where
+    declareNamedSchema p =
+        declareSimpleSchema "PDFBody" $ S.binarySchema &: do
+            setParamDescription p
+
+instance ToSchema Certificate where
+    declareNamedSchema = gDeclareNamedSchema
+
+instance ToSchema EducationForm where
+    declareNamedSchema = gDeclareNamedSchema
+
+instance ToSchema GradingScale where
+    declareNamedSchema = gDeclareNamedSchema
+
+instance ToSchema CertificateGrade where
+    declareNamedSchema = gDeclareNamedSchema
+
+instance ToSchema CertificateMeta where
+    declareNamedSchema = gDeclareNamedSchema
+
+instance ToSchema CertificateFullInfo where
+    declareNamedSchema = gDeclareNamedSchema
+
+instance ToSchema NewCourse where
+    declareNamedSchema = gDeclareNamedSchema
+
+instance ToSchema NewStudent where
+    declareNamedSchema = gDeclareNamedSchema
+
+instance ToSchema NewAssignment where
+    declareNamedSchema = gDeclareNamedSchema
+
+instance ToSchema NewStudentCourse where
+    declareNamedSchema = gDeclareNamedSchema
+
+instance ToSchema NewStudentAssignment where
+    declareNamedSchema = gDeclareNamedSchema
+
+instance ToSchema NewGrade where
+    declareNamedSchema = gDeclareNamedSchema
+
+instance ToSchema EducatorInfo where
+    declareNamedSchema = gDeclareNamedSchema
+
+instance ToSchema CourseEducatorInfo where
+    declareNamedSchema = gDeclareNamedSchema
+
+instance ToSchema AssignmentEducatorInfo where
+    declareNamedSchema = gDeclareNamedSchema
+
+instance ToSchema SubmissionEducatorInfo where
+    declareNamedSchema = gDeclareNamedSchema

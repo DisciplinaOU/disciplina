@@ -12,6 +12,9 @@ let
       pg_tmp stop -d $(echo ''${TEST_PG_CONN_STRING#*=} | sed 's:%2F:/:g') || :
     '';
   });
+  addLatex = drv: pkgs.haskell.lib.overrideCabal drv (old: {
+    libraryToolDepends = (old.libraryToolDepends or []) ++ [ pkgs.pdf-generator-xelatex ];
+  });
 in
 stackToNix {
   # TODO: properly fix this in stack-to-nix
@@ -23,11 +26,13 @@ stackToNix {
     "/config.yaml"
     "/scripts"
     "/secrets"
-    "/specs"
   ];
   inherit shell;
   overrides = self: previous: {
-    disciplina-educator = withPostgreSQL previous.disciplina-educator;
+    disciplina-educator =
+      (withPostgreSQL
+        (addLatex previous.disciplina-educator)
+      );
 
     HList = pkgs.haskell.lib.overrideCabal previous.HList (o: {
       preCompileBuildDriver = ''

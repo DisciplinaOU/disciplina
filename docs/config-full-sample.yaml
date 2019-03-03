@@ -176,7 +176,7 @@ sample:
         genNew: false
         passphrase: "qwerty123"
 
-    # Student API params
+    # Student & Educator API params
     api:
       # HTTP server params
       serverParams:
@@ -188,7 +188,7 @@ sample:
         params:
           # Type of botConfig.
           # - `enabled` - to use a bot with the specified seed and delay.
-          # - `closed` - to use no bot.
+          # - `disabled` - to use no bot.
           paramsType: "disabled"
           enabled:
             # Random seed which determines bot's actions
@@ -206,10 +206,34 @@ sample:
       educatorAPINoAuth:
         enabled: true
         data: []
+      # For multi-educator case, whether authentication in Educator API should be optional.
+      multiEducatorAPINoAuth:
+        enabled: true
+        # Id of educator pretending to be the requests author.
+        data: The principal
 
     # Private blocks publishing params
     publishing:
       period: 30s
+
+    # Parameters for certificates generator
+    certificates:
+      # Path to LaTeX executable (resolved against $PATH). `xelatex` is used by default.
+      latex: "xelatex"
+      # Path to the directory with LaTeX templates
+      resources: "/var/lib/disciplina/certificate-templates"
+      # Base URL for downloading certificates
+      downloadBaseUrl: "https://example.com/api/certificates/v1/cert"
+      # Info about the certificates issuer, to be used in Pdf generation
+      issuer:
+        name: Grimpy Cat University
+        website: example.grimpy.cat.com
+    # These are options for the AAA microservice, only used by the multi-educator
+    aaa:
+      # URL of the AAA microservice
+      serviceUrl: "https://aaa.service.dscp.com"
+      # Public key of the microservice, used for JWT validation
+      publicKey: "Rdx2rUYesuu6EOBSt27Po85W5k-S4EU6uoSQxrDYUXc"
 
   # Faucet config
   faucet:

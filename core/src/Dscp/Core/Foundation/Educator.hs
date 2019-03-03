@@ -18,6 +18,8 @@ module Dscp.Core.Foundation.Educator
     , Student
     , Grade (..)
     , mkGrade
+    , Language (..)
+    , gradeToNum
     , EducatorId
     , Assignment (..)
     , AssignmentType (..)
@@ -27,8 +29,16 @@ module Dscp.Core.Foundation.Educator
     , SubmissionSig
     , SignedSubmission (..)
     , SubmissionWitness (..)
+    , CertificateFullInfo (..)
     , CertificateMeta (..)
+    , CertificateGrade (..)
+    , CertificateIssuerInfo (..)
+    , Certificate (..)
+    , CertificateName (..)
+    , StudentInfo (..)
+    , GradeInfo (..)
     , EducationForm (..)
+    , GradingScale (..)
     , documentType
     , _aDocumentType
     , aDocumentType
@@ -97,7 +107,7 @@ import qualified Data.ByteArray as BA
 import qualified Data.Text as T
 import Data.Time.Calendar (Day (..))
 import Data.Time.Clock (UTCTime (..), diffTimeToPicoseconds, picosecondsToDiffTime)
-import Fmt (build, genericF, mapF, (+|), (|+))
+import Fmt (build, genericF, listF, mapF, (+|), (|+))
 
 import Dscp.Core.Foundation.Address (Address (..))
 import Dscp.Crypto
@@ -179,6 +189,9 @@ mkGrade a =
     let g = UnsafeGrade a
     in g <$ guard (g >= minBound && g <= maxBound)
 
+gradeToNum :: Num i => Grade -> i
+gradeToNum (UnsafeGrade g) = fromIntegral g
+
 -- | Student is identified by their public address.
 type Student = Address
 
@@ -238,24 +251,24 @@ offlineHash = unsafeHash ("offline" :: ByteString)
 
 -- | Datatype to represent the notion of "offline"- and "online"-ness
 -- of assignments and submissions.
-data DocumentType = Online | Offline
+data DocumentType a = Online | Offline
     deriving (Eq, Ord, Show, Enum, Generic)
 
-documentType :: Hash Raw -> DocumentType
+documentType :: Hash Raw -> DocumentType a
 documentType h
     | h == offlineHash = Offline
     | otherwise        = Online
 
-_aDocumentType :: Assignment -> DocumentType
+_aDocumentType :: Assignment -> DocumentType Assignment
 _aDocumentType = documentType . _aContentsHash
 
-aDocumentType :: Getter Assignment DocumentType
+aDocumentType :: Getter Assignment (DocumentType Assignment)
 aDocumentType = to _aDocumentType
 
-_sDocumentType :: Submission -> DocumentType
+_sDocumentType :: Submission -> DocumentType Submission
 _sDocumentType = documentType . _sContentsHash
 
-sDocumentType :: Getter Submission DocumentType
+sDocumentType :: Getter Submission (DocumentType Submission)
 sDocumentType = to _sDocumentType
 
 instance HasHash Submission => HasId Submission where
@@ -320,17 +333,17 @@ instance Buildable Course where
 instance Buildable () where
     build _ = ""
 
-instance Buildable DocumentType where
+instance Buildable (DocumentType a) where
     build = genericF
 
 -- | Datatype containing info about a certificate issued by Educator.
 data CertificateMeta = CertificateMeta
     { cmStudentName      :: !ItemDesc
     , cmStudentBirthDate :: !Day
-    , cmStartYear        :: !Int
-    , cmEndYear          :: !Int
+    , cmStartYear        :: !Word16
+    , cmEndYear          :: !Word16
     , cmEducationForm    :: !EducationForm
-    , cmNumber           :: !Integer
+    , cmNumber           :: !Natural
     , cmIssueDate        :: !Day
     , cmTitle            :: !ItemDesc
     , cmMajor            :: !ItemDesc
@@ -339,6 +352,90 @@ data CertificateMeta = CertificateMeta
 
 data EducationForm = Fulltime | Parttime | Fullpart
     deriving (Show, Eq, Generic, Enum, Bounded)
+
+data GradingScale = RusDiff | RusNonDiff
+    deriving (Show, Eq, Generic, Enum, Bounded)
+
+-- | Datatype which combines certificate meta with its ID.
+data Certificate = Certificate
+    { cId   :: Hash CertificateMeta
+    , cMeta :: CertificateMeta
+    } deriving (Show, Eq, Generic)
+
+-- | Datatype which contains information about the grade which
+-- gets included into the certificate.
+data CertificateGrade = CertificateGrade
+    { cgSubject :: ItemDesc
+    , cgLang    :: Language
+    , cgHours   :: Word32
+    , cgCredits :: Maybe Word32
+    , cgScale   :: GradingScale
+    , cgGrade   :: Grade
+    } deriving (Show, Eq, Generic)
+
+data Language = EN | RU
+    deriving (Show, Eq, Generic)
+
+-- | Datatype which contains all the info about certificate. This
+-- datatype represents a request body for 'AddCertificate' endpoint.
+data CertificateFullInfo = CertificateFullInfo
+    { cfiMeta   :: CertificateMeta
+    , cfiGrades :: NonEmpty CertificateGrade
+    } deriving (Show, Eq, Generic)
+
+data StudentInfo = StudentInfo
+    { siAddr :: Student
+    } deriving (Show, Eq, Ord, Generic)
+
+data GradeInfo = GradeInfo
+    { giSubmissionHash :: (Hash Submission)
+    , giGrade          :: Grade
+    , giTimestamp      :: Timestamp
+    , giHasProof       :: Bool
+    } deriving (Show, Eq, Ord, Generic)
+
+-- | Datatype containing information about Educator which issued
+-- the certificate, required in order to render a certificate.
+data CertificateIssuerInfo = CertificateIssuerInfo
+    { ciiName    :: ItemDesc
+    , ciiWebsite :: ItemDesc
+    , ciiId      :: Text
+    } deriving (Show, Eq, Generic)
+
+-- | Datatype which is used for encoding a full certificate ID.
+data CertificateName = CertificateName
+    { cnEducatorId    :: Text
+    , cnCertificateId :: Hash CertificateMeta
+    } deriving (Show, Eq, Generic)
+
+instance Buildable (StudentInfo) where
+    build (StudentInfo{..}) =
+      "{ address = " +| siAddr |+
+      " }"
+
+instance Buildable (GradeInfo) where
+    build (GradeInfo{..}) =
+      "{ submission hash = " +| giSubmissionHash |+
+      ", grade = " +| giGrade |+
+      ", timestamp = " +| giTimestamp |+
+      ", has proof = " +| giHasProof |+
+      " }"
+
+instance Buildable Certificate where
+    build Certificate {..} =
+        "{ id = "+|cId|+", meta = "+|cMeta|+" }"
+
+instance Buildable CertificateGrade where
+    build CertificateGrade {..} =
+        "{ subject = "+|cgSubject|+
+        ", hours = "+|cgHours|+
+        ", credits = "+|cgCredits|+
+        ", grade = "+|cgGrade|+" }"
+
+instance Buildable CertificateFullInfo where
+    build CertificateFullInfo {..} =
+        "{ meta = "+|cfiMeta|+
+        ", grades = "+|listF cfiGrades|+" }"
 
 instance Buildable EducationForm where
     build = show
@@ -350,11 +447,16 @@ instance Buildable CertificateMeta where
         ", startYear = "+|cmStartYear|+
         ", endYear = "+|cmEndYear|+
         ", educationForm = "+|cmEducationForm|+
-        ", number = "+|cmNumber|+
+        ", number = "+|toInteger cmNumber|+
         ", issueDate = "+|cmIssueDate|+
         ", title = "+|cmTitle|+
         ", major = "+|cmMajor|+
         ", specialization = "+|cmSpecialization|+" }"
+
+instance Buildable CertificateName where
+    build (CertificateName eId cId) =
+        "certificate { educator-id = "+|eId|+", hash = "+|build cId|+"}"
+
 
 ----------------------------------------------------------------------------
 -- Transactions

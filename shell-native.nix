@@ -18,7 +18,7 @@ stdenv.mkDerivation rec {
     rocksdb
     zeromq
     zlib
-    git
+    pdf-generator-xelatex
   ];
 
   shellHook = ''

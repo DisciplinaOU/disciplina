@@ -13,17 +13,20 @@ module Dscp.Educator.Launcher.Mode
 
       -- * Implementations
     , EducatorContext (..)
+    , ecResources
+    , ecWitnessVars
     , EducatorRealMode
     ) where
 
 import Control.Lens (makeLenses)
-import Loot.Base.HasLens (HasLens')
+import Loot.Base.HasLens (HasCtx)
+import qualified Pdf.FromLatex as Pdf
 
 import Dscp.DB.CanProvideDB as DB
 import Dscp.DB.SQL (SQL)
 import Dscp.Educator.Config (HasEducatorConfig, withEducatorConfig)
 import Dscp.Educator.Launcher.Marker (EducatorNode)
-import Dscp.Educator.Launcher.Resource (EducatorResources)
+import Dscp.Educator.Launcher.Resource (CertificateIssuerResource, EducatorResources)
 import qualified Dscp.Launcher.Mode as Basic
 import Dscp.Resource.Keys (KeyResources)
 import Dscp.Resource.Network
@@ -41,12 +44,15 @@ type EducatorOnlyWorkMode ctx m =
 
     , HasEducatorConfig
 
-    , MonadReader ctx m
-
-    , HasLens' ctx DB.Plugin
-    , HasLens' ctx SQL
-    , HasLens' ctx (KeyResources EducatorNode)
-    , MonadThrow m
+    , HasCtx ctx m
+        [ DB.Plugin
+        , SQL
+        , KeyResources EducatorNode
+        , Pdf.LatexPath
+        , Pdf.ResourcePath
+        , Pdf.DownloadBaseUrl
+        , CertificateIssuerResource
+        ]
     )
 
 -- | Set of typeclasses which define capabilities both of Educator and Witness.
@@ -68,7 +74,7 @@ data EducatorContext = EducatorContext
     { _ecResources   :: !EducatorResources
       -- ^ Resources, allocated from params.
     , _ecWitnessVars :: !W.WitnessVariables
-      -- ^ Wintess variables (non-resources).
+      -- ^ Witness variables (non-resources).
     }
 
 makeLenses ''EducatorContext

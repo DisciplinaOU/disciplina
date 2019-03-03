@@ -7,10 +7,12 @@ module Dscp.Witness.Web.API
      , witnessAPI
      ) where
 
+import Pdf.Scanner (PDFBody)
 import Servant
 import Servant.Generic
 
 import Dscp.Core
+import Dscp.Witness.Web.ContentTypes
 import Dscp.Witness.Web.Error
 import Dscp.Witness.Web.Types
 
@@ -85,7 +87,7 @@ data WitnessEndpoints route = WitnessEndpoints
 
     , wCheckFairCVPDF :: route
         :- "checkcv-pdf"
-        :> ReqBody '[OctetStream] ByteString
+        :> ReqBody '[PDF] PDFBody
         :> Verb 'PUT 200 '[DSON] FairCVAndCheckResult
     } deriving (Generic)
 

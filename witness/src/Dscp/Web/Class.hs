@@ -40,6 +40,8 @@ class HasErrorTag e where
 -- | Get a servant error with appropriate HTTP code, but without
 -- reason field filled.
 class HasErrorTag e => ToServantErr e where
+    {-# MINIMAL toServantErrNoBody #-}
+
     -- | Get miminal info about the error, consider using
     -- 'Servant.err404'-like constants in an implementation.
     toServantErrNoBody :: e -> ServantErr
@@ -67,7 +69,7 @@ class HasErrorTag e => FromServantErr e where
         FailureResponse Response{..} <- pure err
         errResponse <- decode @(ErrResponse e) responseBody
         return $ erContent errResponse
-              ?: error "fromServantError: no error content"
+          ?: error "fromServantError: no error content"
 
 -- | Handle all previously uncaught errors.
 unexpectedToServantErr :: SomeException -> ServantErr

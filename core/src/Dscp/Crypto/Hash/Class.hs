@@ -12,6 +12,7 @@ module Dscp.Crypto.Hash.Class
        , hashLongF
        ) where
 
+import Crypto.Hash.Algorithms ()
 import Data.ByteArray (ByteArray, ByteArrayAccess)
 import qualified Data.Text as T
 import Fmt (Builder, build)
@@ -50,7 +51,6 @@ deriving instance ByteArray (HashResult hf) => ByteArray (AbstractHash hf a)
 deriving instance FromByteArray (HashResult hf) => FromByteArray (AbstractHash hf a)
 instance Show (HashResult hf) => Buildable (AbstractHash hf a) where
     build = build @Text . show
-
 
 -- | For each `a`, provide a way to apply hash function `hf` to it.
 -- Types with 'ByteArrayAccess' have a free pass.

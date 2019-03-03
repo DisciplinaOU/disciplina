@@ -113,9 +113,6 @@ data HashIs
 deriving instance (Eq (Id a), Eq a) => Eq (PaginatedList d a)
 deriving instance (Show (Id a), Show a) => Show (PaginatedList d a)
 
-instance Buildable ByteString where
-    build _ = "<binary data, omitted>"
-
 instance HasId a => HasId (WithBlockInfo a) where
     type Id (WithBlockInfo a) = Id a
     getId WithBlockInfo{..} = getId wbiItem
@@ -163,7 +160,7 @@ instance (HasId a, Buildable (Id a)) =>
 
 instance KnownSymbol d => Buildable (ForResponseLog (PaginatedList d a)) where
     build (ForResponseLog PaginatedList{..}) =
-        "" +| length plItems |+ " " +| symbolValT @d |+ ""
+        "" +| length plItems |+ " " +| symbolValT @d @Text |+ ""
 
 instance Buildable (ForResponseLog HashIs) where
     build (ForResponseLog hashIs) = genericF hashIs

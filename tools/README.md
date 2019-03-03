@@ -151,3 +151,15 @@ There are other options, they can be listed by using `dscp-faircv --help`
 dscp-faircv -w 127.0.0.1:8013 -e 127.0.0.1:8090 -k run/tmp/educator/educator.key
 ```
 
+## swagger generator
+
+Used to produce swagger specifications of Disciplina APIs.
+
+```bash
+dscp-swagger --api student | jq . - | xclip -select clipboard
+xdg-open http://editor.swagger.io
+<paste there>
+```
+
+Also consider using swagger UI hosted by the Discipina node itself.
+For instance, Student API documentation is hosted on `/api/student/v1/doc`.
