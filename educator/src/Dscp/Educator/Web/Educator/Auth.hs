@@ -48,3 +48,10 @@ educatorAuthCheck (EducatorPublicKey pk) = do
 ---------------------------------------------------------------------------
 
 type instance NoAuthData "educator" = ()
+
+---------------------------------------------------------------------------
+-- Documentation
+---------------------------------------------------------------------------
+
+instance AuthHasSwagger EducatorAuth where
+    authSecurityDoc = jwtSecurityDoc educatorAuthDocDesc

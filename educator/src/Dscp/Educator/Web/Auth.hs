@@ -25,9 +25,14 @@ module Dscp.Educator.Web.Auth
        , makeTestAuthToken
        , clientRequestEndpoint
        , signRequestBasic
+
+       , AuthHasSwagger (..)
+       , jwtSecurityDoc
+       , educatorAuthDocDesc
        ) where
 
 import Control.Lens (at, (<>~), (?~))
+import Data.Typeable (typeRep)
 import Crypto.JOSE (Error, decodeCompact, encodeCompact)
 import Data.Aeson (FromJSON (..), decodeStrict, encode, withObject, (.:))
 import Data.Aeson.Options (defaultOptions)
@@ -41,7 +46,6 @@ import Data.Time.Clock (NominalDiffTime, UTCTime, diffUTCTime, getCurrentTime)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Data.Typeable (cast)
 import GHC.TypeLits (ErrorMessage (..), Symbol, TypeError)
-import qualified GHC.Exts as Exts
 import Network.Wai (Request, rawPathInfo, requestHeaders)
 import Servant ((:>), HasServer, ServantErr (..), ServerT, err401, hoistServerWithContext, route)
 import Servant.Auth.Server (AuthCheck (..), AuthResult (..))
@@ -347,35 +351,78 @@ instance FromJSON (NoAuthData s) => FromJSON (NoAuthContext s) where
             then NoAuthOnContext <$> (o .: "data")
             else pure NoAuthOffContext
 
+instance AuthHasSwagger (NoAuth s) where
+    authNameDoc = "NoAuth"
+    authSecurityDoc = NoAuthSwaggerInfo
+
 ---------------------------------------------------------------------------
 -- Documentation
 ---------------------------------------------------------------------------
 
--- | Name of this authentication as mentioned in swagger.
-educatorAuthDocName :: Text
-educatorAuthDocName = "EducatorAuth"
+data AuthSwaggerInfo
+    = AuthSwaggerInfo
+        { asiRequirements :: [Text]
+          -- ^ Security requirements.
+          -- Make sense only for @OAuth@, otherwise leave empty.
+        , asiDefinition :: S.SecurityScheme
+          -- ^ Description of authentication method.
+        }
+    | NoAuthSwaggerInfo
 
-instance HasSwagger subApi => HasSwagger (Auth' auths a :> subApi) where
+class AuthHasSwagger auth where
+    -- | Name of authentication method.
+    authNameDoc :: Text
+    default authNameDoc :: Typeable auth => Text
+    authNameDoc = show $ typeRep (Proxy @auth)
+
+    -- | Security requirements.
+    -- Make sense only for @OAuth@, otherwise leave empty.
+    authSecurityDoc :: AuthSwaggerInfo
+
+class AuthsHaveSwagger (auths :: [*]) where
+    authsSwagger :: S.Swagger
+
+instance AuthsHaveSwagger '[] where
+    authsSwagger = mempty
+
+instance (AuthHasSwagger auth, AuthsHaveSwagger auths) =>
+         AuthsHaveSwagger (auth ': auths) where
+    authsSwagger = addAuth (authSecurityDoc @auth) $ authsSwagger @auths
+      where
+        addAuth auth sw = case auth of
+            NoAuthSwaggerInfo -> sw
+            AuthSwaggerInfo{..} -> sw
+                & S.security <>~
+                    [ S.SecurityRequirement $
+                        mempty & at (authNameDoc @auth) ?~ asiRequirements
+                    ]
+                & S.securityDefinitions . at (authNameDoc @auth) ?~ asiDefinition
+
+instance (HasSwagger subApi, AuthsHaveSwagger auths) =>
+         HasSwagger (Auth' auths a :> subApi) where
     toSwagger _ = toSwagger (Proxy @subApi)
-        & S.security <>~ [S.SecurityRequirement requirement]
-        & S.securityDefinitions . at "EducatorAuth" ?~ securityScheme
         & S.responses . at response401Name ?~ response401
         & S.allOperations . S.responses . S.responses . at 401 ?~
             S.Ref (S.Reference response401Name)
+        & (<> authsSwagger @auths)
       where
-        requirement = Exts.fromList [(educatorAuthDocName, [])]
-        securityScheme = S.SecurityScheme
-            { S._securitySchemeType = S.SecuritySchemeApiKey S.ApiKeyParams
-                { S._apiKeyName = "Authorization"
-                , S._apiKeyIn = S.ApiKeyHeader
-                }
-            , S._securitySchemeDescription = Just educatorAuthDocDesc
-            }
         response401Name = "Unauthorized"
         response401 = mempty
             & S.description .~ "Unauthorized"
             & S.headers . at "WWW-Authenticate" ?~
                 (mempty & S.type_ .~ S.SwaggerString)
+
+jwtSecurityDoc :: Text -> AuthSwaggerInfo
+jwtSecurityDoc desc = AuthSwaggerInfo
+    { asiRequirements = []
+    , asiDefinition = S.SecurityScheme
+        { S._securitySchemeType = S.SecuritySchemeApiKey S.ApiKeyParams
+            { S._apiKeyName = "Authorization"
+            , S._apiKeyIn = S.ApiKeyHeader
+            }
+        , S._securitySchemeDescription = Just desc
+        }
+    }
 
 educatorAuthDocDesc :: Text
 educatorAuthDocDesc =
