@@ -62,11 +62,11 @@ instance ToServantErr DatabaseSemanticError where
 instance EnumHasDescription DomainError where
     enumDocDescription = gEnumDocDesc $ \case
         AbsentError err ->
-            errorDocNoDesc . AbsentError <$>
+            mapMaybe (errorDocNoDesc . AbsentError) $
             enlistConstructorsOf @UnsafeFiller err
 
         AlreadyPresentError err ->
-            errorDocNoDesc . AlreadyPresentError <$>
+            mapMaybe (errorDocNoDesc . AlreadyPresentError) $
             enlistConstructorsOf @UnsafeFiller err
 
         SemanticError err -> errorCaseDocDesc @UnsafeFiller (proxyOf err) $ \case

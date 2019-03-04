@@ -1,6 +1,7 @@
 -- | Helpers to derive descriptions of enum-like types
 module Dscp.Web.Swagger.Generation.Enum
-    ( errorDocNoDesc
+    ( enumCaseDocDesc
+    , errorDocNoDesc
     , errorCaseDocDesc
     , EnumHasDescription (..)
     , gEnumDocDesc
@@ -8,7 +9,7 @@ module Dscp.Web.Swagger.Generation.Enum
     ) where
 
 import Control.Lens ((?=))
-import Data.Aeson (toJSON)
+import Data.Aeson (ToJSON, Value (String), encode, toJSON)
 import qualified Data.Swagger as S
 import qualified Data.Text as T
 import Fmt ((+|), (|+))
@@ -19,18 +20,47 @@ import Dscp.Web.Class
 
 -- | Description of one enum value case.
 data EnumDescriptionItem = EnumDescriptionItem
-    { ediTag      :: Text
-    , ediHttpCode :: Int
-    , ediDesc     :: Maybe Text
+    { ediTag  :: Text
+    , ediDesc :: Text
     }
 
+-- | Implementation of 'enumDocDescription' which describes simple enum.
+enumCaseDocDesc
+    :: forall a.
+       (CanEnlistConstructors EnumLikeOnly a, ToJSON a, HasCallStack)
+    => Proxy a -> (a -> Text) -> [EnumDescriptionItem]
+enumCaseDocDesc _ mkDesc =
+    enlistConstructors @EnumLikeOnly @a <&> \x ->
+        EnumDescriptionItem
+        { ediTag = mkTag x
+        , ediDesc = mkDesc x
+        }
+  where
+    mkTag x = case toJSON x of
+        -- Most common case for enums.
+        -- Unwrapping 'String' to avoid surrounding quotes.
+        String v -> v
+        -- And here we do a madness.
+        other    -> decodeUtf8 $ encode other
+
+-- | Description of error's HTTP code.
+showErrorHttpCode :: ToServantErr err => err -> Text
+showErrorHttpCode err =
+    let code = errHTTPCode $ toServantErrNoBody err
+    in show code <> " code"
+
+-- | Whether this error is server-internal and should not appear in the doc.
+isInternalError :: ToServantErr err => err -> Bool
+isInternalError = (== 500) . errHTTPCode . toServantErrNoBody
+
 -- | Set error description without detailed explanation.
-errorDocNoDesc :: ToServantErr err => err -> EnumDescriptionItem
-errorDocNoDesc err = EnumDescriptionItem
-    { ediTag = errorTag err
-    , ediHttpCode = errHTTPCode $ toServantErrNoBody err
-    , ediDesc = Nothing
-    }
+errorDocNoDesc :: ToServantErr err => err -> Maybe EnumDescriptionItem
+errorDocNoDesc err =
+    guard (not $ isInternalError err) $>
+        EnumDescriptionItem
+        { ediTag = errorTag err
+        , ediDesc = showErrorHttpCode err
+        }
 
 -- | Implementation of 'enumDocDescription' which describes single
 -- error case.
@@ -39,12 +69,12 @@ errorCaseDocDesc
        (CanEnlistConstructors fill err, ToServantErr err, HasCallStack)
     => Proxy err -> (err -> Text) -> [EnumDescriptionItem]
 errorCaseDocDesc _ mkDesc =
-    enlistConstructors @fill @err <&> \err ->
-        EnumDescriptionItem
-        { ediTag = errorTag err
-        , ediHttpCode = errHTTPCode $ toServantErrNoBody err
-        , ediDesc = Just (mkDesc err)
-        }
+    catMaybes $ enlistConstructors @fill @err <&> \err ->
+        guard (not $ isInternalError err) $>
+            EnumDescriptionItem
+            { ediTag = errorTag err
+            , ediDesc = mkDesc err <> " (" <> showErrorHttpCode err <> ")"
+            }
 
 class EnumHasDescription err where
     -- | Description of every single error which is part of the given exception datatype.
@@ -65,16 +95,10 @@ setDocEnumDescription
        (EnumHasDescription err)
     => State S.Schema ()
 setDocEnumDescription = do
-    let descs = dropInternalErrors $ enumDocDescription (Proxy @err)
+    let descs = enumDocDescription (Proxy @err)
     let desc = T.unlines $ map fmt descs
     S.description ?= desc
     S.enum_ ?= map (toJSON . ediTag) descs
   where
-    dropInternalErrors = filter (\d -> ediHttpCode d /= 500)
-    fmt EnumDescriptionItem{..} = mconcat
-        [ "* `" +| ediTag |+ "`"
-        , case ediDesc of
-            Nothing -> ""
-            Just d  -> ": " +| d |+ ""
-        , " (" +| ediHttpCode |+ " code)"
-        ]
+    fmt EnumDescriptionItem{..} =
+        "* `" +| ediTag |+ "`: " +| ediDesc |+ ""
