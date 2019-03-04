@@ -58,6 +58,8 @@ demo: &demo
         params:
           enabled:
             seed: Bot seed
+    certificates:
+      downloadBaseUrl: "https://example.com/api/certificates/v1/cert"
 
   faucet:
     logging:
