@@ -1,4 +1,5 @@
 {-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE StrictData                #-}
 
 -- Some of these methods have 'NetworkingX' constraint added though it is
 -- not required. I use it to force fundep m -> t so user can use methods
@@ -119,13 +120,13 @@ fromSubType (Subscription bs) = readMaybe (BS8.unpack bs)
 ----------------------------------------------------------------------------
 
 data Worker m = forall pre. Worker
-    { wId        :: !ClientId
+    { wId        :: ClientId
       -- ^ Worker's identity.
-    , wBootstrap :: !(m pre)
+    , wBootstrap :: m pre
       -- ^ Initialize necessary context. Fail here or never.
-    , wAction    :: !(pre -> m Void)
+    , wAction    :: pre -> m Void
       -- ^ Worker's action. Should never end.
-    , wRecovery  :: !(RetryPolicyM m)
+    , wRecovery  :: RetryPolicyM m
     }
 
 makeLensesWith postfixLFields ''Worker
