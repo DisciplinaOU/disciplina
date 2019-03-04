@@ -4,8 +4,10 @@ module Dscp.Educator.Web.Educator.API
     ( EducatorApiEndpoints (..)
     , RawEducatorAPI
     , ProtectedEducatorAPI
+    , FullEducatorAPI
     , rawEducatorAPI
     , protectedEducatorAPI
+    , fullEducatorAPI
     , EducatorApiHandlers
     -- * Re-export for using in packages dependent on `disciplina-educator`
     , PDFBody (..)
@@ -53,8 +55,11 @@ data EducatorApiEndpoints route = EducatorApiEndpoints
 type RawEducatorAPI = ToServant (EducatorApiEndpoints AsApi)
 
 type ProtectedEducatorAPI =
-    "api" :> "educator" :> "v1" :>
     Auth' [EducatorAuth, NoAuth "educator"] () :> RawEducatorAPI
+
+type FullEducatorAPI =
+    "api" :> "educator" :> "v1" :>
+    (WithSwaggerUI ProtectedEducatorAPI)
 
 type EducatorApiHandlers m = EducatorApiEndpoints (AsServerT m)
 
@@ -63,6 +68,9 @@ rawEducatorAPI = Proxy
 
 protectedEducatorAPI :: Proxy ProtectedEducatorAPI
 protectedEducatorAPI = Proxy
+
+fullEducatorAPI :: Proxy FullEducatorAPI
+fullEducatorAPI = Proxy
 
 ---------------------------------------------------------------------------
 -- General

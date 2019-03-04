@@ -8,6 +8,7 @@ import Dscp.Core.Foundation.Educator
 import Dscp.DB.SQL
 import Dscp.Educator.Web.Educator
 import Dscp.MultiEducator.Launcher.Mode
+import Dscp.MultiEducator.Types
 import Dscp.MultiEducator.Web.Educator.API
 
 certificatesApiHandlers
@@ -15,6 +16,6 @@ certificatesApiHandlers
     => CertificatesApiHandlers m
 certificatesApiHandlers = CertificatesApiEndpoints
     { cGetCertificate = \(CertificateName eId cId) -> invoke $ do
-            setConnSchemaName $ educatorSchemaName eId
+            setConnSchemaName $ educatorSchemaName (EducatorId eId)
             educatorGetCertificate cId
     }

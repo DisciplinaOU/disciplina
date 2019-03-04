@@ -35,6 +35,9 @@ instance Buildable NetworkAddress where
 instance Show NetworkAddress where
     show = toString . pretty
 
+instance Arbitrary NetworkAddress where
+    arbitrary = NetworkAddress <$> arbitrary <*> arbitrary
+
 ---------------------------------------------------------------------------
 -- Util functions for working with web types
 ---------------------------------------------------------------------------

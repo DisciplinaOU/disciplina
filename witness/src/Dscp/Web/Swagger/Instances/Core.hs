@@ -50,6 +50,8 @@ type instance ParamDescription (DocumentType Submission) =
 type instance ParamDescription SubmissionWitness =
     "Concatenated student public key and submission hash signed with \
     \student secret key."
+type instance ParamDescription CertificateName =
+    "Full certificate ID"
 
 ----------------------------------------------------------------------------
 -- ToParamSchema instances
@@ -142,6 +144,12 @@ instance ToSchema (EmptyMerkleProof PrivateTx) where
 
 instance ToSchema PrivateTx where
     declareNamedSchema _ = declareNamedSchema (Proxy @Text)
+
+instance S.ToParamSchema CertificateName where
+    toParamSchema _ = mempty &: do
+        S.type_ .= S.SwaggerString
+        S.format ?= "base64url"
+        S.pattern ?= ".pdf$"
 
 ----------------------------------------------------------------------------
 -- Error description

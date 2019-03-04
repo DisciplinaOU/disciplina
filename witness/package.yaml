@@ -57,6 +57,7 @@ library:
     - servant-server
     - servant-generic
     - servant-swagger
+    - servant-swagger-ui
     - servant-util
     - swagger2
     - serokell-util
@@ -65,6 +66,7 @@ library:
     - snowdrop-execution
     - snowdrop-util
     - stm
+    - tagged
     - template-haskell
     - text
     - text-format

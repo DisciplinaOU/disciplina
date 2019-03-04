@@ -50,6 +50,7 @@ import Dscp.Educator.Workers
 import Dscp.MultiEducator.Config
 import Dscp.MultiEducator.Launcher.Params (MultiEducatorKeyParams (..))
 import Dscp.MultiEducator.Launcher.Resource
+import Dscp.MultiEducator.Types
 import Dscp.MultiEducator.Web.Educator.Auth (EducatorAuthData (..), EducatorAuthLogin (..))
 import Dscp.Network
 import Dscp.Resource.AppDir (AppDir)
@@ -171,7 +172,7 @@ loadEducator
     -> Maybe PassPhrase
     -> m LoadedEducatorContext
 loadEducator educatorAuthLogin mpassphrase = do
-    let educatorId = eadId $ ealData educatorAuthLogin
+    let educatorId@(EducatorId eid) = eadId $ ealData educatorAuthLogin
     logDebug $ "Loading educator " +| educatorId |+ ""
     -- TODO: add hashing
     appDir <- view $ lensOf @AppDir
@@ -191,7 +192,7 @@ loadEducator educatorAuthLogin mpassphrase = do
     liftIO $ createDirectoryIfMissing True keyDir
     -- read key from file and creates one if it does not exist yet
     let keyParams = finaliseDeferredUnsafe $ mempty
-            & option #path       ?~ Just (keyDir </> toString educatorId <.> "key")
+            & option #path       ?~ Just (keyDir </> toString eid <.> "key")
             & option #genNew     ?~ True
             & option #passphrase ?~ mpassphrase
     key <- withCoreConfig (rcast multiEducatorConfig) $ linkStore keyParams appDir
@@ -229,7 +230,7 @@ loadEducator educatorAuthLogin mpassphrase = do
 
     workerAsyncs <- E.withEducatorConfig newCfg $ runRIO educatorContext $
         let meWorkers = educatorWorkers
-                      & traversed . wIdL %~ (<> "_of_" <> encodeUtf8 educatorId)
+                      & traversed . wIdL %~ (<> "_of_" <> encodeUtf8 eid)
         in mapM (async . runWorker identity) meWorkers
 
     let loadedEducatorCtx = E.withEducatorConfig newCfg $ LoadedEducatorContext
@@ -239,8 +240,8 @@ loadEducator educatorAuthLogin mpassphrase = do
     return loadedEducatorCtx
 
 -- | Returns database schema name for an educator with given ID.
-educatorSchemaName :: Text -> Text
-educatorSchemaName eId = "educator_" <> eId
+educatorSchemaName :: EducatorId -> Text
+educatorSchemaName (EducatorId eId) = "educator_" <> eId
 
 makeCertIssuerRes
     :: MultiEducatorWorkMode ctx m

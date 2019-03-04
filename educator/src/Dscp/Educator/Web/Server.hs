@@ -29,34 +29,40 @@ import Dscp.Educator.DB (existsStudent)
 import Dscp.Educator.Launcher.Mode (EducatorNode, EducatorWorkMode)
 import Dscp.Educator.Web.Auth
 import Dscp.Educator.Web.Bot
-import Dscp.Educator.Web.Educator (EducatorPublicKey (..), ProtectedEducatorAPI,
+import Dscp.Educator.Web.Educator (EducatorPublicKey (..), FullEducatorAPI,
                                    convertEducatorApiHandler, educatorApiHandlers,
                                    protectedEducatorAPI)
-import Dscp.Educator.Web.Student (ProtectedStudentAPI, StudentCheckAction (..),
-                                  convertStudentApiHandler, rawStudentAPI, studentApiHandlers)
+import Dscp.Educator.Web.Educator.Swagger
+import Dscp.Educator.Web.Student (FullStudentAPI, StudentCheckAction (..), convertStudentApiHandler,
+                                  protectedStudentAPI, studentApiHandlers)
 import Dscp.Educator.Web.Student.Auth (mkStudentActionM)
+import Dscp.Educator.Web.Student.Swagger
 import Dscp.Resource.Keys (KeyResources, krPublicKey)
 import Dscp.Web (buildServantLogConfig, serveWeb)
 import Dscp.Web.Metrics (responseTimeMetric)
+import Dscp.Web.Swagger.UI
+import Dscp.Web.Types
 import Dscp.Witness.Web
 
 type EducatorWebAPI =
-    ProtectedEducatorAPI
+    FullEducatorAPI
     :<|>
-    ProtectedStudentAPI
+    FullStudentAPI
     :<|>
     WitnessAPI
 
 mkEducatorApiServer
     :: forall ctx m. EducatorWorkMode ctx m
     => (forall x. m x -> Handler x)
-    -> Server ProtectedEducatorAPI
-mkEducatorApiServer nat =
-    hoistServerWithContext
-        protectedEducatorAPI
-        (Proxy :: Proxy '[EducatorPublicKey, NoAuthContext "educator"])
-        nat
-        (\() -> toServant educatorApiHandlers)
+    -> NetworkAddress
+    -> Server FullEducatorAPI
+mkEducatorApiServer nat host =
+    withSwaggerUI protectedEducatorAPI (educatorAPISwagger (Just host)) $
+        hoistServerWithContext
+            protectedEducatorAPI
+            (Proxy :: Proxy '[EducatorPublicKey, NoAuthContext "educator"])
+            nat
+            (\() -> toServant educatorApiHandlers)
 
 -- | Create these two:
 -- 1. An action which checks whether or not the
@@ -67,32 +73,34 @@ mkEducatorApiServer nat =
 mkStudentApiServer
     :: forall ctx m. EducatorWorkMode ctx m
     => (forall x. m x -> Handler x)
+    -> NetworkAddress
     -> EducatorBotConfigRec
-    -> m (StudentCheckAction, Server ProtectedStudentAPI)
-mkStudentApiServer nat botConfig = case botConfig ^. tree #params . selection of
+    -> m (StudentCheckAction, Server FullStudentAPI)
+mkStudentApiServer nat host botConfig = case botConfig ^. tree #params . selection of
     "enabled" ->
         initializeBot (botConfig ^. tree #params . peekBranch #enabled) $ do
-            let server student =
-                    getServer . addBotHandlers student $
-                    studentApiHandlers student
+            let server = getServer $
+                    \student -> addBotHandlers student $ studentApiHandlers student
             checkAction <- mkStudentActionM $ \pk -> do
                 let student = mkAddr pk
                 botProvideInitSetting student
                 return True
             return (checkAction, server)
     "disabled" -> do
-        let server = getServer . studentApiHandlers
+        let server = getServer studentApiHandlers
         checkAction <- mkStudentActionM $ \pk ->
               let addr = mkAddr pk
               in invoke $ existsStudent addr
         return (checkAction, server)
     other -> error $ "unknown EducatorBotConfig type: " <> fromString other
   where
-    getServer handlers = hoistServerWithContext
-        rawStudentAPI
-        (Proxy :: Proxy '[StudentCheckAction])
-        nat
-        (toServant handlers)
+    getServer handlers =
+        withSwaggerUI Proxy (studentAPISwagger (Just host)) $
+            hoistServerWithContext
+                protectedStudentAPI
+                (Proxy :: Proxy '[StudentCheckAction, NoAuthContext "student"])
+                nat
+                (\student -> toServant $ handlers student)
 
 -- | CORS is enabled to ease development for frontend team.
 educatorCors :: Middleware
@@ -116,7 +124,7 @@ serveEducatorAPIsReal withWitnessApi = do
 
     educatorKeyResources <- view (lensOf @(KeyResources EducatorNode))
     (studentCheckAction, studentApiServer) <-
-          mkStudentApiServer (convertStudentApiHandler unliftIO) botConfig
+          mkStudentApiServer (convertStudentApiHandler unliftIO) serverAddress botConfig
 
     let educatorPublicKey = EducatorPublicKey $ educatorKeyResources ^. krPublicKey
     let srvCtx = educatorPublicKey :. educatorAPINoAuth :.
@@ -125,7 +133,8 @@ serveEducatorAPIsReal withWitnessApi = do
 
     logInfo $ "Serving Student API on "+|serverAddress|+""
     lc <- buildServantLogConfig (<> "web")
-    let educatorApiServer = mkEducatorApiServer (convertEducatorApiHandler unliftIO)
+    let educatorApiServer =
+          mkEducatorApiServer (convertEducatorApiHandler unliftIO) serverAddress
     let witnessApiServer = if withWitnessApi
           then mkWitnessAPIServer (convertWitnessHandler unliftIO)
           else throwAll err405{ errBody = "Witness API disabled at this port" }

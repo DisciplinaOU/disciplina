@@ -24,6 +24,7 @@ import qualified Dscp.Educator.Config as E
 import qualified Dscp.Educator.Launcher.Mode as E
 import Dscp.MultiEducator.Config
 import Dscp.Resource.Class (AllocResource (..), buildComponentR)
+import Dscp.MultiEducator.Types
 import Dscp.Resource.Network (NetServResources)
 import Dscp.Util.TimeLimit
 import Dscp.Util.HasLens
@@ -44,7 +45,7 @@ data MaybeLoadedEducatorContext
       -- | Educator context has been loaded.
     | FullyLoadedEducatorContext LoadedEducatorContext
 
-type EducatorContexts = Map Text MaybeLoadedEducatorContext
+type EducatorContexts = Map EducatorId MaybeLoadedEducatorContext
 
 -- | Contexts of every loaded educator.
 newtype EducatorContextsVar = EducatorContextsVar (TVar EducatorContexts)

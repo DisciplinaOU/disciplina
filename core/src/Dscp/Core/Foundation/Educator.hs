@@ -20,7 +20,6 @@ module Dscp.Core.Foundation.Educator
     , mkGrade
     , Language (..)
     , gradeToNum
-    , EducatorId
     , Assignment (..)
     , AssignmentType (..)
     , Submission (..)
@@ -196,9 +195,6 @@ gradeToNum (UnsafeGrade g) = fromIntegral g
 type Student = Address
 
 instance HasId Student
-
--- | Educator is identified by their public adddress.
-type EducatorId = Address
 
 -- | Educator's course ID is simply a number too.
 -- There's a mapping from course ID to a set of associated subject IDs.

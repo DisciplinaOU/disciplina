@@ -24,15 +24,18 @@ import Dscp.Config
 import Dscp.Educator.Web.Auth
 import Dscp.Educator.Web.Educator (RawEducatorAPI, convertEducatorApiHandler, educatorApiHandlers,
                                    rawEducatorAPI)
-import Dscp.Educator.Web.Student (StudentCheckAction (..), convertStudentApiHandler, rawStudentAPI,
-                                  studentApiHandlers)
+import Dscp.Educator.Web.Student (StudentCheckAction (..), convertStudentApiHandler,
+                                  protectedStudentAPI, studentApiHandlers)
 import Dscp.MultiEducator.Config
 import Dscp.MultiEducator.Launcher.Mode (MultiCombinedWorkMode, MultiEducatorWorkMode,
                                          lookupEducator, normalToMulti)
 import Dscp.MultiEducator.Launcher.Params (MultiEducatorAAAConfigRec)
 import Dscp.MultiEducator.Web.Educator
+import Dscp.MultiEducator.Web.Swagger
 import Dscp.Web (buildServantLogConfig, serveWeb)
 import Dscp.Web.Metrics (responseTimeMetric)
+import Dscp.Web.Swagger.UI
+import Dscp.Web.Types
 import Dscp.Witness.Web
 
 type MultiEducatorWebAPI =
@@ -40,7 +43,7 @@ type MultiEducatorWebAPI =
     :<|>
     MultiStudentAPI
     :<|>
-    CertificatesAPI
+    FullCertificatesAPI
     :<|>
     WitnessAPI
 
@@ -59,32 +62,39 @@ mkMultiEducatorApiServer
     :: forall ctx m. MultiEducatorWorkMode ctx m
     => MultiEducatorAAAConfigRec
     -> (forall x. m x -> Handler x)
+    -> NetworkAddress
     -> Server MultiEducatorAPI
-mkMultiEducatorApiServer _aaaConfig nat =
-    hoistServerWithContext
-        multiEducatorAPI
-        (Proxy :: Proxy '[MultiEducatorPublicKey, NoAuthContext "multi-educator"])
-        nat
-        mkEducatorApiServer'
+mkMultiEducatorApiServer _aaaConfig nat host =
+    withSwaggerUI protectedMultiEducatorAPI (multiEducatorAPISwagger (Just host)) $
+        hoistServerWithContext
+            protectedMultiEducatorAPI
+            (Proxy :: Proxy '[MultiEducatorPublicKey, NoAuthContext "multi-educator"])
+            nat
+            mkEducatorApiServer'
 
 mkStudentApiServer
     :: forall ctx m. MultiEducatorWorkMode ctx m
     => (forall x. m x -> Handler x)
-    -> m (Server MultiStudentAPI)
-mkStudentApiServer nat =
-    return $ \login student -> let ealogin = educatorAuthLoginSimple login in
-        hoistServerWithContext
-            rawStudentAPI
-            (Proxy :: Proxy '[StudentCheckAction])
-            (\x -> nat $ lookupEducator ealogin >>= \c -> normalToMulti c x)
-            (toServant $ studentApiHandlers student)
+    -> NetworkAddress
+    -> Server MultiStudentAPI
+mkStudentApiServer nat host =
+    withSwaggerUI protectedMultiStudentAPI (multiStudentAPISwagger (Just host)) $
+        \login ->
+        let ealogin = educatorAuthLoginSimple login
+        in hoistServerWithContext
+                protectedStudentAPI
+                (Proxy :: Proxy '[StudentCheckAction, NoAuthContext "student"])
+                (\x -> nat $ lookupEducator ealogin >>= \c -> normalToMulti c x)
+                (\student -> toServant $ studentApiHandlers student)
 
 mkCertificatesApiServer
     :: forall ctx m. MultiEducatorWorkMode ctx m
     => (forall x. m x -> Handler x)
-    -> Server CertificatesAPI
-mkCertificatesApiServer nat =
-    hoistServer certificatesAPI nat $ toServant certificatesApiHandlers
+    -> NetworkAddress
+    -> Server FullCertificatesAPI
+mkCertificatesApiServer nat host =
+    withSwaggerUI certificatesAPI (certificatesAPISwagger (Just host)) $
+        hoistServer certificatesAPI nat $ toServant certificatesApiHandlers
 
 -- | Create an action which checks whether or not the
 -- student is a valid API user.
@@ -120,6 +130,7 @@ serveEducatorAPIsReal withWitnessApi = do
         studentAPINoAuth  = webCfg ^. option #studentAPINoAuth
         educatorAPINoAuth = webCfg ^. option #multiEducatorAPINoAuth
         aaaSettings       = multiEducatorConfig ^. sub #educator . sub #aaa
+        metricsEndpoint   = witnessConfig ^. sub #witness . option #metricsEndpoint
 
     studentCheckAction <- createStudentCheckAction
     let educatorPublicKey = aaaSettings ^. option #publicKey
@@ -132,13 +143,26 @@ serveEducatorAPIsReal withWitnessApi = do
 
     logInfo $ "Serving Student API on "+|serverAddress|+""
     unliftIO <- askUnliftIO
-    let educatorApiServer = mkMultiEducatorApiServer aaaSettings (convertEducatorApiHandler unliftIO)
-        certificatesApiServer = mkCertificatesApiServer (convertEducatorApiHandler unliftIO)
-    studentApiServer <- mkStudentApiServer (convertStudentApiHandler unliftIO)
-    let witnessApiServer = if withWitnessApi
+    let educatorApiServer =
+            mkMultiEducatorApiServer
+                aaaSettings
+                (convertEducatorApiHandler unliftIO)
+                serverAddress
+
+        certificatesApiServer =
+            mkCertificatesApiServer
+                (convertEducatorApiHandler unliftIO)
+                serverAddress
+
+        studentApiServer =
+            mkStudentApiServer
+                (convertStudentApiHandler unliftIO)
+                serverAddress
+
+        witnessApiServer = if withWitnessApi
           then mkWitnessAPIServer (convertWitnessHandler unliftIO)
           else throwAll err405{ errBody = "Witness API disabled at this port" }
-    let metricsEndpoint = witnessConfig ^. sub #witness . option #metricsEndpoint
+
     lc <- buildServantLogConfig (<> "web")
     serveWeb serverAddress $
         responseTimeMetric metricsEndpoint $

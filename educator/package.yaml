@@ -56,6 +56,7 @@ library:
     - servant-util-beam-pg
     - snowdrop-util
     - swagger2
+    - tagged
     - template-haskell
     - text
     - text-format
@@ -109,6 +110,7 @@ tests:
       - servant-util
       - sqlite-simple
       - stm
+      - tagged
       - tasty
       - tasty-hspec
       - text-format

@@ -18,7 +18,7 @@ import Control.Lens (from, mapping)
 import Data.Coerce (coerce)
 import Data.Default (Default)
 import Servant.Util (HList (HNil), PaginationSpec, SortingSpecOf, (.*.))
-import Servant.Util.Beam.Postgres (bySpec_, fieldSort_, paginate_)
+import Servant.Util.Beam.Postgres (fieldSort, paginate_, sortBy_)
 
 import Dscp.Core
 import Dscp.Crypto (Hash)
@@ -92,7 +92,7 @@ studentGetCourses
 studentGetCourses studentId (coerce -> isEnrolledF) sorting pagination = do
     courses <- runSelect . select $
         paginate_ pagination $
-        orderBy_ (bySpec_ sorting . mkSortingSpecApp) $ do
+        sortBy_ sorting mkSortingSpecApp $ do
             course <- all_ (esCourses es)
             whenJust isEnrolledF $ \isEnrolled -> do
                 let isEnrolled' = exists_ $ do
@@ -108,8 +108,8 @@ studentGetCourses studentId (coerce -> isEnrolledF) sorting pagination = do
         return CourseStudentInfo{ ciId = courseId, .. }
   where
     mkSortingSpecApp (courseId, desc) =
-        fieldSort_ @"id" courseId .*.
-        fieldSort_ @"desc" desc .*.
+        fieldSort @"id" courseId .*.
+        fieldSort @"desc" desc .*.
         HNil
 
 studentGetGrade
@@ -191,7 +191,7 @@ studentGetAssignments student filters sorting pagination = do
     assignments <- runSelectMap (arHash &&& assignmentFromRow) . select $
         paginate_ pagination $ do
             assignment <-
-                orderBy_ (bySpec_ sorting . mkSortingSpecApp) $
+                sortBy_ sorting mkSortingSpecApp $
                 all_ (esAssignments es)
 
             link_ (esStudentAssignments es) (valPk_ student :-: pk_ assignment)
@@ -208,8 +208,8 @@ studentGetAssignments student filters sorting pagination = do
   where
     assignTypeF = afIsFinal filters ^. mapping (from assignmentTypeRaw)
     mkSortingSpecApp AssignmentRow{..} =
-        fieldSort_ @"course" (unpackPk arCourse) .*.
-        fieldSort_ @"desc" arDesc .*.
+        fieldSort @"course" (unpackPk arCourse) .*.
+        fieldSort @"desc" arDesc .*.
         HNil
 
 -- | Get exactly one assignment.
@@ -242,7 +242,7 @@ studentGetSubmissions
 studentGetSubmissions student filters sorting pagination = do
     runSelectMap studentSubmissionInfoFromRow . select $
         paginate_ pagination $
-        orderBy_ (bySpec_ sorting . mkSortingSpecApp) $ do
+        sortBy_ sorting mkSortingSpecApp $ do
             submission <- all_ (esSubmissions es)
 
             assignment <- related_ (esAssignments es) (srAssignment submission)
@@ -259,5 +259,5 @@ studentGetSubmissions student filters sorting pagination = do
             return (submission, mPrivateTx)
   where
     mkSortingSpecApp (_, TransactionRow{..}) =
-        fieldSort_ @"grade" trGrade .*.
+        fieldSort @"grade" trGrade .*.
         HNil

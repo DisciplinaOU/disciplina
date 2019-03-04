@@ -1,6 +1,7 @@
 -- | Top-level swagger entries and global transformations.
 module Dscp.Web.Swagger.Generation.Global
-    ( toAwesomeSwagger
+    ( networkAddressToSwaggerHost
+    , toAwesomeSwagger
     , setSerokellDocMeta
     , encodeSwagger
     ) where
@@ -11,14 +12,22 @@ import Data.Aeson.Encoding (encodingToLazyByteString)
 import Data.Swagger (Swagger, URL (..))
 import qualified Data.Swagger as S
 import GHC.TypeLits (AppendSymbol, KnownSymbol, Symbol)
-import Servant ((:<|>), (:>), Capture', Description, NoContent, QueryFlag, QueryParam', StdMethod,
-                Verb)
+import Servant ((:<|>), (:>), Capture', Description, NoContent, QueryFlag, QueryParam', Raw,
+                StdMethod, Verb)
 import Servant.Swagger (HasSwagger (..))
 
 import Dscp.Util
 import Dscp.Web.Swagger.Generation.Class
+import Dscp.Web.Types
 
 makePrisms ''S.Referenced
+
+networkAddressToSwaggerHost :: NetworkAddress -> S.Host
+networkAddressToSwaggerHost addr =
+    S.Host
+    { S._hostName = toString $ naHost addr
+    , S._hostPort = Just . fromIntegral $ naPort addr
+    }
 
 -- | Apply all meta info which is fixed for this project.
 setSerokellDocMeta :: State Swagger ()
@@ -84,6 +93,8 @@ type family SwaggerrizeApi api where
 
     SwaggerrizeApi (Verb (method :: StdMethod) (code :: Nat) ctx a) =
         Verb method code ctx a
+
+    SwaggerrizeApi Raw = Raw
 
 -- | Apply some beautiness to automatically generated spec.
 swaggerPostfixes :: Swagger -> Swagger
