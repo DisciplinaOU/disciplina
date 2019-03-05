@@ -31,6 +31,7 @@ library:
     - generic-arbitrary
     - gitrev
     - hashable
+    - HList
     - hspec
     - http-types
     - interpolatedstring-perl6

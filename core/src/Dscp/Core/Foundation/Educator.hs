@@ -57,6 +57,7 @@ module Dscp.Core.Foundation.Educator
 
     -- * Private transactions
     , PrivateTx (..)
+    , PrivateTxSig
     , PrivateTxWitness (..)
     , PrivateTxAux (..)
 
