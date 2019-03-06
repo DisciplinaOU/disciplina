@@ -1,6 +1,7 @@
 -- | Context of multi-educator node.
 module Dscp.MultiEducator.Launcher.Context
-       ( EducatorContextsMap
+       ( EducatorContextVar
+       , EducatorContextsMap
        , EducatorContexts (..)
        , EducatorContextsVar
        , MultiEducatorResources (..)
@@ -19,8 +20,12 @@ import Dscp.Resource.Network (NetServResources)
 import Dscp.Util.HasLens
 import qualified Dscp.Witness.Launcher.Resource as Witness
 
+-- | We keep each educator's context in a separate @TVar@ to reduce
+-- contention.
+type EducatorContextVar = TVar MaybeLoadedEducatorContext
+
 -- | For each educator - its context state.
-type EducatorContextsMap = Map EducatorUUID MaybeLoadedEducatorContext
+type EducatorContextsMap = Map EducatorUUID EducatorContextVar
 
 -- | State of active educator contexts.
 data EducatorContexts

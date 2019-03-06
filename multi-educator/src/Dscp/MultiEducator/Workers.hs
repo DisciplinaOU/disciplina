@@ -36,6 +36,7 @@ privateBlockCreatorWorker =
         educatorContexts <- view $ lensOf @MultiEducatorResources . merEducatorData
 
         handleTerminatedException . forever $ do
+            -- TODO: insert logWaitLongAction
             time <- getCurTime
             let isExpired = \case
                     LockedEducatorContext -> False
@@ -47,10 +48,11 @@ privateBlockCreatorWorker =
             -- Phase 1: remove all expired contexts
 
             expiredCtxs <- atomically . modifyTVarS educatorContexts . onTerminatedThrow $ do
-                ictx <- get
-                let (expired, nonExpired) = M.partition isExpired ictx
-                put nonExpired
-                return (M.elems expired)
+                ctxMap <- get
+                ctxReadMap <- lift $ forM ctxMap $ \ctxVar -> (ctxVar, ) <$> readTVar ctxVar
+                let (expired, nonExpired) = M.partition (isExpired . snd) ctxReadMap
+                put (fmap fst nonExpired)
+                return (snd <$> M.elems expired)
 
             -- TODO: there is a major problem: right here there is a probability
             -- to get another request to server using expired context, and eventually
@@ -63,7 +65,8 @@ privateBlockCreatorWorker =
             -- Phase 2: wait for the next expiring context
 
             nextExpiry <- atomically . modifyTVarS educatorContexts . onTerminatedThrow $ do
-                las <- gets (map lastActivity . M.elems)
+                ctxs <- gets M.elems
+                las <- lift $ forM ctxs $ fmap lastActivity . readTVar
                 when (null las) $ lift STM.retry
                 return $ timeAdd expiryDuration (minimum las)
 

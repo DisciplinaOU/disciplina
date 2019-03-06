@@ -37,12 +37,13 @@ gently (compare to suddenly getting error about closed database connection).
 module Dscp.MultiEducator.Launcher.Educator.Load
     ( MultiEducatorIsTerminating (..)
     , onTerminatedThrow
+    , retryOnContextLocked
     , withSingleEducator
     , unloadEducator
     ) where
 
 import qualified Control.Concurrent.STM as STM
-import Control.Lens (at, traversed, zoom, (%=), _Just)
+import Control.Lens (at, ix, traversed, zoom, (%=))
 import Control.Monad.Fix (mfix)
 import qualified Data.Set as S
 import Fmt ((+|), (|+))
@@ -83,10 +84,19 @@ instance Exception MultiEducatorIsTerminating
 
 -- | Zoom into 'EducatorContext' expecting that multi-educator is active;
 -- if it is terminating, a corresponding exception is thrown.
-onTerminatedThrow :: StateT EducatorContextsMap STM a -> StateT EducatorContexts STM a
+onTerminatedThrow
+    :: MonadThrow m
+    => StateT EducatorContextsMap m a -> StateT EducatorContexts m a
 onTerminatedThrow action = StateT $ \case
     TerminatedEducatorContexts -> throwM MultiEducatorIsTerminating
     ActiveEducatorContexts ctxs -> second ActiveEducatorContexts <$> runStateT action ctxs
+
+-- | Zoom into 'EducatorContext' expecting that multi-educator is active;
+-- if it is terminating, skip the action.
+onTerminatedDoNothing
+    :: (Monad m, Monoid a)
+    => StateT EducatorContextsMap m a -> StateT EducatorContexts m a
+onTerminatedDoNothing = zoom _ActiveEducatorContexts
 
 -- | Remember a thread using this context.
 rememberUser :: Async a -> LoadedEducatorContext -> LoadedEducatorContext
@@ -97,16 +107,18 @@ forgetUser :: MultiEducatorWorkMode ctx m => EducatorUUID -> Async a -> m ()
 forgetUser educatorId (void -> actionAsync) = do
     educatorContexts <- view $ lensOf @MultiEducatorResources . merEducatorData
 
-    atomically . modifyTVarS educatorContexts $
-        -- if the context has been terminated, then we do not care about deleting,
-        -- it is being done for us.
-        zoom (_ActiveEducatorContexts . at educatorId) $
-            -- for the same reasons we do nothing when the context is not loaded.
-            _Just . _FullyLoadedEducatorContext . lecUsersL %=
-                S.delete actionAsync
+    ctxs <- atomically $ readTVar educatorContexts
+    -- If the context has been terminated, then we do not care about deleting,
+    -- it is being done for us.
+    -- For the same reasons we do nothing when the context is not (already) loaded.
+    let mCtxVar = ctxs ^? _ActiveEducatorContexts . ix educatorId
+    whenJust mCtxVar $ \ctxVar ->
+        atomically . modifyTVarS ctxVar $
+            _FullyLoadedEducatorContext . lecUsersL %= S.delete actionAsync
 
 -- | Do our best to kill all user threads to perform resources cleanup
 -- safely later.
+-- This operation is synchronous, idempotent and thread-safe.
 disperseUsers
     :: (MonadUnliftIO m, MonadLogging m)
     => EducatorContextUsers -> m ()
@@ -116,38 +128,46 @@ disperseUsers users = do
         whenNothing res $
             boundExecution_ (sec 1) "Educator context user termination" $ cancel user
 
--- | Reads a ready context from state or takes a lock if it does not exist yet.
+-- | Extract the context, block if it is locked.
+retryOnContextLocked :: MaybeLoadedEducatorContext -> STM LoadedEducatorContext
+retryOnContextLocked = \case
+    LockedEducatorContext -> STM.retry
+    FullyLoadedEducatorContext ctx -> return ctx
+
+-- | Reads a ready context from state or creates a new one and takes a lock
+-- if it does not exist yet (and returns @Left@ or @Right@ correspondingly).
 -- If a context was present, we also update it in-place to reduce number of
 -- state touches.
 getContextOrLock
     :: MultiEducatorWorkMode ctx m
-    => EducatorAuthLogin -> Timestamp -> Async a -> m (Maybe LoadedEducatorContext)
+    => EducatorAuthLogin
+    -> Timestamp
+    -> Async a
+    -> m (Either EducatorContextVar LoadedEducatorContext)
 getContextOrLock educatorAuthLogin curTime userAsync = do
     educatorContexts <- view $ lensOf @MultiEducatorResources . merEducatorData
     let educatorId = ealId educatorAuthLogin
 
-    atomically . modifyTVarS educatorContexts . onTerminatedThrow . zoom (at educatorId) $
+    atomically . modifyTVarS educatorContexts . onTerminatedThrow . zoom (at educatorId) $ do
         get >>= \case
-            Nothing ->
+            Nothing -> do
                 -- will load the context oursevles, taking a lock
-                Nothing <$ put (Just LockedEducatorContext)
+                var <- lift $ newTVar LockedEducatorContext
+                put (Just var)
+                return (Left var)
 
-            Just LockedEducatorContext ->
-                -- someone else has taken a lock
-                lift STM.retry
-
-            Just (FullyLoadedEducatorContext ctx) -> do
-                -- already prepared
-                ctx' <- updateOldCtx ctx
-                put . Just $ FullyLoadedEducatorContext ctx'
-                return (Just ctx')
+            Just ctxVar -> lift $ do
+                ctx <- readTVar ctxVar >>= retryOnContextLocked
+                let ctx' = updateOldCtx ctx
+                writeTVar ctxVar (FullyLoadedEducatorContext ctx')
+                return (Right ctx')
   where
     -- Note: we need this because even if we already have the 'EducatorCtxWithCfg'
     -- in the map it may need to be updated with a new token
-    updateOldCtx ctx = do
+    updateOldCtx ctx =
         let certIssuerInfoRes = makeCertIssuerRes educatorAuthLogin
             newEdCtx = lecCtx ctx & E.ecResources.E.erPdfCertIssuerRes .~ certIssuerInfoRes
-        return $ ctx
+        in ctx
             { lecCtx = newEdCtx
             , lecLastActivity = curTime
             } & rememberUser userAsync
@@ -159,7 +179,7 @@ cleanLockedContext educatorId = do
     educatorContexts <- view $ lensOf @MultiEducatorResources . merEducatorData
 
     atomically . modifyTVarS educatorContexts $
-        zoom (_ActiveEducatorContexts . at educatorId) $
+        onTerminatedDoNothing . zoom (at educatorId) $
             put Nothing
 
 -- | Replace a lock with the prepared context, execute given action and replace
@@ -169,48 +189,37 @@ cleanLockedContext educatorId = do
 -- we may abort at context preparation stage.
 fillingEducatorContext
     :: (MonadUnliftIO m, MonadMask m, MonadLogging m, E.HasEducatorConfig)
-    => EducatorContextsVar
-    -> EducatorUUID
+    => EducatorContextVar
     -> LoadedEducatorContext
     -> m a
     -> m a
-fillingEducatorContext educatorContexts educatorId loadedCtx action = do
+fillingEducatorContext ctxVar loadedCtx action = do
     bracket_ fillContext releaseContext action
   where
     fillContext =
-        atomically . modifyTVarS educatorContexts $
-            onTerminatedThrow . zoom (at educatorId) $
-                put $ Just (FullyLoadedEducatorContext loadedCtx)
+        atomically $ writeTVar ctxVar (FullyLoadedEducatorContext loadedCtx)
 
     releaseContext = do
-        mctx <- atomically . modifyTVarS educatorContexts $
-            zoom (_ActiveEducatorContexts . at educatorId) $
-                get >>= \case
-                    Just (FullyLoadedEducatorContext ctx) -> do
-                        put $ Just LockedEducatorContext
-                        return (Alt $ Just ctx)
-                    _ -> error "Weird state"
+        ctx <- atomically . modifyTVarS ctxVar . state $ \case
+            FullyLoadedEducatorContext ctx -> do
+                (ctx, LockedEducatorContext)
+            _ -> error "Weird state"
 
-        whenJust (getAlt mctx) $ \ctx ->
-            disperseUsers (lecUsers ctx)
+        disperseUsers (lecUsers ctx)
 
 -- | Once a thread serving the context is forked, wait for that context to load
 -- and return it once ready.
 waitForContextLoad
     :: MultiEducatorWorkMode ctx m
-    => EducatorUUID -> Async Void -> m LoadedEducatorContext
-waitForContextLoad educatorId contextKeeper = do
-    educatorContexts <- view $ lensOf @MultiEducatorResources . merEducatorData
-
-    atomically . modifyTVarS educatorContexts . onTerminatedThrow . zoom (at educatorId) $ do
-        mctx' <- get
+    => EducatorContextVar -> Async Void -> m LoadedEducatorContext
+waitForContextLoad ctxVar contextKeeper = do
+    atomically . modifyTVarS ctxVar $ do
+        mctx <- get
         mterminated <- lift $ pollSTM contextKeeper
-        case (mctx', mterminated) of
-            (Just (FullyLoadedEducatorContext ctx), _) -> return ctx
-            (_, Just term)                             -> either throwM absurd term
-            (Just LockedEducatorContext, Nothing)      -> lift STM.retry
-            -- context has been unloaded, need to read exception from the context keeper
-            (Nothing, Nothing)                         -> lift STM.retry
+        case (mctx, mterminated) of
+            (FullyLoadedEducatorContext ctx, _) -> return ctx
+            (_, Just term)                      -> either throwM absurd term
+            (LockedEducatorContext, Nothing)    -> lift STM.retry
 
 -- | An action which is happening in the context keeping thread.
 -- It allocates resources, launches workers and waits till async exception
@@ -231,8 +240,6 @@ serveEducatorContext fillingContext educatorAuthLogin = do
         withWorkers singleEducatorClients $
             fillingContext educatorContext $
                 forever $ threadDelay (hour 1)
-
-            -- TODO: wrap each LoadedEducatorContext entry into own tvar for performance?
   where
     educatorId@(EducatorUUID eid) = ealId educatorAuthLogin
 
@@ -243,29 +250,28 @@ lookupEducator
     -> Async a
     -> m LoadedEducatorContext
 lookupEducator educatorAuthLogin userAsync = do
-    educatorContexts <- view $ lensOf @MultiEducatorResources . merEducatorData
     curTime <- getCurTime
     let educatorId = ealId educatorAuthLogin
 
-    mask_ $ do
-        mctx <- getContextOrLock educatorAuthLogin curTime userAsync
+    mask_ $
+        getContextOrLock educatorAuthLogin curTime userAsync >>= \case
+            Right ctx -> return ctx
+            Left ctxVar -> do
+                let fillingContext :: Async Void -> FillingEducatorContext E.EducatorRealMode
+                    fillingContext contextKeeper ctx =
+                        fillingEducatorContext ctxVar $
+                            LoadedEducatorContext
+                            { lecCtx = ctx
+                            , lecLastActivity = curTime
+                            , lecUsers = S.singleton (void userAsync)
+                            , lecContextKeeper = contextKeeper
+                            }
 
-        whenNothing mctx $ do
-            let fillingContext :: Async Void -> FillingEducatorContext E.EducatorRealMode
-                fillingContext contextKeeper ctx =
-                    fillingEducatorContext educatorContexts educatorId $
-                        LoadedEducatorContext
-                        { lecCtx = ctx
-                        , lecLastActivity = curTime
-                        , lecUsers = S.singleton (void userAsync)
-                        , lecContextKeeper = contextKeeper
-                        }
+                contextKeeper <- mfix $ \contextKeeper ->
+                    async $ serveEducatorContext (fillingContext contextKeeper) educatorAuthLogin
+                              `finally` (cleanLockedContext educatorId)
 
-            contextKeeper <- mfix $ \contextKeeper ->
-                async $ serveEducatorContext (fillingContext contextKeeper) educatorAuthLogin
-                          `finally` (cleanLockedContext educatorId)
-
-            waitForContextLoad educatorId contextKeeper
+                waitForContextLoad ctxVar contextKeeper
 
 -- | Execute an action in educator context.
 withSingleEducator

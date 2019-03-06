@@ -11,7 +11,6 @@ import Dscp.Config
 import Dscp.DB.SQL
 import Dscp.MultiEducator.Config
 import Dscp.MultiEducator.Launcher.Context
-import Dscp.MultiEducator.Launcher.Educator.Context
 import Dscp.MultiEducator.Launcher.Educator.Load
 import Dscp.Resource.Class (AllocResource (..), buildComponentR)
 import qualified Dscp.Witness.Launcher.Resource as Witness
@@ -29,18 +28,11 @@ instance AllocResource EducatorContextsVar where
                 TerminatedEducatorContexts ->
                     logWarning "Extra attempt to terminate all educator contexts"
 
-                ActiveEducatorContexts ctxs' ->
-                    forConcurrently_ ctxs' $ \case
-                        LockedEducatorContext ->
-                            -- can do nothing, once the one who has taken a lock
-                            -- completes his operation (load or unload) he will find
-                            -- out that new contexts are not accepted and will have
-                            -- to handle this situation himself
-                            pass
-
-                        FullyLoadedEducatorContext ctx ->
-                            -- TODO: throw 'MultiEducatorIsTerminating' exception to context users
-                            unloadEducator ctx
+                ActiveEducatorContexts ctxs ->
+                    forConcurrently_ ctxs $ \ctxVar -> do
+                        ctx <- atomically $ readTVar ctxVar >>= retryOnContextLocked
+                        unloadEducator ctx
+                        -- TODO: throw 'MultiEducatorIsTerminating' exception to context users
 
 instance AllocResource MultiEducatorResources where
     type Deps MultiEducatorResources = MultiEducatorConfigRec
