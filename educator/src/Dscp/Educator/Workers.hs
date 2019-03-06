@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedLists  #-}
 
 module Dscp.Educator.Workers
-       ( educatorWorkers
+       ( educatorClients
        ) where
 
 import Fmt ((+||), (||+))
@@ -17,10 +17,10 @@ import Dscp.Educator.Logic
 import Dscp.Network
 import Dscp.Util.Timing
 
-educatorWorkers
+educatorClients
     :: EducatorWorkMode ctx m
-    => [Worker m]
-educatorWorkers =
+    => [Client m]
+educatorClients =
     [ privateBlockCreatorWorker
     , publicationTxSubmitter
     ]
@@ -30,7 +30,7 @@ educatorWorkers =
 ----------------------------------------------------------------------------
 
 -- | Periodically take hanging private transactions and form a new private block.
-privateBlockCreatorWorker :: EducatorWorkMode ctx m => Worker m
+privateBlockCreatorWorker :: EducatorWorkMode ctx m => Client m
 privateBlockCreatorWorker =
     set wRecoveryL (capDelay (minute 5) $ expBackoff (sec 1)) $
     bootingWorker_ "privateBlockCreatorWorker" bootstrap work
@@ -48,7 +48,7 @@ privateBlockCreatorWorker =
     work = notFasterThan period $ void dumpPrivateBlock
 
 -- | Publish all hanging private blocks to public chain.
-publicationTxSubmitter :: forall m ctx. EducatorWorkMode ctx m => Worker m
+publicationTxSubmitter :: forall m ctx. EducatorWorkMode ctx m => Client m
 publicationTxSubmitter =
     set wRecoveryL (capDelay (minute 5) $ expBackoff (sec 1)) $
         simpleWorker "publicationTxSubmitter" $

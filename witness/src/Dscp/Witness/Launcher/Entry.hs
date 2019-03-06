@@ -29,7 +29,7 @@ withWitnessBackground cont = do
     logInfo $ "Genesis header: " +| genesisHeader |+ ""
 
     logInfo "Forking witness workers and listeners"
-    withWorkers (witnessListeners <> witnessWorkers) $
+    withWorkers witnessListeners . withWorkers witnessClients $
         cont
 
 -- | Entry point of witness node.

@@ -148,14 +148,14 @@ mkTestWitnessVariables issuer dbPlugin = do
 -- Workers
 ----------------------------------------------------------------------------
 
-drainNetworkOutputWorker :: WitnessWorkMode ctx m => Worker m
+drainNetworkOutputWorker :: WitnessWorkMode ctx m => Client m
 drainNetworkOutputWorker =
     simpleWorker "drainNetworkOutput" $ do
         RelayState{..} <- view $ lensOf @RelayState
         _ <- atomically $ STM.readTBQueue _rsPipe
         return ()
 
-testWitnessWorkers :: WitnessWorkMode ctx m => [Worker m]
+testWitnessWorkers :: WitnessWorkMode ctx m => [Client m]
 testWitnessWorkers =
     [ txRetranslatingWorker
     , drainNetworkOutputWorker

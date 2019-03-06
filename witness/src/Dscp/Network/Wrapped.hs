@@ -20,6 +20,8 @@ module Dscp.Network.Wrapped
     , fromSubType
 
     , Worker
+    , Client
+    , Listener
     , wIdL
     , wRecoveryL
     , simpleWorker
@@ -34,8 +36,8 @@ module Dscp.Network.Wrapped
     , CliRecvExc(..)
     , servSend
     , servPub
-    , serverWorker
-    , serverCallbacksWorker
+    , listeningWorker
+    , listeningCallbacksWorker
     , lcallback
     , cliRecv
     , cliRecvResp
@@ -119,8 +121,8 @@ fromSubType (Subscription bs) = readMaybe (BS8.unpack bs)
 -- Workers
 ----------------------------------------------------------------------------
 
-data Worker m = forall pre. Worker
-    { wId        :: ClientId
+data Worker id m = forall pre. Worker
+    { wId        :: id
       -- ^ Worker's identity.
     , wBootstrap :: m pre
       -- ^ Initialize necessary context. Fail here or never.
@@ -131,22 +133,25 @@ data Worker m = forall pre. Worker
 
 makeLensesWith postfixLFields ''Worker
 
+type Client = Worker ClientId
+type Listener = Worker ListenerId
+
 -- | An action which will happen forever.
-simpleWorker :: Monad m => ClientId -> m () -> Worker m
+simpleWorker :: Monad m => id -> m () -> Worker id m
 simpleWorker wId action = bootingWorker_ wId pass action
 
 -- | A worker with one-shot bootstrap and infinite main action.
-bootingWorker_ :: Monad m => ClientId -> m () -> m () -> Worker m
+bootingWorker_ :: Monad m => id -> m () -> m () -> Worker id m
 bootingWorker_ wId boot action = bootingWorker wId boot (\() -> action)
 
 -- | A worker with context preparation.
-bootingWorker :: Monad m => ClientId -> m a -> (a -> m ()) -> Worker m
+bootingWorker :: Monad m => id -> m a -> (a -> m ()) -> Worker id m
 bootingWorker wId boot action = Worker wId boot (forever . action) defWorkerRecovery
 
 defWorkerRecovery :: forall m. Monad m => RetryPolicyM m
 defWorkerRecovery = capDelay (sec 20) $ expBackoff (sec 1)
 
-hoistWorker :: (forall a. m a -> n a) -> Worker m -> Worker n
+hoistWorker :: (forall a. m a -> n a) -> Worker id m -> Worker id n
 hoistWorker nat Worker{..} =
     Worker
     { wBootstrap = nat wBootstrap
@@ -155,10 +160,9 @@ hoistWorker nat Worker{..} =
     , ..
     }
 
-runWorker ::
-       forall m. (MonadMask m, MonadLogging m, MonadUnliftIO m)
-    => Worker m
-    -> m (Async Void)
+runWorker
+    :: (MonadMask m, MonadLogging m, MonadUnliftIO m, Show id)
+    => Worker id m -> m (Async Void)
 runWorker Worker{..} = do
     logDebug $ "Launching worker " +|| wId ||+ ""
     pre <- wBootstrap
@@ -169,8 +173,8 @@ runWorker Worker{..} = do
         forever $ recoverAll ("Worker " +|| wId ||+ "") wRecovery (wAction pre)
 
 withWorkers
-    :: (MonadMask m, MonadLogging m, MonadUnliftIO m)
-    => [Worker m] -> m a -> m a
+    :: (MonadMask m, MonadLogging m, MonadUnliftIO m, Show id)
+    => [Worker id m] -> m a -> m a
 withWorkers workers action = do
     bracket
         (mapM (\w -> (w, ) <$> runWorker w) workers)
@@ -200,7 +204,7 @@ clientWorker
     -> Set MsgType
     -> Set Subscription
     -> (ClientEnv NetTag -> m ())
-    -> Worker m
+    -> Client m
 clientWorker cId msgTypes subs action =
     bootingWorker cId register action
   where
@@ -246,25 +250,25 @@ servPub :: forall d. Message SubK d => ListenerEnv NetTag -> d -> STM ()
 servPub btq msg =
     sendBtq btq $ L.Publish (subType @d) [BSL.toStrict $ serialise msg]
 
-serverWorker
+listeningWorker
     :: (MonadIO m, MonadLogging m, NetworkingServ NetTag m)
     => ListenerId
     -> Set MsgType
     -> (ListenerEnv NetTag -> m ())
-    -> Worker m
-serverWorker lId msgTypes action =
+    -> Listener m
+listeningWorker lId msgTypes action =
     bootingWorker lId register action
   where
     register = registerListener @NetTag lId msgTypes
 
-serverCallbacksWorker
+listeningCallbacksWorker
     :: (MonadIO m, MonadLogging m, NetworkingServ NetTag m)
     => ListenerId
     -> Set MsgType
     -> (ListenerEnv NetTag -> [CallbackWrapper (CliId NetTag) m ()])
-    -> Worker m
-serverCallbacksWorker lId lMsgTypes getCallbacks =
-    serverWorker lId lMsgTypes $ \btq -> do
+    -> Listener m
+listeningCallbacksWorker lId lMsgTypes getCallbacks =
+    listeningWorker lId lMsgTypes $ \btq -> do
         let callbacks = getCallbacks btq
         (cliId,msgT,content) <- atomically $ recvBtq btq
         case (fromMsgType msgT,content) of

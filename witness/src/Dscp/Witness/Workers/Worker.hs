@@ -4,7 +4,7 @@
 -- | Node workers
 
 module Dscp.Witness.Workers.Worker
-    ( witnessWorkers
+    ( witnessClients
 
     , txRetranslatingWorker
     ) where
@@ -36,10 +36,10 @@ import Dscp.Witness.Messages
 import Dscp.Witness.Relay
 import Dscp.Witness.SDLock
 
-witnessWorkers
+witnessClients
     :: FullWitnessWorkMode ctx m
-    => [Worker m]
-witnessWorkers =
+    => [Client m]
+witnessClients =
     [ blockUpdateWorker
     , txRetranslatingWorker
     , networkTxReceivingWorker
@@ -50,7 +50,7 @@ witnessWorkers =
 ----------------------------------------------------------------------------
 
 -- | Worker listening to block updates.
-blockUpdateWorker :: forall ctx m. FullWitnessWorkMode ctx m => Worker m
+blockUpdateWorker :: forall ctx m. FullWitnessWorkMode ctx m => Client m
 blockUpdateWorker =
     set wRecoveryL (constDelay (sec 5)) $
     clientWorker "blockUpdateWorker" [msgType @TipMsg, msgType @BlocksMsg] [subType @PubBlock] $
@@ -155,7 +155,7 @@ checkThenRepublish tx = do
 -- | Reads transaction queue and publishes transactions.
 txRetranslatingWorker
     :: WitnessWorkMode ctx m
-    => Worker m
+    => Client m
 txRetranslatingWorker =
     set wRecoveryL retryOnSpot $
     simpleWorker "txRetranslationInitialiser" $ do
@@ -166,7 +166,7 @@ txRetranslatingWorker =
             & handleAny (\e -> logDebug $ "Transaction failed: " +| e |+ "")
 
 -- | Handles incoming transactions.
-networkTxReceivingWorker :: FullWitnessWorkMode ctx m => Worker m
+networkTxReceivingWorker :: FullWitnessWorkMode ctx m => Client m
 networkTxReceivingWorker =
     set wRecoveryL (constDelay (sec 1)) $
         clientWorker "txRetranslationRepeater" [] [subType @PubTx] $ \btq -> do
