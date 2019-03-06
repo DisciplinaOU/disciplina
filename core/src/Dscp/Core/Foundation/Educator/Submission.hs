@@ -19,10 +19,10 @@ data Submission = Submission
     -- ^ Assignment of this submission
     } deriving (Eq, Ord, Show, Generic)
 
-_sDocumentType :: Submission -> DocumentType
+_sDocumentType :: Submission -> DocumentType Submission
 _sDocumentType = documentType . _sContentsHash
 
-sDocumentType :: Getter Submission DocumentType
+sDocumentType :: Getter Submission (DocumentType Submission)
 sDocumentType = to _sDocumentType
 
 -- | Type alias for Submission signature.

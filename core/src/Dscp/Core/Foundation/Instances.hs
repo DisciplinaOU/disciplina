@@ -37,6 +37,7 @@ instance Serialise PrivateGrade
 instance Serialise PrivateCertification
 instance Serialise PrivateTxWitness
 instance Serialise PrivateTxAux
+instance Serialise GradingScale
 instance Serialise CertificateGrade
 instance Serialise SignedCertificateGrade
 instance Serialise Language

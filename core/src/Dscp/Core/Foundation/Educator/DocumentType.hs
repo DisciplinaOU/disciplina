@@ -6,13 +6,13 @@ import Dscp.Util
 
 -- | Datatype to represent the notion of "offline"- and "online"-ness
 -- of assignments and submissions.
-data DocumentType = Online | Offline
+data DocumentType a = Online | Offline
     deriving (Eq, Ord, Show, Enum, Generic)
 
-instance Buildable DocumentType where
+instance Buildable (DocumentType a) where
     build = genericF
 
-documentType :: Hash Raw -> DocumentType
+documentType :: Hash Raw -> DocumentType a
 documentType h
     | h == offlineHash = Offline
     | otherwise        = Online

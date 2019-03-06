@@ -36,8 +36,8 @@ instance HasHash Assignment => HasId Assignment where
 
 makeLenses ''Assignment
 
-_aDocumentType :: Assignment -> DocumentType
+_aDocumentType :: Assignment -> DocumentType Assignment
 _aDocumentType = documentType . _aContentsHash
 
-aDocumentType :: Getter Assignment DocumentType
+aDocumentType :: Getter Assignment (DocumentType Assignment)
 aDocumentType = to _aDocumentType

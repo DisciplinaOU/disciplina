@@ -526,7 +526,7 @@ submissionWitnessEx = _ssWitness signedSubmissionEx
 certificateIssuerInfoEx :: CertificateIssuerInfo
 certificateIssuerInfoEx =
     CertificateIssuerInfo
-    { ciiName    = "Grimpy Cat University"
+    { ciiName    = "Grumpy Cat University"
     , ciiWebsite = "university@example.com"
     , ciiId      = "Principal"
     }

@@ -77,16 +77,6 @@ data GradeRowT f = GradeRow
     , grSubmission   :: PrimaryKey SubmissionRowT f
     } deriving (Generic)
 
-data CertificateRowT f = CertificateRow
-    { crHash         :: PrimaryKey TransactionRowT f
-    , crStudent      :: PrimaryKey StudentRowT f
-    , crLanguage     :: C f Language
-    , crHours        :: C f Int
-    , crCredits      :: C f (Maybe Int)
-    , crGrade        :: C f Grade
-    , crIdx          :: C f TxBlockIdx
-    } deriving (Generic)
-
 -- We need `idx` field to be able to perform queries like "get N last blocks" efficiently.
 data BlockRowT f = BlockRow
     { brIdx          :: C f BlockIdx
@@ -105,37 +95,34 @@ data CertificateRowT f = CertificateRow
     } deriving (Generic)
 
 data EducatorSchema f = EducatorSchema
-    { esCourses             :: f (TableEntity   CourseRowT)
-    , esSubjects            :: f (TableEntity   SubjectRowT)
-    , esStudents            :: f (TableEntity   StudentRowT)
-    , esStudentCourses      :: f (TableEntity $ RelationT 'MxM StudentRowT CourseRowT)
-    , esAssignments         :: f (TableEntity   AssignmentRowT)
-    , esStudentAssignments  :: f (TableEntity $ RelationT 'MxM StudentRowT AssignmentRowT)
-    , esSubmissions         :: f (TableEntity   SubmissionRowT)
-    , esTransactions        :: f (TableEntity   TransactionRowT)
+    { esAssignments         :: f (TableEntity   AssignmentRowT)
     , esBlocks              :: f (TableEntity   BlockRowT)
     , esBlockTxs            :: f (TableEntity $ RelationT 'Mx1 TransactionRowT BlockRowT)
     , esCertificates        :: f (TableEntity   CertificateRowT)
     , esCertificatesVersion :: f (TableEntity $ SingletonT Word32)
     , esGrades              :: f (TableEntity   GradeRowT)
-    , esCertificates        :: f (TableEntity   CertificateRowT)
+    , esStudentAssignments  :: f (TableEntity $ RelationT 'MxM StudentRowT AssignmentRowT)
+    , esStudentCourses      :: f (TableEntity $ RelationT 'MxM StudentRowT CourseRowT)
+    , esStudents            :: f (TableEntity   StudentRowT)
+    , esSubjects            :: f (TableEntity   SubjectRowT)
+    , esSubmissions         :: f (TableEntity   SubmissionRowT)
+    , esTransactions        :: f (TableEntity   TransactionRowT)
+    , esCourses             :: f (TableEntity   CourseRowT)
     } deriving (Generic)
 
 ----------------------------------------------------------------------------
 -- Aliases
 ----------------------------------------------------------------------------
 
-type GradeRow       = GradeRowT       Identity
+type AssignmentRow  = AssignmentRowT  Identity
+type BlockRow       = BlockRowT       Identity
 type CertificateRow = CertificateRowT Identity
 type CourseRow      = CourseRowT      Identity
-type SubjectRow     = SubjectRowT     Identity
+type GradeRow       = GradeRowT       Identity
 type StudentRow     = StudentRowT     Identity
-type AssignmentRow  = AssignmentRowT  Identity
+type SubjectRow     = SubjectRowT     Identity
 type SubmissionRow  = SubmissionRowT  Identity
 type TransactionRow = TransactionRowT Identity
-type BlockRow       = BlockRowT Identity
-type CertificateRow = CertificateRowT Identity
-type BlockRow       = BlockRowT       Identity
 
 ----------------------------------------------------------------------------
 -- Connection with core types
@@ -226,11 +213,6 @@ instance Table GradeRowT where
     newtype PrimaryKey GradeRowT f = GradeRowId (PrimaryKey TransactionRowT f)
         deriving (Generic)
     primaryKey = GradeRowId . grHash
-
-instance Table CertificateRowT where
-    newtype PrimaryKey CertificateRowT f = CertificateRowId (PrimaryKey TransactionRowT f)
-        deriving (Generic)
-    primaryKey = CertificateRowId . crHash
 
 ----------------------------------------------------------------------------
 -- 'Beamable' instances

@@ -35,7 +35,6 @@ module Dscp.Core.Foundation.Educator
     , SignedCertificateGrade (..)
     , Certificate (..)
     , CertificateName (..)
-    , StudentInfo (..)
     , GradeInfo (..)
     , EducationForm (..)
     , GradingScale (..)
@@ -119,7 +118,7 @@ import Dscp.Core.Foundation.Educator.ATGDelta as M
 import Dscp.Core.Foundation.Educator.Certificate as M
 import Dscp.Core.Foundation.Educator.Course as M
 import Dscp.Core.Foundation.Educator.DocumentType as M
-import Dscp.Core.Foundation.Educator.Educator as M
+-- import Dscp.Core.Foundation.Educator.Educator as M
 import Dscp.Core.Foundation.Educator.Grade as M
 import Dscp.Core.Foundation.Educator.GradeInfo as M
 import Dscp.Core.Foundation.Educator.ItemDesc as M

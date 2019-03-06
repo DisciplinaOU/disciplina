@@ -21,3 +21,9 @@ mkGrade :: Word8 -> Maybe Grade
 mkGrade a =
     let g = UnsafeGrade a
     in  g <$ guard (g >= minBound && g <= maxBound)
+
+gradeToNum :: Num i => Grade -> i
+gradeToNum (UnsafeGrade g) = fromIntegral g
+
+data GradingScale = RusDiff | RusNonDiff
+    deriving (Show, Eq, Ord, Enum, Bounded, Generic)

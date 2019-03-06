@@ -172,12 +172,8 @@ deriving instance FromJSON GenesisDistribution
 ---------------------------------------------------------------------------
 
 deriveJSON defaultOptions ''Assignment
-deriveJSON defaultOptions ''Submission
-deriveJSON defaultOptions ''SignedSubmission
-deriveJSON dscpAesonOptions ''DocumentType  -- TODO: apply everywhere
-deriveJSON dscpAesonOptions ''AssignmentType
-deriveJSON defaultOptions ''CertificateIssuerInfo
 deriveJSON defaultOptions ''CertificateGrade
+deriveJSON defaultOptions ''CertificateIssuerInfo
 deriveJSON defaultOptions ''CertificateMeta
 deriveJSON defaultOptions ''FeeCoefficients
 deriveJSON defaultOptions ''GTx
@@ -198,12 +194,8 @@ deriveJSON defaultOptions ''TxInAcc
 deriveJSON defaultOptions ''TxOut
 deriveJSON defaultOptions ''TxWitness
 deriveJSON defaultOptions ''TxWitnessed
-deriveJSON defaultOptions ''GTx
-deriveJSON defaultOptions ''GTxWitnessed
-deriveJSON defaultOptions ''PublicationTxWitness
-deriveJSON defaultOptions ''PublicationTxWitnessed
-deriveJSON defaultOptions ''PublicationTx
-deriveJSON defaultOptions ''FeeCoefficients
+deriveJSON dscpAesonOptions ''AssignmentType
+deriveJSON dscpAesonOptions ''DocumentType  -- TODO: apply everywhere
 deriveJSON dscpAesonOptions ''EducationForm
 deriveJSON dscpAesonOptions ''GradingScale
 
