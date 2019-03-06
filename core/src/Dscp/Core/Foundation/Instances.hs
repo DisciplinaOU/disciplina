@@ -73,6 +73,20 @@ instance {-# OVERLAPPABLE #-} ( ProductList p ) => Serialise p where
         prodListDecoder
 
 ----------------------------------------------------------------------------
+-- Helper functions to `Serialise` `Enum`eration types
+----------------------------------------------------------------------------
+
+-- Note: the reason there is no `Enum t => Serialise t` instance, but instead the
+-- following 2 functions are used is that such an instance cannot coexist with the
+-- `ProductList` one above
+
+encodeEnum :: Enum a => a -> Encoding
+encodeEnum = mappend (encodeListLen 1) . encodeWord . fromIntegral . fromEnum
+
+decodeEnum :: Enum a => Decoder s a
+decodeEnum = decodeListLenOf 1 >> decodeWord >>= return . toEnum . fromIntegral
+
+----------------------------------------------------------------------------
 -- Educator
 ----------------------------------------------------------------------------
 
@@ -139,17 +153,8 @@ instance ProductList ATGEdge where
     fromProductList = hUncurry ATGEdge
 
 instance Serialise ATGSubjectChange where
-    encode a = encodeListLen 1
-            <> encodeWord (case a of
-                ATGAdded   -> 0
-                ATGRemoved -> 1
-                )
-    decode = do
-        decodeListLenOf 1
-        decodeWord >>= \case
-            0 -> return ATGAdded
-            1 -> return ATGRemoved
-            _ -> fail "Unexpected tag"
+    encode = encodeEnum
+    decode = decodeEnum
 
 instance Serialise ATGDelta where
     encode = encode . getATGDelta
@@ -165,17 +170,8 @@ instance ProductList Assignment where
     fromProductList = hUncurry Assignment
 
 instance Serialise AssignmentType where
-    encode a = encodeListLen 1
-            <> encodeWord (case a of
-                Regular     -> 0
-                CourseFinal -> 1
-                )
-    decode = do
-        decodeListLenOf 1
-        decodeWord >>= \case
-            0 -> return Regular
-            1 -> return CourseFinal
-            _ -> fail "Unexpected tag"
+    encode = encodeEnum
+    decode = decodeEnum
 
 instance ProductList SubmissionWitness where
     type Attrs SubmissionWitness = '[PublicKey, SubmissionSig]
@@ -188,36 +184,16 @@ instance ProductList SignedSubmission where
     fromProductList = hUncurry SignedSubmission
 
 instance Serialise (DocumentType a) where
-    encode a = encodeListLen 1
-            <> encodeWord (case a of
-                Online  -> 0
-                Offline -> 1
-                )
-    decode = do
-        decodeListLenOf 1
-        decodeWord >>= \case
-            0 -> return Online
-            1 -> return Offline
-            _ -> fail "Unexpected tag"
+    encode = encodeEnum
+    decode = decodeEnum
 
 instance Serialise Day where
     encode = encode . toModifiedJulianDay
     decode = ModifiedJulianDay <$> decode
 
 instance Serialise EducationForm where
-    encode a = encodeListLen 1
-            <> encodeWord (case a of
-                Fulltime -> 0
-                Parttime -> 1
-                Fullpart -> 2
-                )
-    decode = do
-        decodeListLenOf 1
-        decodeWord >>= \case
-            0 -> return Fulltime
-            1 -> return Parttime
-            2 -> return Fullpart
-            _ -> fail "Unexpected tag"
+    encode = encodeEnum
+    decode = decodeEnum
 
 instance ProductList CertificateMeta where
     type Attrs CertificateMeta =
@@ -339,7 +315,7 @@ instance Serialise GTx where
         decodeWord >>= \case
             0 -> GMoneyTx       <$> decode
             1 -> GPublicationTx <$> decode
-            _ -> fail "Unexpected tag"
+            _ -> fail "Unexpected GTx tag"
 
 instance Serialise GTxId where
     encode (GTxId hGTx) = encode hGTx
@@ -362,7 +338,7 @@ instance Serialise GTxWitnessed where
         decodeWord >>= \case
             0 -> GMoneyTxWitnessed       <$> decode
             1 -> GPublicationTxWitnessed <$> decode
-            _ -> fail "Unexpected tag"
+            _ -> fail "Unexpected GTxWitnessed tag"
 
 instance ProductList BlockToSign where
     type Attrs BlockToSign = '[Difficulty, SlotId, HeaderHash, Hash BlockBody]

@@ -313,7 +313,7 @@ makeLenses ''SignedSubmission
 data ATGSubjectChange
     = ATGAdded
     | ATGRemoved
-    deriving (Eq, Ord, Show, Generic)
+    deriving (Eq, Ord, Show, Generic, Enum)
 
 instance Buildable ATGSubjectChange where
     build = \case
