@@ -172,7 +172,7 @@ createStore path pp = do
 linkStore
     :: forall m n.
        (MonadIO m, MonadCatch m, MonadLogging m, MonadThrow m,
-        HasCoreConfig, Buildable (Proxy n))
+        Buildable (Proxy n))
     => BaseKeyParamsRec -> AppDir -> m (KeyResources n)
 linkStore baseKeyParams appDir = do
     let path = storePath baseKeyParams appDir (Proxy :: Proxy n)

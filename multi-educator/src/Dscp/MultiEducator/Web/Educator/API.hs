@@ -97,7 +97,9 @@ type MultiStudentAPI =
     (WithSwaggerUI ProtectedMultiStudentAPI)
 
 type ProtectedMultiStudentAPI =
-    Capture "educator" EducatorId :> ProtectedStudentAPI
+    Capture "educator" EducatorUUID :> ProtectedStudentAPI
+    -- @martoon: I guess it's weird that we accept uuid here?
+    -- Does student even know it?
 
 multiStudentAPI :: Proxy MultiStudentAPI
 multiStudentAPI = Proxy

@@ -27,8 +27,8 @@ import Dscp.Educator.Web.Educator (RawEducatorAPI, convertEducatorApiHandler, ed
 import Dscp.Educator.Web.Student (StudentCheckAction (..), convertStudentApiHandler,
                                   protectedStudentAPI, studentApiHandlers)
 import Dscp.MultiEducator.Config
-import Dscp.MultiEducator.Launcher.Mode (MultiCombinedWorkMode, MultiEducatorWorkMode,
-                                         lookupEducator, normalToMulti)
+import Dscp.MultiEducator.Launcher.Educator.Load
+import Dscp.MultiEducator.Launcher.Mode (MultiCombinedWorkMode, MultiEducatorWorkMode)
 import Dscp.MultiEducator.Launcher.Params (MultiEducatorAAAConfigRec)
 import Dscp.MultiEducator.Web.Educator
 import Dscp.MultiEducator.Web.Swagger

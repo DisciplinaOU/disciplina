@@ -1,5 +1,5 @@
 module Dscp.MultiEducator.Types
-    ( EducatorId (..)
+    ( EducatorUUID (..)
     ) where
 
 import Control.Lens ((.=))
@@ -12,23 +12,23 @@ import Dscp.Util
 import Dscp.Web.Swagger
 
 -- | Educator id we receive from AAA service.
-newtype EducatorId = EducatorId Text
+newtype EducatorUUID = EducatorUUID Text
     deriving (Show, Eq, Ord, IsString)
 
-instance Buildable EducatorId where
-    build (EducatorId eId) = "\"" <> build eId <> "\""
+instance Buildable EducatorUUID where
+    build (EducatorUUID eId) = "\"" <> build eId <> "\""
 
-deriving instance ToJSON EducatorId
-deriving instance FromJSON EducatorId
+deriving instance ToJSON EducatorUUID
+deriving instance FromJSON EducatorUUID
 
-instance ToHttpApiData EducatorId where
-    toUrlPiece (EducatorId eid) = eid
+instance ToHttpApiData EducatorUUID where
+    toUrlPiece (EducatorUUID eid) = eid
 
-instance FromHttpApiData EducatorId where
-    parseUrlPiece = pure . EducatorId
+instance FromHttpApiData EducatorUUID where
+    parseUrlPiece = pure . EducatorUUID
 
-type instance ParamDescription EducatorId = "Educator identifier."
+type instance ParamDescription EducatorUUID = "Educator identifier."
 
-instance S.ToParamSchema EducatorId where
+instance S.ToParamSchema EducatorUUID where
     toParamSchema _ = mempty &: do
         S.type_ .= S.SwaggerString

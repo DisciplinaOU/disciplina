@@ -12,6 +12,7 @@ module Dscp.DB.SQL.Types
        , TransactionsSwitch (..)
        , PostgresParams (..)
        , SQL (..)
+       , PreparedSQL (..)
 
        , _ConnectionString
        , connStringFromText
@@ -23,6 +24,7 @@ import Control.Concurrent.Chan (Chan)
 import Control.Lens (makePrisms, (?~))
 import Data.Aeson (FromJSON (..))
 import Database.PostgreSQL.Simple (Connection)
+import GHC.TypeLits (Symbol)
 import Loot.Config ((:::), Config, PartialConfig, option)
 
 ----------------------------------------------------------
@@ -98,6 +100,9 @@ data SQL = SQL
     , sqlTransactionsSwitch :: TransactionsSwitch
       -- ^ How transactions are interpreted.
     }
+
+-- | SQL with prepared schema described by type parameter @s@.
+newtype PreparedSQL (s :: Symbol) = PreparedSQL { unPreparedSQL :: SQL }
 
 instance FromJSON ConnectionString where
     parseJSON v = connStringFromText <$> parseJSON @Text v

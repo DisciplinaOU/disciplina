@@ -23,10 +23,11 @@ import System.FilePath.Posix (isRelative, (</>))
 
 import Dscp.Config
 import Dscp.Core.Foundation.Educator (ItemDesc)
-import Dscp.DB.SQL (SQL)
+import Dscp.DB.SQL
 import Dscp.Educator.Config
 import Dscp.Educator.DB.Resource ()
 import Dscp.Educator.Launcher.Marker (EducatorNode)
+import Dscp.Educator.Launcher.Params
 import Dscp.Resource.AppDir
 import Dscp.Resource.Class (AllocResource (..), buildComponentR)
 import Dscp.Resource.Keys (KeyResources (..), linkStore)
@@ -61,12 +62,11 @@ deriveHasLens 'erWitnessResources ''EducatorResources ''Witness.WitnessResources
 deriveHasLens 'erWitnessResources ''EducatorResources ''NetServResources
 
 instance AllocResource (KeyResources EducatorNode) where
-    type Deps (KeyResources EducatorNode) = (EducatorConfigRec, AppDir)
+    type Deps (KeyResources EducatorNode) = (EducatorKeyParamsRec, AppDir)
     allocResource (educatorCfg, appDir) =
-        let baseParams = educatorCfg ^. sub #educator . sub #keys . sub #keyParams
+        let baseParams = educatorCfg ^. sub #keyParams
         in buildComponentR "educator keys"
-           (withCoreConfig (rcast educatorCfg) $
-               linkStore baseParams appDir)
+           (linkStore baseParams appDir)
            (const pass)
 
 instance AllocResource Pdf.LatexPath where
@@ -111,9 +111,9 @@ instance AllocResource EducatorResources where
             witnessCfg = rcast educatorCfg
         _erWitnessResources <- withWitnessConfig witnessCfg $
                                allocResource witnessCfg
-        _erDB <- allocResource $ cfg ^. sub #db
+        _erDB <- unPreparedSQL @"educator" <$> allocResource (cfg ^. sub #db)
         let appDir = Witness._wrAppDir _erWitnessResources
-        _erKeys <- allocResource (educatorCfg, appDir)
+        _erKeys <- allocResource (educatorCfg ^. sub #educator . sub #keys, appDir)
         _erPdfLatexPath <- allocResource $ cfg ^. sub #certificates . option #latex
         _erPdfResourcePath <- allocResource ( cfg ^. sub #certificates . option #resources
                                             , appDir )

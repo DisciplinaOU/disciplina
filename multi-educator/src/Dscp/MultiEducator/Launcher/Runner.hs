@@ -11,8 +11,9 @@ import Loot.Log (MonadLogging)
 
 import Dscp.Config
 import Dscp.MultiEducator.Config
+import Dscp.MultiEducator.Launcher.Context
 import Dscp.MultiEducator.Launcher.Mode (MultiEducatorContext (..), MultiEducatorRealMode)
-import Dscp.MultiEducator.Launcher.Resource (MultiEducatorResources (..))
+import Dscp.MultiEducator.Launcher.Resource ()
 import Dscp.Resource.Class (AllocResource (..), InitParams (..))
 import Dscp.Resource.Functions
 import Dscp.Rio (runRIO)
