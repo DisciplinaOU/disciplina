@@ -3,6 +3,7 @@
 module Dscp.Core.Slotting
        ( SlotId (..)
        , getCurrentSlot
+       , slotFromMcs
        , getSlotSince
        , waitUntilNextSlot
        , rewindToNextSlot
@@ -20,9 +21,11 @@ slotLength = (*1000) $ unSlotDuration $ giveL @CoreConfig
 
 -- Yes. This is enough.
 getCurrentSlot :: (HasCoreConfig, HasTime ctx m) => m SlotId
-getCurrentSlot = do
-    curTime <- getCurTimeMcs
-    pure $ SlotId $ curTime `div` slotLength
+getCurrentSlot = slotFromMcs <$> getCurTimeMcs
+
+-- | Get 'SlotId' from time in microseconds
+slotFromMcs :: (HasCoreConfig) => Word64 -> SlotId
+slotFromMcs time = SlotId $ time `div` slotLength
 
 -- Time of slot start, in microseconds
 getSlotSince :: HasCoreConfig => SlotId -> Word64

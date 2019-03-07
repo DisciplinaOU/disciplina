@@ -14,12 +14,17 @@ module Dscp.Util.Time
       -- * Implementations
     , realTimeActions
     , mkTestTimeActions
+
+      -- * Helpers
+    , timestampToMcs
+    , utcTimeToMcs
     ) where
 
 import qualified Control.Concurrent.STM as STM
 import Control.Exception (BlockedIndefinitelyOnSTM (..))
 import Control.Exception.Safe (handle)
-import Data.Time.Clock.POSIX (getPOSIXTime)
+import Data.Time.Clock (UTCTime)
+import Data.Time.Clock.POSIX (getPOSIXTime, utcTimeToPOSIXSeconds)
 import Loot.Base.HasLens (HasCtx, HasLens', lensOf)
 import Time (KnownRat, Second, Time, Timestamp (..), fromUnixTime, threadDelay, timeAdd, toUnit)
 
@@ -52,7 +57,7 @@ getCurTime = do
 
 -- | Get current time, in microseconds.
 getCurTimeMcs :: HasTime ctx m => m Word64
-getCurTimeMcs = getCurTime <&> \(Timestamp t) -> floor (t * 1000000)
+getCurTimeMcs = getCurTime <&> timestampToMcs
 
 -- | Analogy to 'threadDelay'.
 sleep :: (KnownRat unit, HasTime ctx m) => Time unit -> m ()
@@ -104,3 +109,13 @@ mkTestTimeActions = do
     handleSleepHangs =
         handle $ \BlockedIndefinitelyOnSTM ->
             error "And this thread has never awaken again..."
+
+----------------------------------------------------------------------------
+-- Helpers
+----------------------------------------------------------------------------
+
+timestampToMcs :: Timestamp -> Word64
+timestampToMcs (Timestamp t) = floor (t * 1000000)
+
+utcTimeToMcs :: UTCTime -> Word64
+utcTimeToMcs = timestampToMcs . fromUnixTime . utcTimeToPOSIXSeconds
