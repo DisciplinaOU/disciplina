@@ -11,7 +11,8 @@ module Pdf.Scanner
     ) where
 
 import qualified Data.ByteString.Base64 as Base64
-import qualified Data.ByteString.Lazy.Char8 as LBS
+import qualified Data.ByteString.Lazy as LBS
+import Data.Char (ord)
 import Data.Hashable
 import Fmt (Buildable (..))
 
@@ -51,7 +52,8 @@ unInject
   = do
     place <- findFromEnd quota fairCVStartMark text
     let after  = LBS.drop (place + LBS.length fairCVStartMark + 1) text
-        piece  = LBS.takeWhile (not . (== '}')) after
+        mark   = fromIntegral $ ord '}'
+        piece  = LBS.takeWhile (/= mark) after
         source = LBS.take (place - 2) text <> LBS.drop (place + LBS.length piece + LBS.length fairCVStartMark + 1 + 2) text
 
     either

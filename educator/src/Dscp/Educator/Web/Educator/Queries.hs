@@ -277,7 +277,7 @@ educatorAddCertificate cert = do
     downloadBaseUrl <- view (lensOf @Pdf.DownloadBaseUrl)
 
     certificateIssuerInfo  <- getCertificateIssuerInfo
-    pdfRaw@ (PDFBody body) <- Pdf.produce RU certificateIssuerInfo cert pdfLatexPath pdfResPath
+    pdfRaw@ (PDFBody body) <- Pdf.produce RU certificateIssuerInfo cert pdfLatexPath pdfResPath downloadBaseUrl
 
     let pdfHash = hash body
 
