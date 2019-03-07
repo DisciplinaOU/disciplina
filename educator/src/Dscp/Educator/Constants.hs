@@ -28,6 +28,3 @@ defCertAssignment =
     , _aType = CourseFinal
     , _aDesc = ""
     }
-
--- TODO: Someday we will need to add description for each field of certificate datatypes
--- for the sake of swagger documentation, mention those things ^ as example there.
