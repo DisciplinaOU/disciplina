@@ -16,20 +16,21 @@ steps:
       system: x86_64-linux
     label: build
 
-  - command: nix-build --no-out-link
-    agents:
-      system: x86_64-darwin
-    label: build-darwin
+  # NOTE: Darwin builds are temporarily disabled until they are fixed
+  # - command: nix-build --no-out-link
+  #   agents:
+  #     system: x86_64-darwin
+  #   label: build-darwin
 
   - command: nix-build shell.nix --no-out-link
     agents:
       system: x86_64-linux
     label: shell
 
-  - command: nix-build shell.nix --no-out-link
-    agents:
-      system: x86_64-darwin
-    label: shell-darwin
+  # - command: nix-build shell.nix --no-out-link
+  #   agents:
+  #     system: x86_64-darwin
+  #   label: shell-darwin
 
   - wait
 
@@ -47,12 +48,12 @@ steps:
     - haddock.tar.gz
     label: haddock
 
-  - command: nix-build release.nix -A disciplina-wallet-macos-zip -o disciplina-wallet-macos.zip
-    agents:
-      system: x86_64-darwin
-    artifact_paths:
-    - disciplina-wallet-macos.zip
-    label: macos-zip
+  # - command: nix-build release.nix -A disciplina-wallet-macos-zip -o disciplina-wallet-macos.zip
+  #   agents:
+  #     system: x86_64-darwin
+  #   artifact_paths:
+  #   - disciplina-wallet-macos.zip
+  #   label: macos-zip
 
   - command: nix-build specs -o specs/result
     agents:
