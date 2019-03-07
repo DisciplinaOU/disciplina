@@ -12,7 +12,7 @@ import Dscp.Crypto
 
 data PrivateTx
     = PrivateTxGrade !PrivateGrade
-    | PrivateTxCertification !PrivateCertification
+    | PrivateTxCertification !(Signed CertificateFullInfo)
       deriving (Show, Eq, Ord, Generic)
 
 getPrivateTxType :: PrivateTx -> Int

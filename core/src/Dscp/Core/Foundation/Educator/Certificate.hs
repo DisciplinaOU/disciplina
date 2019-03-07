@@ -10,7 +10,7 @@ import Dscp.Crypto
 import Dscp.Util
 
 data EducationForm = Fulltime | Parttime | Fullpart
-    deriving (Show, Eq, Generic, Enum, Bounded)
+    deriving (Show, Eq, Ord, Generic, Enum, Bounded)
 
 instance Buildable EducationForm where
     build = show
@@ -20,7 +20,7 @@ instance Buildable EducationForm where
 data CertificateFullInfo = CertificateFullInfo
     { cfiMeta   :: CertificateMeta
     , cfiGrades :: [CertificateGrade]
-    } deriving (Show, Eq, Generic)
+    } deriving (Show, Eq, Ord, Generic)
 
 instance Buildable CertificateFullInfo where
     build CertificateFullInfo {..} =
@@ -51,7 +51,7 @@ data CertificateIssuerInfo = CertificateIssuerInfo
     { ciiName    :: ItemDesc
     , ciiWebsite :: ItemDesc
     , ciiId      :: Text
-    } deriving (Show, Eq, Generic)
+    } deriving (Show, Eq, Ord, Generic)
 
 data Language = EN | RU
     deriving (Show, Eq, Ord, Enum, Bounded, Generic)
@@ -68,7 +68,7 @@ data CertificateMeta = CertificateMeta
     , cmTitle            :: !ItemDesc
     , cmMajor            :: !ItemDesc
     , cmSpecialization   :: !(Maybe ItemDesc)
-    } deriving (Show, Eq, Generic)
+    } deriving (Show, Eq, Ord, Generic)
 
 instance Buildable CertificateMeta where
     build CertificateMeta {..} =
@@ -87,7 +87,7 @@ instance Buildable CertificateMeta where
 data Certificate = Certificate
     { cId   :: Hash CertificateMeta
     , cMeta :: CertificateMeta
-    } deriving (Show, Eq, Generic)
+    } deriving (Show, Eq, Ord, Generic)
 
 instance Buildable Certificate where
     build Certificate {..} =
@@ -97,7 +97,7 @@ instance Buildable Certificate where
 data CertificateName = CertificateName
     { cnEducatorId    :: Text
     , cnCertificateId :: Hash CertificateMeta
-    } deriving (Show, Eq, Generic)
+    } deriving (Show, Eq, Ord, Generic)
 
 instance Buildable CertificateName where
     build (CertificateName eId cId) =

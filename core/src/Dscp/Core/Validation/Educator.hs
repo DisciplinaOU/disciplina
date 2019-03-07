@@ -26,7 +26,7 @@ import qualified Text.Show
 
 import Dscp.Core.Foundation
 import Dscp.Crypto
-import Dscp.Util (mappendLefts)
+import Dscp.Util
 
 -- | Block validation failures
 data BlockValidationFailure
@@ -145,14 +145,17 @@ validateSubmission ss =
         ]
 
 verifyCertificate
-    :: SignedCertificateGrade
+    :: Signed CertificateFullInfo
     -> Either [CertificationValidationFailure] ()
-verifyCertificate (SignedCertificateGrade cg pk sig) =
-    let cgHash = hash cg
-    in
-        if verify pk cgHash sig
-        then Right ()
-        else Left $ [CertificationSignatureMismatch cgHash pk sig]
+verifyCertificate cert = either rethrow accept (unsign cert)
+  where
+    rethrow _ = Left $
+      [ CertificationSignatureMismatch
+          (cert^.idOf)
+          (cert^.sgPublicKey)
+          (cert^.sgSignature)
+      ]
+    accept  _ = Right ()
 
 -- | Checks that
 -- 1. 'SignedSubmission' is valid;

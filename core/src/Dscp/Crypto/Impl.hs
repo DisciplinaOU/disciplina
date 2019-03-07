@@ -31,13 +31,15 @@ module Dscp.Crypto.Impl
        , unsafeVerify
 
          -- * Evenlope with a sign
-       , Signed
+       , Signed, sgMessage, sgSignature, sgPublicKey
        , signed
        , unsign
 
          -- * Other
        , Raw
        ) where
+
+import Control.Lens (makeLenses)
 
 import Crypto.Error (CryptoFailable (..))
 import Crypto.Hash (digestFromByteString)
@@ -148,11 +150,28 @@ verify = abstractVerify
 unsafeVerify :: HasSignature a => PublicKey -> a -> Signature b -> Bool
 unsafeVerify = unsafeAbstractVerify
 
+-- | Type alias for denoting raw bytes. Indended to be used with hashes
+-- and signatures, like in type `Hash Raw`, and not type-safe hashing and
+-- signing.
+-- TODO: probably it makes sense to make it a newtype, like in Cardano?
+type Raw = LByteString
+
 data Signed msg = Signed
-    { sgMessage   :: msg
-    , sgPublicKey :: PublicKey
-    , sgSignature :: Signature (Id msg)
-    } deriving (Eq, Show, Generic)
+    { _sgMessage   :: msg
+    , _sgPublicKey :: PublicKey
+    , _sgSignature :: Signature (Id msg)
+    } deriving (Eq, Ord, Show, Generic)
+
+makeLenses ''Signed
+
+instance Buildable msg => Buildable (Signed msg) where
+    build it = "Signed { sig: " +| build (it^.sgSignature) |+
+                       "; pk: " +| build (it^.sgPublicKey) |+ " }"
+
+instance HasId a => HasId (Signed a) where
+    type Id (Signed a) = Id a
+
+    getId = (^.sgMessage.idOf)
 
 -- | Thrown if signed object has invalid signature.
 --   Expected to be immidiately catched by client code and somehow rethrown.
@@ -170,12 +189,3 @@ unsign (Signed obj pk sig) =
     then return obj
     else throwM SignatureIsInvalid
 
-instance Buildable msg => Buildable (Signed msg) where
-    build Signed{..} = "Signed { sig: " +| build sgSignature |+
-                       "; pk: " +| build sgPublicKey |+ " }"
-
--- | Type alias for denoting raw bytes. Indended to be used with hashes
--- and signatures, like in type `Hash Raw`, and not type-safe hashing and
--- signing.
--- TODO: probably it makes sense to make it a newtype, like in Cardano?
-type Raw = LByteString

@@ -171,6 +171,8 @@ deriving instance FromJSON GenesisDistribution
 -- TH derivations for data
 ---------------------------------------------------------------------------
 
+deriveJSON defaultOptions ''Signed
+
 deriveJSON defaultOptions ''Assignment
 deriveJSON defaultOptions ''CertificateGrade
 deriveJSON defaultOptions ''CertificateIssuerInfo

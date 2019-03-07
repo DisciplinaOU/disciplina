@@ -79,6 +79,7 @@ instance Serialise Day where
     decode = ModifiedJulianDay <$> decode
 
 instance Serialise EducationForm
+instance Serialise CertificateFullInfo
 instance Serialise CertificateMeta
 
 instance HasId CertificateMeta where
