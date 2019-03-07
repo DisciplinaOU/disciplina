@@ -2,7 +2,7 @@
 {-# LANGUAGE OverloadedLists  #-}
 
 module Dscp.Educator.Workers
-       ( educatorWorkers
+       ( educatorClients
        ) where
 
 import Fmt ((+||), (||+))
@@ -17,10 +17,10 @@ import Dscp.Educator.Logic
 import Dscp.Network
 import Dscp.Util.Timing
 
-educatorWorkers
+educatorClients
     :: EducatorWorkMode ctx m
-    => [Worker m]
-educatorWorkers =
+    => [Client m]
+educatorClients =
     [ privateBlockCreatorWorker
     , publicationTxSubmitter
     ]
@@ -30,9 +30,10 @@ educatorWorkers =
 ----------------------------------------------------------------------------
 
 -- | Periodically take hanging private transactions and form a new private block.
-privateBlockCreatorWorker :: EducatorWorkMode ctx m => Worker m
+privateBlockCreatorWorker :: EducatorWorkMode ctx m => Client m
 privateBlockCreatorWorker =
-    Worker "privateBlockCreatorWorker" [] [] $ \_ -> bootstrap >> work
+    set wRecoveryL (capDelay (minute 5) $ expBackoff (sec 1)) $
+    bootingWorker_ "privateBlockCreatorWorker" bootstrap work
   where
     period = educatorConfig ^. sub #educator . sub #publishing . option #period
     slotDuration =
@@ -44,23 +45,11 @@ privateBlockCreatorWorker =
                          \witness slot duration ("
                          +|| period ||+ " <= " +|| slotDuration ||+ ")"
 
-    withRecovery action =
-        recoverAll "Private block publisher"
-                   (capDelay (minute 5) $ expBackoff (sec 1)) $
-                   action
-    work =
-        forever $
-        withRecovery $
-        notFasterThan period $
-            void dumpPrivateBlock
+    work = notFasterThan period $ void dumpPrivateBlock
 
 -- | Publish all hanging private blocks to public chain.
-publicationTxSubmitter :: forall m ctx. EducatorWorkMode ctx m => Worker m
+publicationTxSubmitter :: forall m ctx. EducatorWorkMode ctx m => Client m
 publicationTxSubmitter =
-    Worker "publicationTxSubmitter" [] [] $ \_ ->
-        forever $
-        recoverAll actionName (capDelay (minute 5) $ expBackoff (sec 1)) $
-        notFasterThan (sec 1) $
-            void updateMempoolWithPublications
-  where
-    actionName = "Publication tx submitter"
+    set wRecoveryL (capDelay (minute 5) $ expBackoff (sec 1)) $
+        simpleWorker "publicationTxSubmitter" $
+            notFasterThan (sec 1) $ void updateMempoolWithPublications

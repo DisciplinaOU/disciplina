@@ -15,10 +15,8 @@ import Test.Dscp.DB.SQL.Mode
 import Test.Dscp.Educator.Mode
 import Test.Dscp.Educator.Web.Scenarios
 
--- | This was renamed from "spec_Private_blocks_publishing" to be ignored, see DSCP-464.
--- Both the tests it contains do not pass anymore and a solution is not known yet.
-private_blocks_publishing :: Spec
-private_blocks_publishing = specWithTempPostgresServer $ do
+spec_Private_blocks_publishing :: Spec
+spec_Private_blocks_publishing = specWithTempPostgresServer $ do
     it "Single block is successfully published by worker" $ educatorPropertyM $ do
         sk <- lift $ ourSecretKeyData @EducatorNode
         env <- pickSmall $ genCoreTestEnv simpleCoreTestParams

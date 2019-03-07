@@ -44,7 +44,7 @@ faucetCors = cors $ const $ Just $
     , corsRequestHeaders = [hContentType]
     }
 
-serveFaucetAPIReal :: HasFaucetConfig => FaucetRealMode ()
+serveFaucetAPIReal :: HasFaucetConfig => FaucetRealMode a
 serveFaucetAPIReal = do
     let spAddr = faucetConfig ^. sub #faucet . sub #api . option #addr
     logInfo $ "Serving faucet API on "+|spAddr|+""
@@ -54,4 +54,5 @@ serveFaucetAPIReal = do
     serveWeb spAddr $
         faucetCors $
         reify lc $ \(_ :: Proxy lc) ->
-        serve (Proxy @(LoggingApi lc FaucetWebAPI)) faucetApiServer
+            serve (Proxy @(LoggingApi lc FaucetWebAPI)) faucetApiServer
+            $> error "Faucet server terminated early"

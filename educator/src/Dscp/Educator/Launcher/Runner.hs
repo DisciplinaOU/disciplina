@@ -33,8 +33,8 @@ formEducatorContext _ecResources = do
 -- `EducatorWorkMode` monad. Any synchronous exceptions are handled inside.
 launchEducatorRealMode
     :: EducatorConfigRec
-    -> (HasEducatorConfig => EducatorRealMode ())
-    -> IO ()
+    -> (HasEducatorConfig => EducatorRealMode Void)
+    -> IO a
 launchEducatorRealMode config action =
     exitSilentlyOnFailure $
     runResourceAllocation appDesc initParams (allocResource config) $

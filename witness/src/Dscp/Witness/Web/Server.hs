@@ -54,7 +54,7 @@ witnessCors = cors $ const $ Just $
     , corsRequestHeaders = [hContentType]
     }
 
-serveWitnessAPIReal :: WitnessWorkMode ctx m => ServerParamsRec -> m ()
+serveWitnessAPIReal :: WitnessWorkMode ctx m => ServerParamsRec -> m a
 serveWitnessAPIReal serverParams = do
     let spAddr = serverParams ^. option #addr
     logInfo $ "Serving wallet API on "+|spAddr|+""

@@ -35,7 +35,6 @@ import Serokell.Util (modifyTVarS)
 import Servant.Client.Core.Internal.BaseUrl
 import System.Directory (createDirectoryIfMissing)
 import System.FilePath ((<.>), (</>))
-import UnliftIO (async)
 
 import Dscp.Config
 import Dscp.Crypto
@@ -229,9 +228,9 @@ loadEducator educatorAuthLogin mpassphrase = do
                 error "Should not use certificate config, resource is made by multi-educator"
 
     workerAsyncs <- E.withEducatorConfig newCfg $ runRIO educatorContext $
-        let meWorkers = educatorWorkers
+        let meClients = educatorClients
                       & traversed . wIdL %~ (<> "_of_" <> encodeUtf8 eid)
-        in mapM (async . runWorker identity) meWorkers
+        in mapM runWorker meClients
 
     let loadedEducatorCtx = E.withEducatorConfig newCfg $ LoadedEducatorContext
             { lecCtx = educatorContext

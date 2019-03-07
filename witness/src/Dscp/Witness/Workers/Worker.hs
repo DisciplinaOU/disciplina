@@ -4,7 +4,9 @@
 -- | Node workers
 
 module Dscp.Witness.Workers.Worker
-    ( witnessWorkers
+    ( witnessClients
+
+    , txRetranslatingWorker
     ) where
 
 import qualified Control.Concurrent.STM as STM
@@ -34,23 +36,25 @@ import Dscp.Witness.Messages
 import Dscp.Witness.Relay
 import Dscp.Witness.SDLock
 
-witnessWorkers
+witnessClients
     :: FullWitnessWorkMode ctx m
-    => m [Worker m]
-witnessWorkers = do
-    relayState <- view (lensOf @RelayState)
-    let (inputReader, subReader) = makeRelay relayState
-    return [blockUpdateWorker, inputReader, subReader]
+    => [Client m]
+witnessClients =
+    [ blockUpdateWorker
+    , txRetranslatingWorker
+    , networkTxReceivingWorker
+    ]
 
 ----------------------------------------------------------------------------
 -- Updates
 ----------------------------------------------------------------------------
 
 -- | Worker listening to block updates.
-blockUpdateWorker :: forall ctx m. FullWitnessWorkMode ctx m => Worker m
+blockUpdateWorker :: forall ctx m. FullWitnessWorkMode ctx m => Client m
 blockUpdateWorker =
-    Worker "blockUpdateWorker" [msgType @TipMsg, msgType @BlocksMsg] [subType @PubBlock]
-    (\btq -> bootstrap btq >> action btq)
+    set wRecoveryL (constDelay (sec 5)) $
+    clientWorker "blockUpdateWorker" [msgType @TipMsg, msgType @BlocksMsg] [subType @PubBlock] $
+    \btq -> bootstrap btq >> action btq
   where
     -- We ask for a tip on startup to synchronise.
     bootstrap :: ClientEnv NetTag -> m ()
@@ -62,7 +66,7 @@ blockUpdateWorker =
         logDebug "Bootstrapped, asking for a tip"
         cliSend btq Nothing GetTipMsg
 
-    action :: ClientEnv NetTag -> m Void
+    action :: ClientEnv NetTag -> m ()
     action btq = do
         logDebug "Started block update worker"
 
@@ -78,12 +82,11 @@ blockUpdateWorker =
                 logDebug $ "Processing blocks"
                 applyManyBlocks blocks
 
-        forever . recoverAll "Block update worker" (constDelay (sec 5)) $ do
-            logDebug "blockUpdateWorker: receiving"
-            cliRecv btq (-1) [ ccallback processPubBlock
-                             , ccallback processTipMsg
-                             , ccallback processBlocks
-                             ]
+        logDebug "blockUpdateWorker: receiving"
+        cliRecv btq (-1) [ ccallback processPubBlock
+                         , ccallback processTipMsg
+                         , ccallback processBlocks
+                         ]
 
     processNewBlock nId btq block = do
         let header = bHeader block
@@ -128,50 +131,49 @@ blockUpdateWorker =
 -- Retranslator, input part
 ----------------------------------------------------------------------------
 
-makeRelay
-    :: forall ctx m
-    .  FullWitnessWorkMode ctx m
-    => RelayState
-    -> (Worker m, Worker m)
-makeRelay (RelayState input pipe failedTxs) =
-    (inputWorker, republisher)
+-- | Check that the transaction is neither failed nor in a mempool and republish it.
+checkThenRepublish
+    :: WitnessWorkMode ctx m
+    => GTxWitnessed -> m ()
+checkThenRepublish tx = do
+    RelayState _input output failedTxs <- view (lensOf @RelayState)
+
+    hashmap <- atomically $ readTVar failedTxs
+
+    let hasFailed = hash tx `HashMap.lookup` hashmap
+    whenJust hasFailed $ \(_, e) ->
+        throwM e
+
+    writingSDLock "add to mempool" $
+        addTxToMempool tx `withException` addFailedTx failedTxs
+
+    atomically $ STM.writeTBQueue output tx
   where
-    inputWorker = Worker
-        "txRetranslationInitialiser"
-        []
-        [] $ \_btq ->
-            forever . recoverAll "Tx retranslation initializer" retryOnSpot $ do
-                (tx, inMempoolNotifier) <- atomically $ STM.readTBQueue input
-                checkThenRepublish tx
-                    & finallyNotify inMempoolNotifier
-                    & handleAny (\e -> logDebug $ "Transaction failed: " +| e |+ "")
+    addFailedTx failedTxs e =
+        atomically $ STM.modifyTVar failedTxs $ HashMap.insert (hash tx) (tx, e)
 
-    republisher = Worker
-        "txRetranslationRepeater"
-        []
-        [subType @PubTx] $ \btq -> do
-            recoverAll "Tx retranslation repeater" (constDelay (sec 1)) $ forever $ do
-                (_, PubTx tx) <- cliRecvUpdate btq (-1)
-                checkThenRepublish tx
-                    & handleAlreadyExists (\_ -> pass)
-                    & handleAny (\e -> logWarning $
-                                      "Exception in republisher: " +| e |+ "")
+-- | Reads transaction queue and publishes transactions.
+txRetranslatingWorker
+    :: WitnessWorkMode ctx m
+    => Client m
+txRetranslatingWorker =
+    set wRecoveryL retryOnSpot $
+    simpleWorker "txRetranslationInitialiser" $ do
+        relay <- view (lensOf @RelayState)
+        (tx, inMempoolNotifier) <- atomically $ STM.readTBQueue (_rsInput relay)
+        checkThenRepublish tx
+            & finallyNotify inMempoolNotifier
+            & handleAny (\e -> logDebug $ "Transaction failed: " +| e |+ "")
 
-    -- Check that the transaction is neither failed nor in a mempool and republish it.
-    checkThenRepublish tx = do
-        hashmap <- atomically $ readTVar failedTxs
-
-        let hasFailed = hash tx `HashMap.lookup` hashmap
-        whenJust hasFailed $ \(_, e) ->
-            throwM e
-
-        writingSDLock "add to mempool" $
-            addTxToMempool @ctx tx
-                `withException` \e -> addFailedTx (tx, e)
-
-        atomically $ STM.writeTBQueue pipe tx
-
-    addFailedTx entry@(tx, _) =
-        atomically $ STM.modifyTVar failedTxs $ HashMap.insert (hash tx) entry
-
+-- | Handles incoming transactions.
+networkTxReceivingWorker :: FullWitnessWorkMode ctx m => Client m
+networkTxReceivingWorker =
+    set wRecoveryL (constDelay (sec 1)) $
+        clientWorker "txRetranslationRepeater" [] [subType @PubTx] $ \btq -> do
+            (_, PubTx tx) <- cliRecvUpdate btq (-1)
+            checkThenRepublish tx
+                & handleAlreadyExists (\_ -> pass)
+                & handleAny (\e -> logWarning $
+                                  "Exception in republisher: " +| e |+ "")
+  where
     handleAlreadyExists = flip $ catchJust (^? _TransactionAlreadyExists)

@@ -1,4 +1,5 @@
 {-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE StrictData                #-}
 
 -- Some of these methods have 'NetworkingX' constraint added though it is
 -- not required. I use it to force fundep m -> t so user can use methods
@@ -18,21 +19,26 @@ module Dscp.Network.Wrapped
     , subType
     , fromSubType
 
-    , Listener (..)
-    , runListener
+    , Worker
+    , Client
+    , Listener
+    , wIdL
+    , wRecoveryL
+    , simpleWorker
+    , bootingWorker
+    , bootingWorker_
+    , clientWorker
+    , hoistWorker
+    , runWorker
+    , withWorkers
+    , cliSend
+
+    , CliRecvExc(..)
     , servSend
     , servPub
-    , simpleListener
+    , listeningWorker
+    , listeningCallbacksWorker
     , lcallback
-
-    , Worker (..)
-    , wActionL
-    , wIdL
-    , wMsgTypesL
-    , wSubsL
-    , runWorker
-    , cliSend
-    , CliRecvExc(..)
     , cliRecv
     , cliRecvResp
     , cliRecvUpdate
@@ -41,7 +47,7 @@ module Dscp.Network.Wrapped
     , withClient
     , withServer
 
-    -- reexports
+      -- reexports
     , ListenerEnv
     , ClientEnv
     , CallbackWrapper
@@ -55,10 +61,11 @@ import Control.Concurrent (threadDelay)
 import Control.Concurrent.STM (orElse, retry)
 import Control.Concurrent.STM.TMVar (newEmptyTMVarIO, putTMVar, readTMVar)
 import Control.Lens (makeLensesWith)
+import Control.Retry (RetryPolicyM, natTransformRetryPolicy)
 import qualified Data.ByteString.Char8 as BS8
 import qualified Data.ByteString.Lazy as BSL
 import Fmt ((+||), (||+))
-import Loot.Log (MonadLogging, logDebug, logError, logWarning)
+import Loot.Log (MonadLogging, logDebug, logWarning)
 import Loot.Network.BiTQueue (recvBtq, sendBtq)
 import Loot.Network.Class (CliId, ClientEnv, ClientId, ListenerEnv, ListenerId, MsgType (..),
                            NetworkingCli, NetworkingServ, NodeId, Subscription (..), registerClient,
@@ -69,9 +76,10 @@ import Loot.Network.Message (CallbackWrapper, Message (..), getMsgTag, handlerDe
 import Loot.Network.ZMQ.Common (ZmqTcp)
 import Time (sec)
 import UnliftIO (MonadUnliftIO)
-import UnliftIO.Async (withAsync)
+import UnliftIO.Async (Async, async, cancel, withAsync)
 
 import Dscp.Util
+import Dscp.Util.TimeLimit
 import Dscp.Util.Timing
 
 ----------------------------------------------------------------------------
@@ -109,104 +117,77 @@ subType = Subscription $ BS8.pack $ show $ getMsgTag @SubK @d
 fromSubType :: Subscription -> Maybe Natural
 fromSubType (Subscription bs) = readMaybe (BS8.unpack bs)
 
----------------------------------------------------------------------------
--- Listeners
-----------------------------------------------------------------------------
-
--- Listeners are supposed to have one dispatcher only (and one receive
--- block only). When new messages come, response callback thread is
--- forked and this thread is allowed to send multiple messages
--- (directly, or publish).
-
-data Listener m = Listener
-    { lId       :: !ListenerId
-      -- ^ Listener id, should be unique.
-    , lMsgTypes :: !(Set MsgType)
-      -- ^ Message types listener is supposed to receive.
-    , lAction   :: !(ListenerEnv NetTag -> m Void)
-      -- ^ Listener's action. Should never terminate.
-    }
-
-runListener ::
-       forall m n. (NetworkingServ NetTag n, MonadLogging n, MonadMask n)
-    => (forall x. m x -> n x)
-    -> Listener m
-    -> n ()
-runListener nat Listener{..} = do
-    logDebug $ "Launching listner " +|| lId ||+ ""
-    (lEnv :: ListenerEnv NetTag) <- registerListener @NetTag lId lMsgTypes
-    void (nat $ lAction lEnv)
-        `catchAny` (\e -> logError $ "Listener " +|| lId ||+ " stopped due to error: " +|| e ||+ "")
-        `finally` (logDebug $ "Listener " +|| lId ||+ " has exited")
-
-servSend :: forall d. Message MsgK d => ListenerEnv NetTag -> CliId NetTag -> d -> STM ()
-servSend btq cliId msg =
-    sendBtq btq $ L.Reply cliId (msgType @d) [BSL.toStrict $ serialise msg]
-
-servPub :: forall d. Message SubK d => ListenerEnv NetTag -> d -> STM ()
-servPub btq msg =
-    sendBtq btq $ L.Publish (subType @d) [BSL.toStrict $ serialise msg]
-
-simpleListener ::
-       forall m. (MonadIO m, MonadMask m, MonadLogging m)
-    => ListenerId
-    -> Set MsgType
-    -> (ListenerEnv NetTag -> [CallbackWrapper (CliId NetTag) m ()])
-    -> Listener m
-simpleListener lId lMsgTypes getCallbacks =
-    Listener {..}
-  where
-    -- todo use 'fmt' or something similar
-    lAction btq = do
-        logDebug $ "Listener " +|| lId ||+ " has started."
-        forever $
-            recoverAll ("Listener " +|| lId ||+ "") (constDelay (sec 2)) (action btq)
-    action btq = do
-        let callbacks = getCallbacks btq
-        (cliId,msgT,content) <- atomically $ recvBtq btq
-        case (fromMsgType msgT,content) of
-            (Just n,[d]) -> runCallbacksInt callbacks n d cliId >>= \case
-                Nothing ->
-                    logWarning $ "Listener " +|| lId ||+ "couldn't match on type (runCallbacksInt)"
-                _       -> pass
-            _            -> pass
-
--- for server, we just skip the message if we can't decode it, since
--- we have only one dispatcher.
-lcallback ::
-       forall d m. (Message MsgK d, Monad m)
-    => (CliId NetTag -> d -> m ())
-    -> CallbackWrapper (CliId NetTag) m ()
-lcallback foo = handlerDecoded $ \cId -> either (const $ pass) (foo cId)
-
 ----------------------------------------------------------------------------
 -- Workers
 ----------------------------------------------------------------------------
 
-data Worker m = Worker
-    { wId       :: !ClientId
+data Worker id m = forall pre. Worker
+    { wId        :: id
       -- ^ Worker's identity.
-    , wMsgTypes :: !(Set MsgType)
-      -- ^ Message types worker is supposed to receive.
-    , wSubs     :: !(Set Subscription)
-      -- ^ Worker's subscriptions.
-    , wAction   :: !(ClientEnv NetTag -> m Void)
+    , wBootstrap :: m pre
+      -- ^ Initialize necessary context. Fail here or never.
+    , wAction    :: pre -> m Void
       -- ^ Worker's action. Should never end.
+    , wRecovery  :: RetryPolicyM m
     }
 
 makeLensesWith postfixLFields ''Worker
 
-runWorker ::
-       forall m n. (NetworkingCli NetTag n, MonadMask n, MonadLogging n)
-    => (forall x. m x -> n x)
-    -> Worker m
-    -> n ()
-runWorker nat Worker{..} = do
+type Client = Worker ClientId
+type Listener = Worker ListenerId
+
+-- | An action which will happen forever.
+simpleWorker :: Monad m => id -> m () -> Worker id m
+simpleWorker wId action = bootingWorker_ wId pass action
+
+-- | A worker with one-shot bootstrap and infinite main action.
+bootingWorker_ :: Monad m => id -> m () -> m () -> Worker id m
+bootingWorker_ wId boot action = bootingWorker wId boot (\() -> action)
+
+-- | A worker with context preparation.
+bootingWorker :: Monad m => id -> m a -> (a -> m ()) -> Worker id m
+bootingWorker wId boot action = Worker wId boot (forever . action) defWorkerRecovery
+
+defWorkerRecovery :: forall m. Monad m => RetryPolicyM m
+defWorkerRecovery = capDelay (sec 20) $ expBackoff (sec 1)
+
+hoistWorker :: (forall a. m a -> n a) -> Worker id m -> Worker id n
+hoistWorker nat Worker{..} =
+    Worker
+    { wBootstrap = nat wBootstrap
+    , wAction = \pre -> nat $ wAction pre
+    , wRecovery = natTransformRetryPolicy nat wRecovery
+    , ..
+    }
+
+runWorker
+    :: (MonadMask m, MonadLogging m, MonadUnliftIO m, Show id)
+    => Worker id m -> m (Async Void)
+runWorker Worker{..} = do
     logDebug $ "Launching worker " +|| wId ||+ ""
-    (cEnv :: ClientEnv NetTag) <- registerClient @NetTag wId wMsgTypes wSubs
-    void (nat $ wAction cEnv)
-        `catchAny` (\e -> logError $ "Worker " +|| wId ||+ " stopped due to error: " +|| e ||+ "")
-        `finally` (logDebug $ "Worker " +|| wId ||+ " has exited")
+    pre <- wBootstrap
+    async $ loop pre
+              `finally` (logDebug $ "Worker " +|| wId ||+ " has exited")
+  where
+    loop pre =
+        forever $ recoverAll ("Worker " +|| wId ||+ "") wRecovery (wAction pre)
+
+withWorkers
+    :: (MonadMask m, MonadLogging m, MonadUnliftIO m, Show id)
+    => [Worker id m] -> m a -> m a
+withWorkers workers action = do
+    bracket
+        (mapM (\w -> (w, ) <$> runWorker w) workers)
+        (mapM terminate)
+        $ \_ -> action
+  where
+    terminate (worker, workerAsync) =
+        logWarningWaitInf (sec 1) ("Worker " <> show (wId worker) <> " shutdown") $
+        cancel workerAsync
+
+---------------------------------------------------------------------------
+-- Client components
+----------------------------------------------------------------------------
 
 cliSend ::
        forall d m. (Message MsgK d, NetworkingCli NetTag m, MonadIO m)
@@ -216,6 +197,27 @@ cliSend ::
     -> m ()
 cliSend btq nId msg =
     atomically $ sendBtq btq (nId, (msgType @d, [BSL.toStrict $ serialise msg]))
+
+clientWorker
+    :: NetworkingCli NetTag m
+    => ClientId
+    -> Set MsgType
+    -> Set Subscription
+    -> (ClientEnv NetTag -> m ())
+    -> Client m
+clientWorker cId msgTypes subs action =
+    bootingWorker cId register action
+  where
+    register = registerClient @NetTag cId msgTypes subs
+
+---------------------------------------------------------------------------
+-- Server components
+----------------------------------------------------------------------------
+
+-- Listeners are supposed to have one dispatcher only (and one receive
+-- block only). When new messages come, response callback thread is
+-- forked and this thread is allowed to send multiple messages
+-- (directly, or publish).
 
 data CliRecvExc
     = CRETimeout
@@ -239,6 +241,50 @@ type SendConstraint k d m
        , MonadUnliftIO m
        , MonadCatch m
        , MonadLogging m)
+
+servSend :: forall d. Message MsgK d => ListenerEnv NetTag -> CliId NetTag -> d -> STM ()
+servSend btq cliId msg =
+    sendBtq btq $ L.Reply cliId (msgType @d) [BSL.toStrict $ serialise msg]
+
+servPub :: forall d. Message SubK d => ListenerEnv NetTag -> d -> STM ()
+servPub btq msg =
+    sendBtq btq $ L.Publish (subType @d) [BSL.toStrict $ serialise msg]
+
+listeningWorker
+    :: (MonadIO m, MonadLogging m, NetworkingServ NetTag m)
+    => ListenerId
+    -> Set MsgType
+    -> (ListenerEnv NetTag -> m ())
+    -> Listener m
+listeningWorker lId msgTypes action =
+    bootingWorker lId register action
+  where
+    register = registerListener @NetTag lId msgTypes
+
+listeningCallbacksWorker
+    :: (MonadIO m, MonadLogging m, NetworkingServ NetTag m)
+    => ListenerId
+    -> Set MsgType
+    -> (ListenerEnv NetTag -> [CallbackWrapper (CliId NetTag) m ()])
+    -> Listener m
+listeningCallbacksWorker lId lMsgTypes getCallbacks =
+    listeningWorker lId lMsgTypes $ \btq -> do
+        let callbacks = getCallbacks btq
+        (cliId,msgT,content) <- atomically $ recvBtq btq
+        case (fromMsgType msgT,content) of
+            (Just n,[d]) -> do
+                mres <- runCallbacksInt callbacks n d cliId
+                whenNothing mres $
+                    logWarning $ "Listener " +|| lId ||+ "couldn't match on type (runCallbacksInt)"
+            _            -> pass
+
+-- for server, we just skip the message if we can't decode it, since
+-- we have only one dispatcher.
+lcallback ::
+       forall d m. (Message MsgK d, Monad m)
+    => (CliId NetTag -> d -> m ())
+    -> CallbackWrapper (CliId NetTag) m ()
+lcallback foo = handlerDecoded $ \cId -> either (const $ pass) (foo cId)
 
 -- Timeout -- milliseconds, 0 if instant response is expected, -1 (any
 -- negative) if timeout should be disabled.

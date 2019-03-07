@@ -123,7 +123,7 @@ educatorCors = cors $ const $ Just $
     , corsMethods = methodsCoveringAPI @['GET, 'POST, 'PUT, 'DELETE] @MultiEducatorWebAPI
     }
 
-serveEducatorAPIsReal :: MultiCombinedWorkMode ctx m => Bool -> m ()
+serveEducatorAPIsReal :: MultiCombinedWorkMode ctx m => Bool -> m a
 serveEducatorAPIsReal withWitnessApi = do
     let webCfg = multiEducatorConfig ^. sub #educator . sub #api
         serverAddress     = webCfg ^. sub #serverParams . option #addr

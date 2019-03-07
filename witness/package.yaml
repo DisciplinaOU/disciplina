@@ -49,6 +49,7 @@ library:
     - prettyprinter
     - reflection
     - resourcet
+    - retry
     - rocksdb-haskell
     - safe-exceptions >= 0.1.4
     - serialise

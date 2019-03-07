@@ -15,18 +15,22 @@ module Dscp.Witness.TestConfig
     , testWitnessConfig
     , TestWitnessVariables (..)
     , mkTestWitnessVariables
+    , testWitnessWorkers
     ) where
 
+import qualified Control.Concurrent.STM as STM
 import Control.Lens (makeLenses, (.=), (?=), (?~))
 import Data.Default (def)
 import qualified Data.List as L
 import qualified Data.Map as M
+import Loot.Base.HasLens (lensOf)
 import Loot.Base.HasLens (HasLens')
 
 import Dscp.Config
 import Dscp.Core
 import Dscp.Crypto
 import Dscp.DB.CanProvideDB as DB
+import Dscp.Network.Wrapped
 import Dscp.Snowdrop.Actions (initSDActions)
 import Dscp.Util
 import Dscp.Util.HasLens
@@ -37,11 +41,16 @@ import Dscp.Witness.Launcher.Context
 import Dscp.Witness.Mempool (newMempoolVar)
 import Dscp.Witness.Relay
 import Dscp.Witness.SDLock
+import Dscp.Witness.Workers
 
 type TestWitnessWorkMode ctx m =
     ( WitnessWorkMode ctx m
     , HasLens' ctx TestTimeActions
     )
+
+----------------------------------------------------------------------------
+-- Constants
+----------------------------------------------------------------------------
 
 testGenesisSecrets :: [SecretKey]
 testGenesisSecrets = detGen 123 $ vectorUnique 10
@@ -67,6 +76,10 @@ testCommitteeSecrets = openCommitteeSecrets testCommittee
 
 testCommitteeAddrs :: [Address]
 testCommitteeAddrs = map (mkAddr . toPublic) testCommitteeSecrets
+
+----------------------------------------------------------------------------
+-- Functions
+----------------------------------------------------------------------------
 
 -- | Find who should sign block at given slot.
 testFindSlotOwner :: SlotId -> SecretKey
@@ -130,3 +143,20 @@ mkTestWitnessVariables issuer dbPlugin = do
     (_wvTime, _twvTestTime) <- mkTestTimeActions
     let _twvVars = WitnessVariables{..}
     return TestWitnessVariables{..}
+
+----------------------------------------------------------------------------
+-- Workers
+----------------------------------------------------------------------------
+
+drainNetworkOutputWorker :: WitnessWorkMode ctx m => Client m
+drainNetworkOutputWorker =
+    simpleWorker "drainNetworkOutput" $ do
+        RelayState{..} <- view $ lensOf @RelayState
+        _ <- atomically $ STM.readTBQueue _rsPipe
+        return ()
+
+testWitnessWorkers :: WitnessWorkMode ctx m => [Client m]
+testWitnessWorkers =
+    [ txRetranslatingWorker
+    , drainNetworkOutputWorker
+    ]
