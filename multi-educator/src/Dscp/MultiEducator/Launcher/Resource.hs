@@ -31,8 +31,7 @@ instance AllocResource EducatorContextsVar where
                 ActiveEducatorContexts ctxs ->
                     forConcurrently_ ctxs $ \ctxVar -> do
                         ctx <- atomically $ readTVar ctxVar >>= retryOnContextLocked
-                        unloadEducator ctx
-                        -- TODO: throw 'MultiEducatorIsTerminating' exception to context users
+                        unloadEducator MultiEducatorIsTerminating ctx
 
 instance AllocResource MultiEducatorResources where
     type Deps MultiEducatorResources = MultiEducatorConfigRec

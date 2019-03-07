@@ -9,7 +9,8 @@ import qualified Data.Map as M
 import Loot.Base.HasLens (lensOf)
 import Loot.Config (option, sub)
 import Serokell.Util (modifyTVarS)
-import Time (minute, sec, threadDelay, timeAdd)
+import qualified Text.Show
+import Time (minute, ms, sec, threadDelay, timeAdd)
 import UnliftIO (handle)
 
 import Dscp.MultiEducator.Config
@@ -24,15 +25,24 @@ multiEducatorWorkers
     :: MultiEducatorWorkMode ctx m
     => [Client m]
 multiEducatorWorkers =
-    [ privateBlockCreatorWorker
+    [ expiredEducatorContextsCleaner
     ]
 
 ----------------------------------------------------------------------------
 -- Educator contexts expiration
 ----------------------------------------------------------------------------
 
-privateBlockCreatorWorker :: MultiEducatorWorkMode ctx m => Client m
-privateBlockCreatorWorker =
+-- | Exception used to kill users of expired contexts.
+-- Well, as you can guess this should never occur to be thrown eventually.
+data TerminatedByContextsCleaner = TerminatedByContextsCleaner
+
+instance Show TerminatedByContextsCleaner where
+    show _ = "Thread terminated by contexts cleaner"
+
+instance Exception TerminatedByContextsCleaner
+
+expiredEducatorContextsCleaner :: MultiEducatorWorkMode ctx m => Client m
+expiredEducatorContextsCleaner =
     simpleWorker "expiredEducatorsUnload" $ do
         handleTerminatedException $ forever loop
   where
@@ -62,8 +72,9 @@ privateBlockCreatorWorker =
 
         -- Phase 1: remove all expired contexts
 
-        -- under high contention we can get constant retries, so monitoring such case
-        mask_ . logWarningWaitInf (sec 1) "Educator contexts GC" $ do
+        -- under high contention we can get constant retries
+        -- so monitoring such possibility
+        mask_ . logWarningWaitInf (ms 100) "Educator contexts GC" $ do
             expiredCtxs <- atomically . modifyTVarS educatorContexts . onTerminatedThrow $ do
                 ctxMap <- get
                 ctxReadMap <- lift $ forM ctxMap $
@@ -79,11 +90,11 @@ privateBlockCreatorWorker =
                         writeTVar ctxVar $ FullyLoadedEducatorContext ctx'
                         return ctx'
 
-            forM_ expiredCtxs unloadEducator
+            forM_ expiredCtxs $ unloadEducator TerminatedByContextsCleaner
 
-        -- Phase 2: wait for the next expiring context
+        -- Phase 2: wait for the nearest expiring context
 
-        logWarningWaitInf (sec 1) "Educator contexts GC sleep" $ do
+        do
             nextExpiry <- atomically . modifyTVarS educatorContexts . onTerminatedThrow $ do
                 ctxs <- gets M.elems
                 las <- lift $ forM ctxs $ fmap lastActivity . readTVar

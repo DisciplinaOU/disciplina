@@ -48,10 +48,11 @@ import Control.Monad.Fix (mfix)
 import qualified Data.Set as S
 import Fmt ((+|), (|+))
 import Loot.Base.HasLens (lensOf)
-import Loot.Log (MonadLogging, logDebug)
+import Loot.Log (MonadLogging, logDebug, logWarning)
 import Serokell.Util (modifyTVarS)
 import Time (Timestamp, hour, sec, threadDelay)
-import UnliftIO (Async, MonadUnliftIO, async, cancel, forConcurrently_, pollSTM, wait)
+import UnliftIO (Async, MonadUnliftIO, async, cancelWith, forConcurrently_, pollSTM, wait,
+                 withException)
 
 import qualified Dscp.Educator.Config as E
 import qualified Dscp.Educator.Launcher.Mode as E
@@ -72,7 +73,7 @@ import Dscp.Util.TimeLimit
 -- | Action which saves provided educator context while the provided action
 -- lasts; once it completes, the context is unloaded.
 type FillingEducatorContext m =
-    forall a. E.HasEducatorConfig => E.EducatorContext -> m a -> m a
+    forall a. E.HasEducatorConfig => E.EducatorContext -> m Void -> m a
 
 -- | Exception indicating that multi-educator is about to stop and does not
 -- accept further requests.
@@ -81,6 +82,15 @@ data MultiEducatorIsTerminating = MultiEducatorIsTerminating
     deriving (Show)
 
 instance Exception MultiEducatorIsTerminating
+
+-- | Exception used to terminate the thread which served related context.
+-- Carries termination parameters.
+-- This is the only exception permitted for killing context keepers.
+data TerminateContextKeeper = TerminateContextKeeper
+    { tckUsersKillingException :: SomeException
+    } deriving Show
+
+instance Exception TerminateContextKeeper
 
 -- | Zoom into 'EducatorContext' expecting that multi-educator is active;
 -- if it is terminating, a corresponding exception is thrown.
@@ -121,12 +131,15 @@ forgetUser educatorId (void -> actionAsync) = do
 -- This operation is synchronous, idempotent and thread-safe.
 disperseUsers
     :: (MonadUnliftIO m, MonadLogging m)
-    => EducatorContextUsers -> m ()
-disperseUsers users = do
+    => EducatorContextUsers -> SomeException -> m ()
+disperseUsers users exc = do
     forConcurrently_ users $ \user -> do
-        res <- boundExecution (sec 3) "Educator context user waiting" $ wait user
+        res <-
+            boundExecution (sec 3) "Educator context user waiting" $
+            wait user
         whenNothing res $
-            boundExecution_ (sec 1) "Educator context user termination" $ cancel user
+            boundExecution_ (sec 1) "Educator context user termination" $
+            cancelWith user exc
 
 -- | Extract the context, block if it is locked.
 retryOnContextLocked :: MaybeLoadedEducatorContext -> STM LoadedEducatorContext
@@ -192,21 +205,26 @@ fillingEducatorContext
     :: (MonadUnliftIO m, MonadMask m, MonadLogging m, E.HasEducatorConfig)
     => EducatorContextVar
     -> LoadedEducatorContext
+    -> m Void
     -> m a
-    -> m a
-fillingEducatorContext ctxVar loadedCtx action = do
-    bracket_ fillContext releaseContext action
+fillingEducatorContext ctxVar loadedCtx action =
+    mask $ \unmask -> vacuous $ do
+        fillContext
+        unmask action `withException` releaseContext
   where
     fillContext =
         atomically $ writeTVar ctxVar (FullyLoadedEducatorContext loadedCtx)
 
-    releaseContext = do
-        ctx <- atomically . modifyTVarS ctxVar . state $ \case
-            FullyLoadedEducatorContext ctx -> do
-                (ctx, LockedEducatorContext)
-            _ -> error "Weird state"
+    releaseContext TerminateContextKeeper{..} = do
+        mctx <- atomically . modifyTVarS ctxVar . state $ \case
+            FullyLoadedEducatorContext ctx -> (Just ctx, LockedEducatorContext)
+            LockedEducatorContext -> (Nothing, LockedEducatorContext)
 
-        disperseUsers (lecUsers ctx)
+        case mctx of
+            Just ctx ->
+                disperseUsers (lecUsers ctx) tckUsersKillingException
+            Nothing ->
+                logWarning "fillingEducatorContext: weird state"
 
 -- | Once a thread serving the context is forked, wait for that context to load
 -- and return it once ready.
@@ -290,9 +308,15 @@ withSingleEducator educatorAuthLogin action = do
 
 -- | Synchronously unload educator context waiting for requests to server
 -- to complete and releasing all associated resources.
+-- You have to provide an exception used to kill all the current users if
+-- they are unresponsive.
 unloadEducator
-    :: (MonadUnliftIO m, MonadLogging m)
-    => LoadedEducatorContext -> m ()
-unloadEducator ctx =
+    :: (MonadUnliftIO m, MonadLogging m, Exception e)
+    => e -> LoadedEducatorContext -> m ()
+unloadEducator usersExc ctx =
     logWarningWaitInf (sec 1) "Educator context shutdown" $
-        cancel $ lecContextKeeper ctx
+        cancelWith (lecContextKeeper ctx) contextKeeperExc
+  where
+    contextKeeperExc = TerminateContextKeeper
+        { tckUsersKillingException = SomeException usersExc
+        }
