@@ -29,6 +29,10 @@ data LoadedEducatorContext where
              -- ^ Last user request time.
            , lecUsers :: EducatorContextUsers
              -- ^ Threads which take use of the context currently.
+           , lecNoFurtherUsers :: Bool
+             -- ^ Whether new context users are allowed.
+             -- You may set this to @True@ upon context termination if
+             -- only STM context is yet available.
            }
         -> LoadedEducatorContext
 

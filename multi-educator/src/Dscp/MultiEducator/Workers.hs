@@ -18,6 +18,7 @@ import Dscp.MultiEducator.Launcher.Educator
 import Dscp.MultiEducator.Launcher.Mode
 import Dscp.Network
 import Dscp.Util.Time
+import Dscp.Util.TimeLimit
 
 multiEducatorWorkers
     :: MultiEducatorWorkMode ctx m
@@ -33,37 +34,56 @@ multiEducatorWorkers =
 privateBlockCreatorWorker :: MultiEducatorWorkMode ctx m => Client m
 privateBlockCreatorWorker =
     simpleWorker "expiredEducatorsUnload" $ do
+        handleTerminatedException $ forever loop
+  where
+    expiryDuration = multiEducatorConfig ^. sub #educator . option #contextExpiry
+    minimalCheckPeriod = sec 1
+
+    lastActivity = \case
+        LockedEducatorContext -> infiniteFuture
+        FullyLoadedEducatorContext ctx -> lecLastActivity ctx
+
+    handleTerminatedException =
+        handle $ \MultiEducatorIsTerminating ->
+            -- waiting for this worker to be killed outside
+            forever $ threadDelay (minute 1)
+
+    loop = do
         educatorContexts <- view $ lensOf @MultiEducatorResources . merEducatorData
 
-        handleTerminatedException . forever $ do
-            -- TODO: insert logWaitLongAction
-            time <- getCurTime
-            let isExpired = \case
-                    LockedEducatorContext -> False
-                    FullyLoadedEducatorContext ctx -> and @[_]
-                        [ expiryDuration `timeAdd` lecLastActivity ctx > time
-                        , null (lecUsers ctx)
-                        ]
+        time <- getCurTime
+        let isExpired ctx = and @[_]
+                [ expiryDuration `timeAdd` lecLastActivity ctx > time
+                , null (lecUsers ctx)
+                ]
+        let isExpired' = \case
+                LockedEducatorContext -> False
+                FullyLoadedEducatorContext ctx -> isExpired ctx
 
-            -- Phase 1: remove all expired contexts
+        -- Phase 1: remove all expired contexts
 
+        -- under high contention we can get constant retries, so monitoring such case
+        mask_ . logWarningWaitInf (sec 1) "Educator contexts GC" $ do
             expiredCtxs <- atomically . modifyTVarS educatorContexts . onTerminatedThrow $ do
                 ctxMap <- get
-                ctxReadMap <- lift $ forM ctxMap $ \ctxVar -> (ctxVar, ) <$> readTVar ctxVar
-                let (expired, nonExpired) = M.partition (isExpired . snd) ctxReadMap
+                ctxReadMap <- lift $ forM ctxMap $
+                    \ctxVar -> (ctxVar, ) <$> readTVar ctxVar
+                let (expired, nonExpired) = M.partition (isExpired' . snd) ctxReadMap
+
                 put (fmap fst nonExpired)
-                return (snd <$> M.elems expired)
 
-            -- TODO: there is a major problem: right here there is a probability
-            -- to get another request to server using expired context, and eventually
-            -- this request may be killed along with the context unload and this is very undesired.
+                lift . forM expired $ \case
+                    (_, LockedEducatorContext) -> error "impossible"
+                    (ctxVar, FullyLoadedEducatorContext ctx) -> do
+                        let ctx' = ctx{ lecNoFurtherUsers = True }
+                        writeTVar ctxVar $ FullyLoadedEducatorContext ctx'
+                        return ctx'
 
-            forM_ expiredCtxs $ \case
-                LockedEducatorContext -> error "impossible"
-                FullyLoadedEducatorContext ctx -> unloadEducator ctx
+            forM_ expiredCtxs unloadEducator
 
-            -- Phase 2: wait for the next expiring context
+        -- Phase 2: wait for the next expiring context
 
+        logWarningWaitInf (sec 1) "Educator contexts GC sleep" $ do
             nextExpiry <- atomically . modifyTVarS educatorContexts . onTerminatedThrow $ do
                 ctxs <- gets M.elems
                 las <- lift $ forM ctxs $ fmap lastActivity . readTVar
@@ -72,13 +92,3 @@ privateBlockCreatorWorker =
 
             let tillNextExpiry = nextExpiry `timeDiffNonNegative` time
             sleep $ max minimalCheckPeriod tillNextExpiry
-  where
-    lastActivity = \case
-        LockedEducatorContext -> infiniteFuture
-        FullyLoadedEducatorContext ctx -> lecLastActivity ctx
-    expiryDuration = multiEducatorConfig ^. sub #educator . option #contextExpiry
-    minimalCheckPeriod = sec 1
-    handleTerminatedException =
-        handle $ \MultiEducatorIsTerminating ->
-            -- waiting for this worker to be killed outside
-            forever $ threadDelay (minute 1)

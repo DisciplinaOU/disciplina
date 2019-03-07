@@ -158,6 +158,7 @@ getContextOrLock educatorAuthLogin curTime userAsync = do
 
             Just ctxVar -> lift $ do
                 ctx <- readTVar ctxVar >>= retryOnContextLocked
+                when (lecNoFurtherUsers ctx) $ STM.retry
                 let ctx' = updateOldCtx ctx
                 writeTVar ctxVar (FullyLoadedEducatorContext ctx')
                 return (Right ctx')
@@ -265,6 +266,7 @@ lookupEducator educatorAuthLogin userAsync = do
                             , lecLastActivity = curTime
                             , lecUsers = S.singleton (void userAsync)
                             , lecContextKeeper = contextKeeper
+                            , lecNoFurtherUsers = False
                             }
 
                 contextKeeper <- mfix $ \contextKeeper ->
