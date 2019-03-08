@@ -72,6 +72,7 @@ module Dscp.Educator.DB.Queries
        , createAssignment
        , createTransaction
        , createCertificate
+       , createCertificatePdf
        ) where
 
 import Control.Lens (to)
@@ -487,7 +488,7 @@ existsSubmission = existsWithPk (esSubmissions es)
 existsTransaction :: MonadIO m => Id PrivateTx -> DBT t m Bool
 existsTransaction = existsWithPk (esTransactions es)
 
-existsCertificateMeta :: MonadIO m => Id CertificateMeta -> DBT t m Bool
+existsCertificateMeta :: MonadIO m => Id CertificateFullInfo -> DBT t m Bool
 existsCertificateMeta = existsWithPk (esCertificates es)
 
 createStudent :: DBM m => Student -> DBT t m (Id Student)
@@ -551,16 +552,7 @@ createTransaction trans = do
                     , grIdx          = TxInMempool
                     }
             PrivateTxCertification cert -> do
-                runInsert . insert (esCertificates es) . insertValue $
-                    CertificateRow
-                    { crHash     = trans^.idOf.to TransactionRowId
-                    , crStudent  = cert^.pcStudent.idOf.to StudentRowId
-                    , crLanguage = cert^.pcGrade.scgCertificateGrade.to cgLang
-                    , crHours    = cert^.pcGrade.scgCertificateGrade.to cgHours
-                    , crCredits  = cert^.pcGrade.scgCertificateGrade.to cgCredits
-                    , crGrade    = cert^.pcGrade.scgCertificateGrade.to cgGrade
-                    , crIdx      = TxInMempool
-                    }
+              createCertificate (cert^.sgMessage)
 
         runInsert . insert (esTransactions es) . insertValue $
             TransactionRow
@@ -572,15 +564,27 @@ createTransaction trans = do
 
 createCertificate
     :: DBM m
-    => CertificateMeta -> PDFBody -> DBT t m ()
-createCertificate meta pdf =
+    => CertificateFullInfo -> DBT t m ()
+createCertificate meta =
     rewrapAlreadyExists (CertificateDomain (getId meta)) $
         runInsert . insert (esCertificates es) $ insertValue
             CertificateRow
             { crHash = hash meta
-            , crMeta = PgJSONB meta
-            , crPdf = pdf
+            , crInfo = PgJSONB meta
             }
+
+createCertificatePdf
+    :: DBM m
+    => CertificateFullInfo -> PDFBody -> DBT t m ()
+createCertificatePdf meta pdf =
+    rewrapAlreadyExists (CertificateDomain (getId meta)) $
+        runInsert . insert (esCertificatesPdf es) $ insertValue
+            CertificatePdfRow
+            { cprHash = hash meta
+            , cprPdf  = pdf
+            }
+
+
 
 getTransaction :: DBM m => Id PrivateTx -> DBT t m (Maybe PrivateTx)
 getTransaction ptid = do

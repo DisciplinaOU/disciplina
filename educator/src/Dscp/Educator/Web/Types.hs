@@ -17,7 +17,6 @@ module Dscp.Educator.Web.Types
        , HasProof (..)
 
          -- * Responses
-       , StudentInfo (..)
        , GradeInfo (..)
        , BlkProofInfo (..)
 
@@ -126,9 +125,6 @@ instance Buildable (BlkProofInfo) where
       ", transactons num = " +| length bpiTxs |+
       "} "
 
-instance Buildable (ForResponseLog StudentInfo) where
-    build = buildForResponse
-
 instance Buildable (ForResponseLog GradeInfo) where
     build (ForResponseLog GradeInfo{..}) =
       "{ submission hash = " +| giSubmissionHash |+
@@ -147,9 +143,6 @@ instance Buildable (ForResponseLog Course) where
 instance Buildable (ForResponseLog [GradeInfo]) where
     build = buildListForResponse (take 4)
 
-instance Buildable (ForResponseLog [StudentInfo]) where
-    build = buildListForResponse (take 8)
-
 instance Buildable (ForResponseLog [BlkProofInfo]) where
     build = buildListForResponse (take 8)
 
@@ -163,6 +156,7 @@ assignmentTypeRaw = iso forth back . from _IsFinal
     back = \case
         False -> Regular
         True  -> CourseFinal
+
     forth = \case
         Regular     -> False
         CourseFinal -> True
@@ -200,7 +194,6 @@ deriving instance ToJSON HasProof
 deriving instance FromJSON HasProof
 
 deriveJSON defaultOptions ''GradeInfo
-deriveJSON defaultOptions ''StudentInfo
 deriveJSON defaultOptions ''BlkProofInfo
 
 ---------------------------------------------------------------------------
@@ -238,9 +231,6 @@ instance ToParamSchema IsGraded where
 
 instance ToSchema IsFinal where
     declareNamedSchema = newtypeDeclareNamedSchema @Bool
-
-instance ToSchema StudentInfo where
-    declareNamedSchema = gDeclareNamedSchema
 
 instance ToSchema GradeInfo where
     declareNamedSchema = gDeclareNamedSchema

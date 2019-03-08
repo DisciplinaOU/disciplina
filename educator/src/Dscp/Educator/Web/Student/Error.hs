@@ -33,11 +33,11 @@ import Dscp.Web.Types
 
 -- | Any error backend may return.
 data StudentAPIError
-    = SomeDomainError DomainError
+    = SomeDomainError ~DomainError
       -- ^ Entity is missing or getting duplicated.
-    | BadSubmissionSignature WrongSubmissionSignature
+    | BadSubmissionSignature ~WrongSubmissionSignature
       -- ^ Submission signature doesn't match the student nor has valid format.
-    | SomeGeneralBackendError GeneralBackendError
+    | SomeGeneralBackendError ~GeneralBackendError
       -- ^ Common backend errors.
     deriving (Show, Eq, Generic, Typeable)
 

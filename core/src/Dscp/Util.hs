@@ -347,7 +347,7 @@ class HasId s where
     default getId :: (Id s ~ s) => s -> Id s
     getId = id
 
-idOf :: HasId s => Getter s (Id s)
+idOf ::forall s. HasId s => Getter s (Id s)
 idOf = to getId
 
 instance HasId ()

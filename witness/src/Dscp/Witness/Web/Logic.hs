@@ -235,8 +235,8 @@ checkFairCV =
     checkTxSubmission sAddr (PrivateTxGrade (PrivateGrade sSub _ _)) =
         isRight $ verifyStudentSubmission sAddr sSub
 
-    checkTxSubmission _     (PrivateTxCertification (PrivateCertification sCert _)) =
-        isRight $ verifyCertificate sCert
+    checkTxSubmission _ (PrivateTxCertification cert) =
+        isRight $ verifyCertificate cert
 
     buildResults results = FairCVCheckResult
         { fairCVCheckResults = results

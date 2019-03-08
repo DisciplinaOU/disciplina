@@ -87,8 +87,8 @@ instance HasId CertificateMeta where
     getId = hash
 
 instance HasId CertificateFullInfo where
-    type Id CertificateFullInfo = Id CertificateMeta
-    getId = getId . cfiMeta
+    type Id CertificateFullInfo = Hash CertificateFullInfo
+    getId = hash
 
 instance Serialise Submission where
     encode (Submission s c a) = mconcat

@@ -58,11 +58,18 @@ import Dscp.Crypto
 import Dscp.Util
 import Dscp.Util.Test
 
-instance Arbitrary a => (Arbitrary (Signed a)) where
+instance
+    ( HasId a
+    , Arbitrary a
+    , HasAbstractSignature SigScheme (Id a)
+    )
+  =>
+    Arbitrary (Signed a)
+  where
     arbitrary = do
-        SecretKeyData sk pk _ <- arbitrary
+        SecretKeyData sk _ _ <- arbitrary
         object <- arbitrary
-        return $ sign sk object
+        return $ signed sk object
 
 instance Arbitrary SecretKeyData where
     arbitrary = mkSecretKeyData <$> arbitrary

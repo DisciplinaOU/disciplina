@@ -31,48 +31,48 @@ import Dscp.Educator.DB.BlockData
 import Dscp.Util
 
 data DomainError
-    = AbsentError DomainErrorItem
-    | AlreadyPresentError DomainErrorItem
-    | SemanticError DatabaseSemanticError
+    = AbsentError ~DomainErrorItem
+    | AlreadyPresentError ~DomainErrorItem
+    | SemanticError ~DatabaseSemanticError
     deriving (Show, Eq, Generic)
 
 data DomainErrorItem
     = CourseDomain
-        { deCourseId :: Id Course }
+        { deCourseId :: ~(Id Course) }
 
     | StudentDomain
-        { deStudentId :: Id Student }
+        { deStudentId :: ~(Id Student) }
 
     | AssignmentDomain
-        { deAssignmentId :: Id Assignment }
+        { deAssignmentId :: ~(Id Assignment) }
 
     | StudentCourseEnrollmentDomain
-        { deStudentId :: Id Student
-        , deCourseId  :: Id Course }
+        { deStudentId :: ~(Id Student)
+        , deCourseId  :: ~(Id Course) }
 
     | StudentAssignmentSubscriptionDomain
-        { deStudentId    :: Id Student
-        , deAssignmentId :: Id Assignment }
+        { deStudentId    :: ~(Id Student)
+        , deAssignmentId :: ~(Id Assignment) }
 
     | SubmissionDomain
-        { deSubmissionId :: Id Submission }
+        { deSubmissionId :: ~(Id Submission) }
 
     | TransactionDomain
-        { deTransactionId :: Id PrivateTx }
+        { deTransactionId :: ~(Id PrivateTx) }
 
     | BlockWithIndexDomain
-        { deBlockIdx :: BlockIdx }
+        { deBlockIdx :: ~BlockIdx }
 
     | CertificateDomain
-        { deCertificateMeta :: Id CertificateMeta }
+        { deCertificateFullInfo :: ~(Id CertificateFullInfo) }
 
     deriving (Show, Typeable, Eq, Generic)
 
 -- | Logical errors.
 data DatabaseSemanticError
-    = StudentIsActiveError     (Id Student)
+    = StudentIsActiveError     ~(Id Student)
       -- ^ Student can't be deleted because it has activities.
-    | DeletingGradedSubmission (Id Submission)
+    | DeletingGradedSubmission ~(Id Submission)
       -- ^ Submission has potentially published grade and thus can't be deleted.
     deriving (Show, Eq, Generic)
 

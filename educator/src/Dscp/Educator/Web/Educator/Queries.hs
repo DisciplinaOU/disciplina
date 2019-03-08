@@ -92,9 +92,9 @@ educatorRemoveStudent student = do
 
 educatorGetStudents
     :: MonadEducatorWebQuery m
-    => Maybe Course -> PaginationSpec -> DBT t m [StudentInfo]
+    => Maybe Course -> PaginationSpec -> DBT t m [Student]
 educatorGetStudents courseF pagination =
-    runSelectMap StudentInfo . select $
+    runSelect . select $
     paginate_ pagination $ do
         student <- all_ (esStudents es)
         whenJust courseF $ \course ->
@@ -329,9 +329,9 @@ getCertificateIssuerInfo = view (lensOf @CertificateIssuerResource) >>= \case
 
 educatorGetCertificate
     :: MonadEducatorWebQuery m
-    => Hash CertificateMeta -> DBT t m PDFBody
+    => Hash CertificateFullInfo -> DBT t m PDFBody
 educatorGetCertificate certId =
-    selectByPk crPdf (esCertificates es) certId
+    selectByPk cprPdf (esCertificatesPdf es) certId
         >>= nothingToThrow (AbsentError $ CertificateDomain certId)
 
 educatorGetCertificates
@@ -345,9 +345,9 @@ educatorGetCertificates sorting pagination =
         certificate <-
             sortBy_ sorting sortingSpecApp $ do
             all_ (esCertificates es)
-        return (crHash certificate, crMeta certificate)
+        return (crHash certificate, crInfo certificate)
   where
     sortingSpecApp CertificateRow{..} =
-        fieldSort @"createdAt" (crMeta ->>$. #cmIssueDate) .*.
-        fieldSort @"studentName" (crMeta ->>$. #cmStudentName) .*.
+        fieldSort @"createdAt"   (crInfo ->>$. #cmIssueDate) .*.
+        fieldSort @"studentName" (crInfo ->>$. #cmStudentName) .*.
         HNil

@@ -58,9 +58,9 @@ data SubmissionValidationFailure
 
 data CertificationValidationFailure
     = CertificationSignatureMismatch
-      { cvfCertificationHash   :: !(Hash CertificateGrade)
+      { cvfCertificationHash   :: !(Hash CertificateFullInfo)
       , cvfCertificationSigKey :: !PublicKey
-      , cvfCertificationSig    :: !(Signature (Hash CertificateGrade))
+      , cvfCertificationSig    :: !(Signature (Hash CertificateFullInfo))
       }
     deriving (Eq, Show)
 
@@ -68,7 +68,7 @@ data CertificationValidationFailure
 data WrongSubmissionSignature
     = FakeSubmissionSignature
       -- ^ Signature doesn't match the student who performs the request.
-    | SubmissionSignatureInvalid [SubmissionValidationFailure]
+    | SubmissionSignatureInvalid ~[SubmissionValidationFailure]
       -- ^ Submission is invalid on itself.
     deriving (Eq, Show, Generic)
 
@@ -204,4 +204,4 @@ validatePrivateBlk pb =
 
         PrivateTxCertification cert ->
           first (fmap CertificateInvalid) $
-            verifyCertificate (cert^.pcGrade)
+            verifyCertificate cert

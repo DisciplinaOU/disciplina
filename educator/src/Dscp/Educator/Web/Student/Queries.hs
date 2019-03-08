@@ -267,5 +267,5 @@ studentGetSubmissions student filters sorting pagination = do
             return (submission, mPrivateGrade)
   where
     mkSortingSpecApp (_, GradeRow{..}) =
-        fieldSort_ @"grade" grGrade .*.
+        fieldSort @"grade" grGrade .*.
         HNil

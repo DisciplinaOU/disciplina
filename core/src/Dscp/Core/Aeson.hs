@@ -176,6 +176,7 @@ deriveJSON defaultOptions ''Signed
 deriveJSON defaultOptions ''Assignment
 deriveJSON defaultOptions ''CertificateGrade
 deriveJSON defaultOptions ''CertificateIssuerInfo
+deriveJSON defaultOptions ''CertificateFullInfo
 deriveJSON defaultOptions ''CertificateMeta
 deriveJSON defaultOptions ''FeeCoefficients
 deriveJSON defaultOptions ''GTx

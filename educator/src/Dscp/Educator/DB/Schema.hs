@@ -89,9 +89,13 @@ data BlockRowT f = BlockRow
     } deriving (Generic)
 
 data CertificateRowT f = CertificateRow
-    { crHash :: C f (Hash CertificateMeta)
-    , crMeta :: C f (PgJSONB CertificateMeta)
-    , crPdf  :: C f PDFBody
+    { crHash :: C f (Hash CertificateFullInfo)
+    , crInfo :: C f (PgJSONB CertificateFullInfo)
+    } deriving (Generic)
+
+data CertificatePdfRowT f = CertificatePdfRow
+    { cprHash :: C f (Hash CertificateFullInfo)
+    , cprPdf  :: C f PDFBody
     } deriving (Generic)
 
 data EducatorSchema f = EducatorSchema
@@ -99,6 +103,7 @@ data EducatorSchema f = EducatorSchema
     , esBlocks              :: f (TableEntity   BlockRowT)
     , esBlockTxs            :: f (TableEntity $ RelationT 'Mx1 TransactionRowT BlockRowT)
     , esCertificates        :: f (TableEntity   CertificateRowT)
+    , esCertificatesPdf     :: f (TableEntity   CertificatePdfRowT)
     , esCertificatesVersion :: f (TableEntity $ SingletonT Word32)
     , esGrades              :: f (TableEntity   GradeRowT)
     , esStudentAssignments  :: f (TableEntity $ RelationT 'MxM StudentRowT AssignmentRowT)
@@ -114,15 +119,16 @@ data EducatorSchema f = EducatorSchema
 -- Aliases
 ----------------------------------------------------------------------------
 
-type AssignmentRow  = AssignmentRowT  Identity
-type BlockRow       = BlockRowT       Identity
-type CertificateRow = CertificateRowT Identity
-type CourseRow      = CourseRowT      Identity
-type GradeRow       = GradeRowT       Identity
-type StudentRow     = StudentRowT     Identity
-type SubjectRow     = SubjectRowT     Identity
-type SubmissionRow  = SubmissionRowT  Identity
-type TransactionRow = TransactionRowT Identity
+type AssignmentRow     = AssignmentRowT     Identity
+type BlockRow          = BlockRowT          Identity
+type CertificateRow    = CertificateRowT    Identity
+type CertificatePdfRow = CertificatePdfRowT Identity
+type CourseRow         = CourseRowT         Identity
+type GradeRow          = GradeRowT          Identity
+type StudentRow        = StudentRowT        Identity
+type SubjectRow        = SubjectRowT        Identity
+type SubmissionRow     = SubmissionRowT     Identity
+type TransactionRow    = TransactionRowT    Identity
 
 ----------------------------------------------------------------------------
 -- Connection with core types
@@ -205,9 +211,14 @@ instance Table BlockRowT where
     primaryKey = BlockRowId . brIdx
 
 instance Table CertificateRowT where
-    newtype PrimaryKey CertificateRowT f = HashTableId (C f (Hash CertificateMeta))
+    newtype PrimaryKey CertificateRowT f = CertificateRowId (C f (Hash CertificateFullInfo))
         deriving (Generic)
-    primaryKey = HashTableId . crHash
+    primaryKey = CertificateRowId . crHash
+
+instance Table CertificatePdfRowT where
+    newtype PrimaryKey CertificatePdfRowT f = CertificatePdfRowId (C f (Hash CertificateFullInfo))
+        deriving (Generic)
+    primaryKey = CertificatePdfRowId . cprHash
 
 instance Table GradeRowT where
     newtype PrimaryKey GradeRowT f = GradeRowId (PrimaryKey TransactionRowT f)
@@ -244,6 +255,9 @@ instance Beamable (PrimaryKey GradeRowT)
 
 instance Beamable CertificateRowT
 instance Beamable (PrimaryKey CertificateRowT)
+
+instance Beamable CertificatePdfRowT
+instance Beamable (PrimaryKey CertificatePdfRowT)
 
 ----------------------------------------------------------------------------
 -- Final
