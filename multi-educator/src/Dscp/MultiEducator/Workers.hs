@@ -50,8 +50,9 @@ expiredEducatorContextsCleaner =
     minimalCheckPeriod = sec 1
 
     lastActivity = \case
-        LockedEducatorContext -> infiniteFuture
+        YetLoadingEducatorContext -> infiniteFuture
         FullyLoadedEducatorContext ctx -> lecLastActivity ctx
+        TerminatingEducatorContext{} -> infiniteFuture  -- we skip them as non-expired
 
     handleTerminatedException =
         handle $ \MultiEducatorIsTerminating ->
@@ -67,8 +68,9 @@ expiredEducatorContextsCleaner =
                 , null (lecUsers ctx)
                 ]
         let isExpired' = \case
-                LockedEducatorContext -> False
+                YetLoadingEducatorContext -> False
                 FullyLoadedEducatorContext ctx -> isExpired ctx
+                TerminatingEducatorContext{} -> False
 
         -- Phase 1: remove all expired contexts
 
@@ -84,13 +86,15 @@ expiredEducatorContextsCleaner =
                 put (fmap fst nonExpired)
 
                 lift . forM expired $ \case
-                    (_, LockedEducatorContext) -> error "impossible"
+                    (_, YetLoadingEducatorContext) -> error "impossible"
+                    (_, TerminatingEducatorContext{}) -> error "impossible"
                     (ctxVar, FullyLoadedEducatorContext ctx) -> do
                         let ctx' = ctx{ lecNoFurtherUsers = True }
                         writeTVar ctxVar $ FullyLoadedEducatorContext ctx'
                         return ctx'
 
-            forM_ expiredCtxs $ unloadEducator TerminatedByContextsCleaner
+            forM_ expiredCtxs $ \ctx ->
+                unloadEducator TerminatedByContextsCleaner (lecContextKeeper ctx)
 
         -- Phase 2: wait for the nearest expiring context
 

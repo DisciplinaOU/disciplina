@@ -3,6 +3,7 @@ module Dscp.MultiEducator.Launcher.Resource
        (
        ) where
 
+import qualified Control.Concurrent.STM as STM
 import Control.Concurrent.STM.TVar (swapTVar)
 import Loot.Log (logWarning)
 import UnliftIO.Async (forConcurrently_)
@@ -11,6 +12,7 @@ import Dscp.Config
 import Dscp.DB.SQL
 import Dscp.MultiEducator.Config
 import Dscp.MultiEducator.Launcher.Context
+import Dscp.MultiEducator.Launcher.Educator.Context
 import Dscp.MultiEducator.Launcher.Educator.Load
 import Dscp.Resource.Class (AllocResource (..), buildComponentR)
 import qualified Dscp.Witness.Launcher.Resource as Witness
@@ -30,8 +32,11 @@ instance AllocResource EducatorContextsVar where
 
                 ActiveEducatorContexts ctxs ->
                     forConcurrently_ ctxs $ \ctxVar -> do
-                        ctx <- atomically $ readTVar ctxVar >>= retryOnContextLocked
-                        unloadEducator MultiEducatorIsTerminating ctx
+                        contextKeeper <- atomically $ readTVar ctxVar >>= \case
+                            YetLoadingEducatorContext -> STM.retry
+                            FullyLoadedEducatorContext ctx -> return (lecContextKeeper ctx)
+                            TerminatingEducatorContext contextKeeper -> return contextKeeper
+                        unloadEducator MultiEducatorIsTerminating contextKeeper
 
 instance AllocResource MultiEducatorResources where
     type Deps MultiEducatorResources = MultiEducatorConfigRec

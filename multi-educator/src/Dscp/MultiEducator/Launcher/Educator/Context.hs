@@ -2,6 +2,7 @@
 
 module Dscp.MultiEducator.Launcher.Educator.Context
     ( EducatorContextUsers
+    , EducatorContextKeeper (..)
     , LoadedEducatorContext (..)
     , MaybeLoadedEducatorContext (..)
     , _FullyLoadedEducatorContext
@@ -17,13 +18,15 @@ import qualified Dscp.Educator.Launcher.Mode as E
 
 type EducatorContextUsers = Set (Async ())
 
+newtype EducatorContextKeeper = EducatorContextKeeper (Async Void)
+
 -- | Context and related stuff of a single educator.
 data LoadedEducatorContext where
     LoadedEducatorContext
         :: E.HasEducatorConfig
         => { lecCtx :: E.EducatorContext
              -- ^ The context itself.
-           , lecContextKeeper :: Async Void
+           , lecContextKeeper :: EducatorContextKeeper
              -- ^ Handler to context and resources keeping thread.
            , lecLastActivity :: Timestamp
              -- ^ Last user request time.
@@ -40,9 +43,11 @@ lecUsersL :: Lens' LoadedEducatorContext EducatorContextUsers
 lecUsersL = lens lecUsers (\ctx usrs -> ctx{ lecUsers = usrs })
 
 data MaybeLoadedEducatorContext
-      -- | Educator context is in transient state (loading or unloading).
-    = LockedEducatorContext
+      -- | Educator context is getting prepared.
+    = YetLoadingEducatorContext
       -- | Educator context has been loaded.
     | FullyLoadedEducatorContext LoadedEducatorContext
+      -- | Educator context is currently being unloaded.
+    | TerminatingEducatorContext EducatorContextKeeper
 
 makePrisms ''MaybeLoadedEducatorContext

@@ -14,18 +14,18 @@ corresponding context is destroyed.
 Prepared context is put into `EducatorContextUsersVar` state.
 In total, this state is updated 4 times during lifecycle of the context:
 
-1. @Nothing -> Just LockedEducatorContext@ - happens when the first request
-to the corresponding educator occurs. This lock is taken until the context
+1. @Nothing -> Just YetLoadingEducatorContext@ - happens when the first request
+to the corresponding educator occurs. This sort of lock is taken until the context
 is ready to use.
 
-2. @Just LockedEducatorContext -> Just FullyLoadedEducatorContext@ - the context
+2. @Just YetLoadingEducatorcontext -> Just FullyLoadedEducatorContext@ - the context
 is ready and can be used by whoever needs it.
 
-3. @Just FullyLoadedEducatorContext -> Just LockedEducatorContext@ - context
+3. @Just FullyLoadedEducatorContext -> Just TerminatingEducatorContext@ - context
 termination initiated. Further we kill all context users, release resources,
 stop workers.
 
-4. @Just LockedEducatorContext -> Nothing@ - context is fully removed, now
+4. @Just TerminatingEducatorContext -> Nothing@ - context is fully removed, now
 one another context can be created for this educator.
 
 
@@ -37,7 +37,6 @@ gently (compare to suddenly getting error about closed database connection).
 module Dscp.MultiEducator.Launcher.Educator.Load
     ( MultiEducatorIsTerminating (..)
     , onTerminatedThrow
-    , retryOnContextLocked
     , withSingleEducator
     , unloadEducator
     ) where
@@ -141,12 +140,6 @@ disperseUsers users exc = do
             boundExecution_ (sec 1) "Educator context user termination" $
             cancelWith user exc
 
--- | Extract the context, block if it is locked.
-retryOnContextLocked :: MaybeLoadedEducatorContext -> STM LoadedEducatorContext
-retryOnContextLocked = \case
-    LockedEducatorContext -> STM.retry
-    FullyLoadedEducatorContext ctx -> return ctx
-
 -- | Reads a ready context from state or creates a new one and takes a lock
 -- if it does not exist yet (and returns @Left@ or @Right@ correspondingly).
 -- If a context was present, we also update it in-place to reduce number of
@@ -165,13 +158,18 @@ getContextOrLock educatorAuthLogin curTime userAsync = do
         get >>= \case
             Nothing -> do
                 -- will load the context oursevles, taking a lock
-                var <- lift $ newTVar LockedEducatorContext
+                var <- lift $ newTVar YetLoadingEducatorContext
                 put (Just var)
                 return (Left var)
 
             Just ctxVar -> lift $ do
-                ctx <- readTVar ctxVar >>= retryOnContextLocked
+                ctx <- readTVar ctxVar >>= \case
+                    YetLoadingEducatorContext -> STM.retry
+                    FullyLoadedEducatorContext ctx -> return ctx
+                    TerminatingEducatorContext{} -> STM.retry
+
                 when (lecNoFurtherUsers ctx) $ STM.retry
+
                 let ctx' = updateOldCtx ctx
                 writeTVar ctxVar (FullyLoadedEducatorContext ctx')
                 return (Right ctx')
@@ -217,28 +215,37 @@ fillingEducatorContext ctxVar loadedCtx action =
 
     releaseContext TerminateContextKeeper{..} = do
         mctx <- atomically . modifyTVarS ctxVar . state $ \case
-            FullyLoadedEducatorContext ctx -> (Just ctx, LockedEducatorContext)
-            LockedEducatorContext -> (Nothing, LockedEducatorContext)
+            FullyLoadedEducatorContext ctx ->
+                (Right ctx, TerminatingEducatorContext (lecContextKeeper ctx))
+            st@YetLoadingEducatorContext ->
+                (Left "loading", st)
+            st@TerminatingEducatorContext{} ->
+                (Left "terminating", st)
 
         case mctx of
-            Just ctx ->
+            Right ctx ->
                 disperseUsers (lecUsers ctx) tckUsersKillingException
-            Nothing ->
-                logWarning "fillingEducatorContext: weird state"
+            Left (st :: Text) ->
+                logWarning $ "fillingEducatorContext: weird state " +| st |+ ""
 
 -- | Once a thread serving the context is forked, wait for that context to load
 -- and return it once ready.
 waitForContextLoad
     :: MultiEducatorWorkMode ctx m
-    => EducatorContextVar -> Async Void -> m LoadedEducatorContext
-waitForContextLoad ctxVar contextKeeper = do
+    => EducatorContextVar -> EducatorContextKeeper -> m LoadedEducatorContext
+waitForContextLoad ctxVar (EducatorContextKeeper contextKeeper) = do
     atomically . modifyTVarS ctxVar $ do
         mctx <- get
         mterminated <- lift $ pollSTM contextKeeper
         case (mctx, mterminated) of
-            (FullyLoadedEducatorContext ctx, _) -> return ctx
-            (_, Just term)                      -> either throwM absurd term
-            (LockedEducatorContext, Nothing)    -> lift STM.retry
+            (FullyLoadedEducatorContext ctx, _)     -> return ctx
+            (_, Just term)                          -> either throwM absurd term
+            (YetLoadingEducatorContext, Nothing)    -> lift STM.retry
+
+            -- Educator context got killed very quickly (e.g. because
+            -- multi-educator shutdown has been initialized), let's wait for
+            -- an error from the context keeper thread.
+            (TerminatingEducatorContext{}, Nothing) -> lift STM.retry
 
 -- | An action which is happening in the context keeping thread.
 -- It allocates resources, launches workers and waits till async exception
@@ -276,7 +283,7 @@ lookupEducator educatorAuthLogin userAsync = do
         getContextOrLock educatorAuthLogin curTime userAsync >>= \case
             Right ctx -> return ctx
             Left ctxVar -> do
-                let fillingContext :: Async Void -> FillingEducatorContext E.EducatorRealMode
+                let fillingContext :: EducatorContextKeeper -> FillingEducatorContext E.EducatorRealMode
                     fillingContext contextKeeper ctx =
                         fillingEducatorContext ctxVar $
                             LoadedEducatorContext
@@ -288,6 +295,7 @@ lookupEducator educatorAuthLogin userAsync = do
                             }
 
                 contextKeeper <- mfix $ \contextKeeper ->
+                    fmap EducatorContextKeeper $
                     async $ serveEducatorContext (fillingContext contextKeeper) educatorAuthLogin
                               `finally` (cleanLockedContext educatorId)
 
@@ -312,10 +320,10 @@ withSingleEducator educatorAuthLogin action = do
 -- they are unresponsive.
 unloadEducator
     :: (MonadUnliftIO m, MonadLogging m, Exception e)
-    => e -> LoadedEducatorContext -> m ()
-unloadEducator usersExc ctx =
+    => e -> EducatorContextKeeper -> m ()
+unloadEducator usersExc (EducatorContextKeeper contextKeeper) =
     logWarningWaitInf (sec 1) "Educator context shutdown" $
-        cancelWith (lecContextKeeper ctx) contextKeeperExc
+        cancelWith contextKeeper contextKeeperExc
   where
     contextKeeperExc = TerminateContextKeeper
         { tckUsersKillingException = SomeException usersExc
