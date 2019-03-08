@@ -5,12 +5,11 @@ module Dscp.MultiEducator.Workers
     ) where
 
 import qualified Control.Concurrent.STM as STM
-import qualified Data.Map as M
 import Loot.Base.HasLens (lensOf)
 import Loot.Config (option, sub)
 import Serokell.Util (modifyTVarS)
 import qualified Text.Show
-import Time (minute, ms, sec, threadDelay, timeAdd)
+import Time (minute, sec, threadDelay, timeAdd)
 import UnliftIO (handle)
 
 import Dscp.MultiEducator.Config
@@ -19,7 +18,6 @@ import Dscp.MultiEducator.Launcher.Educator
 import Dscp.MultiEducator.Launcher.Mode
 import Dscp.Network
 import Dscp.Util.Time
-import Dscp.Util.TimeLimit
 
 multiEducatorWorkers
     :: MultiEducatorWorkMode ctx m
@@ -44,66 +42,64 @@ instance Exception TerminatedByContextsCleaner
 expiredEducatorContextsCleaner :: MultiEducatorWorkMode ctx m => Client m
 expiredEducatorContextsCleaner =
     simpleWorker "expiredEducatorsUnload" $ do
-        handleTerminatedException $ forever loop
+        handleTerminatedException . forever $ cleanup >> nap
   where
     expiryDuration = multiEducatorConfig ^. sub #educator . option #contextExpiry
-    minimalCheckPeriod = sec 1
-
-    lastActivity = \case
-        YetLoadingEducatorContext -> infiniteFuture
-        FullyLoadedEducatorContext ctx -> lecLastActivity ctx
-        TerminatingEducatorContext{} -> infiniteFuture  -- we skip them as non-expired
 
     handleTerminatedException =
         handle $ \MultiEducatorIsTerminating ->
             -- waiting for this worker to be killed outside
             forever $ threadDelay (minute 1)
 
-    loop = do
+    cleanup = do
         educatorContexts <- view $ lensOf @MultiEducatorResources . merEducatorData
+        curTime <- getCurTime
 
-        time <- getCurTime
         let isExpired ctx = and @[_]
-                [ expiryDuration `timeAdd` lecLastActivity ctx > time
+                [ expiryDuration `timeAdd` lecLastActivity ctx > curTime
                 , null (lecUsers ctx)
                 ]
-        let isExpired' = \case
-                YetLoadingEducatorContext -> False
-                FullyLoadedEducatorContext ctx -> isExpired ctx
-                TerminatingEducatorContext{} -> False
 
-        -- Phase 1: remove all expired contexts
+        ctxs <- atomically . modifyTVarS educatorContexts . onTerminatedThrow $
+            gets toList
 
-        -- under high contention we can get constant retries
-        -- so monitoring such possibility
-        mask_ . logWarningWaitInf (ms 100) "Educator contexts GC" $ do
-            expiredCtxs <- atomically . modifyTVarS educatorContexts . onTerminatedThrow $ do
-                ctxMap <- get
-                ctxReadMap <- lift $ forM ctxMap $
-                    \ctxVar -> (ctxVar, ) <$> readTVar ctxVar
-                let (expired, nonExpired) = M.partition (isExpired' . snd) ctxReadMap
-
-                put (fmap fst nonExpired)
-
-                lift . forM expired $ \case
-                    (_, YetLoadingEducatorContext) -> error "impossible"
-                    (_, TerminatingEducatorContext{}) -> error "impossible"
-                    (ctxVar, FullyLoadedEducatorContext ctx) -> do
+        toUnload <- forM ctxs $ \ctxVar -> atomically $
+            readTVar ctxVar >>= \case
+                YetLoadingEducatorContext -> return Nothing
+                TerminatingEducatorContext{} -> return Nothing
+                FullyLoadedEducatorContext ctx
+                    | isExpired ctx -> do
                         let ctx' = ctx{ lecNoFurtherUsers = True }
-                        writeTVar ctxVar $ FullyLoadedEducatorContext ctx'
-                        return ctx'
+                        writeTVar ctxVar (FullyLoadedEducatorContext ctx')
+                        return $ Just (lecContextKeeper ctx)
+                    | otherwise -> return Nothing
 
-            forM_ expiredCtxs $ \ctx ->
-                unloadEducator TerminatedByContextsCleaner (lecContextKeeper ctx)
+        forM_ (catMaybes toUnload) $ \contextKeeper ->
+            unloadEducator TerminatedByContextsCleaner contextKeeper
 
-        -- Phase 2: wait for the nearest expiring context
+    nap = do
+        educatorContexts <- view $ lensOf @MultiEducatorResources . merEducatorData
+        curTime <- getCurTime
 
-        do
-            nextExpiry <- atomically . modifyTVarS educatorContexts . onTerminatedThrow $ do
-                ctxs <- gets M.elems
-                las <- lift $ forM ctxs $ fmap lastActivity . readTVar
-                when (null las) $ lift STM.retry
-                return $ timeAdd expiryDuration (minimum las)
+        let minimalCheckPeriod = sec 1
+        let maximalCheckPeriod = sec 10
+        let lastActivity = \case
+                YetLoadingEducatorContext -> infiniteFuture
+                FullyLoadedEducatorContext ctx -> lecLastActivity ctx
+                TerminatingEducatorContext{} -> infiniteFuture
 
-            let tillNextExpiry = nextExpiry `timeDiffNonNegative` time
-            sleep $ max minimalCheckPeriod tillNextExpiry
+        ctxs <- atomically . modifyTVarS educatorContexts . onTerminatedThrow $ do
+            ctxs <- gets toList
+            maybe (lift STM.retry) pure $ nonEmpty ctxs
+            -- Would be nice to check whether any fully loaded context is present here
+            -- and 'STM.retry' otherwise, but traversing the whole map atomically
+            -- would potentially cause too high contention.
+            -- So we keep all 'atomically' blocks no more than constant-size in time.
+
+        lastActivities <- forM ctxs $ \ctxVar -> do
+            atomically $ lastActivity <$> readTVar ctxVar
+
+        let nextExpiry = timeAdd expiryDuration (minimum @(NonEmpty _) lastActivities)
+        let tillNextExpiry = nextExpiry `timeDiffNonNegative` curTime
+        let napTime = min maximalCheckPeriod $ max minimalCheckPeriod tillNextExpiry
+        sleep napTime
