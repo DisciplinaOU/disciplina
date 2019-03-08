@@ -7,6 +7,7 @@ module Dscp.MultiEducator.Web.Educator.Handlers
 import Dscp.Core.Foundation.Educator
 import Dscp.DB.SQL
 import Dscp.Educator.Web.Educator
+import Dscp.MultiEducator.Launcher.Educator
 import Dscp.MultiEducator.Launcher.Mode
 import Dscp.MultiEducator.Types
 import Dscp.MultiEducator.Web.Educator.API
@@ -16,6 +17,8 @@ certificatesApiHandlers
     => CertificatesApiHandlers m
 certificatesApiHandlers = CertificatesApiEndpoints
     { cGetCertificate = \(CertificateName eId cId) -> invoke $ do
-            setConnSchemaName $ educatorSchemaName (EducatorId eId)
+            -- TODO: something is wrong about that 'CertificateName' keeps 'Text'
+            -- instead of 'EducatorUUID' inside, how to properly resolve this?
+            setConnSchemaName $ educatorSchemaName (EducatorUUID eId)
             educatorGetCertificate cId
     }

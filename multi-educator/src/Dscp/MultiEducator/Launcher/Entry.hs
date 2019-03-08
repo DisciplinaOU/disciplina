@@ -14,13 +14,20 @@ import Dscp.Config (branch, sub, tree, whenConfigJust)
 import Dscp.MultiEducator.Config
 import Dscp.MultiEducator.Launcher.Mode
 import Dscp.MultiEducator.Web.Server
+import Dscp.MultiEducator.Workers
 import Dscp.Network
-import Dscp.Witness.Launcher
+import Dscp.Witness.Launcher.Entry
 import Dscp.Witness.Web.Server
 
-multiEducatorEntry :: MultiCombinedWorkMode ctx m => m Void
+-- | Listeners, workers and no interaction with user.
+withMultiEducatorBackground :: MultiEducatorWorkMode ctx m => m a -> m a
+withMultiEducatorBackground cont = do
+    logInfo "Forking multi-educator workers"
+    withWorkers multiEducatorWorkers cont
+
+multiEducatorEntry :: MultiCombinedWorkMode ctx m => m a
 multiEducatorEntry =
-    withServer . withWitnessBackground $ do
+    withServer . withWitnessBackground . withMultiEducatorBackground $ do
         let witnessApiParams = witnessConfig ^. sub #witness . sub #api
             educatorServerParams = multiEducatorConfig ^.
                 sub #educator . sub #api . sub #serverParams

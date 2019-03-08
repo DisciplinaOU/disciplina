@@ -25,9 +25,11 @@ prepareEducatorSchema db = do
     logging <- view (lensOf @LoggingIO)
     runRIO (db, logging) . transact $ ensureSchemaIsSetUp
 
-instance AllocResource SQL where
-    type Deps SQL = PostgresRealParamsRec
-    allocResource p = buildComponentR "SQL DB" (openPostgresDB' p) closePostgresDB
+instance AllocResource (PreparedSQL "educator") where
+    type Deps (PreparedSQL "educator") = PostgresRealParamsRec
+    allocResource p =
+        PreparedSQL <$>
+        buildComponentR "SQL DB" (openPostgresDB' p) closePostgresDB
       where
         openPostgresDB' p' = do
             db <- openPostgresDB (PostgresParams $ PostgresReal p')

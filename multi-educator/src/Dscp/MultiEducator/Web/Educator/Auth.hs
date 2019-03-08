@@ -6,6 +6,7 @@ module Dscp.MultiEducator.Web.Educator.Auth
        ( EducatorAuthToken (..)
        , EducatorAuthData (..)
        , EducatorAuthLogin (..)
+       , ealId
        , educatorAuthLoginSimple
        , MultiEducatorAuth
        , MultiEducatorPublicKey (..)
@@ -36,7 +37,7 @@ import qualified Data.ByteArray as BA
 ---------------------------------------------------------------------------
 
 newtype EducatorAuthData = EducatorAuthData
-    { eadId :: EducatorId
+    { eadId :: EducatorUUID
     } deriving (Show, Eq)
 
 deriveJSON defaultOptions ''EducatorAuthData
@@ -61,6 +62,9 @@ data EducatorAuthLogin = EducatorAuthLogin
     { ealData  :: EducatorAuthData
     , ealToken :: ByteString
     } deriving (Show, Eq)
+
+ealId :: EducatorAuthLogin -> EducatorUUID
+ealId = eadId . ealData
 
 instance ToJSON EducatorAuthLogin where
     toJSON (EducatorAuthLogin {..}) = toJSON ealData
@@ -122,7 +126,7 @@ multiEducatorAuthCheck (MultiEducatorPublicKey mpk) = do
     let ealData = eatData educatorAuthToken
     return $ EducatorAuthLogin {..}
 
-educatorAuthLoginSimple :: EducatorId -> EducatorAuthLogin
+educatorAuthLoginSimple :: EducatorUUID -> EducatorAuthLogin
 educatorAuthLoginSimple eadId = EducatorAuthLogin {..}
   where
     ealData = EducatorAuthData {..}
