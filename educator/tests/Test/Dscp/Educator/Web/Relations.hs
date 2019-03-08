@@ -10,6 +10,7 @@ import Test.QuickCheck.Property (failed, reason)
 
 import Dscp.DB.SQL
 import Dscp.Educator.DB
+import Dscp.Util.Rethrow
 import Dscp.Util.Test
 
 import Test.Dscp.DB.SQL.Mode
@@ -78,21 +79,21 @@ buildRelationTestScenarios RelationTestActions{..} = do
         sqlPropertyM $ do
             (lid, rid) <- pick arbitrary
             let someDepDomain = rtsLeftDepDomain <> rtsRightDepDomain
-            lift . throwsPrism (_AbsentError . someDepDomain) $
+            lift . expectPrismRethrowing (_AbsentError . someDepDomain) $
                 rtsCreate lid rid
 
     it ("Relation cannot be created without " <> rtsLeftName <> " dependency") $
         sqlPropertyM $ do
             rid <- pick arbitrary
             lid <- rtsPrepareLeftDep
-            lift . throwsPrism (_AbsentError . rtsRightDepDomain) $
+            lift . expectPrismRethrowing (_AbsentError . rtsRightDepDomain) $
                 rtsCreate lid rid
 
     it ("Relation cannot be created without " <> rtsRightName <> " dependency") $
         sqlPropertyM $ do
             lid <- pick arbitrary
             rid <- rtsPrepareRightDep
-            lift . throwsPrism (_AbsentError . rtsLeftDepDomain) $
+            lift . expectPrismRethrowing (_AbsentError . rtsLeftDepDomain) $
                 rtsCreate lid rid
 
     whenJust rtsDepRelation $ \DepRelationTestActions{..} ->
@@ -100,7 +101,7 @@ buildRelationTestScenarios RelationTestActions{..} = do
             sqlPropertyM $ do
                 lid <- rtsPrepareLeftDep
                 rid <- rtsPrepareRightDep
-                lift . throwsPrism (_AbsentError . drtaDomain) $
+                lift . expectPrismRethrowing (_AbsentError . drtaDomain) $
                     rtsCreate lid rid
 
     let createAll :: PropertyM m (lid, rid)
@@ -122,21 +123,21 @@ buildRelationTestScenarios RelationTestActions{..} = do
     it ("Cannot create same relation twice") $
         sqlPropertyM $ do
             (lid, rid) <- createAll
-            lift . throwsPrism (_AlreadyPresentError . rtsDomain) $
+            lift . expectPrismRethrowing (_AlreadyPresentError . rtsDomain) $
                 rtsCreate lid rid
 
     whenJust rtsDeleteLeftDep $ \doDeleteLeftDep -> do
         it ("Cannot delete " <> rtsLeftName <> " dependency while relation exists") $
             sqlPropertyM $ do
                 (lid, _) <- createAll
-                lift . throwsPrism (_AlreadyPresentError . rtsLeftDepDomain) $
+                lift . expectPrismRethrowing (_AlreadyPresentError . rtsLeftDepDomain) $
                     doDeleteLeftDep lid
 
     whenJust rtsDeleteRightDep $ \doDeleteRightDep -> do
         it ("Cannot delete " <> rtsRightName <> " dependency while relation exists") $
             sqlPropertyM $ do
                 (_, rid) <- createAll
-                lift . throwsPrism (_AlreadyPresentError . rtsRightDepDomain) $
+                lift . expectPrismRethrowing (_AlreadyPresentError . rtsRightDepDomain) $
                     doDeleteRightDep rid
 
     whenJust rtsDepRelation $ \DepRelationTestActions{..} ->
@@ -144,14 +145,14 @@ buildRelationTestScenarios RelationTestActions{..} = do
             it ("Cannot delete " <> drtaName <> " while main relation exists") $
                 sqlPropertyM $ do
                     (lid, rid) <- createAll
-                    lift . throwsPrism (_AlreadyPresentError . drtaDomain) $
+                    lift . expectPrismRethrowing (_AlreadyPresentError . drtaDomain) $
                         doDeleteDepRelation lid rid
 
     whenJust rtsDelete $ \doDelete -> do
         it ("Deletion of non-existing relation fails properly") $
             sqlPropertyM $ do
                 (lid, rid) <- pick arbitrary
-                lift . throwsPrism (_AbsentError . rtsDomain) $
+                lift . expectPrismRethrowing (_AbsentError . rtsDomain) $
                     doDelete lid rid
 
         it ("Can delete relation properly") $

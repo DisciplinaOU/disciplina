@@ -11,6 +11,7 @@ import Dscp.Educator.Web.Educator
 import Dscp.Educator.Web.Logic
 import Dscp.Educator.Web.Types
 import Dscp.Util
+import Dscp.Util.Rethrow
 import Dscp.Util.Test
 
 import Test.Dscp.DB.SQL.Mode
@@ -88,7 +89,7 @@ spec_Educator_API_queries = specWithTempPostgresServer $ do
             env <- pickSmall $ genCoreTestEnv simpleCoreTestParams
             let course = tiOne $ cteCourses env
 
-            lift . throwsPrism (_AbsentError . _CourseDomain) $
+            lift . expectPrismRethrowing (_AbsentError . _CourseDomain) $
                 educatorGetCourse (getId course)
 
         it "Returns existing course properly" $ sqlPropertyM $ do
@@ -135,7 +136,7 @@ spec_Educator_API_queries = specWithTempPostgresServer $ do
 
             _ <- lift $ createStudent student
 
-            lift . throwsPrism (_AbsentError . _SubmissionDomain) $
+            lift . expectPrismRethrowing (_AbsentError . _SubmissionDomain) $
                 educatorGetSubmission (getId submission)
 
         it "Returns existing submission properly" $ sqlPropertyM $ do

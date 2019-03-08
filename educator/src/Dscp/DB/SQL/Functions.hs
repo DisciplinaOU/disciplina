@@ -48,6 +48,7 @@ import Control.Concurrent (getNumCapabilities)
 import Control.Concurrent.Chan (newChan, readChan, writeChan)
 import qualified Control.Exception as E
 import Control.Lens (views)
+import qualified Control.Monad.Catch
 import Control.Monad.Reader (mapReaderT)
 import Database.Beam.Backend (FromBackendRow, MonadBeam (..))
 import qualified Database.Beam.Backend.SQL.BeamExtensions as Backend
@@ -75,6 +76,7 @@ import Dscp.DB.SQL.Error
 import Dscp.DB.SQL.Types
 import Dscp.Rio
 import Dscp.Util
+import Dscp.Util.Rethrow
 
 -----------------------------------------------------------
 -- Operations with plain connections
@@ -193,7 +195,7 @@ closePostgresDB sd =
 -- though fetching info from context of the inner monad is allowed.
 newtype DBT (t :: TransactionalContext) m a = DBT
     { runDBT :: ReaderT Connection m a
-    } deriving (Functor, Applicative, Monad, MonadThrow, MonadCatch)
+    } deriving (Functor, Applicative, Monad, MonadThrow)
 
 -- | Lifted actions should NOT have side-effects as soon as any 'DBT'
 -- action can happen multiple times per single 'transact' call.
@@ -203,6 +205,21 @@ instance MonadUnliftIO m => MonadUnliftIO (DBT t m) where
     askUnliftIO = do
         UnliftIO unlift <- DBT askUnliftIO
         return $ UnliftIO $ unlift . runDBT
+
+-- | This one is prohibited, because if an error is thrown from DB engine's side
+-- then you are not allowed to perform any further SQL operations until the end
+-- of current transaction.
+-- We could forbid only @DBT 'WithinTx m@ actually, but not doing it yet to refer
+-- the developer to this comment as soon as possible.
+instance UseMonadRethrow m => MonadCatch (DBT t m) where
+    catch = error "impossible"
+
+instance MonadCatch m => MonadRethrow (DBT t m) where
+    catchHot action handler =
+        DBT $ catch (runDBT action) (vacuous . runDBT . handler)
+    {-# NOINLINE catchHot #-}
+    -- Without this pragma exceptions are not always caught (you can notice
+    -- some tests would fail), looks like GHC bug (@martoon).
 
 instance MonadReader r m => MonadReader r (DBT t m) where
     ask = DBT $ lift ask

@@ -209,6 +209,9 @@ withProbability p action = do
 withProbability_ :: Monad m => Rational -> PropertyM m a -> PropertyM m ()
 withProbability_ = void ... withProbability
 
+instance Testable Void where
+    property = absurd
+
 ----------------------------------------------------------------------------
 -- CLI interface testing
 ----------------------------------------------------------------------------

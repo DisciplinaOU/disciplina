@@ -38,6 +38,7 @@ import Dscp.Resource.Keys
 import Dscp.Rio
 import Dscp.Util
 import Dscp.Util.HasLens
+import Dscp.Util.Rethrow
 import Dscp.Util.Test
 import Dscp.Witness
 
@@ -146,13 +147,14 @@ sqlProperty
     :: (Testable prop, Show a, Arbitrary a)
     => (a -> DBT t TestEducatorM prop) -> PostgresTestServer -> Property
 sqlProperty action =
-    educatorProperty (invokeUnsafe . action)
+    educatorProperty (throwsOnlyExpected . invokeUnsafe . action)
 
 sqlPropertyM
     :: Testable prop
     => PropertyM (DBT t TestEducatorM) prop -> PostgresTestServer -> Property
 sqlPropertyM action testDb =
-    monadic (ioProperty . runTestSqlM testDb . invokeUnsafe) (void $ action >>= stop)
+    monadic (ioProperty . runTestSqlM testDb . throwsOnlyExpected . invokeUnsafe)
+            (void $ action >>= stop)
 
 orIfItFails :: MonadCatch m => m a -> a -> m a
 orIfItFails action instead = do

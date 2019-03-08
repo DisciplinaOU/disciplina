@@ -16,6 +16,7 @@ import Dscp.Educator.Web.Queries
 import Dscp.Educator.Web.Student
 import Dscp.Educator.Web.Types
 import Dscp.Util
+import Dscp.Util.Rethrow
 import Dscp.Util.Test
 
 import Test.Dscp.DB.SQL.Mode
@@ -270,7 +271,7 @@ spec_Student_API_queries = specWithTempPostgresServer $ do
     describe "getAssignment" $ do
         it "Fails on request of non-existent assignment" $
             sqlProperty $ \() ->
-                throwsPrism (_AbsentError . _AssignmentDomain) $ do
+                expectPrismRethrowing (_AbsentError . _AssignmentDomain) $ do
                     _ <- createStudent student1
                     studentGetAssignment student1 (hash assignment1)
 
@@ -282,7 +283,7 @@ spec_Student_API_queries = specWithTempPostgresServer $ do
                 _ <- createStudent student1
                 _ <- createCourse $ simpleCourse course
                 _ <- createAssignment assignment
-                throwsPrism (_AbsentError . _AssignmentDomain) $
+                expectPrismRethrowing (_AbsentError . _AssignmentDomain) $
                     studentGetAssignment student1 (hash assignment1)
 
         it "Returns existing assignment properly" $
@@ -315,7 +316,7 @@ spec_Student_API_queries = specWithTempPostgresServer $ do
                 _ <- createAssignment assignment
                 _ <- enrollStudentToCourse student1 course
                 _ <- setStudentAssignment student1 (hash assignment)
-                throwsPrism (_AbsentError . _AssignmentDomain) $
+                expectPrismRethrowing (_AbsentError . _AssignmentDomain) $
                     studentGetAssignment student1 (getId needlessAssignment)
 
     describe "getAssignments" $ do
@@ -454,7 +455,7 @@ spec_Student_API_queries = specWithTempPostgresServer $ do
                     _ <- setStudentAssignment owner (hash assignment)
                     _ <- submitAssignment sigSub
                     return ()
-                lift . fmap property $ throwsPrism (_AbsentError . _SubmissionDomain) $
+                lift . fmap property $ expectPrismRethrowing (_AbsentError . _SubmissionDomain) $
                     studentGetSubmission user (getId submission)
 
     describe "getSubmissions" $ do
@@ -482,7 +483,7 @@ spec_Student_API_queries = specWithTempPostgresServer $ do
         it "Deletion of non-existing submission throws" $
             sqlProperty $ \submission -> do
                 _ <- createStudent student1
-                throwsPrism (_AbsentError . _SubmissionDomain) $
+                expectPrismRethrowing (_AbsentError . _SubmissionDomain) $
                     commonDeleteSubmission (hash submission) (Just student1)
 
         it "Delete works" $
@@ -515,7 +516,7 @@ spec_Student_API_queries = specWithTempPostgresServer $ do
                 _ <- createTransaction $
                      PrivateTx sigSub gA someTime
 
-                throwsPrism (_SemanticError . _DeletingGradedSubmission) $
+                expectPrismRethrowing (_SemanticError . _DeletingGradedSubmission) $
                      commonDeleteSubmission (hash sub) (Just student)
 
         it "Can not delete other student's submission" $
@@ -532,7 +533,7 @@ spec_Student_API_queries = specWithTempPostgresServer $ do
                 else do
                     prepareAndCreateSubmission env
 
-                    fmap property . throwsPrism (_AbsentError . _SubmissionDomain) $
+                    fmap property . expectPrismRethrowing (_AbsentError . _SubmissionDomain) $
                         commonDeleteSubmission (hash sub) (Just otherStudent)
 
     describe "makeSubmission" $ do
@@ -544,7 +545,7 @@ spec_Student_API_queries = specWithTempPostgresServer $ do
 
                 prepareForSubmissions env
                 void $ submitAssignment sigSub
-                throwsPrism (_AlreadyPresentError . _SubmissionDomain) $
+                expectPrismRethrowing (_AlreadyPresentError . _SubmissionDomain) $
                     void $ submitAssignment sigSub
 
         it "Making submission works" $
