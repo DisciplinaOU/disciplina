@@ -17,6 +17,7 @@ module Dscp.Educator.Web.Auth
        , NoAuth
        , NoAuthData
        , NoAuthContext (..)
+       , whenNoAuth
 
        , authBearerToken
        , authTimeout
@@ -354,6 +355,11 @@ instance FromJSON (NoAuthData s) => FromJSON (NoAuthContext s) where
 instance AuthHasSwagger (NoAuth s) where
     authNameDoc = "NoAuth"
     authSecurityDoc = NoAuthSwaggerInfo
+
+whenNoAuth :: Monad m => NoAuthContext s -> (NoAuthData s -> m ()) -> m ()
+whenNoAuth ctx action = case ctx of
+    NoAuthOnContext c -> action c
+    NoAuthOffContext -> pass
 
 ---------------------------------------------------------------------------
 -- Documentation

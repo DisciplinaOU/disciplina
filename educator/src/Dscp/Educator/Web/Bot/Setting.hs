@@ -256,8 +256,10 @@ botProvideCourses student courses = do
 -- | Remember student and add minimal set of courses.
 botProvideInitSetting :: (BotWorkMode ctx m, HasBotSetting) => Student -> m ()
 botProvideInitSetting student = do
-    maybePresent $ do
+    maybePresent $
         void . invoke $ createStudent student
+
+    maybePresent $ do
         botProvideCourses student (bsBasicCourses botSetting)
         botLog . logInfo $ "Registered student " +| student |+ ""
 
