@@ -54,9 +54,9 @@ educatorApiHandlers =
     , eGetCourses = \mStudent onlyCount pagination ->
         fmap (mkCountedList onlyCount) $ invoke $ educatorGetCourses mStudent pagination
 
-    , eAddCourse = \(NewCourse mcid desc subjects) ->
+    , eAddCourse = \(NewCourse desc subjects) ->
         transact $ createCourse CourseDetails
-            { cdCourseId = mcid
+            { cdCourseId = Nothing
             , cdDesc = desc
             , cdSubjects = subjects
             }
