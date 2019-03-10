@@ -402,7 +402,9 @@ instance ToSchema EducationForm where
     declareNamedSchema = gDeclareNamedSchema
 
 instance ToSchema GradingScale where
-    declareNamedSchema = gDeclareNamedSchema
+    declareNamedSchema p =
+        inDeclaredSchema (gDeclareNamedSchema p) $
+            setDocEnumDescription @GradingScale
 
 instance ToSchema CertificateGrade where
     declareNamedSchema = gDeclareNamedSchema
@@ -442,3 +444,10 @@ instance ToSchema AssignmentEducatorInfo where
 
 instance ToSchema SubmissionEducatorInfo where
     declareNamedSchema = gDeclareNamedSchema
+
+instance EnumHasDescription GradingScale where
+    enumDocDescription p = enumCaseDocDesc p $ \case
+        RusDiff ->
+            "Russian differentiated: 5 = 100, 4 = 80, 3 = 60, 2 = 40"
+        RusNonDiff ->
+            "Russian non-differentiated: \"zachot\" = 100, \"nezachot\" = 0"

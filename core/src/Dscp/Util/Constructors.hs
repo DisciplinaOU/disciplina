@@ -13,6 +13,7 @@ module Dscp.Util.Constructors
        , enlistConstructorsOf
 
        , UnsafeFiller
+       , EnumLikeOnly
        ) where
 
 import Data.Default (Default (..))
@@ -23,6 +24,9 @@ import Dscp.Util.Test
 
 -- | Indicates filling constructor fields with 'error's.
 class UnsafeFiller a
+
+-- | Indicates that only datatypes with nullary constructors are allowed.
+class EnumLikeOnly a
 
 -- | Whether this filler can be applied to such field type.
 type family AllowedFiller (m :: G.Meta) (fill :: * -> Constraint) :: Constraint
@@ -45,6 +49,10 @@ class GFillConstructor (fill :: * -> Constraint) (a :: * -> *) where
 
 instance GFillConstructor UnsafeFiller (G.Rec0 a) where
     gFillConstructor = error "Beyond this field only a black hole, do not touch"
+
+instance TypeError ('Text "Cannot fill datatype with non-nullary constructors") =>
+         GFillConstructor EnumLikeOnly (G.Rec0 a) where
+    gFillConstructor = error "impossible"
 
 instance Default a => GFillConstructor Default (G.Rec0 a) where
     gFillConstructor = G.K1 def
@@ -94,6 +102,7 @@ You need to supply a @fill@ type argument which have to be one of:
 
 * 'UnsafeFiller' - initialize fields as 'error's.
   Applying to a datatype with strict fields will cause a compile error.
+* 'EnumLikeOnly' - just does not compile for constructors with fields.
 * 'Default' - initialize fields with default values.
 * 'Arbitrary' - initialize fields with arbitrarily generated values.
 
