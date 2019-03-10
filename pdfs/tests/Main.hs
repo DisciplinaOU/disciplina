@@ -45,3 +45,9 @@ main = hspec $ do
             \(text) ->
                 project inf (PDFBody text)
                     == Nothing
+
+        it "unInject -| uncurry inject" . property $
+            \(before, after, piece) ->
+                let text = before <> insertionMark <> after
+                in  (unInject inf =<< inject inf piece (PDFBody text))
+                ==   Just (piece, PDFBody text)

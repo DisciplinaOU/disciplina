@@ -4,6 +4,7 @@ module Dscp.Educator.Logic.Certificates
     , addCertificateGrades
     ) where
 
+import Control.Monad.State (lift)
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy as LBS
 import Data.Time.Clock (UTCTime (..))
@@ -36,10 +37,9 @@ instance Exception FailedToBuildCertificate
 -- | Make a fake submission for certificate grade.
 -- Has to be unique for each transaction, or getting equal private
 -- transactions becomes too easy for the user.
-randomCertSubmission :: MonadRandom m => m SignedSubmission
-randomCertSubmission = do
-    contentsHash <- randomHash
-    return $ makeSignedSubmission
+randomCertSubmission :: Hash Raw -> SignedSubmission
+randomCertSubmission contentsHash = do
+    makeSignedSubmission
         defCertStudentSk
         (hash defCertAssignment)
         contentsHash
@@ -84,16 +84,23 @@ ensureCertSubmissionExists = do
 -- | Add a certificate grade to database.
 addCertificateGrades
     :: (MonadIO m, MonadCatch m, Traversable t)
-    => CertificateMeta -> (t CertificateGrade) -> DBT 'WithinTx m (t PrivateTx)
-addCertificateGrades meta grades = do
+    => Hash Raw -> CertificateMeta -> (t CertificateGrade) -> DBT 'WithinTx m (t PrivateTx)
+addCertificateGrades rawHash meta grades = do
     ensureCertSubmissionExists
 
-    forM grades $ \grade -> do
-        submission <- liftIO randomCertSubmission
-        void $ createSignedSubmission submission
+    flip evalStateT True $ do
+        forM grades $ \grade -> do
+            injectHash <- get
+            put False
 
-        let tx = certGradeToPrivateTx submission meta grade
-        tx <$ createTransaction tx
+            lift $ do
+                submission <- (if injectHash then return rawHash else liftIO randomHash)
+                    <&> randomCertSubmission
+
+                void $ createSignedSubmission submission
+
+                let tx = certGradeToPrivateTx submission meta grade
+                tx <$ createTransaction tx
 
 -- | Build a certificate with embedded FairCV.
 embedFairCVToCert

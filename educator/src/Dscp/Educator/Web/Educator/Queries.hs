@@ -30,7 +30,7 @@ import Network.HTTP.Client
 import Network.HTTP.Client.TLS
 import Network.HTTP.Types.Status (statusCode)
 import qualified Pdf.FromLatex as Pdf
-import Pdf.Scanner (PDFBody)
+import Pdf.Scanner (PDFBody (..))
 import Servant (err501)
 import Servant.Client.Core.Internal.BaseUrl (showBaseUrl)
 import Servant.Util (PaginationSpec, SortingSpecOf, HList (HNil), (.*.))
@@ -270,16 +270,19 @@ educatorPostGrade subH grade = do
 -- and generates a PDF certificate with embedded FairCV describing that block.
 educatorAddCertificate
     :: MonadEducatorWeb ctx m
-    => CertificateFullInfo -> m ()
+    => CertificateFullInfo -> m PDFBody
 educatorAddCertificate cert = do
-    pdfLatexPath <- view (lensOf @Pdf.LatexPath)
-    pdfResPath <- view (lensOf @Pdf.ResourcePath)
+    pdfLatexPath    <- view (lensOf @Pdf.LatexPath)
+    pdfResPath      <- view (lensOf @Pdf.ResourcePath)
     downloadBaseUrl <- view (lensOf @Pdf.DownloadBaseUrl)
-    certificateIssuerInfo <- getCertificateIssuerInfo
-    pdfRaw <- Pdf.produce RU certificateIssuerInfo cert pdfLatexPath pdfResPath downloadBaseUrl
+
+    certificateIssuerInfo  <- getCertificateIssuerInfo
+    pdfRaw@ (PDFBody body) <- Pdf.produce RU certificateIssuerInfo cert pdfLatexPath pdfResPath downloadBaseUrl
+
+    let pdfHash = hash body
 
     transact $ do
-        txs <- addCertificateGrades (cfiMeta cert) (cfiGrades cert)
+        txs <- addCertificateGrades pdfHash (cfiMeta cert) (cfiGrades cert)
         blkHeader <-
             createPrivateBlock (toList @(NonEmpty _) txs) Nothing
             <&> nothingToPanic "impossible: failed to make non-empty block"
@@ -291,6 +294,8 @@ educatorAddCertificate cert = do
         pdf <- embedFairCVToCert (unReadyFairCV faircv) pdfRaw
 
         createCertificate (cfiMeta cert) pdf
+
+        return pdf
 
 getCertificateIssuerInfo
     :: MonadEducatorWeb ctx m

@@ -13,6 +13,7 @@ module Dscp.Witness.Web.Logic
        , checkFairCVPDF
        ) where
 
+import Control.Lens (to, each)
 import Codec.Serialise (serialise)
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString.Lazy as LBS
@@ -246,9 +247,18 @@ checkFairCVPDF
     => Pdf.PDFBody -> m FairCVAndCheckResult
 checkFairCVPDF pdf = do
     let maybeFairCV = do
-            fairCVencoded <- Pdf.project (Pdf.MaxSearchLength Nothing) pdf
-            Aeson.decodeStrict fairCVencoded
+            (fairCVencoded, Pdf.PDFBody source) <- Pdf.unInject (Pdf.MaxSearchLength Nothing) pdf
+            res <- Aeson.decodeStrict fairCVencoded
+            return (res, source)
 
-    fairCV   <- maybe (throwM InvalidFormat) pure maybeFairCV
-    checkRes <- checkFairCV fairCV
+    (fairCV, source) <- maybe (throwM InvalidFormat) pure maybeFairCV
+    checkRes         <- checkFairCV fairCV
+
+    let pdfHashIsValid =
+            (  fairCV^?to(fcCV).each.each.to(toList).each.ptSignedSubmission.ssSubmission.sContentsHash
+            == Just (coerce $ hash source)
+            )
+
     return $ FairCVAndCheckResult fairCV checkRes
+        { fairCVFullyValid = fairCVFullyValid checkRes && pdfHashIsValid
+        }

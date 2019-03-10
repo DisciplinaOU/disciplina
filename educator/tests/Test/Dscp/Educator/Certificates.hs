@@ -2,8 +2,12 @@
 
 module Test.Dscp.Educator.Certificates where
 
+import Control.Lens (ix)
+import Data.Bits (complement)
+import qualified Data.ByteString.Lazy as LBS
 import Data.Default (def)
 import qualified Pdf.FromLatex as Pdf
+import qualified Pdf.Scanner as Pdf
 import Servant.Util (asc, fullContent)
 
 import Dscp.DB.SQL
@@ -29,21 +33,40 @@ spec_Educator_certificates = specWithTempPostgresServer $ do
         describe "Certificate endpoints" $ do
             it "Can add a certificate" $ educatorPropertyM $ do
                 cert <- pickSmall arbitrary
-                lift $ educatorAddCertificate cert
+                void $ lift $ educatorAddCertificate cert
 
-            it "Added certificate is fetchable" $ educatorPropertyM $ do
+            it "Added certificate is fetchable and verifiable" $ educatorPropertyM $ do
                 cert <- pickSmall arbitrary
 
+                pdf <- lift $ do
+                    void $ educatorAddCertificate cert
+
+                    [crt] <- invoke $ educatorGetCertificates def def
+                    invoke $ educatorGetCertificate $ cId crt
+
+                let pdfBs = Pdf.getPDFBody pdf
+                    pdfLen = LBS.length pdfBs
+
+                flippedByteIdx <- pickSmall $ choose (0, pdfLen - 1)
+                let badPdf = Pdf.PDFBody $
+                        pdfBs & ix flippedByteIdx %~ complement
+
                 lift $ do
-                    educatorAddCertificate cert
-
-                    [cId -> certId] <- invoke $ educatorGetCertificates def def
-                    pdf <- invoke $ educatorGetCertificate certId
-
                     void updateMempoolWithPublications
                     checkRes <- checkFairCVPDF pdf
-                    return $ counterexample "FairCV is not verified" $
-                             fairCVFullyValid $ fcacrCheckResult checkRes
+                    checkResBad <- do
+                        let handler e = case (e :: WitnessAPIError) of
+                                InvalidFormat -> return False
+                                _             -> throwM e
+
+                        (fairCVFullyValid . fcacrCheckResult <$> checkFairCVPDF badPdf)
+                            `catch` handler
+
+                    let positive = counterexample "FairCV is not verified" $
+                                   fairCVFullyValid $ fcacrCheckResult checkRes
+                        negative = counterexample "Bad FairCV is verified" $
+                                   not checkResBad
+                    return $ positive .&&. negative
 
             it "Sorting certificates on creation day works" $ educatorPropertyM $ do
                 n <- pick $ choose (0, 5)
