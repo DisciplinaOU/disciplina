@@ -1,8 +1,8 @@
 module FaircvClient where
 
 import Data.Traversable (for)
+import Servant.Util (fullContent, noFilters, noSorting)
 
-import Data.Default (def)
 import Dscp.Core
 import Dscp.Crypto
 import Dscp.Educator.Web.Student
@@ -18,7 +18,7 @@ data InvalidProofs = InvalidProofs deriving (Show, Exception)
 -- | Get all proofs since given time.
 getProofs :: StudentApiClientNoAuth -> IO [MerkleProof PrivateTx]
 getProofs sc = do
-    rawProofs <- sGetProofs sc False def
+    rawProofs <- sGetProofs sc False noFilters
     nothingToThrow InvalidProofs $ mapM zipProof rawProofs
 
 zipProof :: BlkProofInfo -> Maybe (MerkleProof PrivateTx)
@@ -39,7 +39,7 @@ mergeFairCVList (fcv:fcvs) =
 
 getAssignments :: StudentApiClientNoAuth -> IO [AssignmentStudentInfo]
 getAssignments sc = do
-    hashes <- map aiHash <$> sGetAssignments sc False def def def
+    hashes <- map aiHash <$> sGetAssignments sc False noFilters noSorting fullContent
     for hashes $ sGetAssignment sc
 
 makeRandomSubmissionForAssignment :: SecretKey -> Hash Assignment -> IO NewSubmission
@@ -67,7 +67,7 @@ sendSubmission sc sub = do
 
 getAllCourses :: StudentApiClientNoAuth -> IO [Course]
 getAllCourses sc = do
-    map ciId <$> sGetCourses sc False def def def
+    map ciId <$> sGetCourses sc False noFilters noSorting fullContent
 
 
 getFairCV :: IO FairCV
