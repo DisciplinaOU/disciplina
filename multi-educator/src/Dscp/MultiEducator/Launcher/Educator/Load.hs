@@ -11,7 +11,7 @@ other stuff associated with the context; once this thread is killed,
 corresponding context is destroyed.
 
 
-Prepared context is put into `EducatorContextUsersVar` state.
+Prepared context is put into state.
 In total, this state is updated 4 times during lifecycle of the context:
 
 1. @Nothing -> Just YetLoadingEducatorContext@ - happens when the first request
@@ -26,12 +26,12 @@ termination initiated. Further we kill all context users, release resources,
 stop workers.
 
 4. @Just TerminatingEducatorContext -> Nothing@ - context is fully removed, now
-one another context can be created for this educator.
+one another context can be created for this educator when needed.
 
 
 We account all context users (e.g. a thread corresponding to request to server)
 so that when the context is terminated we perform an attempt to kill those users
-gently (compare to suddenly getting error about closed database connection).
+gently (compare to suddenly getting an error about closed database connection).
 
 -}
 module Dscp.MultiEducator.Launcher.Educator.Load
@@ -77,6 +77,8 @@ type FillingEducatorContext m =
 -- | Exception indicating that multi-educator is about to stop and does not
 -- accept further requests.
 -- TODO: consider it not as 500 internal on server?
+-- TODO: this exception is thrown as async one - it won't be even caught by server
+-- and thus won't be interpreted sanely anyway without special care.
 data MultiEducatorIsTerminating = MultiEducatorIsTerminating
     deriving (Show)
 
@@ -119,7 +121,7 @@ forgetUser educatorId (void -> actionAsync) = do
     ctxs <- atomically $ readTVar educatorContexts
     -- If the context has been terminated, then we do not care about deleting,
     -- it is being done for us.
-    -- For the same reasons we do nothing when the context is not (already) loaded.
+    -- For the same reason we do nothing when the context is not (already) loaded.
     let mCtxVar = ctxs ^? _ActiveEducatorContexts . ix educatorId
     whenJust mCtxVar $ \ctxVar ->
         atomically . modifyTVarS ctxVar $
@@ -134,14 +136,17 @@ disperseUsers
 disperseUsers users exc = do
     forConcurrently_ users $ \user -> do
         res <-
-            boundExecution (sec 3) "Educator context user waiting" $
+            boundExecution (sec 1) "Educator context user waiting" $
             wait user
         whenNothing res $
             boundExecution_ (sec 1) "Educator context user termination" $
             cancelWith user exc
 
--- | Reads a ready context from state or creates a new one and takes a lock
--- if it does not exist yet (and returns @Left@ or @Right@ correspondingly).
+        -- remember that total multi-educator resources shutdown duration
+        -- is limited, we should fit into it above
+
+-- | Reads ready context from state or creates a new one and takes a lock
+-- if it does not exist yet (returning @Left@ or @Right@ correspondingly).
 -- If a context was present, we also update it in-place to reduce number of
 -- state touches.
 getContextOrLock
@@ -297,7 +302,7 @@ lookupEducator educatorAuthLogin userAsync = do
                 contextKeeper <- mfix $ \contextKeeper ->
                     fmap EducatorContextKeeper $
                     async $ serveEducatorContext (fillingContext contextKeeper) educatorAuthLogin
-                              `finally` (cleanLockedContext educatorId)
+                              `finally` cleanLockedContext educatorId
 
                 waitForContextLoad ctxVar contextKeeper
 
@@ -305,7 +310,7 @@ lookupEducator educatorAuthLogin userAsync = do
 withSingleEducator
     :: MultiEducatorWorkMode ctx m
     => EducatorAuthLogin -> E.EducatorRealMode a -> m a
-withSingleEducator educatorAuthLogin action = do
+withSingleEducator educatorAuthLogin action =
     bracket prepare terminate wait
   where
     prepare = mfix $ \actionAsync -> do
@@ -314,10 +319,14 @@ withSingleEducator educatorAuthLogin action = do
     terminate actionAsync =
         forgetUser (ealId educatorAuthLogin) actionAsync
 
--- | Synchronously unload educator context waiting for requests to server
+-- | Unload educator context waiting for requests to server
 -- to complete and releasing all associated resources.
--- You have to provide an exception used to kill all the current users if
--- they are unresponsive.
+--
+-- This operation is synchronous, idempotent and thread-safe.
+--
+-- You have to provide an exception used to kill all the current users in
+-- case if their execution takes too long (and this should be semantically sane
+-- exception - it may be thrown by multieducator server).
 unloadEducator
     :: (MonadUnliftIO m, MonadLogging m, Exception e)
     => e -> EducatorContextKeeper -> m ()

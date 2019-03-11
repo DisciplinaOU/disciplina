@@ -1,5 +1,3 @@
-{-# LANGUAGE OverloadedLists #-}
-
 module Dscp.MultiEducator.Workers
     ( multiEducatorWorkers
     ) where
@@ -33,15 +31,13 @@ multiEducatorWorkers =
 -- | Exception used to kill users of expired contexts.
 -- Well, as you can guess this should never occur to be thrown eventually.
 data TerminatedByContextsCleaner = TerminatedByContextsCleaner
-
 instance Show TerminatedByContextsCleaner where
     show _ = "Thread terminated by contexts cleaner"
-
 instance Exception TerminatedByContextsCleaner
 
 expiredEducatorContextsCleaner :: MultiEducatorWorkMode ctx m => Client m
 expiredEducatorContextsCleaner =
-    simpleWorker "expiredEducatorsUnload" $ do
+    simpleWorker "expiredEducatorsUnload" $
         handleTerminatedException . forever $ cleanup >> nap
   where
     expiryDuration = multiEducatorConfig ^. sub #educator . option #contextExpiry
@@ -96,8 +92,7 @@ expiredEducatorContextsCleaner =
             -- would potentially cause too high contention.
             -- So we keep all 'atomically' blocks no more than constant-size in time.
 
-        lastActivities <- forM ctxs $ \ctxVar -> do
-            atomically $ lastActivity <$> readTVar ctxVar
+        lastActivities <- forM ctxs $ fmap lastActivity . readTVarIO
 
         let nextExpiry = timeAdd expiryDuration (minimum @(NonEmpty _) lastActivities)
         let tillNextExpiry = nextExpiry `timeDiffNonNegative` curTime

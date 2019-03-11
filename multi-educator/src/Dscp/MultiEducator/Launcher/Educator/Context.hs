@@ -16,8 +16,10 @@ import UnliftIO.Async (Async)
 import qualified Dscp.Educator.Config as E
 import qualified Dscp.Educator.Launcher.Mode as E
 
+-- | Set of handlers to threads which currently use the context.
 type EducatorContextUsers = Set (Async ())
 
+-- | Handler to resources keeping thread.
 newtype EducatorContextKeeper = EducatorContextKeeper (Async Void)
 
 -- | Context and related stuff of a single educator.
@@ -27,15 +29,15 @@ data LoadedEducatorContext where
         => { lecCtx :: E.EducatorContext
              -- ^ The context itself.
            , lecContextKeeper :: EducatorContextKeeper
-             -- ^ Handler to context and resources keeping thread.
+             -- ^ Handler to resources keeping thread.
            , lecLastActivity :: Timestamp
              -- ^ Last user request time.
            , lecUsers :: EducatorContextUsers
              -- ^ Threads which take use of the context currently.
            , lecNoFurtherUsers :: Bool
-             -- ^ Whether new context users are allowed.
-             -- You may set this to @True@ upon context termination if
-             -- only STM context is yet available.
+             -- ^ Whether new context users are prohibited.
+             -- You may set this to @True@ upon context termination
+             -- within STM to provide some atomicity guarantees.
            }
         -> LoadedEducatorContext
 
@@ -43,7 +45,7 @@ lecUsersL :: Lens' LoadedEducatorContext EducatorContextUsers
 lecUsersL = lens lecUsers (\ctx usrs -> ctx{ lecUsers = usrs })
 
 data MaybeLoadedEducatorContext
-      -- | Educator context is getting prepared.
+      -- | Educator context is yet being loaded.
     = YetLoadingEducatorContext
       -- | Educator context has been loaded.
     | FullyLoadedEducatorContext LoadedEducatorContext
