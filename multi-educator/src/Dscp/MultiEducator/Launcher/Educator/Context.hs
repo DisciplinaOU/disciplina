@@ -1,8 +1,10 @@
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE StrictData #-}
 
 module Dscp.MultiEducator.Launcher.Educator.Context
-    ( EducatorContextUsers
-    , EducatorContextKeeper (..)
+    ( EducatorContextKeeper (..)
+    , EducatorContextUser (..)
+    , toEducatorContextUser
     , LoadedEducatorContext (..)
     , MaybeLoadedEducatorContext (..)
     , _FullyLoadedEducatorContext
@@ -16,11 +18,16 @@ import UnliftIO.Async (Async)
 import qualified Dscp.Educator.Config as E
 import qualified Dscp.Educator.Launcher.Mode as E
 
--- | Set of handlers to threads which currently use the context.
-type EducatorContextUsers = Set (Async ())
-
 -- | Handler to resources keeping thread.
-newtype EducatorContextKeeper = EducatorContextKeeper (Async Void)
+data EducatorContextKeeper = EducatorContextKeeper ~(Async Void)
+
+-- | Handler to some thread using educator context.
+data EducatorContextUser = EducatorContextUser ~(Async ())
+    deriving (Eq, Ord)
+
+-- | Turn a thread handler into 'EducatorContextUser'.
+toEducatorContextUser :: Async a -> EducatorContextUser
+toEducatorContextUser = EducatorContextUser . void
 
 -- | Context and related stuff of a single educator.
 data LoadedEducatorContext where
@@ -32,7 +39,7 @@ data LoadedEducatorContext where
              -- ^ Handler to resources keeping thread.
            , lecLastActivity :: Timestamp
              -- ^ Last user request time.
-           , lecUsers :: EducatorContextUsers
+           , lecUsers :: Set EducatorContextUser
              -- ^ Threads which take use of the context currently.
            , lecNoFurtherUsers :: Bool
              -- ^ Whether new context users are prohibited.
@@ -41,7 +48,7 @@ data LoadedEducatorContext where
            }
         -> LoadedEducatorContext
 
-lecUsersL :: Lens' LoadedEducatorContext EducatorContextUsers
+lecUsersL :: Lens' LoadedEducatorContext (Set EducatorContextUser)
 lecUsersL = lens lecUsers (\ctx usrs -> ctx{ lecUsers = usrs })
 
 data MaybeLoadedEducatorContext

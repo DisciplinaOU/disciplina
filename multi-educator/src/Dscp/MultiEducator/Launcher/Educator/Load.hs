@@ -111,11 +111,12 @@ onTerminatedDoNothing = zoom _ActiveEducatorContexts
 
 -- | Remember a thread using this context.
 rememberUser :: Async a -> LoadedEducatorContext -> LoadedEducatorContext
-rememberUser (void -> userAsync) = lecUsersL %~ S.insert userAsync
+rememberUser (toEducatorContextUser -> userAsync) =
+    lecUsersL %~ S.insert userAsync
 
 -- | Forget about a completed thread which used this context.
 forgetUser :: MultiEducatorWorkMode ctx m => EducatorUUID -> Async a -> m ()
-forgetUser educatorId (void -> actionAsync) = do
+forgetUser educatorId (toEducatorContextUser -> actionAsync) = do
     educatorContexts <- view $ lensOf @MultiEducatorResources . merEducatorData
 
     ctxs <- atomically $ readTVar educatorContexts
@@ -132,9 +133,9 @@ forgetUser educatorId (void -> actionAsync) = do
 -- This operation is synchronous, idempotent and thread-safe.
 disperseUsers
     :: (MonadUnliftIO m, MonadLogging m)
-    => EducatorContextUsers -> SomeException -> m ()
+    => Set EducatorContextUser -> SomeException -> m ()
 disperseUsers users exc = do
-    forConcurrently_ users $ \user -> do
+    forConcurrently_ users $ \(EducatorContextUser user) -> do
         res <-
             boundExecution (sec 1) "Educator context user waiting" $
             wait user
@@ -294,7 +295,7 @@ lookupEducator educatorAuthLogin userAsync = do
                             LoadedEducatorContext
                             { lecCtx = ctx
                             , lecLastActivity = curTime
-                            , lecUsers = S.singleton (void userAsync)
+                            , lecUsers = S.singleton (toEducatorContextUser userAsync)
                             , lecContextKeeper = contextKeeper
                             , lecNoFurtherUsers = False
                             }
