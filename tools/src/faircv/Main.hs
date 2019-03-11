@@ -1,10 +1,10 @@
 import Data.Aeson
 import Fmt ((+|), (|+))
 import Servant.Client
+import Servant.Util (fullContent, noFilters, noSorting)
 import Test.QuickCheck
 import Time.Units (threadDelay)
 
-import Data.Default (def)
 import Loot.Log
 
 import Dscp.Core
@@ -60,7 +60,7 @@ main = do
                 _         -> threadDelay refreshRate >> waitForProofs (info:infos)
 
     -- Get all the available assignments for this student
-    assLst <- sGetAssignments sClient False def def def
+    assLst <- sGetAssignments sClient False noFilters noSorting fullContent
     -- Show a warning when there are not enough assignments available
     let assNum = length assLst
     when (assignmentNum > assNum) $ logWarning $
@@ -71,7 +71,7 @@ main = do
     -- Wait for the proofs to be available, then get them and make a faircv
     logInfo "Submissions sent, waiting for proofs"
     waitForProofs subInfos
-    proofs <- sGetProofs sClient False def
+    proofs <- sGetProofs sClient False noFilters
 
     fcvrs <- mapM (blkToFairCV addrS "John Doe" addr) proofs
     fcv <- unReadyFairCV <$> leftToFail (mergeFairCVList fcvrs)
