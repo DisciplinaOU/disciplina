@@ -106,6 +106,11 @@ instance FromJSON MultiEducatorPublicKey where
         toDscpPubKey = onCryptoFailure (error . show) AbstractPK . toCryptoPubKey
         toCryptoPubKey (Base64Octets rpk) = publicKey rpk
 
+instance IsClientAuth MultiEducatorAuth where
+    data ClientAuthData MultiEducatorAuth
+        = MultiEducatorBearerToken Text
+        -- Use Authorization:Bearer\ eyJhbGciOiJFZERTQSIsImp3ayI6eyJjcnYiOiJFZDI1NTE5Iiwia3R5IjoiT0tQIiwieCI6IjJnU055MndLU2FJNFl0R1plX0VheHNkdl9CTENmaTVra1Q5eHZ4dF9PMGsifSwidHlwIjoiSldUIn0.eyJkYXRhIjp7ImVtYWlsIjoidGVzdEBkZXZlbG9wZXIuY29tIiwiaWQiOiI5MWJjYTFmNS1hZWE4LTQyOTItODA5YS0wZTQ0NDcxOTJhNWYifSwiZXhwIjoxNTUyOTE0OTgwfQ.l4r_E7LC374UkBCsR367Q6i8UV1Ed15_JiIgCxoHwceRIgpapa3CNdpnDkLot0jlDZU5-5lo-a8fBddlm3K_Ag
+
 ---------------------------------------------------------------------------
 -- Helpers
 ---------------------------------------------------------------------------
