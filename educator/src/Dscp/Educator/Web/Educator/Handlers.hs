@@ -5,7 +5,6 @@ module Dscp.Educator.Web.Educator.Handlers
        , convertEducatorApiHandler
        ) where
 
-import Data.Default (def)
 import Servant (Handler)
 import UnliftIO (UnliftIO (..))
 
@@ -31,8 +30,8 @@ educatorApiHandlers =
 
       -- Students
 
-    , eGetStudents = \mCourse _mIsEnrolled onlyCount pagination ->
-        fmap (mkCountedList onlyCount) $ invoke $ educatorGetStudents mCourse pagination
+    , eGetStudents = \onlyCount filters pagination ->
+        fmap (mkCountedList onlyCount) $ invoke $ educatorGetStudents filters pagination
 
     , eAddStudent = \(NewStudent student) ->
         void . invoke $ createStudent student
@@ -51,8 +50,8 @@ educatorApiHandlers =
 
       -- Courses
 
-    , eGetCourses = \mStudent onlyCount pagination ->
-        fmap (mkCountedList onlyCount) $ invoke $ educatorGetCourses mStudent pagination
+    , eGetCourses = \onlyCount filters pagination ->
+        fmap (mkCountedList onlyCount) $ invoke $ educatorGetCourses filters pagination
 
     , eAddCourse = \(NewCourse desc subjects) ->
         transact $ createCourse CourseDetails
@@ -66,9 +65,9 @@ educatorApiHandlers =
 
       -- Assignments
 
-    , eGetAssignments = \afCourse afStudent afIsFinal _afSince afOnlyCount pagination ->
+    , eGetAssignments = \afOnlyCount filters pagination ->
             fmap (mkCountedList afOnlyCount) $ invoke $
-            educatorGetAssignments def{ afCourse, afStudent, afIsFinal } pagination
+            educatorGetAssignments filters pagination
 
     , eAddAssignment = \_autoAssign na -> do
         void . transact $ createAssignment (requestToAssignment na)
@@ -76,12 +75,9 @@ educatorApiHandlers =
 
       -- Submissions
 
-    , eGetSubmissions = \sfCourse sfStudent sfAssignmentHash _sfIsGraded _sfSince
-                         sfOnlyCount pagination ->
+    , eGetSubmissions = \sfOnlyCount filters pagination ->
             fmap (mkCountedList sfOnlyCount) $ invoke $
-            educatorGetSubmissions
-                def{ sfCourse, sfStudent, sfAssignmentHash }
-                pagination
+            educatorGetSubmissions filters pagination
 
     , eGetSubmission =
         invoke ... educatorGetSubmission
@@ -91,18 +87,18 @@ educatorApiHandlers =
 
       -- Grades
 
-    , eGetGrades = \course student assignment isFinalF _since onlyCount ->
+    , eGetGrades = \onlyCount filters ->
             fmap (mkCountedList onlyCount) $ invoke $
-            educatorGetGrades course student assignment isFinalF
+            educatorGetGrades filters
 
     , eAddGrade = \(NewGrade subH grade) ->
             transact $ educatorPostGrade subH grade
 
       -- Proofs
 
-    , eGetProofs = \pfCourse pfStudent pfAssignment pfOnlyCount ->
-            fmap (mkCountedList pfOnlyCount) $ transact $
-            commonGetProofs def{ pfCourse, pfStudent, pfAssignment }
+    , eGetProofs = \onlyCount filters ->
+            fmap (mkCountedList onlyCount) $ transact $
+            commonGetProofs filters
 
       -- Certificates
     , eGetCertificates = \sorting pagination onlyCount ->

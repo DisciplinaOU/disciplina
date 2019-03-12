@@ -9,7 +9,7 @@ import Servant.Client (GenResponse (..), ServantError (..))
 import Servant.Generic (AsServerT, fromServant, toServant)
 import Servant.Mock (HasMock (..), mock)
 import Servant.QuickCheck (withServantServerAndContext)
-import Servant.Util (ErrorResponses, PaginationParams, SortingParams, Tag)
+import Servant.Util (ErrorResponses, FilteringParams, PaginationParams, SortingParams, Tag)
 
 import Dscp.Core
 import Dscp.Crypto
@@ -28,6 +28,10 @@ instance (HasMock subApi ctx, HasServer (SortingParams params :> subApi) ctx) =>
 
 instance (HasMock subApi ctx, HasServer (PaginationParams :> subApi) ctx) =>
          HasMock (PaginationParams :> subApi) ctx where
+    mock _ pc _ = mock (Proxy @subApi) pc
+
+instance (HasMock subApi ctx, HasServer (FilteringParams params :> subApi) ctx) =>
+         HasMock (FilteringParams params :> subApi) ctx where
     mock _ pc _ = mock (Proxy @subApi) pc
 
 instance (HasMock subApi ctx, HasServer (Tag name :> subApi) ctx) =>
@@ -77,7 +81,7 @@ withServerClient config action =
 
 -- TODO: Maybe add a "ping" endpoint instead?
 doTrialRequest :: StudentApiClient -> Maybe SecretKeyData -> IO ()
-doTrialRequest cli sk = void $ sGetCourses (cli sk) Nothing False def def
+doTrialRequest cli sk = void $ sGetCourses (cli sk) False def def def
 
 modifyTrialEndpoint
     :: (forall m a. MonadIO m => Student -> m a -> m a)

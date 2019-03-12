@@ -37,7 +37,8 @@ import Loot.Base.HasLens (HasCtx)
 import Loot.Log (ModifyLogName, MonadLogging)
 import qualified Pdf.FromLatex as Pdf
 import Servant (FromHttpApiData (..), ToHttpApiData)
-import Servant.Util (ForResponseLog (..), buildForResponse, buildListForResponse)
+import Servant.Util (type (?:), FilterKind (..), FilteringParamTypesOf, ForResponseLog (..),
+                     ParamDescription, SupportedFilters, buildForResponse, buildListForResponse)
 
 import Dscp.Core
 import Dscp.Crypto
@@ -247,3 +248,34 @@ instance ToSchema GradeInfo where
 
 instance ToSchema BlkProofInfo where
     declareNamedSchema = gDeclareNamedSchema
+
+---------------------------------------------------------------------------
+-- SQL instances
+---------------------------------------------------------------------------
+
+deriving instance HasSqlValueSyntax PgValueSyntax IsGraded
+deriving instance HasSqlEqualityCheck PgExpressionSyntax IsGraded
+
+---------------------------------------------------------------------------
+-- Filtering parameters
+---------------------------------------------------------------------------
+
+type instance SupportedFilters IsEnrolled = SupportedFilters Bool
+
+type instance FilteringParamTypesOf StudentInfo =
+    '[ "course" ?: 'ManualFilter Course ]
+
+type instance FilteringParamTypesOf GradeInfo =
+    [ "course" ?: 'AutoFilter Course
+    , "student" ?: 'AutoFilter Student
+    , "assignment" ?: 'AutoFilter (Hash Assignment)
+    , "isFinal" ?: 'ManualFilter IsFinal
+    , "createdAt" ?: 'AutoFilter Timestamp
+    ]
+
+type instance FilteringParamTypesOf BlkProofInfo =
+    [ "course" ?: 'AutoFilter Course
+    , "student" ?: 'AutoFilter Student
+    , "assignment" ?: 'AutoFilter (Hash Assignment)
+    , "createdAt" ?: 'AutoFilter Timestamp
+    ]
