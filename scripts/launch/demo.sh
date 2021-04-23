@@ -13,7 +13,7 @@ fi
 # Make sure we're using proper version of tmux.
 tmux_actual_version=$(tmux -V | awk '{print $2}')
 # All tmux versions contain two numbers only.
-tmux_proper_versions=("2.3" "2.4" "2.5" "2.6" "2.7" "2.7-rc" "2.8" "master")
+tmux_proper_versions=("2.3" "2.4" "2.5" "2.6" "2.7" "2.7-rc" "2.8" "master" "3.1c")
 checker=""
 for version in "${tmux_proper_versions[@]}"; do
     if [ "${version}" == "${tmux_actual_version}" ]; then

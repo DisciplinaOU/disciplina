@@ -29,7 +29,7 @@ data FaucetApiEndpoints route = FaucetApiEndpoints
         :> Post '[DSON] TransferMoneyResponse
     } deriving (Generic)
 
-type FaucetAPI = "v1" :> ToServant (FaucetApiEndpoints AsApi)
+type FaucetAPI = "api" :> "faucet" :> "v1" :> ToServant (FaucetApiEndpoints AsApi)
 
 type FaucetApiHandlers m = FaucetApiEndpoints (AsServerT m)
 

@@ -13,7 +13,7 @@ import Loot.Log (logInfo)
 import Network.HTTP.Types.Header (hContentType)
 import Network.Wai (Middleware)
 import Network.Wai.Middleware.Cors (CorsResourcePolicy (..), cors, simpleCorsResourcePolicy)
-import Servant ((:>), Handler, Server, StdMethod (..), hoistServer, serve)
+import Servant (Handler, Server, StdMethod (..), hoistServer, serve)
 import Servant.Generic (toServant)
 import Servant.Util (LoggingApi, methodsCoveringAPI)
 
@@ -24,8 +24,6 @@ import Dscp.Faucet.Web.API (FaucetAPI, faucetAPI)
 import Dscp.Faucet.Web.Handlers (convertFaucetApiHandler, faucetApiHandlers)
 import Dscp.Web (serveWeb)
 import Dscp.Web.Server (buildServantLogConfig)
-
-type FaucetWebAPI = "api" :> "faucet" :> FaucetAPI
 
 mkFaucetApiServer
     :: forall ctx m. FaucetWorkMode ctx m
@@ -40,7 +38,7 @@ faucetCors = cors $ const $ Just $
     simpleCorsResourcePolicy
     { -- We use @Access-Control-Allow-Origin: *@ as soon as API is public.
       corsOrigins = Nothing
-    , corsMethods = methodsCoveringAPI @['GET, 'POST] @FaucetWebAPI
+    , corsMethods = methodsCoveringAPI @['GET, 'POST] @FaucetAPI
     , corsRequestHeaders = [hContentType]
     }
 
@@ -54,5 +52,4 @@ serveFaucetAPIReal = do
     serveWeb spAddr $
         faucetCors $
         reify lc $ \(_ :: Proxy lc) ->
-            serve (Proxy @(LoggingApi lc FaucetWebAPI)) faucetApiServer
-            $> error "Faucet server terminated early"
+            serve (Proxy @(LoggingApi lc FaucetAPI)) faucetApiServer
