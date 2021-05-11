@@ -12,6 +12,7 @@ import Data.Aeson (eitherDecodeStrict')
 import Loot.Config (OptModParser, uplift, (.::), (.:<), (<*<))
 import Options.Applicative (Parser, eitherReader, help, long, metavar, option, strOption)
 import Servant.Client.Core (BaseUrl, parseBaseUrl)
+import Time (KnownRatName, Time)
 
 import Dscp.CommonCLI
 import Dscp.Educator.CLI
@@ -60,6 +61,12 @@ multiEducatorWebConfigParser =
     #multiEducatorAPINoAuth .:: multiEducatorApiNoAuthParser <*<
     #studentAPINoAuth .:: studentApiNoAuthParser
 
+educatorContextExpiryParser :: KnownRatName unit => Parser (Time unit)
+educatorContextExpiryParser = option timeReadM $
+    long "educator-context-expiry" <>
+    metavar "TIME" <>
+    help "How soon unused educator contexts should be unloaded."
+
 multiEducatorConfigParser :: OptModParser MultiEducatorConfig
 multiEducatorConfigParser =
     uplift witnessConfigParser <*<
@@ -72,5 +79,6 @@ multiEducatorConfigParser =
              (#period .:: publishingPeriodParser
              ) <*<
          #certificates .:<
-            (#resources .:: pdfResourcesPathParser)
+            (#resources .:: pdfResourcesPathParser) <*<
+         #contextExpiry .:: educatorContextExpiryParser
         )

@@ -1,8 +1,11 @@
 -- | Time primitives with emulation support.
 
 module Dscp.Util.Time
-    ( -- * Cababilities
-      TimeActions
+    ( infiniteFuture
+    , timeDiffNonNegative
+
+      -- * Cababilities
+    , TimeActions
     , TestTimeActions
     , HasTime
     , HasTestTime
@@ -21,7 +24,27 @@ import Control.Exception (BlockedIndefinitelyOnSTM (..))
 import Control.Exception.Safe (handle)
 import Data.Time.Clock.POSIX (getPOSIXTime)
 import Loot.Base.HasLens (HasCtx, HasLens', lensOf)
-import Time (KnownRat, Second, Time, Timestamp (..), fromUnixTime, threadDelay, timeAdd, toUnit)
+import Time (KnownRat, Second, Time, Timestamp (..), fromUnixTime, threadDelay, timeAdd, timeDiff,
+             toUnit)
+
+----------------------------------------------------------------------------
+-- Helpers
+----------------------------------------------------------------------------
+
+-- | Moment of time which will never happen, in theory.
+infiniteFuture :: Timestamp
+infiniteFuture = fromUnixTime @Int 4260211200  -- 1 Jan 2105
+
+-- | Substruct timestamps, returning 0 if result is negative.
+timeDiffNonNegative :: Timestamp -> Timestamp -> Time Second
+timeDiffNonNegative t1 t2 =
+    case timeDiff t1 t2 of
+        (GT, d) -> d
+        _       -> 0
+
+----------------------------------------------------------------------------
+-- Capabilities
+----------------------------------------------------------------------------
 
 -- | Basic timing actions.
 data TimeActions = TimeActions

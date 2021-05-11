@@ -55,7 +55,7 @@ mkEducatorApiServer' educatorAuthLogin =
     hoistServerWithContext
         rawEducatorAPI
         (Proxy :: Proxy '[])
-        (\x -> lookupEducator educatorAuthLogin >>= \c -> normalToMulti c x)
+        (withSingleEducator educatorAuthLogin)
         (toServant educatorApiHandlers)
 
 mkMultiEducatorApiServer
@@ -84,7 +84,7 @@ mkStudentApiServer nat host =
         in hoistServerWithContext
                 protectedStudentAPI
                 (Proxy :: Proxy '[StudentCheckAction, NoAuthContext "student"])
-                (\x -> nat $ lookupEducator ealogin >>= \c -> normalToMulti c x)
+                (nat . withSingleEducator ealogin)
                 (\student -> toServant $ studentApiHandlers student)
 
 mkCertificatesApiServer

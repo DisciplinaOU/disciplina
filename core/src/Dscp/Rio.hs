@@ -6,6 +6,7 @@ module Dscp.Rio
     ) where
 
 import Control.Monad.Catch (MonadCatch, MonadMask, MonadThrow)
+import Control.Monad.Fix (MonadFix)
 import Loot.Base.HasLens (HasLens (..))
 import Loot.Log (ModifyLogName (..), MonadLogging (..))
 import Loot.Log.Rio (LoggingIO)
@@ -24,7 +25,7 @@ This also allows us to remorselessly define one global
 -}
 newtype RIO ctx a = RIO { unRIO :: ReaderT ctx IO a }
     deriving (Functor, Applicative, Monad, MonadIO, MonadReader ctx,
-              MonadThrow, MonadCatch, MonadMask, MonadUnliftIO)
+              MonadThrow, MonadCatch, MonadMask, MonadUnliftIO, MonadFix)
 
 runRIO :: MonadIO m => ctx -> RIO ctx a -> m a
 runRIO ctx (RIO act) = liftIO $ runReaderT act ctx
