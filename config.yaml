@@ -120,4 +120,4 @@ alpha:
         - equal: 5
         - specific:
             # faucet
-            3BAyX5pMm4mhu7vVRF7skUXLaBoCwneW5C56YPCAtgMT2eJ7H8YBd3vMVU: 20000000
+            3BAyX5pMm4mhu7vVRF7skUXLaBoCwneW5C56YPCAtgMT2eJ7H8YBd3vMVU: 200000000000
