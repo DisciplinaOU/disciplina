@@ -46,7 +46,7 @@ extra-deps:
     - servant-util-beam-pg
 
 - git: https://github.com/serokell/auth-data-structures.git
-  commit: 4a95f4dd32a82195f49ceb0113c9f05bc260ca7d
+  commit: b04bb2f5b30ebd28f0064a68509b51792e0316b5
 
 - git: https://github.com/serokell/log-warper.git
   commit: 5b3c68fb2c71df45c7589a2ecff011659221d279
