@@ -31,6 +31,7 @@ library:
     - generic-arbitrary
     - gitrev
     - hashable
+    - HList
     - hspec
     - http-types
     - interpolatedstring-perl6
@@ -56,7 +57,9 @@ library:
     - serialise
     - serokell-util
     - servant
+    - servant-auth-server
     - servant-server
+    - servant-client
     - servant-client-core
     - servant-generic
     - servant-util
@@ -71,6 +74,7 @@ library:
     - unliftio
     - unordered-containers
     - vinyl
+    - wai
     - yaml
 
 tests:

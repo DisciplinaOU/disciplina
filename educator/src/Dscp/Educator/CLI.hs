@@ -9,6 +9,7 @@ module Dscp.Educator.CLI
     , noAuthContextParser
     , educatorApiNoAuthParser
     , studentApiNoAuthParser
+    , authTimeoutParser
     , educatorWebConfigParser
     , educatorConfigParser
     , publishingPeriodParser
@@ -26,9 +27,9 @@ import Dscp.Core.Foundation.Educator (ItemDesc (..), toItemDesc)
 import Dscp.DB.SQL
 import Dscp.Educator.Config
 import Dscp.Educator.Launcher.Params (EducatorKeyParams)
-import Dscp.Educator.Web.Auth
 import Dscp.Educator.Web.Bot.Params
 import Dscp.Educator.Web.Config
+import Dscp.Util.Servant.Auth
 import Dscp.Witness.CLI (witnessConfigParser)
 
 postgresParamsParser :: OptModParser PostgresRealParams
@@ -98,6 +99,12 @@ studentApiNoAuthParser = noAuthContextParser . option addressReadM $
          \author, if invalid data is passed authentication will \
          \automatically roll back to no-auth scheme."
 
+authTimeoutParser :: Parser AuthTimeout
+authTimeoutParser = fmap AuthTimeout . option timeReadM $
+    long "auth-timeout" <>
+    metavar "TIME" <>
+    help "Authentication header timeout, in seconds"
+
 educatorKeyParamsParser :: OptModParser EducatorKeyParams
 educatorKeyParamsParser = #keyParams .:< baseKeyParamsParser "educator"
 
@@ -115,7 +122,8 @@ educatorWebConfigParser =
     #serverParams .:< serverParamsParser "Educator" <*<
     #botConfig .:< educatorBotConfigParser <*<
     #educatorAPINoAuth .:: educatorApiNoAuthParser <*<
-    #studentAPINoAuth .:: studentApiNoAuthParser
+    #studentAPINoAuth .:: studentApiNoAuthParser <*<
+    #authTimeout .:: authTimeoutParser
 
 pdfResourcesPathParser :: Parser FilePath
 pdfResourcesPathParser = strOption $

@@ -25,13 +25,13 @@ import Servant.Generic
 import Servant.Util (type ( #: ), ExceptionalResponses)
 
 import Dscp.Core.Foundation.Educator
-import Dscp.Educator.Web.Auth
 import Dscp.Educator.Web.Educator.API
 import Dscp.Educator.Web.Educator.Error
 import Dscp.Educator.Web.Student.API
 import Dscp.MultiEducator.Types
 import Dscp.MultiEducator.Web.Educator.Auth
 import Dscp.Web.Swagger.UI
+import Dscp.Util.Servant.Auth
 import Dscp.Witness.Web.ContentTypes
 
 ---------------------------------------------------------------------------

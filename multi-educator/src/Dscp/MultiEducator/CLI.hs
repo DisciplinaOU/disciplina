@@ -15,10 +15,10 @@ import Servant.Client.Core (BaseUrl, parseBaseUrl)
 
 import Dscp.CommonCLI
 import Dscp.Educator.CLI
-import Dscp.Educator.Web.Auth
 import Dscp.MultiEducator.Config
 import Dscp.MultiEducator.Launcher.Params (MultiEducatorAAAConfig, MultiEducatorKeyParams (..))
 import Dscp.MultiEducator.Web.Educator.Auth (MultiEducatorPublicKey, educatorAuthLoginSimple)
+import Dscp.Util.Servant.Auth
 import Dscp.Witness.CLI (witnessConfigParser)
 
 import qualified Data.ByteString as BS
@@ -58,7 +58,8 @@ multiEducatorWebConfigParser :: OptModParser MultiEducatorWebConfig
 multiEducatorWebConfigParser =
     #serverParams .:< serverParamsParser "Educator" <*<
     #multiEducatorAPINoAuth .:: multiEducatorApiNoAuthParser <*<
-    #studentAPINoAuth .:: studentApiNoAuthParser
+    #studentAPINoAuth .:: studentApiNoAuthParser <*<
+    #authTimeout .:: authTimeoutParser
 
 multiEducatorConfigParser :: OptModParser MultiEducatorConfig
 multiEducatorConfigParser =

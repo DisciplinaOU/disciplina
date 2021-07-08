@@ -19,7 +19,6 @@ import Crypto.PubKey.Ed25519 (publicKey)
 import Data.Aeson (FromJSON (..), ToJSON (..), decodeStrict)
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
-import Data.Time.Clock (addUTCTime, getCurrentTime)
 import Fmt (build, (+||), (||+))
 import Servant.Auth.Server (AuthCheck, FromJWT, ToJWT)
 import Servant.Auth.Server.Internal.Class (IsAuth (..))
@@ -29,6 +28,7 @@ import Dscp.Crypto
 import Dscp.Educator.Web.Auth
 import Dscp.MultiEducator.Types
 import Dscp.Util.FileEmbed
+import Dscp.Util.Servant.Auth
 
 import qualified Data.ByteArray as BA
 
@@ -88,7 +88,7 @@ newtype MultiEducatorPublicKey = MultiEducatorPublicKey PublicKey
     deriving (Show, Eq)
 
 instance IsAuth MultiEducatorAuth EducatorAuthLogin where
-    type AuthArgs MultiEducatorAuth = '[MultiEducatorPublicKey]
+    type AuthArgs MultiEducatorAuth = '[MultiEducatorPublicKey, AuthTimeout]
     runAuth _ _ = multiEducatorAuthCheck
 
 -- We cannot implement 'IsClientAuth' since for that we would need
@@ -111,16 +111,15 @@ instance FromJSON MultiEducatorPublicKey where
 ---------------------------------------------------------------------------
 
 -- | Checks the signature of the JWT and returns an 'EducatorAuthLogin'
-multiEducatorAuthCheck :: MultiEducatorPublicKey -> AuthCheck EducatorAuthLogin
-multiEducatorAuthCheck (MultiEducatorPublicKey mpk) = do
+multiEducatorAuthCheck :: MultiEducatorPublicKey -> AuthTimeout -> AuthCheck EducatorAuthLogin
+multiEducatorAuthCheck (MultiEducatorPublicKey mpk) authTimeout = do
     request <- ask
     ealToken <- maybe mempty pure $ authBearerToken request
     (pk, payload) <- checkJWitness
     educatorAuthToken <- maybe mempty pure $ decodeStrict payload
     -- Check expiration time
-    currentTime <- liftIO getCurrentTime
     let NumericDate expirationTime = eatExp educatorAuthToken
-    guard (currentTime < addUTCTime authTimeout expirationTime)
+    checkAuthTime expirationTime (Just authTimeout)
     -- Remember about timing attacks
     guard (pk `constTimeEq` mpk)
     let ealData = eatData educatorAuthToken

@@ -18,11 +18,11 @@ import Servant.Util (type ( #: ), ExceptionalResponses, PaginationParams, Sortin
 
 import qualified Dscp.Core as Core
 import Dscp.Crypto (Hash)
-import Dscp.Educator.Web.Auth
 import Dscp.Educator.Web.Student.Auth
 import Dscp.Educator.Web.Student.Error (DSON, StudentAPIError)
 import Dscp.Educator.Web.Student.Types
 import Dscp.Educator.Web.Types
+import Dscp.Util.Servant.Auth
 import Dscp.Web.Swagger
 
 data StudentApiEndpoints route = StudentApiEndpoints

@@ -139,7 +139,7 @@ getBlockInfo hh = runSdMLocked $
 getAccountInfo :: WitnessWorkMode ctx m => Address -> Bool -> m AccountInfo
 getAccountInfo address includeTxs = readingSDLock $ do
     account <- runSdDual $ fromMaybe def <$> getAccountMaybe address
-    -- TODO: remove this, same info can be found in an another place
+    -- TODO [DSCP-505]: remove this, same info can be get from the `transaction` endpoint
     txs <- if includeTxs
         then runSdMLocked $ Just <$> getAccountTxs address
         else return Nothing

@@ -16,6 +16,7 @@ import Dscp.Snowdrop.BlockMetaValidation
 import Dscp.Snowdrop.Configuration
 import Dscp.Snowdrop.Mode
 import Dscp.Snowdrop.PublicationValidation
+import Dscp.Util.Time
 import Dscp.Witness.Config
 
 ----------------------------------------------------------------------------
@@ -96,8 +97,7 @@ simpleBlkConfiguration = SD.BlkConfiguration
     , bcBlkVerify    = verifiers
     , bcIsBetterThan = isBetterThan
     , bcMaxForkDepth = 10 -- max possible fork is 10 blocks
-    , bcValidateFork = \_osParams _proposedChain -> True
-    -- TODO ^ check that all headers are from slots which preceed current time
+    , bcValidateFork = validateFork
     }
   where
     isBetterThan (SD.OldestFirst proposedChain) (SD.OldestFirst currentChain) = length currentChain < length proposedChain
@@ -107,3 +107,10 @@ simpleBlkConfiguration = SD.BlkConfiguration
         | otherwise        = Just h
 
     verifiers = mempty  -- we validate everything in 'BlockMetaTx' processing.
+
+    -- This makes sure that every header is from a slot preceeding current time
+    validateFork osParams (SD.OldestFirst proposedChain) =
+        all (\header -> hSlotId header < curTimeSlotId osParams) proposedChain
+
+    curTimeSlotId :: SD.OSParams -> SlotId
+    curTimeSlotId = slotFromMcs . utcTimeToMcs . SD.currentTime

@@ -114,6 +114,7 @@ getBalance wc sendEvent address = do
 
 getTxHistory :: WitnessClient -> SendEvent -> Address -> IO [GTx]
 getTxHistory wc sendEvent address = do
+    -- TODO [DSCP-505] this should use `wGetTransactions` instead of `wGetAccount`
     res <- map wbiItem . fromMaybe [] . aiTransactions <$> wGetAccount wc address True
     sendLogEvent sendEvent $
         "Tx history for " <> pretty address <> ": " <> pretty (length res) <> " entries"

@@ -13,9 +13,9 @@ import Servant.Util (ErrorResponses, PaginationParams, SortingParams, Tag)
 
 import Dscp.Core
 import Dscp.Crypto
-import Dscp.Educator.Web.Auth
 import Dscp.Educator.Web.Student
 import Dscp.Util.Test
+import Dscp.Util.Servant.Auth
 import Dscp.Web.Class
 
 import Test.Dscp.Educator.Web.Instances ()
@@ -73,7 +73,7 @@ withServerClient config action =
         | otherwise = NoAuthOffContext :: NoAuthContext "student"
     noAuthStudent = detGen 5643 arbitrary
     studentCheckAction = StudentCheckAction (\_ -> return True)
-    ctx = studentCheckAction :. noAuthCtx :. EmptyContext
+    ctx = studentCheckAction :. noAuthCtx :. defaultAuthTimeout :. EmptyContext
 
 -- TODO: Maybe add a "ping" endpoint instead?
 doTrialRequest :: StudentApiClient -> Maybe SecretKeyData -> IO ()

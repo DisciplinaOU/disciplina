@@ -29,6 +29,7 @@ import Dscp.Educator.Launcher.Params
 import Dscp.Educator.Web.Config
 import Dscp.Resource.Keys
 import Dscp.Util
+import Dscp.Util.Servant.Auth
 import Dscp.Witness.Config
 
 type EducatorConfig = WitnessConfig ++
@@ -62,6 +63,7 @@ defaultEducatorConfig = upcast defaultWitnessConfig
     & sub #educator . sub #db .~ defaultPostgresRealParams
     & sub #educator . sub #keys . sub #keyParams .~ defaultBaseKeyParams
     & sub #educator . sub #api . sub #botConfig . tree #params . selection ?~ "disabled"
+    & sub #educator . sub #api . option #authTimeout ?~ defaultAuthTimeout
     & sub #educator . sub #certificates . option #latex ?~ "xelatex"
     & sub #educator . sub #certificates . option #downloadBaseUrl ?~ defBaseUrl
     & sub #educator . sub #certificates . sub #issuer . option #id ?~ "Principal"

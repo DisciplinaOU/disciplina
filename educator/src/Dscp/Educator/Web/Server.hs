@@ -26,7 +26,6 @@ import Dscp.DB.SQL
 import Dscp.Educator.Config
 import Dscp.Educator.DB (existsStudent)
 import Dscp.Educator.Launcher.Mode (EducatorNode, EducatorWorkMode)
-import Dscp.Educator.Web.Auth
 import Dscp.Educator.Web.Bot
 import Dscp.Educator.Web.Educator (EducatorPublicKey (..), FullEducatorAPI,
                                    convertEducatorApiHandler, educatorApiHandlers,
@@ -37,6 +36,7 @@ import Dscp.Educator.Web.Student (FullStudentAPI, StudentCheckAction (..), conve
 import Dscp.Educator.Web.Student.Auth (mkStudentActionM)
 import Dscp.Educator.Web.Student.Swagger
 import Dscp.Resource.Keys (KeyResources, krPublicKey)
+import Dscp.Util.Servant.Auth
 import Dscp.Web (buildServantLogConfig, serveWeb)
 import Dscp.Web.Metrics (responseTimeMetric)
 import Dscp.Web.Swagger.UI
@@ -59,7 +59,7 @@ mkEducatorApiServer nat host =
     withSwaggerUI protectedEducatorAPI (educatorAPISwagger (Just host)) $
         hoistServerWithContext
             protectedEducatorAPI
-            (Proxy :: Proxy '[EducatorPublicKey, NoAuthContext "educator"])
+            (Proxy :: Proxy '[EducatorPublicKey, NoAuthContext "educator", AuthTimeout])
             nat
             (\() -> toServant educatorApiHandlers)
 
@@ -95,7 +95,7 @@ mkStudentApiServer nat host botConfig = case botConfig ^. tree #params . selecti
         withSwaggerUI Proxy (studentAPISwagger (Just host)) $
             hoistServerWithContext
                 protectedStudentAPI
-                (Proxy :: Proxy '[StudentCheckAction, NoAuthContext "student"])
+                (Proxy :: Proxy '[StudentCheckAction, NoAuthContext "student", AuthTimeout])
                 nat
                 (\student -> toServant $ handlers student)
 
@@ -117,6 +117,7 @@ serveEducatorAPIsReal withWitnessApi = do
         botConfig         = webCfg ^. sub #botConfig
         educatorAPINoAuth = webCfg ^. option #educatorAPINoAuth
         studentAPINoAuth  = webCfg ^. option #studentAPINoAuth
+        authTimeout       = webCfg ^. option #authTimeout
     unliftIO <- askUnliftIO
 
     educatorKeyResources <- view (lensOf @(KeyResources EducatorNode))
@@ -128,7 +129,7 @@ serveEducatorAPIsReal withWitnessApi = do
     let educatorPublicKey = EducatorPublicKey $ educatorKeyResources ^. krPublicKey
     let srvCtx = educatorPublicKey :. educatorAPINoAuth :.
                  studentCheckAction :. studentAPINoAuth :.
-                 EmptyContext
+                 authTimeout :. EmptyContext
 
     logInfo $ "Serving Student API on "+|serverAddress|+""
     lc <- buildServantLogConfig (<> "web")
