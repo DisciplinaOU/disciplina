@@ -33,19 +33,19 @@ import Dscp.Web.Types
 
 -- | Error resulting from requests made to a third-party service
 data ThirdPartyRequestError
-    = NonPositiveStatusCodeError Int
-    | NonDecodableResponseError String
+    = NonPositiveStatusCodeError ~Int
+    | NonDecodableResponseError ~String
     deriving (Show, Eq, Generic)
 
 instance Exception ThirdPartyRequestError
 
 -- | Any error backend may return.
 data EducatorAPIError
-    = SomeDomainError DomainError
+    = SomeDomainError ~DomainError
       -- ^ Something not found or already exists.
-    | SomeGeneralBackendError GeneralBackendError
+    | SomeGeneralBackendError ~GeneralBackendError
       -- ^ Common backend errors.
-    | SomeThirdPartyRequestError ThirdPartyRequestError
+    | SomeThirdPartyRequestError ~ThirdPartyRequestError
       -- ^ Errors from requests to third-party services
     deriving (Show, Eq, Generic)
 

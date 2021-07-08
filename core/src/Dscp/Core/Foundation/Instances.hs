@@ -5,6 +5,7 @@ module Dscp.Core.Foundation.Instances where
 import Codec.Serialise (Serialise (..))
 import Codec.Serialise.Decoding (decodeListLen, decodeWord)
 import Codec.Serialise.Encoding (encodeListLen, encodeWord)
+import Data.Coerce (coerce)
 import Data.Time.Calendar (Day (..))
 
 import Dscp.Core.Foundation.Coin
@@ -32,12 +33,28 @@ instance HasId PrivateBlock where
 
 -- | Transactions
 instance Serialise PrivateTx
+instance Serialise PrivateGrade
+instance Serialise PrivateCertification
 instance Serialise PrivateTxWitness
 instance Serialise PrivateTxAux
+instance Serialise GradingScale
+instance Serialise CertificateGrade
+instance Serialise SignedCertificateGrade
+instance Serialise Language
+
+instance HasId PrivateGrade where
+    type Id PrivateGrade = Hash PrivateGrade
+    getId = hash
+
+instance HasId PrivateCertification where
+    type Id PrivateCertification = Hash PrivateCertification
+    getId = hash
 
 instance HasId PrivateTx where
     type Id PrivateTx = Hash PrivateTx
-    getId = hash
+    getId = \case
+        PrivateTxGrade         grade -> coerce (getId grade)
+        PrivateTxCertification cert  -> coerce (getId cert)
 
 -- TODO: move to well-specified serialisation instead of generic one.
 deriving instance Serialise Course
@@ -62,6 +79,7 @@ instance Serialise Day where
     decode = ModifiedJulianDay <$> decode
 
 instance Serialise EducationForm
+instance Serialise CertificateFullInfo
 instance Serialise CertificateMeta
 
 instance HasId CertificateMeta where
@@ -69,8 +87,8 @@ instance HasId CertificateMeta where
     getId = hash
 
 instance HasId CertificateFullInfo where
-    type Id CertificateFullInfo = Id CertificateMeta
-    getId = getId . cfiMeta
+    type Id CertificateFullInfo = Hash CertificateFullInfo
+    getId = hash
 
 instance Serialise Submission where
     encode (Submission s c a) = mconcat

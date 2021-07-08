@@ -94,9 +94,9 @@ import Dscp.Util
 
 -- | Carries all data related to a secret key, evaluating it lazily.
 data SecretKeyData = SecretKeyData
-    { skSecret  :: !SecretKey
-    , skPublic  :: PublicKey
-    , skAddress :: Address
+    { skSecret  :: SecretKey
+    , skPublic  :: ~PublicKey
+    , skAddress :: ~Address
     } deriving (Show)
 
 instance Eq SecretKeyData where

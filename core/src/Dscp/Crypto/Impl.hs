@@ -29,11 +29,17 @@ module Dscp.Crypto.Impl
        , unsafeSign
        , verify
        , unsafeVerify
-       , Signed (..)
+
+         -- * Evenlope with a sign
+       , Signed, sgMessage, sgSignature, sgPublicKey
+       , signed
+       , unsign
 
          -- * Other
        , Raw
        ) where
+
+import Control.Lens (makeLenses)
 
 import Crypto.Error (CryptoFailable (..))
 import Crypto.Hash (digestFromByteString)
@@ -144,18 +150,42 @@ verify = abstractVerify
 unsafeVerify :: HasSignature a => PublicKey -> a -> Signature b -> Bool
 unsafeVerify = unsafeAbstractVerify
 
-data Signed msg = Signed
-    { sgMessage   :: msg
-    , sgPublicKey :: PublicKey
-    , sgSignature :: Signature msg
-    } deriving (Eq, Show, Generic)
-
-instance Buildable msg => Buildable (Signed msg) where
-    build Signed{..} = "Signed { sig: " +| build sgSignature |+
-                       "; pk: " +| build sgPublicKey |+ " }"
-
 -- | Type alias for denoting raw bytes. Indended to be used with hashes
 -- and signatures, like in type `Hash Raw`, and not type-safe hashing and
 -- signing.
 -- TODO: probably it makes sense to make it a newtype, like in Cardano?
 type Raw = LByteString
+
+data Signed msg = Signed
+    { _sgMessage   :: msg
+    , _sgPublicKey :: PublicKey
+    , _sgSignature :: Signature (Id msg)
+    } deriving (Eq, Ord, Show, Generic)
+
+makeLenses ''Signed
+
+instance Buildable msg => Buildable (Signed msg) where
+    build it = "Signed { sig: " +| build (it^.sgSignature) |+
+                       "; pk: " +| build (it^.sgPublicKey) |+ " }"
+
+instance HasId a => HasId (Signed a) where
+    type Id (Signed a) = Id a
+
+    getId = (^.sgMessage.idOf)
+
+-- | Thrown if signed object has invalid signature.
+--   Expected to be immidiately catched by client code and somehow rethrown.
+data SignatureIsInvalid = SignatureIsInvalid
+    deriving (Show)
+
+instance Exception SignatureIsInvalid
+
+signed :: (HasId a, HasSignature (Id a)) => SecretKey -> a -> Signed a
+signed sk a = Signed a (toPublic sk) (sign sk (a^.idOf))
+
+unsign :: (MonadThrow m, HasId a, HasSignature (Id a)) => Signed a -> m a
+unsign (Signed obj pk sig) =
+    if   verify pk (obj^.idOf) sig
+    then return obj
+    else throwM SignatureIsInvalid
+

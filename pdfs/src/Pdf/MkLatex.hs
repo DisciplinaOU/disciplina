@@ -52,7 +52,7 @@ escapeInLatex = Text.Strict.pack . escape . Text.Strict.unpack
         isRussian ch = ch `Set.member` Set.fromList (['А'.. 'Я'] ++ ['а'.. 'я'])
 
 -- | Generate latex from a.
-data MkLatex a = MkLatex (Language -> a -> Text.Builder)
+data MkLatex a = MkLatex ~(Language -> a -> Text.Builder)
 
 instance Contravariant MkLatex where
     contramap f (MkLatex printer) = MkLatex (\lang -> printer lang . f)

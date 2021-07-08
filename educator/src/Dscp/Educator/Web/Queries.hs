@@ -65,8 +65,8 @@ isGradedSubmission
     => Hash Submission -> DBT t m Bool
 isGradedSubmission submissionH =
     checkExists $ do
-        privateTx <- all_ (esTransactions es)
-        guard_ (trSubmission privateTx ==. valPk_ submissionH)
+        privateGrade <- all_ (esGrades es)
+        guard_ (grSubmission privateGrade ==. valPk_ submissionH)
 
 ----------------------------------------------------------------------------
 -- Operations

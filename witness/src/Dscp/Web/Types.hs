@@ -67,7 +67,7 @@ parseNetAddr st =
 data GeneralBackendError
     = InvalidFormat
       -- ^ Decoding failed.
-    | ServiceUnavailable Text
+    | ServiceUnavailable ~Text
       -- ^ Service is overloaded with requests.
     deriving (Show, Eq, Generic)
 

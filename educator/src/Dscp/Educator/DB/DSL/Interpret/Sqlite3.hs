@@ -33,19 +33,19 @@ getPrivateTxsByFilter
     :: MonadIO m
     => TxsFilterExpr -> DBT t m [Core.PrivateTx]
 getPrivateTxsByFilter filterExpr = do
-    runSelectMap privateTxFromRow . select $ do
-        privateTx <- all_ (esTransactions educatorSchema)
-        submission <- related_ (esSubmissions educatorSchema) (trSubmission privateTx)
+    runSelectMap (Core.PrivateTxGrade . privateGradeFromRow) . select $ do
+        privateGrade <- all_     (esGrades      educatorSchema)
+        submission   <- related_ (esSubmissions educatorSchema) (grSubmission privateGrade)
         -- some of rows below may be extra ones
-        assignment <- related_ (esAssignments educatorSchema) (srAssignment submission)
-        course <- related_ (esCourses educatorSchema) (arCourse assignment)
-        subject <- all_ (esSubjects educatorSchema)
+        assignment   <- related_ (esAssignments educatorSchema) (srAssignment submission)
+        course       <- related_ (esCourses     educatorSchema) (arCourse     assignment)
+        subject      <- all_     (esSubjects    educatorSchema)
         guard_ (srCourse subject `references_` course)
 
         guard_ $ buildWhereStatement
-            (srId subject, trGrade privateTx)
+            (srId subject, grGrade privateGrade)
             filterExpr
-        return (privateTx, submission)
+        return (privateGrade, submission)
 
 buildWhereStatement
     :: _

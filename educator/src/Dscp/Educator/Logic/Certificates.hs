@@ -52,7 +52,7 @@ certGradeToPrivateTx
     -> PrivateTx
 certGradeToPrivateTx submission meta CertificateGrade{..} =
     let issueTime = toTimestamp $ dayToTime (cmIssueDate meta)
-    in PrivateTx
+    in PrivateTxGrade $ PrivateGrade
         { _ptSignedSubmission = submission
         , _ptGrade = cgGrade
         , _ptTime = issueTime

@@ -32,6 +32,11 @@ import Dscp.Util.FileEmbed
 -- Tables
 ----------------------------------------------------------------------------
 
+data TransactionRowT f = TransactionRow
+    { trId   :: C f (Hash PrivateTx)
+    , trType :: C f  Int
+    } deriving (Generic)
+
 data CourseRowT f = CourseRow
     { crId   :: C f Course
     , crDesc :: C f ItemDesc
@@ -64,12 +69,12 @@ data SubmissionRowT f = SubmissionRow
     , srAssignment   :: PrimaryKey AssignmentRowT f
     } deriving (Generic)
 
-data TransactionRowT f = TransactionRow
-    { trHash         :: C f (Hash PrivateTx)
-    , trGrade        :: C f Grade
-    , trCreationTime :: C f Timestamp
-    , trIdx          :: C f TxBlockIdx
-    , trSubmission   :: PrimaryKey SubmissionRowT f
+data GradeRowT f = GradeRow
+    { grHash         :: PrimaryKey TransactionRowT f
+    , grGrade        :: C f Grade
+    , grCreationTime :: C f Timestamp
+    , grIdx          :: C f TxBlockIdx
+    , grSubmission   :: PrimaryKey SubmissionRowT f
     } deriving (Generic)
 
 -- We need `idx` field to be able to perform queries like "get N last blocks" efficiently.
@@ -84,39 +89,46 @@ data BlockRowT f = BlockRow
     } deriving (Generic)
 
 data CertificateRowT f = CertificateRow
-    { crHash :: C f (Hash CertificateMeta)
-    , crMeta :: C f (PgJSONB CertificateMeta)
-    , crPdf  :: C f PDFBody
+    { crHash :: C f (Hash CertificateFullInfo)
+    , crInfo :: C f (PgJSONB CertificateFullInfo)
+    } deriving (Generic)
+
+data CertificatePdfRowT f = CertificatePdfRow
+    { cprHash :: C f (Hash CertificateFullInfo)
+    , cprPdf  :: C f PDFBody
     } deriving (Generic)
 
 data EducatorSchema f = EducatorSchema
-    { esCourses             :: f (TableEntity CourseRowT)
-    , esSubjects            :: f (TableEntity SubjectRowT)
-    , esStudents            :: f (TableEntity StudentRowT)
-    , esStudentCourses      :: f (TableEntity $ RelationT 'MxM StudentRowT CourseRowT)
-    , esAssignments         :: f (TableEntity AssignmentRowT)
-    , esStudentAssignments  :: f (TableEntity $ RelationT 'MxM StudentRowT AssignmentRowT)
-    , esSubmissions         :: f (TableEntity SubmissionRowT)
-    , esTransactions        :: f (TableEntity TransactionRowT)
-    , esBlocks              :: f (TableEntity BlockRowT)
+    { esAssignments         :: f (TableEntity   AssignmentRowT)
+    , esBlocks              :: f (TableEntity   BlockRowT)
     , esBlockTxs            :: f (TableEntity $ RelationT 'Mx1 TransactionRowT BlockRowT)
-
-    , esCertificates        :: f (TableEntity CertificateRowT)
+    , esCertificates        :: f (TableEntity   CertificateRowT)
+    , esCertificatesPdf     :: f (TableEntity   CertificatePdfRowT)
     , esCertificatesVersion :: f (TableEntity $ SingletonT Word32)
+    , esGrades              :: f (TableEntity   GradeRowT)
+    , esStudentAssignments  :: f (TableEntity $ RelationT 'MxM StudentRowT AssignmentRowT)
+    , esStudentCourses      :: f (TableEntity $ RelationT 'MxM StudentRowT CourseRowT)
+    , esStudents            :: f (TableEntity   StudentRowT)
+    , esSubjects            :: f (TableEntity   SubjectRowT)
+    , esSubmissions         :: f (TableEntity   SubmissionRowT)
+    , esTransactions        :: f (TableEntity   TransactionRowT)
+    , esCourses             :: f (TableEntity   CourseRowT)
     } deriving (Generic)
 
 ----------------------------------------------------------------------------
 -- Aliases
 ----------------------------------------------------------------------------
 
-type CourseRow = CourseRowT Identity
-type SubjectRow = SubjectRowT Identity
-type StudentRow = StudentRowT Identity
-type AssignmentRow = AssignmentRowT Identity
-type SubmissionRow = SubmissionRowT Identity
-type TransactionRow = TransactionRowT Identity
-type BlockRow = BlockRowT Identity
-type CertificateRow = CertificateRowT Identity
+type AssignmentRow     = AssignmentRowT     Identity
+type BlockRow          = BlockRowT          Identity
+type CertificateRow    = CertificateRowT    Identity
+type CertificatePdfRow = CertificatePdfRowT Identity
+type CourseRow         = CourseRowT         Identity
+type GradeRow          = GradeRowT          Identity
+type StudentRow        = StudentRowT        Identity
+type SubjectRow        = SubjectRowT        Identity
+type SubmissionRow     = SubmissionRowT     Identity
+type TransactionRow    = TransactionRowT    Identity
 
 ----------------------------------------------------------------------------
 -- Connection with core types
@@ -143,12 +155,12 @@ submissionFromRow SubmissionRow{..} =
     , _ssWitness = srSignature
     }
 
-privateTxFromRow :: (TransactionRow, SubmissionRow) -> PrivateTx
-privateTxFromRow (TransactionRow{..}, sub) =
-    PrivateTx
+privateGradeFromRow :: (GradeRow, SubmissionRow) -> PrivateGrade
+privateGradeFromRow (GradeRow{..}, sub) =
+    PrivateGrade
     { _ptSignedSubmission = submissionFromRow sub
-    , _ptGrade = trGrade
-    , _ptTime = trCreationTime
+    , _ptGrade = grGrade
+    , _ptTime = grCreationTime
     }
 
 pbHeaderFromRow :: BlockRow -> PrivateBlockHeader
@@ -191,7 +203,7 @@ instance Table SubmissionRowT where
 instance Table TransactionRowT where
     newtype PrimaryKey TransactionRowT f = TransactionRowId (C f (Id PrivateTx))
         deriving (Generic)
-    primaryKey = TransactionRowId . trHash
+    primaryKey = TransactionRowId . trId
 
 instance Table BlockRowT where
     newtype PrimaryKey BlockRowT f = BlockRowId (C f BlockIdx)
@@ -199,9 +211,19 @@ instance Table BlockRowT where
     primaryKey = BlockRowId . brIdx
 
 instance Table CertificateRowT where
-    newtype PrimaryKey CertificateRowT f = HashTableId (C f (Hash CertificateMeta))
+    newtype PrimaryKey CertificateRowT f = CertificateRowId (C f (Hash CertificateFullInfo))
         deriving (Generic)
-    primaryKey = HashTableId . crHash
+    primaryKey = CertificateRowId . crHash
+
+instance Table CertificatePdfRowT where
+    newtype PrimaryKey CertificatePdfRowT f = CertificatePdfRowId (C f (Hash CertificateFullInfo))
+        deriving (Generic)
+    primaryKey = CertificatePdfRowId . cprHash
+
+instance Table GradeRowT where
+    newtype PrimaryKey GradeRowT f = GradeRowId (PrimaryKey TransactionRowT f)
+        deriving (Generic)
+    primaryKey = GradeRowId . grHash
 
 ----------------------------------------------------------------------------
 -- 'Beamable' instances
@@ -228,8 +250,14 @@ instance Beamable (PrimaryKey TransactionRowT)
 instance Beamable BlockRowT
 instance Beamable (PrimaryKey BlockRowT)
 
+instance Beamable GradeRowT
+instance Beamable (PrimaryKey GradeRowT)
+
 instance Beamable CertificateRowT
 instance Beamable (PrimaryKey CertificateRowT)
+
+instance Beamable CertificatePdfRowT
+instance Beamable (PrimaryKey CertificatePdfRowT)
 
 ----------------------------------------------------------------------------
 -- Final

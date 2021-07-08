@@ -232,11 +232,13 @@ checkFairCV =
            root == mprRoot proof &&
            all (checkTxSubmission sAddr) (mprProof proof)
 
-    checkTxSubmission sAddr (PrivateTx sSub _ _) =
+    checkTxSubmission sAddr (PrivateTxGrade (PrivateGrade sSub _ _)) =
         isRight $ verifyStudentSubmission sAddr sSub
 
-    buildResults results =
-        FairCVCheckResult
+    checkTxSubmission _ (PrivateTxCertification cert) =
+        isRight $ verifyCertificate cert
+
+    buildResults results = FairCVCheckResult
         { fairCVCheckResults = results
         , fairCVFullyValid = all and results
         }

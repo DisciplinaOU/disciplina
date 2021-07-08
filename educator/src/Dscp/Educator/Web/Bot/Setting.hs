@@ -277,7 +277,7 @@ botGradeSubmission ssub = do
         contentsH = _sContentsHash subm
     time <- toTimestamp <$> liftIO getCurrentTime
     let grade = detGenG contentsH genPleasantGrade
-    let ptx = PrivateTx
+    let ptx = PrivateTxGrade $ PrivateGrade
             { _ptSignedSubmission = ssub
             , _ptGrade = grade
             , _ptTime = time
