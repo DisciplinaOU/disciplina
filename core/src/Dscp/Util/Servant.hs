@@ -11,6 +11,7 @@
 
 module Dscp.Util.Servant
     ( CanHoistClient (..)
+    , IdentifierFilterTypes
     ) where
 
 import GHC.TypeLits (Symbol)
@@ -18,7 +19,11 @@ import Network.HTTP.Types.Method (StdMethod)
 import Servant.API ((:<|>) (..), (:>), Capture, Description, QueryFlag, QueryParam', ReqBody,
                     Summary, Verb)
 import Servant.Client.Core (Client)
-import Servant.Util (ErrorResponses, PaginationParams, SortingParams, Tag)
+import Servant.Util (ErrorResponses, FilterComparing, FilterMatching, FilteringParams,
+                     PaginationParams, SortingParams, Tag)
+
+-- | Auto filters supported for identifiers (numeric and hashes).
+type IdentifierFilterTypes = [FilterMatching, FilterComparing]
 
 -- Please anybody switch us to lts-12 already so that there is no need in this:
 class CanHoistClient m api where
@@ -37,6 +42,9 @@ instance CanHoistClient m api =>
     hoistClientMonad pm _ hst cli arg = hoistClientMonad pm (Proxy @api) hst (cli arg)
 instance CanHoistClient m api =>
          CanHoistClient m (ReqBody (ct ': cts) a :> api) where
+    hoistClientMonad pm _ hst cli arg = hoistClientMonad pm (Proxy @api) hst (cli arg)
+instance CanHoistClient m api =>
+         CanHoistClient m (FilteringParams params :> api) where
     hoistClientMonad pm _ hst cli arg = hoistClientMonad pm (Proxy @api) hst (cli arg)
 instance CanHoistClient m api =>
          CanHoistClient m (SortingParams params :> api) where

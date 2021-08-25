@@ -50,7 +50,6 @@ executables:
       - aeson-pretty
       - bytestring
       - containers
-      - data-default
       - disciplina-core
       - disciplina-witness
       - disciplina-educator
@@ -61,6 +60,7 @@ executables:
       - optparse-applicative
       - serialise
       - servant-client
+      - servant-util
       - time
       - QuickCheck
     default-extensions:

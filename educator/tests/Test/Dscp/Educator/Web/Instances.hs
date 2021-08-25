@@ -5,7 +5,6 @@ module Test.Dscp.Educator.Web.Instances
 import Test.QuickCheck.Arbitrary.Generic (genericArbitrary, genericShrink)
 
 import Dscp.Educator.DB
-import Dscp.Educator.Web.Educator
 import Dscp.Educator.Web.Student
 import Dscp.Educator.Web.Types
 import Dscp.Util.Test
@@ -17,26 +16,6 @@ genCourseNoSubjects :: Gen CourseDetails
 genCourseNoSubjects = CourseDetails <$> (Just <$> arbitrary) <*> arbitrary <*> pure []
 
 deriving instance Arbitrary IsFinal
-
-instance Arbitrary StudentGetAssignmentsFilters where
-    arbitrary = genericArbitrary
-    shrink = genericShrink
-
-instance Arbitrary StudentGetSubmissionsFilters where
-    arbitrary = genericArbitrary
-    shrink = genericShrink
-
-instance Arbitrary EducatorGetAssignmentsFilters where
-    arbitrary = genericArbitrary
-    shrink = genericShrink
-
-instance Arbitrary EducatorGetSubmissionsFilters where
-    arbitrary = genericArbitrary
-    shrink = genericShrink
-
-instance Arbitrary GetProvenStudentTransactionsFilters where
-    arbitrary = genericArbitrary
-    shrink = genericShrink
 
 instance Arbitrary CourseStudentInfo where
     arbitrary = genericArbitrary

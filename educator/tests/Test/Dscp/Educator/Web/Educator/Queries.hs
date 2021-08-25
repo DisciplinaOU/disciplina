@@ -1,8 +1,12 @@
+{-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE OverloadedLists  #-}
+
 module Test.Dscp.Educator.Web.Educator.Queries where
 
 import Control.Lens (to, united)
 import Data.Default (def)
 import Data.List (nubBy)
+import Servant.Util ((?/), (?/=))
 import Test.QuickCheck (cover)
 import Test.QuickCheck.Monadic (pick, pre)
 
@@ -32,7 +36,7 @@ spec_Educator_API_queries = specWithTempPostgresServer $ do
             students <- pickSmall listUnique
             lift $ forM_ students createStudent
 
-            students' <- lift $ educatorGetStudents Nothing def
+            students' <- lift $ educatorGetStudents def def
             return $ sort students' === sort (map StudentInfo students)
 
         it "Filtering works" $ sqlPropertyM $ do
@@ -45,8 +49,8 @@ spec_Educator_API_queries = specWithTempPostgresServer $ do
                 enrollStudentToCourse student2 course1
                 enrollStudentToCourse student1 course2
 
-            res1 <- lift $ educatorGetStudents (Just course1) def
-            res2 <- lift $ educatorGetStudents (Just course2) def
+            res1 <- lift $ educatorGetStudents [#course ?/ course1] def
+            res2 <- lift $ educatorGetStudents [#course ?/ course2] def
             return $ sort res1 === sort (map StudentInfo students)
                 .&&. res2 === one (StudentInfo student1)
 
@@ -57,7 +61,7 @@ spec_Educator_API_queries = specWithTempPostgresServer $ do
                               pickSmall (listOf genCourseNoSubjects)
             lift $ forM_ coursesDetails createCourse
 
-            courses' <- lift $ educatorGetCourses Nothing def
+            courses' <- lift $ educatorGetCourses def def
             let coursesBone = coursesDetails <&>
                               \(CourseDetails courseId desc subjs) ->
                                   (courseId, desc, subjs)
@@ -79,8 +83,8 @@ spec_Educator_API_queries = specWithTempPostgresServer $ do
                 enrollStudentToCourse student2 course1
                 enrollStudentToCourse student1 course2
 
-            res1 <- lift $ educatorGetCourses (Just student1) def
-            res2 <- lift $ educatorGetCourses (Just student2) def
+            res1 <- lift $ educatorGetCourses [#student ?/ student1] def
+            res2 <- lift $ educatorGetCourses [#student ?/ student2] def
             return $ sort (map ciId res1) === sort courses
                 .&&. map ciId res2 === one (course1)
 
@@ -117,7 +121,7 @@ spec_Educator_API_queries = specWithTempPostgresServer $ do
                 void $ createAssignment assignment
                 setStudentAssignment student (hash assignment)
 
-            res <- lift $ educatorGetAssignments def{ afStudent = Just student } def
+            res <- lift $ educatorGetAssignments [#student ?/ student] def
             return $ res === one AssignmentEducatorInfo
                 { aiHash = hash assignment
                 , aiCourseId = _aCourseId assignment
@@ -205,34 +209,6 @@ spec_Educator_API_queries = specWithTempPostgresServer $ do
                 ===
                 sortOn fst submissionsAndGrades'
 
-        it "Filtering works" $ sqlPropertyM $ do
-            env <- pickSmall $ genCoreTestEnv simpleCoreTestParams
-                                         { ctpAssignment = variousItems }
-            courseIdF <- pick arbitrary
-            assignHF <- pick arbitrary
-            docTypeF <- pick arbitrary
-
-            let student = tiOne $ cteStudents env
-                sigSubs = ordNub . tiList $ cteSignedSubmissions env
-                courses = map _aCourseId . tiList $ cteAssignments env
-
-            lift $ prepareForSubmissions env
-            lift $ mapM_ createSignedSubmission sigSubs
-
-            submissions <- lift $ educatorGetSubmissions
-                def{ sfStudent = Just student, sfCourse = courseIdF
-                    , sfAssignmentHash = assignHF, sfDocType = docTypeF }
-                def
-
-            let submissions' =
-                  map (\(s, _) -> educatorLiftSubmission s Nothing) $
-                  applyFilterOn snd courseIdF $
-                  applyFilterOn (_sAssignmentHash . _ssSubmission . fst) assignHF $
-                  applyFilterOn (_sDocumentType . _ssSubmission . fst) docTypeF $
-                  sigSubs `zip` cycle courses
-
-            return $ sortOn siHash submissions === sortOn siHash submissions'
-
 
   describe "Grades" $ do
     describe "getGrades" $ pass  -- TODO [DSCP-176]
@@ -297,7 +273,7 @@ spec_Educator_API_queries = specWithTempPostgresServer $ do
             let student = tiOne $ cteStudents env
             lift $ prepareAndCreateSubmissions env
 
-            proofs <- lift $ commonGetProofs def{ pfStudent = Just student }
+            proofs <- lift $ commonGetProofs [#student ?/= student]
 
             return $ proofs === []
 
@@ -313,7 +289,7 @@ spec_Educator_API_queries = specWithTempPostgresServer $ do
                 let !_ = mblock ?: error "No private block created"
                 return ()
 
-            proofs <- lift $ commonGetProofs def{ pfStudent = Just student }
+            proofs <- lift $ commonGetProofs [#student ?/= student]
             let proof = expectOne "block proofs" proofs
 
             return $ bpiTxs proof === [ptx]
@@ -336,7 +312,7 @@ spec_Educator_API_queries = specWithTempPostgresServer $ do
                 let !_ = (mblock1 >> mblock2) ?: error "No private blocks created"
                 return ()
 
-            proofs <- lift $ commonGetProofs def{ pfStudent = Just student }
+            proofs <- lift $ commonGetProofs [#student ?/= student]
             let resTxs = map bpiTxs proofs
 
             return $ map sort resTxs === [sort [ptx1, ptx2], [ptx3]]

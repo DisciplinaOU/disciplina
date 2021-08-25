@@ -1,9 +1,11 @@
 {-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE OverloadedLists  #-}
 
 module Test.Dscp.Educator.Bot.Endpoints where
 
 import Control.Lens ((?~))
 import Data.Default (def)
+import Servant.Util ((?/~))
 
 import Dscp.Config
 import Dscp.Core.Arbitrary
@@ -38,14 +40,14 @@ spec_StudentApiWithBotQueries = specWithTempPostgresServer $ do
         educatorProperty $ \seed -> do
             StudentApiEndpoints{..} <- initializeBot (testBotParams seed) $
                                        testBotHandlers <$ botProvideInitSetting student
-            courses <- sGetCourses (Just (IsEnrolled True)) False def def
+            courses <- sGetCourses False [#isEnrolled ?/~ True] def def
             return (not $ null courses)
 
     it "Student gets some assignments on first request" $
         educatorProperty $ \seed -> do
             StudentApiEndpoints{..} <- initializeBot (testBotParams seed) $
                                        testBotHandlers <$ botProvideInitSetting student
-            assignments <- sGetAssignments Nothing Nothing Nothing False def def
+            assignments <- sGetAssignments False def def def
             return (not $ null assignments)
 
     it "Submissions are graded automatically" $
@@ -61,6 +63,6 @@ spec_StudentApiWithBotQueries = specWithTempPostgresServer $ do
                     let StudentApiEndpoints{..} = testBotHandlers
                     botProvideInitSetting student
                     void $ sAddSubmission (signedSubmissionToRequest sigsub)
-                    sGetSubmissions Nothing Nothing Nothing False def def
+                    sGetSubmissions False def def def
             [submission] <- pure submissions
             return (isJust $ siGrade submission)

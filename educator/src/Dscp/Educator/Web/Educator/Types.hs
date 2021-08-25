@@ -29,6 +29,7 @@ module Dscp.Educator.Web.Educator.Types
     , educatorLiftAssignment
     , educatorLiftSubmission
     , requestToAssignment
+    , educatorCourseInfoFromRow
     , educatorAssignmentInfoFromRow
     , educatorSubmissionInfoFromRow
     ) where
@@ -45,7 +46,9 @@ import qualified Data.Swagger.Internal.Schema as S
 import Data.Time.Calendar (Day)
 import Fmt (build, listF, (+|), (|+))
 import Pdf.Scanner (PDFBody (..))
-import Servant.Util (type (?:), ForResponseLog (..), SortingParamTypesOf, buildListForResponse)
+import Servant.Util (type (?:), FilterKind (..), FilteringParamTypesOf, ForResponseLog (..),
+                     ParamDescription, QueryFlagDescription, SortingParamTypesOf, SupportedFilters,
+                     buildListForResponse, paramDescription)
 
 import Dscp.Core
 import Dscp.Crypto
@@ -133,13 +136,6 @@ mkCountedList onlyCount ls =
     Counted (length ls) (if onlyCount then Nothing else Just ls)
 
 ---------------------------------------------------------------------------
--- Sorting
----------------------------------------------------------------------------
-
-type instance SortingParamTypesOf Certificate =
-    ["createdAt" ?: Day, "studentName" ?: ItemDesc]
-
----------------------------------------------------------------------------
 -- Simple conversions
 ---------------------------------------------------------------------------
 
@@ -172,6 +168,13 @@ requestToAssignment NewAssignment{..} =
     , _aContentsHash = naContentsHash
     , _aType = naIsFinal ^. from assignmentTypeRaw
     , _aDesc = naDesc
+    }
+
+educatorCourseInfoFromRow :: (Course, ItemDesc, Vector Subject) -> CourseEducatorInfo
+educatorCourseInfoFromRow (ciId, ciDesc, subjects) =
+    CourseEducatorInfo
+    { ciId, ciDesc
+    , ciSubjects = toList subjects
     }
 
 educatorAssignmentInfoFromRow :: AssignmentRow -> AssignmentEducatorInfo
@@ -339,7 +342,7 @@ type instance ParamDescription Coin =
 type instance ParamDescription PDFBody =
     "Content of a PDF file."
 type instance ParamDescription IsGraded =
-    "Return only submissions with/without grade."
+    "Whether submission has been graded by educator."
 
 type instance QueryFlagDescription "autoAssign" =
     "Automatically subscribe all students attending related course to new \
@@ -370,7 +373,7 @@ instance ToSchema Coin where
         S.plain $ mempty &: do
             S.type_ .= S.SwaggerInteger
             S.format ?= "int32"
-            setParamDescription p
+            S.description ?= paramDescription p
 
 instance ToSchema a => ToSchema (BlocksOrMempool a) where
     declareNamedSchema _ =
@@ -393,7 +396,7 @@ instance ToSchema Language where
 instance ToSchema PDFBody where
     declareNamedSchema p =
         declareSimpleSchema "PDFBody" $ S.binarySchema &: do
-            setParamDescription p
+            S.description ?= paramDescription p
 
 instance ToSchema Certificate where
     declareNamedSchema = gDeclareNamedSchema
@@ -451,3 +454,34 @@ instance EnumHasDescription GradingScale where
             "Russian differentiated: 5 = 100, 4 = 80, 3 = 60, 2 = 40"
         RusNonDiff ->
             "Russian non-differentiated: \"zachot\" = 100, \"nezachot\" = 0"
+
+---------------------------------------------------------------------------
+-- Sorting
+---------------------------------------------------------------------------
+
+type instance SortingParamTypesOf Certificate =
+    ["createdAt" ?: Day, "studentName" ?: ItemDesc]
+
+---------------------------------------------------------------------------
+-- Filtering parameters
+---------------------------------------------------------------------------
+
+type instance SupportedFilters IsGraded = SupportedFilters Bool
+
+type instance FilteringParamTypesOf CourseEducatorInfo =
+    '["student" ?: 'ManualFilter Student]
+
+type instance FilteringParamTypesOf AssignmentEducatorInfo =
+    [ "course" ?: 'AutoFilter Course
+    , "student" ?: 'ManualFilter Student
+    , "isFinal" ?: 'ManualFilter IsFinal
+    -- , "createdAt" ?: 'AutoFilter Timestamp  TODO: add timestamps
+    ]
+
+type instance FilteringParamTypesOf SubmissionEducatorInfo =
+    [ "course" ?: 'AutoFilter Course
+    , "student" ?: 'AutoFilter Student
+    , "assignment" ?: 'AutoFilter (Hash Assignment)
+    , "isGraded" ?: 'AutoFilter IsGraded
+    , "createdAt" ?: 'AutoFilter Timestamp
+    ]

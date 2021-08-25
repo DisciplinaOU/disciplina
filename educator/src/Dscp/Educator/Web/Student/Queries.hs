@@ -1,9 +1,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 
 module Dscp.Educator.Web.Student.Queries
-    ( StudentGetAssignmentsFilters (..)
-    , StudentGetSubmissionsFilters (..)
-    , studentIsCourseFinished
+    ( studentIsCourseFinished
     , studentGetCourse
     , studentGetCourses
     , studentGetGrade
@@ -14,11 +12,9 @@ module Dscp.Educator.Web.Student.Queries
     , studentGetSubmissions
     ) where
 
-import Control.Lens (from, mapping)
-import Data.Coerce (coerce)
-import Data.Default (Default)
-import Servant.Util (HList (HNil), PaginationSpec, SortingSpecOf, (.*.))
-import Servant.Util.Beam.Postgres (fieldSort, paginate_, sortBy_)
+import Control.Lens (from)
+import Servant.Util (FilteringSpecOf, HList (HNil), PaginationSpec, SortingSpecOf, (.*.))
+import Servant.Util.Beam.Postgres (fieldSort, filterOn, manualFilter, matches_, paginate_, sortBy_)
 
 import Dscp.Core
 import Dscp.Crypto (Hash)
@@ -30,30 +26,6 @@ import Dscp.Util
 import Dscp.Educator.Web.Queries
 import Dscp.Educator.Web.Student.Types
 import Dscp.Educator.Web.Types
-
-----------------------------------------------------------------------------
--- Filters for endpoints
-----------------------------------------------------------------------------
-
-data StudentGetAssignmentsFilters = StudentGetAssignmentsFilters
-    { afCourse  :: Maybe Course
-    , afDocType :: Maybe $ DocumentType Assignment
-    , afIsFinal :: Maybe IsFinal
-    } deriving (Show, Generic)
-
-deriving instance Default StudentGetAssignmentsFilters
-
-data StudentGetSubmissionsFilters = StudentGetSubmissionsFilters
-    { sfCourse         :: Maybe Course
-    , sfAssignmentHash :: Maybe $ Hash Assignment
-    , sfDocType        :: Maybe $ DocumentType Submission
-    } deriving (Show, Generic)
-
-deriving instance Default StudentGetSubmissionsFilters
-
-----------------------------------------------------------------------------
--- DB endpoints
-----------------------------------------------------------------------------
 
 es :: DatabaseSettings be EducatorSchema
 es = educatorSchema
@@ -85,20 +57,16 @@ studentGetCourse studentId courseId = do
 studentGetCourses
     :: MonadEducatorWebQuery m
     => Id Student
-    -> Maybe IsEnrolled
+    -> FilteringSpecOf CourseStudentInfo
     -> SortingSpecOf CourseStudentInfo
     -> PaginationSpec
     -> DBT 'WithinTx m [CourseStudentInfo]
-studentGetCourses studentId (coerce -> isEnrolledF) sorting pagination = do
+studentGetCourses studentId filtering sorting pagination = do
     courses <- runSelect . select $
         paginate_ pagination $
         sortBy_ sorting mkSortingSpecApp $ do
             course <- all_ (esCourses es)
-            whenJust isEnrolledF $ \isEnrolled -> do
-                let isEnrolled' = exists_ $ do
-                        link_ (esStudentCourses es) (valPk_ studentId :-: pk_ course)
-                        return (as_ @Int 1)
-                guard_ (val_ isEnrolled ==. isEnrolled')
+            guard_ $ matches_ filtering (mkFilteringSpecApp course)
             return (crId course, crDesc course)
 
     forM courses $ \(courseId, ciDesc) -> do
@@ -107,10 +75,19 @@ studentGetCourses studentId (coerce -> isEnrolledF) sorting pagination = do
         ciIsFinished <- studentIsCourseFinished studentId courseId
         return CourseStudentInfo{ ciId = courseId, .. }
   where
+    mkFilteringSpecApp course =
+        manualFilter (isEnrolledF course) .*.
+        filterOn (crDesc course) .*.
+        HNil
     mkSortingSpecApp (courseId, desc) =
         fieldSort @"id" courseId .*.
         fieldSort @"desc" desc .*.
         HNil
+
+    isEnrolledF course (IsEnrolled isEnrolled) =
+        let isEnrolled' = existsAny_ $
+                link_ (esStudentCourses es) (valPk_ studentId :-: pk_ course)
+        in val_ isEnrolled ==. isEnrolled'
 
 studentGetGrade
     :: MonadEducatorWebQuery m
@@ -183,7 +160,7 @@ studentGetAssignment student assignH = do
 studentGetAssignments
     :: MonadEducatorWebQuery m
     => Student
-    -> StudentGetAssignmentsFilters
+    -> FilteringSpecOf AssignmentStudentInfo
     -> SortingSpecOf AssignmentStudentInfo
     -> PaginationSpec
     -> DBT 'WithinTx m [AssignmentStudentInfo]
@@ -196,17 +173,19 @@ studentGetAssignments student filters sorting pagination = do
 
             link_ (esStudentAssignments es) (valPk_ student :-: pk_ assignment)
 
-            guard_ $ filterMatchesPk_ (afCourse filters) (arCourse assignment)
-            guard_ $ filterMatches_ assignTypeF (arType assignment)
-            whenJust (afDocType filters) $ \docType ->
-                guard_ (eqDocTypeQ docType (arContentsHash assignment))
+            guard_ $ matches_ filters (mkFilteringSpecApp assignment)
 
             return assignment
 
     forM assignments $ \(assignH, assignment) ->
         studentComplementAssignmentInfo student assignH assignment
   where
-    assignTypeF = afIsFinal filters ^. mapping (from assignmentTypeRaw)
+    mkFilteringSpecApp AssignmentRow{..} =
+        filterOn (unpackPk arCourse) .*.
+        manualFilter (`eqDocTypeQ` arContentsHash) .*.
+        manualFilter (\isFinal -> val_ (isFinal ^. from assignmentTypeRaw) ==. arType) .*.
+        filterOn arDesc .*.
+        HNil
     mkSortingSpecApp AssignmentRow{..} =
         fieldSort @"course" (unpackPk arCourse) .*.
         fieldSort @"desc" arDesc .*.
@@ -235,7 +214,7 @@ studentGetSubmission student subH = do
 studentGetSubmissions
     :: MonadEducatorWebQuery m
     => Student
-    -> StudentGetSubmissionsFilters
+    -> FilteringSpecOf SubmissionStudentInfo
     -> SortingSpecOf SubmissionStudentInfo
     -> PaginationSpec
     -> DBT t m [SubmissionStudentInfo]
@@ -244,20 +223,21 @@ studentGetSubmissions student filters sorting pagination = do
         paginate_ pagination $
         sortBy_ sorting mkSortingSpecApp $ do
             submission <- all_ (esSubmissions es)
-
             assignment <- related_ (esAssignments es) (srAssignment submission)
             link_ (esStudentAssignments es) (valPk_ student :-: pk_ assignment)
 
-            guard_ $ filterMatchesPk_ (sfCourse filters) (arCourse assignment)
-            guard_ $ filterMatchesPk_ (sfAssignmentHash filters) (srAssignment submission)
-            whenJust (sfDocType filters) $ \docType ->
-                guard_ (eqDocTypeQ docType (arContentsHash assignment))
+            guard_ $ matches_ filters $
+                mkFilteringSpecApp (submission, assignment)
 
             mPrivateTx <- leftJoin_ (all_ $ esTransactions es)
                                     ((`references_` submission) . trSubmission)
-
             return (submission, mPrivateTx)
   where
+    mkFilteringSpecApp (SubmissionRow{..}, AssignmentRow{..}) =
+        filterOn (unpackPk arCourse) .*.
+        filterOn arHash .*.
+        manualFilter (`eqDocTypeQ` arContentsHash) .*.
+        HNil
     mkSortingSpecApp (_, TransactionRow{..}) =
         fieldSort @"grade" trGrade .*.
         HNil

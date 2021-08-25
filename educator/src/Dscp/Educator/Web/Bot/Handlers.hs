@@ -10,7 +10,6 @@ import Dscp.Core (Student)
 import Dscp.Educator.Web.Bot.Params
 import Dscp.Educator.Web.Bot.Setting
 import Dscp.Educator.Web.Student
-import Dscp.Educator.Web.Types
 
 initializeBot
     :: BotWorkMode ctx m
@@ -35,7 +34,7 @@ addBotHandlers student endpoints@StudentApiEndpoints{..} =
             delayed $ do
                 requestToSignedSubmission newSub >>= botGradeSubmission
 
-                allAssigns <- sGetAssignments Nothing Nothing Nothing False def def
+                allAssigns <- sGetAssignments False def def def
                 botProvideUnlockedAssignments student res allAssigns
 
             -- Easter egg: once a couple of courses is completed,
@@ -44,7 +43,7 @@ addBotHandlers student endpoints@StudentApiEndpoints{..} =
             -- Frontend team can still unlock courses quickly if they need
             -- because assignments for first two courses are fixed disregard
             -- the seed.
-            courses <- sGetCourses (Just $ IsEnrolled True) False def def
+            courses <- sGetCourses False def def def
             when (length (filter ciIsFinished courses) >= 2) $
                 botProvideAdvancedSetting student
 

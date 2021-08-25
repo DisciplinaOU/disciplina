@@ -7,6 +7,7 @@ import qualified Data.Swagger as S
 import qualified Data.Swagger.Internal.ParamSchema as S
 import qualified Data.Swagger.Internal.Schema as S
 import GHC.TypeLits (KnownSymbol)
+import Servant.Util (ParamDescription, paramDescription)
 
 import Dscp.Core
 import Dscp.Crypto
@@ -76,6 +77,9 @@ instance ToParamSchema Course where
 instance ToParamSchema Subject where
     toParamSchema _ = idParamSchema
 
+instance ToParamSchema ItemDesc where
+    toParamSchema _ = toParamSchema (Proxy @Text)
+
 instance ToParamSchema Timestamp where
     toParamSchema _ = S.timeParamSchema timestampFormat
 
@@ -90,24 +94,24 @@ instance ToSchema ItemDesc where
     declareNamedSchema p =
         declareSimpleSchema "Description" $ mempty &: do
             S.type_ .= S.SwaggerString
-            setParamDescription p
+            S.description ?= paramDescription p
 
 instance ToSchema Timestamp where
     declareNamedSchema p =
         declareSimpleSchema "Timestamp" $ S.timeSchema timestampFormat &: do
-            setParamDescription p
+            S.description ?= paramDescription p
             setExample timestampEx
 
 instance ToSchema Address where
     declareNamedSchema p =
         declareSimpleSchema "Address" $ S.byteSchema &: do
-            setParamDescription p
+            S.description ?= paramDescription p
             setExample addressEx
 
 instance KnownSymbol (ParamDescription (Hash a)) => ToSchema (Hash a) where
     declareNamedSchema p =
         declareSimpleSchema "Hash" $ S.byteSchema &: do
-            setParamDescription p
+            S.description ?= paramDescription p
             setExample $ hash @Text "example"
 
 instance {-# OVERLAPPING #-} ToSchema (Hash Raw) where
@@ -132,12 +136,12 @@ instance ToSchema Grade where
             S.type_ .= S.SwaggerInteger
             S.minimum_ ?= gradeToNum minBound
             S.maximum_ ?= gradeToNum maxBound
-            setParamDescription p
+            S.description ?= paramDescription p
 
 instance ToSchema SubmissionWitness where
     declareNamedSchema p =
         declareSimpleSchema "SubmissionWitness" $ S.byteSchema &: do
-            setParamDescription p
+            S.description ?= paramDescription p
 
 instance ToSchema (EmptyMerkleProof PrivateTx) where
     declareNamedSchema _ = declareNamedSchema (Proxy @Text)

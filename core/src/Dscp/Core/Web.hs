@@ -12,11 +12,13 @@ module Dscp.Core.Web
 import Data.List (span)
 import Servant.API
 import Servant.Client.Core (BaseUrl (..), parseBaseUrl, showBaseUrl)
+import Servant.Util (DatetimeFilterTypes, FilterMatching, SupportedFilters, TextFilterTypes)
 import System.FilePath (splitExtension)
 
 import Dscp.Core.Foundation
 import Dscp.Crypto.Web ()
 import Dscp.Util
+import Dscp.Util.Servant
 
 ---------------------------------------------------------------------------
 -- FromHttpApiData/ToHttpApiData instances
@@ -42,6 +44,10 @@ instance FromHttpApiData (DocumentType a) where
 deriving instance ToHttpApiData GTxId
 deriving instance FromHttpApiData GTxId
 
+deriving instance ToHttpApiData ItemDesc
+instance FromHttpApiData ItemDesc where
+    parseQueryParam = toItemDesc <=< parseQueryParam
+
 deriving instance ToHttpApiData Timestamp
 instance FromHttpApiData Timestamp where
     parseQueryParam t =
@@ -62,3 +68,12 @@ instance FromHttpApiData CertificateName where
             cId' = drop 1 cId''
         cId <- parseUrlPiece $ toText cId'
         return (CertificateName (toText eId) cId)
+
+---------------------------------------------------------------------------
+-- Filtering
+---------------------------------------------------------------------------
+
+type instance SupportedFilters ItemDesc = TextFilterTypes
+type instance SupportedFilters Timestamp = DatetimeFilterTypes
+type instance SupportedFilters Course = IdentifierFilterTypes
+type instance SupportedFilters Address = '[FilterMatching]
