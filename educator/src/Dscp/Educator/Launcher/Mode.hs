@@ -22,6 +22,7 @@ import Control.Lens (makeLenses)
 import Loot.Base.HasLens (HasCtx)
 import qualified Pdf.FromLatex as Pdf
 
+import Dscp.Core (Language)
 import Dscp.DB.CanProvideDB as DB
 import Dscp.DB.SQL (SQL)
 import Dscp.Educator.Config (HasEducatorConfig, withEducatorConfig)
@@ -48,6 +49,7 @@ type EducatorOnlyWorkMode ctx m =
         [ DB.Plugin
         , SQL
         , KeyResources EducatorNode
+        , Language
         , Pdf.LatexPath
         , Pdf.ResourcePath
         , Pdf.DownloadBaseUrl

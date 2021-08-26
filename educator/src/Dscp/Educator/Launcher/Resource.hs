@@ -22,7 +22,7 @@ import System.Directory (doesDirectoryExist, findExecutable)
 import System.FilePath.Posix (isRelative, (</>))
 
 import Dscp.Config
-import Dscp.Core.Foundation.Educator (ItemDesc)
+import Dscp.Core.Foundation.Educator (ItemDesc, Language)
 import Dscp.DB.SQL
 import Dscp.Educator.Config
 import Dscp.Educator.DB.Resource ()
@@ -49,6 +49,7 @@ data EducatorResources = EducatorResources
     { _erWitnessResources :: !Witness.WitnessResources
     , _erDB               :: !SQL
     , _erKeys             :: !(KeyResources EducatorNode)
+    , _erLanguage         :: !Language
     , _erPdfLatexPath     :: !Pdf.LatexPath
     , _erPdfResourcePath  :: !Pdf.ResourcePath
     , _erDownloadBaseUrl  :: !Pdf.DownloadBaseUrl
@@ -68,6 +69,10 @@ instance AllocResource (KeyResources EducatorNode) where
         in buildComponentR "educator keys"
            (linkStore baseParams appDir)
            (const pass)
+
+instance AllocResource Language where
+    type Deps Language = Language
+    allocResource = return
 
 instance AllocResource Pdf.LatexPath where
     type Deps Pdf.LatexPath = FilePath
@@ -114,6 +119,7 @@ instance AllocResource EducatorResources where
         _erDB <- unPreparedSQL @"educator" <$> allocResource (cfg ^. sub #db)
         let appDir = Witness._wrAppDir _erWitnessResources
         _erKeys <- allocResource (educatorCfg ^. sub #educator . sub #keys, appDir)
+        _erLanguage <- allocResource $ cfg ^. sub #certificates . option #language
         _erPdfLatexPath <- allocResource $ cfg ^. sub #certificates . option #latex
         _erPdfResourcePath <- allocResource ( cfg ^. sub #certificates . option #resources
                                             , appDir )

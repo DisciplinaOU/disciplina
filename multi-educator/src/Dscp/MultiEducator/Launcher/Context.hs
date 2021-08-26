@@ -10,6 +10,7 @@ module Dscp.MultiEducator.Launcher.Context
 import Control.Lens (makeLenses)
 import qualified Pdf.FromLatex as Pdf
 
+import Dscp.Core.Foundation (Language)
 import Dscp.DB.SQL
 import Dscp.MultiEducator.Launcher.Educator.Context
 import Dscp.MultiEducator.Types
@@ -29,6 +30,7 @@ data MultiEducatorResources = MultiEducatorResources
     { _merWitnessResources :: !Witness.WitnessResources
     , _merDB               :: !SQL
     , _merEducatorData     :: !EducatorContextsVar
+    , _merLanguage         :: !Language
     , _merPdfLatexPath     :: !Pdf.LatexPath
     , _merPdfResourcePath  :: !Pdf.ResourcePath
     , _merDownloadBaseUrl  :: !Pdf.DownloadBaseUrl

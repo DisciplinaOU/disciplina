@@ -62,6 +62,7 @@ type MonadEducatorWeb ctx m =
     , HasCtx ctx m
        '[ SQL
         , KeyResources EducatorNode
+        , Language
         , Pdf.LatexPath
         , Pdf.ResourcePath
         , Pdf.DownloadBaseUrl

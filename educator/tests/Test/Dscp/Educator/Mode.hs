@@ -50,6 +50,7 @@ data TestEducatorCtx = TestEducatorCtx
     { _tecEducatorDb       :: SQL
     , _tecWitnessDb        :: DB.Plugin
     , _tecKeys             :: KeyResources EducatorNode
+    , _tecLanguage         :: Language
     , _tecPdfLatexPath     :: Pdf.LatexPath
     , _tecPdfResourcePath  :: Pdf.ResourcePath
     , _tecDownloadBaseUrl  :: Pdf.DownloadBaseUrl
@@ -107,6 +108,7 @@ runTestSqlM testDb action =
         let _tecKeys = KeyResources $ mkSecretKeyData testSomeGenesisSecret
         let _tecEducatorDb = db
         let _tecLogging = testLogging
+        let _tecLanguage = EN
         let _tecPdfLatexPath = testLatexPath
         let _tecPdfResourcePath = testResourcePath
         let _tecDownloadBaseUrl = testDownloadBaseUrl

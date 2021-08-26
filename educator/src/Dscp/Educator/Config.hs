@@ -22,7 +22,7 @@ import Loot.Config ((:::), (::<), ConfigKind (Final, Partial), ConfigRec, upcast
 import Time (Second, Time)
 
 import Dscp.Config
-import Dscp.Core.Foundation.Educator (ItemDesc (..))
+import Dscp.Core.Foundation.Educator (ItemDesc (..), Language (..))
 import Dscp.Core.Web
 import Dscp.DB.SQL
 import Dscp.Educator.Launcher.Params
@@ -40,7 +40,8 @@ type EducatorConfig = WitnessConfig ++
            '[ "period" ::: Time Second
             ]
         , "certificates" ::<
-           '[ "latex" ::: FilePath
+           '[ "language" ::: Language
+            , "latex" ::: FilePath
             , "resources" ::: FilePath
             , "downloadBaseUrl" ::: BaseUrl
             , "issuer" ::<

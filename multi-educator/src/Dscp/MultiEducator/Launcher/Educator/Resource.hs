@@ -15,6 +15,7 @@ import System.FilePath ((<.>), (</>))
 import UnliftIO (MonadUnliftIO)
 
 import Dscp.Config
+import Dscp.Core.Foundation (Language)
 import Dscp.Crypto
 import Dscp.DB.SQL
 import qualified Dscp.Educator.Config as E
@@ -121,6 +122,7 @@ instance HasMultiEducatorConfig => AllocResource SingleEducatorResources where
             meKeyParams = educatorConfig ^. option #keys
 
         let _erWitnessResources = witnessResources
+        let _erLanguage = multiEducatorResources ^. lensOf @Language
         let _erPdfLatexPath = multiEducatorResources ^. lensOf @Pdf.LatexPath
         let _erPdfResourcePath = multiEducatorResources ^. lensOf @Pdf.ResourcePath
         let _erDownloadBaseUrl = multiEducatorResources ^. lensOf @Pdf.DownloadBaseUrl

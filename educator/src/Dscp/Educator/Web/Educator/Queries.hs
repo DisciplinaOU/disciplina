@@ -33,7 +33,7 @@ import qualified Pdf.FromLatex as Pdf
 import Pdf.Scanner (PDFBody (..))
 import Servant (err501)
 import Servant.Client.Core.Internal.BaseUrl (showBaseUrl)
-import Servant.Util (PaginationSpec, SortingSpecOf, HList (HNil), (.*.))
+import Servant.Util (HList (HNil), PaginationSpec, SortingSpecOf, (.*.))
 import Servant.Util.Beam.Postgres (fieldSort, paginate_, sortBy_)
 
 import Dscp.Core
@@ -272,12 +272,13 @@ educatorAddCertificate
     :: MonadEducatorWeb ctx m
     => CertificateFullInfo -> m PDFBody
 educatorAddCertificate cert = do
+    pdfLang         <- view (lensOf @Language)
     pdfLatexPath    <- view (lensOf @Pdf.LatexPath)
     pdfResPath      <- view (lensOf @Pdf.ResourcePath)
     downloadBaseUrl <- view (lensOf @Pdf.DownloadBaseUrl)
 
     certificateIssuerInfo  <- getCertificateIssuerInfo
-    pdfRaw@ (PDFBody body) <- Pdf.produce RU certificateIssuerInfo cert pdfLatexPath pdfResPath downloadBaseUrl
+    pdfRaw@ (PDFBody body) <- Pdf.produce pdfLang certificateIssuerInfo cert pdfLatexPath pdfResPath downloadBaseUrl
 
     let pdfHash = hash body
 

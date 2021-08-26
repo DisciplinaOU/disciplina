@@ -23,6 +23,7 @@ import Loot.Config ((:::), (::<), ConfigKind (Final, Partial), ConfigRec, upcast
 import Time (Second, Time)
 
 import Dscp.Config
+import Dscp.Core.Foundation.Educator (Language (..))
 import Dscp.Core.Web (BaseUrl)
 import Dscp.DB.SQL
 import Dscp.Educator.Web.Auth
@@ -49,7 +50,8 @@ type MultiEducatorConfig = WitnessConfig ++
            '[ "period" ::: Time Second
             ]
         , "certificates" ::<
-           '[ "latex" ::: FilePath
+           '[ "language" ::: Language
+            , "latex" ::: FilePath
             , "resources" ::: FilePath
             , "downloadBaseUrl" ::: BaseUrl
             ]

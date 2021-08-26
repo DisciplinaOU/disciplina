@@ -43,6 +43,7 @@ instance AllocResource MultiEducatorResources where
         _merDB <- unPreparedSQL @"educator" <$> allocResource (cfg ^. sub #db)
         let appDir = Witness._wrAppDir _merWitnessResources
         _merEducatorData <- allocResource ()
+        _merLanguage <- allocResource $ cfg ^. sub #certificates . option #language
         _merPdfLatexPath <- allocResource $ cfg ^. sub #certificates . option #latex
         _merPdfResourcePath <- allocResource
             (cfg ^. sub #certificates . option #resources, appDir)
