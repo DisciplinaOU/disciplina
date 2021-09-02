@@ -55,7 +55,7 @@ data WitnessEndpoints route = WitnessEndpoints
 
     , wGetAccount :: route
         :- "accounts" :> Capture "address" Address
-        :> QueryFlag "includeTxs"
+        :> QueryFlag "includeTxs" -- TODO [DSCP-505] remove this
         :> Verb 'GET 200 '[DSON] AccountInfo
 
     , wGetTransactions :: route

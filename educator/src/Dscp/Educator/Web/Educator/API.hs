@@ -20,11 +20,11 @@ import Servant.Util (type ( #: ), ExceptionalResponses, PaginationParams, Sortin
 
 import Dscp.Core
 import Dscp.Crypto
-import Dscp.Educator.Web.Auth
 import Dscp.Educator.Web.Educator.Auth
 import Dscp.Educator.Web.Educator.Error
 import Dscp.Educator.Web.Educator.Types
 import Dscp.Educator.Web.Types
+import Dscp.Util.Servant.Auth
 import Dscp.Web.Swagger
 import Dscp.Witness.Web.ContentTypes
 

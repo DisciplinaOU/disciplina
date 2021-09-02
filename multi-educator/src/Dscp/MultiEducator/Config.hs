@@ -26,8 +26,8 @@ import Dscp.Config
 import Dscp.Core.Foundation.Educator (Language (..))
 import Dscp.Core.Web (BaseUrl)
 import Dscp.DB.SQL
-import Dscp.Educator.Web.Auth
 import Dscp.MultiEducator.Launcher.Params
+import Dscp.Util.Servant.Auth
 import Dscp.Web
 import Dscp.Witness.Config
 
@@ -35,6 +35,7 @@ type MultiEducatorWebConfig =
     '[ "serverParams"           ::< ServerParams
      , "multiEducatorAPINoAuth" ::: NoAuthContext "multi-educator"
      , "studentAPINoAuth"       ::: NoAuthContext "student"
+     , "authTimeout"            ::: AuthTimeout
      ]
 
 type MultiEducatorWebConfigRecP = ConfigRec 'Partial MultiEducatorWebConfig
@@ -73,6 +74,7 @@ defaultMultiEducatorWebConfig :: MultiEducatorWebConfigRecP
 defaultMultiEducatorWebConfig = mempty
     & option #multiEducatorAPINoAuth ?~ NoAuthOffContext
     & option #studentAPINoAuth ?~ NoAuthOffContext
+    & option #authTimeout ?~ defaultAuthTimeout
 
 -- instance (HasEducatorConfig, cfg ~ WitnessConfigRec) => Given cfg where
 --     given = rcast (given @EducatorConfigRec)

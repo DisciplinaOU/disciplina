@@ -12,6 +12,7 @@ module Dscp.Core.Foundation.Address
 import Codec.Serialise (Serialise (..))
 import Data.ByteString.Base58 (Alphabet, bitcoinAlphabet, decodeBase58, encodeBase58)
 import Fmt (build)
+import qualified Text.Show
 
 import Dscp.Crypto.Impl (Hash, PublicKey, hash)
 import Dscp.Crypto.Serialise ()
@@ -22,7 +23,7 @@ import Dscp.Util.Serialise (decodeCrcProtected, deserialiseOrFail', encodeCrcPro
 -- TODO: maybe we should use a shorter hash for address, like in Cardano?
 data Address = Address
     { addrHash :: !(Hash PublicKey)
-    } deriving (Eq, Ord, Show, Generic)
+    } deriving (Eq, Ord, Generic)
 
 instance Hashable Address
 
@@ -62,7 +63,5 @@ instance Buildable Address where
 instance ToText Address where
     toText = pretty
 
--- TODO: Provide this instance (this will require module rearrangement
--- due to 'Show' derivations in `Dscp.Core.Types` module)
--- instance Show Address where
---     show = toString . toText
+instance Show Address where
+    show = toString . toText

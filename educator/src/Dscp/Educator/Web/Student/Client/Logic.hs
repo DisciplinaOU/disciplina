@@ -15,11 +15,11 @@ import Servant.Generic (fromServant)
 import Servant.Util ()
 
 import Dscp.Core
-import Dscp.Educator.Web.Auth
 import Dscp.Educator.Web.Student.API
 import Dscp.Educator.Web.Student.Auth
 import Dscp.Educator.Web.Student.Error
 import Dscp.Util
+import Dscp.Util.Servant.Auth
 import Dscp.Web
 
 -- | Exceptions which can appear from the client.

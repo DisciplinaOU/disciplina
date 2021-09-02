@@ -22,7 +22,8 @@ instance
     runTxQuery (SELECTTx WHERE (TxIdEq pid)) =
         getTransaction pid
 
-    -- TODO (kir): find where the 'Obj'ects live.
+    -- NOTE, this function's body should be replaced with something like
+    -- `getPrivateTxByHash hash`, but this module is not used anymore
     runObjQuery (SELECTObj WHERE (ObjHashEq _hash)) =
         return Nothing
 

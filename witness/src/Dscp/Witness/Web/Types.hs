@@ -90,7 +90,7 @@ data AccountInfo = AccountInfo
     { aiBalances         :: BlocksOrMempool Coin
     , aiCurrentNonce     :: Nonce
     , aiTransactionCount :: Integer
-    , aiTransactions     :: Maybe [GTxInfo]  -- TODO: remove this field?
+    , aiTransactions     :: Maybe [GTxInfo]  -- TODO [DSCP-505]: remove this field
     } deriving (Eq, Show, Generic)
 
 type TxList = PaginatedList "transactions" TxInfo

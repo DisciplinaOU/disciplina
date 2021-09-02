@@ -13,6 +13,7 @@ import Servant.Auth.Server.Internal.Class (AuthArgs (..), IsAuth (..))
 
 import Dscp.Crypto
 import Dscp.Educator.Web.Auth
+import Dscp.Util.Servant.Auth
 
 ---------------------------------------------------------------------------
 -- Data types
@@ -25,7 +26,7 @@ data EducatorAuth
 newtype EducatorPublicKey = EducatorPublicKey PublicKey
 
 instance IsAuth EducatorAuth () where
-    type AuthArgs EducatorAuth = '[EducatorPublicKey]
+    type AuthArgs EducatorAuth = '[EducatorPublicKey, AuthTimeout]
     runAuth _ _ = educatorAuthCheck
 
 instance IsClientAuth EducatorAuth where
@@ -37,9 +38,9 @@ instance IsClientAuth EducatorAuth where
 ---------------------------------------------------------------------------
 
 -- | This function returns AuthCheck that checks the signature of the JWT.
-educatorAuthCheck :: EducatorPublicKey -> AuthCheck ()
-educatorAuthCheck (EducatorPublicKey pk) = do
-    otherPk <- checkAuthBasic
+educatorAuthCheck :: EducatorPublicKey -> AuthTimeout -> AuthCheck ()
+educatorAuthCheck (EducatorPublicKey pk) authTimeout = do
+    otherPk <- checkAuthBasic authTimeout
     -- Remember about timing attacks
     guard (pk `constTimeEq` otherPk)
 

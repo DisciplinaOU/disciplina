@@ -229,8 +229,11 @@ data MerkleProof a
     deriving (Show, Eq, Generic)
 
 -- TODO: provide a useful instance
-instance Buildable (MerkleProof a) where
-    build _ = "<merkle proof>"
+instance Buildable a => Buildable (MerkleProof a) where
+    build = \case
+        ProofBranch {..} -> "MerkleProof Branch { left = "+|mpLeft|+", right = "+|mpRight|+" }"
+        ProofLeaf {..}   -> "MerkleProof Leaf { value = "+|mpVal|+" }"
+        ProofPruned {..} -> "MerkleProof Pruned { signature = "+|mpSig|+" }"
 
 instance Foldable MerkleProof where
     foldMap _ ProofPruned{} = mempty
@@ -258,7 +261,7 @@ data MerkleProofReady a = UnsafeMerkleProofReady
     , mprProof :: !(MerkleProof a)
     } deriving (Show, Eq, Generic)
 
-instance Buildable (MerkleProofReady a) where
+instance Buildable (MerkleProof a) => Buildable (MerkleProofReady a) where
     build proofR = "Merkle proof { root = "+|mprRoot proofR|+
                    ", proof = "+|mprProof proofR|+" }"
 
