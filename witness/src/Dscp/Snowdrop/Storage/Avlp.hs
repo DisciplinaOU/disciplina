@@ -56,21 +56,21 @@ type AVLBase h k v m =
 -- | So we can put (hash -> node) relation into RocksDB.
 type CanSerialise h k v =
     ( Serialise  h
-    , Serialise (AVL.MapLayer h k v h)
+    , Serialise (AVL.MapLayerTemplate Int h k v h)
     )
 
 -- | Instance for reading from the database.
-instance AVLBase h k v m => AVL.KVRetrieve h (AVL.MapLayer h k v h) (ReaderT DB.Plugin m) where
+instance AVLBase h k v m => AVL.KVRetrieve h (AVL.MapLayerTemplate Int h k v h) (ReaderT DB.Plugin m) where
     retrieve h =
         DB.get h >>= nothingToThrow (AVL.NotFound h)
 
 -- | Instance for reading from the database.
-instance AVLBase h k v m => AVL.KVStore h (AVL.MapLayer h k v h) (ReaderT DB.Plugin m) where
+instance AVLBase h k v m => AVL.KVStore h (AVL.MapLayerTemplate Int h k v h) (ReaderT DB.Plugin m) where
     massStore = DB.batch . map (uncurry DB.Put)
 
 -- | Instance for getting/setting a current root in the database.
 -- | Also, for overwriting, if needed.
-instance AVLBase h k v m => AVL.KVMutate h (AVL.MapLayer h k v h) (ReaderT DB.Plugin m)
+instance AVLBase h k v m => AVL.KVMutate h (AVL.MapLayerTemplate Int h k v h) (ReaderT DB.Plugin m)
   where
     getRoot   = DB.get  (rootName @h @k @v) >>= nothingToThrow AVL.NoRootExists
     setRoot r = DB.batch [DB.Put (rootName @h @k @v) r]
@@ -95,7 +95,7 @@ data RealAVLAccum h k v =
   RealAVLAccum
     { acaMap     :: AVL.Map h k v
     -- ^ AVL map, which contains avl tree with most-recent updates
-    , acaTouched :: Set AVL.Revision
+    , acaTouched :: Set h
     -- ^ Set of nodes, which were touched during all of change operations applied on tree
     }
 
@@ -122,7 +122,7 @@ mkAvlDbModifyActions
   => DB.Plugin
   -> n (DbModifyActions (AVLChgAccum h k v) k v m (AVL.Proof h k v))
 mkAvlDbModifyActions plugin = do
-    lookups <- newTVarIO (Set.empty :: Set AVL.Revision)
+    lookups <- newTVarIO (Set.empty :: Set h)
     return DbModifyActions
         { dmaAccessActions = mkAvlDbAccessActions plugin lookups
         , dmaApply         = mkDmaApply                  lookups
@@ -132,13 +132,13 @@ mkAvlDbModifyActions plugin = do
     run = flip runReaderT plugin
 
     -- Apply changes to the database.
-    mkDmaApply :: TVar (Set AVL.Revision) -> AVLChgAccum h k v -> m (AVL.Proof h k v)
+    mkDmaApply :: TVar (Set h) -> AVLChgAccum h k v -> m (AVL.Proof h k v)
     mkDmaApply lookups accum' = do
       accum        <- initAccum plugin accum'
       nodesTouched <- atomically $ STM.swapTVar lookups Set.empty
       old          <- run AVL.currentRoot
       let preproof =  nodesTouched <> acaTouched accum
-      proof        <- run $ AVL.prune preproof (AVL.fullRehash old)
+      proof        <- run $ AVL.prune preproof old
 
       -- To prevent unnessessary growth of storage,
       -- we will 'overwrite' for now instead of 'append'ing.
@@ -152,7 +152,7 @@ mkAvlDbAccessActions
      , AVLMutates h k v m
      )
   => DB.Plugin
-  -> TVar (Set.Set AVL.Revision)
+  -> TVar (Set.Set h)
   -> DbAccessActions (AVLChgAccum h k v) k v m
 mkAvlDbAccessActions plugin lookups = DbAccessActions
     { daaGetter
@@ -163,7 +163,7 @@ mkAvlDbAccessActions plugin lookups = DbAccessActions
     run :: ReaderT DB.Plugin m a -> m a
     run = flip runReaderT plugin
 
-    storeNodeset :: Set.Set AVL.Revision -> m ()
+    storeNodeset :: Set.Set h -> m ()
     storeNodeset nodeset = do
         atomically $ STM.modifyTVar lookups (<> nodeset)
 
