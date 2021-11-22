@@ -128,6 +128,12 @@ deriving instance IsPgValue PDFBody
 
 {- Custom instances -}
 
+instance FromField Language where
+    fromField field ty = toEnum <$> fromField field ty
+
+instance IsPgValue Language where
+    sqlValueSyntax = sqlValueSyntax . fromEnum
+
 instance FromField TxBlockIdx where
     fromField field ty = leftToPanic . txBlockIdxFromInt <$> fromField field ty
 

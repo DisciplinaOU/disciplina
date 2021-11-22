@@ -105,7 +105,7 @@ signedSubmissionToRequest sigSub =
         , nsWitness = _ssWitness sigSub
         }
 
-studentSubmissionInfoFromRow :: (SubmissionRow, Maybe TransactionRow) -> SubmissionStudentInfo
+studentSubmissionInfoFromRow :: (SubmissionRow, Maybe GradeRow) -> SubmissionStudentInfo
 studentSubmissionInfoFromRow (SubmissionRow{..}, mtx) =
     SubmissionStudentInfo
     { siHash = srHash

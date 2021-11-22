@@ -36,6 +36,7 @@ _definitions:
         - RecordWildCards
         - ScopedTypeVariables
         - StandaloneDeriving
+        - StrictData
         - TemplateHaskell
         - TupleSections
         - TypeFamilies

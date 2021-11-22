@@ -72,9 +72,11 @@ module Dscp.Educator.DB.Queries
        , createAssignment
        , createTransaction
        , createCertificate
+       , createCertificatePdf
        ) where
 
-
+import Control.Lens (to)
+import Control.Exception.Safe (catchJust)
 import Data.Default (Default (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -163,20 +165,20 @@ getGradesForCourseAssignments
     :: MonadIO m
     => Id Student -> Id Course -> DBT t m [PrivateTx]
 getGradesForCourseAssignments student' course' = do
-    runSelectMap privateTxFromRow . select $ do
-        privateTx <- all_ (esTransactions es)
-        submission <- related_ (esSubmissions es) (trSubmission privateTx)
-        assignment <- related_ (esAssignments es) (srAssignment submission)
+    runSelectMap (PrivateTxGrade . privateGradeFromRow) . select $ do
+        privateGrade <- all_     (esGrades      es)
+        submission   <- related_ (esSubmissions es) (grSubmission privateGrade)
+        assignment   <- related_ (esAssignments es) (srAssignment submission)
         guard_ (srStudent submission ==. valPk_ student')
-        guard_ (arCourse assignment ==. valPk_ course')
-        return (privateTx, submission)
+        guard_ (arCourse  assignment ==. valPk_ course')
+        return (privateGrade, submission)
 
 -- | How can a student receive transactions with Merkle proofs which contain info about his grades and assignments?
 getStudentTransactions :: MonadIO m => Id Student -> DBT t m [PrivateTx]
 getStudentTransactions student' = do
-    runSelectMap privateTxFromRow . select $ do
-        privateTx <- all_ (esTransactions es)
-        submission <- related_ (esSubmissions es) (trSubmission privateTx)
+    runSelectMap (PrivateTxGrade . privateGradeFromRow) . select $ do
+        privateTx  <- all_     (esGrades      es)
+        submission <- related_ (esSubmissions es) (grSubmission privateTx)
         guard_ (srStudent submission ==. valPk_ student')
         return (privateTx, submission)
 
@@ -224,26 +226,27 @@ getProvenStudentTransactions filters = do
     getTxsBlockMap :: DBT t m [(BlockIdx, PrivateTx)]
     getTxsBlockMap =
         runSelectMap rearrange . select $
-          orderBy_ (\(_bi, (tx, _sub)) -> asc_ (trIdx tx)) $ do
-            txId :-: BlockRowId blockIdx <- all_ (esBlockTxs es)
-            privateTx <- related_ (esTransactions es) txId
-            submission <- related_ (esSubmissions es) (trSubmission privateTx)
+            orderBy_ (\(_bi, (tx, _sub)) ->
+                asc_ (grIdx tx)) $ do
+                    txId :-: BlockRowId blockIdx <- all_ (esBlockTxs es)
+                    privateGrade <- related_ (esGrades       es) (GradeRowId txId)
+                    submission   <- related_ (esSubmissions  es) (grSubmission privateGrade)
 
-            guard_ (trIdx privateTx /=. val_ TxInMempool)
+                    guard_ (grIdx privateGrade /=. val_ TxInMempool)
 
-            whenJust (pfSince filters) $ \since ->
-                guard_ (trCreationTime privateTx >=. val_ since)
+                    whenJust (pfSince filters) $ \since ->
+                        guard_ (grCreationTime privateGrade >=. val_ since)
 
-            whenJust (pfCourse filters) $ \course -> do
-                assignment <- related_ (esAssignments es) (srAssignment submission)
-                guard_ (arCourse assignment ==. valPk_ course)
+                    whenJust (pfCourse filters) $ \course -> do
+                        assignment <- related_ (esAssignments es) (srAssignment submission)
+                        guard_ (arCourse assignment ==. valPk_ course)
 
-            guard_ $ filterMatchesPk_ (pfStudent filters) (srStudent submission)
-            guard_ $ filterMatchesPk_ (pfAssignment filters) (srAssignment submission)
+                    guard_ $ filterMatchesPk_ (pfStudent    filters) (srStudent    submission)
+                    guard_ $ filterMatchesPk_ (pfAssignment filters) (srAssignment submission)
 
-            return (blockIdx, (privateTx, submission))
+                    return (blockIdx, (privateGrade, submission))
       where
-        rearrange (bi, (tx, sub)) = (bi, privateTxFromRow (tx, sub))
+        rearrange (bi, (tx, sub)) = (bi, PrivateTxGrade $ privateGradeFromRow (tx, sub))
 
     getMerkleTreeAndHash :: BlockIdx -> DBT t m (PrivateHeaderHash, EmptyMerkleTree PrivateTx)
     getMerkleTreeAndHash blockIdx =
@@ -252,11 +255,11 @@ getProvenStudentTransactions filters = do
 
 getAllNonChainedTransactions :: MonadIO m => DBT t m [PrivateTx]
 getAllNonChainedTransactions =
-    runSelectMap privateTxFromRow . select $ do
-        privateTx <- all_ (esTransactions es)
-        submission <- related_ (esSubmissions es) (trSubmission privateTx)
-        guard_ (trIdx privateTx ==. val_ TxInMempool)
-        return (privateTx, submission)
+    runSelectMap (PrivateTxGrade . privateGradeFromRow) . select $ do
+        privateGrade <- all_     (esGrades      es)
+        submission   <- related_ (esSubmissions es) (grSubmission privateGrade)
+        guard_ (grIdx privateGrade ==. val_ TxInMempool)
+        return (privateGrade, submission)
 
 genesisBlockIdx :: BlockIdx
 genesisBlockIdx = 0
@@ -353,9 +356,9 @@ createPrivateBlock txs delta = runMaybeT $ do
 
     for_ txs' $ \(txIdx, txId) -> lift $ do
         runUpdate_ $ update
-            (esTransactions es)
-            (\tx -> [ trIdx tx <-. val_ (TxBlockIdx txIdx) ])
-            (\tx -> pk_ tx ==. valPk_ txId)
+            (esGrades es)
+            (\tx -> [ grIdx tx <-. val_ (TxBlockIdx txIdx) ])
+            (\tx -> pk_ tx ==. GradeRowId (valPk_ txId))
         runInsert . insert (esBlockTxs es) . insertValue $
             txId <:-:> bid
 
@@ -485,7 +488,7 @@ existsSubmission = existsWithPk (esSubmissions es)
 existsTransaction :: MonadIO m => Id PrivateTx -> DBT t m Bool
 existsTransaction = existsWithPk (esTransactions es)
 
-existsCertificateMeta :: MonadIO m => Id CertificateMeta -> DBT t m Bool
+existsCertificateMeta :: MonadIO m => Id CertificateFullInfo -> DBT t m Bool
 existsCertificateMeta = existsWithPk (esCertificates es)
 
 createStudent :: DBM m => Student -> DBT t m (Id Student)
@@ -531,39 +534,61 @@ createTransaction
     :: DBM m
     => PrivateTx -> DBT 'WithinTx m (Id PrivateTx)
 createTransaction trans = do
-    let ptid    = trans^.idOf
-        subHash = trans^.ptSignedSubmission.idOf
+    let ptid :: Id PrivateTx = trans^.idOf
+    rewrapAlreadyExists (TransactionDomain ptid) $ do
+        case trans of
+            PrivateTxGrade grade -> do
+                let subHash = grade^.ptSignedSubmission.idOf
 
-    _ <- getSignedSubmission subHash `assertJustPresent`
-        SubmissionDomain subHash
+                _ <- getSignedSubmission subHash `assertJustPresent`
+                    SubmissionDomain subHash
 
-    rewrapAlreadyExists (TransactionDomain ptid) $
+                runInsert . insert (esGrades es) . insertValue $
+                    GradeRow
+                    { grHash         = trans^.idOf.to TransactionRowId
+                    , grSubmission   = packPk subHash
+                    , grGrade        = grade^.ptGrade
+                    , grCreationTime = grade^.ptTime
+                    , grIdx          = TxInMempool
+                    }
+            PrivateTxCertification cert -> do
+              createCertificate (cert^.sgMessage)
+
         runInsert . insert (esTransactions es) . insertValue $
             TransactionRow
-            { trHash = ptid
-            , trSubmission = packPk subHash
-            , trGrade = trans^.ptGrade
-            , trCreationTime = trans^.ptTime
-            , trIdx = TxInMempool
+            { trId   = ptid
+            , trType = trans^.to getPrivateTxType
             }
 
     return ptid
 
-getTransaction :: DBM m => Id PrivateTx -> DBT t m (Maybe PrivateTx)
-getTransaction ptid = do
-    fmap listToMaybe . runSelectMap privateTxFromRow . select $ do
-        privateTx <- related_ (esTransactions es) (valPk_ ptid)
-        submission <- related_ (esSubmissions es) (trSubmission privateTx)
-        return (privateTx, submission)
-
 createCertificate
     :: DBM m
-    => CertificateMeta -> PDFBody -> DBT t m ()
-createCertificate meta pdf =
+    => CertificateFullInfo -> DBT t m ()
+createCertificate meta =
     rewrapAlreadyExists (CertificateDomain (getId meta)) $
         runInsert . insert (esCertificates es) $ insertValue
             CertificateRow
             { crHash = hash meta
-            , crMeta = PgJSONB meta
-            , crPdf = pdf
+            , crInfo = PgJSONB meta
             }
+
+createCertificatePdf
+    :: DBM m
+    => CertificateFullInfo -> PDFBody -> DBT t m ()
+createCertificatePdf meta pdf =
+    rewrapAlreadyExists (CertificateDomain (getId meta)) $
+        runInsert . insert (esCertificatesPdf es) $ insertValue
+            CertificatePdfRow
+            { cprHash = hash meta
+            , cprPdf  = pdf
+            }
+
+
+
+getTransaction :: DBM m => Id PrivateTx -> DBT t m (Maybe PrivateTx)
+getTransaction ptid = do
+    fmap listToMaybe . runSelectMap (PrivateTxGrade . privateGradeFromRow) . select $ do
+        privateGrade <- related_ (esGrades      es) (GradeRowId $ valPk_ ptid)
+        submission   <- related_ (esSubmissions es) (grSubmission privateGrade)
+        return (privateGrade, submission)

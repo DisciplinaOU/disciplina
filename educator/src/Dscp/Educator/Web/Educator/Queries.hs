@@ -92,9 +92,9 @@ educatorRemoveStudent student = do
 
 educatorGetStudents
     :: MonadEducatorWebQuery m
-    => Maybe Course -> PaginationSpec -> DBT t m [StudentInfo]
+    => Maybe Course -> PaginationSpec -> DBT t m [Student]
 educatorGetStudents courseF pagination =
-    runSelectMap StudentInfo . select $
+    runSelect . select $
     paginate_ pagination $ do
         student <- all_ (esStudents es)
         whenJust courseF $ \course ->
@@ -228,13 +228,14 @@ educatorGetGrades
     -> DBT t m [GradeInfo]
 educatorGetGrades courseIdF studentF assignmentF isFinalF =
     runSelectMap gradeInfoFromRow . select $ do
-        privateTx <- all_ (esTransactions es)
-        submission <- related_ (esSubmissions es) (trSubmission privateTx)
+        privateTx  <- all_     (esGrades es)
+        submission <- related_ (esSubmissions es) (grSubmission privateTx)
         assignment <- related_ (esAssignments es) (srAssignment submission)
 
-        guard_ $ filterMatchesPk_ courseIdF (arCourse assignment)
-        guard_ $ filterMatchesPk_ studentF (srStudent submission)
-        guard_ $ filterMatchesPk_ assignmentF (pk_ assignment)
+        guard_ $ filterMatchesPk_ courseIdF   (arCourse  assignment)
+        guard_ $ filterMatchesPk_ studentF    (srStudent submission)
+        guard_ $ filterMatchesPk_ assignmentF (pk_       assignment)
+
         whenJust isFinalF $ \isFinal -> do
             let assignTypeF = isFinal ^. from assignmentTypeRaw
             guard_ (arType assignment ==. val_ assignTypeF)
@@ -249,7 +250,7 @@ educatorPostGrade subH grade = do
     sigSub <- getSignedSubmission subH
         `assertJust` AbsentError (SubmissionDomain subH)
 
-    let ptx = PrivateTx
+    let ptx = PrivateTxGrade $ PrivateGrade
             { _ptSignedSubmission = sigSub
             , _ptTime = time
             , _ptGrade = grade
@@ -257,13 +258,19 @@ educatorPostGrade subH grade = do
         txId = getId ptx
 
     rewrapAlreadyExists (TransactionDomain txId) $
+        runInsert . insert (esGrades es) . insertValue $
+            GradeRow
+            { grHash         = txId
+            , grGrade        = grade
+            , grCreationTime = time
+            , grIdx          = TxInMempool
+            , grSubmission   = packPk subH
+            }
+
         runInsert . insert (esTransactions es) . insertValue $
             TransactionRow
-            { trHash = txId
-            , trGrade = grade
-            , trCreationTime = time
-            , trIdx = TxInMempool
-            , trSubmission = packPk subH
+            { trId   = txId
+            , trType = ptxTypeGrade
             }
 
 -- | Creates a private block consisting of transactions built from certificate grades
@@ -323,9 +330,9 @@ getCertificateIssuerInfo = view (lensOf @CertificateIssuerResource) >>= \case
 
 educatorGetCertificate
     :: MonadEducatorWebQuery m
-    => Hash CertificateMeta -> DBT t m PDFBody
+    => Hash CertificateFullInfo -> DBT t m PDFBody
 educatorGetCertificate certId =
-    selectByPk crPdf (esCertificates es) certId
+    selectByPk cprPdf (esCertificatesPdf es) certId
         >>= nothingToThrow (AbsentError $ CertificateDomain certId)
 
 educatorGetCertificates
@@ -339,9 +346,9 @@ educatorGetCertificates sorting pagination =
         certificate <-
             sortBy_ sorting sortingSpecApp $ do
             all_ (esCertificates es)
-        return (crHash certificate, crMeta certificate)
+        return (crHash certificate, crInfo certificate)
   where
     sortingSpecApp CertificateRow{..} =
-        fieldSort @"createdAt" (crMeta ->>$. #cmIssueDate) .*.
-        fieldSort @"studentName" (crMeta ->>$. #cmStudentName) .*.
+        fieldSort @"createdAt"   (crInfo ->>$. #cmIssueDate) .*.
+        fieldSort @"studentName" (crInfo ->>$. #cmStudentName) .*.
         HNil

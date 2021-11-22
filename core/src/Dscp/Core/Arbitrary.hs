@@ -58,6 +58,19 @@ import Dscp.Crypto
 import Dscp.Util
 import Dscp.Util.Test
 
+instance
+    ( HasId a
+    , Arbitrary a
+    , HasAbstractSignature SigScheme (Id a)
+    )
+  =>
+    Arbitrary (Signed a)
+  where
+    arbitrary = do
+        SecretKeyData sk _ _ <- arbitrary
+        object <- arbitrary
+        return $ signed sk object
+
 instance Arbitrary SecretKeyData where
     arbitrary = mkSecretKeyData <$> arbitrary
 
@@ -171,7 +184,23 @@ instance Arbitrary CertificateName where
         <*> arbitrary
 
 instance Arbitrary PrivateTx where
-    arbitrary = PrivateTx <$> arbitrary <*> arbitrary <*> arbitrary
+    arbitrary = genericArbitrary
+    shrink    = genericShrink
+
+instance Arbitrary PrivateGrade where
+    arbitrary = genericArbitrary
+    shrink    = genericShrink
+
+instance Arbitrary PrivateCertification where
+    arbitrary = genericArbitrary
+    shrink    = genericShrink
+
+instance Arbitrary SignedCertificateGrade where
+    arbitrary = do
+        cg <- arbitrary
+        pk <- arbitrary
+        return (SignedCertificateGrade cg (toPublic pk) (sign pk (hash cg)))
+    shrink    = genericShrink
 
 instance Arbitrary ATGSubjectChange where
     arbitrary = genericArbitrary
@@ -448,7 +477,7 @@ genCoreTestEnv p = do
           <+> pksItem
           <+> submissionsItem
     txsItem <- forM sigSubsItem $ \sigSub ->
-        PrivateTx <$> pure sigSub <*> arbitrary <*> arbitrary
+        (PrivateTxGrade ... PrivateGrade) <$> pure sigSub <*> arbitrary <*> arbitrary
     return CoreTestEnv
         { cteStudents             = studentsItem
         , cteCourses              = fmap _aCourseId assignmentsItem
@@ -498,7 +527,7 @@ gradeEx = detGen 123 arbitrary
 
 privateTxEx :: PrivateTx
 privateTxEx =
-    PrivateTx
+    PrivateTxGrade $ PrivateGrade
     { _ptSignedSubmission = signedSubmissionEx
     , _ptGrade = gradeEx
     , _ptTime = timestampEx
@@ -510,7 +539,7 @@ submissionWitnessEx = _ssWitness signedSubmissionEx
 certificateIssuerInfoEx :: CertificateIssuerInfo
 certificateIssuerInfoEx =
     CertificateIssuerInfo
-    { ciiName    = "Grimpy Cat University"
+    { ciiName    = "Grumpy Cat University"
     , ciiWebsite = "university@example.com"
     , ciiId      = "Principal"
     }

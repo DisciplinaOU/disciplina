@@ -36,7 +36,6 @@ module Dscp.Educator.Web.Educator.Types
 import Control.Lens (at, from, (%=), (.=), (?=), _Just)
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
-import qualified Data.Aeson.TH as A
 import Data.Char (toLower)
 import Data.Swagger (ToSchema (..))
 import qualified Data.Swagger as S
@@ -53,7 +52,6 @@ import Dscp.DB.SQL.Util
 import Dscp.Educator.DB.Schema
 import Dscp.Educator.Web.Types
 import Dscp.Util
-import Dscp.Util.Aeson
 import Dscp.Web.Swagger
 import Dscp.Witness.Web.Types
 
@@ -184,7 +182,7 @@ educatorAssignmentInfoFromRow AssignmentRow{..} =
     , aiIsFinal = arType ^. assignmentTypeRaw
     }
 
-educatorSubmissionInfoFromRow :: (SubmissionRow, Maybe TransactionRow) -> SubmissionEducatorInfo
+educatorSubmissionInfoFromRow :: (SubmissionRow, Maybe GradeRow) -> SubmissionEducatorInfo
 educatorSubmissionInfoFromRow (SubmissionRow{..}, tx) =
     SubmissionEducatorInfo
     { siHash = srHash
@@ -314,21 +312,18 @@ instance Buildable (ForResponseLog [a]) =>
 -- JSON instances
 ---------------------------------------------------------------------------
 
-deriveJSON defaultOptions ''NewStudent
+deriveJSON defaultOptions ''AssignmentEducatorInfo
+deriveJSON defaultOptions ''Certificate
+deriveJSON defaultOptions ''Counted
+deriveJSON defaultOptions ''CourseEducatorInfo
+deriveJSON defaultOptions ''EducatorInfo
+deriveJSON defaultOptions ''NewAssignment
 deriveJSON defaultOptions ''NewCourse
 deriveJSON defaultOptions ''NewGrade
-deriveJSON defaultOptions ''NewAssignment
-deriveJSON defaultOptions ''NewStudentCourse
+deriveJSON defaultOptions ''NewStudent
 deriveJSON defaultOptions ''NewStudentAssignment
-deriveJSON defaultOptions ''EducatorInfo
-deriveJSON defaultOptions ''CourseEducatorInfo
-deriveJSON defaultOptions ''AssignmentEducatorInfo
+deriveJSON defaultOptions ''NewStudentCourse
 deriveJSON defaultOptions ''SubmissionEducatorInfo
-deriveJSON defaultOptions ''Certificate
-deriveJSON defaultOptions ''CertificateGrade
-deriveJSON defaultOptions ''CertificateFullInfo
-deriveJSON defaultOptions ''Counted
-deriveJSON dscpAesonOptions{ A.constructorTagModifier = map toLower } ''Language
 
 ---------------------------------------------------------------------------
 -- Swagger instances

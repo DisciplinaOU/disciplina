@@ -171,32 +171,49 @@ deriving instance FromJSON GenesisDistribution
 -- TH derivations for data
 ---------------------------------------------------------------------------
 
+deriveJSON defaultOptions ''Signed
+
 deriveJSON defaultOptions ''Assignment
-deriveJSON defaultOptions ''Submission
-deriveJSON defaultOptions ''SignedSubmission
-deriveJSON dscpAesonOptions ''DocumentType  -- TODO: apply everywhere
-deriveJSON dscpAesonOptions ''AssignmentType
+deriveJSON defaultOptions ''CertificateGrade
 deriveJSON defaultOptions ''CertificateIssuerInfo
+deriveJSON defaultOptions ''CertificateFullInfo
 deriveJSON defaultOptions ''CertificateMeta
-deriveJSON defaultOptions ''PrivateTx
-deriveJSON defaultOptions ''PrivateBlockHeader
-deriveJSON defaultOptions ''Header
-deriveJSON defaultOptions ''TxInAcc
-deriveJSON defaultOptions ''TxOut
-deriveJSON defaultOptions ''Tx
-deriveJSON defaultOptions ''TxWitness
-deriveJSON defaultOptions ''TxWitnessed
+deriveJSON defaultOptions ''FeeCoefficients
 deriveJSON defaultOptions ''GTx
 deriveJSON defaultOptions ''GTxWitnessed
+deriveJSON defaultOptions ''Header
+deriveJSON defaultOptions ''PrivateBlockHeader
+deriveJSON defaultOptions ''PrivateCertification
+deriveJSON defaultOptions ''PrivateGrade
+deriveJSON defaultOptions ''PrivateTx
+deriveJSON defaultOptions ''PublicationTx
 deriveJSON defaultOptions ''PublicationTxWitness
 deriveJSON defaultOptions ''PublicationTxWitnessed
-deriveJSON defaultOptions ''PublicationTx
-deriveJSON defaultOptions ''FeeCoefficients
+deriveJSON defaultOptions ''SignedCertificateGrade
+deriveJSON defaultOptions ''SignedSubmission
+deriveJSON defaultOptions ''Submission
+deriveJSON defaultOptions ''Tx
+deriveJSON defaultOptions ''TxInAcc
+deriveJSON defaultOptions ''TxOut
+deriveJSON defaultOptions ''TxWitness
+deriveJSON defaultOptions ''TxWitnessed
+deriveJSON dscpAesonOptions ''AssignmentType
+deriveJSON dscpAesonOptions ''DocumentType  -- TODO: apply everywhere
 deriveJSON dscpAesonOptions ''EducationForm
 deriveJSON dscpAesonOptions ''GradingScale
 
 deriveFromJSON defaultOptions ''Committee
 deriveJSON defaultOptions ''GenesisDistributionElem
+
+instance ToJSON Language where
+    toJSON EN = String "en"
+    toJSON RU = String "ru"
+
+instance FromJSON Language where
+    parseJSON = withText "Language" $ \case
+        "en" -> pure EN
+        "ru" -> pure RU
+        other -> fail $ "invalid constructor: " ++ toString other
 
 instance FromJSON GenesisInfo where
     parseJSON = error "FromJSON GenesisInfo should never be called"
