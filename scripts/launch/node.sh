@@ -57,6 +57,7 @@ fi
 files="$root/run"
 # gitignored files: databases...
 tmp_files="$files/tmp/$node"
+# new postgres host
 
 witness_web_addr="127.0.0.1:8091"
 

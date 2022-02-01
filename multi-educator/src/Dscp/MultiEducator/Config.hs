@@ -67,6 +67,7 @@ defaultMultiEducatorConfig :: MultiEducatorConfigRecP
 defaultMultiEducatorConfig = upcast defaultWitnessConfig
     & sub #educator . sub #db .~ defaultPostgresRealParams
     & sub #educator . sub #api .~ defaultMultiEducatorWebConfig
+    & sub #educator . sub #certificates . option #language ?~ EN
     & sub #educator . sub #certificates . option #latex ?~ "xelatex"
 
 defaultMultiEducatorWebConfig :: MultiEducatorWebConfigRecP

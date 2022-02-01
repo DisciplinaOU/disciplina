@@ -29,6 +29,8 @@ let
     disciplina-witness
     disciplina-pdfs
   ];
+
+  buildFlatpak = callPackage ../nix-flatpak-bundler/default.nix {};
 in
 
 rec {

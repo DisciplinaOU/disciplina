@@ -1,3 +1,6 @@
+.git
+.gitignore
+
 run/tmp/
 run/multieducator/
 educator-db
