@@ -1,4 +1,4 @@
-<<: !include "../hpack/module.yaml"
+<<: !include "../hpack/package.yaml"
 
 name: disciplina-pdfs
 description: Disciplina tools for work with PDFs

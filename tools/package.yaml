@@ -1,4 +1,4 @@
-<<: !include "../hpack/module.yaml"
+<<: !include "../hpack/package.yaml"
 
 name:        disciplina-tools
 description: This package contains tools for development of Disciplina

@@ -1,4 +1,94 @@
-<<: !include "../hpack/module.yaml"
+# Include this file in your module's `package.yaml` to set sensible defaults
+# and get access to useful utilities.
+# Included verbatim to make `haskell.nix` build work
+
+_definitions:
+  _top-level:
+    - &meta
+        version:            '0.1.0.0'
+        author:             Serokell
+        maintainer:         hi@serokell.io
+        copyright:          2018 TeachMePlease.com
+        github:             DisciplinaOU/disciplina
+        extra-source-files: [README.md]
+
+    - &default-extensions
+        - NoImplicitPrelude
+        - AllowAmbiguousTypes
+        - BangPatterns
+        - ConstraintKinds
+        - DataKinds
+        - DefaultSignatures
+        - DeriveDataTypeable
+        - DeriveGeneric
+        - EmptyCase
+        - FlexibleContexts
+        - FlexibleInstances
+        - FunctionalDependencies
+        - GeneralizedNewtypeDeriving
+        - LambdaCase
+        - MultiParamTypeClasses
+        - MultiWayIf
+        - NamedFieldPuns
+        - OverloadedStrings
+        - OverloadedLabels
+        - PatternSynonyms
+        - RankNTypes
+        - RecordWildCards
+        - ScopedTypeVariables
+        - StandaloneDeriving
+        - TemplateHaskell
+        - TupleSections
+        - TypeFamilies
+        - TypeOperators
+        - UndecidableInstances
+        - ViewPatterns
+        - TypeApplications
+
+    - &dependencies
+        - base
+        - universum
+
+    - &ghc-options
+        - -Wall
+        - -fno-warn-orphans
+        - -Widentities
+        - -Wincomplete-record-updates
+        - -Werror
+
+  _utils:
+    - &lib-common
+        source-dirs: src
+
+        ghc-options:
+          - -Wincomplete-uni-patterns
+
+    - &test-common
+        main:        Main.hs
+        source-dirs: tests
+
+        ghc-options:
+          - -threaded
+          - -rtsopts
+          - -with-rtsopts=-N
+
+    - &bench-common
+        source-dirs: bench
+
+        ghc-options:
+          - -threaded
+
+    - &exec-common
+        main:        Main.hs
+        ghc-options:
+          - -threaded
+          - -O2
+          - -Wincomplete-uni-patterns
+
+<<: *meta
+default-extensions: *default-extensions
+dependencies: *dependencies
+ghc-options: *ghc-options
 
 name: disciplina-core
 description: Disciplina blockchain core functionality
@@ -54,14 +144,12 @@ library:
     - safe-exceptions >= 0.1.4
     - scientific
     - serialise
-    - serokell-util
     - servant
     - servant-server
     - servant-client-core
-    - servant-generic
     - servant-util
     - semver
-    - snowdrop-util
+    # - snowdrop-util
     - stm
     - template-haskell
     - text

@@ -1,4 +1,4 @@
-<<: !include "../hpack/module.yaml"
+<<: !include "../hpack/package.yaml"
 
 name: disciplina-faucet
 description: This package contains disciplina faucet backend
@@ -25,7 +25,6 @@ library:
     - serokell-util
     - servant
     - servant-client
-    - servant-generic
     - servant-server
     - servant-util
     - text-format

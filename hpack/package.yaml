@@ -1,5 +1,6 @@
-# This file defines sensible defaults but does not actually apply
-# any of them, so it can be safely included.
+# Include this file in your module's `package.yaml` to set sensible defaults
+# and get access to useful utilities.
+# Renamed it as `package.yaml` as a hack to make haskell.nix work.
 
 _definitions:
   _top-level:
@@ -25,7 +26,6 @@ _definitions:
         - FunctionalDependencies
         - GeneralizedNewtypeDeriving
         - LambdaCase
-        - MonadFailDesugaring
         - MultiParamTypeClasses
         - MultiWayIf
         - NamedFieldPuns
@@ -45,8 +45,6 @@ _definitions:
         - TypeApplications
 
     - &dependencies
-        - base-noprelude >= 4.9 && < 5
-        - loot-prelude
         - universum
 
     - &ghc-options
@@ -84,3 +82,8 @@ _definitions:
           - -threaded
           - -O2
           - -Wincomplete-uni-patterns
+
+<<: *meta
+default-extensions: *default-extensions
+dependencies: *dependencies
+ghc-options: *ghc-options

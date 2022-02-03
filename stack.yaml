@@ -1,76 +1,55 @@
-resolver: lts-11.17
+resolver: lts-18.23
 
 packages:
 - 'core'
-- 'witness'
+# - 'witness'  # No more custom public chain
 - 'educator'
 - 'multi-educator'
 - 'tools'
-- 'wallet'
-- 'faucet'
+# - 'wallet'  # Removed: this wallet is not necessary really anymore
+# - 'faucet'
 - 'pdfs'
 
 extra-deps:
 - aeson-options-0.0.0
-- base58-bytestring-0.1.0
-- cryptonite-openssl-0.7
+- beam-core-0.9.0.0
+- beam-migrate-0.5.0.0
+- beam-postgres-0.5.0.0
 - pretty-tree-0.1.0.0
-- time-units-1.0.0
-- serokell-util-0.8.0
-- formatting-6.2.5
-- typed-process-0.2.2.0
-- teardown-0.5.0.0
-- universum-1.1.0
-- safe-exceptions-0.1.7.0
-- servant-auth-0.3.2.0
-- servant-auth-server-0.4.0.0
-- cborg-0.2.1.0
-- serialise-0.2.1.0
-- beam-postgres-0.3.2.2
-- servant-quickcheck-0.0.6.0
+# - serokell-util-0.10.0
+- teardown-0.5.0.1
+- servant-quickcheck-0.0.10.0
 - HList-0.5.0.0
-- qrcode-core-0.8.0
-- qrcode-juicypixels-0.8.0
-- retry-0.8.0.0
-
-# Fixes bug with `concurrently` not waiting for its children to die
-# (this bug causes our node terminatation before all workers/resources cleaned up)
-- async-2.2.1
-- lifted-async-0.10.0.3
-
+- union-0.1.2
 
 - git: https://github.com/serokell/servant-util.git
-  commit: 54a8af9f82055a4cc45ad85eb4094ecbe77d249e
+  commit: ee9b1aa75011554626ddbbb72e9125f617e688d9
   subdirs:
     - servant-util
     - servant-util-beam-pg
 
-- git: https://github.com/serokell/auth-data-structures.git
-  commit: 4a95f4dd32a82195f49ceb0113c9f05bc260ca7d
+# - git: https://github.com/serokell/avl-plus.git
+#   commit: 3fb3933f4f11f282e8c498d128c3e5c79518ea9b
 
-- git: https://github.com/serokell/log-warper.git
-  commit: 5b3c68fb2c71df45c7589a2ecff011659221d279
+# - git: https://github.com/serokell/zipp.git
+#   commit: ec15b334355784b4b6a052ab21108c3d6eaceff0
 
-- git: https://github.com/serokell/blockchain-util.git
-  commit: 9a28a192c55cb61735ffc0c899fbd80815e1dd2c # volhovm/dscp193
-  subdirs:
-    - snowdrop-core
-    - snowdrop-util
-    - snowdrop-block
-    - snowdrop-execution
+# - git: https://github.com/serokell/log-warper.git
+#   commit: a6dd74a1085e8c6d94a4aefc2a036efe30f6cde5
 
-- git: https://github.com/serokell/rocksdb-haskell.git
-  commit: 2dd6b4ffdc4edb86b477273ee3c8416a1520f4e1
+# - git: https://github.com/serokell/blockchain-util.git
+#   commit: a6428c6841e7002605a115002f58eff78ff9f128 # volhovm/dscp193
+#   subdirs:
+#     # - snowdrop-core
+#     - snowdrop-util
+#     # - snowdrop-block
+
+# - git: https://github.com/serokell/rocksdb-haskell.git
+#   commit: 2dd6b4ffdc4edb86b477273ee3c8416a1520f4e1
 
 # Required by lootbox (loot-log)
-- git: https://github.com/kowainik/co-log.git
-  commit: 41cc915e42628c9cc4eea28db2ecdf11bd0e413e
-  subdirs:
-  - co-log-core
-  - co-log
-
-- git: https://github.com/serokell/co-log-sys.git
-  commit: 4d3edc99a073e51830dce0dd0efd35b65f9fb5b5
+- co-log-0.4.0.1
+- co-log-sys-0.1.1.0
 
 # In version 1.2.1.1 function `createTempDirectory` implemented in a way which does
 # not suit for concurrent use from multiple processes.
@@ -85,48 +64,35 @@ extra-deps:
   subdirs:
   - componentm
 
-# Required by co-log and co-log-core
-- contravariant-1.5
-- relude-0.3.0
-- typerep-map-0.3.0
-- primitive-0.6.4.0
-
-- git: https://github.com/serokell/lootbox.git
-  commit: 66506052cd7338d420701f446c619f160c4bb7d4
+- git: https://github.com/flyingleafe/lootbox.git
+  commit: 5f54dbd865bb8a2dc55fd6237013dae904f78d2a
   subdirs:
     - code/base
     - code/config
     - code/log
     - code/network
-    - code/prelude
 
-- git: https://github.com/serokell/ariadne.git
-  commit: 7676f62b48e76f6d2041d3b5c07e96979e4f517f
-  subdirs:
-    - ariadne/core
-    - knit
-    - ui/cli-lib
-    - ui/vty-lib
+# - git: https://github.com/serokell/ariadne.git
+#   commit: 7676f62b48e76f6d2041d3b5c07e96979e4f517f
+#   subdirs:
+#     - ariadne/core
+#     - knit
+#     - ui/cli-lib
+#     - ui/vty-lib
 
-# for ariadne
-- loc-0.1.3.2
-- brick-0.38
-- named-0.1.0.0
-- ntype-0.1.0.0
-- vty-5.22
-
-# Forced by lootbox #
-- base-noprelude-4.10.1.0
-# - log-warper-1.8.9 - overriden above
-# - serokell-util-0.6.0 - overriden above
-- vinyl-0.8.1.1
+# # for ariadne
+# - loc-0.1.3.2
+# - brick-0.38
+# - named-0.1.0.0
+# - ntype-0.1.0.0
+# - vty-5.22
 
 - git: https://github.com/int-index/caps
-  commit: 2f46fc6d5480bdef0a17f64359ad6eb29510dba4
+  commit: 37ab7699570002ff92529cf92c8ca01d5419bb7b
 
 # for caps
-- git: https://github.com/mokus0/dependent-sum
-  commit: f8909cb323b4ffa63af6c4e7cb3a9745e6199080
+# - git: https://github.com/mokus0/dependent-sum
+#   commit: f8909cb323b4ffa63af6c4e7cb3a9745e6199080
 
 # for monitoring
 - git: https://github.com/serokell/mon.git
@@ -139,7 +105,7 @@ extra-deps:
 # Lootbox dependencies end #
 
 # for snowdrop, will be removed
-- pretty-terminal-0.1.0.0
+# - pretty-terminal-0.1.0.0
 
 apply-ghc-options: everything
 

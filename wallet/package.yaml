@@ -1,4 +1,4 @@
-<<: !include "../hpack/module.yaml"
+<<: !include "../hpack/package.yaml"
 
 name: disciplina-wallet
 description: Ariadne-based wallet for Disciplina
@@ -36,7 +36,6 @@ library:
     - serialise
     - serokell-util
     - servant
-    - servant-generic
     - servant-client
     - text-format
   ghc-options:

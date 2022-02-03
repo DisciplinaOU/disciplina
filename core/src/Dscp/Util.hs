@@ -1,7 +1,9 @@
 -- | Utilities.
 
 module Dscp.Util
-       ( anyMapM
+       ( OldestFirst (..)
+       , NewestFirst (..)
+       , anyMapM
        , listToMaybeWarn
        , listToMaybeWarnM
        , allUniqueOrd
@@ -70,7 +72,7 @@ module Dscp.Util
        , dieGracefully
 
          -- * Re-exports
-       , module Snowdrop.Util
+       -- , module Snowdrop.Util
        ) where
 
 import Codec.Serialise (Serialise, serialise)
@@ -88,9 +90,15 @@ import qualified UnliftIO.Async as UIO
 import Loot.Log (ModifyLogName (..), MonadLogging, NameSelector (CallstackName), logError,
                  logWarning)
 
-import Snowdrop.Util (NewestFirst (..), OldestFirst (..))
-
 import Dscp.Crypto.ByteArray (FromByteArray (..))
+
+newtype OldestFirst b a = OldestFirst { unOldestFirst :: b a }
+deriving instance Foldable b => Foldable (OldestFirst b)
+deriving instance Functor b => Functor (OldestFirst b)
+
+newtype NewestFirst b a = NewestFirst { unNewestFirst :: b a }
+deriving instance Foldable b => Foldable (NewestFirst b)
+deriving instance Functor b => Functor (NewestFirst b)
 
 deriving instance Container (b a) => Container (OldestFirst b a)
 deriving instance Container (b a) => Container (NewestFirst b a)

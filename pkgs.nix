@@ -1,8 +1,13 @@
-(import (fetchGit {
-  url = https://github.com/DisciplinaOU/serokell-closure;
-  rev = "7b26d2aa7b99b11201679b51d80a963f9aac4847";
-  ref = "20210415.2126";
-})).extend(final: previous: with previous; rec {
+# (import (fetchGit {
+#   url = https://github.com/DisciplinaOU/serokell-closure;
+#   rev = "7b26d2aa7b99b11201679b51d80a963f9aac4847";
+#   ref = "20210415.2126";
+let
+  sources = import ./nix/sources.nix;
+  haskellNix = import sources.haskellNix {};
+  pkgs = import haskellNix.sources.nixpkgs-unstable haskellNix.nixpkgsArgs;
+
+in pkgs.extend(final: previous: with previous; rec {
   bubblewrap = callPackage ../nix-flatpak-bundler/bubblewrap {};
   ostree = callPackage ../nix-flatpak-bundler/ostree {};
   flatpak = callPackage ../nix-flatpak-bundler/flatpak { inherit bubblewrap ostree; };

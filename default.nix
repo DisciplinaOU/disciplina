@@ -16,32 +16,36 @@ let
     libraryToolDepends = (old.libraryToolDepends or []) ++ [ pkgs.pdf-generator-xelatex ];
   });
 in
-stackToNix {
+haskell-nix.stackProject {
   # TODO: properly fix this in stack-to-nix
-  root = constGitIgnore "disciplina-src" ./. [
-    "*.nix"
-    "/ChangeLog.md"
-    "/README.md"
-    "/.buildkite"
-    "/config.yaml"
-    "/scripts"
-    "/secrets"
-  ];
-  inherit shell;
-  overrides = self: previous: {
-    disciplina-educator =
-      (withPostgreSQL
-        (addLatex previous.disciplina-educator)
-      );
+  # root = constGitIgnore "disciplina-src" ./. [
+  #   "*.nix"
+  #   "/ChangeLog.md"
+  #   "/README.md"
+  #   "/.buildkite"
+  #   "/config.yaml"
+  #   "/scripts"
+  #   "/secrets"
+  # ];
+  # inherit shell;
 
-    HList = pkgs.haskell.lib.overrideCabal previous.HList (o: {
-      preCompileBuildDriver = ''
-        rm -f Setup.lhs Setup.hs
-        cat << EOF > Setup.hs
-        import Distribution.Simple
-        main = defaultMain
-        EOF
-      '';
-    });
-  };
+  name = "disciplina";
+  src = ./.;
+
+  # overrides = self: previous: {
+  #   disciplina-educator =
+  #     (withPostgreSQL
+  #       (addLatex previous.disciplina-educator)
+  #     );
+
+  #   HList = pkgs.haskell.lib.overrideCabal previous.HList (o: {
+  #     preCompileBuildDriver = ''
+  #       rm -f Setup.lhs Setup.hs
+  #       cat << EOF > Setup.hs
+  #       import Distribution.Simple
+  #       main = defaultMain
+  #       EOF
+  #     '';
+  #   });
+  # };
 }
