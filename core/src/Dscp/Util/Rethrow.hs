@@ -13,6 +13,7 @@ module Dscp.Util.Rethrow
     , throwsOnlyExpected
     ) where
 
+import Universum
 import Control.Lens (LensLike')
 import GHC.TypeLits (ErrorMessage (..), TypeError)
 import Test.QuickCheck (Property, Testable, property)

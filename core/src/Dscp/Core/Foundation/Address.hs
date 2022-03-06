@@ -9,9 +9,10 @@ module Dscp.Core.Foundation.Address
        , addrToText
        ) where
 
+import Universum
 import Codec.Serialise (Serialise (..))
 import Data.ByteString.Base58 (Alphabet, bitcoinAlphabet, decodeBase58, encodeBase58)
-import Fmt (build)
+import Fmt (Buildable (..), pretty)
 
 import Dscp.Crypto.Impl (Hash, PublicKey, hash)
 import Dscp.Crypto.Serialise ()

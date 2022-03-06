@@ -1,5 +1,6 @@
 module Test.Dscp.Core.Validation.Educator where
 
+import Universum
 import qualified Data.Map.Strict as M
 import System.IO.Unsafe (unsafePerformIO)
 import Test.Hspec

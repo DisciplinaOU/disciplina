@@ -1,8 +1,10 @@
-
 -- | Aeson instances for web-related types
 
 module Dscp.Web.Aeson () where
 
+import Universum
+
+import Fmt (pretty)
 import Data.Aeson (FromJSON (..), ToJSON (..), Value (..), withText)
 
 import Dscp.Util (leftToFail)

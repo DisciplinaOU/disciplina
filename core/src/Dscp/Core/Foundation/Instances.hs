@@ -2,6 +2,7 @@
 
 module Dscp.Core.Foundation.Instances where
 
+import Universum
 import Codec.Serialise (Serialise (..))
 import Codec.Serialise.Decoding (decodeListLen, decodeWord)
 import Codec.Serialise.Encoding (encodeListLen, encodeWord)

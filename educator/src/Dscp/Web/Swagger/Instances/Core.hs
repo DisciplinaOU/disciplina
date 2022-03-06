@@ -1,7 +1,10 @@
 -- | Core swagger instances.
 module Dscp.Web.Swagger.Instances.Core () where
 
-import Control.Lens ((.=), (?=))
+import Universum
+
+import Control.Lens ((?=))
+import Data.Aeson (Value)
 import Data.Swagger (ToParamSchema (..), ToSchema (..))
 import qualified Data.Swagger as S
 import qualified Data.Swagger.Internal.ParamSchema as S
@@ -62,12 +65,12 @@ timestampFormat = "yyyy-mm-ddThh:MM:ss.ffffffZ"
 
 instance ToParamSchema Address where
     toParamSchema _ = mempty &: do
-        S.type_ .= S.SwaggerString
+        S.type_ ?= S.SwaggerString
         S.format ?= "base58"
 
 instance ToParamSchema (Hash a) where
     toParamSchema _ = mempty &: do
-        S.type_ .= S.SwaggerString
+        S.type_ ?= S.SwaggerString
         S.format ?= "hex"
 
 instance ToParamSchema Course where
@@ -86,10 +89,13 @@ instance ToParamSchema (DocumentType a) where
 -- ToSchema instances
 ----------------------------------------------------------------------------
 
+instance ToSchema Value where
+    declareNamedSchema = gDeclareNamedSchemaUnrestricted
+
 instance ToSchema ItemDesc where
     declareNamedSchema p =
         declareSimpleSchema "Description" $ mempty &: do
-            S.type_ .= S.SwaggerString
+            S.type_ ?= S.SwaggerString
             setParamDescription p
 
 instance ToSchema Timestamp where
@@ -129,7 +135,7 @@ instance ToSchema a => ToSchema (EncodeSerialised Base64Encoded a) where
 instance ToSchema Grade where
     declareNamedSchema p =
         declareSimpleSchema "Grade" $ mempty &: do
-            S.type_ .= S.SwaggerInteger
+            S.type_ ?= S.SwaggerInteger
             S.minimum_ ?= gradeToNum minBound
             S.maximum_ ?= gradeToNum maxBound
             setParamDescription p
@@ -147,7 +153,7 @@ instance ToSchema PrivateTx where
 
 instance S.ToParamSchema CertificateName where
     toParamSchema _ = mempty &: do
-        S.type_ .= S.SwaggerString
+        S.type_ ?= S.SwaggerString
         S.format ?= "base64url"
         S.pattern ?= ".pdf$"
 
@@ -157,5 +163,5 @@ instance S.ToParamSchema CertificateName where
 
 instance EnumHasDescription GeneralBackendError where
     enumDocDescription p = errorCaseDocDesc @UnsafeFiller p $ \case
-        InvalidFormat{} -> "Invalid format of one of parameters."
+        InvalidFormat{}      -> "Invalid format of one of parameters."
         ServiceUnavailable{} -> "Number of incoming requests is exceeded."

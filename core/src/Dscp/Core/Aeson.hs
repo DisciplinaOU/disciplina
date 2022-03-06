@@ -2,6 +2,7 @@
 
 module Dscp.Core.Aeson () where
 
+import Universum
 import Codec.Serialise (Serialise)
 import Data.Aeson (FromJSON (..), FromJSONKey (..), FromJSONKeyFunction (..), ToJSON (..),
                    ToJSONKey (..), Value (..), object, withObject, withScientific, withText, (.:),

@@ -1,5 +1,6 @@
 module Test.Dscp.DB.DSL.Interpret.SimpleTxDB where
 
+import Universum
 import Test.Hspec
 
 import Dscp.Core (Course (..), Subject, gA, gB, gC, gD)

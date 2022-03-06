@@ -1,5 +1,5 @@
-{-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE QuasiQuotes               #-}
 
 -- | Necessary types and implementation for web server authenthication
 -- TODO: move all authentication stuff not directly related to Educator
@@ -33,7 +33,6 @@ module Dscp.Educator.Web.Auth
        ) where
 
 import Control.Lens (at, (<>~), (?~))
-import Data.Typeable (typeRep)
 import Crypto.JOSE (Error, decodeCompact, encodeCompact)
 import Data.Aeson (FromJSON (..), decodeStrict, encode, withObject, (.:))
 import Data.Aeson.Options (defaultOptions)
@@ -45,26 +44,25 @@ import qualified Data.List as L (lookup)
 import qualified Data.Swagger as S
 import Data.Time.Clock (NominalDiffTime, UTCTime, diffUTCTime, getCurrentTime)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
-import Data.Typeable (cast)
+import Data.Typeable (cast, typeRep)
 import GHC.TypeLits (ErrorMessage (..), Symbol, TypeError)
+import Network.HTTP.Types (Status)
 import Network.Wai (Request, rawPathInfo, requestHeaders)
-import Servant ((:>), HasServer, ServantErr (..), ServerT, err401, hoistServerWithContext, route)
+import Servant (HasServer (..), ServerError (..), err401, (:>))
 import Servant.Auth.Server (AuthCheck (..), AuthResult (..))
 import Servant.Auth.Server.Internal.Class (AreAuths (..), IsAuth (..), runAuths)
 import Servant.Client (HasClient (..))
 import Servant.Client.Core (RunClient (..))
-import qualified Servant.Client.Core.Internal.Request as Cli
-import Servant.Server.Internal.RoutingApplication (DelayedIO, addAuthCheck, delayedFailFatal,
-                                                   withRequest)
+import qualified Servant.Client.Core.Request as Cli
+import Servant.Server.Internal.Delayed (addAuthCheck)
+import Servant.Server.Internal.DelayedIO (DelayedIO, delayedFailFatal, withRequest)
 import Servant.Swagger (HasSwagger (..))
 import Servant.Util (ApiCanLogArg (..), ApiHasArgClass (..))
-import System.FilePath.Posix ((</>))
+import Universum
 
 import Dscp.Crypto
 import Dscp.Util
 import Dscp.Util.Type
-import Dscp.Util.FileEmbed
-import Dscp.Util.Servant
 
 ---------------------------------------------------------------------------
 -- Data types
@@ -190,18 +188,19 @@ newtype AuthClientM auths m a = AuthClientM
     { unAuthClientM :: ReaderT (Maybe (ClientAuthDataFrom auths)) m a
     } deriving (Functor, Applicative, Monad, MonadIO, MonadThrow, MonadCatch)
 
-runAuthClientM :: Maybe (ClientAuthDataFrom auths) -> AuthClientM auths m a -> m a
+runAuthClientM :: forall m auths a . Maybe (ClientAuthDataFrom auths) -> AuthClientM auths m a -> m a
 runAuthClientM ctx action = runReaderT (unAuthClientM action) ctx
 
 -- | Attaches authentication header to given request.
 runAuthRequest
     :: (MonadIO m, AreClientAuths auths, AllUniqueAuths auths, Typeable auths)
-    => (Cli.Request -> m a) -> Cli.Request -> AuthClientM auths m a
-runAuthRequest runReq req =
+    => (Maybe [Status] -> Cli.Request -> m a)
+    -> Maybe [Status] -> Cli.Request -> AuthClientM auths m a
+runAuthRequest runReq statuses req =
     AuthClientM . ReaderT $ \mAuthData -> do
         mAuthToken <- liftIO $ mapM (encodeAuthData req) mAuthData
         let req' = maybe id addAuthToken mAuthToken req
-        runReq req'
+        runReq statuses req'
   where
     addAuthToken = Cli.addHeader "Authorization" . decodeUtf8 @Text . unAuthToken
 
@@ -209,19 +208,17 @@ instance ( MonadIO m, RunClient m
          , AreClientAuths auths, AllUniqueAuths auths, Typeable auths
          ) =>
          RunClient (AuthClientM auths m) where
-    runRequest = runAuthRequest runRequest
-    streamingRequest = runAuthRequest streamingRequest
-    throwServantError = AuthClientM . lift . throwServantError @m
-    catchServantError action handler =
-        AuthClientM . ReaderT $ \ctx ->
-            catchServantError @m (runAuthClientM ctx action)
-                                 (runAuthClientM ctx . handler)
+    runRequestAcceptStatus = runAuthRequest runRequestAcceptStatus
+    throwClientError = AuthClientM . lift . throwClientError @m
+    -- catchServantError action handler =
+    --     AuthClientM . ReaderT $ \ctx ->
+    --         catchServantError @m (runAuthClientM ctx action)
+    --                              (runAuthClientM ctx . handler)
 
 -- | Generally, on client side you are allowed to optionally provide authentication data
 -- which will appear in an authentication header.
 instance ( HasClient (AuthClientM auths m) api
          , RunClient m
-         , CanHoistClient (AuthClientM auths m) api
          , Typeable auths, AreClientAuths auths, AllUniqueAuths auths
          ) =>
          HasClient m (Auth' auths res :> api) where
@@ -230,8 +227,11 @@ instance ( HasClient (AuthClientM auths m) api
         Maybe (ClientAuthDataFrom auths) -> Client m api
 
     clientWithRoute _ _ semiBuiltRequest mAuthData =
-        hoistClientMonad (Proxy @(AuthClientM auths m)) (Proxy @api) (runAuthClientM mAuthData) $
+        hoistClientMonad (Proxy @(AuthClientM auths m)) (Proxy @api) (runAuthClientM @m @auths mAuthData) $
         clientWithRoute (Proxy @(AuthClientM auths m)) (Proxy @api) semiBuiltRequest
+
+    hoistClientMonad _ _ hoist clientAction1 mAuthData =
+        hoistClientMonad (Proxy @(AuthClientM auths m)) (Proxy @api) hoist $ clientAction1 mAuthData
 
 ---------------------------------------------------------------------------
 -- Helpers
@@ -339,7 +339,7 @@ instance (d ~ NoAuthData s) => IsAuth (NoAuth s) d where
     type AuthArgs (NoAuth s) = '[NoAuthContext s]
     runAuth _ _ = \case
         NoAuthOnContext dat -> pure dat
-        NoAuthOffContext -> mzero
+        NoAuthOffContext    -> mzero
 
 instance IsClientAuth (NoAuth s) where
     data ClientAuthData (NoAuth s)
@@ -359,7 +359,7 @@ instance AuthHasSwagger (NoAuth s) where
 whenNoAuth :: Monad m => NoAuthContext s -> (NoAuthData s -> m ()) -> m ()
 whenNoAuth ctx action = case ctx of
     NoAuthOnContext c -> action c
-    NoAuthOffContext -> pass
+    NoAuthOffContext  -> pass
 
 ---------------------------------------------------------------------------
 -- Documentation
@@ -370,7 +370,7 @@ data AuthSwaggerInfo
         { asiRequirements :: [Text]
           -- ^ Security requirements.
           -- Make sense only for @OAuth@, otherwise leave empty.
-        , asiDefinition :: S.SecurityScheme
+        , asiDefinition   :: S.SecurityScheme
           -- ^ Description of authentication method.
         }
     | NoAuthSwaggerInfo
@@ -416,7 +416,7 @@ instance (HasSwagger subApi, AuthsHaveSwagger auths) =>
         response401 = mempty
             & S.description .~ "Unauthorized"
             & S.headers . at "WWW-Authenticate" ?~
-                (mempty & S.type_ .~ S.SwaggerString)
+                (mempty & S.type_ ?~ S.SwaggerString)
 
 jwtSecurityDoc :: Text -> AuthSwaggerInfo
 jwtSecurityDoc desc = AuthSwaggerInfo
@@ -431,12 +431,12 @@ jwtSecurityDoc desc = AuthSwaggerInfo
     }
 
 educatorAuthDocDesc :: Text
-educatorAuthDocDesc =
-    $(embedResourceStringFile $ foldr1 (</>)
-        [ "specs"
-        , "disciplina"
-        , "educator"
-        , "api"
-        , "authentication.md"
-        ]
-     )
+educatorAuthDocDesc = "TBD: fix documentation embedding"
+    -- $(embedResourceStringFile $ foldr1 (</>) $
+    --       "specs" :|
+    --     [ "disciplina"
+    --     , "educator"
+    --     , "api"
+    --     , "authentication.md"
+    --     ]
+    --  )

@@ -13,12 +13,11 @@ module Dscp.Core.Validation.Educator
        , validatePrivateBlk
        ) where
 
+import Universum
 import Control.Lens (makePrisms, to)
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
-import Data.Text.Buildable (build)
-import qualified Data.Text.Buildable ()
-import Fmt (listF, (+|))
+import Fmt (Buildable (..), listF, (+|), pretty)
 import Text.InterpolatedString.Perl6 (qc)
 import qualified Text.Show
 
@@ -61,7 +60,7 @@ data WrongSubmissionSignature
 instance Exception WrongSubmissionSignature
 
 instance Show BlockValidationFailure where
-    show = toString . pretty
+    show = toString @Text . pretty
 
 instance Buildable BlockValidationFailure where
     build MerkleSignatureMismatch {..} =

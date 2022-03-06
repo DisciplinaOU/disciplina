@@ -27,28 +27,30 @@ module Dscp.Educator.Web.Types
        , certificateFromRow
        ) where
 
+import Universum
+
 import Control.Lens (Iso', from, iso, makePrisms)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
 import Data.Swagger (ToParamSchema (..), ToSchema (..))
-import Fmt (build, (+|), (+||), (|+), (||+))
+import Fmt (Buildable (..), (+|), (+||), (|+), (||+))
 import Loot.Base.HasLens (HasCtx)
-import Loot.Log (ModifyLogName, MonadLogging)
+import Loot.Log (LoggingIO, ModifyLogName, MonadLogging)
 import qualified Pdf.FromLatex as Pdf
-import Servant (FromHttpApiData (..), ToHttpApiData)
+-- import Servant (FromHttpApiData, ToHttpApiData)
 import Servant.Util (ForResponseLog (..), buildForResponse, buildListForResponse)
 
 import Dscp.Core
 import Dscp.Crypto
 import Dscp.DB.SQL
 import Dscp.Educator.DB
-import Dscp.Educator.Launcher.Marker
+import Dscp.Educator.Launcher.Mode
 import Dscp.Educator.Launcher.Resource (CertificateIssuerResource)
-import Dscp.Resource.Keys
+import Dscp.Educator.Resource
+import Dscp.Resource.AppDir
 import Dscp.Util.Aeson
 import Dscp.Web.Swagger
-import Dscp.Witness.Launcher.Context
 
 type MonadEducatorWebQuery m =
     ( MonadIO m
@@ -58,9 +60,11 @@ type MonadEducatorWebQuery m =
     )
 
 type MonadEducatorWeb ctx m =
-    ( WitnessWorkMode ctx m
+    ( BasicWorkMode m
     , HasCtx ctx m
-       '[ SQL
+        [ LoggingIO
+        , AppDir
+        , SQL
         , KeyResources EducatorNode
         , Language
         , Pdf.LatexPath
@@ -97,7 +101,7 @@ newtype HasProof = HasProof { unHasProof :: Bool }
 
 data BlkProofInfo = BlkProofInfo
     { bpiBlockHash       :: PrivateHeaderHash
-    , bpiMtreeSerialized :: (EncodeSerialised Base64Encoded (EmptyMerkleProof PrivateTx))
+    , bpiMtreeSerialized :: EncodeSerialised Base64Encoded (EmptyMerkleProof PrivateTx)
     , bpiTxs             :: [PrivateTx]
     } deriving (Show, Eq, Generic)
 

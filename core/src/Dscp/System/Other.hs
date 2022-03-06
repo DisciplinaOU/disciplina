@@ -12,6 +12,7 @@ module Dscp.System.Other
     , whenPosix
     ) where
 
+import Universum
 import Data.Reflection (Given, give)
 import qualified Development.GitRev as Git
 import Fmt ((+|))

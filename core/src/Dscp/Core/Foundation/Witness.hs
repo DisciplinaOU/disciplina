@@ -73,13 +73,14 @@ module Dscp.Core.Foundation.Witness
     , HasHeaderHash (..)
     ) where
 
+import Universum
 import Codec.Serialise (Serialise)
 import Control.Lens (makeLensesWith)
 import Control.Lens (makePrisms)
 import Data.Data (Data)
 import System.Random (Random)
 
-import Fmt (blockListF, build, indentF, listF, nameF, whenF, (+|), (+||), (|+), (||+))
+import Fmt (Buildable (..), blockListF, build, indentF, listF, nameF, whenF, (+|), (+||), (|+), (||+))
 
 import Dscp.Core.Foundation.Address
 import Dscp.Core.Foundation.Coin
@@ -424,7 +425,7 @@ class HasHeaderHash d where
     headerHash :: d -> HeaderHash
 
 instance HasHeaderHash HeaderHash where
-    headerHash = identity
+    headerHash = id
 
 instance HasHash Header => HasHeaderHash Header where
     headerHash = hash

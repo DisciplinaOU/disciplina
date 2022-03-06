@@ -6,6 +6,7 @@ module Test.Dscp.DB.SQL.Mode
     , runPostgresMode
     ) where
 
+import Universum
 import Control.Concurrent.MVar (withMVar)
 import Database.PostgreSQL.Simple (Connection)
 import Database.PostgreSQL.Simple.Transaction (IsolationLevel (..), ReadWriteMode (..),
@@ -14,10 +15,7 @@ import qualified Database.PostgreSQL.Simple.Transaction as Transaction
 import GHC.IO.Unsafe (unsafePerformIO)
 import Loot.Log (LoggingIO)
 import System.Environment (lookupEnv)
-import Test.Hspec.Core.Hooks (beforeAll)
 import UnliftIO (MonadUnliftIO, UnliftIO (..), askUnliftIO)
-
-import Test.Hspec.Core.Spec (Spec, SpecWith)
 
 import Dscp.DB.SQL
 import Dscp.Educator.DB

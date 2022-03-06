@@ -9,13 +9,12 @@ module Dscp.Educator.DB.Schema
     ( module Dscp.Educator.DB.Schema
     ) where
 
-import Prelude hiding (_1, _2)
+import Universum hiding (_1, _2)
 
 import Database.Beam.Backend (runNoReturn)
-import Database.Beam.Postgres (PgJSONB)
 import Database.Beam.Postgres.Syntax (PgCommandSyntax (..), PgCommandType (..), emit)
-import Database.Beam.Schema.Tables (Beamable, C, Database, DatabaseSettings, Table (..),
-                                    TableEntity, defaultDbSettings)
+import Database.Beam.Schema.Tables (Beamable, C, Database, Table (..), TableEntity,
+                                    defaultDbSettings)
 import Pdf.Scanner (PDFBody)
 import System.FilePath.Posix ((</>))
 

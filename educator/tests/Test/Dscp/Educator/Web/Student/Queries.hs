@@ -1,15 +1,18 @@
 module Test.Dscp.Educator.Web.Student.Queries where
 
+import Universum
+
 import Control.Concurrent (threadDelay)
 import Control.Lens (each, forOf, traversed)
 import Data.Default (def)
 import Data.List (nub, (!!))
 import Data.Time.Clock (UTCTime (..))
+import Fmt (pretty)
 import qualified GHC.Exts as Exts
-import Test.QuickCheck.Monadic (pick, pre)
+import Test.QuickCheck.Monadic (pre)
 
 import Dscp.Core
-import Dscp.Crypto (hash, unsafeHash)
+import Dscp.Crypto (unsafeHash)
 import Dscp.DB.SQL
 import Dscp.Educator.DB
 import Dscp.Educator.Web.Queries
@@ -423,7 +426,7 @@ spec_Student_API_queries = specWithTempPostgresServer $ do
 
                 let someFilteredOut = length submissions /= length expectedSubmissions
                 return $
-                    cover someFilteredOut 20 "Not all submissions are visible" $
+                    cover 20 someFilteredOut "Not all submissions are visible" $
                         conjoin $ (catMaybes lastSubs) <&> \sub ->
                             counterexample ("Extra visible submission: " <> show sub) $
                             siHash sub `elem` expectedSubmissions

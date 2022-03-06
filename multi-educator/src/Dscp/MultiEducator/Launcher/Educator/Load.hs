@@ -5,31 +5,36 @@ module Dscp.MultiEducator.Launcher.Educator.Load
     , normalToMulti
     ) where
 
+import Universum
+
 import qualified Control.Concurrent.STM as STM
-import Control.Lens (at, traversed, zoom)
+import Control.Lens (at, zoom)
 import Fmt ((+|), (|+))
 import Loot.Base.HasLens (lensOf)
 import Loot.Log (logDebug)
-import Serokell.Util (modifyTVarS)
 import Time (hour, threadDelay)
-import UnliftIO (async)
+import UnliftIO (async, mask_)
 
 import qualified Dscp.Educator.Launcher.Mode as E
 import qualified Dscp.Educator.Launcher.Resource as E
-import Dscp.Educator.Workers
 import Dscp.MultiEducator.Launcher.Context
 import Dscp.MultiEducator.Launcher.Educator.Context
 import Dscp.MultiEducator.Launcher.Educator.Resource
 import Dscp.MultiEducator.Launcher.Educator.Runner
 import Dscp.MultiEducator.Launcher.Mode
-import Dscp.MultiEducator.Types
 import Dscp.MultiEducator.Web.Educator.Auth
-import Dscp.Network
 import Dscp.Rio (runRIO)
 
 -----------------------------------------------------------------------------
 --- (Almost) Natural Transformation
 -----------------------------------------------------------------------------
+
+modifyTVarS :: TVar s -> StateT s STM a -> STM a
+modifyTVarS t st = do
+    s <- readTVar t
+    (a, s') <- runStateT st s
+    writeTVar t s'
+    return a
 
 -- | This function transforms normal workmode into multi-workmode using login.
 -- It create a new Educator context if login was not found
@@ -91,18 +96,14 @@ loadEducator educatorAuthLogin  = do
     -- we will not ignore this async once DSCP-494 is completed
     _ <- async $ launchSingleEducatorMode educatorAuthLogin $ do
         educatorContext <- ask
-        let singleEducatorClients =
-                educatorClients & traversed . wIdL %~ (<> "_of_" <> encodeUtf8 eid)
-
-        withWorkers singleEducatorClients $ do
-            putMVar ctxVar LoadedEducatorContext
-                { lecCtx = educatorContext
-                }
-            forever $ threadDelay (hour 1)
+        putMVar ctxVar LoadedEducatorContext
+            { lecCtx = educatorContext
+            }
+        forever $ threadDelay (hour 1)
 
     takeMVar ctxVar
   where
-    educatorId@(EducatorUUID eid) = ealId educatorAuthLogin
+    educatorId = ealId educatorAuthLogin
 
 normalToMulti :: MultiEducatorWorkMode ctx m => LoadedEducatorContext -> E.EducatorRealMode a -> m a
 normalToMulti LoadedEducatorContext{..} = runRIO lecCtx

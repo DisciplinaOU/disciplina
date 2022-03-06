@@ -8,10 +8,11 @@ module Dscp.DB.SQL.Util.Singleton
      , loadSingleton_
      ) where
 
-import Prelude hiding (_1, _2)
+import Universum hiding (_1, _2)
 
 import Data.Typeable (typeRep)
 import Database.Beam.Schema (PrimaryKey, TableEntity)
+import Database.Beam.Postgres (Postgres)
 import qualified Database.Beam.Schema as Beam
 import qualified Text.Show
 
@@ -49,13 +50,13 @@ instance Typeable a => Exception (SingletonIsNotInit a)
 
 getSingleton_
     :: (MonadIO m, _)
-    => Beam.DatabaseEntity be db (TableEntity (SingletonT a))
+    => Beam.DatabaseEntity Postgres db (TableEntity (SingletonT a))
     -> DBT t m (Maybe a)
 getSingleton_ tbl = selectByPk singletonItem tbl defSingletonId
 
 setSingleton_
     :: (MonadIO m, _)
-    => Beam.DatabaseEntity be db (TableEntity (SingletonT a))
+    => Beam.DatabaseEntity Postgres db (TableEntity (SingletonT a))
     -> a
     -> DBT t m ()
 setSingleton_ tbl val =
@@ -69,9 +70,9 @@ setSingleton_ tbl val =
 -- If singleton value is absent and no action is provided to initialize it
 -- then exception is thrown.
 loadSingleton_
-    :: forall be db m a.
+    :: forall db m a.
        (MonadIO m, MonadThrow m, _)
-    => Beam.DatabaseEntity be db (TableEntity (SingletonT a))
+    => Beam.DatabaseEntity Postgres db (TableEntity (SingletonT a))
     -> MaybeT (DBT 'WithinTx m) a
     -> DBT 'WithinTx m a
 loadSingleton_ tbl onAbsent = do

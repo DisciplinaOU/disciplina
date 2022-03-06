@@ -12,6 +12,7 @@ module Dscp.Resource.Class
        , buildComponentR
        ) where
 
+import Universum
 import Control.Lens (makeLenses)
 import Control.Monad.Component (ComponentM, buildComponent)
 import Loot.Base.HasLens (HasLens (..), HasLens')

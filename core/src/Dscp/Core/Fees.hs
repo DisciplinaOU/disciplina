@@ -22,6 +22,7 @@ module Dscp.Core.Fees
        , estimateFees
        ) where
 
+import Universum
 import Codec.Serialise (Serialise (..))
 import Control.Lens (makePrisms, (?~))
 import Loot.Config ((:::), Config, PartialConfig, finaliseDeferredUnsafe, option)

@@ -11,12 +11,18 @@ module Dscp.Educator.Web.Educator.API
     , EducatorApiHandlers
     -- * Re-export for using in packages dependent on `disciplina-educator`
     , PDFBody (..)
+    , PDF
     ) where
 
+import Network.HTTP.Media.MediaType ((//))
 import Pdf.Scanner (PDFBody (..))
 import Servant
-import Servant.Generic
-import Servant.Util (type ( #: ), ExceptionalResponses, PaginationParams, SortingParamsOf, Tag)
+-- import Servant.API (Accept (..), MimeRender (..), MimeUnrender (..))
+import Servant.API.Generic
+import Servant.Server.Generic (AsServerT)
+import Servant.Util (ExceptionalResponses, PaginationPageSize (..), PaginationParams,
+                     SortingParamsOf, Tag, type (#:))
+import Universum
 
 import Dscp.Core
 import Dscp.Crypto
@@ -26,7 +32,23 @@ import Dscp.Educator.Web.Educator.Error
 import Dscp.Educator.Web.Educator.Types
 import Dscp.Educator.Web.Types
 import Dscp.Web.Swagger
-import Dscp.Witness.Web.ContentTypes
+
+--------------------------------------------------------------------------
+-- PDF media type
+--------------------------------------------------------------------------
+
+data PDF
+
+instance Accept PDF where
+    contentType _ = "application" // "pdf"
+instance MimeRender PDF PDFBody where
+    mimeRender _ = getPDFBody
+instance MimeUnrender PDF PDFBody where
+    mimeUnrender _ = Right . PDFBody
+
+--------------------------------------------------------------------------
+-- API
+--------------------------------------------------------------------------
 
 data EducatorApiEndpoints route = EducatorApiEndpoints
     { eGetStatus               :: route :- GetStatus
@@ -52,14 +74,14 @@ data EducatorApiEndpoints route = EducatorApiEndpoints
     , eAddCertificate          :: route :- AddCertificate
     } deriving (Generic)
 
-type RawEducatorAPI = ToServant (EducatorApiEndpoints AsApi)
+type RawEducatorAPI = ToServantApi EducatorApiEndpoints
 
 type ProtectedEducatorAPI =
     Auth' [EducatorAuth, NoAuth "educator"] () :> RawEducatorAPI
 
 type FullEducatorAPI =
     "api" :> "educator" :> "v1" :>
-    (WithSwaggerUI ProtectedEducatorAPI)
+    WithSwaggerUI ProtectedEducatorAPI
 
 type EducatorApiHandlers m = EducatorApiEndpoints (AsServerT m)
 
@@ -90,7 +112,7 @@ type GetStudents
     :> FilterParam "course" Course
     :> FilterParam "isEnrolled" IsEnrolled
     :> QueryFlag "onlyCount"
-    :> PaginationParams
+    :> PaginationParams ('DefPageSize 20)
     :> Tag "Students"
     :> Summary "Get a list of all registered students' addresses"
     :> Get '[DSON] (Counted StudentInfo)
@@ -173,7 +195,7 @@ type GetCourses
     = "courses"
     :> FilterParam "student" Student
     :> QueryFlag "onlyCount"
-    :> PaginationParams
+    :> PaginationParams ('DefPageSize 20)
     :> Tag "Courses"
     :> Summary "Get all courses"
     :> Get '[DSON] (Counted CourseEducatorInfo)
@@ -206,7 +228,7 @@ type GetAssignments
     :> FilterParam "isFinal" IsFinal
     :> FilterParamSince "since" Timestamp
     :> QueryFlag "onlyCount"
-    :> PaginationParams
+    :> PaginationParams ('DefPageSize 20)
     :> Tag "Assignments"
     :> Summary "Get all assignments"
     :> Get '[DSON] (Counted AssignmentEducatorInfo)
@@ -234,7 +256,7 @@ type GetSubmissions
     :> FilterParam "isGraded" IsGraded
     :> FilterParamSince "since" Timestamp
     :> QueryFlag "onlyCount"
-    :> PaginationParams
+    :> PaginationParams ('DefPageSize 20)
     :> Tag "Submissions"
     :> Summary "Get all submissions"
     :> Description "Gets a list of all submissions done by all students. \
@@ -311,7 +333,7 @@ type GetProofs
 type GetCertificates
     = "certificates"
     :> SortingParamsOf Certificate
-    :> PaginationParams
+    :> PaginationParams ('DefPageSize 20)
     :> QueryFlag "onlyCount"
     :> Tag "Certificates"
     :> Summary "Get the list of certificates created by Educator"

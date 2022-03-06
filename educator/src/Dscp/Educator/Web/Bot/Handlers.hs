@@ -3,6 +3,7 @@ module Dscp.Educator.Web.Bot.Handlers
      , initializeBot
      ) where
 
+import Universum
 import Data.Default (def)
 import Loot.Log (logInfo)
 

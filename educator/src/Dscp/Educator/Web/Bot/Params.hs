@@ -8,6 +8,7 @@ module Dscp.Educator.Web.Bot.Params
     , EducatorBotConfigRecP
     ) where
 
+import Universum
 import Loot.Config ((::+), (::-), (:::), Config, PartialConfig)
 import Time.Units (Microsecond, Time)
 

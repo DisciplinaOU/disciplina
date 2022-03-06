@@ -2,6 +2,8 @@ module Dscp.MultiEducator.Launcher.Educator.Runner
     ( launchSingleEducatorMode
     ) where
 
+import Universum
+
 import Loot.Base.HasLens (lensOf)
 import Loot.Log (LoggingIO)
 import UnliftIO (UnliftIO (..), askUnliftIO)
@@ -16,14 +18,11 @@ import Dscp.MultiEducator.Web.Educator.Auth (EducatorAuthData (..), EducatorAuth
 import Dscp.Resource.Class
 import Dscp.Resource.Functions
 import Dscp.Rio
-import qualified Dscp.Witness as W
 
 formSingleEducatorContext
     :: MultiEducatorWorkMode ctx m
     => E.EducatorResources -> m E.EducatorContext
-formSingleEducatorContext _ecResources = do
-    _ecWitnessVars <- view (lensOf @W.WitnessVariables)
-    pure E.EducatorContext{..}
+formSingleEducatorContext _ecResources = pure E.EducatorContext{..}
 
 launchSingleEducatorMode
     :: (MultiEducatorWorkMode ctx m)

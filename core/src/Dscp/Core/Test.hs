@@ -5,6 +5,7 @@ module Dscp.Core.Test
     , mkKeyPair
     ) where
 
+import Universum
 import Data.Time.Format (defaultTimeLocale, parseTimeOrError)
 
 import Dscp.Core.Foundation

@@ -12,28 +12,29 @@ module Dscp.Educator.Config
     , educatorConfig
     , withEducatorConfig
     , fillEducatorConfig
-
-    , module Dscp.Witness.Config
     ) where
 
 import Control.Lens ((?~))
 import Data.Reflection (Given, give, given)
-import Loot.Config ((:::), (::<), ConfigKind (Final, Partial), ConfigRec, upcast)
+import Loot.Config (ConfigKind (Final, Partial), ConfigRec, (:::), (::<))
 import Time (Second, Time)
+import Universum
 
 import Dscp.Config
 import Dscp.Core.Foundation.Educator (ItemDesc (..), Language (..))
+import Dscp.Resource.Logging (LoggingParams, basicLoggingParams)
 import Dscp.Core.Web
 import Dscp.DB.SQL
 import Dscp.Educator.Launcher.Params
 import Dscp.Educator.Web.Config
-import Dscp.Resource.Keys
+import Dscp.Resource.AppDir (AppDirParam)
 import Dscp.Util
-import Dscp.Witness.Config
 
-type EducatorConfig = WitnessConfig ++
+type EducatorConfig =
     '[ "educator" ::<
-       '[ "db" ::< PostgresRealParams
+       '[ "logging" ::< LoggingParams
+        , "db" ::< PostgresRealParams
+        , "appDir" ::< AppDirParam
         , "keys" ::< EducatorKeyParams
         , "api" ::< EducatorWebConfig
         , "publishing" ::<
@@ -56,11 +57,13 @@ type EducatorConfig = WitnessConfig ++
 type EducatorConfigRecP = ConfigRec 'Partial EducatorConfig
 type EducatorConfigRec = ConfigRec 'Final EducatorConfig
 
-type HasEducatorConfig = (Given EducatorConfigRec, HasWitnessConfig)
+type HasEducatorConfig = Given EducatorConfigRec
 
 defaultEducatorConfig :: EducatorConfigRecP
-defaultEducatorConfig = upcast defaultWitnessConfig
+defaultEducatorConfig = mempty
+    & sub #educator . sub #logging .~ basicLoggingParams "educator" False
     & sub #educator . sub #db .~ defaultPostgresRealParams
+    & sub #educator . sub #appDir . tree #param . selection ?~ "os"
     & sub #educator . sub #keys . sub #keyParams .~ defaultBaseKeyParams
     & sub #educator . sub #api . sub #botConfig . tree #params . selection ?~ "disabled"
     & sub #educator . sub #certificates . option #latex ?~ "xelatex"
@@ -77,7 +80,8 @@ educatorConfig :: HasEducatorConfig => EducatorConfigRec
 educatorConfig = given
 
 withEducatorConfig :: EducatorConfigRec -> (HasEducatorConfig => a) -> a
-withEducatorConfig conf a = give (rcast @_ @WitnessConfig conf) $ give conf a
+withEducatorConfig = give
 
 fillEducatorConfig :: EducatorConfigRecP -> IO EducatorConfigRecP
-fillEducatorConfig = fillExpandedConfig fillWitnessConfig
+fillEducatorConfig = return
+-- fillEducatorConfig = fillExpandedConfig fillCoreConfig

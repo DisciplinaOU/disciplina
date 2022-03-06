@@ -31,6 +31,7 @@ module Dscp.Crypto.Encrypt
        , encKeyGen
        ) where
 
+import Universum
 import Codec.Serialise (Serialise (..), serialise)
 import Codec.Serialise.Decoding (decodeBytes)
 import Codec.Serialise.Encoding (encodeBytes)
@@ -45,8 +46,7 @@ import Crypto.Random.Types (MonadRandom, getRandomBytes)
 import Data.ByteArray (ByteArray, ByteArrayAccess, ScrubbedBytes)
 import qualified Data.ByteArray as BA
 import qualified Data.ByteString.Lazy as BSL
-import Data.Text.Buildable (build)
-import Fmt ((+|), (|+))
+import Fmt (Buildable (..), (+|), (|+), pretty)
 import System.IO.Unsafe (unsafePerformIO)
 import qualified Text.Show
 
@@ -64,7 +64,7 @@ import Dscp.Util (toBase64)
 -- appearance of actual passphrases in logs.
 newtype PassPhrase = PassPhrase
     { getPassPhrase :: ScrubbedBytes
-    } deriving (Eq, Ord, Monoid, ByteArray, ByteArrayAccess)
+    } deriving (Eq, Ord, Semigroup, Monoid, ByteArray, ByteArrayAccess)
 
 instance Buildable PassPhrase where
     build _ = "<passphrase>"
@@ -97,7 +97,7 @@ instance Buildable PassPhraseError where
         " chars), maximum length is "+|maxPassPhraseLength|+" chars."
 
 instance Show PassPhraseError where
-    show = toString . pretty
+    show = toString @Text . pretty
 
 instance Exception PassPhraseError
 
@@ -157,7 +157,7 @@ maxKeySize :: Int
 maxKeySize = case cipherKeySize fakeCipher of
     KeySizeFixed size      -> size
     KeySizeRange _ maxSize -> maxSize
-    KeySizeEnum sizes      -> maximum sizes
+    KeySizeEnum sizes      -> safeMaximum sizes ?: error "empty cipher sizes list"
   where
     fakeCipher :: CipherType
     fakeCipher =
@@ -204,7 +204,7 @@ instance FromByteArray ba => Buildable (Encrypted ba) where
     build = build . toBase64 . BSL.toStrict . serialise
 
 instance FromByteArray ba => Show (Encrypted ba) where
-    show = toString . pretty
+    show = toString @Text . pretty
 
 -------------------------------------------------------------
 -- Encryption/decryption logic
@@ -225,13 +225,13 @@ keyFromPassPhrase (PassPhrase pp) = PBKDF2.generate
 prepareAEAD :: PassPhrase -> IV CipherType -> AEAD CipherType
 prepareAEAD pp iv =
     let impossible err =
-            error $ "prepareAEAD: impossible: " <> Prelude.show err
+            error $ "prepareAEAD: impossible: " <> Universum.show err
         ppHashKey =
             keyFromPassPhrase pp
         cipher :: CipherType =
-            onCryptoFailure impossible identity $
+            onCryptoFailure impossible id $
             cipherInit ppHashKey
-    in onCryptoFailure impossible identity $
+    in onCryptoFailure impossible id $
        aeadInit aeadMode cipher iv
 
 -- | Encrypt given 'ByteArray' with AES.
@@ -272,7 +272,7 @@ instance Buildable DecryptionError where
             "Result of encryption/decryption is malformed: "+|err|+""
 
 instance Show DecryptionError where
-    show = toString . pretty
+    show = toString @Text . pretty
 
 instance Exception DecryptionError
 

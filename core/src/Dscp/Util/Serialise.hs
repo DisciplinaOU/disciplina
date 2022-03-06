@@ -9,6 +9,7 @@ module Dscp.Util.Serialise
        , decodeCrcProtected
        ) where
 
+import Universum
 import Codec.Serialise (DeserialiseFailure, Serialise (..), deserialise, deserialiseOrFail,
                         serialise)
 import qualified Codec.Serialise.Decoding as D

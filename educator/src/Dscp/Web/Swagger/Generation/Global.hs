@@ -6,6 +6,8 @@ module Dscp.Web.Swagger.Generation.Global
     , encodeSwagger
     ) where
 
+import Universum
+
 import Control.Lens (at, ix, makePrisms, zoom, (.=), (?=))
 import Data.Aeson (toEncoding)
 import Data.Aeson.Encoding (encodingToLazyByteString)

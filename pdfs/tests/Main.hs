@@ -1,4 +1,5 @@
 
+import Universum
 import Test.QuickCheck (property)
 import Test.QuickCheck.Instances ()
 

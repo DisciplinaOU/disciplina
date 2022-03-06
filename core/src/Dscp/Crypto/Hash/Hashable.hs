@@ -1,4 +1,3 @@
-
 -- | 'HashFunction' implementation for 'Hashable' typeclass.
 -- Here for demonstration. Never use this implementation in actual
 -- cryptographic purposes!
@@ -7,7 +6,7 @@ module Dscp.Crypto.Hash.Hashable
        ( HashableFunc
        ) where
 
-import Data.Hashable (Hashable)
+import Universum
 import qualified Data.Hashable as H
 
 import Dscp.Crypto.ByteArray (hashBytes)

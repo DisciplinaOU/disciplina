@@ -17,6 +17,7 @@ module Dscp.Core.Genesis
     , formGenesisInfo
     ) where
 
+import Universum
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map as M
 import qualified Data.Map.Strict as Map

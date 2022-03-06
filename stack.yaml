@@ -21,6 +21,9 @@ extra-deps:
 - servant-quickcheck-0.0.10.0
 - HList-0.5.0.0
 - union-0.1.2
+- servant-mock-0.8.7
+# - web3-solidity-1.0.0.0
+# - web3-ethereum-1.0.0.0
 
 - git: https://github.com/serokell/servant-util.git
   commit: ee9b1aa75011554626ddbbb72e9125f617e688d9

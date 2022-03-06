@@ -33,7 +33,9 @@ module Dscp.Educator.Web.Educator.Types
     , educatorSubmissionInfoFromRow
     ) where
 
-import Control.Lens (at, from, (%=), (.=), (?=), _Just)
+import Universum
+
+import Control.Lens (at, from, (.=), (?=))
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
 import qualified Data.Aeson.TH as A
@@ -43,9 +45,10 @@ import qualified Data.Swagger as S
 import qualified Data.Swagger.Declare as S
 import qualified Data.Swagger.Internal.Schema as S
 import Data.Time.Calendar (Day)
-import Fmt (build, listF, (+|), (|+))
+import Fmt (Buildable (..), listF, (+|), (|+))
 import Pdf.Scanner (PDFBody (..))
-import Servant.Util (type (?:), ForResponseLog (..), SortingParamTypesOf, buildListForResponse)
+import Servant.Util (ForResponseLog (..), SortingParamBaseOf, SortingParamProvidedOf,
+                     buildListForResponse, type (?:))
 
 import Dscp.Core
 import Dscp.Crypto
@@ -55,7 +58,6 @@ import Dscp.Educator.Web.Types
 import Dscp.Util
 import Dscp.Util.Aeson
 import Dscp.Web.Swagger
-import Dscp.Witness.Web.Types
 
 data NewStudent = NewStudent
     { nsAddr :: Student
@@ -88,7 +90,7 @@ data NewStudentAssignment = NewStudentAssignment
 
 data EducatorInfo = EducatorInfo
     { eiAddress  :: Address
-    , eiBalances :: BlocksOrMempool Coin
+    -- , eiBalances :: BlocksOrMempool Coin
     } deriving (Show, Eq, Ord, Generic)
 
 data CourseEducatorInfo = CourseEducatorInfo
@@ -136,8 +138,10 @@ mkCountedList onlyCount ls =
 -- Sorting
 ---------------------------------------------------------------------------
 
-type instance SortingParamTypesOf Certificate =
-    ["createdAt" ?: Day, "studentName" ?: ItemDesc]
+type instance SortingParamBaseOf Certificate = '[]
+
+type instance SortingParamProvidedOf Certificate =
+    '["createdAt" ?: Day, "studentName" ?: ItemDesc]
 
 ---------------------------------------------------------------------------
 -- Simple conversions
@@ -255,9 +259,7 @@ instance Buildable (SubmissionEducatorInfo) where
 
 instance Buildable (ForResponseLog EducatorInfo) where
     build (ForResponseLog EducatorInfo{..})=
-      "{ address = " +| eiAddress |+
-      ", balances = " +| eiBalances |+
-      " }"
+      "{ address = " +| eiAddress |+ " }"
 
 instance Buildable (ForResponseLog CourseEducatorInfo) where
     build (ForResponseLog CourseEducatorInfo{..}) =
@@ -353,7 +355,7 @@ instance ToSchema a => ToSchema (Counted a) where
                 at name ?= S.toSchema (Proxy @a)
 
         S.plain $ mempty &: do
-            S.type_ .= S.SwaggerObject
+            S.type_ ?= S.SwaggerObject
             S.required .= ["count"]
             S.properties .= mempty &: do
                 at "count" ?= S.Ref (S.Reference countName)
@@ -361,29 +363,29 @@ instance ToSchema a => ToSchema (Counted a) where
       where
         countName = "Count"
         countSchema = mempty &: do
-            S.type_ .= S.SwaggerInteger
+            S.type_ ?= S.SwaggerInteger
             S.format ?= "int32"
             S.description ?= "Count of items returned"
 
 instance ToSchema Coin where
     declareNamedSchema p =
         S.plain $ mempty &: do
-            S.type_ .= S.SwaggerInteger
+            S.type_ ?= S.SwaggerInteger
             S.format ?= "int32"
             setParamDescription p
 
-instance ToSchema a => ToSchema (BlocksOrMempool a) where
-    declareNamedSchema _ =
-        S.plain $ mempty &: do
-            S.type_ .= S.SwaggerObject
-            S.required .= ["confirmed", "total"]
-            S.properties .= mempty &: do
-                at "confirmed" ?= S.toSchemaRef (Proxy @a) &: do
-                    _Inline . S.description . _Just %= ("From blockchain-only view. " <>)
+-- instance ToSchema a => ToSchema (BlocksOrMempool a) where
+--     declareNamedSchema _ =
+--         S.plain $ mempty &: do
+--             S.type_ .= S.SwaggerObject
+--             S.required .= ["confirmed", "total"]
+--             S.properties .= mempty &: do
+--                 at "confirmed" ?= S.toSchemaRef (Proxy @a) &: do
+--                     _Inline . S.description . _Just %= ("From blockchain-only view. " <>)
 
-                at "total" ?= S.toSchemaRef (Proxy @a) &: do
-                    _Inline . S.description . _Just %=
-                        ("From view considering both chain and pending changes. " <>)
+--                 at "total" ?= S.toSchemaRef (Proxy @a) &: do
+--                     _Inline . S.description . _Just %=
+--                         ("From view considering both chain and pending changes. " <>)
 
 instance ToSchema Language where
     declareNamedSchema =

@@ -2,7 +2,8 @@ module Dscp.Util.Exceptions
     ( FileSysException (..)
     ) where
 
-import Fmt (Buildable (..), (+|), (|+))
+import Universum
+import Fmt (Buildable (..), (+|), (|+), pretty)
 import qualified Text.Show
 
 data FileSysException
@@ -12,7 +13,7 @@ data FileSysException
 instance Exception FileSysException
 
 instance Show FileSysException where
-    show = toString . pretty
+    show = toString @Text . pretty
 
 instance Buildable FileSysException where
     build (DirectoryDoesNotExist desc dir) =

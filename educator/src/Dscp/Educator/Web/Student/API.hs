@@ -13,8 +13,10 @@ module Dscp.Educator.Web.Student.API
        ) where
 
 import Servant
-import Servant.Generic
-import Servant.Util (type ( #: ), ExceptionalResponses, PaginationParams, SortingParamsOf, Tag)
+import Servant.API.Generic
+import Servant.Server.Generic (AsServerT)
+import Servant.Util (ExceptionalResponses, PaginationPageSize (..), PaginationParams,
+                     SortingParamsOf, Tag, type (#:))
 
 import qualified Dscp.Core as Core
 import Dscp.Crypto (Hash)
@@ -37,14 +39,14 @@ data StudentApiEndpoints route = StudentApiEndpoints
     , sGetProofs        :: route :- GetProofs
     } deriving (Generic)
 
-type RawStudentAPI = ToServant (StudentApiEndpoints AsApi)
+type RawStudentAPI = ToServantApi StudentApiEndpoints
 
 type ProtectedStudentAPI =
     Auth' [StudentAuth, NoAuth "student"] Core.Student :> RawStudentAPI
 
 type FullStudentAPI =
     "api" :> "student" :> "v1" :>
-    (WithSwaggerUI ProtectedStudentAPI)
+    WithSwaggerUI ProtectedStudentAPI
 
 type StudentApiHandlers m = StudentApiEndpoints (AsServerT m)
 
@@ -66,7 +68,7 @@ type GetCourses
     :> FilterParam "isEnrolled" IsEnrolled
     :> QueryFlag "onlyCount"
     :> SortingParamsOf CourseStudentInfo
-    :> PaginationParams
+    :> PaginationParams ('DefPageSize 20)
     :> Tag "Courses"
     :> Summary "Get Educator's courses"
     :> Description "Gets a list of Educator's courses, both enrolled and available."
@@ -94,7 +96,7 @@ type GetAssignments
     :> FilterParam "isFinal" IsFinal
     :> QueryFlag "onlyCount"
     :> SortingParamsOf AssignmentStudentInfo
-    :> PaginationParams
+    :> PaginationParams ('DefPageSize 20)
     :> Summary "Get student's assignments"
     :> Description "Gets a list of student's assignments. Filter parameters are \
                    \used to specify specific course, type, etc."
@@ -125,7 +127,7 @@ type GetSubmissions
     :> FilterParam "type" (Core.DocumentType Core.Submission)
     :> QueryFlag "onlyCount"
     :> SortingParamsOf SubmissionStudentInfo
-    :> PaginationParams
+    :> PaginationParams ('DefPageSize 20)
     :> Tag "Submissions"
     :> Summary "Get student's submissions"
     :> Description "Gets a list of student's submissions. Filter parameters are \

@@ -5,6 +5,7 @@ module Dscp.Crypto.Util
        , secretFromSeed
        ) where
 
+import Universum
 import Dscp.Crypto.Impl (SecretKey, genSecretKey, withIntSeed, withSeed)
 
 import qualified Crypto.Util as CU (constTimeEq)

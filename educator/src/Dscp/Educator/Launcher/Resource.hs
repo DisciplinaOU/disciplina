@@ -5,7 +5,8 @@
 module Dscp.Educator.Launcher.Resource
        ( EducatorResources (..)
        , CertificateIssuerResource (..)
-       , erWitnessResources
+       , erLogging
+       , erAppDir
        , erDB
        , erKeys
        , erPdfLatexPath
@@ -16,10 +17,13 @@ module Dscp.Educator.Launcher.Resource
 import Control.Lens (makeLenses)
 import Fmt ((+|), (|+))
 import Loot.Log (logDebug)
+import Loot.Log.Rio (LoggingIO)
+import Loot.Base.HasLens (lensOf)
 import qualified Pdf.FromLatex as Pdf
-import Servant.Client.Core.Internal.BaseUrl
+import Servant.Client.Core (BaseUrl (..))
 import System.Directory (doesDirectoryExist, findExecutable)
 import System.FilePath.Posix (isRelative, (</>))
+import Universum
 
 import Dscp.Config
 import Dscp.Core.Foundation.Educator (ItemDesc, Language)
@@ -28,14 +32,12 @@ import Dscp.Educator.Config
 import Dscp.Educator.DB.Resource ()
 import Dscp.Educator.Launcher.Marker (EducatorNode)
 import Dscp.Educator.Launcher.Params
+import Dscp.Educator.Resource (KeyResources (..), linkStore)
 import Dscp.Resource.AppDir
 import Dscp.Resource.Class (AllocResource (..), buildComponentR)
-import Dscp.Resource.Keys (KeyResources (..), linkStore)
-import Dscp.Resource.Network (NetServResources)
 import Dscp.Util
 import Dscp.Util.Exceptions
 import Dscp.Util.HasLens
-import qualified Dscp.Witness.Launcher.Resource as Witness
 
 -- | Educator Resource that either has the info 'CertificateIssuerInfo' itself
 -- or enough info to contact a server that has it
@@ -46,7 +48,8 @@ data CertificateIssuerResource
 -- | Datatype which contains resources required by all Disciplina nodes
 -- to start working.
 data EducatorResources = EducatorResources
-    { _erWitnessResources :: !Witness.WitnessResources
+    { _erLogging          :: !LoggingIO
+    , _erAppDir           :: !AppDir
     , _erDB               :: !SQL
     , _erKeys             :: !(KeyResources EducatorNode)
     , _erLanguage         :: !Language
@@ -59,8 +62,6 @@ data EducatorResources = EducatorResources
 makeLenses ''EducatorResources
 deriveHasLensDirect ''EducatorResources
 
-deriveHasLens 'erWitnessResources ''EducatorResources ''Witness.WitnessResources
-deriveHasLens 'erWitnessResources ''EducatorResources ''NetServResources
 
 instance AllocResource (KeyResources EducatorNode) where
     type Deps (KeyResources EducatorNode) = (EducatorKeyParamsRec, AppDir)
@@ -113,16 +114,14 @@ instance AllocResource EducatorResources where
     type Deps EducatorResources = EducatorConfigRec
     allocResource educatorCfg = do
         let cfg = educatorCfg ^. sub #educator
-            witnessCfg = rcast educatorCfg
-        _erWitnessResources <- withWitnessConfig witnessCfg $
-                               allocResource witnessCfg
+        _erLogging <- view (lensOf @LoggingIO)
         _erDB <- unPreparedSQL @"educator" <$> allocResource (cfg ^. sub #db)
-        let appDir = Witness._wrAppDir _erWitnessResources
-        _erKeys <- allocResource (educatorCfg ^. sub #educator . sub #keys, appDir)
+        _erAppDir <- allocResource $ cfg ^. sub #appDir
+        _erKeys <- allocResource (educatorCfg ^. sub #educator . sub #keys, _erAppDir)
         _erLanguage <- allocResource $ cfg ^. sub #certificates . option #language
         _erPdfLatexPath <- allocResource $ cfg ^. sub #certificates . option #latex
         _erPdfResourcePath <- allocResource ( cfg ^. sub #certificates . option #resources
-                                            , appDir )
+                                            , _erAppDir )
         _erDownloadBaseUrl <- allocResource $ cfg ^. sub #certificates . option #downloadBaseUrl
         _erPdfCertIssuerRes <- allocResource
             ( cfg ^. sub #certificates . sub #issuer . option #name

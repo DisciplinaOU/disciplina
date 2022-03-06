@@ -14,6 +14,7 @@ module Dscp.Educator.Web.Student.Queries
     , studentGetSubmissions
     ) where
 
+import Universum
 import Control.Lens (from, mapping)
 import Data.Coerce (coerce)
 import Data.Default (Default)
@@ -97,7 +98,7 @@ studentGetCourses studentId (coerce -> isEnrolledF) sorting pagination = do
             whenJust isEnrolledF $ \isEnrolled -> do
                 let isEnrolled' = exists_ $ do
                         link_ (esStudentCourses es) (valPk_ studentId :-: pk_ course)
-                        return (as_ @Int 1)
+                        return (as_ @Int32 1)
                 guard_ (val_ isEnrolled ==. isEnrolled')
             return (crId course, crDesc course)
 

@@ -7,6 +7,8 @@ module Dscp.MultiEducator.Launcher.Educator.Context
     , _FullyLoadedEducatorContext
     ) where
 
+import Universum
+
 import Control.Lens (makePrisms)
 import UnliftIO.Async (Async)
 

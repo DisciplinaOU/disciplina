@@ -4,6 +4,7 @@ module Dscp.Educator.Web.Educator.Swagger
        , writeEducatorAPISwagger
        ) where
 
+import Universum
 import Control.Lens (zoom, (.=), (?=))
 import qualified Data.ByteString.Lazy as LBS
 import Data.Swagger (Scheme (..), Swagger)

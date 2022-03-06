@@ -1,6 +1,6 @@
 {-# LANGUAGE ApplicativeDo    #-}
-{-# LANGUAGE QuasiQuotes      #-}
 {-# LANGUAGE OverloadedLabels #-}
+{-# LANGUAGE QuasiQuotes      #-}
 
 -- | Common CLI params.
 
@@ -17,9 +17,12 @@ module Dscp.CommonCLI
        , appDirParamParser
        ) where
 
+import Universum
+
+import Fmt (pretty)
 import Data.Char (toLower)
 import Data.Version (showVersion)
-import Loot.Config.CLI (OptModParser, (.::), (.:+), (.:-), (<*<))
+import Loot.Config.CLI (OptModParser, (.:+), (.:-), (.::), (<*<))
 import Options.Applicative (Parser, ReadM, auto, eitherReader, flag', help, infoOption, long,
                             maybeReader, metavar, option, str, strOption)
 import Servant.Client (BaseUrl (..), parseBaseUrl)
@@ -28,13 +31,12 @@ import Time (KnownRatName, Time, unitsP)
 
 import Dscp.Config (selectBranchParser)
 import Dscp.Core.Foundation
-import Dscp.Crypto (PassPhrase)
-import Dscp.Crypto (mkPassPhrase)
+import Dscp.Crypto (PassPhrase, mkPassPhrase)
 import Dscp.Resource.AppDir
-import Dscp.Resource.Keys
+import Dscp.Educator.Resource
 import Dscp.Util
 import Dscp.Web (NetworkAddress (..), ServerParams, parseNetAddr)
-import Paths_disciplina_witness (version)
+import Paths_disciplina_educator (version)
 
 versionOption :: Parser (a -> a)
 versionOption = infoOption ("disciplina-" <> (showVersion version)) $
@@ -89,7 +91,7 @@ addressReadM = leftToPanic . addrFromText <$> str
 
 -- | Parses passphrase.
 passphraseReadM :: ReadM PassPhrase
-passphraseReadM = leftToFail . first pretty . mkPassPhrase =<< str
+passphraseReadM = leftToFail @Text . first pretty . mkPassPhrase =<< str
 
 ----------------------------------------------------------------------------
 -- Utils

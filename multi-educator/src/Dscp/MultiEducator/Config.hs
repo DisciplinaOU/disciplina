@@ -13,23 +13,24 @@ module Dscp.MultiEducator.Config
     , multiEducatorConfig
     , withMultiEducatorConfig
     , fillMultiEducatorConfig
-
-    , module Dscp.Witness.Config
     ) where
+
+import Universum
 
 import Control.Lens ((?~))
 import Data.Reflection (Given, give, given)
-import Loot.Config ((:::), (::<), ConfigKind (Final, Partial), ConfigRec, upcast)
+import Loot.Config (ConfigKind (Final, Partial), ConfigRec, (:::), (::<))
 import Time (Second, Time)
 
 import Dscp.Config
 import Dscp.Core.Foundation.Educator (Language (..))
-import Dscp.Core.Web (BaseUrl)
 import Dscp.DB.SQL
 import Dscp.Educator.Web.Auth
 import Dscp.MultiEducator.Launcher.Params
+import Dscp.Resource.AppDir (AppDirParam)
+import Dscp.Resource.Logging (LoggingParams, basicLoggingParams)
 import Dscp.Web
-import Dscp.Witness.Config
+
 
 type MultiEducatorWebConfig =
     '[ "serverParams"           ::< ServerParams
@@ -40,9 +41,11 @@ type MultiEducatorWebConfig =
 type MultiEducatorWebConfigRecP = ConfigRec 'Partial MultiEducatorWebConfig
 type MultiEducatorWebConfigRec = ConfigRec 'Final MultiEducatorWebConfig
 
-type MultiEducatorConfig = WitnessConfig ++
+type MultiEducatorConfig =
     '[ "educator" ::<
-       '[ "db" ::< PostgresRealParams
+       '[ "logging" ::< LoggingParams
+        , "db" ::< PostgresRealParams
+        , "appDir" ::< AppDirParam
         , "keys" ::: MultiEducatorKeyParams
         , "aaa" ::< MultiEducatorAAAConfig
         , "api" ::< MultiEducatorWebConfig
@@ -64,8 +67,10 @@ type MultiEducatorConfigRec = ConfigRec 'Final MultiEducatorConfig
 type HasMultiEducatorConfig = Given MultiEducatorConfigRec
 
 defaultMultiEducatorConfig :: MultiEducatorConfigRecP
-defaultMultiEducatorConfig = upcast defaultWitnessConfig
+defaultMultiEducatorConfig = mempty
+    & sub #educator . sub #logging .~ basicLoggingParams "educator" False
     & sub #educator . sub #db .~ defaultPostgresRealParams
+    & sub #educator . sub #appDir . tree #param . selection ?~ "os"
     & sub #educator . sub #api .~ defaultMultiEducatorWebConfig
     & sub #educator . sub #certificates . option #language ?~ EN
     & sub #educator . sub #certificates . option #latex ?~ "xelatex"
@@ -85,4 +90,4 @@ withMultiEducatorConfig :: MultiEducatorConfigRec -> (HasMultiEducatorConfig => 
 withMultiEducatorConfig = give
 
 fillMultiEducatorConfig :: MultiEducatorConfigRecP -> IO MultiEducatorConfigRecP
-fillMultiEducatorConfig = fillExpandedConfig fillWitnessConfig
+fillMultiEducatorConfig = return

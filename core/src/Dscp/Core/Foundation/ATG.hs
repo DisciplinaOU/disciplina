@@ -11,10 +11,9 @@ module Dscp.Core.Foundation.ATG
        , activityTypeGraphIndexed
        ) where
 
+import Universum
 import Control.Lens (makeLenses)
-import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
-import Data.Set (Set)
 import qualified Data.Set as S
 
 import Dscp.Core.Foundation.Educator (ATG (..), ATGEdge (..), ATGNode (..), Subject, atgeChild)

@@ -41,15 +41,14 @@ module Dscp.Core.Arbitrary
     , timestampEx
     ) where
 
+import Universum
 import qualified Data.Foldable
-import qualified Data.Text.Buildable
 import Data.Time.Calendar (fromGregorian, toGregorian)
 import Data.Time.Clock (UTCTime, getCurrentTime)
-import Fmt ((+||), (||+))
+import Fmt (Buildable (..), (+||), (||+), pretty)
 import qualified GHC.Exts as Exts
 import GHC.IO.Unsafe (unsafePerformIO)
 import Test.QuickCheck (arbitraryBoundedEnum, resize)
-import Test.QuickCheck.Arbitrary.Generic (genericArbitrary, genericShrink)
 import qualified Text.Show
 
 import Dscp.Core.FairCV
@@ -412,7 +411,7 @@ cteSubmissions :: CoreTestEnv -> TestItem Submission
 cteSubmissions = fmap _ssSubmission . cteSignedSubmissions
 
 instance Show CoreTestEnv where
-    show = toString . pretty
+    show = toString @Text . pretty
 
 instance Buildable CoreTestEnv where
     build env@CoreTestEnv{..} =

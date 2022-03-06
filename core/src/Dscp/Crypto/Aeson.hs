@@ -4,7 +4,7 @@
 
 module Dscp.Crypto.Aeson () where
 
-import Prelude hiding (toStrict)
+import Universum hiding (toStrict)
 
 import Data.Aeson (FromJSON (..), FromJSONKey (..), FromJSONKeyFunction (..), ToJSON (..),
                    ToJSONKey (..), object, withObject, (.:), (.=))

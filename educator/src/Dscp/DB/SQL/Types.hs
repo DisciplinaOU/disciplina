@@ -20,6 +20,7 @@ module Dscp.DB.SQL.Types
        , defaultPostgresRealParams
        ) where
 
+import Universum
 import Control.Concurrent.Chan (Chan)
 import Control.Lens (makePrisms, (?~))
 import Data.Aeson (FromJSON (..))

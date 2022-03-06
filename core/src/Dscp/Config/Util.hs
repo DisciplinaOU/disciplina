@@ -49,19 +49,19 @@ module Dscp.Config.Util
     , peekBranch
     ) where
 
+import Universum
 import Control.Applicative.Combinators.NonEmpty as NonEmpty (some)
 import Control.Lens (Contravariant, to)
 import Data.Aeson (Result (..), Value (Object), fromJSON)
 import qualified Data.HashMap.Strict as HM
 import Data.Reflection (reifySymbol)
 import Data.Reflection (Given (..))
-import qualified Data.Text.Buildable
 import Data.Vinyl.Derived (Label)
 import Data.Vinyl.Lens (type (<:), rcast, rreplace)
 import Data.Vinyl.TypeLevel (type (++))
 import Data.Yaml (FromJSON (..), ParseException (AesonException), decodeFileEither, withObject,
                   (.:?))
-import Fmt (blockListF)
+import Fmt (Buildable (..), blockListF, pretty)
 import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
 import Loot.Base.HasLens (HasLens', lensOf)
 import Loot.Config ((::+), (::-), (.::), (<*<), OptModParser, ConfigKind (Final, Partial),
@@ -84,7 +84,7 @@ data ConfigBuildError
       -- ^ Some values are not defined in resulting config
 
 instance Show ConfigBuildError where
-    show = toString . pretty
+    show = toString @Text . pretty
 
 instance Buildable ConfigBuildError where
     build = \case

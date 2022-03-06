@@ -1,5 +1,6 @@
 module Test.Dscp.Crypto.Encrypt where
 
+import Universum
 import Dscp.Crypto (DecryptionError (..), decrypt, encrypt)
 import Dscp.Util.Test
 

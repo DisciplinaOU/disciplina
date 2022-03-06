@@ -17,9 +17,10 @@ module Dscp.Util.TimeLimit
        , boundExecution_
        ) where
 
+import Universum
 import Fmt ((+|), (+||), (|+), (||+))
 import Loot.Log (MonadLogging, logError, logWarning)
-import Time (KnownRat, KnownUnitName, Microsecond, Second, Time, floorUnit, threadDelay, toUnit)
+import Time (KnownDivRat, KnownUnitName, Microsecond, Second, Time, floorUnit, threadDelay, toUnit, toNum, time)
 import UnliftIO (MonadUnliftIO)
 import UnliftIO.Async (async, asyncWithUnmask, cancel, uninterruptibleCancel, waitEither,
                        withAsyncWithUnmask)
@@ -71,30 +72,30 @@ logWarningLongAction delta actionTag action =
         let waitLoop acc = do
                 threadDelay s
                 printWarning acc
-                waitLoop (acc + s)
+                waitLoop (acc <> s)
         in waitLoop s
     waitAndWarn (WaitGeometric s q) =
         let waitLoop !acc !t = do
                 threadDelay t
-                let newAcc  = acc + t
-                let newT    = realToFrac $ realToFrac t * q
+                let newAcc  = acc <> t
+                let newT    = time @Microsecond $ realToFrac $ toNum @Microsecond @Double t * q
                 printWarning (floorUnit @Second $ toUnit newAcc)
                 waitLoop newAcc newT
-        in waitLoop 0 s
+        in waitLoop (time @Microsecond 0) s
 
 {- Helper functions to avoid dealing with data type -}
 
 -- | Specialization of 'logWarningLongAction' with 'WaitOnce'.
-logWarningWaitOnce :: (CanLogInParallel m, KnownRat u) => Time u -> Text -> m a -> m a
+logWarningWaitOnce :: (CanLogInParallel m, KnownDivRat u Second) => Time u -> Text -> m a -> m a
 logWarningWaitOnce = logWarningLongAction . WaitOnce . toUnit
 
 -- | Specialization of 'logWarningLongAction' with 'WaitLinear'.
-logWarningWaitLinear :: (CanLogInParallel m, KnownRat u) => Time u -> Text -> m a -> m a
+logWarningWaitLinear :: (CanLogInParallel m, KnownDivRat u Second) => Time u -> Text -> m a -> m a
 logWarningWaitLinear = logWarningLongAction . WaitLinear . toUnit
 
 -- | Specialization of 'logWarningLongAction' with 'WaitGeometric'
 -- with parameter @1.3@. Accepts 'Second'.
-logWarningWaitInf :: (CanLogInParallel m, KnownRat u) => Time u -> Text -> m a -> m a
+logWarningWaitInf :: (CanLogInParallel m, KnownDivRat u Microsecond) => Time u -> Text -> m a -> m a
 logWarningWaitInf = logWarningLongAction . (`WaitGeometric` 1.7) . toUnit
 
 ----------------------------------------------------------------------------
@@ -107,13 +108,13 @@ logWarningWaitInf = logWarningLongAction . (`WaitGeometric` 1.7) . toUnit
 -- you are not sure whether will it die smoothly (e.g. because it is uninterruptibly
 -- blocked on some operation or makes FFI calls).
 boundExecution
-    :: (MonadUnliftIO m, MonadLogging m, KnownRat u, KnownUnitName u)
+    :: (MonadUnliftIO m, MonadLogging m, KnownDivRat u Microsecond, KnownUnitName u)
     => Time u -> Text -> m a -> m (Maybe a)
-boundExecution time desc action =
+boundExecution time' desc action =
     UIO.mask $ \restore -> do
         -- further we cannot use 'restore' since 'boundExecution' call can happen
         -- under masked state (e.g. in resources cleanup), and this state would be inherited.
-        timerAsync <- asyncWithUnmask $ \unmask -> unmask (threadDelay time)
+        timerAsync <- asyncWithUnmask $ \unmask -> unmask (threadDelay time')
         actionAsync <- asyncWithUnmask $ \unmask -> unmask action
 
         res <- restore $ waitEither timerAsync actionAsync
@@ -127,9 +128,9 @@ boundExecution time desc action =
                 return (Just a)
   where
     logTimeouted =
-        logError $ "Action " +|| desc ||+ " timeouted (after " +|| time ||+ ")"
+        logError $ "Action " +|| desc ||+ " timeouted (after " +|| time' ||+ ")"
 
 boundExecution_
-    :: (MonadUnliftIO m, MonadLogging m, KnownRat u, KnownUnitName u)
+    :: (MonadUnliftIO m, MonadLogging m, KnownDivRat u Microsecond, KnownUnitName u)
     => Time u -> Text -> m a -> m ()
 boundExecution_ = void ... boundExecution

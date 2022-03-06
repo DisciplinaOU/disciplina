@@ -5,6 +5,7 @@ module Dscp.Core.Validation.Witness
        , verifyPubTxWitnessed
        ) where
 
+import Universum
 import Codec.Serialise (Serialise)
 
 import Dscp.Core.Foundation

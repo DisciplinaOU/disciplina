@@ -16,10 +16,11 @@ module Dscp.Educator.CLI
     ) where
 
 import Control.Arrow (left)
-import Loot.Config (OptModParser, uplift, (.:+), (.:-), (.::), (.:<), (<*<))
-import Options.Applicative (Parser, auto, eitherReader, flag', help, long, metavar,
-                            option, strOption)
+import Loot.Config (OptModParser, (.:+), (.:-), (.::), (.:<), (<*<))
+import Options.Applicative (Parser, auto, eitherReader, flag', help, long, metavar, option,
+                            strOption)
 import Time (Second, Time)
+import Universum
 
 import Dscp.CommonCLI
 import Dscp.Core.Foundation.Educator (ItemDesc (..), toItemDesc)
@@ -29,7 +30,7 @@ import Dscp.Educator.Launcher.Params (EducatorKeyParams)
 import Dscp.Educator.Web.Auth
 import Dscp.Educator.Web.Bot.Params
 import Dscp.Educator.Web.Config
-import Dscp.Witness.CLI (witnessConfigParser)
+-- import Dscp.Witness.CLI (witnessConfigParser)
 
 postgresParamsParser :: OptModParser PostgresRealParams
 postgresParamsParser =
@@ -138,9 +139,9 @@ pdfIssuerUrlParser = option (eitherReader $ left toString . toItemDesc . fromStr
 
 educatorConfigParser :: OptModParser EducatorConfig
 educatorConfigParser =
-    uplift witnessConfigParser <*<
     #educator .:<
         (#db .:< postgresParamsParser <*<
+         #appDir .:< appDirParamParser <*<
          #keys .:< educatorKeyParamsParser <*<
          #api .:< educatorWebConfigParser <*<
          #publishing .:<

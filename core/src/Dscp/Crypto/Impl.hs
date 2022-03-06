@@ -35,6 +35,7 @@ module Dscp.Crypto.Impl
        , Raw
        ) where
 
+import Universum
 import Crypto.Error (CryptoFailable (..))
 import Crypto.Hash (digestFromByteString)
 import Crypto.Hash.Algorithms (Blake2b_256)
@@ -42,7 +43,7 @@ import Crypto.Hash.IO (hashDigestSize)
 import "cryptonite" Crypto.Random (ChaChaDRG, MonadPseudoRandom, drgNewSeed, seedFromBinary,
                                    seedFromInteger, withDRG)
 import qualified Data.ByteString as BS
-import Fmt (build, (+|), (|+))
+import Fmt (Buildable (..), (+|), (|+))
 
 import Dscp.Crypto.Hash (AbstractHash (..), CryptoniteFunc, HasAbstractHash (..), abstractHash)
 import Dscp.Crypto.Random (MonadRandom (..))

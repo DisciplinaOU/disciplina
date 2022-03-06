@@ -11,10 +11,9 @@ module Dscp.DB.SQL.Util.Relation
      , link_
      ) where
 
-import Prelude hiding (_1, _2)
+import Universum hiding (_1, _2)
 
 import Control.Lens (Field1 (..), Field2 (..))
-import Database.Beam.Postgres (PgSelectSyntax)
 import Database.Beam.Query (Q)
 import Database.Beam.Schema (Beamable, DatabaseEntity, PrimaryKey, Table (..), TableEntity)
 
@@ -81,7 +80,7 @@ link_
     :: (table ~ RelationT t a b, _)
     => DatabaseEntity be db (TableEntity table)
     -> table (QGenExpr _ _ _)
-    -> Q PgSelectSyntax db _ ()
+    -> Q be db _ ()
 link_ relation (pk1 :-: pk2) = do
     id1 :-: id2 <- all_ relation
     guard_ (id1 ==. pk1)

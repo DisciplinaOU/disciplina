@@ -8,6 +8,7 @@ module Dscp.System.FileMode
     , mode600
     ) where
 
+import Universum
 import Fmt (octF, (+|), (|+))
 import Loot.Log (MonadLogging, logWarning)
 import qualified System.Posix.Files as PSX

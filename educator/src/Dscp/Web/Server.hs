@@ -8,9 +8,11 @@ module Dscp.Web.Server
        , buildClientEnv
        ) where
 
-import Control.Lens (views)
+import Universum
+
 import Loot.Base.HasLens (HasLens', lensOf)
-import Loot.Log (Logging, Message (..), MonadLogging, Name, NameSelector (..))
+import Loot.Log.Rio (LoggingIO)
+import Loot.Log (Message (..), MonadLogging, Name, NameSelector (..))
 import qualified Loot.Log.Internal as Log
 import Network.HTTP.Client.TLS (newTlsManager)
 import qualified Network.Wai.Handler.Warp as Warp
@@ -38,17 +40,18 @@ serveWeb addr app = do
 
 -- | Grab logging context and build config for servant requests logging.
 buildServantLogConfig
-    :: (MonadReader ctx m, HasLens' ctx (Logging IO), MonadLogging m)
+    :: (MonadReader ctx m, HasLens' ctx LoggingIO, MonadLogging m)
     => (Name -> Name) -> m ServantLogConfig
 buildServantLogConfig modifyName = do
     origNameSel <- Log.logName
-    logger <- views (lensOf @(Logging IO)) Log._log
-    let origName = case origNameSel of
+    logging <- view (lensOf @LoggingIO)
+    let logger = Log._log logging
+        origName = case origNameSel of
                        GivenName x -> x
                        _           -> mempty
         name = modifyName origName
     return ServantLogConfig
-        { clcLog = \text -> logger $ Message Log.Info name text
+        { clcLog = \_ text -> logger $ Message Log.Info name text
         }
 
 ----------------------------------------------------------------------------

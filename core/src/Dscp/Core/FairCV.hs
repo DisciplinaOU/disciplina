@@ -19,11 +19,11 @@ module Dscp.Core.FairCV
        , FairCVCheckResult (..)
        ) where
 
+import Universum
 import Control.Lens (makeLensesWith)
 import qualified Data.Map.Merge.Strict as M
-import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as M
-import Fmt (build, mapF, (+|), (|+))
+import Fmt (Buildable (..), mapF, (+|), (|+))
 
 import Dscp.Core.Foundation
 import Dscp.Crypto

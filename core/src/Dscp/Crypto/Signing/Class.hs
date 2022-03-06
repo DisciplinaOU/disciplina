@@ -13,9 +13,10 @@ module Dscp.Crypto.Signing.Class
        , MonadRandom
        ) where
 
+import Universum
 import Crypto.Random.Types (MonadRandom)
 import Data.ByteArray (ByteArray, ByteArrayAccess)
-import Fmt (build, (+|))
+import Fmt (Buildable (..), (+|))
 import qualified Text.Show
 
 import Dscp.Crypto.ByteArray (FromByteArray (..))
@@ -53,6 +54,7 @@ newtype AbstractPK ss = AbstractPK { unAbstractPk :: PK ss }
 deriving instance Eq (PK ss) => Eq (AbstractPK ss)
 deriving instance Ord (PK ss) => Ord (AbstractPK ss)
 deriving instance Show (PK ss) => Show (AbstractPK ss)
+deriving instance Semigroup (PK ss) => Semigroup (AbstractPK ss)
 deriving instance Monoid (PK ss) => Monoid (AbstractPK ss)
 
 instance ByteArrayAccess (PK ss) => Buildable (AbstractPK ss) where
@@ -63,6 +65,7 @@ newtype AbstractSK ss = AbstractSK { unAbstractSk :: SK ss }
 
 deriving instance Eq (SK ss) => Eq (AbstractSK ss)
 deriving instance Ord (SK ss) => Ord (AbstractSK ss)
+deriving instance Semigroup (SK ss) => Semigroup (AbstractSK ss)
 deriving instance Monoid (SK ss) => Monoid (AbstractSK ss)
 
 -- | Existing 'Show' instance e.g. for Ed25519 Secret Key would produce
@@ -83,6 +86,7 @@ instance ByteArrayAccess (Sig ss) => Buildable (AbstractSig ss a) where
 deriving instance Eq (Sig ss) => Eq (AbstractSig ss a)
 deriving instance Ord (Sig ss) => Ord (AbstractSig ss a)
 deriving instance Show (Sig ss) => Show (AbstractSig ss a)
+deriving instance Semigroup (Sig ss) => Semigroup (AbstractSig ss a)
 deriving instance Monoid (Sig ss) => Monoid (AbstractSig ss a)
 
 -- | Provide 'ByteArrayAccess' instances for signatures and keys.

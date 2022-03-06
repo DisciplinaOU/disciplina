@@ -16,12 +16,13 @@ module Dscp.Util.Time
     , mkTestTimeActions
     ) where
 
+import Universum
 import qualified Control.Concurrent.STM as STM
 import Control.Exception (BlockedIndefinitelyOnSTM (..))
 import Control.Exception.Safe (handle)
 import Data.Time.Clock.POSIX (getPOSIXTime)
 import Loot.Base.HasLens (HasCtx, HasLens', lensOf)
-import Time (KnownRat, Second, Time, Timestamp (..), fromUnixTime, threadDelay, timeAdd, toUnit)
+import Time (KnownDivRat, Second, Time, Timestamp (..), fromUnixTime, threadDelay, timeAdd, toUnit)
 
 -- | Basic timing actions.
 data TimeActions = TimeActions
@@ -55,13 +56,13 @@ getCurTimeMcs :: HasTime ctx m => m Word64
 getCurTimeMcs = getCurTime <&> \(Timestamp t) -> floor (t * 1000000)
 
 -- | Analogy to 'threadDelay'.
-sleep :: (KnownRat unit, HasTime ctx m) => Time unit -> m ()
+sleep :: (KnownDivRat unit Second, HasTime ctx m) => Time unit -> m ()
 sleep duration = do
     TimeActions{..} <- view $ lensOf @TimeActions
     liftIO $ taSleep (toUnit duration)
 
 -- | Instantly increase current time by given amount.
-rewindTime :: (KnownRat unit, HasTestTime ctx m) => Time unit -> m ()
+rewindTime :: (KnownDivRat unit Second, HasTestTime ctx m) => Time unit -> m ()
 rewindTime by = do
     TestTimeActions{..} <- view $ lensOf @TestTimeActions
     liftIO $ taRewind (toUnit by)

@@ -2,7 +2,8 @@ module Dscp.Educator.Launcher.Marker
     ( EducatorNode
     ) where
 
-import qualified Data.Text.Buildable
+import Universum
+import Fmt (Buildable (..))
 
 -- | Indicator of educator.
 data EducatorNode

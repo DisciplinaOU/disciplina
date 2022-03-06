@@ -24,9 +24,10 @@ module Dscp.DB.SQL.Util.Common
      , unsafeCast_
      ) where
 
-import Prelude hiding (_1, _2)
+import Universum hiding (_1, _2)
 
 import Data.Coerce (coerce)
+import qualified Database.Beam.Backend.Types as Beam
 import qualified Database.Beam.Backend.SQL as Beam
 import Database.Beam.Migrate (HasDefaultSqlDataType (..))
 import Database.Beam.Postgres as BeamReexport (PgJSONB (..))
@@ -51,11 +52,11 @@ import Dscp.Util
 -- | Check whether the query returns any row.
 checkExists
     :: (MonadIO m)
-    => Beam.Q Beam.PgSelectSyntax db (Beam.QNested _) () -> DBT t m Bool
+    => Beam.Q Beam.Postgres db (Beam.QNested _) () -> DBT t m Bool
 checkExists query =
-    fmap ((> 0) . oneOrError) $
+    fmap ((> (0 :: Int32)) . oneOrError) $
     runSelect . select $
-    aggregate_ (\_ -> countAll_) (query $> as_ @Int 1)
+    aggregate_ (\_ -> countAll_) (query $> as_ @Int64 1)
 
 -- | Build a 'SqlInsertValues' from concrete table value.
 insertValue :: _ => table Identity -> Beam.SqlInsertValues syntax (table (Beam.QExpr _ s))
@@ -114,8 +115,8 @@ valPk_ = val_ . packPk
 -- | Quick way to fetch a single entiry refered by the given primary key.
 selectByPk
     :: (MonadIO m, HasCallStack, _)
-    => (row Identity -> res)
-    -> Beam.DatabaseEntity be db (TableEntity table)
+    => (table Identity -> res)
+    -> Beam.DatabaseEntity Beam.Postgres db (TableEntity table)
     -> pk
     -> DBT t m (Maybe res)
 selectByPk mapper tbl key =
@@ -130,7 +131,7 @@ selectByPk mapper tbl key =
 -- | Quick way to check whether an entiry refered by the given primary key exists.
 existsWithPk
     :: _
-    => Beam.DatabaseEntity be db (TableEntity table) -> pk -> DBT t m Bool
+    => Beam.DatabaseEntity Beam.Postgres db (TableEntity table) -> pk -> DBT t m Bool
 existsWithPk tbl key =
     checkExists $ do
         row <- all_ tbl
@@ -140,7 +141,7 @@ existsWithPk tbl key =
 -- Returns whether anything was actually deleted.
 deleteByPk
     :: (MonadIO m, _)
-    => Beam.DatabaseEntity be db (TableEntity table)
+    => Beam.DatabaseEntity Beam.Postgres db (TableEntity table)
     -> pk
     -> DBT t m Bool
 deleteByPk tbl key = do
@@ -155,7 +156,7 @@ coerceQExpr = coerce
 -- | SQL CURRENT_TIMESTAMP function.
 currentTimestampUtc_
     :: forall ctxt syntax s.
-       Beam.IsSql92ExpressionSyntax syntax
+       Beam.BeamSqlBackend syntax
     => Beam.QGenExpr ctxt syntax s Timestamp
 currentTimestampUtc_ =
     -- The behavior should not depend much on the backend.
@@ -208,10 +209,10 @@ getNextPrimaryKey tbl = do
 
 -- | Apply @cast@ SQL function.
 unsafeCast_
-    :: forall b a ctx syntax s.
-       ( HasDefaultSqlDataType (Beam.Sql92ExpressionCastTargetSyntax syntax) b
-       , Beam.IsSql92ExpressionSyntax syntax
+    :: forall be b a ctx s.
+       ( Beam.BeamBackend be
+       , HasDefaultSqlDataType be b
        )
-    => QGenExpr ctx syntax s a -> QGenExpr ctx syntax s b
+    => QGenExpr ctx be s a -> QGenExpr ctx be s b
 unsafeCast_ (QExpr expr) = QExpr $ \tblPrefix ->
-    Beam.castE (expr tblPrefix) (defaultSqlDataType (Proxy @b) True)
+    Beam.castE (expr tblPrefix) (defaultSqlDataType (Proxy @b) (Proxy @be) True)

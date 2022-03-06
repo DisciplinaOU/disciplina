@@ -8,7 +8,8 @@ module Dscp.Core.Slotting
        , rewindToNextSlot
        ) where
 
-import Time (Microsecond)
+import Universum
+import Time (Microsecond, time)
 
 import Dscp.Core.Config
 import Dscp.Core.Foundation (SlotId (..))
@@ -36,12 +37,12 @@ remainingTillNextSlot = do
 
 waitUntilNextSlot :: (HasCoreConfig, HasTime ctx m) => m SlotId
 waitUntilNextSlot = do
-    sleep @Microsecond . fromIntegral =<< remainingTillNextSlot
+    sleep . time @Microsecond . realToFrac =<< remainingTillNextSlot
     getCurrentSlot
 
 -- | Rewind emulated time to the start of the next slot.
 -- Returns id of just arrived slot.
 rewindToNextSlot :: (HasCoreConfig, HasTestTime ctx m) => m SlotId
 rewindToNextSlot = do
-    rewindTime @Microsecond . fromIntegral =<< remainingTillNextSlot
+    rewindTime . time @Microsecond . realToFrac =<< remainingTillNextSlot
     getCurrentSlot

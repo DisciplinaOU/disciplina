@@ -8,6 +8,7 @@ module Dscp.Util.HasLens
     , deriveHasLensDirectWith
     ) where
 
+import Universum
 import Control.Lens (DefName (TopName), LensRules, lensField, lensRules, to, traversed)
 import qualified Data.List as L
 import qualified Data.Text as T

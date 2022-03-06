@@ -6,7 +6,7 @@ module Dscp.Educator.Web.Educator.Arbitrary
     , certificateListEx
     ) where
 
-import Test.QuickCheck (vectorOf)
+import Universum
 
 import Dscp.Core
 import Dscp.Crypto

@@ -16,6 +16,7 @@ module Dscp.Util.Constructors
        , EnumLikeOnly
        ) where
 
+import Universum
 import Data.Default (Default (..))
 import qualified GHC.Generics as G
 import GHC.TypeLits (ErrorMessage (..), TypeError)

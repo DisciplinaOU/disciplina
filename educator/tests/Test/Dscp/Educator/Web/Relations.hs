@@ -5,8 +5,8 @@ module Test.Dscp.Educator.Web.Relations
     , buildRelationTestScenarios
     ) where
 
-import Test.Hspec.Core.Spec (SpecWith)
-import Test.QuickCheck.Property (failed, reason)
+import Universum
+import Test.QuickCheck.Property (reason)
 
 import Dscp.DB.SQL
 import Dscp.Educator.DB

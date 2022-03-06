@@ -10,6 +10,7 @@ module Dscp.Crypto.Random
        , randomNumberInRange
        ) where
 
+import Universum
 import Crypto.Number.Basic (numBytes)
 import Crypto.Number.Serialize (os2ip)
 import Crypto.OpenSSL.Random (randBytes)

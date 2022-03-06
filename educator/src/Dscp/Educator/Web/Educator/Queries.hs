@@ -20,7 +20,9 @@ module Dscp.Educator.Web.Educator.Queries
     , educatorGetCertificates
     ) where
 
-import Control.Lens (from, mapping, traversed, _Just)
+import Universum
+
+import Control.Lens (_Just, from, mapping, traversed)
 import Data.Aeson (eitherDecode)
 import Data.Default (Default)
 import Data.List (groupBy)
@@ -32,7 +34,6 @@ import Network.HTTP.Types.Status (statusCode)
 import qualified Pdf.FromLatex as Pdf
 import Pdf.Scanner (PDFBody (..))
 import Servant (err501)
-import Servant.Client.Core.Internal.BaseUrl (showBaseUrl)
 import Servant.Util (HList (HNil), PaginationSpec, SortingSpecOf, (.*.))
 import Servant.Util.Beam.Postgres (fieldSort, paginate_, sortBy_)
 
@@ -44,11 +45,11 @@ import Dscp.Educator.DB
 import Dscp.Educator.Launcher.Marker
 import Dscp.Educator.Launcher.Resource (CertificateIssuerResource (..))
 import Dscp.Educator.Logic.Certificates
+import Dscp.Educator.Resource
 import Dscp.Educator.Web.Educator.Error
 import Dscp.Educator.Web.Educator.Types
 import Dscp.Educator.Web.Queries
 import Dscp.Educator.Web.Types
-import Dscp.Resource.Keys
 import Dscp.Util
 
 ----------------------------------------------------------------------------

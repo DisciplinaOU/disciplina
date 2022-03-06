@@ -7,14 +7,15 @@ import Codec.Serialise as Codec (deserialise)
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteArray as BA
 import Data.Time.Clock (UTCTime)
-import Database.Beam.Backend (BackendFromField, BeamBackend, FromBackendRow (..))
-import Database.Beam.Backend.SQL.SQL92 (HasSqlValueSyntax (..), IsSql92ExpressionSyntax,
-                                        Sql92ExpressionValueSyntax)
+import Database.Beam.Backend (BackendFromField, BeamBackend, BeamSqlBackend, FromBackendRow (..))
+import Database.Beam.Backend.SQL.SQL92 (HasSqlValueSyntax (..))
 import Database.Beam.Migrate (HasDefaultSqlDataType (..))
-import Database.Beam.Postgres.Syntax (PgDataTypeSyntax, PgValueSyntax)
+import Database.Beam.Postgres (Postgres)
+import Database.Beam.Postgres.Syntax (PgValueSyntax)
 import Database.Beam.Query (HasSqlEqualityCheck (..))
 import Database.PostgreSQL.Simple.FromField (FromField (..))
 import Pdf.Scanner (PDFBody (..))
+import Universum
 
 import Dscp.Core
 import Dscp.Crypto
@@ -61,7 +62,7 @@ instance FromField (TYPE) where \
 
 #define EnumInstanceEnc(TYPE) \
 instance IsPgValue (TYPE) where \
-    sqlValueSyntax = sqlValueSyntax . fromEnum
+    sqlValueSyntax = sqlValueSyntax . fromIntegral @Int @Int64 . fromEnum
 
 #define EnumInstanceDec(TYPE) \
 instance FromField (TYPE) where \
@@ -132,7 +133,7 @@ instance FromField TxBlockIdx where
     fromField field ty = leftToPanic . txBlockIdxFromInt <$> fromField field ty
 
 instance HasSqlValueSyntax PgValueSyntax TxBlockIdx where
-    sqlValueSyntax = sqlValueSyntax . txBlockIdxToInt
+    sqlValueSyntax = sqlValueSyntax . fromIntegral @Int @Int64 . txBlockIdxToInt
 
 {- Basic instances -}
 
@@ -155,10 +156,14 @@ instance FromField Timestamp where
 #define GenFromBackendRow(TYPE) \
 instance (BeamBackend be, BackendFromField be (TYPE)) => FromBackendRow be (TYPE)
 
+#define GenFromBackendRow2arity(TYPE) \
+instance (Typeable a, BeamBackend be, BackendFromField be (TYPE a)) => FromBackendRow be (TYPE a)
+
+
 -- For Postgres they all refer to 'FromField' instances
 GenFromBackendRow(ItemDesc)
 GenFromBackendRow(Timestamp)
-GenFromBackendRow(Hash a)
+GenFromBackendRow2arity(Hash)
 GenFromBackendRow(Address)
 GenFromBackendRow(Course)
 GenFromBackendRow(AssignmentType)
@@ -167,8 +172,8 @@ GenFromBackendRow(Grade)
 GenFromBackendRow(BlockIdx)
 GenFromBackendRow(TxBlockIdx)
 GenFromBackendRow(SubmissionWitness)
-GenFromBackendRow(MerkleSignature a)
-GenFromBackendRow(EmptyMerkleTree a)
+GenFromBackendRow2arity(MerkleSignature)
+GenFromBackendRow2arity(EmptyMerkleTree)
 GenFromBackendRow(ATGDelta)
 GenFromBackendRow(CertificateMeta)
 GenFromBackendRow(PDFBody)
@@ -178,9 +183,7 @@ GenFromBackendRow(PDFBody)
 ----------------------------------------------------------------------------
 
 #define GenHasSqlEqualityCheck(TYPE) \
-instance (HasSqlValueSyntax (Sql92ExpressionValueSyntax syntax) (TYPE), \
-          IsSql92ExpressionSyntax syntax) => \
-         HasSqlEqualityCheck syntax (TYPE)
+instance BeamSqlBackend be => HasSqlEqualityCheck be (TYPE)
 
 GenHasSqlEqualityCheck(Address)
 GenHasSqlEqualityCheck(Course)
@@ -192,5 +195,5 @@ GenHasSqlEqualityCheck(Hash a)
 GenHasSqlEqualityCheck(AssignmentType)
 
 
-instance HasDefaultSqlDataType PgDataTypeSyntax ItemDesc where
+instance HasDefaultSqlDataType Postgres ItemDesc where
     defaultSqlDataType _ = defaultSqlDataType (Proxy @Text)

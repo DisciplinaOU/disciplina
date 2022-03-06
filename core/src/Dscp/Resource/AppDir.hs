@@ -13,6 +13,7 @@ module Dscp.Resource.AppDir
        , getOSAppDir
        ) where
 
+import Universum
 import Fmt ((+|), (|+))
 import Loot.Config ((::+), (::-), (:::), Config, PartialConfig)
 import Loot.Log (MonadLogging, logInfo)

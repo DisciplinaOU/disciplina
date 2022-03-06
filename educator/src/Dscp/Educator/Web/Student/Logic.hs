@@ -5,6 +5,7 @@ module Dscp.Educator.Web.Student.Logic
     , studentMakeSubmissionVerified
     ) where
 
+import Universum
 import Dscp.Core
 import Dscp.Crypto
 import Dscp.DB.SQL

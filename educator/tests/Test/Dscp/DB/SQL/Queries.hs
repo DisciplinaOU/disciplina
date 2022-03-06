@@ -2,7 +2,7 @@
 
 module Test.Dscp.DB.SQL.Queries where
 
-import Prelude
+import Universum
 
 import Control.Lens (mapped)
 -- import Data.Default (Default (..))

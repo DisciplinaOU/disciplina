@@ -9,6 +9,7 @@ module Dscp.Core.Web
        , ToHttpApiData (..)
        ) where
 
+import Universum
 import Data.List (span)
 import Servant.API
 import Servant.Client.Core (BaseUrl (..), parseBaseUrl, showBaseUrl)
@@ -56,8 +57,8 @@ instance FromHttpApiData CertificateName where
     parseUrlPiece txt = do
         let (name', ext) = splitExtension $ toString txt
         when (ext /= ".pdf") $
-            fail "Wrong extension, `.pdf` is expected"
-        name <- decodeUtf8 <$> leftToFail (fromBase64Url @ByteString $ toText name')
+            Left "Wrong extension, `.pdf` is expected"
+        name <- bimap toText decodeUtf8 $ fromBase64Url @ByteString $ toText name'
         let (eId, cId'') = span (/= ':') name
             cId' = drop 1 cId''
         cId <- parseUrlPiece $ toText cId'

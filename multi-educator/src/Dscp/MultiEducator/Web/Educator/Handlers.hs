@@ -4,6 +4,8 @@ module Dscp.MultiEducator.Web.Educator.Handlers
        ( certificatesApiHandlers
        ) where
 
+import Universum
+
 import Dscp.Core.Foundation.Educator
 import Dscp.DB.SQL
 import Dscp.Educator.Web.Educator

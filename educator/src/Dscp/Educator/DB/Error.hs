@@ -20,11 +20,11 @@ module Dscp.Educator.DB.Error
        , _StudentIsActiveError
        ) where
 
+import Universum
 import Control.Lens (makePrisms)
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
-import qualified Data.Text.Buildable as B
-import Fmt ((+|), (|+))
+import Fmt (Buildable (..), (+|), (|+))
 
 import Dscp.Core
 import Dscp.Educator.DB.BlockData
@@ -114,7 +114,7 @@ instance Buildable DomainError where
     build (AlreadyPresentError entity) =
         "Entity ["+|entity|+"] already exists"
     build (SemanticError err) =
-        "Semantic error: " <> B.build err
+        "Semantic error: " <> build err
 
 deriveJSON defaultOptions ''DomainErrorItem
 deriveJSON defaultOptions ''DatabaseSemanticError

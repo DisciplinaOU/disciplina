@@ -1,5 +1,6 @@
 module Test.Dscp.Core.Serialise where
 
+import Universum
 import Dscp.Core
 import Dscp.Util.Test
 

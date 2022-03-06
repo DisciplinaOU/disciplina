@@ -3,7 +3,10 @@ module Dscp.MultiEducator.Launcher.Resource
        (
        ) where
 
-import Loot.Log (logWarning)
+import Universum
+
+import Loot.Log (logWarning, LoggingIO)
+import Loot.Base.HasLens (lensOf)
 import UnliftIO.Async (forConcurrently_)
 
 import Dscp.Config
@@ -12,7 +15,6 @@ import Dscp.MultiEducator.Config
 import Dscp.MultiEducator.Launcher.Context
 import Dscp.MultiEducator.Launcher.Educator.Context
 import Dscp.Resource.Class (AllocResource (..), buildComponentR)
-import qualified Dscp.Witness.Launcher.Resource as Witness
 
 instance AllocResource EducatorContextsVar where
     type Deps EducatorContextsVar = ()
@@ -37,15 +39,14 @@ instance AllocResource MultiEducatorResources where
     type Deps MultiEducatorResources = MultiEducatorConfigRec
     allocResource educatorCfg = do
         let cfg = educatorCfg ^. sub #educator
-            witnessCfg = rcast educatorCfg
-        _merWitnessResources <- withWitnessConfig witnessCfg $
-                               allocResource witnessCfg
+
+        _merLogging <- view (lensOf @LoggingIO)
         _merDB <- unPreparedSQL @"educator" <$> allocResource (cfg ^. sub #db)
-        let appDir = Witness._wrAppDir _merWitnessResources
+        _merAppDir <- allocResource $ cfg ^. sub #appDir
         _merEducatorData <- allocResource ()
         _merLanguage <- allocResource $ cfg ^. sub #certificates . option #language
         _merPdfLatexPath <- allocResource $ cfg ^. sub #certificates . option #latex
         _merPdfResourcePath <- allocResource
-            (cfg ^. sub #certificates . option #resources, appDir)
+            (cfg ^. sub #certificates . option #resources, _merAppDir)
         _merDownloadBaseUrl <- allocResource $ cfg ^. sub #certificates . option #downloadBaseUrl
         return MultiEducatorResources {..}

@@ -5,6 +5,7 @@ module Dscp.Educator.Web.Arbitrary
     , blkProofInfoEx
     ) where
 
+import Universum
 import Dscp.Core
 import Dscp.Crypto
 import Dscp.Educator.Web.Types

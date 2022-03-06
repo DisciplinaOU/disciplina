@@ -8,13 +8,14 @@ module Dscp.Util.Timing
        , capDelay
        ) where
 
+import Universum
 import qualified Control.Concurrent as C
 import Control.Exception.Safe (Handler (..))
 import qualified Control.Retry as R
 import Data.Time.Clock.POSIX (getPOSIXTime)
 import Fmt (ordinalF, (+|), (+||), (|+), (||+))
 import Loot.Log (MonadLogging, logError)
-import Time (KnownRat, Microsecond, Second, Time, toNum)
+import Time (KnownDivRat, Microsecond, Second, Time, toNum)
 
 -- | Evaluate how much time did action take.
 countingTime :: MonadIO m => m a -> m (Double, a)
@@ -29,7 +30,7 @@ countingTime m = do
 -- | Execute an action, finishing not faster than in given amount of time.
 -- Useful in pair with 'foreverAlive' to get periodically invoked actions.
 notFasterThan
-    :: (MonadIO m, KnownRat unit)
+    :: (MonadIO m, KnownDivRat unit Second)
     => Time unit -> m () -> m ()
 notFasterThan minTime action = do
     (takenTime, ()) <- countingTime action
@@ -56,15 +57,15 @@ retryOnSpot :: R.RetryPolicy
 retryOnSpot = mempty
 
 -- | Like 'R.constantDelay', but with a prettier way to specify time.
-constDelay :: KnownRat unit => Time unit -> R.RetryPolicy
+constDelay :: KnownDivRat unit Microsecond => Time unit -> R.RetryPolicy
 constDelay = R.constantDelay . toNum @Microsecond
 
 -- | Like 'R.exponentialBackoff', but with a prettier way to specify time.
-expBackoff :: KnownRat unit => Time unit -> R.RetryPolicy
+expBackoff :: KnownDivRat unit Microsecond => Time unit -> R.RetryPolicy
 expBackoff = R.exponentialBackoff . toNum @Microsecond
 
 -- | Like 'R.capDelay', but with a prettier way to specify time.
 capDelay
-    :: (Monad m, KnownRat unit)
+    :: (Monad m, KnownDivRat unit Microsecond)
     => Time unit -> R.RetryPolicyM m -> R.RetryPolicyM m
 capDelay = R.capDelay . toNum @Microsecond

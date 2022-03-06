@@ -20,8 +20,11 @@ module Dscp.MultiEducator.Web.Educator.API
     , multiStudentAPI
     ) where
 
+import Universum
+
 import Servant
-import Servant.Generic
+import Servant.API.Generic
+import Servant.Server.Generic (AsServerT)
 import Servant.Util (type ( #: ), ExceptionalResponses)
 
 import Dscp.Core.Foundation.Educator
@@ -32,7 +35,6 @@ import Dscp.Educator.Web.Student.API
 import Dscp.MultiEducator.Types
 import Dscp.MultiEducator.Web.Educator.Auth
 import Dscp.Web.Swagger.UI
-import Dscp.Witness.Web.ContentTypes
 
 ---------------------------------------------------------------------------
 -- Certificates API
@@ -45,8 +47,7 @@ data CertificatesApiEndpoints route = CertificatesApiEndpoints
 
 type CertificatesApiHandlers m = CertificatesApiEndpoints (AsServerT m)
 
-type CertificatesAPI =
-    ToServant (CertificatesApiEndpoints AsApi)
+type CertificatesAPI = ToServantApi CertificatesApiEndpoints
 
 type FullCertificatesAPI =
     "api" :> "certificates" :> "v1" :>

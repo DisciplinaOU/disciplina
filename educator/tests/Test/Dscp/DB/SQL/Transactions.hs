@@ -1,5 +1,4 @@
 {-# LANGUAGE OverloadedLabels #-}
-{-# LANGUAGE QuasiQuotes      #-}
 
 -- | This module tests that our wrapper over SQL library
 -- allow SQL transactions to work properly.
@@ -7,14 +6,15 @@
 -- queries are not allowed to be performed concurrently via the same connection.
 module Test.Dscp.DB.SQL.Transactions where
 
+import Universum
+
 import qualified Control.Concurrent.STM as STM
 import Control.Lens ((?~))
 import Database.Beam.Migrate (CheckedDatabaseSettings, defaultMigratableDbSettings, unCheckDatabase)
 import Database.Beam.Migrate.Simple (createSchema)
-import Database.Beam.Postgres (PgCommandSyntax, Postgres)
+import Database.Beam.Postgres (Postgres)
 import Database.Beam.Postgres.Migrate (migrationBackend)
-import Database.Beam.Schema.Tables (Beamable, C, Database, DatabaseSettings, Table (..),
-                                    TableEntity)
+import Database.Beam.Schema.Tables (Beamable, C, Database, Table (..), TableEntity)
 import Loot.Base.HasLens (HasCtx)
 import Loot.Config (finaliseDeferredUnsafe, option)
 import Loot.Log (LoggingIO, MonadLogging)
@@ -30,7 +30,7 @@ import Test.Dscp.DB.SQL.Mode
 
 type MonadMoney m = (MonadIO m, MonadCatch m, MonadUnliftIO m)
 
-type Money = Int
+type Money = Int32
 
 data AccountRowT f = AccountRow
     { arMoney   :: C f Money
@@ -39,7 +39,7 @@ data AccountRowT f = AccountRow
 type AccountRow = AccountRowT Identity
 
 instance Table AccountRowT where
-    newtype PrimaryKey AccountRowT f = AccountRowId (C f Int)
+    newtype PrimaryKey AccountRowT f = AccountRowId (C f Int32)
         deriving (Generic)
     primaryKey = AccountRowId . arMoney
 
@@ -53,7 +53,7 @@ data BankSchema f = BankSchema
 instance Database be BankSchema
 
 bankCheckedSchema :: CheckedDatabaseSettings Postgres BankSchema
-bankCheckedSchema = defaultMigratableDbSettings @PgCommandSyntax
+bankCheckedSchema = defaultMigratableDbSettings @Postgres
 
 bankSchema :: DatabaseSettings Postgres BankSchema
 bankSchema = unCheckDatabase bankCheckedSchema
@@ -70,7 +70,7 @@ setMoney :: MonadIO m => Money -> DBT t m ()
 setMoney val =
     runUpdate_ $ update
         (bsAccounts bankSchema)
-        (\acc -> [ arMoney acc <-. val_ val ])
+        (\acc -> arMoney acc <-. val_ val)
         (\_ -> val_ True)
 
 addMoney :: (MonadUnliftIO m, MonadLogging m, HasCtx ctx m '[SQL]) => m ()
@@ -98,7 +98,7 @@ spec_SQL_wrapper = specWithTempPostgresServer $ do
         let iterations = 100
 
         started <- newTVarIO False
-        workers <- forM [1 :: Int .. iterations] $ \_ ->
+        workers <- forM [1 :: Int32 .. iterations] $ \_ ->
             UIO.async $ do
                 atomically $ readTVar started >>= STM.check
                 addMoney

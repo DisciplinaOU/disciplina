@@ -11,6 +11,7 @@ module Dscp.Crypto.JWS
        , verifyJWitness
        ) where
 
+import Universum
 import Control.Lens (AsEmpty, Cons, _Just)
 import Crypto.JOSE (CompactJWS, Error, FromCompact (..), HasJwk (jwk), HeaderParam (..), JWK,
                     JWSHeader, KeyMaterial (..), OKPKeyParameters (..), ToCompact (..), asPublicKey,

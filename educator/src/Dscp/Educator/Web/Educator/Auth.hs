@@ -8,6 +8,7 @@ module Dscp.Educator.Web.Educator.Auth
        , ClientAuthData (EducatorClientAuthData)
        ) where
 
+import Universum
 import Servant.Auth.Server (AuthCheck (..))
 import Servant.Auth.Server.Internal.Class (AuthArgs (..), IsAuth (..))
 

@@ -9,6 +9,7 @@ module Dscp.Educator.Web.Student.Auth
        , ClientAuthData (StudentClientAuthData)
        ) where
 
+import Universum
 import Servant.Auth.Server (AuthCheck (..))
 import Servant.Auth.Server.Internal.Class (AuthArgs (..), IsAuth (..))
 import UnliftIO (MonadUnliftIO, UnliftIO (..), askUnliftIO)

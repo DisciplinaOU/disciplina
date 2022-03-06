@@ -7,6 +7,8 @@ module Dscp.MultiEducator.Launcher.Runner
     , launchMultiEducatorRealMode
     ) where
 
+import Universum
+
 import Loot.Log (MonadLogging)
 
 import Dscp.Config
@@ -17,18 +19,13 @@ import Dscp.MultiEducator.Launcher.Resource ()
 import Dscp.Resource.Class (AllocResource (..), InitParams (..))
 import Dscp.Resource.Functions
 import Dscp.Rio (runRIO)
-import Dscp.Witness.Launcher
 
 -- | Make up Educator context from dedicated pack of allocated resources.
 formMultiEducatorContext
     :: (MonadIO m, MonadCatch m, MonadLogging m, HasMultiEducatorConfig)
     => MultiEducatorResources
     -> m MultiEducatorContext
-formMultiEducatorContext _mecResources = do
-    let wConfig = rcast multiEducatorConfig
-    _mecWitnessVars <- withWitnessConfig wConfig $
-        mkWitnessVariables (_merWitnessResources _mecResources)
-    pure MultiEducatorContext{..}
+formMultiEducatorContext _mecResources = pure MultiEducatorContext{..}
 
 -- | Given params, allocate resources, construct node context and run
 -- `MultiEducatorWorkMode` monad. Any synchronous exceptions are handled inside.
@@ -45,5 +42,5 @@ launchMultiEducatorRealMode config action =
   where
     appDesc = "Educator (real mode)"
     initParams = InitParams
-        { ipLoggingParams = config ^. sub #witness . sub #logging
+        { ipLoggingParams = config ^. sub #educator . sub #logging
         }

@@ -12,6 +12,7 @@ module Dscp.Resource.Logging
     , noLogging
     ) where
 
+import Universum
 import Colog.Syslog (Collector (..), Facility (User), SyslogConfig (..))
 import Control.Monad.Component (ComponentM)
 import Data.Aeson (encode)

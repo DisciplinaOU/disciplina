@@ -14,6 +14,7 @@ module Dscp.Educator.Web.Queries
     , commonDeleteSubmission
     ) where
 
+import Universum
 import Dscp.Core
 import Dscp.Crypto
 import Dscp.DB.SQL

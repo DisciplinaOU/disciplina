@@ -7,6 +7,7 @@ module Dscp.Util.Type
     , If
     ) where
 
+import Universum
 import Data.Type.Bool (type (&&))
 
 -- | A type family to compute Boolean equality.

@@ -3,6 +3,7 @@ module Dscp.Educator.DB.DSL.Interpret.IO
        )
        where
 
+import Universum
 import Data.List (intersect, union)
 
 import qualified Dscp.Core as Core (Grade (..), Subject (..))

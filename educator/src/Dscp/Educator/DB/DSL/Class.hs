@@ -14,6 +14,7 @@ module Dscp.Educator.DB.DSL.Class
        , WHERE (..)
        ) where
 
+import Universum
 import qualified Data.ByteString.Lazy as LBS
 
 import Dscp.Core (PrivateTx (..))

@@ -5,18 +5,16 @@ module Dscp.Educator.Web.Logic
     , getEducatorStatus
     ) where
 
-import Data.Default (def)
+import Universum
+
 import Dscp.Core
 import Dscp.DB.SQL
 import Dscp.Educator.DB
 import Dscp.Educator.Launcher.Mode
+import Dscp.Educator.Resource
 import Dscp.Educator.Web.Educator.Types
 import Dscp.Educator.Web.Types
-import Dscp.Resource.Keys
-import Dscp.Snowdrop.Types
 import Dscp.Util.Aeson
-import Dscp.Witness.Logic.Getters
-import Dscp.Witness.SDLock
 
 commonGetProofs
     :: MonadEducatorWebQuery m
@@ -38,11 +36,5 @@ getEducatorStatus
     => m EducatorInfo
 getEducatorStatus = do
     sk <- ourSecretKeyData @EducatorNode
-    let address = skAddress sk
-
-    accounts <- readingSDLock $ runSdDual $
-        fromMaybe def <$> getAccountMaybe address
-    return EducatorInfo
-        { eiAddress = address
-        , eiBalances = Coin . fromIntegral . aBalance <$> accounts
-        }
+    let eiAddress = skAddress sk
+    return EducatorInfo {..}

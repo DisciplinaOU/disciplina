@@ -15,22 +15,24 @@ module Dscp.MultiEducator.Launcher.Mode
       -- * Implementations
     , MultiEducatorContext (..)
     , MultiEducatorRealMode
-    , mecWitnessVars
     ) where
 
-import Control.Lens (makeLenses)
-import Loot.Base.HasLens (HasLens')
-import Loot.Network.Class (NetworkingCli, NetworkingServ)
-import Loot.Network.ZMQ (ZmqTcp)
+import Universum
 
+import Control.Lens (makeLenses)
+import Loot.Base.HasLens (HasLens', HasCtx)
+import Loot.Log (LoggingIO)
+import qualified Pdf.FromLatex as Pdf
+
+import Dscp.Core (Language)
 import Dscp.DB.SQL
 import Dscp.Educator.Launcher.Marker (EducatorNode)
+import Dscp.Educator.Launcher.Mode (BasicWorkMode)
 import Dscp.MultiEducator.Config
 import Dscp.MultiEducator.Launcher.Context
-import Dscp.Resource.Network
+import Dscp.Resource.AppDir
 import Dscp.Rio (RIO)
 import Dscp.Util.HasLens
-import qualified Dscp.Witness as W
 
 ---------------------------------------------------------------------
 -- WorkMode class
@@ -38,26 +40,23 @@ import qualified Dscp.Witness as W
 
 -- | Set of typeclasses which define capabilities of bare Educator node.
 type MultiEducatorWorkMode ctx m =
-    ( W.WitnessWorkMode ctx m
-
+    ( BasicWorkMode m
     , HasMultiEducatorConfig
-    , HasLens' ctx EducatorContextsVar
-    , HasLens' ctx SQL
-
-    -- It's easier to just have these two lenses instead of reconstructing
-    -- the full educator context in multiToNormal from other lenses
     , HasLens' ctx MultiEducatorResources
-    , HasLens' ctx W.WitnessVariables
-
-    , NetworkingCli ZmqTcp m
-    , NetworkingServ ZmqTcp m
+    , HasCtx ctx m
+        [ LoggingIO
+        , AppDir
+        , SQL
+        , EducatorContextsVar
+        , Language
+        , Pdf.LatexPath
+        , Pdf.ResourcePath
+        , Pdf.DownloadBaseUrl
+        ]
     )
 
--- | Set of typeclasses which define capabilities both of Educator and Witness.
-type MultiCombinedWorkMode ctx m =
-    ( MultiEducatorWorkMode ctx m
-    , W.FullWitnessWorkMode ctx m
-    )
+-- | Set of typeclasses which define capabilities both of Educator and Witness^W NO WITNESSES ANYMORE
+type MultiCombinedWorkMode ctx m = MultiEducatorWorkMode ctx m
 
 ---------------------------------------------------------------------
 -- WorkMode implementation
@@ -66,8 +65,6 @@ type MultiCombinedWorkMode ctx m =
 data MultiEducatorContext = MultiEducatorContext
     { _mecResources   :: !MultiEducatorResources
       -- ^ Resources, allocated from params.
-    , _mecWitnessVars :: !W.WitnessVariables
-      -- ^ Runtime variables of witness.
     }
 
 makeLenses ''MultiEducatorContext
@@ -80,16 +77,13 @@ type MultiEducatorRealMode = RIO MultiEducatorContext
 ---------------------------------------------------------------------
 
 deriveHasLens 'mecResources ''MultiEducatorContext ''MultiEducatorResources
-deriveHasLens 'mecResources ''MultiEducatorContext ''W.WitnessResources
-deriveHasLens 'mecResources ''MultiEducatorContext ''NetServResources
-deriveHasLens 'mecWitnessVars ''MultiEducatorContext ''W.WitnessVariables
 
 ----------------------------------------------------------------------------
 -- Sanity check
 ----------------------------------------------------------------------------
 
 _sanity :: MultiEducatorRealMode ()
-_sanity = withMultiEducatorConfig (error "") $ W.withWitnessConfig (error "") _sanityCallee
+_sanity = withMultiEducatorConfig (error "") _sanityCallee
   where
     _sanityCallee :: MultiCombinedWorkMode ctx m => m ()
     _sanityCallee = pass

@@ -9,6 +9,8 @@ module Dscp.Web.Swagger.Generation.Class
     , FilterParamSince
     ) where
 
+import Universum
+
 import qualified Control.Exception as E
 import Control.Lens (ix, makePrisms, zoom, (.=), (?=), _head)
 import Data.Swagger (Swagger)

@@ -2,6 +2,7 @@
 
 module Main where
 
+import Universum
 import Options.Applicative (execParser, fullDesc, helper, info, progDesc)
 
 import Dscp.CommonCLI (versionOption)
@@ -11,9 +12,7 @@ import Dscp.Educator
 main :: IO ()
 main = do
     eConfig <- getEducatorConfig
-    let wConfig = rcast eConfig
-    launchEducatorRealMode eConfig $
-        withWitnessConfig wConfig educatorEntry
+    launchEducatorRealMode eConfig educatorEntry
 
 getEducatorConfig :: IO EducatorConfigRec
 getEducatorConfig = do

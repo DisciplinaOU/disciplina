@@ -5,6 +5,8 @@ module Dscp.MultiEducator.Web.Swagger
     , certificatesAPISwagger
     ) where
 
+import Universum
+
 import Control.Lens (zoom, (.=), (?=))
 import Data.Swagger (Scheme (..), Swagger)
 import qualified Data.Swagger as S

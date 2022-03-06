@@ -1,4 +1,5 @@
 
+import Universum
 import qualified Data.ByteString.Lazy as LBS
 
 import Dscp.Core.Web (parseBaseUrl)

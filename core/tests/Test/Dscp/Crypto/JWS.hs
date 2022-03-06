@@ -1,5 +1,6 @@
 module Test.Dscp.Crypto.JWS where
 
+import Universum
 import Crypto.JOSE (Alg (EdDSA), CompactJWS, Error, HeaderParam (..), JWK, JWSHeader, asPublicKey,
                     jwk, newJWSHeader, signJWS)
 

@@ -13,12 +13,15 @@ module Dscp.Web.Class
     , servantToClientError
     ) where
 
+import Universum
+
+import Control.Monad.Except (MonadError (..))
 import Data.Aeson (FromJSON, ToJSON, decode, encode)
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (Options (..), deriveJSON)
-import qualified Data.Text.Buildable as B
-import Servant (Handler, ServantErr (..), err500, throwError)
-import Servant.Client (GenResponse (..), ServantError (..))
+import Fmt (Buildable (..), pretty)
+import qualified Servant.Client.Core as S
+import Servant.Server (Handler, ServerError (..), err500)
 import qualified Text.Show
 
 -- | Error kind identifier.
@@ -44,18 +47,18 @@ class HasErrorTag e => ToServantErr e where
 
     -- | Get miminal info about the error, consider using
     -- 'Servant.err404'-like constants in an implementation.
-    toServantErrNoBody :: e -> ServantErr
+    toServantErrNoBody :: e -> ServerError
 
     -- | Convert the error to server error.
-    toServantErr :: e -> ServantErr
-    default toServantErr :: ToJSON e => e -> ServantErr
+    toServantErr :: e -> ServerError
+    default toServantErr :: ToJSON e => e -> ServerError
     toServantErr e =
         (toServantErrNoBody e)
         { errBody = encode $ ErrResponse (Just e) (errorTag e) }
 
 -- | Implementation for 'toServantErr' suitable for case when there is no need
 -- to encode the error entirely, only tag is required.
-toServantErrJustTag :: ToServantErr e => e -> ServantErr
+toServantErrJustTag :: ToServantErr e => e -> ServerError
 toServantErrJustTag e =
     (toServantErrNoBody e)
     { errBody = encode $ ErrResponse @() Nothing (errorTag e) }
@@ -63,16 +66,16 @@ toServantErrJustTag e =
 -- | Extract the error back from the errored response.
 class HasErrorTag e => FromServantErr e where
     -- | Convert client error to the given error.
-    fromServantError :: ServantError -> Maybe e
-    default fromServantError :: FromJSON e => ServantError -> Maybe e
-    fromServantError err = do
-        FailureResponse Response{..} <- pure err
+    fromClientError :: S.ClientError -> Maybe e
+    default fromClientError :: FromJSON e => S.ClientError -> Maybe e
+    fromClientError err = do
+        S.FailureResponse _ S.Response{..} <- pure err
         errResponse <- decode @(ErrResponse e) responseBody
         return $ erContent errResponse
-          ?: error "fromServantError: no error content"
+          ?: error "fromClientError: no error content"
 
 -- | Handle all previously uncaught errors.
-unexpectedToServantErr :: SomeException -> ServantErr
+unexpectedToServantErr :: SomeException -> ServerError
 unexpectedToServantErr err = err500{ errBody = show err }
 
 -- | Handle all possible exceptions.
@@ -91,20 +94,20 @@ processServerErrors action =
 data ClientError serverErr
     = ApiClientError !serverErr
       -- ^ API-specific exception with known semantics.
-    | SomeClientError !ServantError
+    | SomeClientError !S.ClientError
       -- ^ General errors (connection, authentication failures, e.t.c).
 
 instance Buildable err => Show (ClientError err) where
-    show = toString . pretty
+    show = toString @Text . pretty
 
 instance Buildable err => Buildable (ClientError err) where
     build = \case
-        ApiClientError err -> B.build err
+        ApiClientError err  -> build err
         SomeClientError msg -> show msg
 
 instance (Typeable err, Buildable err) => Exception (ClientError err)
 
 -- | Consider cases of client errors.
-servantToClientError :: FromServantErr serverErr => ServantError -> ClientError serverErr
+servantToClientError :: FromServantErr serverErr => S.ClientError -> ClientError serverErr
 servantToClientError err =
-    maybe (SomeClientError err) ApiClientError (fromServantError err)
+    maybe (SomeClientError err) ApiClientError (fromClientError err)

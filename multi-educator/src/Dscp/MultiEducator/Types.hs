@@ -2,10 +2,12 @@ module Dscp.MultiEducator.Types
     ( EducatorUUID (..)
     ) where
 
-import Control.Lens ((.=))
+import Universum
+
+import Control.Lens ((?=))
 import Data.Aeson (FromJSON (..), ToJSON (..))
 import qualified Data.Swagger as S
-import Fmt (build)
+import Fmt (Buildable (..))
 import Servant (FromHttpApiData (..), ToHttpApiData (..))
 
 import Dscp.Util
@@ -31,4 +33,4 @@ type instance ParamDescription EducatorUUID = "Educator identifier."
 
 instance S.ToParamSchema EducatorUUID where
     toParamSchema _ = mempty &: do
-        S.type_ .= S.SwaggerString
+        S.type_ ?= S.SwaggerString

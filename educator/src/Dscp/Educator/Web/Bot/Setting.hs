@@ -19,12 +19,13 @@ module Dscp.Educator.Web.Bot.Setting
      , botProvideUnlockedAssignments
      ) where
 
+import Universum
 import Control.Exception.Safe (catchJust)
 import qualified Data.Map as M
 import Data.Reflection (Given (..), give)
 import qualified Data.Set as S
 import Data.Time.Clock (getCurrentTime)
-import Fmt ((+|), (+||), (|+), (||+))
+import Fmt ((+|), (+||), (|+), (||+), pretty)
 import qualified GHC.Exts as Exts
 import Loot.Log (ModifyLogName, logError, logInfo, modifyLogName)
 import Time.Units (Microsecond, Time, threadDelay)
@@ -157,7 +158,7 @@ mkBotSetting params =
         assignments <- genBotCourseAssignments courseSize course
         -- [Note: examples-in-bot]
         let assignmentsWithEx =
-                bool identity (assignmentEx :)
+                bool id (assignmentEx :)
                 (course == _aCourseId assignmentEx)
                 assignments
         assignAndDeps <- genDependencies assignmentsWithEx
@@ -188,7 +189,7 @@ botLog = modifyLogName (<> "bot")
 
 delayed :: (BotWorkMode ctx m, HasBotSetting) => m () -> m ()
 delayed action
-    | delay == 0 = action
+    | delay == mempty = action
     | otherwise =
         void . async $ do
             threadDelay delay

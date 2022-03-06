@@ -2,9 +2,9 @@
 
 module Dscp.Crypto.Arbitrary () where
 
+import Universum
 import qualified Data.Set as Set
 import GHC.Exts (fromList)
-import Test.QuickCheck.Arbitrary.Generic (genericShrink)
 
 import Dscp.Util.Test
 

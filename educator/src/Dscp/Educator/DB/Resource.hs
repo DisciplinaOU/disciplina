@@ -5,6 +5,7 @@ module Dscp.Educator.DB.Resource
     ( prepareEducatorSchema
     ) where
 
+import Universum
 import Loot.Base.HasLens (HasCtx, lensOf)
 import Loot.Log (LoggingIO)
 import UnliftIO (MonadUnliftIO)

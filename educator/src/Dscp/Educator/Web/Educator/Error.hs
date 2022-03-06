@@ -12,14 +12,15 @@ module Dscp.Educator.Web.Educator.Error
        , unexpectedToServantErr
        ) where
 
+import Universum
 import Control.Lens (makePrisms)
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
 import Data.Reflection (Reifies (..))
 import Data.Swagger (ToSchema (..))
 import Data.Typeable (cast)
-import Fmt (build, (+|), (|+))
-import Servant (ServantErr (..), err502)
+import Fmt (Buildable (..), (+|), (|+), pretty)
+import Servant.Server (ServerError (..), err502)
 import Servant.Util (SimpleJSON)
 
 import Dscp.DB.SQL (SQLRequestsNumberExceeded)

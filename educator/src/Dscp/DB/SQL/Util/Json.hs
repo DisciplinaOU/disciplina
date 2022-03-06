@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-partial-type-signatures #-}
+
 {- | Provides means of safe JSON fields access in a database.
 
 Primarily intended for product datatypes with automatically derived
@@ -13,13 +15,12 @@ module Dscp.DB.SQL.Util.Json
     , (->>$.)
     ) where
 
+import Universum
 import qualified Data.Aeson as Aeson hiding (defaultOptions)
 import qualified Data.Aeson.Options as Aeson
 import Data.Time.Calendar (Day)
 import Database.Beam.Migrate (HasDefaultSqlDataType (..))
-import Database.Beam.Postgres (IsPgJSON, (->$), (->>$))
-import Database.Beam.Postgres.Syntax (PgDataTypeSyntax, PgExpressionSyntax)
-import Database.Beam.Query (QGenExpr, val_)
+import Database.Beam.Postgres (Postgres, IsPgJSON, (->$), (->>$))
 import qualified GHC.Generics as G
 import GHC.TypeLits (ErrorMessage (..), KnownSymbol, Symbol, TypeError, symbolVal)
 
@@ -57,9 +58,9 @@ class HasSqlCastableJson a
 (->$.)
     :: forall fname a json ctx s.
        (IsPgJSON json, HasJsonField a fname)
-    => QGenExpr ctx PgExpressionSyntax s (json a)
+    => QGenExpr ctx Postgres s (json a)
     -> Proxy fname
-    -> QGenExpr ctx PgExpressionSyntax s (json (JsonFieldType a fname))
+    -> QGenExpr ctx Postgres s (json (JsonFieldType a fname))
 json ->$. _ = json ->$ val_ (jsonFieldName @a @fname Aeson.defaultOptions)
 infixr 8 ->$.
 
@@ -69,12 +70,12 @@ infixr 8 ->$.
 (->>$.)
     :: forall fname a json ctx s.
        ( IsPgJSON json, HasJsonField a fname
-       , HasDefaultSqlDataType PgDataTypeSyntax (JsonFieldType a fname)
+       , HasDefaultSqlDataType Postgres (JsonFieldType a fname)
        , HasSqlCastableJson (JsonFieldType a fname)
        )
-    => QGenExpr ctx PgExpressionSyntax s (json a)
+    => QGenExpr ctx Postgres s (json a)
     -> Proxy fname
-    -> QGenExpr ctx PgExpressionSyntax s (JsonFieldType a fname)
+    -> QGenExpr ctx Postgres s (JsonFieldType a fname)
 json ->>$. _ =
     unsafeCast_ $ json ->>$ val_ (jsonFieldName @a @fname Aeson.defaultOptions)
 infixr 9 ->>$.

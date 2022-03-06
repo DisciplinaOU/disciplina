@@ -1,5 +1,6 @@
 module Test.Dscp.Crypto.Serialise where
 
+import Universum
 import Dscp.Crypto
 import Dscp.Util.Test
 

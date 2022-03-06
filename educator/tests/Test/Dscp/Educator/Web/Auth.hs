@@ -2,13 +2,16 @@ module Test.Dscp.Educator.Web.Auth
     ( spec_Educator_api_authentication
     ) where
 
+import Universum
+
 import Data.Default (Default (..))
 import Network.HTTP.Types (statusCode)
-import Servant ((:>), Context (..), Handler, HasServer, Server)
-import Servant.Client (GenResponse (..), ServantError (..))
-import Servant.Generic (AsServerT, fromServant, toServant)
+import Servant (Context (..), Handler, HasServer, Server, (:>))
+import Servant.API.Generic (fromServant, toServant)
+import Servant.Client (ClientError (..), responseStatusCode)
 import Servant.Mock (HasMock (..), mock)
 import Servant.QuickCheck (withServantServerAndContext)
+import Servant.Server.Generic (AsServerT)
 import Servant.Util (ErrorResponses, PaginationParams, SortingParams, Tag)
 
 import Dscp.Core
@@ -22,12 +25,12 @@ import Test.Dscp.Educator.Web.Instances ()
 
 {- We will test all auth on Student API -}
 
-instance (HasMock subApi ctx, HasServer (SortingParams params :> subApi) ctx) =>
-         HasMock (SortingParams params :> subApi) ctx where
+instance (HasMock subApi ctx, HasServer (SortingParams provided base :> subApi) ctx) =>
+         HasMock (SortingParams provided base :> subApi) ctx where
     mock _ pc _ = mock (Proxy @subApi) pc
 
-instance (HasMock subApi ctx, HasServer (PaginationParams :> subApi) ctx) =>
-         HasMock (PaginationParams :> subApi) ctx where
+instance (HasMock subApi ctx, HasServer (PaginationParams size :> subApi) ctx) =>
+         HasMock (PaginationParams size :> subApi) ctx where
     mock _ pc _ = mock (Proxy @subApi) pc
 
 instance (HasMock subApi ctx, HasServer (Tag name :> subApi) ctx) =>
@@ -44,8 +47,8 @@ requesterSK = detGen 12543 arbitrary
 
 throws401 :: MonadCatch m => m a -> m Property
 throws401 = throwsMatching @StudentApiClientError $ \case
-    SomeClientError (FailureResponse resp) -> statusCode (responseStatusCode resp) == 401
-    _ -> False
+    SomeClientError (FailureResponse _ resp) -> statusCode (responseStatusCode resp) == 401
+    _                                        -> False
 
 serverProp :: Testable prop => IO prop -> Property
 serverProp = once . ioProperty
@@ -84,8 +87,8 @@ modifyTrialEndpoint
     -> Server ProtectedStudentAPI
     -> Server ProtectedStudentAPI
 modifyTrialEndpoint modifyEndpoint server student =
-    toServant @(StudentApiEndpoints (AsServerT Handler)) $
-        let gserver = fromServant @(StudentApiEndpoints (AsServerT Handler)) (server student)
+    toServant @StudentApiEndpoints @(AsServerT Handler) $
+        let gserver = fromServant @StudentApiEndpoints @(AsServerT Handler) (server student)
         in gserver{ sGetCourses = modifyEndpoint student ... sGetCourses gserver }
 
 spec_Educator_api_authentication :: Spec

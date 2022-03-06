@@ -7,8 +7,9 @@ module Dscp.Resource.Functions
        , exitSilentlyOnFailure
        ) where
 
+import Universum
 import Control.Monad.Component (ComponentError (..), ComponentM, runComponentM)
-import qualified Data.Text.Prettyprint.Doc as Doc (pretty)
+import qualified Prettyprinter as Doc (pretty)
 import Fmt ((+||), (||+))
 import Loot.Log (logDebug, logError)
 

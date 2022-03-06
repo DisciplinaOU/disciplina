@@ -2,6 +2,7 @@ module Dscp.System.Files
     ( getFirstExistingFile
     ) where
 
+import Universum
 import System.Directory (doesFileExist)
 
 -- | Return the first path in the given list which refers to an

@@ -6,6 +6,7 @@ module Dscp.Educator.Web.Config
     , EducatorWebConfigRec
     ) where
 
+-- import Universum
 import Loot.Config ((:::), (::<), ConfigKind (Final, Partial), ConfigRec)
 
 import Dscp.Educator.Web.Auth

@@ -75,6 +75,7 @@ module Dscp.Util
        -- , module Snowdrop.Util
        ) where
 
+import Universum
 import Codec.Serialise (Serialise, serialise)
 import qualified Control.Exception as E
 import Control.Lens (Getter, LensRules, lens, lensField, lensRules, mappingNamer, to)
@@ -240,7 +241,7 @@ leftToFail = either (fail . toString) pure
 
 leftToPanic
     :: ToText s => Either s a -> a
-leftToPanic = either (error . toText) identity
+leftToPanic = either (error . toText) id
 
 leftToFailWith
     :: (MonadFail m, ToString s) => String -> Either s a -> m a
@@ -250,7 +251,7 @@ leftToFailWith prefix =
 leftToPanicWith
     :: ToText s => Text -> Either s a -> a
 leftToPanicWith prefix =
-    either error identity . first (prefixed (prefix <> ": ") . toText)
+    either error id . first (prefixed (prefix <> ": ") . toText)
 
 eitherToMaybe :: Either e a -> Maybe a
 eitherToMaybe = either (\_ -> Nothing) Just

@@ -5,6 +5,7 @@ module Dscp.Educator.Web.Educator.Handlers
        , convertEducatorApiHandler
        ) where
 
+import Universum
 import Data.Default (def)
 import Servant (Handler)
 import UnliftIO (UnliftIO (..))

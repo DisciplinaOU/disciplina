@@ -6,6 +6,8 @@ module Dscp.Web.Metrics
     , endpointToAddr
     ) where
 
+import Universum
+
 import Mon (recordTimer)
 import Mon.Network (Endpoint)
 import Mon.Types (Name)

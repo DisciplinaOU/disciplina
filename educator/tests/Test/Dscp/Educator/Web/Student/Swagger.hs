@@ -1,7 +1,7 @@
 module Test.Dscp.Educator.Web.Student.Swagger where
 
+import Universum
 import Data.Tagged (untag)
-import Test.QuickCheck (once, total)
 
 import Dscp.Educator.Web.Student
 import Dscp.Util.Test

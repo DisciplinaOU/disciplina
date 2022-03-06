@@ -1,5 +1,6 @@
 module Test.Dscp.Crypto.MerkleTree where
 
+import Universum
 import GHC.Exts (fromList)
 
 import qualified Data.List as List

@@ -8,8 +8,10 @@ module Dscp.Educator.Web.Educator.Client.Logic
        , createEducatorApiClient
        ) where
 
+import Universum
 import Servant.Client (ClientM, client, runClientM)
-import Servant.Generic (fromServant)
+import Servant.API.Generic (fromServant)
+import Servant.Client.Generic (AsClientT)
 import Servant.Util ()
 
 import Dscp.Core

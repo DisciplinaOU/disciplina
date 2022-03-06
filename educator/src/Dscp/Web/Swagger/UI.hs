@@ -5,12 +5,15 @@ module Dscp.Web.Swagger.UI
     , withSwaggerUI
     ) where
 
-import Control.Lens ((.=), (?=))
+import Universum
+
+import Control.Lens ((?=))
 import qualified Data.Swagger as S
 import qualified Data.Swagger.Internal.Schema as S
 import Data.Tagged (Tagged (..))
 import Servant ((:<|>) (..), (:>), Server)
-import Servant.Swagger.UI (SwaggerSchemaUI, SwaggerUiHtml, swaggerSchemaUIServer)
+import Servant.Swagger.UI (SwaggerSchemaUI, swaggerSchemaUIServer)
+import Servant.Swagger.UI.Core (SwaggerUiHtml)
 import Servant.Util (Tag)
 
 import Dscp.Util
@@ -39,12 +42,12 @@ withSwaggerUI _ (Tagged swagger) server =
 instance S.ToSchema (SwaggerUiHtml dir api) where
     declareNamedSchema _ =
         S.plain $ mempty &: do
-            S.type_ .= S.SwaggerNull
+            S.type_ ?= S.SwaggerNull
             S.title ?= "Swagger UI page"
 
 instance S.ToSchema S.Swagger where
     declareNamedSchema _ =
         S.plain $ mempty &: do
-            S.type_ .= S.SwaggerObject
+            S.type_ ?= S.SwaggerObject
             S.title ?= "Swagger specification"
             S.description ?= "The specification you are currently reading."

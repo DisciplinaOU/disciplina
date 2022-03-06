@@ -18,6 +18,7 @@ module Pdf.MkLatex
     )
     where
 
+import Universum
 import Data.Functor.Contravariant (Contravariant (..))
 import Data.Functor.Contravariant.Divisible (Decidable (..), Divisible (..), divided)
 

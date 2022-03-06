@@ -2,6 +2,7 @@ module Test.Dscp.Util.Serialise
     ( spec_Serialisation
     ) where
 
+import Universum
 import Dscp.Util.Aeson (AsByteString, Base64Encoded, HexEncoded, Versioned)
 import Dscp.Util.Test
 

@@ -30,6 +30,7 @@ module Dscp.Core.Config
     , giveLC
     ) where
 
+import Universum
 import Control.Lens ((?~))
 import Data.Reflection (Given (..), give)
 import Loot.Config ((:::), (::<), ConfigKind (Final, Partial), ConfigRec,

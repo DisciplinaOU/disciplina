@@ -12,6 +12,8 @@ module Dscp.MultiEducator.Web.Educator.Auth
        , MultiEducatorPublicKey (..)
        ) where
 
+import Universum
+
 import Crypto.Error (onCryptoFailure)
 import Crypto.JOSE.Types (Base64Octets (..))
 import Crypto.JWT (NumericDate (..))
@@ -20,15 +22,13 @@ import Data.Aeson (FromJSON (..), ToJSON (..), decodeStrict)
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
 import Data.Time.Clock (addUTCTime, getCurrentTime)
-import Fmt (build, (+||), (||+))
+import Fmt (Buildable (..), (+||), (||+))
 import Servant.Auth.Server (AuthCheck, FromJWT, ToJWT)
 import Servant.Auth.Server.Internal.Class (IsAuth (..))
-import System.FilePath.Posix ((</>))
 
 import Dscp.Crypto
 import Dscp.Educator.Web.Auth
 import Dscp.MultiEducator.Types
-import Dscp.Util.FileEmbed
 
 import qualified Data.ByteArray as BA
 
@@ -147,12 +147,12 @@ instance AuthHasSwagger MultiEducatorAuth where
     authSecurityDoc = jwtSecurityDoc multieducatorAuthDocDesc
 
 multieducatorAuthDocDesc :: Text
-multieducatorAuthDocDesc =
-    $(embedResourceStringFile $ foldr1 (</>)
-        [ "specs"
-        , "disciplina"
-        , "multi-educator"
-        , "api"
-        , "authentication.md"
-        ]
-     )
+multieducatorAuthDocDesc = "TBD: fix documentation files embedding"
+    -- $(embedResourceStringFile $ foldr1 (</>)
+    --     [ "specs"
+    --     , "disciplina"
+    --     , "multi-educator"
+    --     , "api"
+    --     , "authentication.md"
+    --     ]
+    --  )

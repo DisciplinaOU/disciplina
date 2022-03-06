@@ -2,6 +2,7 @@
 
 module Dscp.Crypto.Web () where
 
+import Universum
 import Servant.API
 
 import Dscp.Crypto.Impl

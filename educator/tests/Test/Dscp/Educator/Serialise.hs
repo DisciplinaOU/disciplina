@@ -2,10 +2,10 @@ module Test.Dscp.Educator.Serialise
     ( spec_Serialisation
     ) where
 
+import Universum
 import Dscp.Util.Test
 
-import Dscp.Educator.Arbitrary ()
-import Dscp.Resource.Keys (KeyJson (..), KeyfileContent)
+import Dscp.Educator.Resource (KeyJson (..), KeyfileContent)
 
 spec_Serialisation :: Spec
 spec_Serialisation = describe "Serialisation" $ do

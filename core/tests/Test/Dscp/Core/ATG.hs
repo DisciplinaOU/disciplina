@@ -1,5 +1,6 @@
 module Test.Dscp.Core.ATG where
 
+import Universum
 import Dscp.Core (Subject)
 import qualified Dscp.Core as Core
 import Dscp.Util (Id)

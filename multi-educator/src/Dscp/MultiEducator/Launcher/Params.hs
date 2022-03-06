@@ -6,8 +6,9 @@ module Dscp.MultiEducator.Launcher.Params
        ) where
 
 import Data.Aeson (FromJSON (..))
-import Loot.Config ((:::), Config, PartialConfig)
+import Loot.Config (Config, PartialConfig, (:::))
 import Servant.Client.Core (BaseUrl)
+import Universum
 
 import Dscp.MultiEducator.Web.Educator.Auth (MultiEducatorPublicKey)
 

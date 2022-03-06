@@ -1,10 +1,9 @@
 {-# LANGUAGE PartialTypeSignatures #-}
-{-# LANGUAGE QuasiQuotes           #-}
 {-# OPTIONS_GHC -Wno-partial-type-signatures #-}
 
 module Dscp.Educator.DB.DSL.Interpret.Sqlite3 () where
 
-import Database.Beam.Query (all_, related_, select)
+import Universum
 
 import qualified Dscp.Core.Foundation as Core
 import Dscp.DB.SQL

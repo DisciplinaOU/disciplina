@@ -2,18 +2,18 @@
 
 module Main where
 
+import Universum
+
 import Options.Applicative (execParser, fullDesc, helper, info, progDesc)
 
 import Dscp.CommonCLI (versionOption)
-import Dscp.Config (buildConfig, configParamsParser, rcast)
+import Dscp.Config (buildConfig, configParamsParser)
 import Dscp.MultiEducator
 
 main :: IO ()
 main = do
     eConfig <- getMultiEducatorConfig
-    let wConfig = rcast eConfig
-    launchMultiEducatorRealMode eConfig $
-        withWitnessConfig wConfig multiEducatorEntry
+    launchMultiEducatorRealMode eConfig multiEducatorEntry
 
 getMultiEducatorConfig :: IO MultiEducatorConfigRec
 getMultiEducatorConfig = do

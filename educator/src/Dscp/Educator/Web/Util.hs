@@ -4,6 +4,7 @@
 
 module Dscp.Educator.Web.Util () where
 
+import Universum
 import Servant (err400, err403, err404, err409, err500)
 
 import Dscp.Educator.DB (DatabaseSemanticError (..), DomainError (..), DomainErrorItem (..))

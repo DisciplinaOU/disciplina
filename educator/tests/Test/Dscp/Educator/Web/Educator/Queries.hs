@@ -1,10 +1,10 @@
 module Test.Dscp.Educator.Web.Educator.Queries where
 
+import Universum
 import Control.Lens (to, united)
 import Data.Default (def)
 import Data.List (nubBy)
-import Test.QuickCheck (cover)
-import Test.QuickCheck.Monadic (pick, pre)
+import Test.QuickCheck.Monadic (pre)
 
 import Dscp.Educator.DB
 import Dscp.Educator.Web.Educator
@@ -65,7 +65,7 @@ spec_Educator_API_queries = specWithTempPostgresServer $ do
                               \(CourseEducatorInfo courseId desc subjs) ->
                                   (Just courseId, desc, subjs)
             return $
-                cover (length coursesDetails > 1) 50 "enough courses" $
+                cover 50 (length coursesDetails > 1) "enough courses" $
                 sort coursesBone === sort coursesBone'
 
     describe "getCourses" $ do

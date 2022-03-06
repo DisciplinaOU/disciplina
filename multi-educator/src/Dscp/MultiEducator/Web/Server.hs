@@ -7,16 +7,16 @@ module Dscp.MultiEducator.Web.Server
        ( serveEducatorAPIsReal
        ) where
 
-import Data.Proxy (Proxy (..))
+import Universum
+
 import Fmt ((+|), (|+))
 import Loot.Log (logInfo)
 import Network.HTTP.Types.Header (hAuthorization, hContentType)
 import Network.Wai (Middleware)
 import Network.Wai.Middleware.Cors (CorsResourcePolicy (..), cors, simpleCorsResourcePolicy)
-import Servant ((:<|>) (..), Context (..), Handler, ServantErr (..), Server, ServerT,
-                StdMethod (..), err405, hoistServer, hoistServerWithContext, serveWithContext)
-import Servant.Auth.Server.Internal.ThrowAll (throwAll)
-import Servant.Generic (toServant)
+import Servant (Context (..), Handler, Server, ServerT, StdMethod (..), hoistServer,
+                hoistServerWithContext, serveWithContext, (:<|>) (..))
+import Servant.API.Generic (toServant)
 import Servant.Util (methodsCoveringAPI, serverWithLogging)
 import UnliftIO (askUnliftIO)
 
@@ -33,10 +33,8 @@ import Dscp.MultiEducator.Launcher.Params (MultiEducatorAAAConfigRec)
 import Dscp.MultiEducator.Web.Educator
 import Dscp.MultiEducator.Web.Swagger
 import Dscp.Web (buildServantLogConfig, serveWeb)
-import Dscp.Web.Metrics (responseTimeMetric)
 import Dscp.Web.Swagger.UI
 import Dscp.Web.Types
-import Dscp.Witness.Web
 
 type MultiEducatorWebAPI =
     MultiEducatorAPI
@@ -44,8 +42,6 @@ type MultiEducatorWebAPI =
     MultiStudentAPI
     :<|>
     FullCertificatesAPI
-    :<|>
-    WitnessAPI
 
 mkEducatorApiServer'
     :: forall ctx m. MultiEducatorWorkMode ctx m
@@ -123,14 +119,13 @@ educatorCors = cors $ const $ Just $
     , corsMethods = methodsCoveringAPI @['GET, 'POST, 'PUT, 'DELETE] @MultiEducatorWebAPI
     }
 
-serveEducatorAPIsReal :: MultiCombinedWorkMode ctx m => Bool -> m a
-serveEducatorAPIsReal withWitnessApi = do
+serveEducatorAPIsReal :: MultiCombinedWorkMode ctx m => m a
+serveEducatorAPIsReal = do
     let webCfg = multiEducatorConfig ^. sub #educator . sub #api
         serverAddress     = webCfg ^. sub #serverParams . option #addr
         studentAPINoAuth  = webCfg ^. option #studentAPINoAuth
         educatorAPINoAuth = webCfg ^. option #multiEducatorAPINoAuth
         aaaSettings       = multiEducatorConfig ^. sub #educator . sub #aaa
-        metricsEndpoint   = witnessConfig ^. sub #witness . option #metricsEndpoint
 
     studentCheckAction <- createStudentCheckAction
     let educatorPublicKey = aaaSettings ^. option #publicKey
@@ -159,20 +154,13 @@ serveEducatorAPIsReal withWitnessApi = do
                 (convertStudentApiHandler unliftIO)
                 serverAddress
 
-        witnessApiServer = if withWitnessApi
-          then mkWitnessAPIServer (convertWitnessHandler unliftIO)
-          else throwAll err405{ errBody = "Witness API disabled at this port" }
-
     lc <- buildServantLogConfig (<> "web")
     serveWeb serverAddress $
-        responseTimeMetric metricsEndpoint $
         educatorCors $
-        serverWithLogging lc (Proxy @MultiEducatorWebAPI) $ \api ->
-        serveWithContext api srvCtx $
+        serverWithLogging lc (Proxy @MultiEducatorWebAPI) $ \_ ->
+        serveWithContext (Proxy @MultiEducatorWebAPI) srvCtx $
             educatorApiServer
             :<|>
             studentApiServer
             :<|>
             certificatesApiServer
-            :<|>
-            witnessApiServer

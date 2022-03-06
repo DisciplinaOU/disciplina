@@ -120,6 +120,7 @@ library:
     - jose
     - http-client
     - http-client-tls
+    - http-media
     - http-types
     - lens
     - loot-base
@@ -127,20 +128,25 @@ library:
     - loot-log
     - loot-network
     - memory
+    - mon
     - mtl
     - optparse-applicative
     - o-clock
+    - parsec
     - path
     - path-io
     - postgresql-simple
     - reflection
     - safe-exceptions >= 0.1.4
     - serialise
+    - servant
     - servant-auth-server
     - servant-client
     - servant-client-core
     - servant-server
     - servant-swagger
+    - servant-swagger-ui
+    - servant-swagger-ui-core
     - servant-util
     - servant-util-beam-pg
     # - snowdrop-util
@@ -153,8 +159,10 @@ library:
     - QuickCheck
     - generic-arbitrary
     - unliftio
+    - warp
     - wai
     - wai-cors
+    # - web3-solidity
 
 tests:
   disciplina-test:

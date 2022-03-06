@@ -19,6 +19,7 @@ module Dscp.Util.Aeson
     , mergeObjects
     ) where
 
+import Universum
 import Codec.Serialise (Serialise, deserialiseOrFail, serialise)
 import Data.Aeson (FromJSON (..), Options (..), ToJSON (..), Value (..), object, withObject,
                    withText, (.:), (.=))
@@ -32,7 +33,6 @@ import qualified Data.HashMap.Strict as HM
 import Data.Reflection (Reifies (..))
 import qualified Data.SemVer as SemVer
 import Fmt ((+||), (||+))
-import Servant.Client.Core (BaseUrl, parseBaseUrl, showBaseUrl)
 import Time (KnownRatName, Time, unitsF, unitsP)
 
 import qualified Dscp.Crypto.ByteArray as BA
@@ -44,13 +44,13 @@ import Dscp.Util.Test
 -- be ambiguous.
 newtype AsByteString encoding a = AsByteString
     { getAsByteString :: a
-    } deriving (Eq, Ord, Show, Monoid, ByteArrayAccess, ByteArray, Functor)
+    } deriving (Eq, Ord, Show, Semigroup, Monoid, ByteArrayAccess, ByteArray, Functor)
 
 -- | Wrapper for types which is encoded in JSON via serialising to
 -- bytestring and then applying some byte encoding.
 newtype EncodeSerialised encoding a = EncodeSerialised
     { unEncodeSerialised :: a
-    } deriving (Eq, Ord, Show, Monoid, ByteArrayAccess, ByteArray, Functor)
+    } deriving (Eq, Ord, Show, Semigroup, Monoid, ByteArrayAccess, ByteArray, Functor)
 
 data Base64Encoded
 data HexEncoded
@@ -157,12 +157,3 @@ instance KnownRatName unit => ToJSON (Time unit) where
 instance KnownRatName unit => FromJSON (Time unit) where
     parseJSON = withText "time duration" $
         nothingToFail "Invalid time format" . unitsP . toString
-
--- TODO: `servant-client-core` dependency in `disciplina-core` is only because
--- of these instances. They are here because they are used simultaneously in
--- `faucet` and `txperf`. Need to move elsewhere
-instance FromJSON BaseUrl where
-    parseJSON = withText "url" $
-        nothingToFail "Invalid URL" . parseBaseUrl . toString
-instance ToJSON BaseUrl where
-    toJSON = String . toText . showBaseUrl

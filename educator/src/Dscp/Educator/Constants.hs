@@ -5,6 +5,7 @@ module Dscp.Educator.Constants
     , defCertAssignment
     ) where
 
+import Universum
 import Dscp.Core
 import Dscp.Crypto
 

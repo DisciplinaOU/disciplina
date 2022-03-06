@@ -11,14 +11,16 @@ module Dscp.Educator.Web.Student.Error
        , DSON
        ) where
 
+import Universum
+
 import Control.Lens (makePrisms)
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
 import Data.Reflection (Reifies (..))
 import Data.Swagger (ToSchema (..))
-import qualified Data.Text.Buildable as B
 import Data.Typeable (cast)
-import Servant (ServantErr (..), err403)
+import Fmt (Buildable (..), pretty)
+import Servant.Server (ServerError (..), err403)
 import Servant.Util (SimpleJSON)
 
 import Dscp.Core.Validation
@@ -45,10 +47,10 @@ makePrisms ''StudentAPIError
 
 instance Buildable StudentAPIError where
     build (BadSubmissionSignature err) =
-        "Bad submission signature: " <> B.build err
+        "Bad submission signature: " <> build err
     build (SomeDomainError err) =
-        "Database error: " <> B.build err
-    build (SomeGeneralBackendError err) = B.build err
+        "Database error: " <> build err
+    build (SomeGeneralBackendError err) = build err
 
 instance Exception StudentAPIError where
     fromException e@(SomeException e') =
@@ -74,8 +76,8 @@ instance HasErrorTag WrongSubmissionSignature where
 
 instance HasErrorTag StudentAPIError where
     errorTag = \case
-        BadSubmissionSignature err -> errorTag err
-        SomeDomainError err -> errorTag err
+        BadSubmissionSignature err  -> errorTag err
+        SomeDomainError err         -> errorTag err
         SomeGeneralBackendError err -> errorTag err
 
 ---------------------------------------------------------------------------
@@ -87,8 +89,8 @@ instance ToServantErr WrongSubmissionSignature where
 
 instance ToServantErr StudentAPIError where
     toServantErrNoBody = \case
-        BadSubmissionSignature err -> toServantErrNoBody err
-        SomeDomainError err -> toServantErrNoBody err
+        BadSubmissionSignature err  -> toServantErrNoBody err
+        SomeDomainError err         -> toServantErrNoBody err
         SomeGeneralBackendError err -> toServantErrNoBody err
 
 instance FromServantErr StudentAPIError
@@ -106,8 +108,8 @@ instance EnumHasDescription WrongSubmissionSignature where
 
 instance EnumHasDescription StudentAPIError where
     enumDocDescription = gEnumDocDesc $ \case
-        BadSubmissionSignature err -> enumDocDescription (proxyOf err)
-        SomeDomainError err -> enumDocDescription (proxyOf err)
+        BadSubmissionSignature err  -> enumDocDescription (proxyOf err)
+        SomeDomainError err         -> enumDocDescription (proxyOf err)
         SomeGeneralBackendError err -> enumDocDescription (proxyOf err)
 
 instance ToSchema StudentAPIError where

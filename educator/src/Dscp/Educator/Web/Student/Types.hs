@@ -24,8 +24,10 @@ module Dscp.Educator.Web.Student.Types
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
 import Data.Swagger (ToSchema (..))
-import Fmt (blockListF, build, (+|), (|+))
-import Servant.Util (type (?:), ForResponseLog (..), SortingParamTypesOf, buildListForResponse)
+import Fmt (Buildable (..), blockListF, (+|), (|+))
+import Servant.Util (ForResponseLog (..), SortingOrderType (..), SortingParamBaseOf,
+                     SortingParamProvidedOf, buildListForResponse, type (?:))
+import Universum
 
 import Dscp.Core
 import Dscp.Crypto
@@ -202,13 +204,17 @@ instance ToSchema SubmissionStudentInfo where
 -- Sorting parameters
 ---------------------------------------------------------------------------
 
-type instance SortingParamTypesOf CourseStudentInfo =
-    ["id" ?: Course, "desc" ?: ItemDesc]
+type instance SortingParamBaseOf CourseStudentInfo =
+    ["id" ?: 'Asc Course, "desc" ?: 'Asc ItemDesc]
 
 -- TODO [DSCP-424]: add timestamps
-type instance SortingParamTypesOf AssignmentStudentInfo =
-    ["course" ?: Course, "desc" ?: ItemDesc]
+type instance SortingParamBaseOf AssignmentStudentInfo =
+    ["course" ?: 'Asc Course, "desc" ?: 'Asc ItemDesc]
 
 -- TODO [DSCP-424]: add timestamps
-type instance SortingParamTypesOf SubmissionStudentInfo =
-    '["grade" ?: Maybe Grade]
+type instance SortingParamBaseOf SubmissionStudentInfo =
+    '["grade" ?: 'Desc (Maybe Grade)]
+
+type instance SortingParamProvidedOf CourseStudentInfo = '[]
+type instance SortingParamProvidedOf AssignmentStudentInfo = '[]
+type instance SortingParamProvidedOf SubmissionStudentInfo = '[]

@@ -2,6 +2,7 @@
 
 module Test.Dscp.Educator.Bot.Endpoints where
 
+import Universum
 import Control.Lens ((?~))
 import Data.Default (def)
 
@@ -12,7 +13,6 @@ import Dscp.Educator.Web.Bot
 import Dscp.Educator.Web.Student
 import Dscp.Educator.Web.Types
 import Dscp.Util.Test
-import Test.QuickCheck.Monadic (pick)
 
 import Test.Dscp.DB.SQL.Mode
 import Test.Dscp.Educator.Mode
@@ -30,7 +30,7 @@ testBotParams :: Text -> EducatorBotParamsRec
 testBotParams seed = finaliseDeferredUnsafe $
     mempty
     & option #seed            ?~ seed
-    & option #operationsDelay ?~ 0
+    & option #operationsDelay ?~ mempty
 
 spec_StudentApiWithBotQueries :: Spec
 spec_StudentApiWithBotQueries = specWithTempPostgresServer $ do

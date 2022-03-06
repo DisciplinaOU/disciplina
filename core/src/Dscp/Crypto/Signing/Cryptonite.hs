@@ -6,6 +6,7 @@ module Dscp.Crypto.Signing.Cryptonite
        ( CryptoEd25519
        ) where
 
+import Universum
 import qualified Crypto.PubKey.Ed25519 as Ed25519
 import Data.ByteArray (ByteArrayAccess, Bytes)
 import qualified Data.ByteArray as BA

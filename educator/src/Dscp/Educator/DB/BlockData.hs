@@ -6,6 +6,8 @@ module Dscp.Educator.DB.BlockData
     , txBlockIdxFromInt
     ) where
 
+import Universum
+import Fmt (Buildable, pretty)
 import Data.Aeson (FromJSON, ToJSON)
 
 -- | Index of block (difficulty).

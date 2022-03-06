@@ -12,10 +12,11 @@ module Dscp.Crypto.Hash.Class
        , hashLongF
        ) where
 
+import Universum
 import Crypto.Hash.Algorithms ()
 import Data.ByteArray (ByteArray, ByteArrayAccess)
 import qualified Data.Text as T
-import Fmt (Builder, build)
+import Fmt (Builder, Buildable (..))
 
 import Dscp.Crypto.ByteArray (FromByteArray)
 import Dscp.Util (toHex)
@@ -44,6 +45,7 @@ hashLongF = build . toHex
 deriving instance Eq (HashResult hf) => Eq (AbstractHash hf a)
 deriving instance Ord (HashResult hf) => Ord (AbstractHash hf a)
 deriving instance Show (HashResult hf) => Show (AbstractHash hf a)
+deriving instance Semigroup (HashResult hf) => Semigroup (AbstractHash hf a)
 deriving instance Monoid (HashResult hf) => Monoid (AbstractHash hf a)
 
 deriving instance ByteArrayAccess (HashResult hf) => ByteArrayAccess (AbstractHash hf a)

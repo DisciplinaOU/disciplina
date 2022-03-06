@@ -8,8 +8,10 @@ module Dscp.MultiEducator.CLI
     , multiEducatorConfigParser
     ) where
 
+import Universum
+
 import Data.Aeson (eitherDecodeStrict')
-import Loot.Config (OptModParser, uplift, (.::), (.:<), (<*<))
+import Loot.Config (OptModParser, (.::), (.:<), (<*<))
 import Options.Applicative (Parser, eitherReader, help, long, metavar, option, strOption)
 import Servant.Client.Core (BaseUrl, parseBaseUrl)
 
@@ -19,7 +21,6 @@ import Dscp.Educator.Web.Auth
 import Dscp.MultiEducator.Config
 import Dscp.MultiEducator.Launcher.Params (MultiEducatorAAAConfig, MultiEducatorKeyParams (..))
 import Dscp.MultiEducator.Web.Educator.Auth (MultiEducatorPublicKey, educatorAuthLoginSimple)
-import Dscp.Witness.CLI (witnessConfigParser)
 
 import qualified Data.ByteString as BS
 
@@ -62,9 +63,9 @@ multiEducatorWebConfigParser =
 
 multiEducatorConfigParser :: OptModParser MultiEducatorConfig
 multiEducatorConfigParser =
-    uplift witnessConfigParser <*<
     #educator .:<
         (#db .:< postgresParamsParser <*<
+         #appDir .:< appDirParamParser <*<
          #keys .:: multiEducatorKeyParamsParser <*<
          #aaa .:< multiEducatorAAAConfigParser <*<
          #api .:< multiEducatorWebConfigParser <*<

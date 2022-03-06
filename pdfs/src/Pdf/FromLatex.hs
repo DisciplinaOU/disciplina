@@ -1,4 +1,3 @@
-
 {- |
     This module contains tools to produce PDF from data and locale using Latex.
 -}
@@ -25,10 +24,10 @@ module Pdf.FromLatex
     )
     where
 
+import Universum
 import Codec.Picture (DynamicImage (..), savePngImage)
 import Codec.QRCode (ErrorLevel (..), QRImage (..), TextEncoding (..), defaultQRCodeOptions, encode)
 import Codec.QRCode.JuicyPixels (toImage)
-import Control.Arrow ((&&&))
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.Text.Lazy as Text
 import Data.Text.Lazy.Builder as Text

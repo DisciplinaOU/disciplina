@@ -12,13 +12,13 @@ module Dscp.Util.Concurrent.NotifyWait
     , newWaitPair
     ) where
 
+import Universum
 import Control.Concurrent.STM (retry)
 import Control.Exception (BlockedIndefinitelyOnSTM (..))
 import Data.Reflection (Reifies (..))
-import qualified Data.Text.Buildable
-import Fmt ((+|), (|+))
+import Fmt (Buildable (..), (+|), (|+))
 import Loot.Log (MonadLogging)
-import Time (Second, Time)
+import Time (Second, time)
 import UnliftIO (MonadUnliftIO)
 import qualified UnliftIO.Exception as UIO
 
@@ -81,7 +81,7 @@ wait (Waiter doWait) = do
           `UIO.catch` \BlockedIndefinitelyOnSTM ->
                      UIO.throwIO $ NotificationNeverFiredError eventDesc
     res <- logWarningWaitInf
-              (1 :: Time Second) ("waiting for event '" <> eventDesc <> "'")
+              (time @Second 1) ("waiting for event '" <> eventDesc <> "'")
               doWait'
     either UIO.throwIO pure res
   where

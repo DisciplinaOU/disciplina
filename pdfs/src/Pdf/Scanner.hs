@@ -1,4 +1,3 @@
-
 module Pdf.Scanner
     ( inject
     , project
@@ -10,9 +9,9 @@ module Pdf.Scanner
     , MaxSearchLength(..)
     ) where
 
+import Universum
 import qualified Data.ByteString.Base64 as Base64
 import qualified Data.ByteString.Lazy as LBS
-import Data.Char (ord)
 import Data.Hashable
 import Fmt (Buildable (..))
 

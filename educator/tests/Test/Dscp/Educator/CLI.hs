@@ -1,5 +1,6 @@
 module Test.Dscp.Educator.CLI where
 
+import Universum
 import Dscp.Educator.CLI
 import Dscp.Util.Test
 

@@ -1,20 +1,17 @@
-
 -- | Web-related types
 
 module Dscp.Web.Types
        ( NetworkAddress (..)
        , parseNetAddr
        , GeneralBackendError (..)
-       , AsClientT
        ) where
+
+import Universum
 
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
-import qualified Data.Text.Buildable as B
-import Fmt (Buildable (..), (+|), (|+))
-import Servant (err400, err503)
-import Servant.Client (Client)
-import Servant.Generic ((:-))
+import Fmt (Buildable (..), (+|), (|+), pretty)
+import Servant.Server (err400, err503)
 import Test.QuickCheck.Arbitrary.Generic (genericArbitrary)
 import Text.Parsec (eof, many1, parse, sepBy)
 import Text.Parsec.Char (char, digit)
@@ -33,7 +30,7 @@ instance Buildable NetworkAddress where
     build NetworkAddress {..} = ""+|naHost|+":"+|naPort|+""
 
 instance Show NetworkAddress where
-    show = toString . pretty
+    show = toString @Text . pretty
 
 instance Arbitrary NetworkAddress where
     arbitrary = NetworkAddress <$> arbitrary <*> arbitrary
@@ -77,7 +74,7 @@ instance Buildable GeneralBackendError where
     build InvalidFormat =
         "Invalid format of the request"
     build (ServiceUnavailable msg) =
-        "Service unavailable: " <> B.build msg
+        "Service unavailable: " <> build msg
 
 instance HasErrorTag GeneralBackendError where
     errorTag = \case
@@ -91,11 +88,3 @@ instance ToServantErr GeneralBackendError where
 
 instance Arbitrary GeneralBackendError where
     arbitrary = genericArbitrary
-
----------------------------------------------------------------------------
--- Servant
----------------------------------------------------------------------------
-
--- todo: isn't needed with servant-client-0.14 (lts-12)
-data AsClientT (m :: * -> *)
-type instance AsClientT m :- api = Client m api

@@ -9,10 +9,13 @@ module Dscp.Web.Swagger.Generation.Util
     , newtypeDeclareNamedSchema
     , gToParamSchema
     , gDeclareNamedSchema
+    , gDeclareNamedSchemaUnrestricted
     , idParamSchema
     , idDeclareNamedSchema
     , errResponseSchema
     ) where
+
+import Universum
 
 import Control.Lens (at, makePrisms, zoom, (.=), (?=))
 import Data.Aeson (ToJSON, Value, toJSON)
@@ -71,7 +74,7 @@ newtypeDeclareNamedSchema pnt = do
 -- | Default implementation of 'ToParamSchema' via Generics.
 gToParamSchema
     :: (Generic a, S.GToParamSchema (G.Rep a))
-    => proxy a -> S.ParamSchema t
+    => Proxy a -> S.ParamSchema t
 gToParamSchema = S.genericToParamSchema dscpSchemaOptions
 
 -- | Default implementation of 'ToSchema' via Generics.
@@ -80,24 +83,31 @@ gDeclareNamedSchema
        , S.GToSchema (G.Rep a)
        , GenericHasSimpleShape a "genericDeclareNamedSchemaUnrestricted" (GenericShape (G.Rep a))
        )
-    => proxy a -> Declare (S.Definitions S.Schema) S.NamedSchema
+    => Proxy a -> Declare (S.Definitions S.Schema) S.NamedSchema
 gDeclareNamedSchema = S.genericDeclareNamedSchema dscpSchemaOptions
+
+gDeclareNamedSchemaUnrestricted
+    :: ( Generic a
+       , S.GToSchema (G.Rep a)
+       )
+    => Proxy a -> Declare (S.Definitions S.Schema) S.NamedSchema
+gDeclareNamedSchemaUnrestricted = S.genericDeclareNamedSchemaUnrestricted dscpSchemaOptions
 
 -- | Implementation of 'toParamSchema' for identifiers.
 idParamSchema :: S.ParamSchema t
 idParamSchema = mempty &: do
-    S.type_ .= S.SwaggerInteger
+    S.type_ ?= S.SwaggerInteger
     S.minimum_ ?= 0
     S.maximum_ ?= fromIntegral (maxBound @Word64)
 
 -- | Implementation of 'declareNamedSchema' for identifiers.
 idDeclareNamedSchema
-    :: forall a proxy.
+    :: forall a.
        ( Typeable a
        , S.ToParamSchema a
        , KnownSymbol (ParamDescription a)
        )
-    => proxy a -> Declare (S.Definitions S.Schema) S.NamedSchema
+    => Proxy a -> Declare (S.Definitions S.Schema) S.NamedSchema
 idDeclareNamedSchema pa =
     declareSimpleSchema (show $ typeRep pa) $ (S.paramSchemaToSchema pa) &: do
         setParamDescription pa
@@ -105,7 +115,7 @@ idDeclareNamedSchema pa =
 -- | Template for error schema (corresponding to `ErrResponse`).
 errResponseSchema :: State Schema () -> Schema
 errResponseSchema errTagSchemaModifier = mempty &: do
-    S.type_ .= S.SwaggerObject
+    S.type_ ?= S.SwaggerObject
     S.required .= ["error"]
     zoom S.properties $ do
         at "error" ?= errSchema

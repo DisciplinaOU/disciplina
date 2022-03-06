@@ -9,10 +9,10 @@ module Dscp.DB.SQL.Error
     , asReferenceInvalidError
     ) where
 
-import qualified Data.Text.Buildable
+import Universum
 import Database.PostgreSQL.Simple (SqlError)
 import Database.PostgreSQL.Simple.Errors (ConstraintViolation (..), constraintViolation)
-import Fmt ((+|), (|+))
+import Fmt (Buildable (..), (+|), (|+), pretty)
 import qualified Text.Show
 
 -- | All errors which may happen on DB openning.
@@ -25,7 +25,7 @@ data SQLConnectionOpenningError
       -- ^ Exception in SQL backend, doc doesn't specify which one
 
 instance Show SQLConnectionOpenningError where
-    show = toString . pretty
+    show = toString @Text . pretty
 
 instance Buildable SQLConnectionOpenningError where
     build = \case
@@ -42,7 +42,7 @@ instance Exception SQLConnectionOpenningError
 data SQLRequestsNumberExceeded = SQLRequestsNumberExceeded
 
 instance Show SQLRequestsNumberExceeded where
-    show = toString . pretty
+    show = toString @Text . pretty
 
 instance Buildable SQLRequestsNumberExceeded where
     build _ = "Too many requests to SQL database"

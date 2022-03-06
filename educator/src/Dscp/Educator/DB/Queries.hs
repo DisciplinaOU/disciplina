@@ -75,27 +75,26 @@ module Dscp.Educator.DB.Queries
        ) where
 
 
+import Universum
 import Data.Default (Default (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Time.Clock (getCurrentTime)
-import Database.Beam.Postgres (PgJSONB (..))
 import GHC.Exts (fromList)
 import Loot.Base.HasLens (HasCtx)
 import Pdf.Scanner (PDFBody)
-import Snowdrop.Util (OldestFirst (..))
 
 import Dscp.Core
 import Dscp.Crypto
 import Dscp.DB.SQL.Error (asAlreadyExistsError, asReferenceInvalidError)
 import Dscp.DB.SQL.Functions
 import Dscp.DB.SQL.Util
+import Dscp.Educator.Resource
 import Dscp.Educator.DB.BlockData
 import Dscp.Educator.DB.Error
 import Dscp.Educator.DB.Instances ()
 import Dscp.Educator.DB.Schema
 import Dscp.Educator.Launcher.Marker
-import Dscp.Resource.Keys
 import Dscp.Util
 import Dscp.Util.Rethrow
 
@@ -354,7 +353,7 @@ createPrivateBlock txs delta = runMaybeT $ do
     for_ txs' $ \(txIdx, txId) -> lift $ do
         runUpdate_ $ update
             (esTransactions es)
-            (\tx -> [ trIdx tx <-. val_ (TxBlockIdx txIdx) ])
+            (\tx -> trIdx tx <-. val_ (TxBlockIdx txIdx))
             (\tx -> pk_ tx ==. valPk_ txId)
         runInsert . insert (esBlockTxs es) . insertValue $
             txId <:-:> bid

@@ -6,6 +6,8 @@ module Dscp.MultiEducator.Launcher.Educator.Resource
     , educatorFromMultiEducatorConfig
     ) where
 
+import Universum
+
 import Control.Lens (zoom, (.=))
 import Fmt ((+|), (|+))
 import Loot.Base.HasLens (HasCtx, lensOf)
@@ -28,9 +30,9 @@ import Dscp.MultiEducator.Launcher.Params
 import Dscp.MultiEducator.Types
 import Dscp.MultiEducator.Web.Educator.Auth
 import Dscp.Resource.Class (AllocResource (..), buildComponentR)
+import Dscp.Resource.AppDir
 import Dscp.Util
 import Dscp.Web.Server
-import qualified Dscp.Witness.Launcher.Resource as W
 
 -- | Returns database schema name for an educator with given ID.
 educatorSchemaName :: EducatorUUID -> Text
@@ -89,9 +91,9 @@ makeCertIssuerRes educatorAuthLogin =
 educatorFromMultiEducatorConfig :: HasMultiEducatorConfig => E.EducatorConfigRec
 educatorFromMultiEducatorConfig =
     (finaliseDeferredUnsafe mempty) -- not great but it actually works
-        & sub #core .~ multiEducatorConfig ^. sub #core
-        & sub #witness .~ multiEducatorConfig ^. sub #witness
+        & sub #educator . sub #logging .~ multiEducatorConfig ^. sub #educator . sub #logging
         & sub #educator . sub #db .~ multiEducatorConfig ^. sub #educator . sub #db
+        & sub #educator . sub #appDir .~ multiEducatorConfig ^. sub #educator . sub #appDir
         & sub #educator . sub #keys . sub #keyParams .~
             error "Do not touch, multi-educator has allocated all keys"
         & sub #educator . sub #api . option #educatorAPINoAuth .~
@@ -117,11 +119,10 @@ instance HasMultiEducatorConfig => AllocResource SingleEducatorResources where
         let mpassphrase = Nothing
 
         let educatorConfig = multiEducatorConfig ^. sub #educator
-            witnessResources = _merWitnessResources multiEducatorResources
-            appDir = W._wrAppDir witnessResources
             meKeyParams = educatorConfig ^. option #keys
 
-        let _erWitnessResources = witnessResources
+        let _erLogging = multiEducatorResources ^. lensOf @LoggingIO
+        let _erAppDir = multiEducatorResources ^. lensOf @AppDir
         let _erLanguage = multiEducatorResources ^. lensOf @Language
         let _erPdfLatexPath = multiEducatorResources ^. lensOf @Pdf.LatexPath
         let _erPdfResourcePath = multiEducatorResources ^. lensOf @Pdf.ResourcePath
@@ -135,7 +136,7 @@ instance HasMultiEducatorConfig => AllocResource SingleEducatorResources where
         _erKeys <-
             allocResource
                 ( mkSingleEducatorKeyParams meKeyParams educatorId mpassphrase
-                , appDir
+                , _erAppDir
                 )
 
         return (SingleEducatorResources E.EducatorResources{..})

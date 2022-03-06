@@ -11,6 +11,7 @@ module Dscp.Core.Foundation.Grade
        , isPositiveGrade
        ) where
 
+import Universum
 import Dscp.Core.Foundation.Educator (Grade (..))
 
 gA, gB, gC, gD, gE, gF :: Grade

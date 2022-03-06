@@ -2,7 +2,7 @@ module Test.Dscp.Educator.Web.Instances
     ( genCourseNoSubjects
     ) where
 
-import Test.QuickCheck.Arbitrary.Generic (genericArbitrary, genericShrink)
+import Universum
 
 import Dscp.Educator.DB
 import Dscp.Educator.Web.Educator

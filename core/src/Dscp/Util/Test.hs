@@ -14,6 +14,7 @@ module Dscp.Util.Test
        , module T
        ) where
 
+import Universum
 import Codec.Serialise (Serialise, deserialise, serialise)
 import Control.Exception.Safe (catchJust)
 import Control.Lens (LensLike', has)
@@ -21,9 +22,8 @@ import "cryptonite" Crypto.Random (ChaChaDRG, MonadPseudoRandom)
 import Data.Aeson (FromJSON, ToJSON, eitherDecode, encode)
 import qualified Data.Hashable as H
 import Data.Ratio ((%))
-import qualified Data.Text.Buildable
 import Data.Typeable (typeRep)
-import Fmt ((+|), (+||), (|+), (||+))
+import Fmt (Buildable (..), (+|), (+||), (|+), (||+), pretty)
 import qualified GHC.Exts as Exts
 import qualified GHC.Generics as G
 import qualified Loot.Log as Log
@@ -233,7 +233,7 @@ data TestLoggedError = TestLoggedError
 instance Exception TestLoggedError
 
 instance Show TestLoggedError where
-    show = toString . pretty
+    show = toString @Text . pretty
 
 instance Buildable TestLoggedError where
     build TestLoggedError{..} =

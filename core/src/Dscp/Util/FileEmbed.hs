@@ -4,6 +4,7 @@ module Dscp.Util.FileEmbed
     , embedResourceStringFile
     ) where
 
+import Universum
 import Data.FileEmbed (embedStringFile)
 import Dscp.System.Files (getFirstExistingFile)
 import qualified Language.Haskell.TH as TH

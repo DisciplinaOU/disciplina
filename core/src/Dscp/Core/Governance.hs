@@ -11,6 +11,7 @@ module Dscp.Core.Governance
     , committeeOwnsSlot
     ) where
 
+import Universum
 import Data.ByteArray (convert)
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.List as List

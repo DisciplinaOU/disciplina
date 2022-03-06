@@ -131,6 +131,7 @@ library:
     - reflection
     - safe-exceptions >= 0.1.4
     - serialise
+    - servant
     - servant-auth-server
     - servant-client-core
     - servant-server

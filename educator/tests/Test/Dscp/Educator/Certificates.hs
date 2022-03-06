@@ -2,19 +2,15 @@
 
 module Test.Dscp.Educator.Certificates where
 
-import Control.Lens (ix)
-import Data.Bits (complement)
-import qualified Data.ByteString.Lazy as LBS
+import Universum
 import Data.Default (def)
 import qualified Pdf.FromLatex as Pdf
-import qualified Pdf.Scanner as Pdf
-import Servant.Util (asc, fullContent)
+import Servant.Util (asc, defPageSize)
 
 import Dscp.DB.SQL
 import Dscp.Educator
 import Dscp.Educator.Web.Educator
 import Dscp.Util.Test
-import Dscp.Witness.Web
 
 import Test.Dscp.DB.SQL.Mode
 import Test.Dscp.Educator.Mode
@@ -35,7 +31,7 @@ spec_Educator_certificates = specWithTempPostgresServer $ do
                 cert <- pickSmall arbitrary
                 void $ lift $ educatorAddCertificate cert
 
-            it "Added certificate is fetchable and verifiable" $ educatorPropertyM $ do
+            it "Added certificate is fetchable" $ educatorPropertyM $ do
                 cert <- pickSmall arbitrary
 
                 pdf <- lift $ do
@@ -44,29 +40,30 @@ spec_Educator_certificates = specWithTempPostgresServer $ do
                     [crt] <- invoke $ educatorGetCertificates def def
                     invoke $ educatorGetCertificate $ cId crt
 
-                let pdfBs = Pdf.getPDFBody pdf
-                    pdfLen = LBS.length pdfBs
+                return $ total pdf
+                -- let pdfBs = Pdf.getPDFBody pdf
+                --     pdfLen = LBS.length pdfBs
 
-                flippedByteIdx <- pickSmall $ choose (0, pdfLen - 1)
-                let badPdf = Pdf.PDFBody $
-                        pdfBs & ix flippedByteIdx %~ complement
+                -- flippedByteIdx <- pickSmall $ choose (0, pdfLen - 1)
+                -- let badPdf = Pdf.PDFBody $
+                --         pdfBs & ix flippedByteIdx %~ complement
 
-                lift $ do
-                    void updateMempoolWithPublications
-                    checkRes <- checkFairCVPDF pdf
-                    checkResBad <- do
-                        let handler e = case (e :: WitnessAPIError) of
-                                InvalidFormat -> return False
-                                _             -> throwM e
+                -- lift $ do
+                --     void updateMempoolWithPublications
+                --     checkRes <- checkFairCVPDF pdf
+                --     checkResBad <- do
+                --         let handler e = case (e :: WitnessAPIError) of
+                --                 InvalidFormat -> return False
+                --                 _             -> throwM e
 
-                        (fairCVFullyValid . fcacrCheckResult <$> checkFairCVPDF badPdf)
-                            `catch` handler
+                --         (fairCVFullyValid . fcacrCheckResult <$> checkFairCVPDF badPdf)
+                --             `catch` handler
 
-                    let positive = counterexample "FairCV is not verified" $
-                                   fairCVFullyValid $ fcacrCheckResult checkRes
-                        negative = counterexample "Bad FairCV is verified" $
-                                   not checkResBad
-                    return $ positive .&&. negative
+                --     let positive = counterexample "FairCV is not verified" $
+                --                    fairCVFullyValid $ fcacrCheckResult checkRes
+                --         negative = counterexample "Bad FairCV is verified" $
+                --                    not checkResBad
+                --     return $ positive .&&. negative
 
             it "Sorting certificates on creation day works" $ educatorPropertyM $ do
                 n <- pick $ choose (0, 5)
@@ -74,7 +71,7 @@ spec_Educator_certificates = specWithTempPostgresServer $ do
 
                 lift $ do
                     forM_ certs educatorAddCertificate
-                    certs' <- invoke $ educatorGetCertificates [asc #createdAt] fullContent
+                    certs' <- invoke $ educatorGetCertificates [asc #createdAt] defPageSize
 
                     return $ map cMeta certs'
                              ===

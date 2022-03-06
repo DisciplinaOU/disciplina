@@ -8,6 +8,7 @@ module Test.Dscp.Educator.Web.Scenarios
      , prepareAndCreateTransactions
      ) where
 
+import Universum
 import qualified Data.Foldable as F
 import Data.List (nub)
 

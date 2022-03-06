@@ -8,12 +8,14 @@ module Dscp.Web.Swagger.Generation.Enum
     , setDocEnumDescription
     ) where
 
+import Universum
+
 import Control.Lens ((?=))
 import Data.Aeson (ToJSON, Value (String), encode, toJSON)
 import qualified Data.Swagger as S
 import qualified Data.Text as T
 import Fmt ((+|), (|+))
-import Servant (ServantErr (..))
+import Servant.Server (ServerError (..))
 
 import Dscp.Util.Constructors
 import Dscp.Web.Class

@@ -100,13 +100,14 @@ module Dscp.Core.Foundation.Educator
     , ATG (..)
     ) where
 
+import Universum
 import Control.Exception as E
 import Control.Lens (Getter, makeLenses, to)
 import qualified Data.ByteArray as BA
 import qualified Data.Text as T
 import Data.Time.Calendar (Day (..))
 import Data.Time.Clock (UTCTime (..), diffTimeToPicoseconds, picosecondsToDiffTime)
-import Fmt (build, genericF, listF, mapF, (+|), (|+))
+import Fmt (Buildable (..), genericF, listF, mapF, (+|), (|+))
 
 import Dscp.Core.Foundation.Address (Address (..))
 import Dscp.Crypto
@@ -314,7 +315,7 @@ instance Buildable ATGSubjectChange where
 -- like 'MapModifier'?
 newtype ATGDelta = ATGDelta
     { getATGDelta :: Map (Id Subject) ATGSubjectChange
-    } deriving (Show, Eq, Ord, Monoid, Generic)
+    } deriving (Show, Eq, Ord, Semigroup, Monoid, Generic)
 
 instance Buildable ATGDelta where
     build (ATGDelta d) = "ATGDelta { " +| mapF d |+ " }"

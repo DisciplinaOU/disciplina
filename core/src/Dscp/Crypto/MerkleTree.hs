@@ -44,6 +44,7 @@ module Dscp.Crypto.MerkleTree
        , mergeProofAndData
        ) where
 
+import Universum
 import Data.ByteArray (convert)
 import Data.ByteString.Builder (Builder, byteString, word32LE)
 import qualified Data.ByteString.Builder.Extra as Builder
@@ -53,7 +54,7 @@ import qualified Data.Foldable as F (Foldable (..))
 import qualified Data.Map as Map ((!))
 import qualified Data.Set as Set
 import Data.Tree as Tree (Tree (Node), drawTree)
-import Fmt (build, (+|), (|+))
+import Fmt (Buildable (..), (+|), (|+), pretty)
 import qualified GHC.Exts as Exts (IsList (..))
 import qualified Text.Show
 
@@ -72,7 +73,7 @@ instance Buildable (MerkleSignature a) where
         "MerkleSignature { hash: "+|msHash|+"; size: "+|msSize|+" }"
 
 instance Show (MerkleSignature a) where
-    show = toString . pretty
+    show = toString @Text . pretty
 
 -- | Merkle tree over an array of elements of type `a`. Might be empty.
 data MerkleTree a

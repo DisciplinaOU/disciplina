@@ -52,13 +52,12 @@ import qualified Control.Monad.Catch
 import Control.Monad.Reader (mapReaderT)
 import Database.Beam.Backend (FromBackendRow, MonadBeam (..))
 import qualified Database.Beam.Backend.SQL.BeamExtensions as Backend
-import Database.Beam.Postgres (Pg, PgCommandSyntax, PgDeleteSyntax, PgInsertSyntax, PgSelectSyntax,
-                               PgUpdateSyntax, Postgres, runBeamPostgres, runBeamPostgresDebug)
+import Database.Beam.Postgres (Pg, Postgres, runBeamPostgres, runBeamPostgresDebug)
 import qualified Database.Beam.Postgres.Conduit as Backend.Conduit
-import Database.Beam.Postgres.Syntax (PgInsertSyntax (..), emit, pgQuotedIdentifier)
-import Database.Beam.Query (QExpr, SqlDelete, SqlInsert (..), SqlInsertValues, SqlSelect, SqlUpdate)
+import Database.Beam.Postgres.Syntax (PgCommandSyntax (..), PgCommandType (..), emit,
+                                      pgQuotedIdentifier)
+import Database.Beam.Query (SqlDelete, SqlInsert (..), SqlSelect, SqlUpdate)
 import qualified Database.Beam.Query as Backend
-import Database.Beam.Schema (DatabaseEntity, TableEntity)
 import Database.PostgreSQL.Simple (Connection)
 import qualified Database.PostgreSQL.Simple as Backend
 import Database.PostgreSQL.Simple.Errors as Backend
@@ -68,6 +67,7 @@ import GHC.Stack (popCallStack)
 import Loot.Base.HasLens (HasCtx, HasLens (..))
 import qualified Loot.Log as Log
 import qualified System.Console.ANSI as ANSI
+import Universum
 import UnliftIO (MonadUnliftIO (..), UnliftIO (..), askUnliftIO)
 import qualified UnliftIO as UIO
 
@@ -202,9 +202,9 @@ newtype DBT (t :: TransactionalContext) m a = DBT
 deriving instance MonadIO m => MonadIO (DBT t m)
 
 instance MonadUnliftIO m => MonadUnliftIO (DBT t m) where
-    askUnliftIO = do
+    withRunInIO runner = do
         UnliftIO unlift <- DBT askUnliftIO
-        return $ UnliftIO $ unlift . runDBT
+        liftIO $ runner (unlift . runDBT)
 
 -- | This one is prohibited, because if an error is thrown from DB engine's side
 -- then you are not allowed to perform any further SQL operations until the end
@@ -242,13 +242,14 @@ liftPg action =
     -- logger = Just sqlDebugLogger
 
 instance MonadUnliftIO m =>
-         MonadBeam PgCommandSyntax Postgres Connection (DBT t m) where
+         MonadBeam Postgres (DBT t m) where
     -- We omit implementation of the following methods as soon as they work in IO only,
     -- use dedicated 'DBT' runners instead ('runInsert' and others).
-    withDatabaseDebug = error "DBT.withDatabaseDebug: not implemented"
-    withDatabase = error "DBT.withDatabase: not implemented"
-    runNoReturn = error "DBT.runNoReturn: not implemented"
-    runReturningMany = error "DBT.runReturningMany: not implemented"
+    runNoReturn = liftPg . runNoReturn
+    runReturningMany query action = do
+        UnliftIO unlift <- askUnliftIO
+        let action' = liftIO . unlift . action . liftPg
+        liftPg $ runReturningMany query action'
 
 -- | Declares whether given 'DBT' actions should be performed within
 -- transaction.
@@ -278,42 +279,41 @@ anyAffected (AffectedRowsNumber aff) = aff > 0
 -- for the sake of better processing of unexpected behavior.
 runSelect
     :: (MonadIO m, FromBackendRow Postgres a)
-    => SqlSelect PgSelectSyntax a -> DBT t m [a]
+    => SqlSelect Postgres a -> DBT t m [a]
 runSelect = liftPg . Backend.runSelectReturningList
 
 -- | Run select query and modify fetched results.
 runSelectMap
     :: (MonadIO m, FromBackendRow Postgres a)
-    => (a -> b) -> SqlSelect PgSelectSyntax a -> DBT t m [b]
+    => (a -> b) -> SqlSelect Postgres a -> DBT t m [b]
 runSelectMap f = fmap (map f) . runSelect
 
 runInsert
     :: MonadIO m
-    => SqlInsert PgInsertSyntax -> DBT t m ()
+    => SqlInsert Postgres table -> DBT t m ()
 runInsert = liftPg . Backend.runInsert
 
 runInsertReturning
     :: (MonadIO m, _)
-    => DatabaseEntity be db (TableEntity table)
-    -> SqlInsertValues _ (table (QExpr _ _))
+    => SqlInsert Postgres table
     -> DBT t m [table Identity]
-runInsertReturning db = liftPg . Backend.runInsertReturningList db
+runInsertReturning = liftPg . Backend.runInsertReturningList
 
 runUpdate
     :: MonadIO m
-    => SqlUpdate PgUpdateSyntax tbl -> DBT t m AffectedRowsNumber
+    => SqlUpdate Postgres tbl -> DBT t m AffectedRowsNumber
 runUpdate query =
     DBT . ReaderT $ \conn ->
         toAffected <$> Backend.Conduit.runUpdate conn query
 
 runUpdate_
     :: MonadIO m
-    => SqlUpdate PgUpdateSyntax tbl -> DBT t m ()
+    => SqlUpdate Postgres tbl -> DBT t m ()
 runUpdate_ = void . runUpdate
 
 runDelete
     :: MonadIO m
-    => SqlDelete PgDeleteSyntax tbl -> DBT t m AffectedRowsNumber
+    => SqlDelete Postgres tbl -> DBT t m AffectedRowsNumber
 runDelete query =
     DBT . ReaderT $ \conn ->
         toAffected <$> Backend.Conduit.runDelete conn query
@@ -457,21 +457,19 @@ instance RequiresTransaction 'WithinTx
 ------------------------------------------------------------
 
 -- | Creates a schema with given name.
-createSchemaIfNotExists :: MonadIO m => Text -> DBT t m ()
-createSchemaIfNotExists schema = runInsert $
-    SqlInsert $ PgInsertSyntax $
+createSchemaIfNotExists :: MonadUnliftIO m => Text -> DBT t m ()
+createSchemaIfNotExists schema = runNoReturn $ PgCommandSyntax PgCommandTypeDdl $
     emit "create schema if not exists " <> pgQuotedIdentifier schema <> emit ";"
 
 -- | Sets a schema name for connection which is currently
 -- used in DBT context.
-setConnSchemaName :: MonadIO m => Text -> DBT t m ()
-setConnSchemaName schema = runInsert $
-    SqlInsert $ PgInsertSyntax $
+setConnSchemaName :: MonadUnliftIO m => Text -> DBT t m ()
+setConnSchemaName schema = runNoReturn $ PgCommandSyntax PgCommandTypeDdl $
     emit "set search_path to " <> pgQuotedIdentifier schema <> emit ";"
 
 -- | Changes default database schema for the given database context.
 -- Note that this function is NOT transactional and NOT thread-safe.
-setSchemaName :: MonadIO m => SQL -> Text -> m ()
+setSchemaName :: MonadUnliftIO m => SQL -> Text -> m ()
 setSchemaName db schema = do
     runRIO db . invokeUnsafe $ createSchemaIfNotExists schema
     forEachConnection db $ runReaderT $ runDBT $

@@ -2,11 +2,12 @@ module Dscp.Educator.Launcher.Params
        ( EducatorKeyParams
        , EducatorKeyParamsRec
        , EducatorKeyParamsRecP
+       , defaultBaseKeyParams
        ) where
 
-import Loot.Config ((::<), Config, PartialConfig)
+import Loot.Config (Config, PartialConfig, (::<))
 
-import Dscp.Resource.Keys (BaseKeyParams)
+import Dscp.Educator.Resource (BaseKeyParams, defaultBaseKeyParams)
 
 -- | Educator key parameters.
 type EducatorKeyParams =

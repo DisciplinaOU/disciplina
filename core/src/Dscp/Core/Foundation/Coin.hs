@@ -13,9 +13,10 @@ module Dscp.Core.Foundation.Coin
     , sumCoins
     ) where
 
+import Universum
 import Control.Lens (makePrisms)
 
-import Fmt (build, (|+))
+import Fmt (Buildable (..), (|+))
 import Data.Fixed (Micro, Fixed(MkFixed), showFixed)
 
 import Dscp.Util (leftToPanic)
@@ -48,7 +49,7 @@ coinFromInteger i
 
 -- | Same as 'coinFromInteger', but errors if Left happens.
 unsafeMkCoin :: Integral i => i -> Coin
-unsafeMkCoin = either error identity . coinFromInteger . fromIntegral
+unsafeMkCoin = either error id . coinFromInteger . fromIntegral
 
 -- | Safely parse coin from Text.
 parseCoin :: Text -> Either Text Coin
