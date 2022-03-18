@@ -69,13 +69,13 @@ data NewCourse = NewCourse
     } deriving (Show, Eq, Generic)
 
 data NewGrade = NewGrade
-    { ngSubmissionHash :: (Hash Submission)
+    { ngSubmissionHash :: Hash Submission
     , ngGrade          :: Grade
-    } deriving (Generic)
+    } deriving (Show, Eq, Generic)
 
 data NewAssignment = NewAssignment
     { naCourseId     :: Course
-    , naContentsHash :: (Hash Raw)
+    , naContentsHash :: Hash Raw
     , naIsFinal      :: IsFinal
     , naDesc         :: ItemDesc
     } deriving (Show, Eq, Generic)
@@ -86,7 +86,7 @@ data NewStudentCourse = NewStudentCourse
 
 data NewStudentAssignment = NewStudentAssignment
     { nsaAssignmentHash :: Hash Assignment
-    } deriving (Generic)
+    } deriving (Show, Eq, Generic)
 
 data EducatorInfo = EducatorInfo
     { eiAddress  :: Address

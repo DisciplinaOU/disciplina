@@ -36,6 +36,8 @@ conn_str=$(pg_tmp)
 
 # Executing tests.
 export TEST_PG_CONN_STRING=$conn_str
+echo "pg_tmp output: $TEST_PG_CONN_STRING"
+
 stack test disciplina-educator --test-arguments "$args"
 
 # pg_tmp shutdowns and cleans up automatically after a period of inactivity

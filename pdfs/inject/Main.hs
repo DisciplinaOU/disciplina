@@ -1,8 +1,9 @@
-
 import Universum
+
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Text as Text
+import System.Environment (getArgs)
 
 import Pdf.Scanner
 

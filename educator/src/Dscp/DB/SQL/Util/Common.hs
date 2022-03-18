@@ -203,7 +203,7 @@ getNextPrimaryKey tbl = do
         aggregate_ (Beam.max_ . unpackPk . pk_) (all_ tbl)
     return $ case res of
         []        -> 0
-        [Nothing] -> error "Unexpected Nothing"
+        [Nothing] -> 0
         [Just x]  -> x + 1
         _ : _ : _ -> error "Too many rows"
 

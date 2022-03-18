@@ -19,6 +19,7 @@ import Universum
 
 import Control.Lens (at, makePrisms, zoom, (.=), (?=))
 import Data.Aeson (ToJSON, Value, toJSON)
+import qualified Data.Aeson as A
 import Data.Swagger (Schema, ToSchema (..))
 import qualified Data.Swagger as S
 import Data.Swagger.Declare (Declare)
@@ -27,6 +28,8 @@ import qualified Data.Swagger.Internal.Schema as S
 import Data.Swagger.Internal.TypeShape (GenericHasSimpleShape, GenericShape)
 import Data.Typeable (typeRep)
 import qualified GHC.Generics as G
+import Data.Char (isLower, isPunctuation, isUpper, toLower)
+import Data.List (findIndex)
 import GHC.TypeLits (KnownSymbol)
 
 import Dscp.Util
@@ -38,7 +41,22 @@ makePrisms ''S.Referenced
 
 -- | Swagger schema options which correspond to our 'dscpAesonOptions'.
 dscpSchemaOptions :: S.SchemaOptions
-dscpSchemaOptions = S.fromAesonOptions dscpAesonOptions
+dscpSchemaOptions = S.fromAesonOptions customOptions
+    where
+      customOptions = dscpAesonOptions
+        { A.fieldLabelModifier     = headToLower . stripFieldPrefix . dropPunctuation
+        , A.constructorTagModifier = headToLower . stripConstructorPrefix
+        }
+
+      headToLower []     = []
+      headToLower (x:xs) = toLower x : xs
+
+      stripFieldPrefix = dropWhile (not . isUpper)
+      dropPunctuation = filter (not . isPunctuation)
+
+      stripConstructorPrefix t = maybe t (flip drop t . decrementSafe) $ findIndex isLower t
+      decrementSafe n = if n == 0 then 0 else n - 1
+
 
 -- | Set description according to 'ParamDescription' definition.
 setParamDescription

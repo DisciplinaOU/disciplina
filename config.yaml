@@ -71,6 +71,7 @@ demo: &demo
           app-name: "faucet"
         min-severity: Debug
 
+
 singleton:
   <<: *demo
   core:
@@ -99,6 +100,43 @@ clusterCi:
          - specific:
             # faucet
             3BAyX5pPvmtsKAyDhtfeUZ1beJdFZzHLTHt6nHrzdGcpfagpgeysRNPyMe: 100500
+
+
+new-web3:
+  educator:
+    logging:
+      default-name: "educator"
+      config:
+        backends:
+        - type: stderr
+        - type: syslog
+          app-name: "educator"
+        min-severity: Debug
+
+    db:
+      connString: "postgresql:///disciplina"
+
+    api:
+      serverParams:
+        addr: "0.0.0.0:4040"
+      botConfig:
+        params:
+          enabled:
+            seed: Bot seed
+
+    publishing:
+      period: "30s"
+
+    certificates:
+      downloadBaseUrl: "https://example.com/api/certificates/v1/cert"
+      resources: "/home/flyingleafe/Job/disciplina/disciplina/pdfs/template"
+
+    keys: "/home/flyingleafe/.disciplina/multieducator"
+
+    aaa:
+      serviceUrl: "https://stage-teachmeplease-aaa.stage.tchmpls.com"
+      publicKey: "2gSNy2wKSaI4YtGZe_Eaxsdv_BLCfi5kkT9xvxt_O0k"
+
 
 alpha:
   <<: *demo

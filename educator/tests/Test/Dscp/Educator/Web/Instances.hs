@@ -17,6 +17,9 @@ genCourseNoSubjects :: Gen CourseDetails
 genCourseNoSubjects = CourseDetails <$> (Just <$> arbitrary) <*> arbitrary <*> pure []
 
 deriving instance Arbitrary IsFinal
+deriving instance Arbitrary IsGraded
+deriving instance Arbitrary IsEnrolled
+deriving instance Arbitrary HasProof
 
 instance Arbitrary StudentGetAssignmentsFilters where
     arbitrary = genericArbitrary
@@ -55,5 +58,57 @@ instance Arbitrary GradeInfo where
     shrink = genericShrink
 
 instance Arbitrary BlkProofInfo where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
+
+instance Arbitrary NewStudent where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
+
+instance Arbitrary NewCourse where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
+
+instance Arbitrary NewGrade where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
+
+instance Arbitrary NewAssignment where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
+
+instance Arbitrary NewStudentCourse where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
+
+instance Arbitrary NewStudentAssignment where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
+
+instance Arbitrary EducatorInfo where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
+
+instance Arbitrary CourseEducatorInfo where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
+
+instance Arbitrary AssignmentEducatorInfo where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
+
+instance Arbitrary SubmissionEducatorInfo where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
+
+instance Arbitrary Certificate where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
+
+instance Arbitrary a => Arbitrary (Counted a) where
+    arbitrary = genericArbitrary
+    shrink = genericShrink
+
+instance Arbitrary NewSubmission where
     arbitrary = genericArbitrary
     shrink = genericShrink

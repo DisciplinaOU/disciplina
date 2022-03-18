@@ -6,7 +6,7 @@ import Universum
 import Options.Applicative (execParser, fullDesc, helper, info, progDesc)
 
 import Dscp.CommonCLI (versionOption)
-import Dscp.Config (buildConfig, configParamsParser, rcast)
+import Dscp.Config (buildConfig, configParamsParser)
 import Dscp.Educator
 
 main :: IO ()

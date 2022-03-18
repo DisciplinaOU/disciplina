@@ -222,7 +222,7 @@ executables:
     source-dirs: exec
     dependencies:
       - disciplina-core
-      - disciplina-witness
+      # - disciplina-witness
       - disciplina-educator
       - loot-log
       - optparse-applicative
