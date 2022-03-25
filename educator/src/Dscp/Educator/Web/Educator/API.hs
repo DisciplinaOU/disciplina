@@ -72,6 +72,7 @@ data EducatorApiEndpoints route = EducatorApiEndpoints
     , eGetCertificates         :: route :- GetCertificates
     , eGetCertificate          :: route :- GetCertificate
     , eAddCertificate          :: route :- AddCertificate
+    , eMarkCertValidated       :: route :- MarkCertValidated
     } deriving (Generic)
 
 type RawEducatorAPI = ToServantApi EducatorApiEndpoints
@@ -353,7 +354,7 @@ type GetCertificate
     :> Get '[PDF] PDFBody
 
 type AddCertificate
-    = "certificates"
+    = "certificate"
     :> Tag "Certificates"
     :> Summary "Create a new certificate"
     :> Description "Creates a new certificate given metadata and the grades."
@@ -361,4 +362,14 @@ type AddCertificate
     :> ExceptionalResponses EducatorAPIError
        '[ 409 #: "Exactly the same certificate already exists."
         ]
-    :> PostCreated '[DSON] Certificate
+    :> PostCreated '[DSON] CertificateWithHeader
+
+type MarkCertValidated
+    = "certificate"
+    :> Tag "Certificates"
+    :> Summary "Mark the certificate validated with the ID of Ethereum transaction"
+    :> ReqBody '[DSON] CertificateTxAndBlock
+    :> ExceptionalResponses EducatorAPIError
+       '[ 404 #: "Private block with given hash not found."
+        ]
+    :> Put '[DSON] ()

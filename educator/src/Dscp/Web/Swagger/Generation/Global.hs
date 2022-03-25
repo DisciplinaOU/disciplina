@@ -36,10 +36,10 @@ setSerokellDocMeta :: State Swagger ()
 setSerokellDocMeta = do
     zoom S.info $ do
         S.termsOfService ?= "https://disciplina.io/tnc.pdf"
-        S.contact ?= mempty &: do
-            S.name ?= "Serokell OÜ"
-            S.email ?= "hi@serokell.io"
-            S.url ?= URL "https://serokell.io"
+        -- S.contact ?= mempty &: do
+        --     S.name ?= "Serokell OÜ"
+        --     S.email ?= "hi@serokell.io"
+        --     S.url ?= URL "https://serokell.io"
         S.license ?= "Apache 2.0" &: do
             S.url ?= URL "http://www.apache.org/licenses/LICENSE-2.0.html"
 

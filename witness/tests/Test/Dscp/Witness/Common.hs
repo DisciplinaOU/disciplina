@@ -69,7 +69,6 @@ createAndSubmitPub sk sig = do
     let ptHeader = PrivateBlockHeader
             { _pbhPrevBlock = lastHeaderHash
             , _pbhBodyProof = sig
-            , _pbhAtgDelta = mempty
             }
         tx = PublicationTx
             { ptAuthor = skAddress sk

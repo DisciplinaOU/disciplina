@@ -22,6 +22,8 @@ module Dscp.Educator.Web.Educator.Types
     , Certificate (..)
     , CertificateGrade (..)
     , CertificateFullInfo (..)
+    , CertificateWithHeader (..)
+    , CertificateTxAndBlock (..)
     , mkCertificate
     , eaDocumentType
 
@@ -39,6 +41,8 @@ import Control.Lens (at, from, (.=), (?=))
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
 import qualified Data.Aeson.TH as A
+import Data.ByteArray.HexString (HexString)
+import qualified Data.ByteArray.HexString as HX
 import Data.Char (toLower)
 import Data.Swagger (ToSchema (..))
 import qualified Data.Swagger as S
@@ -113,6 +117,17 @@ data SubmissionEducatorInfo = SubmissionEducatorInfo
     , siAssignmentHash :: (Hash Assignment)
     , siGrade          :: (Maybe GradeInfo)
     , siWitness        :: SubmissionWitness
+    } deriving (Show, Eq, Generic)
+
+data CertificateWithHeader = CertificateWithHeader
+    { cwhCertificate :: Certificate
+    , cwhHeader      :: PrivateBlockHeader
+    , cwhHeaderHash  :: Hash PrivateBlockHeader
+    } deriving (Show, Eq, Generic)
+
+data CertificateTxAndBlock = CertificateTxAndBlock
+    { ctabTxId      :: HexString
+    , ctabBlockHash :: Hash PrivateBlockHeader
     } deriving (Show, Eq, Generic)
 
 eaDocumentType :: AssignmentEducatorInfo -> DocumentType Assignment
@@ -202,6 +217,9 @@ educatorSubmissionInfoFromRow (SubmissionRow{..}, tx) =
 -- Buildable instances
 ---------------------------------------------------------------------------
 
+instance Buildable HexString where
+    build = build . HX.toText
+
 instance Buildable (NewStudent) where
     build (NewStudent{..}) =
       "{ address = " +| nsAddr |+
@@ -255,6 +273,19 @@ instance Buildable (SubmissionEducatorInfo) where
       "{ hash = " +| siHash |+
       ", content hash = " +| siContentsHash |+
       ", assignment hash = " +| siAssignmentHash |+
+      " }"
+
+instance Buildable CertificateWithHeader where
+    build CertificateWithHeader {..} =
+      "{ certificate = " +| cwhCertificate |+
+      ", block header = " +| cwhHeader |+
+      ", header hash = " +| cwhHeaderHash |+
+      " }"
+
+instance Buildable CertificateTxAndBlock where
+    build CertificateTxAndBlock {..} =
+      "{ txId = " +| ctabTxId |+
+      ", block hash = " +| ctabBlockHash |+
       " }"
 
 instance Buildable (ForResponseLog EducatorInfo) where
@@ -329,6 +360,8 @@ deriveJSON defaultOptions ''SubmissionEducatorInfo
 deriveJSON defaultOptions ''Certificate
 deriveJSON defaultOptions ''CertificateGrade
 deriveJSON defaultOptions ''CertificateFullInfo
+deriveJSON defaultOptions ''CertificateWithHeader
+deriveJSON defaultOptions ''CertificateTxAndBlock
 deriveJSON defaultOptions ''Counted
 deriveJSON dscpAesonOptions{ A.constructorTagModifier = map toLower } ''Language
 
@@ -342,10 +375,18 @@ type instance ParamDescription PDFBody =
     "Content of a PDF file."
 type instance ParamDescription IsGraded =
     "Return only submissions with/without grade."
+type instance ParamDescription HexString =
+    "Byte string in hexadecimal format"
+
+instance S.ToParamSchema HexString where
+    toParamSchema _ = mempty &: do
+        S.type_ ?= S.SwaggerString
+        S.format ?= "hex"
 
 type instance QueryFlagDescription "autoAssign" =
     "Automatically subscribe all students attending related course to new \
     \assignment."
+
 
 instance ToSchema a => ToSchema (Counted a) where
     declareNamedSchema _ = do
@@ -366,6 +407,12 @@ instance ToSchema a => ToSchema (Counted a) where
             S.type_ ?= S.SwaggerInteger
             S.format ?= "int32"
             S.description ?= "Count of items returned"
+
+instance ToSchema HexString where
+    declareNamedSchema p =
+        declareSimpleSchema "Transaction ID" $ S.byteSchema &: do
+            setParamDescription p
+            setExample ("0xa9cb7afcdabcca4dad4db824c6372a22213602897db85371968c9b75120fb850" :: HexString)
 
 instance ToSchema Coin where
     declareNamedSchema p =
@@ -408,6 +455,12 @@ instance ToSchema GradingScale where
         inDeclaredSchema (gDeclareNamedSchema p) $
             setDocEnumDescription @GradingScale
 
+instance ToSchema (MerkleSignature a) where
+    declareNamedSchema = gDeclareNamedSchema
+
+instance ToSchema PrivateBlockHeader where
+    declareNamedSchema = gDeclareNamedSchema
+
 instance ToSchema CertificateGrade where
     declareNamedSchema = gDeclareNamedSchema
 
@@ -415,6 +468,12 @@ instance ToSchema CertificateMeta where
     declareNamedSchema = gDeclareNamedSchema
 
 instance ToSchema CertificateFullInfo where
+    declareNamedSchema = gDeclareNamedSchema
+
+instance ToSchema CertificateWithHeader where
+    declareNamedSchema = gDeclareNamedSchema
+
+instance ToSchema CertificateTxAndBlock where
     declareNamedSchema = gDeclareNamedSchema
 
 instance ToSchema NewCourse where

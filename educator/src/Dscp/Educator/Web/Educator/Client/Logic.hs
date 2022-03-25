@@ -67,6 +67,7 @@ hoistEducatorApiClient nat es = EducatorApiEndpoints
     , eGetCertificates         = nat ... eGetCertificates es
     , eGetCertificate          = nat ... eGetCertificate es
     , eAddCertificate          = nat ... eAddCertificate es
+    , eMarkCertValidated       = nat ... eMarkCertValidated es
     }
 
 -- | Creates a new @'EducatorApiClient'@ connecting to a given @'BaseUrl'@

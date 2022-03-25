@@ -75,6 +75,20 @@ packages:
   original:
     hackage: servant-mock-0.8.7
 - completed:
+    hackage: memory-hexstring-1.0.0.0@sha256:397a423dfd361b75cf73e99613a55b1fa87b7551edf46ea43d1f7e9f5d07b924,1677
+    pantry-tree:
+      size: 467
+      sha256: 1162a2cc21fe7786df1ffda8fdbc6da5d032b5f6f3ad1ba10c6daea71ac12190
+  original:
+    hackage: memory-hexstring-1.0.0.0
+- completed:
+    hackage: scale-1.0.0.0@sha256:7a2f1476772636dc85de4df613a6a5dd460e58a3772974d8a067fc509a5449fd,3433
+    pantry-tree:
+      size: 960
+      sha256: 4d87552d5289cd528921e08a8c6dafa4299e2989d63600c0a3862b8933d271e3
+  original:
+    hackage: scale-1.0.0.0
+- completed:
     subdir: servant-util
     name: servant-util
     version: '0.2'

@@ -87,12 +87,10 @@ spec_ValidateBlock = describe "Validate private block" $ do
     mkBlockHeader txs = PrivateBlockHeader
         { _pbhPrevBlock = genesisHeaderHash educatorAddr
         , _pbhBodyProof = mkBodyProof txs
-        , _pbhAtgDelta = mkATGDelta
         }
     mkBlockBody txs = PrivateBlockBody
         { _pbbTxs = txs }
     mkBodyProof txs = getMerkleRoot (fromFoldable txs)
-    mkATGDelta = ATGDelta M.empty
     replaceMerkleRoot :: PrivateBlock -> [PrivateTx] -> PrivateBlock
     replaceMerkleRoot block txs =
         block { _pbHeader = (_pbHeader block) { _pbhBodyProof = mkBodyProof txs } }

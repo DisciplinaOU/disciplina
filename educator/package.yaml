@@ -128,6 +128,7 @@ library:
     - loot-log
     - loot-network
     - memory
+    - memory-hexstring
     - mon
     - mtl
     - optparse-applicative

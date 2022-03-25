@@ -38,7 +38,7 @@ module Dscp.Crypto.Impl
 import Universum
 import Crypto.Error (CryptoFailable (..))
 import Crypto.Hash (digestFromByteString)
-import Crypto.Hash.Algorithms (Blake2b_256)
+import Crypto.Hash.Algorithms (Keccak_256)
 import Crypto.Hash.IO (hashDigestSize)
 import "cryptonite" Crypto.Random (ChaChaDRG, MonadPseudoRandom, drgNewSeed, seedFromBinary,
                                    seedFromInteger, withDRG)
@@ -58,7 +58,7 @@ import Dscp.Util
 ------------------------------------------------------
 
 -- | We choose `blake2b-256`
-type HashScheme = CryptoniteFunc Blake2b_256
+type HashScheme = CryptoniteFunc Keccak_256
 
 type HasHash a = HasAbstractHash HashScheme a
 type Hash a = AbstractHash HashScheme a
@@ -81,7 +81,7 @@ unsafeCastHash (AbstractHash hashResult) = AbstractHash hashResult
 -- | Produce a random hash value.
 randomHash :: MonadRandom m => m (Hash a)
 randomHash = do
-    bs :: ByteString <- getRandomBytes (hashDigestSize (error "untouched" :: Blake2b_256))
+    bs :: ByteString <- getRandomBytes (hashDigestSize (error "untouched" :: Keccak_256))
     return . AbstractHash $
         digestFromByteString bs ?: error "Wrong algorithm hash / size"
 

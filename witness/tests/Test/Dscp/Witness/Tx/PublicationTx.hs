@@ -32,7 +32,6 @@ genPublicationChain n secret
                 let ptHeader = PrivateBlockHeader
                         { _pbhPrevBlock = prevHeaderHash
                         , _pbhBodyProof = sig
-                        , _pbhAtgDelta = mempty
                         }
                 in PublicationTx
                 { ptAuthor = addr

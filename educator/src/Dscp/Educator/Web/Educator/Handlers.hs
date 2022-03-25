@@ -10,6 +10,7 @@ import Data.Default (def)
 import Servant (Handler)
 import UnliftIO (UnliftIO (..))
 
+import Dscp.Crypto
 import Dscp.DB.SQL
 import Dscp.Educator.DB
 import Dscp.Educator.Web.Educator.API
@@ -114,8 +115,11 @@ educatorApiHandlers =
             invoke ... educatorGetCertificate
 
     , eAddCertificate = \cert@(CertificateFullInfo meta _) -> do
-            void $ educatorAddCertificate cert
-            pure $ mkCertificate meta
+            (blkHeader, _) <- educatorAddCertificate cert
+            pure $ CertificateWithHeader (mkCertificate meta) blkHeader (hash blkHeader)
+
+    -- TODO: implement
+    , eMarkCertValidated = \_certAndTx -> pass
     }
 
 convertEducatorApiHandler

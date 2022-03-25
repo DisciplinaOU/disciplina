@@ -330,7 +330,7 @@ createPrivateBlock txs delta = runMaybeT $ do
 
         trueDelta = mempty `fromMaybe` delta
 
-        hdr = PrivateBlockHeader prev root trueDelta
+        hdr = PrivateBlockHeader prev root
 
     let isNullBlock = and
             [ isEmptyATGDelta trueDelta
@@ -345,6 +345,7 @@ createPrivateBlock txs delta = runMaybeT $ do
             , brHash = val_ $ hash hdr
             , brCreationTime = currentTimestampUtc_
             , brPrevHash = val_ prev
+            , brPubTxId = val_ Nothing
             , brAtgDelta = val_ trueDelta
             , brMerkleRoot = val_ root
             , brMerkleTree = val_ $ getEmptyMerkleTree tree

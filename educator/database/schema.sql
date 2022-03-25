@@ -140,6 +140,7 @@ create table if not exists blocks (
     hash          BYTEA        not null,
     creation_time TIMESTAMPTZ  not null,
     prev_hash     BYTEA        null,
+    pub_tx_id     BYTEA        null,
     atg_delta     BYTEA        not null,
     merkle_root   BYTEA        not null,
     merkle_tree   BYTEA        not null,

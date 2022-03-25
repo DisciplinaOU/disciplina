@@ -269,9 +269,10 @@ educatorPostGrade subH grade = do
 
 -- | Creates a private block consisting of transactions built from certificate grades
 -- and generates a PDF certificate with embedded FairCV describing that block.
+-- Also returns a header of the created block
 educatorAddCertificate
     :: MonadEducatorWeb ctx m
-    => CertificateFullInfo -> m PDFBody
+    => CertificateFullInfo -> m (PrivateBlockHeader, PDFBody)
 educatorAddCertificate cert = do
     pdfLang         <- view (lensOf @Language)
     pdfLatexPath    <- view (lensOf @Pdf.LatexPath)
@@ -279,7 +280,7 @@ educatorAddCertificate cert = do
     downloadBaseUrl <- view (lensOf @Pdf.DownloadBaseUrl)
 
     certificateIssuerInfo  <- getCertificateIssuerInfo
-    pdfRaw@ (PDFBody body) <- Pdf.produce pdfLang certificateIssuerInfo cert pdfLatexPath pdfResPath downloadBaseUrl
+    pdfRaw@(PDFBody body) <- Pdf.produce pdfLang certificateIssuerInfo cert pdfLatexPath pdfResPath downloadBaseUrl
 
     let pdfHash = hash body
 
@@ -297,7 +298,7 @@ educatorAddCertificate cert = do
 
         createCertificate (cfiMeta cert) pdf
 
-        return pdf
+        return (blkHeader, pdf)
 
 getCertificateIssuerInfo
     :: MonadEducatorWeb ctx m

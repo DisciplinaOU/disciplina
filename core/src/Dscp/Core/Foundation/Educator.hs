@@ -74,7 +74,6 @@ module Dscp.Core.Foundation.Educator
     , PrivateBlockHeader (..)
     , pbhPrevBlock
     , pbhBodyProof
-    , pbhAtgDelta
     , PrivateBlockBody (..)
     , pbbTxs
     , PrivateBlock (..)
@@ -513,8 +512,6 @@ data PrivateBlockHeader = PrivateBlockHeader
     , _pbhBodyProof :: !(MerkleSignature PrivateTx)
     -- ^ Body payload proof (for now - only root of sized Merkle tree
     -- over private transactions)
-    , _pbhAtgDelta  :: !ATGDelta
-    -- ^ Changes in courses taught by Educator
     } deriving (Show, Eq, Ord, Generic)
 
 makeLenses ''PrivateBlockHeader
@@ -522,8 +519,7 @@ makeLenses ''PrivateBlockHeader
 instance Buildable PrivateBlockHeader where
     build PrivateBlockHeader {..} =
         "PrivateBlockHeader { prev: " +| _pbhPrevBlock |+
-        "; body proof: " +| _pbhBodyProof |+
-        "; atg:" +| _pbhAtgDelta |+ " }"
+        "; body proof: " +| _pbhBodyProof |+ " }"
 
 -- | Genesis hash, serves as previous block reference for the first block.
 -- Different for each educator.
