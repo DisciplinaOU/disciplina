@@ -64,6 +64,7 @@ module Dscp.Educator.DB.Queries
        , getPrivateBlocksAfter
        , getPrivateBlocksAfterHash
        , createPrivateBlock
+       , markBlockValidated
        , dumpNonChainedTransactions
        , createSignedSubmission
        , setStudentAssignment
@@ -76,12 +77,14 @@ module Dscp.Educator.DB.Queries
 
 
 import Universum
+
 import Data.Default (Default (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Time.Clock (getCurrentTime)
 import GHC.Exts (fromList)
 import Loot.Base.HasLens (HasCtx)
+import Data.ByteArray.HexString (HexString)
 import Pdf.Scanner (PDFBody)
 
 import Dscp.Core
@@ -360,6 +363,19 @@ createPrivateBlock txs delta = runMaybeT $ do
             txId <:-:> bid
 
     return hdr
+
+-- | Writes down the Ethereum transaction ID into the private block's row.
+markBlockValidated
+  :: DBM m
+  => PrivateHeaderHash
+  -> HexString
+  -> DBT 'WithinTx m Bool
+markBlockValidated blkHash txId = fmap anyAffected $
+    runUpdate $ update
+        (esBlocks es)
+        (\blk -> brPubTxId blk <-. val_ (Just txId))
+        (\blk -> brHash blk ==. val_ blkHash)
+
 
 dumpNonChainedTransactions
     :: (DBM m, HasCtx ctx m '[KeyResources EducatorNode])

@@ -41,29 +41,6 @@ spec_Educator_certificates = specWithTempPostgresServer $ do
                     invoke $ educatorGetCertificate $ cId crt
 
                 return $ total pdf
-                -- let pdfBs = Pdf.getPDFBody pdf
-                --     pdfLen = LBS.length pdfBs
-
-                -- flippedByteIdx <- pickSmall $ choose (0, pdfLen - 1)
-                -- let badPdf = Pdf.PDFBody $
-                --         pdfBs & ix flippedByteIdx %~ complement
-
-                -- lift $ do
-                --     void updateMempoolWithPublications
-                --     checkRes <- checkFairCVPDF pdf
-                --     checkResBad <- do
-                --         let handler e = case (e :: WitnessAPIError) of
-                --                 InvalidFormat -> return False
-                --                 _             -> throwM e
-
-                --         (fairCVFullyValid . fcacrCheckResult <$> checkFairCVPDF badPdf)
-                --             `catch` handler
-
-                --     let positive = counterexample "FairCV is not verified" $
-                --                    fairCVFullyValid $ fcacrCheckResult checkRes
-                --         negative = counterexample "Bad FairCV is verified" $
-                --                    not checkResBad
-                --     return $ positive .&&. negative
 
             it "Sorting certificates on creation day works" $ educatorPropertyM $ do
                 n <- pick $ choose (0, 5)

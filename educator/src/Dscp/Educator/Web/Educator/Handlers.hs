@@ -118,8 +118,8 @@ educatorApiHandlers =
             (blkHeader, _) <- educatorAddCertificate cert
             pure $ CertificateWithHeader (mkCertificate meta) blkHeader (hash blkHeader)
 
-    -- TODO: implement
-    , eMarkCertValidated = \_certAndTx -> pass
+    , eMarkCertValidated = \(CertificateTxAndBlock txId blockHash) ->
+            void $ transact $ markBlockValidated blockHash txId
     }
 
 convertEducatorApiHandler
