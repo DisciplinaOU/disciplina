@@ -10,6 +10,7 @@ in
 
     buildInputs = with pkgs; [
       git
+      stack
       ephemeralpg
       postgresql
       getopt

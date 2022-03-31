@@ -17,48 +17,29 @@ that you have installed the following native dependencies:
 - ZeroMQ
 - zlib
 
+However, it is advisable that you use Nix in conjunction with Stack for incremental builds (see below).
+
 ### Nix
 
-Set up Disciplina binary cache so that you don't have to build dependencies:
+The project uses [Nix](https://nixos.org/nix/) with IOHK's haskell.nix library for builds and dependency management.
 
-```sh
-sudo $(nix-build pkgs.nix -A cachix --no-out-link)/bin/cachix use disciplina
+Steps to obtain a working development environment:
+
+- Install Nix as per the [guide](https://nixos.wiki/wiki/Nix_Installation_Guide)
+- Set up the IOHK binary cache as per the [instruction](https://input-output-hk.github.io/haskell.nix/tutorials/getting-started.html)
+- Enter the Nix shell: `$ nix-shell`. (This will take a lot of time, because all the dependencies are being fetched and built)
+- Use the `stack build` command to build the project.
+
+
+#### Running multi-educator executable
+
+Inside the Nix shell, you can start the multi-educator backend by using the command:
+
+```
+$ stack exec dscp-multi-educator --config config.yaml --config-key new-web3
 ```
 
-If you are on a single-user Nix install (`nix-shell -p nix-info --run nix-info`
-should say `multi-user?: no`), omit `sudo` in the command above. You will see
-`No permission` errors, that's fine.
+#### Running tests
 
-If you are on NixOS, make sure to add `https://cache.nixos.org` to `nix.binaryCaches`,
-otherwise main Nix binary cache stops working. See [cachix/cachix#128][].
-
-[cachix/cachix#128]: https://github.com/cachix/cachix/pull/128
-
-Next, install Nix with [NixOS/nix#2409][] patch:
-
-```sh
-nix-env -f pkgs.nix -iA nix
-```
-
-[Nix]: https://nixos.org/nix/
-[NixOS/nix#2409]: https://github.com/NixOS/nix/pull/2409
-
-If you test Disciplina or develop software that integrates with it, run
-`nix-env -f release.nix -iA disciplina`. This will install Disciplina packages
-into your user profile. Then you can use `scripts/launch/node.sh` to start nodes.
-
-For production builds, run `nix-build`.
-
-For incremental builds, run `nix-shell`. Then, use either `stack build` or
-`cabal new-build all` as you normally would. This will only build local packages,
-all dependencies are managed by Nix.
-
-If you prefer to let Stack handle Haskell dependencies instead of Nix, or if
-the above doesn't work for you for whatever reason, leave `nix-shell` and build
-with `stack build --nix`. In that case, Nix will only provide native deps.
-
-## Issue tracker
-
-We use [YouTrack](https://issues.serokell.io/issues/DSCP) as our issue
-tracker. You can login using your GitHub account to leave a comment or
-create a new issue.
+Tests in the `disciplina-educator` package which involve PostgreSQL queries require temporary DB setup using `pg_tmp`.
+There is a script `./scripts/test/educator.sh` which does exactly that.
