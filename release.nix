@@ -4,48 +4,38 @@ let
   project = import ./. { inherit pkgs; };
   source = constGitIgnore "disciplina-release-src" ./. [ "*.icns" "*.png" ];
 
-  runCheck = source: runCommand "check" {} ''
-    ${source}
-    touch $out
-  '';
-
-  writeShellScript = source: writeTextFile {
-    name = "script";
-    executable = true;
-    checkPhase = "${shellcheck}/bin/shellcheck $out";
-    text = ''
-      #!${stdenv.shell} -e
-      ${source}
-    '';
-  };
-
   justDataOutputs = drv: lib.optional (drv ? data) drv.data;
 
-  server-packages = with project; [
-    disciplina-educator
-    disciplina-multi-educator
-    disciplina-faucet
-    disciplina-tools
-    disciplina-witness
-    disciplina-pdfs
-  ];
+  fetchShare = { name, path }: runCommand name { inherit path; }
+    ''
+    ln -s $path/share $out
+    '';
 
-  buildFlatpak = callPackage ../nix-flatpak-bundler/default.nix {};
+  # server-packages = with project; [
+  #   disciplina-educator
+  #   disciplina-multi-educator
+  #   disciplina-pdfs
+  # ];
+
 in
 
 rec {
   disciplina = symlinkJoin {
     name = "disciplina";
-    paths = map haskell.lib.justStaticExecutables server-packages;
+    # paths = map haskell.lib.justStaticExecutables server-packages;
+    paths = [
+      project.disciplina-educator.components.exes.dscp-educator
+      project.disciplina-multi-educator.components.exes.dscp-multi-educator
+    ];
   };
 
-  disciplina-data = symlinkJoin {
+  disciplina-data = fetchShare {
     name = "disciplina-data";
-    paths = lib.concatMap justDataOutputs server-packages;
+    path = project.disciplina-pdfs.components.exes.dscp-inject-json-into-pdf;
   };
 
   inherit (pkgs) pdf-generator-xelatex;
-  inherit (project) disciplina-tools;
+  # inherit (project) disciplina-tools;
 
   disciplina-config = runCommand "disciplina-config.yaml" {} "cp ${./config.yaml} $out";
 
@@ -66,46 +56,40 @@ rec {
     ${hlint}/bin/hlint ${source} --no-exit-code --report=$out -j
   '';
 
-  disciplina-trailing-whitespace = runCheck ''
-    for f in $(find ${source} -type f -not -name "*.jpg" -not -name "*.png" -not -name "*.otf"); do
-      ${haskellPackages.tw}/bin/tw $f
-    done
-  '';
+  # disciplina-wallet-macos-sandbox = writeShellScript ''
+  #   sandbox-exec -D HOME="$HOME" -D DYLD_ROOT_PATH="$DYLD_ROOT_PATH" \
+  #     -f ${./wallet/profile.sb} ${disciplina-wallet-wrapped}/bin/disciplina-wallet
+  # '';
 
-  disciplina-wallet-macos-sandbox = writeShellScript ''
-    sandbox-exec -D HOME="$HOME" -D DYLD_ROOT_PATH="$DYLD_ROOT_PATH" \
-      -f ${./wallet/profile.sb} ${disciplina-wallet-wrapped}/bin/disciplina-wallet
-  '';
+  # disciplina-wallet = haskell.lib.justStaticExecutables project.disciplina-wallet;
 
-  disciplina-wallet = haskell.lib.justStaticExecutables project.disciplina-wallet;
+  # disciplina-wallet-flatpak = buildFlatpak {
+  #   app-id = "io.disciplina.Wallet";
+  #   command = disciplina-wallet-flatpak-wrapper;
+  #   finish-args = [ "--share=network" ];
+  # };
 
-  disciplina-wallet-flatpak = buildFlatpak {
-    app-id = "io.disciplina.Wallet";
-    command = disciplina-wallet-flatpak-wrapper;
-    finish-args = [ "--share=network" ];
-  };
+  # disciplina-wallet-flatpak-wrapper = writeShellScript ''
+  #   ${disciplina-wallet}/bin/dscp-wallet --witness https://witness.disciplina.io \
+  #     --config ${./config.yaml} --config-key alpha
+  # '';
 
-  disciplina-wallet-flatpak-wrapper = writeShellScript ''
-    ${disciplina-wallet}/bin/dscp-wallet --witness https://witness.disciplina.io \
-      --config ${./config.yaml} --config-key alpha
-  '';
+  # disciplina-wallet-macos-app = buildMacOSApp {
+  #   name = "Disciplina";
+  #   icon = ./wallet/icon.icns;
+  #   target = disciplina-wallet-macos-wrapper;
+  #   withOpen = true;
+  # };
 
-  disciplina-wallet-macos-app = buildMacOSApp {
-    name = "Disciplina";
-    icon = ./wallet/icon.icns;
-    target = disciplina-wallet-macos-wrapper;
-    withOpen = true;
-  };
+  # disciplina-wallet-macos-wrapper = writeShellScript ''
+  #   export TERMINFO=/usr/share/terminfo
 
-  disciplina-wallet-macos-wrapper = writeShellScript ''
-    export TERMINFO=/usr/share/terminfo
+  #   ${disciplina-wallet}/bin/dscp-wallet --witness https://witness.disciplina.io \
+  #     --config ${./config.yaml} --config-key alpha
+  # '';
 
-    ${disciplina-wallet}/bin/dscp-wallet --witness https://witness.disciplina.io \
-      --config ${./config.yaml} --config-key alpha
-  '';
-
-  disciplina-wallet-macos-zip = runCommand "disciplina-wallet-macos.zip" {} ''
-    cd ${disciplina-wallet-macos-app}/Applications
-    ${zip}/bin/zip -r --symlinks $out Disciplina.app
-  '';
+  # disciplina-wallet-macos-zip = runCommand "disciplina-wallet-macos.zip" {} ''
+  #   cd ${disciplina-wallet-macos-app}/Applications
+  #   ${zip}/bin/zip -r --symlinks $out Disciplina.app
+  # '';
 }
