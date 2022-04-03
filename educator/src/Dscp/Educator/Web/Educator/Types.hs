@@ -506,6 +506,25 @@ instance ToSchema AssignmentEducatorInfo where
 instance ToSchema SubmissionEducatorInfo where
     declareNamedSchema = gDeclareNamedSchema
 
+instance ToSchema (MerkleProof PrivateTx) where
+    declareNamedSchema = gDeclareNamedSchema
+
+instance ToSchema (MerkleProofReady PrivateTx) where
+    declareNamedSchema = gDeclareNamedSchema
+
+instance ToSchema FairCV where
+    declareNamedSchema = gDeclareNamedSchema
+
+instance ToSchema FairCVReady where
+    declareNamedSchema = gDeclareNamedSchema
+
+instance ToSchema FairCVCheckResult where
+    declareNamedSchema = gDeclareNamedSchema
+
+instance ToSchema FairCVAndCheckResult where
+    declareNamedSchema = gDeclareNamedSchema
+
+
 instance EnumHasDescription GradingScale where
     enumDocDescription p = enumCaseDocDesc p $ \case
         RusDiff ->

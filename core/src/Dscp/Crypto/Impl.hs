@@ -57,7 +57,7 @@ import Dscp.Util
 -- Hashing
 ------------------------------------------------------
 
--- | We choose `blake2b-256`
+-- | We choose `keccak-256`
 type HashScheme = CryptoniteFunc Keccak_256
 
 type HasHash a = HasAbstractHash HashScheme a

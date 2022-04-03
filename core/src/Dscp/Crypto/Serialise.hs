@@ -8,6 +8,7 @@ module Dscp.Crypto.Serialise
        ) where
 
 import Universum
+
 import Codec.Serialise (Serialise (..), serialise)
 import Codec.Serialise.Decoding (Decoder, decodeBytes, decodeWordOf)
 import Codec.Serialise.Encoding (Encoding, encodeBytes, encodeWord)

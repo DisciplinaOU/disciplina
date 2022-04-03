@@ -27,7 +27,7 @@ import Servant.API.Generic
 import Servant.Server.Generic (AsServerT)
 import Servant.Util (type ( #: ), ExceptionalResponses)
 
-import Dscp.Core.Foundation.Educator
+import Dscp.Core
 import Dscp.Educator.Web.Auth
 import Dscp.Educator.Web.Educator.API
 import Dscp.Educator.Web.Educator.Error
@@ -43,6 +43,8 @@ import Dscp.Web.Swagger.UI
 -- | Endpoints of public certificate API.
 data CertificatesApiEndpoints route = CertificatesApiEndpoints
     { cGetCertificate :: route :- GetCertificatePublic
+    , cCheckFairCV :: route :- CheckFairCV
+    , cCheckFairCVPDF :: route :- CheckFairCVPDF
     } deriving (Generic)
 
 type CertificatesApiHandlers m = CertificatesApiEndpoints (AsServerT m)
@@ -65,6 +67,24 @@ type GetCertificatePublic
        '[ 404 #: "Certificate with given ID not found."
         ]
     :> Get '[PDF] PDFBody
+
+-- | Endpoint for checking the FairCV in JSON format
+type CheckFairCV
+    = "checkcv"
+    :> ReqBody '[JSON] FairCV
+    :> Summary "Check the FairCV in JSON format"
+    :> Description "Checks the FairCV JSON data and returns the result of the check"
+    :> Verb 'PUT 200 '[DSON] FairCVCheckResult
+
+-- | Endpoint for checking the FairCV in PDF format
+type CheckFairCVPDF
+    = "checkcv-pdf"
+    :> ReqBody '[PDF] PDFBody
+    :> Summary "Check the FairCV in PDF format"
+    :> Description "Checks the FairCV PDF and returns the result of the check as well \
+        \as the FairCV metadata included into the PDF in JSON format."
+    :> Verb 'PUT 200 '[DSON] FairCVAndCheckResult
+
 
 certificatesAPI :: Proxy CertificatesAPI
 certificatesAPI = Proxy

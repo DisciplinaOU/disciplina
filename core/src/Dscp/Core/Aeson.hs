@@ -105,6 +105,22 @@ instance (FromJSON a, Serialise (EmptyMerkleProof a)) =>
         nothingToFail "Merkle proof and data do not match" $
             mergeProofAndData emptyProof txs
 
+instance ToJSON (MerkleProof a) => ToJSON (MerkleProofReady a) where
+    toJSON mpr = object
+        [ "root" .= mprRoot mpr
+        , "tree" .= mprProof mpr
+        ]
+
+instance (FromJSON (MerkleProof a), HasHash a) => FromJSON (MerkleProofReady a) where
+    parseJSON = withObject "TaggedProofReady" $ \o -> do
+        root  <- o .: "root"
+        proof <- o .: "tree"
+
+        let reconstructed = readyProof proof
+        when (mprRoot reconstructed /= root) $
+            fail "Proof and its root do not match"
+        return reconstructed
+
 instance Serialise (MerkleProof PrivateTx) =>
          ToJSON FairCV where
     toJSON FairCV {..} = object
@@ -117,6 +133,25 @@ instance Serialise (MerkleProof PrivateTx) =>
 
 instance Serialise (MerkleProof PrivateTx) =>
          FromJSON FairCV where
+    parseJSON = withObject "FairCV" $ \o -> do
+        student <- o .: "student"
+        sAddr <- student .: "address"
+        sName <- student .: "name"
+        cv <- o .: "cv"
+        pure $ FairCV sAddr sName cv
+
+instance ToJSON (MerkleProofReady PrivateTx) =>
+         ToJSON FairCVReady where
+    toJSON FairCV {..} = object
+        [ "student" .= object
+            [ "name" .= fcStudentName
+            , "address" .= fcStudentAddr
+            ]
+        , "cv" .= fcCV
+        ]
+
+instance FromJSON (MerkleProofReady PrivateTx) =>
+         FromJSON FairCVReady where
     parseJSON = withObject "FairCV" $ \o -> do
         student <- o .: "student"
         sAddr <- student .: "address"
@@ -225,3 +260,5 @@ instance FromJSON FairCVCheckResult where
         fairCVFullyValid <- o .: "isValid"
         fairCVCheckResults <- o .: "checkResponse"
         return FairCVCheckResult{..}
+
+deriveJSON defaultOptions ''FairCVAndCheckResult

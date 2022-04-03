@@ -17,6 +17,7 @@ module Dscp.Core.FairCV
 
          -- * Fair CV check result
        , FairCVCheckResult (..)
+       , FairCVAndCheckResult (..)
        ) where
 
 import Universum
@@ -122,8 +123,19 @@ data FairCVCheckResult = FairCVCheckResult
     , fairCVFullyValid   :: Bool
     } deriving (Show, Eq, Generic)
 
+data FairCVAndCheckResult = FairCVAndCheckResult
+    { fcacrFairCV      :: FairCVReady
+    , fcacrCheckResult :: FairCVCheckResult
+    } deriving (Eq, Show, Generic)
+
 instance Buildable FairCVCheckResult where
     build (FairCVCheckResult res total) =
         "Fair CV check result: "+|totalS+|" "+|mapF (mapF <$> res)
       where
         totalS = if total then "✔" else "✘"
+
+instance Buildable FairCVAndCheckResult where
+    build (FairCVAndCheckResult res fcv) =
+        "{ fairCV = "  +| res |+
+        ", checkResult = " +| fcv |+
+        " }"

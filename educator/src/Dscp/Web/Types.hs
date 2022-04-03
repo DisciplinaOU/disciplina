@@ -88,3 +88,5 @@ instance ToServantErr GeneralBackendError where
 
 instance Arbitrary GeneralBackendError where
     arbitrary = genericArbitrary
+
+instance Exception GeneralBackendError
