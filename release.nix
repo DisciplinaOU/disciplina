@@ -11,6 +11,12 @@ let
     ln -s $path/share $out
     '';
 
+  wrapInDir = name: path: runCommand name { inherit name path; }
+    ''
+    mkdir -p $out
+    ln -s $path $out/$name
+    '';
+
   # server-packages = with project; [
   #   disciplina-educator
   #   disciplina-multi-educator
@@ -34,10 +40,53 @@ rec {
     path = project.disciplina-pdfs.components.exes.dscp-inject-json-into-pdf;
   };
 
+
   inherit (pkgs) pdf-generator-xelatex;
   # inherit (project) disciplina-tools;
 
   disciplina-config = runCommand "disciplina-config.yaml" {} "cp ${./config.yaml} $out";
+
+  disciplina-with-config = symlinkJoin {
+    name = "disciplina-with-cfg";
+    paths = [
+      disciplina
+      (wrapInDir "config.yaml" disciplina-config)
+    ];
+  };
+
+  disciplina-multieducator-docker = dockerTools.buildImage {
+    name = "disciplina-multi-educator";
+    tag = "latest";
+    contents = [
+      bash
+      coreutils
+      cacert
+      disciplina-with-config
+    ];
+
+    fromImage = dockerTools.pullImage {
+      imageName = "postgres";
+      imageDigest = "sha256:d3b857fac70936a2e0dd83226cc113db1787a4f6119df77a798d8137354c4989";
+      sha256 = "061w4sagqrh2d9jiyfc1nr7x912l477wvvb2r78n4ns4fzasli5h";
+      finalImageTag = "14.2-alpine";
+      finalImageName = "postgres";
+    };
+
+    config = {
+      Cmd = [
+        "/bin/dscp-multi-educator"
+        "--config" "/config.yaml"
+        "--config-key" "new-web3"
+      ];
+      Env = [
+        "LANG=\"C.UTF-8\""
+        "LC_ALL=\"C.UTF-8\""
+      ];
+      ExposedPorts = {
+        "4040/tcp" = {};
+      };
+    };
+  };
 
   disciplina-haddock = with lib;
     let

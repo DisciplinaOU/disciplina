@@ -8,12 +8,6 @@ let
   pkgs = import haskellNix.sources.nixpkgs-unstable haskellNix.nixpkgsArgs;
 
 in pkgs.extend(final: previous: with previous; rec {
-  bubblewrap = callPackage ../nix-flatpak-bundler/bubblewrap {};
-  ostree = callPackage ../nix-flatpak-bundler/ostree {};
-  flatpak = callPackage ../nix-flatpak-bundler/flatpak { inherit bubblewrap ostree; };
-  flatpak-builder = callPackage ../nix-flatpak-bundler/flatpak-builder { inherit flatpak ostree; };
-  buildFlatpak = callPackage ../nix-flatpak-bundler { inherit flatpak flatpak-builder; };
-
   pdf-generator-xelatex = texlive.combine {
     inherit (texlive)
     collection-basic
