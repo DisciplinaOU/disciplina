@@ -21,7 +21,7 @@ import Dscp.Resource.AppDir
 import Dscp.Util.HasLens
 
 -- | State of active educator contexts.
-type EducatorContexts = Map EducatorUUID MaybeLoadedEducatorContext
+type EducatorContexts = Map EducatorEthAddress MaybeLoadedEducatorContext
 
 -- | Contexts of every loaded educator.
 type EducatorContextsVar = TVar EducatorContexts

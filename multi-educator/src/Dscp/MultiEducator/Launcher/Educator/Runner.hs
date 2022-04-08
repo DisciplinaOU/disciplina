@@ -40,7 +40,7 @@ launchSingleEducatorMode educatorAuthLogin action = do
                 ctx <- formSingleEducatorContext resources
                 runRIO ctx (vacuous action)
   where
-    educatorId = eadId $ ealData educatorAuthLogin
+    educatorId = eadPublicAddress $ ealData educatorAuthLogin
     runName = "Educator " <> show educatorId
     initCtx ctx = InitContext
         { _icLogging = ctx ^. lensOf @LoggingIO

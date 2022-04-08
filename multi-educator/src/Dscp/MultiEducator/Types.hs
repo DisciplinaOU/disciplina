@@ -1,5 +1,5 @@
 module Dscp.MultiEducator.Types
-    ( EducatorUUID (..)
+    ( EducatorEthAddress (..)
     ) where
 
 import Universum
@@ -14,23 +14,23 @@ import Dscp.Util
 import Dscp.Web.Swagger
 
 -- | Educator id we receive from AAA service.
-newtype EducatorUUID = EducatorUUID Text
+newtype EducatorEthAddress = EducatorEthAddress Text
     deriving (Show, Eq, Ord, IsString)
 
-instance Buildable EducatorUUID where
-    build (EducatorUUID eId) = "\"" <> build eId <> "\""
+instance Buildable EducatorEthAddress where
+    build (EducatorEthAddress eId) = "\"" <> build eId <> "\""
 
-deriving instance ToJSON EducatorUUID
-deriving instance FromJSON EducatorUUID
+deriving instance ToJSON EducatorEthAddress
+deriving instance FromJSON EducatorEthAddress
 
-instance ToHttpApiData EducatorUUID where
-    toUrlPiece (EducatorUUID eid) = eid
+instance ToHttpApiData EducatorEthAddress where
+    toUrlPiece (EducatorEthAddress eid) = eid
 
-instance FromHttpApiData EducatorUUID where
-    parseUrlPiece = pure . EducatorUUID
+instance FromHttpApiData EducatorEthAddress where
+    parseUrlPiece = pure . EducatorEthAddress
 
-type instance ParamDescription EducatorUUID = "Educator identifier."
+type instance ParamDescription EducatorEthAddress = "Educator's Ethereum address."
 
-instance S.ToParamSchema EducatorUUID where
+instance S.ToParamSchema EducatorEthAddress where
     toParamSchema _ = mempty &: do
         S.type_ ?= S.SwaggerString

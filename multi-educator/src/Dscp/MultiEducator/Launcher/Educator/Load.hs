@@ -45,7 +45,7 @@ lookupEducator
 lookupEducator educatorAuthLogin = do
     educatorContexts <- view $ lensOf @MultiEducatorResources . merEducatorData
 
-    let educatorId = eadId $ ealData educatorAuthLogin
+    let educatorId = eadPublicAddress $ ealData educatorAuthLogin
         withEducatorContextAtomically
             :: MonadIO m
             => StateT (Maybe MaybeLoadedEducatorContext) STM a -> m a
@@ -103,7 +103,7 @@ loadEducator educatorAuthLogin  = do
 
     takeMVar ctxVar
   where
-    educatorId = ealId educatorAuthLogin
+    educatorId = ealPublicAddress educatorAuthLogin
 
 normalToMulti :: MultiEducatorWorkMode ctx m => LoadedEducatorContext -> E.EducatorRealMode a -> m a
 normalToMulti LoadedEducatorContext{..} = runRIO lecCtx

@@ -21,8 +21,8 @@ certificatesApiHandlers
 certificatesApiHandlers = CertificatesApiEndpoints
     { cGetCertificate = \(CertificateName eId cId) -> invoke $ do
             -- TODO: something is wrong about that 'CertificateName' keeps 'Text'
-            -- instead of 'EducatorUUID' inside, how to properly resolve this?
-            setConnSchemaName $ educatorSchemaName (EducatorUUID eId)
+            -- instead of 'EducatorEthAddress' inside, how to properly resolve this?
+            setConnSchemaName $ educatorSchemaName (EducatorEthAddress eId)
             educatorGetCertificate cId
     , cCheckFairCV = pure . checkFairCV
     , cCheckFairCVPDF = checkFairCVPDF

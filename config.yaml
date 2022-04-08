@@ -135,7 +135,8 @@ new-web3:
 
     aaa:
       serviceUrl: "https://stage-teachmeplease-aaa.stage.tchmpls.com"
-      publicKey: "2gSNy2wKSaI4YtGZe_Eaxsdv_BLCfi5kkT9xvxt_O0k"
+      # publicKey: "2gSNy2wKSaI4YtGZe_Eaxsdv_BLCfi5kkT9xvxt_O0k"
+      publicKey: "fAc_hcle5psCxGio6cBjs2BRekX29iwg2JdA97JH-HM"
 
 
 alpha:

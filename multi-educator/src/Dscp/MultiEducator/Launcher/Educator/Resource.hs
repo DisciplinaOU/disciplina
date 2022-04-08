@@ -35,14 +35,14 @@ import Dscp.Util
 import Dscp.Web.Server
 
 -- | Returns database schema name for an educator with given ID.
-educatorSchemaName :: EducatorUUID -> Text
-educatorSchemaName (EducatorUUID eId) = "educator_" <> eId
+educatorSchemaName :: EducatorEthAddress -> Text
+educatorSchemaName (EducatorEthAddress eId) = "educator_" <> eId
 
 prepareMultiEducatorSchema
     :: ( MonadUnliftIO m, HasCtx ctx m '[LoggingIO], MonadLogging m
        , HasCallStack
        )
-    => SQL -> EducatorUUID -> m ()
+    => SQL -> EducatorEthAddress -> m ()
 prepareMultiEducatorSchema db educatorId = do
     let schema = educatorSchemaName educatorId
     logInfo $ "Creating a schema with name `"+|schema|+"`"
@@ -50,7 +50,7 @@ prepareMultiEducatorSchema db educatorId = do
     E.prepareEducatorSchema db
 
 instance AllocResource (PreparedSQL "multi-educator") where
-    type Deps (PreparedSQL "multi-educator") = (PostgresRealParamsRec, EducatorUUID)
+    type Deps (PreparedSQL "multi-educator") = (PostgresRealParamsRec, EducatorEthAddress)
     allocResource p =
         PreparedSQL <$>
         buildComponentR "SQL DB" (openPostgresDB' p) closePostgresDB
@@ -65,12 +65,12 @@ newtype SingleEducatorResources = SingleEducatorResources E.EducatorResources
 
 mkSingleEducatorKeyParams
     :: MultiEducatorKeyParams
-    -> EducatorUUID
+    -> EducatorEthAddress
     -> Maybe PassPhrase
     -> E.EducatorKeyParamsRec
 mkSingleEducatorKeyParams
     (MultiEducatorKeyParams keyDir)
-    (EducatorUUID educatorId)
+    (EducatorEthAddress educatorId)
     mpassphrase =
         finaliseDeferredUnsafe mempty &: do
             zoom (sub #keyParams) $ do
@@ -115,7 +115,7 @@ instance HasMultiEducatorConfig => AllocResource SingleEducatorResources where
         (MultiEducatorResources, EducatorAuthLogin)
 
     allocResource (multiEducatorResources, educatorAuthLogin) = do
-        let educatorId = eadId $ ealData educatorAuthLogin
+        let educatorId = eadPublicAddress $ ealData educatorAuthLogin
         let mpassphrase = Nothing
 
         let educatorConfig = multiEducatorConfig ^. sub #educator
