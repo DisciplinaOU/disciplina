@@ -27,6 +27,7 @@ import Data.Aeson (eitherDecode)
 import Data.Default (Default)
 import Data.List (groupBy)
 import Data.Time.Clock (getCurrentTime)
+import Loot.Log (logDebug)
 import Loot.Base.HasLens (lensOf)
 import Network.HTTP.Client
 import Network.HTTP.Client.TLS
@@ -278,6 +279,8 @@ educatorAddCertificate cert = do
     pdfLatexPath    <- view (lensOf @Pdf.LatexPath)
     pdfResPath      <- view (lensOf @Pdf.ResourcePath)
     downloadBaseUrl <- view (lensOf @Pdf.DownloadBaseUrl)
+
+    logDebug "Starting creating the certificate"
 
     certificateIssuerInfo  <- getCertificateIssuerInfo
     pdfRaw@(PDFBody body) <- Pdf.produce pdfLang certificateIssuerInfo cert pdfLatexPath pdfResPath downloadBaseUrl

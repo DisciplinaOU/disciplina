@@ -17,7 +17,7 @@ import System.FilePath ((<.>), (</>))
 import UnliftIO (MonadUnliftIO)
 
 import Dscp.Config
-import Dscp.Core.Foundation (Language)
+import Dscp.Core.Foundation (Language, CertificateIssuerInfo (..), toItemDescUnsafe)
 import Dscp.Crypto
 import Dscp.DB.SQL
 import qualified Dscp.Educator.Config as E
@@ -32,7 +32,6 @@ import Dscp.MultiEducator.Web.Educator.Auth
 import Dscp.Resource.Class (AllocResource (..), buildComponentR)
 import Dscp.Resource.AppDir
 import Dscp.Util
-import Dscp.Web.Server
 
 -- | Returns database schema name for an educator with given ID.
 educatorSchemaName :: EducatorEthAddress -> Text
@@ -82,11 +81,15 @@ makeCertIssuerRes
     :: HasMultiEducatorConfig
     => EducatorAuthLogin
     -> E.CertificateIssuerResource
-makeCertIssuerRes educatorAuthLogin =
-    let aaaUrl = multiEducatorConfig ^. sub #educator . sub #aaa . option #serviceUrl
-    in E.FromServiceIssuerInfo
-        (aaaUrl { baseUrlPath = "educators" </> "current"})
-        (ealToken educatorAuthLogin)
+makeCertIssuerRes _educatorAuthLogin = E.KnownIssuerInfo $ CertificateIssuerInfo
+  { ciiName    = toItemDescUnsafe "Disciplina Dev"
+  , ciiWebsite = toItemDescUnsafe "http://disciplina.io"
+  , ciiId      = "0x123123123"
+  }
+  -- TODO: make fetching the data from the token or service
+  --   fetchPayload $ ealToken educatorAuthLogin
+  -- where
+  --   fetchPayload = undefined
 
 educatorFromMultiEducatorConfig :: HasMultiEducatorConfig => E.EducatorConfigRec
 educatorFromMultiEducatorConfig =
