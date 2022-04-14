@@ -6,6 +6,8 @@ module Dscp.MultiEducator.Web.Educator.Handlers
 
 import Universum
 
+import qualified UnliftIO.Exception as UIO
+
 import Dscp.Core.Foundation.Educator
 import Dscp.DB.SQL
 import Dscp.Educator.Web.Educator
@@ -21,8 +23,9 @@ certificatesApiHandlers
 certificatesApiHandlers = CertificatesApiEndpoints
     { cGetCertificate = \(CertificateName eId cId) -> invoke $ do
             -- TODO: something is wrong about that 'CertificateName' keeps 'Text'
-            -- instead of 'EducatorEthAddress' inside, how to properly resolve this?
-            setConnSchemaName $ educatorSchemaName (EducatorEthAddress eId)
+            -- instead of 'PubAddress' inside, how to properly resolve this?
+            pubAddr <- either UIO.throwString pure $ pubAddrFromText eId
+            setConnSchemaName $ educatorSchemaName pubAddr
             educatorGetCertificate cId
     , cCheckFairCV = pure . checkFairCV
     , cCheckFairCVPDF = checkFairCVPDF

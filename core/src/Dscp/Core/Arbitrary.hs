@@ -42,10 +42,13 @@ module Dscp.Core.Arbitrary
     ) where
 
 import Universum
+
+import qualified Data.ByteArray.HexString as Hex
+import qualified Data.ByteArray as BA
 import qualified Data.Foldable
 import Data.Time.Calendar (fromGregorian, toGregorian)
 import Data.Time.Clock (UTCTime, getCurrentTime)
-import Fmt (Buildable (..), (+||), (||+), pretty)
+import Fmt (Buildable (..), pretty, (+||), (||+))
 import qualified GHC.Exts as Exts
 import GHC.IO.Unsafe (unsafePerformIO)
 import Test.QuickCheck (arbitraryBoundedEnum, resize)
@@ -53,6 +56,7 @@ import qualified Text.Show
 
 import Dscp.Core.FairCV
 import Dscp.Core.Foundation
+import Dscp.Core.PubChain
 import Dscp.Crypto
 import Dscp.Util
 import Dscp.Util.Test
@@ -71,6 +75,18 @@ instance Arbitrary Subject where
 
 instance Arbitrary Grade where
     arbitrary = arbitrary `suchThatMap` mkGrade
+
+instance Arbitrary Hex.HexString where
+    arbitrary = Hex.fromBytes @ByteString <$> arbitrary
+
+instance Arbitrary PubTxId where
+    arbitrary = BA.convert @(Hash Raw) <$> arbitrary
+
+instance Arbitrary PubAddress where
+    arbitrary =
+      either (error . toText) id . Hex.fromHex .
+      BA.drop 12 . BA.convert @(Hash Raw) @Hex.HexString <$> arbitrary
+
 
 -- | Let's not make users upset ;)
 genPleasantGrade :: Gen Grade

@@ -37,7 +37,7 @@ import qualified Data.ByteArray as BA
 ---------------------------------------------------------------------------
 
 newtype EducatorAuthData = EducatorAuthData
-    { eadPublicAddress :: EducatorEthAddress
+    { eadPublicAddress :: PubAddress
     } deriving (Show, Eq)
 
 deriveJSON defaultOptions ''EducatorAuthData
@@ -63,7 +63,7 @@ data EducatorAuthLogin = EducatorAuthLogin
     , ealToken :: ByteString
     } deriving (Show, Eq)
 
-ealPublicAddress :: EducatorAuthLogin -> EducatorEthAddress
+ealPublicAddress :: EducatorAuthLogin -> PubAddress
 ealPublicAddress = eadPublicAddress . ealData
 
 instance ToJSON EducatorAuthLogin where
@@ -126,7 +126,7 @@ multiEducatorAuthCheck (MultiEducatorPublicKey mpk) = do
     let ealData = eatData educatorAuthToken
     return $ EducatorAuthLogin {..}
 
-educatorAuthLoginSimple :: EducatorEthAddress -> EducatorAuthLogin
+educatorAuthLoginSimple :: PubAddress -> EducatorAuthLogin
 educatorAuthLoginSimple eadPublicAddress = EducatorAuthLogin {..}
   where
     ealData = EducatorAuthData {..}

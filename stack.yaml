@@ -24,8 +24,8 @@ extra-deps:
 - servant-mock-0.8.7
 - memory-hexstring-1.0.0.0
 - scale-1.0.0.0
-# - web3-solidity-1.0.0.0
-# - web3-ethereum-1.0.0.0
+- web3-crypto-1.0.0.0
+- web3-solidity-1.0.0.0
 
 - git: https://github.com/serokell/servant-util.git
   commit: ee9b1aa75011554626ddbbb72e9125f617e688d9

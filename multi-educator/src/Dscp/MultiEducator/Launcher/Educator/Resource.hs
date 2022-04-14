@@ -34,29 +34,29 @@ import Dscp.Resource.AppDir
 import Dscp.Util
 
 -- | Returns database schema name for an educator with given ID.
-educatorSchemaName :: EducatorEthAddress -> Text
-educatorSchemaName (EducatorEthAddress eId) = "educator_" <> eId
+educatorSchemaName :: PubAddress -> Text
+educatorSchemaName addr = "educator_" <> toText addr
 
 prepareMultiEducatorSchema
     :: ( MonadUnliftIO m, HasCtx ctx m '[LoggingIO], MonadLogging m
        , HasCallStack
        )
-    => SQL -> EducatorEthAddress -> m ()
-prepareMultiEducatorSchema db educatorId = do
-    let schema = educatorSchemaName educatorId
+    => SQL -> PubAddress -> m ()
+prepareMultiEducatorSchema db educatorAddr = do
+    let schema = educatorSchemaName educatorAddr
     logInfo $ "Creating a schema with name `"+|schema|+"`"
     setSchemaName db schema
     E.prepareEducatorSchema db
 
 instance AllocResource (PreparedSQL "multi-educator") where
-    type Deps (PreparedSQL "multi-educator") = (PostgresRealParamsRec, EducatorEthAddress)
+    type Deps (PreparedSQL "multi-educator") = (PostgresRealParamsRec, PubAddress)
     allocResource p =
         PreparedSQL <$>
         buildComponentR "SQL DB" (openPostgresDB' p) closePostgresDB
       where
-        openPostgresDB' (param, educatorId) = do
+        openPostgresDB' (param, educatorAddr) = do
             db <- openPostgresDB (PostgresParams $ PostgresReal param)
-            prepareMultiEducatorSchema db educatorId
+            prepareMultiEducatorSchema db educatorAddr
             return db
 
 -- | Context of some educator loaded by multi-educator.
@@ -64,16 +64,16 @@ newtype SingleEducatorResources = SingleEducatorResources E.EducatorResources
 
 mkSingleEducatorKeyParams
     :: MultiEducatorKeyParams
-    -> EducatorEthAddress
+    -> PubAddress
     -> Maybe PassPhrase
     -> E.EducatorKeyParamsRec
 mkSingleEducatorKeyParams
     (MultiEducatorKeyParams keyDir)
-    (EducatorEthAddress educatorId)
+    educatorAddr
     mpassphrase =
         finaliseDeferredUnsafe mempty &: do
             zoom (sub #keyParams) $ do
-                option #path       .= Just (keyDir </> toString educatorId <.> "key")
+                option #path       .= Just (keyDir </> toString (toText educatorAddr) <.> "key")
                 option #genNew     .= True
                 option #passphrase .= mpassphrase
 

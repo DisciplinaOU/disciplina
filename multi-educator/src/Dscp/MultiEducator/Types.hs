@@ -1,36 +1,31 @@
+{- |
+  Only web instances for `PubAddress`
+-}
 module Dscp.MultiEducator.Types
-    ( EducatorEthAddress (..)
-    ) where
+       ( -- * Reexports
+         PubAddress
+       , pubAddrFromText
+       ) where
 
 import Universum
 
 import Control.Lens ((?=))
-import Data.Aeson (FromJSON (..), ToJSON (..))
 import qualified Data.Swagger as S
-import Fmt (Buildable (..))
 import Servant (FromHttpApiData (..), ToHttpApiData (..))
 
+import Dscp.Core.PubChain
 import Dscp.Util
 import Dscp.Web.Swagger
 
--- | Educator id we receive from AAA service.
-newtype EducatorEthAddress = EducatorEthAddress Text
-    deriving (Show, Eq, Ord, IsString)
+instance ToHttpApiData PubAddress where
+    toUrlPiece = toText
 
-instance Buildable EducatorEthAddress where
-    build (EducatorEthAddress eId) = "\"" <> build eId <> "\""
+instance FromHttpApiData PubAddress where
+    parseUrlPiece = first toText . pubAddrFromText
 
-deriving instance ToJSON EducatorEthAddress
-deriving instance FromJSON EducatorEthAddress
+type instance ParamDescription PubAddress = "Educator's Ethereum address."
 
-instance ToHttpApiData EducatorEthAddress where
-    toUrlPiece (EducatorEthAddress eid) = eid
-
-instance FromHttpApiData EducatorEthAddress where
-    parseUrlPiece = pure . EducatorEthAddress
-
-type instance ParamDescription EducatorEthAddress = "Educator's Ethereum address."
-
-instance S.ToParamSchema EducatorEthAddress where
+instance S.ToParamSchema PubAddress where
     toParamSchema _ = mempty &: do
         S.type_ ?= S.SwaggerString
+        S.format ?= "hex"

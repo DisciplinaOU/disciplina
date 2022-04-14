@@ -130,6 +130,7 @@ library:
     - loot-log
     - lens
     - memory
+    - memory-hexstring
     - mon
     - mtl
     - o-clock
@@ -159,6 +160,7 @@ library:
     - unliftio
     - unordered-containers
     - vinyl
+    - web3-solidity
     - yaml
 
 tests:

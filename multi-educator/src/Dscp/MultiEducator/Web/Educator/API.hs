@@ -32,7 +32,7 @@ import Dscp.Educator.Web.Auth
 import Dscp.Educator.Web.Educator.API
 import Dscp.Educator.Web.Educator.Error
 import Dscp.Educator.Web.Student.API
-import Dscp.MultiEducator.Types
+import Dscp.MultiEducator.Types ()
 import Dscp.MultiEducator.Web.Educator.Auth
 import Dscp.Web.Swagger.UI
 
@@ -118,7 +118,7 @@ type MultiStudentAPI =
     (WithSwaggerUI ProtectedMultiStudentAPI)
 
 type ProtectedMultiStudentAPI =
-    Capture "educator" EducatorEthAddress :> ProtectedStudentAPI
+    Capture "educator" PubAddress :> ProtectedStudentAPI
     -- @martoon: I guess it's weird that we accept uuid here?
     -- Does student even know it?
 

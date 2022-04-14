@@ -10,6 +10,7 @@ module Pdf.Scanner
     ) where
 
 import Universum
+
 import qualified Data.ByteString.Base64 as Base64
 import qualified Data.ByteString.Lazy as LBS
 import Data.Hashable

@@ -89,6 +89,20 @@ packages:
   original:
     hackage: scale-1.0.0.0
 - completed:
+    hackage: web3-crypto-1.0.0.0@sha256:51eb8371591e3039b68715c7960c6fc550b2297ca5c56714f26df7d4fc91cee3,3988
+    pantry-tree:
+      size: 1403
+      sha256: 1443e85e99fef5ce837a24b7815547a504444985c9e71130e38708ddadbf8be2
+  original:
+    hackage: web3-crypto-1.0.0.0
+- completed:
+    hackage: web3-solidity-1.0.0.0@sha256:1fad7f03221bdf279a250572616f79ed0fe104114c075506942bde833d85cd36,4503
+    pantry-tree:
+      size: 1663
+      sha256: 178b63d658cda2823e05d83170b873b9e3aecd939e2dbc229bfb30bef3dbd5cd
+  original:
+    hackage: web3-solidity-1.0.0.0
+- completed:
     subdir: servant-util
     name: servant-util
     version: '0.2'
