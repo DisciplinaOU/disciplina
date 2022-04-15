@@ -61,13 +61,15 @@ checkFairCV =
     --     maybe False (checkProofPure sAddr eAddr proof) <$>
     --         runSdMempoolLocked (getPublicationByHeaderHash h)
 
-    checkProofPure sAddr _ _ proof =
+    checkProofPure sAddr _ _ (TxIdAnnotated mTxId proof) =
         -- let root = ptw ^. ptwTxL.ptHeaderL.pbhBodyProof
             -- pubAuthor = ptw ^. ptwTxL.ptAuthorL
         -- in verifyPubTxWitnessed ptw &&
            -- eAddr == pubAuthor &&
            -- root == mprRoot proof &&
-           all (checkTxSubmission sAddr) (mprProof proof)
+        TxIdAnnotated mTxId $
+            all (checkTxSubmission sAddr) (mprProof proof) &&
+            isJust mTxId
 
     checkTxSubmission sAddr (PrivateTx sSub _ _) =
         isRight $ verifyStudentSubmission sAddr sSub
@@ -75,7 +77,7 @@ checkFairCV =
     buildResults results =
         FairCVCheckResult
         { fairCVCheckResults = results
-        , fairCVFullyValid = all and results
+        , fairCVFullyValid = all (and . fmap tiaVal) results
         }
 
 checkFairCVPDF
@@ -91,7 +93,7 @@ checkFairCVPDF pdf = do
 
     let checkRes       = checkFairCV fairCV
         pdfHashIsValid =
-            (  fairCV^?to(fcCV).each.each.to(toList).each.ptSignedSubmission.ssSubmission.sContentsHash
+            (  fairCV ^? fcCVL.each.each.tiaValL.to(toList).each.ptSignedSubmission.ssSubmission.sContentsHash
             == Just (coerce $ hash source)
             )
 

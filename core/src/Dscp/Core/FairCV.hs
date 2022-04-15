@@ -1,8 +1,13 @@
+{-# LANGUAGE DeriveFunctor #-}
+
 -- | Datatypes and functions related to FairCV functionality.
 module Dscp.Core.FairCV
        (
          -- * Fair CV
          FairCVTemplate (..)
+       , TxIdAnnotated (..)
+       , tiaTxIdL
+       , tiaValL
        , fcStudentAddrL
        , fcStudentNameL
        , fcCVL
@@ -10,6 +15,7 @@ module Dscp.Core.FairCV
        , FairCVReady
        , readyFairCV
        , unReadyFairCV
+       , annotateWithTxId
        , singletonFCV
        , mergeFairCVs
        , addProof
@@ -21,19 +27,30 @@ module Dscp.Core.FairCV
        ) where
 
 import Universum
-import Control.Lens (makeLensesWith)
+
+import Control.Lens (makeLensesWith, (?~))
 import qualified Data.Map.Merge.Strict as M
 import qualified Data.Map.Strict as M
 import Fmt (Buildable (..), mapF, (+|), (|+))
 
-import Dscp.Core.PubChain
 import Dscp.Core.Foundation
+import Dscp.Core.PubChain
 import Dscp.Crypto
 import Dscp.Util
 
+-- | Datatype which provides a public transaction ID alongside the
+-- block proof, if it exists
+data TxIdAnnotated a = TxIdAnnotated
+  { tiaTxId :: Maybe PubTxId
+  , tiaVal  :: a
+  } deriving (Show, Eq, Generic, Functor)
+
+withoutTxId :: a -> TxIdAnnotated a
+withoutTxId = TxIdAnnotated Nothing
+
 -- | Two-level map which represents common structure for all `FairCV*`
 -- types
-type GenericFairCV a = Map PubAddress (Map PrivateHeaderHash a)
+type GenericFairCV a = Map PubAddress (Map PrivateHeaderHash (TxIdAnnotated a))
 
 -- | FairCV template, which contains the common data for both
 -- unprocessed and pre-processed FairCVs.
@@ -43,7 +60,12 @@ data FairCVTemplate proof = FairCV
     , fcCV          :: !(GenericFairCV proof)
     } deriving (Show, Eq, Generic)
 
+makeLensesWith postfixLFields ''TxIdAnnotated
 makeLensesWith postfixLFields ''FairCVTemplate
+
+instance Buildable a => Buildable (TxIdAnnotated a) where
+    build (TxIdAnnotated txId val) =
+        "TxIdAnnotated { txId = "+|txId|+", val = "+|val|+" }"
 
 instance Buildable proof => Buildable (FairCVTemplate proof) where
     build (FairCV addr name cv) =
@@ -58,13 +80,26 @@ type FairCV = FairCVTemplate (MerkleProof PrivateTx)
 -- roots pre-calculated).
 type FairCVReady = FairCVTemplate (MerkleProofReady PrivateTx)
 
+
+-- | Helper function: maps annotated values inside FairCV
+mapProofs
+  :: (TxIdAnnotated a -> TxIdAnnotated b)
+  -> FairCVTemplate a -> FairCVTemplate b
+mapProofs f = fcCVL %~ fmap (fmap f)
+
 -- | Pre-process all the proofs in @'FairCV'@
 readyFairCV :: FairCV -> FairCVReady
-readyFairCV = fcCVL %~ fmap (fmap readyProof)
+readyFairCV = mapProofs $ fmap readyProof
 
 -- | Strip roots from all the proofs in @'FairCVReady'@
 unReadyFairCV :: FairCVReady -> FairCV
-unReadyFairCV = fcCVL %~ fmap (fmap mprProof)
+unReadyFairCV = mapProofs $ fmap mprProof
+
+-- | Put `PubTxId` into every proof root of the FairCV.
+-- TODO: enough for certificates, not enough for more complex
+-- use cases.
+annotateWithTxId :: PubTxId -> FairCVTemplate proof -> FairCVTemplate proof
+annotateWithTxId txId = mapProofs $ tiaTxIdL ?~ txId
 
 -- | Make a FairCV from one proof.
 singletonFCV
@@ -77,7 +112,7 @@ singletonFCV
 singletonFCV sAddr sName educatorAddr blkHash proof =
     FairCV sAddr sName $
     M.singleton educatorAddr $
-    M.singleton blkHash proof
+    M.singleton blkHash $ withoutTxId proof
 
 -- | Merge two pre-processed FairCVs, checking if their common parts match.
 -- Does not check that student names match (student names are metadata,
@@ -86,11 +121,20 @@ mergeFairCVs :: FairCVReady -> FairCVReady -> Either Text FairCVReady
 mergeFairCVs (FairCV aAddr aName a) (FairCV bAddr _ b)
     | aAddr /= bAddr = Left "Student's addresses do not match"
     | otherwise = FairCV aAddr aName <$>
-                  unionWithA (unionWithA mergeProofs) a b
+                  unionWithA (unionWithA mergeAnnotatedProofs) a b
   where
     unionWithA f =
         M.mergeA M.preserveMissing M.preserveMissing $
         M.zipWithAMatched $ const f
+
+    mergeAnnotatedProofs (TxIdAnnotated tx1 a') (TxIdAnnotated tx2 b') =
+        equalIfNotMissing tx1 tx2 >>= \tx -> TxIdAnnotated tx <$> mergeProofs a' b'
+
+    equalIfNotMissing Nothing Nothing  = Right Nothing
+    equalIfNotMissing (Just a') Nothing = Right (Just a')
+    equalIfNotMissing Nothing (Just b') = Right (Just b')
+    equalIfNotMissing (Just a') (Just b') =
+        if a' == b' then Right (Just a') else Left "Transaction IDs do not match"
 
 -- | Adds a single Merkle proof to the FairCV.
 addProof

@@ -122,6 +122,16 @@ instance (FromJSON (MerkleProof a), HasHash a) => FromJSON (MerkleProofReady a) 
             fail "Proof and its root do not match"
         return reconstructed
 
+instance ToJSON a => ToJSON (TxIdAnnotated a) where
+    toJSON (TxIdAnnotated txId val) = object
+        [ "txId" .= txId
+        , "val" .= val
+        ]
+
+instance FromJSON a => FromJSON (TxIdAnnotated a) where
+    parseJSON = withObject "TxIdAnnotated" $ \o ->
+        TxIdAnnotated <$> (o .: "txId") <*> (o .: "val")
+
 instance Serialise (MerkleProof PrivateTx) =>
          ToJSON FairCV where
     toJSON FairCV {..} = object

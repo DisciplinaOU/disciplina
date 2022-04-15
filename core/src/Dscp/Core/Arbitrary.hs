@@ -261,6 +261,10 @@ instance Arbitrary Block where
     arbitrary = genericArbitrary
     shrink    = genericShrink
 
+instance Arbitrary a => Arbitrary (TxIdAnnotated a) where
+    arbitrary = genericArbitrary
+    shrink    = genericShrink
+
 -- | TODO: resolve the weird problem with _very_ long generation
 -- and produce larger FairCVs.
 instance Arbitrary FairCV where

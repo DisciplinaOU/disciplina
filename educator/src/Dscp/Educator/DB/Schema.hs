@@ -84,9 +84,9 @@ data BlockRowT f = BlockRow
     } deriving (Generic)
 
 data CertificateRowT f = CertificateRow
-    { crHash :: C f (Hash CertificateMeta)
-    , crMeta :: C f (PgJSONB CertificateMeta)
-    , crPdf  :: C f PDFBody
+    { crHash   :: C f (Hash CertificateMeta)
+    , crMeta   :: C f (PgJSONB CertificateMeta)
+    , crPdf    :: C f PDFBody
     } deriving (Generic)
 
 data EducatorSchema f = EducatorSchema

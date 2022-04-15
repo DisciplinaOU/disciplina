@@ -520,6 +520,9 @@ instance ToSchema (MerkleProof PrivateTx) where
 instance ToSchema (MerkleProofReady PrivateTx) where
     declareNamedSchema = gDeclareNamedSchema
 
+instance ToSchema a => ToSchema (TxIdAnnotated a) where
+    declareNamedSchema = gDeclareNamedSchema
+
 instance ToSchema FairCV where
     declareNamedSchema = gDeclareNamedSchema
 
