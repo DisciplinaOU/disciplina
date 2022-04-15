@@ -102,13 +102,13 @@ module Dscp.Core.Foundation.Educator
 import Universum
 import Control.Exception as E
 import Control.Lens (Getter, makeLenses, to)
-import qualified Data.ByteArray as BA
 import qualified Data.Text as T
 import Data.Time.Calendar (Day (..))
 import Data.Time.Clock (UTCTime (..), diffTimeToPicoseconds, picosecondsToDiffTime)
 import Fmt (Buildable (..), genericF, listF, mapF, (+|), (|+))
 
 import Dscp.Core.Foundation.Address (Address (..))
+import Dscp.Core.PubChain (PubAddress)
 import Dscp.Crypto
 import Dscp.Util
 
@@ -395,21 +395,21 @@ data GradeInfo = GradeInfo
 data CertificateIssuerInfo = CertificateIssuerInfo
     { ciiName    :: ItemDesc
     , ciiWebsite :: ItemDesc
-    , ciiId      :: Text
+    , ciiId      :: PubAddress
     } deriving (Show, Eq, Generic)
 
 -- | Datatype which is used for encoding a full certificate ID.
 data CertificateName = CertificateName
-    { cnEducatorId    :: Text
+    { cnEducatorId    :: PubAddress
     , cnCertificateId :: Hash CertificateMeta
     } deriving (Show, Eq, Generic)
 
-instance Buildable (StudentInfo) where
+instance Buildable StudentInfo where
     build (StudentInfo{..}) =
       "{ address = " +| siAddr |+
       " }"
 
-instance Buildable (GradeInfo) where
+instance Buildable GradeInfo where
     build (GradeInfo{..}) =
       "{ submission hash = " +| giSubmissionHash |+
       ", grade = " +| giGrade |+
@@ -450,8 +450,8 @@ instance Buildable CertificateMeta where
         ", specialization = "+|cmSpecialization|+" }"
 
 instance Buildable CertificateName where
-    build (CertificateName eId cId) =
-        "certificate { educator-id = "+|eId|+", hash = "+|build cId|+"}"
+    build (CertificateName eAddr cId) =
+        "certificate { educator-addr = "+|eAddr|+", hash = "+|build cId|+"}"
 
 
 ----------------------------------------------------------------------------
@@ -525,13 +525,12 @@ instance Buildable PrivateBlockHeader where
 -- Different for each educator.
 -- TODO: move to 'Genesis' module when it is formed somehow. Also, should
 -- private genesis hash actually make some sense?
-genesisHeaderHash :: Address -> PrivateHeaderHash
-genesisHeaderHash (Address addr) =
-    unsafeHash ("pvaforever" <> BA.convert addr :: ByteString)
+genesisHeaderHash :: PubAddress -> PrivateHeaderHash
+genesisHeaderHash = unsafeHash
 
 -- | Get previous block header, if previous block exists,
 -- 'Nothing' otherwise.
-getPrevBlockRefMaybe :: PrivateBlockHeader -> Address -> Maybe PrivateHeaderHash
+getPrevBlockRefMaybe :: PrivateBlockHeader -> PubAddress -> Maybe PrivateHeaderHash
 getPrevBlockRefMaybe PrivateBlockHeader {..} address =
     if _pbhPrevBlock == genesisHeaderHash address
     then Nothing

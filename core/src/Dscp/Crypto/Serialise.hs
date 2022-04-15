@@ -5,6 +5,8 @@
 
 module Dscp.Crypto.Serialise
        ( Raw
+       , encodeBA
+       , decodeBA
        ) where
 
 import Universum

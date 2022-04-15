@@ -11,7 +11,6 @@ module Dscp.Educator.DB.Schema
 
 import Universum hiding (_1, _2)
 
-import Data.ByteArray.HexString (HexString)
 import Database.Beam.Backend (runNoReturn)
 import Database.Beam.Postgres.Syntax (PgCommandSyntax (..), PgCommandType (..), emit)
 import Database.Beam.Schema.Tables (Beamable, C, Database, Nullable, Table (..), TableEntity,
@@ -78,7 +77,7 @@ data BlockRowT f = BlockRow
     , brHash         :: C f PrivateHeaderHash
     , brCreationTime :: C f Timestamp
     , brPrevHash     :: C f PrivateHeaderHash
-    , brPubTxId      :: C (Nullable f) HexString
+    , brPubTxId      :: C (Nullable f) PubTxId
     , brAtgDelta     :: C f ATGDelta
     , brMerkleRoot   :: C f (MerkleSignature PrivateTx)
     , brMerkleTree   :: C f (EmptyMerkleTree PrivateTx)

@@ -12,11 +12,22 @@ module Dscp.Core.PubChain
 
 import Universum
 
+import qualified Codec.Serialise as S
+import Dscp.Crypto.ByteArray (FromByteArray (..))
+import Dscp.Crypto.Serialise (encodeBA, decodeBA)
 import Data.Aeson (ToJSON, FromJSON, encode, eitherDecode)
 import qualified Data.Solidity.Prim.Address as Eth
 import qualified Data.ByteArray.HexString as Hex
-import Data.ByteArray (ByteArrayAccess, ByteArray)
+import Data.ByteArray (ByteArrayAccess (..), ByteArray, convert)
 import Fmt (Buildable (..))
+
+
+instance FromByteArray Hex.HexString
+
+-- | `Serialise` instance for `HexString`: useful for both Ethereum addresses and transaction IDs
+instance S.Serialise Hex.HexString where
+  encode = encodeBA
+  decode = decodeBA
 
 
 -- | Address on the public chain (Ethereum/Binance Smart Chain).
@@ -37,9 +48,21 @@ instance ToText PubAddress where
 instance Buildable PubAddress where
   build = build . toText
 
+instance ByteArrayAccess PubAddress where
+  length _ = 20
+  withByteArray = withByteArray . Hex.toHex
+
+instance FromByteArray PubAddress where
+  fromByteArray = Hex.fromHex . convert
+
+instance S.Serialise PubAddress where
+  encode = encodeBA
+  decode = decodeBA
+
 -- | Transform a `Text` string into `PubAddress`. Fails on ill-formed addresses
 pubAddrFromText :: Text -> Either String PubAddress
 pubAddrFromText = eitherDecode . encode
+
 
 -- | ID of public transaction, encoded as hex string.
 newtype PubTxId = PubTxId
@@ -57,6 +80,12 @@ instance Buildable PubTxId where
 
 instance ToText PubTxId where
   toText = Hex.toText . unPubTxId
+
+instance FromByteArray PubTxId
+
+instance S.Serialise PubTxId where
+  encode = encodeBA
+  decode = decodeBA
 
 -- | Transform a `Text` into `PubTxId`. Fails on ill-formed hex strings.
 pubTxIdFromText :: Text -> Either String PubTxId

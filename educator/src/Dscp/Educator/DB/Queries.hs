@@ -83,8 +83,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Time.Clock (getCurrentTime)
 import GHC.Exts (fromList)
-import Loot.Base.HasLens (HasCtx)
-import Data.ByteArray.HexString (HexString)
+import Loot.Base.HasLens (HasCtx, lensOf)
 import Pdf.Scanner (PDFBody)
 
 import Dscp.Core
@@ -92,12 +91,10 @@ import Dscp.Crypto
 import Dscp.DB.SQL.Error (asAlreadyExistsError, asReferenceInvalidError)
 import Dscp.DB.SQL.Functions
 import Dscp.DB.SQL.Util
-import Dscp.Educator.Resource
 import Dscp.Educator.DB.BlockData
 import Dscp.Educator.DB.Error
 import Dscp.Educator.DB.Instances ()
 import Dscp.Educator.DB.Schema
-import Dscp.Educator.Launcher.Marker
 import Dscp.Util
 import Dscp.Util.Rethrow
 
@@ -264,10 +261,10 @@ genesisBlockIdx :: BlockIdx
 genesisBlockIdx = 0
 
 getLastBlockIdAndIdx
-    :: (MonadIO m, HasCtx ctx m '[KeyResources EducatorNode])
+    :: (MonadIO m, HasCtx ctx m '[PubAddress])
     => DBT t m (Hash PrivateBlockHeader, BlockIdx)
 getLastBlockIdAndIdx = do
-    author <- ourAddress @EducatorNode
+    author <- view $ lensOf @PubAddress
     res <- runSelect . select $
         limit_ 1 $
         orderBy_ (desc_ . snd) $ do
@@ -284,10 +281,10 @@ getPrivateBlock = selectByPk pbHeaderFromRow (esBlocks es)
 
 -- TODO [DSCP-384]: requires index on Blocks.hash
 getPrivateBlockIdxByHash
-    :: (MonadIO m, HasCtx ctx m '[KeyResources EducatorNode])
+    :: (MonadIO m, HasCtx ctx m '[PubAddress])
     => PrivateHeaderHash -> DBT t m (Maybe BlockIdx)
 getPrivateBlockIdxByHash phHash = do
-    author <- ourAddress @EducatorNode
+    author <- view $ lensOf @PubAddress
     if phHash == genesisHeaderHash author
        then pure $ Just genesisBlockIdx
        else fmap maybeOneOrError . runSelect $ select query
@@ -308,7 +305,7 @@ getPrivateBlocksAfter idx =
         all_ (esBlocks es)
 
 getPrivateBlocksAfterHash
-    :: (MonadIO m, HasCtx ctx m '[KeyResources EducatorNode])
+    :: (MonadIO m, HasCtx ctx m '[PubAddress])
     => PrivateHeaderHash -> DBT t m (Maybe $ OldestFirst [] PrivateBlockHeader)
 getPrivateBlocksAfterHash phHash = do
     midx <- getPrivateBlockIdxByHash phHash
@@ -318,7 +315,7 @@ firstBlockTxIdx :: TxWithinBlockIdx
 firstBlockTxIdx = 0
 
 createPrivateBlock
-    :: (DBM m, HasCtx ctx m '[KeyResources EducatorNode])
+    :: (DBM m, HasCtx ctx m '[PubAddress])
     => [PrivateTx]
     -> Maybe ATGDelta
     -> DBT 'WithinTx m (Maybe PrivateBlockHeader)
@@ -368,7 +365,7 @@ createPrivateBlock txs delta = runMaybeT $ do
 markBlockValidated
   :: DBM m
   => PrivateHeaderHash
-  -> HexString
+  -> PubTxId
   -> DBT 'WithinTx m Bool
 markBlockValidated blkHash txId = fmap anyAffected $
     runUpdate $ update
@@ -378,7 +375,7 @@ markBlockValidated blkHash txId = fmap anyAffected $
 
 
 dumpNonChainedTransactions
-    :: (DBM m, HasCtx ctx m '[KeyResources EducatorNode])
+    :: (DBM m, HasCtx ctx m '[PubAddress])
     => Maybe ATGDelta
     -> DBT 'WithinTx m (Maybe PrivateBlockHeader)
 dumpNonChainedTransactions atgDelta = do

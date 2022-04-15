@@ -26,13 +26,14 @@ import qualified Data.Map.Merge.Strict as M
 import qualified Data.Map.Strict as M
 import Fmt (Buildable (..), mapF, (+|), (|+))
 
+import Dscp.Core.PubChain
 import Dscp.Core.Foundation
 import Dscp.Crypto
 import Dscp.Util
 
 -- | Two-level map which represents common structure for all `FairCV*`
 -- types
-type GenericFairCV a = Map Address (Map PrivateHeaderHash a)
+type GenericFairCV a = Map PubAddress (Map PrivateHeaderHash a)
 
 -- | FairCV template, which contains the common data for both
 -- unprocessed and pre-processed FairCVs.
@@ -69,7 +70,7 @@ unReadyFairCV = fcCVL %~ fmap (fmap mprProof)
 singletonFCV
     :: Address                    -- ^ Student's address
     -> Text                       -- ^ Student's name
-    -> Address                    -- ^ Educator's address
+    -> PubAddress                 -- ^ Educator's address
     -> PrivateHeaderHash          -- ^ Private block header hash
     -> MerkleProofReady PrivateTx -- ^ Merkle proof
     -> FairCVReady
@@ -93,7 +94,7 @@ mergeFairCVs (FairCV aAddr aName a) (FairCV bAddr _ b)
 
 -- | Adds a single Merkle proof to the FairCV.
 addProof
-    :: Address
+    :: PubAddress
     -> PrivateHeaderHash
     -> MerkleProofReady PrivateTx
     -> FairCVReady
@@ -106,7 +107,7 @@ addProof educatorAddr blkHash proof fcv@(FairCV sAddr sName _) =
 privateBlockToFairCV
     :: PrivateBlockHeader
     -> NonEmpty PrivateTx
-    -> Address
+    -> PubAddress
     -> (Address, Text)
     -> FairCVReady
 privateBlockToFairCV blkHeader txs educator (student, studentName) =

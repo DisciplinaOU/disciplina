@@ -47,7 +47,6 @@ import Dscp.DB.SQL
 import Dscp.Educator.DB
 import Dscp.Educator.Launcher.Mode
 import Dscp.Educator.Launcher.Resource (CertificateIssuerResource)
-import Dscp.Educator.Resource
 import Dscp.Resource.AppDir
 import Dscp.Util.Aeson
 import Dscp.Web.Swagger
@@ -65,7 +64,7 @@ type MonadEducatorWeb ctx m =
         [ LoggingIO
         , AppDir
         , SQL
-        , KeyResources EducatorNode
+        , PubAddress
         , Language
         , Pdf.LatexPath
         , Pdf.ResourcePath

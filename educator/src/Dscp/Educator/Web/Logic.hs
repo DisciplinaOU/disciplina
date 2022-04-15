@@ -11,6 +11,7 @@ import Universum
 
 import Control.Lens (to, each)
 import Data.Coerce (coerce)
+import Loot.Base.HasLens (lensOf)
 import qualified Data.Map.Strict as M
 import qualified Data.Aeson as Aeson
 
@@ -19,8 +20,6 @@ import Dscp.Crypto
 import Dscp.Web
 import Dscp.DB.SQL
 import Dscp.Educator.DB
-import Dscp.Educator.Launcher.Mode
-import Dscp.Educator.Resource
 import Dscp.Educator.Web.Educator.Types
 import Dscp.Educator.Web.Types
 import Dscp.Util.Aeson
@@ -45,8 +44,7 @@ getEducatorStatus
     :: MonadEducatorWeb ctx m
     => m EducatorInfo
 getEducatorStatus = do
-    sk <- ourSecretKeyData @EducatorNode
-    let eiAddress = skAddress sk
+    eiAddress <- view $ lensOf @PubAddress
     return EducatorInfo {..}
 
 

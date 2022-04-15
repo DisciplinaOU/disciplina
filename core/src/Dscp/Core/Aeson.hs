@@ -20,6 +20,7 @@ import Dscp.Core.Fees
 import Dscp.Core.Foundation
 import Dscp.Core.Genesis
 import Dscp.Core.Governance
+import Dscp.Core.PubChain
 import Dscp.Crypto
 import Dscp.Util (Base (Base16, Base64), leftToFail, nothingToFail)
 import Dscp.Util.Aeson (dscpAesonOptions, parseJSONSerialise, toJSONSerialise)
@@ -194,6 +195,11 @@ instance ToJSONKey Address where
     toJSONKey = toJSONKeyText addrToText
 instance FromJSONKey Address where
     fromJSONKey = FromJSONKeyTextParser $ leftToFail . addrFromText
+
+instance ToJSONKey PubAddress where
+    toJSONKey = toJSONKeyText toText
+instance FromJSONKey PubAddress where
+    fromJSONKey = FromJSONKeyTextParser $ leftToFail . pubAddrFromText
 
 deriving instance FromJSON GenAddressMap
 deriving instance ToJSON GenAddressMap

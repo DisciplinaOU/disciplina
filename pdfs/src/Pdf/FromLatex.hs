@@ -194,9 +194,9 @@ makeQr
     -> FilePath
     -> m ()
 makeQr ciInfo info baseUrl path =
-    let eId = ciiId ciInfo
+    let eAddr = ciiId ciInfo
         cId = getId $ cfiMeta info
-        cName = toUrlPiece $ CertificateName eId cId
+        cName = toUrlPiece $ CertificateName eAddr cId
         prefix = toText $ showBaseUrl baseUrl
 
         qrCode = nothingToPanic "Came up with too long URL" $

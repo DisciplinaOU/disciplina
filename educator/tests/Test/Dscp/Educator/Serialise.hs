@@ -5,7 +5,6 @@ module Test.Dscp.Educator.Serialise
 import Universum
 import Dscp.Util.Test
 
-import Dscp.Educator.Resource (KeyJson (..), KeyfileContent)
 import Dscp.Educator.Web.Types
 import Dscp.Educator.Web.Educator.Types
 import Dscp.Educator.Web.Student.Types
@@ -16,8 +15,6 @@ spec_Serialisation :: Spec
 spec_Serialisation = describe "Serialisation" $ do
     describe "Aeson" $ do
         describe "roundtrip" $ do
-            aesonRoundtripProp @KeyJson
-            aesonRoundtripProp @KeyfileContent
             aesonRoundtripProp @IsEnrolled
             aesonRoundtripProp @IsFinal
             aesonRoundtripProp @IsGraded

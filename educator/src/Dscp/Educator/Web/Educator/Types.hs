@@ -41,8 +41,6 @@ import Control.Lens (at, from, (.=), (?=))
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
 import qualified Data.Aeson.TH as A
-import Data.ByteArray.HexString (HexString)
-import qualified Data.ByteArray.HexString as HX
 import Data.Char (toLower)
 import Data.Swagger (ToSchema (..))
 import qualified Data.Swagger as S
@@ -93,7 +91,7 @@ data NewStudentAssignment = NewStudentAssignment
     } deriving (Show, Eq, Generic)
 
 data EducatorInfo = EducatorInfo
-    { eiAddress  :: Address
+    { eiAddress  :: PubAddress
     -- , eiBalances :: BlocksOrMempool Coin
     } deriving (Show, Eq, Ord, Generic)
 
@@ -126,7 +124,7 @@ data CertificateWithHeader = CertificateWithHeader
     } deriving (Show, Eq, Generic)
 
 data CertificateTxAndBlock = CertificateTxAndBlock
-    { ctabTxId      :: HexString
+    { ctabTxId      :: PubTxId
     , ctabBlockHash :: Hash PrivateBlockHeader
     } deriving (Show, Eq, Generic)
 
@@ -216,9 +214,6 @@ educatorSubmissionInfoFromRow (SubmissionRow{..}, tx) =
 ---------------------------------------------------------------------------
 -- Buildable instances
 ---------------------------------------------------------------------------
-
-instance Buildable HexString where
-    build = build . HX.toText
 
 instance Buildable (NewStudent) where
     build (NewStudent{..}) =
@@ -375,10 +370,17 @@ type instance ParamDescription PDFBody =
     "Content of a PDF file."
 type instance ParamDescription IsGraded =
     "Return only submissions with/without grade."
-type instance ParamDescription HexString =
-    "Byte string in hexadecimal format"
+type instance ParamDescription PubAddress =
+    "Public Solidity (ETH/BSC) address"
+type instance ParamDescription PubTxId =
+    "Public transaction ID (ETH/BSC transaction)"
 
-instance S.ToParamSchema HexString where
+instance S.ToParamSchema PubTxId where
+    toParamSchema _ = mempty &: do
+        S.type_ ?= S.SwaggerString
+        S.format ?= "hex"
+
+instance S.ToParamSchema PubAddress where
     toParamSchema _ = mempty &: do
         S.type_ ?= S.SwaggerString
         S.format ?= "hex"
@@ -408,11 +410,17 @@ instance ToSchema a => ToSchema (Counted a) where
             S.format ?= "int32"
             S.description ?= "Count of items returned"
 
-instance ToSchema HexString where
+instance ToSchema PubTxId where
     declareNamedSchema p =
         declareSimpleSchema "Transaction ID" $ S.byteSchema &: do
             setParamDescription p
-            setExample ("0xa9cb7afcdabcca4dad4db824c6372a22213602897db85371968c9b75120fb850" :: HexString)
+            setExample ("0xa9cb7afcdabcca4dad4db824c6372a22213602897db85371968c9b75120fb850" :: PubTxId)
+
+instance ToSchema PubAddress where
+    declareNamedSchema p =
+        declareSimpleSchema "ETH/BSC address" $ S.byteSchema &: do
+            setParamDescription p
+            setExample ("0xFf8Af36Fc80FcF76f0B444A332058d9641B8e473" :: PubAddress)
 
 instance ToSchema Coin where
     declareNamedSchema p =

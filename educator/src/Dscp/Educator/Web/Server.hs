@@ -10,7 +10,6 @@ module Dscp.Educator.Web.Server
 import Universum
 
 import Fmt ((+|), (|+))
-import Loot.Base.HasLens (lensOf)
 import Loot.Log (logInfo)
 import Network.HTTP.Types.Header (hAuthorization, hContentType)
 import Network.Wai (Middleware)
@@ -25,8 +24,7 @@ import Dscp.Config
 import Dscp.DB.SQL
 import Dscp.Educator.Config
 import Dscp.Educator.DB (existsStudent)
-import Dscp.Educator.Launcher.Mode (EducatorNode, EducatorWorkMode)
-import Dscp.Educator.Resource (KeyResources, krPublicKey)
+import Dscp.Educator.Launcher.Mode (EducatorWorkMode)
 import Dscp.Educator.Web.Auth
 import Dscp.Educator.Web.Bot
 import Dscp.Educator.Web.Educator (EducatorPublicKey (..), FullEducatorAPI,
@@ -115,13 +113,16 @@ serveEducatorAPIsReal = do
         studentAPINoAuth  = webCfg ^. option #studentAPINoAuth
     unliftIO <- askUnliftIO
 
-    educatorKeyResources <- view (lensOf @(KeyResources EducatorNode))
     (studentCheckAction, studentApiServer) <-
           mkStudentApiServer (convertStudentApiHandler unliftIO) serverAddress botConfig
     whenNoAuth studentAPINoAuth $
         liftIO . void . runStudentCheckAction studentCheckAction
 
-    let educatorPublicKey = EducatorPublicKey $ educatorKeyResources ^. krPublicKey
+    -- TODO: removed this authentication method because keyResources are obsolete.
+    -- Trying to authenticate with token with educator running will always fail now.
+    -- educatorKeyResources <- view (lensOf @(KeyResources EducatorNode))
+    -- let educatorPublicKey = EducatorPublicKey $ educatorKeyResources ^. krPublicKey
+    let educatorPublicKey = EducatorPublicKey $ error "Educator PubKey authentication is removed"
     let srvCtx = educatorPublicKey :. educatorAPINoAuth :.
                  studentCheckAction :. studentAPINoAuth :.
                  EmptyContext

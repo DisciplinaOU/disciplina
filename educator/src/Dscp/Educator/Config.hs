@@ -21,11 +21,11 @@ import Time (Second, Time)
 import Universum
 
 import Dscp.Config
+import Dscp.Core.PubChain (PubAddress)
 import Dscp.Core.Foundation.Educator (ItemDesc (..), Language (..))
 import Dscp.Resource.Logging (LoggingParams, basicLoggingParams)
 import Dscp.Core.Web
 import Dscp.DB.SQL
-import Dscp.Educator.Launcher.Params
 import Dscp.Educator.Web.Config
 import Dscp.Resource.AppDir (AppDirParam)
 import Dscp.Util
@@ -35,7 +35,7 @@ type EducatorConfig =
        '[ "logging" ::< LoggingParams
         , "db" ::< PostgresRealParams
         , "appDir" ::< AppDirParam
-        , "keys" ::< EducatorKeyParams
+        , "pubAddress" ::: PubAddress
         , "api" ::< EducatorWebConfig
         , "publishing" ::<
            '[ "period" ::: Time Second
@@ -64,7 +64,6 @@ defaultEducatorConfig = mempty
     & sub #educator . sub #logging .~ basicLoggingParams "educator" False
     & sub #educator . sub #db .~ defaultPostgresRealParams
     & sub #educator . sub #appDir . tree #param . selection ?~ "os"
-    & sub #educator . sub #keys . sub #keyParams .~ defaultBaseKeyParams
     & sub #educator . sub #api . sub #botConfig . tree #params . selection ?~ "disabled"
     & sub #educator . sub #certificates . option #latex ?~ "xelatex"
     & sub #educator . sub #certificates . option #downloadBaseUrl ?~ defBaseUrl

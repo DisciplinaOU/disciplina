@@ -8,7 +8,6 @@ import Universum
 import Codec.Serialise as Codec (deserialise)
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteArray as BA
-import Data.ByteArray.HexString (HexString)
 import Data.Time.Clock (UTCTime)
 import Database.Beam.Backend (BackendFromField, BeamBackend, BeamSqlBackend, FromBackendRow (..))
 import Database.Beam.Backend.SQL.SQL92 (HasSqlValueSyntax (..))
@@ -80,10 +79,11 @@ EnumInstanceDec(DocumentType a)
 
 {- Instances via FromByteArray -}
 
-instance FromByteArray HexString
+ByteArrayInstanceEnc(PubAddress)
+ByteArrayInstanceDec(PubAddress)
 
-ByteArrayInstanceEnc(HexString)
-ByteArrayInstanceDec(HexString)
+ByteArrayInstanceEnc(PubTxId)
+ByteArrayInstanceDec(PubTxId)
 
 ByteArrayInstanceEnc(Hash a)
 ByteArrayInstanceDec(Hash a)
@@ -170,7 +170,8 @@ instance (Typeable a, BeamBackend be, BackendFromField be (TYPE a)) => FromBacke
 -- For Postgres they all refer to 'FromField' instances
 GenFromBackendRow(ItemDesc)
 GenFromBackendRow(Timestamp)
-GenFromBackendRow(HexString)
+GenFromBackendRow(PubAddress)
+GenFromBackendRow(PubTxId)
 GenFromBackendRow2arity(Hash)
 GenFromBackendRow(Address)
 GenFromBackendRow(Course)
@@ -199,7 +200,8 @@ GenHasSqlEqualityCheck(Subject)
 GenHasSqlEqualityCheck(Grade)
 GenHasSqlEqualityCheck(TxBlockIdx)
 GenHasSqlEqualityCheck(BlockIdx)
-GenHasSqlEqualityCheck(HexString)
+GenHasSqlEqualityCheck(PubAddress)
+GenHasSqlEqualityCheck(PubTxId)
 GenHasSqlEqualityCheck(Hash a)
 GenHasSqlEqualityCheck(AssignmentType)
 

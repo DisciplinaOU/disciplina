@@ -28,7 +28,6 @@ import Dscp.Crypto
 import Dscp.DB.SQL
 import Dscp.Educator.Config
 import Dscp.Educator.Launcher
-import Dscp.Educator.Resource
 import Dscp.Educator.TestConfig
 import Dscp.Resource.AppDir
 import Dscp.Rio
@@ -43,7 +42,7 @@ type Trololo m = (MonadThrow m, MonadCatch m)
 
 data TestEducatorCtx = TestEducatorCtx
     { _tecEducatorDb       :: SQL
-    , _tecKeys             :: KeyResources EducatorNode
+    , _tecPubAddress       :: PubAddress
     , _tecLanguage         :: Language
     , _tecPdfLatexPath     :: Pdf.LatexPath
     , _tecPdfResourcePath  :: Pdf.ResourcePath
@@ -66,6 +65,9 @@ testGenesisSecrets = detGen 123 $ vectorUnique 10
 
 testSomeGenesisSecret :: SecretKey
 testSomeGenesisSecret = L.head testGenesisSecrets
+
+testPubAddress :: PubAddress
+testPubAddress = detGen 123 arbitrary
 
 resourcePathVarName :: String
 resourcePathVarName = "PDF_RESOURCE_PATH"
@@ -96,7 +98,7 @@ runTestSqlM testDb action =
     withEducatorConfig testEducatorConfig $
     withPostgresDb testDb $ \rollbackInEnd db ->
     runRIO testLogging $ do
-        let _tecKeys = KeyResources $ mkSecretKeyData testSomeGenesisSecret
+        let _tecPubAddress = testPubAddress
         let _tecEducatorDb = db
         let _tecLogging = testLogging
         let _tecLanguage = EN

@@ -8,7 +8,7 @@ module Dscp.Educator.Launcher.Resource
        , erLogging
        , erAppDir
        , erDB
-       , erKeys
+       , erPubAddress
        , erPdfLatexPath
        , erPdfResourcePath
        , erPdfCertIssuerRes
@@ -25,14 +25,12 @@ import System.Directory (doesDirectoryExist, findExecutable)
 import System.FilePath.Posix (isRelative, (</>))
 import Universum
 
+import Dscp.Core.PubChain
 import Dscp.Config
 import Dscp.Core.Foundation.Educator (ItemDesc, Language)
 import Dscp.DB.SQL
 import Dscp.Educator.Config
 import Dscp.Educator.DB.Resource ()
-import Dscp.Educator.Launcher.Marker (EducatorNode)
-import Dscp.Educator.Launcher.Params
-import Dscp.Educator.Resource (KeyResources (..), linkStore)
 import Dscp.Resource.AppDir
 import Dscp.Resource.Class (AllocResource (..), buildComponentR)
 import Dscp.Util
@@ -51,7 +49,7 @@ data EducatorResources = EducatorResources
     { _erLogging          :: !LoggingIO
     , _erAppDir           :: !AppDir
     , _erDB               :: !SQL
-    , _erKeys             :: !(KeyResources EducatorNode)
+    , _erPubAddress       :: !PubAddress
     , _erLanguage         :: !Language
     , _erPdfLatexPath     :: !Pdf.LatexPath
     , _erPdfResourcePath  :: !Pdf.ResourcePath
@@ -63,13 +61,9 @@ makeLenses ''EducatorResources
 deriveHasLensDirect ''EducatorResources
 
 
-instance AllocResource (KeyResources EducatorNode) where
-    type Deps (KeyResources EducatorNode) = (EducatorKeyParamsRec, AppDir)
-    allocResource (educatorCfg, appDir) =
-        let baseParams = educatorCfg ^. sub #keyParams
-        in buildComponentR "educator keys"
-           (linkStore baseParams appDir)
-           (const pass)
+instance AllocResource PubAddress where
+    type Deps PubAddress = PubAddress
+    allocResource = return
 
 instance AllocResource Language where
     type Deps Language = Language
@@ -106,7 +100,7 @@ instance AllocResource Pdf.DownloadBaseUrl where
     allocResource = return . Pdf.DownloadBaseUrl
 
 instance AllocResource CertificateIssuerResource where
-    type Deps CertificateIssuerResource = (ItemDesc, ItemDesc, Text)
+    type Deps CertificateIssuerResource = (ItemDesc, ItemDesc, PubAddress)
     allocResource (ciiName, ciiWebsite, ciiId) =
         return . KnownIssuerInfo $ Pdf.CertificateIssuerInfo {..}
 
@@ -117,7 +111,7 @@ instance AllocResource EducatorResources where
         _erLogging <- view (lensOf @LoggingIO)
         _erDB <- unPreparedSQL @"educator" <$> allocResource (cfg ^. sub #db)
         _erAppDir <- allocResource $ cfg ^. sub #appDir
-        _erKeys <- allocResource (educatorCfg ^. sub #educator . sub #keys, _erAppDir)
+        _erPubAddress <- allocResource $ cfg ^. option #pubAddress
         _erLanguage <- allocResource $ cfg ^. sub #certificates . option #language
         _erPdfLatexPath <- allocResource $ cfg ^. sub #certificates . option #latex
         _erPdfResourcePath <- allocResource ( cfg ^. sub #certificates . option #resources
@@ -126,6 +120,6 @@ instance AllocResource EducatorResources where
         _erPdfCertIssuerRes <- allocResource
             ( cfg ^. sub #certificates . sub #issuer . option #name
             , cfg ^. sub #certificates . sub #issuer . option #website
-            , cfg ^. sub #certificates . sub #issuer . option #id
+            , _erPubAddress
             )
         return EducatorResources {..}

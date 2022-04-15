@@ -26,12 +26,11 @@ import Loot.Log (LoggingIO, WithLogging)
 import qualified Pdf.FromLatex as Pdf
 import UnliftIO (MonadUnliftIO)
 
-import Dscp.Core (Language)
+import Dscp.Core (Language, PubAddress)
 import Dscp.DB.SQL (SQL)
 import Dscp.Educator.Config (HasEducatorConfig, withEducatorConfig)
 import Dscp.Educator.Launcher.Marker (EducatorNode)
 import Dscp.Educator.Launcher.Resource (CertificateIssuerResource, EducatorResources)
-import Dscp.Educator.Resource
 import Dscp.Resource.AppDir
 import Dscp.Rio (RIO)
 import Dscp.Util.HasLens
@@ -56,7 +55,7 @@ type EducatorOnlyWorkMode ctx m =
         [ LoggingIO
         , AppDir
         , SQL
-        , KeyResources EducatorNode
+        , PubAddress
         , Language
         , Pdf.LatexPath
         , Pdf.ResourcePath

@@ -6,7 +6,6 @@
 
 module Dscp.CommonCLI
        ( versionOption
-       , baseKeyParamsParser
        , passphraseReadM
        , timeReadM
        , coinReadM
@@ -22,18 +21,16 @@ import Universum
 import Fmt (pretty)
 import Data.Char (toLower)
 import Data.Version (showVersion)
-import Loot.Config.CLI (OptModParser, (.:+), (.:-), (.::), (<*<))
+import Loot.Config.CLI (OptModParser, (.:+), (.:-), (.::))
 import Options.Applicative (Parser, ReadM, auto, eitherReader, flag', help, infoOption, long,
                             maybeReader, metavar, option, str, strOption)
 import Servant.Client (BaseUrl (..), parseBaseUrl)
-import Text.InterpolatedString.Perl6 (qc)
 import Time (KnownRatName, Time, unitsP)
 
 import Dscp.Config (selectBranchParser)
 import Dscp.Core.Foundation
 import Dscp.Crypto (PassPhrase, mkPassPhrase)
 import Dscp.Resource.AppDir
-import Dscp.Educator.Resource
 import Dscp.Util
 import Dscp.Web (NetworkAddress (..), ServerParams, parseNetAddr)
 import Paths_disciplina_educator (version)
@@ -42,26 +39,6 @@ versionOption :: Parser (a -> a)
 versionOption = infoOption ("disciplina-" <> (showVersion version)) $
     long "version" <>
     help "Show version."
-
-baseKeyParamsParser :: Text -> OptModParser BaseKeyParams
-baseKeyParamsParser who =
-    #path       .:: kpKeyPathParser <*<
-    #genNew     .:: kpGenKeyParser <*<
-    #passphrase .:: kpPassphraseParser
-  where
-    kpKeyPathParser = fmap Just . strOption $
-         long [qc|{who}-keyfile|] <>
-         metavar "FILEPATH" <>
-         help [qc|Path to the secret key of the {who}. If not specified,
-                 <homeDir>/{who}.key is used.|]
-    kpGenKeyParser = flag' True $
-         long [qc|{who}-gen-key|] <>
-         help [qc|Generate the key and write it to '{who}-keyfile-path' path.
-                 If file already exists at given path, secret in it used.|]
-    kpPassphraseParser = fmap Just . option passphraseReadM $
-         long [qc|{who}-keyfile-pass|] <>
-         metavar "PASSWORD" <>
-         help "Password of secret key."
 
 appDirParamParser :: OptModParser AppDirParam
 appDirParamParser = #param .:+

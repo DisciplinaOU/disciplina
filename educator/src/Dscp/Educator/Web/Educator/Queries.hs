@@ -43,10 +43,8 @@ import Dscp.Crypto
 import Dscp.DB.SQL
 import Dscp.Educator.Constants
 import Dscp.Educator.DB
-import Dscp.Educator.Launcher.Marker
 import Dscp.Educator.Launcher.Resource (CertificateIssuerResource (..))
 import Dscp.Educator.Logic.Certificates
-import Dscp.Educator.Resource
 import Dscp.Educator.Web.Educator.Error
 import Dscp.Educator.Web.Educator.Types
 import Dscp.Educator.Web.Queries
@@ -294,7 +292,7 @@ educatorAddCertificate cert = do
             <&> nothingToPanic "impossible: failed to make non-empty block"
         -- This private block will be added to the public chain on itself shortly
 
-        eAddr <- ourAddress @EducatorNode
+        eAddr <- view $ lensOf @PubAddress
         let sName = unItemDesc . cmStudentName $ cfiMeta cert
         let faircv = privateBlockToFairCV blkHeader txs eAddr (defCertStudent, sName)
         pdf <- embedFairCVToCert (unReadyFairCV faircv) pdfRaw

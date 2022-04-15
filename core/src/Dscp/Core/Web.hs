@@ -15,6 +15,7 @@ import Servant.API
 import Servant.Client.Core (BaseUrl (..), parseBaseUrl, showBaseUrl)
 import System.FilePath (splitExtension)
 
+import Dscp.Core.PubChain
 import Dscp.Core.Foundation
 import Dscp.Crypto.Web ()
 import Dscp.Util
@@ -27,6 +28,11 @@ instance ToHttpApiData Address where
     toUrlPiece = addrToText
 instance FromHttpApiData Address where
     parseUrlPiece = addrFromText
+
+instance ToHttpApiData PubAddress where
+    toUrlPiece = toText
+instance FromHttpApiData PubAddress where
+    parseUrlPiece = first toText . pubAddrFromText
 
 deriving instance ToHttpApiData Course
 deriving instance FromHttpApiData Course
@@ -50,8 +56,8 @@ instance FromHttpApiData Timestamp where
         toTimestamp <$> parseQueryParam t
 
 instance ToHttpApiData CertificateName where
-    toUrlPiece (CertificateName eId cId) =
-        toBase64Url @ByteString (encodeUtf8 $ eId <> ":" <> toHex cId) <> ".pdf"
+    toUrlPiece (CertificateName eAddr cId) =
+        toBase64Url @ByteString (encodeUtf8 $ toText eAddr <> ":" <> toHex cId) <> ".pdf"
 
 instance FromHttpApiData CertificateName where
     parseUrlPiece txt = do
@@ -59,7 +65,8 @@ instance FromHttpApiData CertificateName where
         when (ext /= ".pdf") $
             Left "Wrong extension, `.pdf` is expected"
         name <- bimap toText decodeUtf8 $ fromBase64Url @ByteString $ toText name'
-        let (eId, cId'') = span (/= ':') name
+        let (eAddr', cId'') = span (/= ':') name
             cId' = drop 1 cId''
         cId <- parseUrlPiece $ toText cId'
-        return (CertificateName (toText eId) cId)
+        eAddr <- parseUrlPiece $ toText eAddr'
+        return $ CertificateName eAddr cId

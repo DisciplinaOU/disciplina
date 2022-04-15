@@ -23,10 +23,10 @@ import Time (Second, Time)
 import Universum
 
 import Dscp.CommonCLI
+import Dscp.Core.PubChain (PubAddress, pubAddrFromText)
 import Dscp.Core.Foundation.Educator (ItemDesc (..), toItemDesc)
 import Dscp.DB.SQL
 import Dscp.Educator.Config
-import Dscp.Educator.Launcher.Params (EducatorKeyParams)
 import Dscp.Educator.Web.Auth
 import Dscp.Educator.Web.Bot.Params
 import Dscp.Educator.Web.Config
@@ -99,9 +99,6 @@ studentApiNoAuthParser = noAuthContextParser . option addressReadM $
          \author, if invalid data is passed authentication will \
          \automatically roll back to no-auth scheme."
 
-educatorKeyParamsParser :: OptModParser EducatorKeyParams
-educatorKeyParamsParser = #keyParams .:< baseKeyParamsParser "educator"
-
 publishingPeriodParser :: Parser (Time Second)
 publishingPeriodParser = option timeReadM $
     long "publication-period" <>
@@ -137,12 +134,18 @@ pdfIssuerUrlParser = option (eitherReader $ left toString . toItemDesc . fromStr
     metavar "TEXT" <>
     help "Url of the certificate issuer"
 
+pubAddressParser :: Parser PubAddress
+pubAddressParser = option (eitherReader $ pubAddrFromText . fromString) $
+    long "pub-address" <>
+    metavar "ADDR" <>
+    help "Solidity address (ETH/BSC) of the Educator"
+
 educatorConfigParser :: OptModParser EducatorConfig
 educatorConfigParser =
     #educator .:<
         (#db .:< postgresParamsParser <*<
          #appDir .:< appDirParamParser <*<
-         #keys .:< educatorKeyParamsParser <*<
+         #pubAddress .:: pubAddressParser <*<
          #api .:< educatorWebConfigParser <*<
          #publishing .:<
             (#period .:: publishingPeriodParser) <*<
