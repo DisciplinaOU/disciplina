@@ -23,6 +23,7 @@ module Dscp.DB.SQL.Functions
        , runInsert
        , runInsertReturning
        , runUpdate
+       , runUpdateReturning
        , runUpdate_
        , runDelete
 
@@ -305,6 +306,12 @@ runUpdate
 runUpdate query =
     DBT . ReaderT $ \conn ->
         toAffected <$> Backend.Conduit.runUpdate conn query
+
+runUpdateReturning
+    :: (MonadIO m, _)
+    => SqlUpdate Postgres table
+    -> DBT t m [table Identity]
+runUpdateReturning = liftPg . Backend.runUpdateReturningList
 
 runUpdate_
     :: MonadIO m

@@ -21,10 +21,10 @@ dumpPrivateBlock = do
     case mblock of
         Nothing ->
             logInfo "No private chain updates, skipping private block creation"
-        Just block ->
+        Just (_, block) ->
             logInfo . fmt $
                 nameF "Created new private block" (build block)
-    return mblock
+    return $ fmap snd mblock
 
 -- | Update mempool with lacking private blocks.
 -- Heavyweight operation.

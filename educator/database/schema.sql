@@ -189,6 +189,24 @@ create index if not exists certificates_student_name
 create index if not exists certificates_student_name
     on certificates ((meta ->> 'number'));
 
+
+-- Tying together blocks and certificates
+--
+create table if not exists certificate_blocks (
+    __idx   INTEGER  not null,
+    __hash  BYTEA    not null,
+
+    primary key (__idx, __hash),
+    -- Certificate can potentially contain many blocks, and one block can
+    -- potentially be included in several certificates.
+
+    foreign key (__idx)  references blocks       (idx),
+    foreign key (__hash) references certificates (hash)
+);
+
+create index if not exists certificate_blocks_blk_idx  on certificate_blocks (__idx);
+create index if not exists certificate_blocks_cert_idx on certificate_blocks (__hash);
+
 -- Creating 'certificates_version' table.
 --
 create table if not exists certificates_version (

@@ -119,7 +119,7 @@ educatorApiHandlers =
             pure $ CertificateWithHeader (mkCertificate meta) blkHeader (hash blkHeader)
 
     , eMarkCertValidated = \(CertificateTxAndBlock txId blockHash) ->
-            void $ transact $ markBlockValidated blockHash txId
+            void $ transact $ educatorMarkBlockValidated blockHash txId
     }
 
 convertEducatorApiHandler

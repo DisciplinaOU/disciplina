@@ -18,6 +18,7 @@ module Dscp.Educator.Web.Educator.Queries
     , educatorAddCertificate
     , educatorGetCertificate
     , educatorGetCertificates
+    , educatorMarkBlockValidated
     ) where
 
 import Universum
@@ -50,6 +51,7 @@ import Dscp.Educator.Web.Educator.Types
 import Dscp.Educator.Web.Queries
 import Dscp.Educator.Web.Types
 import Dscp.Util
+import Dscp.Web.Types
 
 ----------------------------------------------------------------------------
 -- Filters for endpoints
@@ -267,8 +269,8 @@ educatorPostGrade subH grade = do
             }
 
 -- | Creates a private block consisting of transactions built from certificate grades
--- and generates a PDF certificate with embedded FairCV describing that block.
--- Also returns a header of the created block
+-- and generates a PDF certificate with an embedded FairCV (without `PubTxId` embedded yet).
+-- Also returns a header of the created block.
 educatorAddCertificate
     :: MonadEducatorWeb ctx m
     => CertificateFullInfo -> m (PrivateBlockHeader, PDFBody)
@@ -287,19 +289,53 @@ educatorAddCertificate cert = do
 
     transact $ do
         txs <- addCertificateGrades pdfHash (cfiMeta cert) (cfiGrades cert)
-        blkHeader <-
+        (blkIdx, blkHeader) <-
             createPrivateBlock (toList @(NonEmpty _) txs) Nothing
             <&> nothingToPanic "impossible: failed to make non-empty block"
-        -- This private block will be added to the public chain on itself shortly
 
         eAddr <- view $ lensOf @PubAddress
         let sName = unItemDesc . cmStudentName $ cfiMeta cert
         let faircv = privateBlockToFairCV blkHeader txs eAddr (defCertStudent, sName)
-        pdf <- embedFairCVToCert (unReadyFairCV faircv) pdfRaw
+        pdf <- embedFairCVToCert' (unReadyFairCV faircv) pdfRaw
 
-        createCertificate (cfiMeta cert) pdf
+        createCertificate (cfiMeta cert) blkIdx pdf
 
-        return (blkHeader, pdf)
+        return (blkHeader, pdfRaw)
+
+-- | Writes down the Ethereum transaction ID into the private block's row.
+-- Also update embedded `FairCVs` in the certificates
+educatorMarkBlockValidated
+  :: MonadEducatorWebQuery m
+  => PrivateHeaderHash
+  -> PubTxId
+  -> DBT 'WithinTx m Bool
+educatorMarkBlockValidated blkHash txId = do
+    affectedBlks <- runUpdateReturning $ update
+        (esBlocks es)
+        (\blk -> brPubTxId blk <-. val_ (Just txId))
+        (\blk -> brHash blk ==. val_ blkHash)
+
+    fmap or $ forM affectedBlks $ \blkRow -> do
+        let blkIdx = brIdx blkRow
+
+        certs <- runSelect . select $ do
+            BlockRowId blkIdx' :-: certHash <- all_ (esCertificateBlocks es)
+            guard_ (blkIdx' ==. val_ blkIdx)
+            related_ (esCertificates es) certHash
+
+        forM_ certs $ \certRow -> do
+             let pdf   = crPdf certRow
+                 cHash = crHash certRow
+
+             updatedPdf <- nothingToThrow InvalidFormat $
+                 mapFairCV (annotateWithTxId txId) pdf
+             runUpdate $ update
+                 (esCertificates es)
+                 (\crt -> crPdf crt <-. val_ updatedPdf)
+                 (\crt -> crHash crt ==. val_ cHash)
+
+        return True
+
 
 getCertificateIssuerInfo
     :: MonadEducatorWeb ctx m

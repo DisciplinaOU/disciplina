@@ -64,7 +64,6 @@ module Dscp.Educator.DB.Queries
        , getPrivateBlocksAfter
        , getPrivateBlocksAfterHash
        , createPrivateBlock
-       , markBlockValidated
        , dumpNonChainedTransactions
        , createSignedSubmission
        , setStudentAssignment
@@ -318,7 +317,7 @@ createPrivateBlock
     :: (DBM m, HasCtx ctx m '[PubAddress])
     => [PrivateTx]
     -> Maybe ATGDelta
-    -> DBT 'WithinTx m (Maybe PrivateBlockHeader)
+    -> DBT 'WithinTx m (Maybe (BlockIdx, PrivateBlockHeader))
 createPrivateBlock txs delta = runMaybeT $ do
     (prev, idx) <- lift getLastBlockIdAndIdx
 
@@ -338,8 +337,8 @@ createPrivateBlock txs delta = runMaybeT $ do
             ]
     guard (not isNullBlock)
 
-    lift . rewrapAlreadyExists (BlockWithIndexDomain bid) $
-        runInsert . insert (esBlocks es) $ insertExpression $
+    [blkRow] <- lift . rewrapAlreadyExists (BlockWithIndexDomain bid) $
+        runInsertReturning . insert (esBlocks es) $ insertExpression $
             BlockRow
             { brIdx = val_ bid
             , brHash = val_ $ hash hdr
@@ -359,25 +358,12 @@ createPrivateBlock txs delta = runMaybeT $ do
         runInsert . insert (esBlockTxs es) . insertValue $
             txId <:-:> bid
 
-    return hdr
-
--- | Writes down the Ethereum transaction ID into the private block's row.
-markBlockValidated
-  :: DBM m
-  => PrivateHeaderHash
-  -> PubTxId
-  -> DBT 'WithinTx m Bool
-markBlockValidated blkHash txId = fmap anyAffected $
-    runUpdate $ update
-        (esBlocks es)
-        (\blk -> brPubTxId blk <-. val_ (Just txId))
-        (\blk -> brHash blk ==. val_ blkHash)
-
+    return (brIdx blkRow, hdr)
 
 dumpNonChainedTransactions
     :: (DBM m, HasCtx ctx m '[PubAddress])
     => Maybe ATGDelta
-    -> DBT 'WithinTx m (Maybe PrivateBlockHeader)
+    -> DBT 'WithinTx m (Maybe (BlockIdx, PrivateBlockHeader))
 dumpNonChainedTransactions atgDelta = do
     txs <- getAllNonChainedTransactions
     createPrivateBlock txs atgDelta
@@ -571,12 +557,16 @@ getTransaction ptid = do
 
 createCertificate
     :: DBM m
-    => CertificateMeta -> PDFBody -> DBT t m ()
-createCertificate meta pdf =
+    => CertificateMeta -> BlockIdx -> PDFBody -> DBT t m ()
+createCertificate meta blkIdx pdf = do
+    let certHash = hash meta
     rewrapAlreadyExists (CertificateDomain (getId meta)) $
         runInsert . insert (esCertificates es) $ insertValue
             CertificateRow
-            { crHash = hash meta
+            { crHash = certHash
             , crMeta = PgJSONB meta
             , crPdf = pdf
             }
+
+    runInsert . insert (esCertificateBlocks es) . insertValue $
+        blkIdx <:-:> certHash

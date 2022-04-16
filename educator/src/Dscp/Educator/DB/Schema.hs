@@ -102,6 +102,7 @@ data EducatorSchema f = EducatorSchema
     , esBlockTxs            :: f (TableEntity $ RelationT 'Mx1 TransactionRowT BlockRowT)
 
     , esCertificates        :: f (TableEntity CertificateRowT)
+    , esCertificateBlocks   :: f (TableEntity $ RelationT 'MxM BlockRowT CertificateRowT)
     , esCertificatesVersion :: f (TableEntity $ SingletonT Word32)
     } deriving (Generic)
 

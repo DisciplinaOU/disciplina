@@ -69,8 +69,9 @@ instance (Beamable (PrimaryKey a), Beamable (PrimaryKey b)) =>
 
 -- | Make a relation from raw ids.
 (<:-:>)
-    :: (PrimaryKeyWrapper (PrimaryKey a Identity) ia
-       ,PrimaryKeyWrapper (PrimaryKey b Identity) ib)
+    :: ( PrimaryKeyWrapper (PrimaryKey a Identity) ia
+       , PrimaryKeyWrapper (PrimaryKey b Identity) ib
+       )
     => ia -> ib -> RelationT t a b Identity
 a <:-:> b = packPk a :-: packPk b
 infix 9 <:-:>

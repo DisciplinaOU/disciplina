@@ -1,6 +1,9 @@
 module Dscp.Educator.Logic.Certificates
     ( certGradeToPrivateTx
     , embedFairCVToCert
+    , embedFairCVToCert'
+    , extractFairCVFromCert
+    , mapFairCV
     , addCertificateGrades
     ) where
 
@@ -103,10 +106,27 @@ addCertificateGrades rawHash meta grades = do
                 tx <$ createTransaction tx
 
 -- | Build a certificate with embedded FairCV.
-embedFairCVToCert
+embedFairCVToCert :: FairCV -> Pdf.PDFBody -> Maybe Pdf.PDFBody
+embedFairCVToCert faircv pdf =
+    Pdf.inject (Pdf.MaxSearchLength Nothing) faircvEncoded pdf
+  where
+    faircvEncoded = LBS.toStrict $ A.encode faircv
+
+-- | Build a certificate with embedded FairCV, throws an exception
+-- if fails.
+embedFairCVToCert'
     :: (MonadThrow m)
     => FairCV -> Pdf.PDFBody -> m Pdf.PDFBody
-embedFairCVToCert faircv pdf = do
-    let faircvEncoded = LBS.toStrict $ A.encode faircv
-    Pdf.inject (Pdf.MaxSearchLength Nothing) faircvEncoded pdf
-        & nothingToThrow FailedToBuildCertificate
+embedFairCVToCert' =
+    nothingToThrow FailedToBuildCertificate ... embedFairCVToCert
+
+-- | Extract a FairCV from a certificate, if it is embedded inside.
+extractFairCVFromCert :: Pdf.PDFBody -> Maybe (FairCV, Pdf.PDFBody)
+extractFairCVFromCert pdf = do
+    (bs, pdfRaw) <- Pdf.unInject (Pdf.MaxSearchLength Nothing) pdf
+    res <- A.decodeStrict bs
+    return (res, pdfRaw)
+
+-- | Applies a function to the encoded FairCV and saves the result back
+mapFairCV :: (FairCV -> FairCV) -> Pdf.PDFBody -> Maybe Pdf.PDFBody
+mapFairCV f = extractFairCVFromCert >=> uncurry embedFairCVToCert . first f

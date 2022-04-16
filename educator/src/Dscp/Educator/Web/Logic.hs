@@ -13,13 +13,13 @@ import Control.Lens (to, each)
 import Data.Coerce (coerce)
 import Loot.Base.HasLens (lensOf)
 import qualified Data.Map.Strict as M
-import qualified Data.Aeson as Aeson
 
 import Dscp.Core
 import Dscp.Crypto
 import Dscp.Web
 import Dscp.DB.SQL
 import Dscp.Educator.DB
+import Dscp.Educator.Logic.Certificates
 import Dscp.Educator.Web.Educator.Types
 import Dscp.Educator.Web.Types
 import Dscp.Util.Aeson
@@ -84,12 +84,7 @@ checkFairCVPDF
     :: MonadThrow m
     => Pdf.PDFBody -> m FairCVAndCheckResult
 checkFairCVPDF pdf = do
-    let maybeFairCV = do
-            (fairCVencoded, Pdf.PDFBody source) <- Pdf.unInject (Pdf.MaxSearchLength Nothing) pdf
-            res <- Aeson.decodeStrict fairCVencoded
-            return (res, source)
-
-    (fairCV, source) <- maybe (throwM InvalidFormat) pure maybeFairCV
+    (fairCV, Pdf.PDFBody source) <- maybe (throwM InvalidFormat) pure $ extractFairCVFromCert pdf
 
     let checkRes       = checkFairCV fairCV
         pdfHashIsValid =
