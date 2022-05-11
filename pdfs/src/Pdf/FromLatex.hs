@@ -67,6 +67,8 @@ fullInfo
     language = localized $ \case
         RU -> command "documentclass[11pt, russian]" $ const [text "faircv"]
         EN -> command "documentclass[11pt, english]" $ const [text "faircv"]
+        ES -> command "documentclass[11pt, spanish]" $ const [text "faircv"]
+        ZH -> command "documentclass[11pt, chinese]" $ const [text "faircv"]
 
     personal
         = split cmStudentName               (command "Name"        $ pure . shownDesc)
@@ -120,6 +122,13 @@ fullInfo
         renderGrade EN RusNonDiff grade
             | grade >= 100 = "passed"
             | otherwise = "not passed"
+        renderGrade ES RusNonDiff grade
+            | grade >= 100 = "aprobado"
+            | otherwise = "no aprobado"
+        renderGrade ZH RusNonDiff grade
+            | grade >= 100 = "通过"
+            | otherwise = "未通过"
+
 
     formatDate day = [shown d, shown m, shown y]
       where

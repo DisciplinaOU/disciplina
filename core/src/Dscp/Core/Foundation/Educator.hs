@@ -108,7 +108,7 @@ import Data.Time.Clock (UTCTime (..), diffTimeToPicoseconds, picosecondsToDiffTi
 import Fmt (Buildable (..), genericF, listF, mapF, (+|), (|+))
 
 import Dscp.Core.Foundation.Address (Address (..))
-import Dscp.Core.PubChain (PubAddress)
+import Dscp.Core.PubChain (PubAddress, PubTxId)
 import Dscp.Crypto
 import Dscp.Util
 
@@ -356,6 +356,7 @@ data GradingScale = RusDiff | RusNonDiff
 data Certificate = Certificate
     { cId   :: Hash CertificateMeta
     , cMeta :: CertificateMeta
+    , cTxId :: Maybe PubTxId
     } deriving (Show, Eq, Generic)
 
 -- | Datatype which contains information about the grade which
@@ -369,7 +370,7 @@ data CertificateGrade = CertificateGrade
     , cgGrade   :: Grade
     } deriving (Show, Eq, Generic)
 
-data Language = EN | RU
+data Language = EN | RU | ES | ZH
     deriving (Show, Eq, Generic)
 
 -- | Datatype which contains all the info about certificate. This

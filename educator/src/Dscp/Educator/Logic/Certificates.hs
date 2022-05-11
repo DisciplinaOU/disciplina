@@ -8,6 +8,7 @@ module Dscp.Educator.Logic.Certificates
     ) where
 
 import Universum
+
 import qualified Data.Aeson as A
 import qualified Data.ByteString.Lazy as LBS
 import Data.Time.Clock (UTCTime (..))

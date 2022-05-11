@@ -21,9 +21,9 @@ module Dscp.Educator.Web.Educator.Queries
     , educatorMarkBlockValidated
     ) where
 
-import Universum
+import Universum hiding (_1, _2)
 
-import Control.Lens (_Just, from, mapping, traversed)
+import Control.Lens (_Just, from, mapping, traversed, _1, _2)
 import Data.Aeson (eitherDecode)
 import Data.Default (Default)
 import Data.List (groupBy)
@@ -375,12 +375,14 @@ educatorGetCertificates
 educatorGetCertificates sorting pagination =
     runSelectMap certificateFromRow . select $
     paginate_ pagination $ do
-        certificate <-
-            sortBy_ sorting sortingSpecApp $ do
-            all_ (esCertificates es)
-        return (crHash certificate, crMeta certificate)
+        (cert, blk) <- sortBy_ sorting sortingSpecApp $
+            manyToMany_ (esCertificateBlocks es) (view _2) (view _1)
+                (all_ $ esCertificates es)
+                (all_ $ esBlocks es)
+        return (crHash cert, crMeta cert, brPubTxId blk)
+
   where
-    sortingSpecApp CertificateRow{..} =
+    sortingSpecApp (CertificateRow{..}, _blk) =
         fieldSort @"createdAt" (crMeta ->>$. #cmIssueDate) .*.
         fieldSort @"studentName" (crMeta ->>$. #cmStudentName) .*.
         HNil

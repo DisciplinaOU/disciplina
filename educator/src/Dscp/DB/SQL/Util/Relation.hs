@@ -41,9 +41,10 @@ But having a generalized 'Relation' schema _is_ convenient, isn't it?
 
 type Relation t a b = RelationT t a b Identity
 
-instance (rel ~ RelationT t a b f, ca ~ PrimaryKey a f) => Field1 rel rel ca ca where
+instance (ca ~ PrimaryKey a f) => Field1 (RelationT t a b f) (RelationT t a b f) ca ca where
     _1 f (a :-: b) = (:-: b) <$> f a
-instance (rel ~ RelationT t a b f, cb ~ PrimaryKey b f) => Field2 rel rel cb cb where
+
+instance (cb ~ PrimaryKey b f) => Field2 (RelationT t a b f) (RelationT t a b f) cb cb where
     _2 f (a :-: b) = (a :-:) <$> f b
 
 instance (Typeable a, Typeable b, Beamable (PrimaryKey a), Beamable (PrimaryKey b)) =>

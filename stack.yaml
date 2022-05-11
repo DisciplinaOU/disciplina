@@ -60,8 +60,8 @@ extra-deps:
 # not suit for concurrent use from multiple processes.
 # This fork is temporary-1.3 with version lowered to 1.2.9
 # (otherwise too many dependant packages refuse to build).
-- git: https://github.com/serokell/temporary.git
-  commit: 102ed4671dd78c5d271f09756681aac2a41b6717
+- git: https://github.com/DisciplinaOU/temporary.git
+  commit: 95969b89b1e88401383e71eb9c3026cc3af48a18
 
 # Fixes missing resources cleanup in case of async exception.
 - git: https://github.com/serokell/Haskell-componentm.git
@@ -104,8 +104,8 @@ extra-deps:
   commit: 19d35c9895468c22397187420fe9e63379aef4db
 
 # for fixed networking
-- git: https://github.com/serokell/zeromq-haskell
-  commit: 714ac20981b2d346609fd896a1af4d31eb6d1162
+# - git: https://github.com/serokell/zeromq-haskell
+  # commit: 714ac20981b2d346609fd896a1af4d31eb6d1162
 
 # Lootbox dependencies end #
 

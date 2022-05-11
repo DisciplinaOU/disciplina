@@ -132,7 +132,7 @@ eaDocumentType :: AssignmentEducatorInfo -> DocumentType Assignment
 eaDocumentType = documentType . aiContentsHash
 
 -- | Makes a 'Certificate' from 'CertificateMeta'.
-mkCertificate :: CertificateMeta -> Certificate
+mkCertificate :: CertificateMeta -> Maybe PubTxId -> Certificate
 mkCertificate meta = Certificate (hash meta) meta
 
 -- | Special wrapper for list which includes its length

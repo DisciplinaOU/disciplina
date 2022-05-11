@@ -9,20 +9,22 @@ module Dscp.Educator.Web.Logic
 
 import Universum
 
-import Control.Lens (to, each)
+import Control.Lens (each, to)
 import Data.Coerce (coerce)
-import Loot.Base.HasLens (lensOf)
 import qualified Data.Map.Strict as M
+import Fmt ((+|), (|+))
+import Loot.Base.HasLens (lensOf)
+import Loot.Log (MonadLogging, logDebug)
 
 import Dscp.Core
 import Dscp.Crypto
-import Dscp.Web
 import Dscp.DB.SQL
 import Dscp.Educator.DB
 import Dscp.Educator.Logic.Certificates
 import Dscp.Educator.Web.Educator.Types
 import Dscp.Educator.Web.Types
 import Dscp.Util.Aeson
+import Dscp.Web
 import qualified Pdf.Scanner as Pdf
 
 commonGetProofs
@@ -81,16 +83,20 @@ checkFairCV =
         }
 
 checkFairCVPDF
-    :: MonadThrow m
+    :: (MonadThrow m, MonadLogging m)
     => Pdf.PDFBody -> m FairCVAndCheckResult
 checkFairCVPDF pdf = do
     (fairCV, Pdf.PDFBody source) <- maybe (throwM InvalidFormat) pure $ extractFairCVFromCert pdf
 
     let checkRes       = checkFairCV fairCV
-        pdfHashIsValid =
-            (  fairCV ^? fcCVL.each.each.tiaValL.to(toList).each.ptSignedSubmission.ssSubmission.sContentsHash
-            == Just (coerce $ hash source)
-            )
+        pdfHash        = fairCV ^? fcCVL.each.each.tiaValL.to(toList).each.ptSignedSubmission.ssSubmission.sContentsHash
+        sourceHash     = hash source
+        pdfHashIsValid = pdfHash == Just (coerce sourceHash)
+
+    logDebug $ "Original fairCV check result: "+|checkRes|+";"
+    logDebug $ "PDF hash inside FairCV: "+|pdfHash|+";"
+    logDebug $ "Calculated source hash: "+|sourceHash|+";"
+    logDebug $ "Is hash valid? "+|pdfHashIsValid|+"."
 
     return $ FairCVAndCheckResult (readyFairCV fairCV) checkRes
         { fairCVFullyValid = fairCVFullyValid checkRes && pdfHashIsValid

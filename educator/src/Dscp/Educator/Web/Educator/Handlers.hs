@@ -116,7 +116,7 @@ educatorApiHandlers =
 
     , eAddCertificate = \cert@(CertificateFullInfo meta _) -> do
             (blkHeader, _) <- educatorAddCertificate cert
-            pure $ CertificateWithHeader (mkCertificate meta) blkHeader (hash blkHeader)
+            pure $ CertificateWithHeader (mkCertificate meta Nothing) blkHeader (hash blkHeader)
 
     , eMarkCertValidated = \(CertificateTxAndBlock txId blockHash) ->
             void $ transact $ educatorMarkBlockValidated blockHash txId

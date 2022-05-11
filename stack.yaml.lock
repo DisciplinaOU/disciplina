@@ -145,14 +145,14 @@ packages:
 - completed:
     name: temporary
     version: 1.2.9
-    git: https://github.com/serokell/temporary.git
+    git: https://github.com/DisciplinaOU/temporary.git
     pantry-tree:
       size: 617
-      sha256: 1a76420995f0ddb7fc06126e8e30836ed7366b67aad3fcc706048d4bf513baf1
-    commit: 102ed4671dd78c5d271f09756681aac2a41b6717
+      sha256: fb067945d292842aea64f5d368ef843cf8c0e231e0e2b86db6c7cd833b727a57
+    commit: 95969b89b1e88401383e71eb9c3026cc3af48a18
   original:
-    git: https://github.com/serokell/temporary.git
-    commit: 102ed4671dd78c5d271f09756681aac2a41b6717
+    git: https://github.com/DisciplinaOU/temporary.git
+    commit: 95969b89b1e88401383e71eb9c3026cc3af48a18
 - completed:
     subdir: code/base
     name: loot-base
@@ -216,17 +216,6 @@ packages:
   original:
     git: https://github.com/int-index/caps
     commit: 37ab7699570002ff92529cf92c8ca01d5419bb7b
-- completed:
-    name: zeromq4-haskell
-    version: 0.7.0
-    git: https://github.com/serokell/zeromq-haskell
-    pantry-tree:
-      size: 1549
-      sha256: 44af9e65599823ae012cd740e3d5f4874ddeba7f027edf16600be9971f07310d
-    commit: 714ac20981b2d346609fd896a1af4d31eb6d1162
-  original:
-    git: https://github.com/serokell/zeromq-haskell
-    commit: 714ac20981b2d346609fd896a1af4d31eb6d1162
 snapshots:
 - completed:
     size: 587819
