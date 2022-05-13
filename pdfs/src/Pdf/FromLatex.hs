@@ -103,11 +103,11 @@ fullInfo
       where
         course
             = custom
-            $ \lang CertificateGrade { cgSubject, cgLang, cgHours, cgCredits, cgScale, cgGrade = UnsafeGrade grade} -> ""
+            $ \lang CertificateGrade { cgSubject, cgLang, cgHours, cgScale, cgGrade = UnsafeGrade grade} -> ""
                 <> shownDesc cgSubject <> " & "
                 <> shown     cgLang    <> " & "
                 <> shown     cgHours   <> " & "
-                <> maybe "---" shown cgCredits <> " & "
+                -- <> maybe "---" shown cgCredits <> " & "
                 <> renderGrade lang cgScale grade
 
         renderGrade _ RusDiff grade

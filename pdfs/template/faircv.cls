@@ -196,7 +196,7 @@
         \textbf{\tr{Course}} %
         & \textbf{\tr{Language}} %
         & \textbf{\tr{Hours}} %
-        & \textbf{\tr{ECTS credits}} %
+        %% & \textbf{\tr{ECTS credits}} %
         & \textbf{\tr{Grade}} %
         \\[1.5\normalbaselineskip] \hline \endhead%
 }{%

@@ -371,18 +371,25 @@ educatorGetCertificates
     :: MonadEducatorWebQuery m
     => SortingSpecOf Certificate
     -> PaginationSpec
-    -> DBT t m [Certificate]
+    -> DBT t m [CertificateWithHeader]
 educatorGetCertificates sorting pagination =
-    runSelectMap certificateFromRow . select $
+    runSelectMap certificateWithHeaderFromRow . select $
     paginate_ pagination $ do
         (cert, blk) <- sortBy_ sorting sortingSpecApp $
             manyToMany_ (esCertificateBlocks es) (view _2) (view _1)
                 (all_ $ esCertificates es)
                 (all_ $ esBlocks es)
-        return (crHash cert, crMeta cert, brPubTxId blk)
+        return (crHash cert, crMeta cert, blk)
 
   where
     sortingSpecApp (CertificateRow{..}, _blk) =
         fieldSort @"createdAt" (crMeta ->>$. #cmIssueDate) .*.
         fieldSort @"studentName" (crMeta ->>$. #cmStudentName) .*.
         HNil
+    certificateWithHeaderFromRow (cHash, cMeta, blkRow) =
+        let header = pbHeaderFromRow blkRow
+        in CertificateWithHeader
+           { cwhCertificate = certificateFromRow (cHash, cMeta, brPubTxId blkRow)
+           , cwhHeader = header
+           , cwhHeaderHash = hash header
+           }

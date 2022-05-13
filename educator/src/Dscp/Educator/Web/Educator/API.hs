@@ -340,7 +340,7 @@ type GetCertificates
     :> Summary "Get the list of certificates created by Educator"
     :> Description "Gets all the certificates created by Educator. Each \
                    \entry contains certificate metadata and certificate ID."
-    :> Get '[DSON] (Counted Certificate)
+    :> Get '[DSON] (Counted CertificateWithHeader)
 
 type GetCertificate
     = "certificate" :> Capture "certificate" (Hash CertificateMeta)
