@@ -61,10 +61,10 @@ makeCertIssuerRes
     :: HasMultiEducatorConfig
     => EducatorAuthLogin
     -> E.CertificateIssuerResource
-makeCertIssuerRes _educatorAuthLogin = E.KnownIssuerInfo $ CertificateIssuerInfo
+makeCertIssuerRes EducatorAuthLogin {..} = E.KnownIssuerInfo $ CertificateIssuerInfo
   { ciiName    = toItemDescUnsafe "Disciplina Dev"
   , ciiWebsite = toItemDescUnsafe "http://disciplina.io"
-  , ciiId      = "0xdA9a23c412CbBCdaB171a2218f3FeD7D0c0d9a9f"
+  , ciiId      = eadPublicAddress ealData
   }
   -- TODO: make fetching the data from the token or service
   --   fetchPayload $ ealToken educatorAuthLogin

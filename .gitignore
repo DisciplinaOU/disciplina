@@ -27,6 +27,9 @@ stack-to-nix.yaml
 # Stack
 .stack-work
 
+# VScode
+.vscode
+
 # TeX
 *.bbl
 *.bcf
