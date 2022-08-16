@@ -55,6 +55,7 @@ type MultiEducatorConfig = WitnessConfig ++
             , "resources" ::: FilePath
             , "downloadBaseUrl" ::: BaseUrl
             ]
+        , "contextExpiry" ::: Time Second
         ]
      ]
 

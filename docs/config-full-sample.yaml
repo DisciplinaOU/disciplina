@@ -235,6 +235,9 @@ sample:
       # Public key of the microservice, used for JWT validation
       publicKey: "Rdx2rUYesuu6EOBSt27Po85W5k-S4EU6uoSQxrDYUXc"
 
+    # How soon unused educator contexts get automatically unloaded.
+    contextExpiry: 1m
+
   # Faucet config
   faucet:
     # Logging config for faucet node. See option `witness.logging`.

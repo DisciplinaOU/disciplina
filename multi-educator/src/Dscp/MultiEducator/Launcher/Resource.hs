@@ -3,6 +3,8 @@ module Dscp.MultiEducator.Launcher.Resource
        (
        ) where
 
+import qualified Control.Concurrent.STM as STM
+import Control.Concurrent.STM.TVar (swapTVar)
 import Loot.Log (logWarning)
 import UnliftIO.Async (forConcurrently_)
 
@@ -11,6 +13,7 @@ import Dscp.DB.SQL
 import Dscp.MultiEducator.Config
 import Dscp.MultiEducator.Launcher.Context
 import Dscp.MultiEducator.Launcher.Educator.Context
+import Dscp.MultiEducator.Launcher.Educator.Load
 import Dscp.Resource.Class (AllocResource (..), buildComponentR)
 import qualified Dscp.Witness.Launcher.Resource as Witness
 
@@ -18,20 +21,22 @@ instance AllocResource EducatorContextsVar where
     type Deps EducatorContextsVar = ()
     allocResource () =
         buildComponentR "Educator contexts var"
-            (newTVarIO mempty)
+            newEducatorContexts
             shutdownAllContexts
       where
-        shutdownAllContexts ctxsVar = do
-            ctxs <- atomically $ readTVar ctxsVar
-            -- TODO [DSCP-494]: prevent further insertions to the context var
+        newEducatorContexts = newTVarIO $ ActiveEducatorContexts mempty
+        shutdownAllContexts ctxsVar =
+            atomically (swapTVar ctxsVar TerminatedEducatorContexts) >>= \case
+                TerminatedEducatorContexts ->
+                    logWarning "Extra attempt to terminate all educator contexts"
 
-            forConcurrently_ ctxs $ \case
-                YetLoadingEducatorContext ->
-                    logWarning "Educator context is being loaded during shutdown."
-                    -- TODO [DSCP-494] Do something smarter
-                FullyLoadedEducatorContext _ctx ->
-                    -- TODO [DSCP-494] Terminate normally
-                    pass
+                ActiveEducatorContexts ctxs ->
+                    forConcurrently_ ctxs $ \ctxVar -> do
+                        contextKeeper <- atomically $ readTVar ctxVar >>= \case
+                            YetLoadingEducatorContext -> STM.retry
+                            FullyLoadedEducatorContext ctx -> return (lecContextKeeper ctx)
+                            TerminatingEducatorContext contextKeeper -> return contextKeeper
+                        unloadEducator MultiEducatorIsTerminating contextKeeper
 
 instance AllocResource MultiEducatorResources where
     type Deps MultiEducatorResources = MultiEducatorConfigRec

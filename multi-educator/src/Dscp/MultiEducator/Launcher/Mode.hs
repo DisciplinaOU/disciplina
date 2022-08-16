@@ -19,6 +19,7 @@ module Dscp.MultiEducator.Launcher.Mode
     ) where
 
 import Control.Lens (makeLenses)
+import Control.Monad.Fix (MonadFix)
 import Loot.Base.HasLens (HasLens')
 import Loot.Network.Class (NetworkingCli, NetworkingServ)
 import Loot.Network.ZMQ (ZmqTcp)
@@ -39,6 +40,7 @@ import qualified Dscp.Witness as W
 -- | Set of typeclasses which define capabilities of bare Educator node.
 type MultiEducatorWorkMode ctx m =
     ( W.WitnessWorkMode ctx m
+    , MonadFix m
 
     , HasMultiEducatorConfig
     , HasLens' ctx EducatorContextsVar
