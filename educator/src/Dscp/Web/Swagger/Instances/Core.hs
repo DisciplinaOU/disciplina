@@ -40,6 +40,8 @@ type instance ParamDescription (Hash PrivateBlockHeader) =
     "Hex-encoded blake2b hash value of private block."
 type instance ParamDescription (Hash CertificateMeta) =
     "Hex-encoded blake2b hash value of certificate meta."
+type instance ParamDescription Entity =
+    "Entity ID."
 type instance ParamDescription Course =
     "Course ID."
 type instance ParamDescription Subject =
@@ -72,6 +74,9 @@ instance ToParamSchema (Hash a) where
     toParamSchema _ = mempty &: do
         S.type_ ?= S.SwaggerString
         S.format ?= "hex"
+
+instance ToParamSchema Entity where
+    toParamSchema _ = idParamSchema
 
 instance ToParamSchema Course where
     toParamSchema _ = idParamSchema
@@ -122,6 +127,10 @@ instance {-# OVERLAPPING #-} ToSchema (Hash Raw) where
              setExample offlineHash
              S.description ?= "Contents hash (e.g. contents of assignment is a problem \
                               \statement, contents of submission is a text of solution."
+
+
+instance ToSchema Entity where
+    declareNamedSchema = idDeclareNamedSchema
 
 instance ToSchema Course where
     declareNamedSchema = idDeclareNamedSchema

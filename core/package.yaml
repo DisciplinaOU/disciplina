@@ -105,6 +105,7 @@ library:
     - bytestring
     - bytestring
     - base58-bytestring
+    - binary
     - co-log-sys
     - containers
     - componentm
@@ -159,6 +160,7 @@ library:
     - unix
     - unliftio
     - unordered-containers
+    - vector
     - vinyl
     - web3-solidity
     - yaml

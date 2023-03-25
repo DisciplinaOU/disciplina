@@ -135,40 +135,30 @@ instance FromJSON a => FromJSON (TxIdAnnotated a) where
 instance Serialise (MerkleProof PrivateTx) =>
          ToJSON FairCV where
     toJSON FairCV {..} = object
-        [ "student" .= object
-            [ "name" .= fcStudentName
-            , "address" .= fcStudentAddr
-            ]
+        [ "desc" .= fcDesc
         , "cv" .= fcCV
         ]
 
 instance Serialise (MerkleProof PrivateTx) =>
          FromJSON FairCV where
     parseJSON = withObject "FairCV" $ \o -> do
-        student <- o .: "student"
-        sAddr <- student .: "address"
-        sName <- student .: "name"
+        desc <- o .: "desc"
         cv <- o .: "cv"
-        pure $ FairCV sAddr sName cv
+        pure $ FairCV desc cv
 
 instance ToJSON (MerkleProofReady PrivateTx) =>
          ToJSON FairCVReady where
     toJSON FairCV {..} = object
-        [ "student" .= object
-            [ "name" .= fcStudentName
-            , "address" .= fcStudentAddr
-            ]
+        [ "desc" .= fcDesc
         , "cv" .= fcCV
         ]
 
 instance FromJSON (MerkleProofReady PrivateTx) =>
          FromJSON FairCVReady where
     parseJSON = withObject "FairCV" $ \o -> do
-        student <- o .: "student"
-        sAddr <- student .: "address"
-        sName <- student .: "name"
+        desc <- o .: "desc"
         cv <- o .: "cv"
-        pure $ FairCV sAddr sName cv
+        pure $ FairCV desc cv
 
 ---------------------------------------------------------------------------
 -- Standalone derivations for newtypes
@@ -179,6 +169,9 @@ deriving instance FromJSON Nonce
 
 deriving instance ToJSON GTxId
 deriving instance FromJSON GTxId
+
+deriving instance ToJSON Entity
+deriving instance FromJSON Entity
 
 deriving instance ToJSON Course
 deriving instance FromJSON Course

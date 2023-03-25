@@ -3,6 +3,8 @@
 module Dscp.Core.Foundation.Instances where
 
 import Universum
+import Data.Scientific (Scientific (..), toRealFloat, fromFloatDigits)
+import Data.Aeson (Value (..))
 import Codec.Serialise (Serialise (..))
 import Codec.Serialise.Decoding (decodeListLen, decodeWord)
 import Codec.Serialise.Encoding (encodeListLen, encodeWord)
@@ -18,6 +20,14 @@ import Dscp.Util
 ----------------------------------------------------------------------------
 -- Educator
 ----------------------------------------------------------------------------
+
+-- Serialise instance for JSON values
+instance Serialise Scientific where
+    encode = encode . toRealFloat @Double
+    decode = fromFloatDigits @Double <$> decode
+
+instance Serialise Value
+
 
 -- TODO: make well-defined Serialise instances instead of generic ones
 
@@ -41,6 +51,7 @@ instance HasId PrivateTx where
     getId = hash
 
 -- TODO: move to well-specified serialisation instead of generic one.
+deriving instance Serialise Entity
 deriving instance Serialise Course
 deriving instance Serialise Subject
 

@@ -158,6 +158,6 @@ validatePrivateBlk pb =
                                   }
           )
         ]
-    validateSub sub =
-        first (map SubmissionInvalid) $
-        validateSubmission (_ptSignedSubmission sub)
+    validateSub _ = Right ()   -- we made it very simple no signatures
+        -- first (map SubmissionInvalid) $
+        -- validateSubmission (_ptSignedSubmission sub)

@@ -8,8 +8,7 @@ module Dscp.Core.FairCV
        , TxIdAnnotated (..)
        , tiaTxIdL
        , tiaValL
-       , fcStudentAddrL
-       , fcStudentNameL
+       , fcDescL
        , fcCVL
        , FairCV
        , FairCVReady
@@ -55,9 +54,8 @@ type GenericFairCV a = Map PubAddress (Map PrivateHeaderHash (TxIdAnnotated a))
 -- | FairCV template, which contains the common data for both
 -- unprocessed and pre-processed FairCVs.
 data FairCVTemplate proof = FairCV
-    { fcStudentAddr :: !Address
-    , fcStudentName :: !Text
-    , fcCV          :: !(GenericFairCV proof)
+    { fcDesc  :: !Text
+    , fcCV    :: !(GenericFairCV proof)
     } deriving (Show, Eq, Generic)
 
 makeLensesWith postfixLFields ''TxIdAnnotated
@@ -68,8 +66,8 @@ instance Buildable a => Buildable (TxIdAnnotated a) where
         "TxIdAnnotated { txId = "+|txId|+", val = "+|val|+" }"
 
 instance Buildable proof => Buildable (FairCVTemplate proof) where
-    build (FairCV addr name cv) =
-        "FairCV { student = ("+|name|+", "+|addr|+
+    build (FairCV desc cv) =
+        "FairCV { description = ("+|desc|+
         "), cv = "+|mapF (mapF <$> cv)|+" }"
 
 -- | FairCV datatype. Proofs are divided by educators (designated by their
@@ -103,14 +101,13 @@ annotateWithTxId txId = mapProofs $ tiaTxIdL ?~ txId
 
 -- | Make a FairCV from one proof.
 singletonFCV
-    :: Address                    -- ^ Student's address
-    -> Text                       -- ^ Student's name
+    :: Text                       -- ^ Description
     -> PubAddress                 -- ^ Educator's address
     -> PrivateHeaderHash          -- ^ Private block header hash
     -> MerkleProofReady PrivateTx -- ^ Merkle proof
     -> FairCVReady
-singletonFCV sAddr sName educatorAddr blkHash proof =
-    FairCV sAddr sName $
+singletonFCV desc educatorAddr blkHash proof =
+    FairCV desc $
     M.singleton educatorAddr $
     M.singleton blkHash $ withoutTxId proof
 
@@ -118,10 +115,8 @@ singletonFCV sAddr sName educatorAddr blkHash proof =
 -- Does not check that student names match (student names are metadata,
 -- which should eventually be provided on-chain or fixed by some hash).
 mergeFairCVs :: FairCVReady -> FairCVReady -> Either Text FairCVReady
-mergeFairCVs (FairCV aAddr aName a) (FairCV bAddr _ b)
-    | aAddr /= bAddr = Left "Student's addresses do not match"
-    | otherwise = FairCV aAddr aName <$>
-                  unionWithA (unionWithA mergeAnnotatedProofs) a b
+mergeFairCVs (FairCV desc a) (FairCV _ b) = FairCV desc <$>
+    unionWithA (unionWithA mergeAnnotatedProofs) a b
   where
     unionWithA f =
         M.mergeA M.preserveMissing M.preserveMissing $
@@ -143,21 +138,21 @@ addProof
     -> MerkleProofReady PrivateTx
     -> FairCVReady
     -> Either Text FairCVReady
-addProof educatorAddr blkHash proof fcv@(FairCV sAddr sName _) =
+addProof educatorAddr blkHash proof fcv@(FairCV desc _) =
     mergeFairCVs fcv $
-    singletonFCV sAddr sName educatorAddr blkHash proof
+    singletonFCV desc educatorAddr blkHash proof
 
 -- | Make a FairCV from one private block.
 privateBlockToFairCV
     :: PrivateBlockHeader
     -> NonEmpty PrivateTx
     -> PubAddress
-    -> (Address, Text)
+    -> Text
     -> FairCVReady
-privateBlockToFairCV blkHeader txs educator (student, studentName) =
+privateBlockToFairCV blkHeader txs educator desc =
     let blkHash = hash blkHeader
         proof = readyProof $ merkleProofFromList txs
-    in singletonFCV student studentName educator blkHash proof
+    in singletonFCV desc educator blkHash proof
 
 ---------------------------------------------------------------------------
 -- Fair CV check result

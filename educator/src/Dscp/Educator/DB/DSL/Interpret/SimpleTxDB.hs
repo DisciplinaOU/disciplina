@@ -6,8 +6,7 @@ import Universum
 import Control.Lens (filtered, makePrisms, traversed)
 import Data.List (intersect, union)
 
-import Dscp.Core (Assignment (..), Course (..), SignedSubmission (..), Subject,
-                  activityTypeGraphIndexed, hasPathFromTo)
+import Dscp.Core (Assignment (..), Course (..), Subject, activityTypeGraphIndexed, hasPathFromTo)
 import Dscp.Core.Foundation.Educator (PrivateTx (..))
 import Dscp.Crypto (hash)
 import Dscp.Educator.DB.DSL.Class (MonadSearchTxObj (..), Obj, ObjHashEq (..), QueryObj (..),
@@ -67,18 +66,18 @@ evalSimpleTxsQuery (SELECTTxs _ (TxHasSubjectId sId)) = do
                  _         -> False
 
 -- | Evaluator for query: find Txs in db with grade == g
-evalSimpleTxsQuery (SELECTTxs _ (_ :== grade)) = do
-    db <- asks sdbGetSimpleObj
-    return $ db ^.. traversed
-                 . _SSTx
-                 . filtered ((== grade)._ptGrade)
+evalSimpleTxsQuery (SELECTTxs _ (_ :== _)) = error "NOT NECESSARY"
+    -- db <- asks sdbGetSimpleObj
+    -- return $ db ^.. traversed
+    --              . _SSTx
+    --              . filtered ((== grade)._ptGrade)
 
 -- | Evaluator for query: find Txs in db with grade >= g
-evalSimpleTxsQuery (SELECTTxs _ (_ :>= grade)) = do
-    db <- asks sdbGetSimpleObj
-    return $ db ^.. traversed
-                 . _SSTx
-                 . filtered ((>= grade)._ptGrade)
+evalSimpleTxsQuery (SELECTTxs _ (_ :>= _)) = error "NOT NECESSARY"
+    -- db <- asks sdbGetSimpleObj
+    -- return $ db ^.. traversed
+    --              . _SSTx
+    --              . filtered ((>= grade)._ptGrade)
 
 -- | Evaluator for AND query
 evalSimpleTxsQuery (SELECTTxs _ (a :& b)) =
@@ -143,6 +142,6 @@ runSimpleTxDBQuery dbTx dbObj query =
         cId5 = Course 5
 
 getTxCourseId :: PrivateTx -> Id Course
-getTxCourseId tx = _aCourseId (getAssignment (_ssSubmission (_ptSignedSubmission tx)))
+getTxCourseId tx = _aCourseId (getAssignment tx)
   where
     getAssignment = error "Some magic should happen here here"

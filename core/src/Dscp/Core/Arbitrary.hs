@@ -43,29 +43,96 @@ module Dscp.Core.Arbitrary
 
 import Universum
 
+import qualified Data.Aeson as A
 import qualified Data.ByteArray.HexString as Hex
 import qualified Data.ByteArray as BA
+import qualified Data.Scientific as Sci
 import qualified Data.Foldable
-import Data.Time.Calendar (fromGregorian, toGregorian)
+import qualified Data.Vector as V
+import qualified Data.Text as T
+import qualified Data.HashMap.Strict as HM
 import Data.Time.Clock (UTCTime, getCurrentTime)
 import Fmt (Buildable (..), pretty, (+||), (||+))
 import qualified GHC.Exts as Exts
 import GHC.IO.Unsafe (unsafePerformIO)
-import Test.QuickCheck (arbitraryBoundedEnum, resize)
+import Test.QuickCheck (arbitraryBoundedEnum, resize, sized, liftShrink, chooseInt, shuffle)
 import qualified Text.Show
 
 import Dscp.Core.FairCV
 import Dscp.Core.Foundation
 import Dscp.Core.PubChain
+import Dscp.Core.Aeson ()
 import Dscp.Crypto
 import Dscp.Util
 import Dscp.Util.Test
+
+-- | Arbitrary for Aeson values
+instance Arbitrary A.Value where
+    arbitrary = sized arbValue
+
+    shrink = ordNub . go where
+        go A.Null       = []
+        go (A.Bool b)   = A.Null : map A.Bool (shrink b)
+        go (A.String x) = A.Null : map (A.String . T.pack) (shrink (T.unpack x))
+        go (A.Number x) = A.Null : map A.Number (shrScientific x)
+        go (A.Array x)  = A.Null : V.toList x ++ map (A.Array . V.fromList) (liftShrink go (V.toList x))
+        go (A.Object x) = A.Null : HM.elems x ++ map (A.Object . HM.fromList) (liftShrink (liftShrink go) (HM.toList x))
+
+shrScientific :: Sci.Scientific -> [Sci.Scientific]
+shrScientific s = map (uncurry Sci.scientific) $
+    shrink (Sci.coefficient s, Sci.base10Exponent s)
+
+arbValue :: Int -> Gen A.Value
+arbValue n
+    | n <= 0 = oneof
+        [ pure A.Null
+        , A.Bool <$> arbitrary
+        , A.String <$> arbText
+        , A.Number <$> arbScientific
+        ]
+
+    | otherwise = oneof
+        [ A.Object <$> arbObject n
+        , A.Array <$> arbArray  n
+        ]
+
+arbText :: Gen Text
+arbText = T.pack <$> arbitrary
+
+arbScientific :: Gen Sci.Scientific
+arbScientific = Sci.scientific <$> arbitrary <*> arbitrary
+
+arbObject :: Int -> Gen A.Object
+arbObject n = do
+    p <- arbPartition (n - 1)
+    HM.fromList <$> traverse (\m -> (,) <$> arbitrary <*> arbValue m) p
+
+arbArray :: Int -> Gen A.Array
+arbArray n = do
+    p <- arbPartition (n - 1)
+    V.fromList <$> traverse arbValue p
+
+arbPartition :: Int -> Gen [Int]
+arbPartition k = case compare k 1 of
+    LT -> pure []
+    EQ -> pure [1]
+    GT -> do
+        first' <- chooseInt (1, k)
+        rest <- arbPartition $ k - first'
+        shuffle (first' : rest)
+
+------------------------------
+-- All other instances
+------------------------------
 
 instance Arbitrary SecretKeyData where
     arbitrary = mkSecretKeyData <$> arbitrary
 
 instance Arbitrary Address where
     arbitrary = Address <$> arbitrary
+
+instance Arbitrary Entity where
+    arbitrary = Entity <$> arbitrary
 
 instance Arbitrary Course where
     arbitrary = Course <$> arbitrary
@@ -141,26 +208,9 @@ instance Arbitrary GradingScale where
 
 instance Arbitrary CertificateMeta where
     arbitrary = do
-        cmStudentName <- arbitrary
-        cmStudentBirthDate <- arbitrary
-        -- Start year should be after student birth date
-        let getYear date = fromInteger $ toGregorian date ^. _1
-            studentBirthYear = getYear cmStudentBirthDate
-        cmStartYear <- arbitrary `suchThat` (> studentBirthYear)
-        -- End year should be after start year
-        cmEndYear <- arbitrary `suchThat` (> cmStartYear)
-        cmEducationForm <- arbitrary
-        -- Document number should be large enough to resemble
-        -- actual diploma numbers
-        cmNumber <- (+ 1000000) <$> arbitrary
-        -- Document should be issued in the year when studies are ended
-        let setYear year date =
-                let (_, m, d) = toGregorian date
-                in fromGregorian (toInteger year) m d
-        cmIssueDate <- setYear cmEndYear <$> arbitrary
+        cmEntity <- arbitrary
+        cmIssueDate <- arbitrary
         cmTitle <- arbitrary
-        cmMajor <- arbitrary
-        cmSpecialization <- arbitrary
         return CertificateMeta {..}
 
 instance Arbitrary Language where
@@ -183,7 +233,7 @@ instance Arbitrary CertificateName where
     arbitrary = CertificateName <$> arbitrary <*> arbitrary
 
 instance Arbitrary PrivateTx where
-    arbitrary = PrivateTx <$> arbitrary <*> arbitrary <*> arbitrary
+    arbitrary = PrivateTx 1 (A.String "data") <$> arbitrary
 
 instance Arbitrary ATGSubjectChange where
     arbitrary = genericArbitrary
@@ -269,7 +319,7 @@ instance Arbitrary a => Arbitrary (TxIdAnnotated a) where
 -- and produce larger FairCVs.
 instance Arbitrary FairCV where
     arbitrary = resize 5 $
-        FairCV <$> arbitrary <*> arbitrary <*> arbitrary
+        FairCV <$> arbitrary <*> arbitrary
 
 instance ArbitraryMixture (AbstractSK ss) where
     arbitraryMixture = primitiveArbitraryMixture
@@ -464,7 +514,7 @@ genCoreTestEnv p = do
           <+> pksItem
           <+> submissionsItem
     txsItem <- forM sigSubsItem $ \sigSub ->
-        PrivateTx <$> pure sigSub <*> arbitrary <*> arbitrary
+        PrivateTx 1 (A.toJSON sigSub) <$> arbitrary
     return CoreTestEnv
         { cteStudents             = studentsItem
         , cteCourses              = fmap _aCourseId assignmentsItem
@@ -506,6 +556,9 @@ signedSubmissionEx = detGen 123 $
                 { ctpSubmissionContentsHash = oneTestItem (pure offlineHash) }
     in tiOne . cteSignedSubmissions <$> genCoreTestEnv param
 
+entityEx :: Entity
+entityEx = Entity 1
+
 submissionEx :: Submission
 submissionEx = _ssSubmission signedSubmissionEx
 
@@ -515,8 +568,8 @@ gradeEx = detGen 123 arbitrary
 privateTxEx :: PrivateTx
 privateTxEx =
     PrivateTx
-    { _ptSignedSubmission = signedSubmissionEx
-    , _ptGrade = gradeEx
+    { _ptEntity = entityEx
+    , _ptData = A.String "data"
     , _ptTime = timestampEx
     }
 

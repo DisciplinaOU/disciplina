@@ -8,21 +8,17 @@
 
 module Dscp.Educator.Web.Queries
     ( eqDocTypeQ
-    , isPositiveGradeQ
-    , commonExistsSubmission
-    , isGradedSubmission
-    , commonDeleteSubmission
     ) where
 
 import Universum
 import Dscp.Core
 import Dscp.Crypto
 import Dscp.DB.SQL
-import Dscp.Educator.DB
-import Dscp.Educator.Web.Types
+-- import Dscp.Educator.DB
+-- import Dscp.Educator.Web.Types
 
-es :: DatabaseSettings be EducatorSchema
-es = educatorSchema
+-- es :: DatabaseSettings be EducatorSchema
+-- es = educatorSchema
 
 ----------------------------------------------------------------------------
 -- Filters
@@ -38,10 +34,10 @@ eqDocTypeQ docType contentsHash = case docType of
     Online  -> contentsHash /=. val_ offlineHash
 
 -- | Check whether a corresponding assignment is successfully passed.
-isPositiveGradeQ
-    :: _
-    => QGenExpr context syntax s Grade -> QGenExpr context syntax s Bool
-isPositiveGradeQ _ = val_ True
+-- isPositiveGradeQ
+--     :: _
+--     => QGenExpr context syntax s Grade -> QGenExpr context syntax s Bool
+-- isPositiveGradeQ _ = val_ True
 
 ----------------------------------------------------------------------------
 -- Predicates
@@ -49,25 +45,25 @@ isPositiveGradeQ _ = val_ True
 
 -- | Whether a submission exists.
 -- If student is supplied, then submissions owned by other students won't be visible.
-commonExistsSubmission
-    :: MonadEducatorWebQuery m
-    => Hash Submission
-    -> Maybe Student
-    -> DBT t m Bool
-commonExistsSubmission submissionH studentF =
-    checkExists $ do
-        submission <- all_ (esSubmissions es)
-        guard_ (valPk_ submissionH `references_` submission)
-        guard_ $ filterMatchesPk_ studentF (srStudent submission)
+-- commonExistsSubmission
+--     :: MonadEducatorWebQuery m
+--     => Hash Submission
+--     -> Maybe Student
+--     -> DBT t m Bool
+-- commonExistsSubmission submissionH studentF =
+--     checkExists $ do
+--         submission <- all_ (esSubmissions es)
+--         guard_ (valPk_ submissionH `references_` submission)
+--         guard_ $ filterMatchesPk_ studentF (srStudent submission)
 
 -- | Whether a submission has taken any grade.
-isGradedSubmission
-    :: MonadEducatorWebQuery m
-    => Hash Submission -> DBT t m Bool
-isGradedSubmission submissionH =
-    checkExists $ do
-        privateTx <- all_ (esTransactions es)
-        guard_ (trSubmission privateTx ==. valPk_ submissionH)
+-- isGradedSubmission
+--     :: MonadEducatorWebQuery m
+--     => Hash Submission -> DBT t m Bool
+-- isGradedSubmission submissionH =
+--     checkExists $ do
+--         privateTx <- all_ (esTransactions es)
+--         guard_ (trSubmission privateTx ==. valPk_ submissionH)
 
 ----------------------------------------------------------------------------
 -- Operations
@@ -76,16 +72,16 @@ isGradedSubmission submissionH =
 -- | Delete a submission. If absent, error is thrown.
 -- If student is supplied, then submissions owned by other students won't be
 -- visible/affected.
-commonDeleteSubmission
-    :: MonadEducatorWebQuery m
-    => Hash Submission
-    -> Maybe Student
-    -> DBT t m ()
-commonDeleteSubmission submissionH studentF =
-    rewrapReferenceGotInvalid (SemanticError $ DeletingGradedSubmission submissionH) $ do
-        changes <- runDelete $ delete (esSubmissions es)
-            (\submission -> valPk_ submissionH `references_` submission
-                        &&. filterMatchesPk_ studentF (srStudent submission))
+-- commonDeleteSubmission
+--     :: MonadEducatorWebQuery m
+--     => Hash Submission
+--     -> Maybe Student
+--     -> DBT t m ()
+-- commonDeleteSubmission submissionH studentF =
+--     rewrapReferenceGotInvalid (SemanticError $ DeletingGradedSubmission submissionH) $ do
+--         changes <- runDelete $ delete (esSubmissions es)
+--             (\submission -> valPk_ submissionH `references_` submission
+--                         &&. filterMatchesPk_ studentF (srStudent submission))
 
-        unless (anyAffected changes) $
-            throwM $ AbsentError (SubmissionDomain submissionH)
+--         unless (anyAffected changes) $
+--             throwM $ AbsentError (SubmissionDomain submissionH)

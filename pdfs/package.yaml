@@ -97,6 +97,7 @@ library:
   <<: *lib-common
 
   dependencies:
+    - aeson
     - bytestring
     - base64-bytestring
     - contravariant

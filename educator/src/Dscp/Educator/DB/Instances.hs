@@ -119,6 +119,9 @@ deriving instance IsPgValue ItemDesc
 
 deriving instance IsPgValue Timestamp
 
+deriving instance FromField Entity
+deriving instance IsPgValue Entity
+
 deriving instance FromField Subject
 deriving instance IsPgValue Subject
 
@@ -174,6 +177,7 @@ GenFromBackendRow(PubAddress)
 GenFromBackendRow(PubTxId)
 GenFromBackendRow2arity(Hash)
 GenFromBackendRow(Address)
+GenFromBackendRow(Entity)
 GenFromBackendRow(Course)
 GenFromBackendRow(AssignmentType)
 GenFromBackendRow(Subject)
@@ -195,6 +199,7 @@ GenFromBackendRow(PDFBody)
 instance BeamSqlBackend be => HasSqlEqualityCheck be (TYPE)
 
 GenHasSqlEqualityCheck(Address)
+GenHasSqlEqualityCheck(Entity)
 GenHasSqlEqualityCheck(Course)
 GenHasSqlEqualityCheck(Subject)
 GenHasSqlEqualityCheck(Grade)

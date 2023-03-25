@@ -23,7 +23,6 @@ module Dscp.Educator.Web.Types
 
          -- * Conversions
        , assignmentTypeRaw
-       , gradeInfoFromRow
        , certificateFromRow
        ) where
 
@@ -44,7 +43,6 @@ import Servant.Util (ForResponseLog (..), buildForResponse, buildListForResponse
 import Dscp.Core
 import Dscp.Crypto
 import Dscp.DB.SQL
-import Dscp.Educator.DB
 import Dscp.Educator.Launcher.Mode
 import Dscp.Educator.Launcher.Resource (CertificateIssuerResource)
 import Dscp.Resource.AppDir
@@ -171,14 +169,14 @@ assignmentTypeRaw = iso forth back . from _IsFinal
         Regular     -> False
         CourseFinal -> True
 
-gradeInfoFromRow :: TransactionRow -> GradeInfo
-gradeInfoFromRow TransactionRow{..} =
-    GradeInfo
-    { giSubmissionHash = unpackPk trSubmission
-    , giGrade = trGrade
-    , giTimestamp = trCreationTime
-    , giHasProof = trIdx /= TxInMempool
-    }
+-- gradeInfoFromRow :: TransactionRow -> GradeInfo
+-- gradeInfoFromRow TransactionRow{..} =
+--     GradeInfo
+--     { giSubmissionHash = unpackPk trSubmission
+--     , giGrade = trGrade
+--     , giTimestamp = trCreationTime
+--     , giHasProof = trIdx /= TxInMempool
+--     }
 
 certificateFromRow :: (Hash CertificateMeta, PgJSONB CertificateMeta, Maybe PubTxId) -> Certificate
 certificateFromRow (cId, meta, cTxId) =

@@ -30,6 +30,7 @@ import Codec.QRCode (ErrorLevel (..), QRImage (..), TextEncoding (..), defaultQR
 import Codec.QRCode.JuicyPixels (toImage)
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.Text.Lazy as Text
+import qualified Data.Aeson as A
 import Data.Text.Lazy.Builder as Text
 import Data.Time.Calendar
 import GHC.Exts (fromList)
@@ -60,7 +61,7 @@ fullInfo
     = split (const ())      language
     $ split (cfiMeta . snd) personal
     $ inBlock "document"
-        $ divide (id &&& (toList . cfiGrades . snd))
+        $ divide (id &&& (toList . cfiDatas . snd))
             meta
             courses
   where
@@ -71,9 +72,7 @@ fullInfo
         ZH -> command "documentclass[11pt, chinese]" $ const [text "faircv"]
 
     personal
-        = split cmStudentName               (command "Name"        $ pure . shownDesc)
-        $ split cmStudentBirthDate          (command "DateOfBirth" $ formatDate)
-        $ split (const ())                  (command "QR"          $ const ["qrcode"])
+        = split (const ())                  (command "QR"          $ const ["qrcode"])
         $ ignore
 
     meta
@@ -84,57 +83,51 @@ fullInfo
         $ ignore
 
     diploma
-        = split (cmStartYear &&& cmEndYear) (command "EducationPeriod" $ showBoth)
-        $ split  cmNumber                   (command "DiplomaId"       $ pure . shown)
-        $ split  cmIssueDate                (command "DateOfIssue"     $ formatDate)
+        = split  cmIssueDate                (command "DateOfIssue"     $ formatDate)
         $ split  cmTitle                    (command "DegreeLevel"     $ pure . shownDesc)
-        $ split  cmMajor                    (command "Major"           $ pure . shownDesc)
-        $ split  cmSpecialization           (command "Minor"           $ pure . maybe "---" shownDesc)
-        $ split  cmEducationForm             educationForm
         $ ignore
-
-    educationForm = choose (\case Parttime -> Left (); _ -> Right ())
-        (command "PartTimeEducation" (const []))
-        ignore
 
     courses =
         inBlock "Courses"
-            $ allThe (the "\\\\") course
+            $ allThe (the "\\\\") cData
       where
-        course
-            = custom
-            $ \lang CertificateGrade { cgSubject, cgLang, cgHours, cgScale, cgGrade = UnsafeGrade grade} -> ""
-                <> shownDesc cgSubject <> " & "
-                <> shown     cgLang    <> " & "
-                <> shown     cgHours   <> " & "
-                -- <> maybe "---" shown cgCredits <> " & "
-                <> renderGrade lang cgScale grade
+        -- TODO: actual render!
+        cData = custom $ \_lang _dat -> ""
 
-        renderGrade _ RusDiff grade
-            | grade >= 100 = "5"
-            | grade >= 80 = "4"
-            | grade >= 60 = "3"
-            | grade >= 40 = "2"
-            | otherwise = "1"
-        renderGrade RU RusNonDiff grade
-            | grade >= 100 = "зачёт"
-            | otherwise = "незачёт"
-        renderGrade EN RusNonDiff grade
-            | grade >= 100 = "passed"
-            | otherwise = "not passed"
-        renderGrade ES RusNonDiff grade
-            | grade >= 100 = "aprobado"
-            | otherwise = "no aprobado"
-        renderGrade ZH RusNonDiff grade
-            | grade >= 100 = "通过"
-            | otherwise = "未通过"
+        -- course
+        --     = custom
+        --     $ \lang CertificateGrade { cgSubject, cgLang, cgHours, cgScale, cgGrade = UnsafeGrade grade} -> ""
+        --         <> shownDesc cgSubject <> " & "
+        --         <> shown     cgLang    <> " & "
+        --         <> shown     cgHours   <> " & "
+        --         -- <> maybe "---" shown cgCredits <> " & "
+        --         <> renderGrade lang cgScale grade
+
+        -- renderGrade _ RusDiff grade
+        --     | grade >= 100 = "5"
+        --     | grade >= 80 = "4"
+        --     | grade >= 60 = "3"
+        --     | grade >= 40 = "2"
+        --     | otherwise = "1"
+        -- renderGrade RU RusNonDiff grade
+        --     | grade >= 100 = "зачёт"
+        --     | otherwise = "незачёт"
+        -- renderGrade EN RusNonDiff grade
+        --     | grade >= 100 = "passed"
+        --     | otherwise = "not passed"
+        -- renderGrade ES RusNonDiff grade
+        --     | grade >= 100 = "aprobado"
+        --     | otherwise = "no aprobado"
+        -- renderGrade ZH RusNonDiff grade
+        --     | grade >= 100 = "通过"
+        --     | otherwise = "未通过"
 
 
     formatDate day = [shown d, shown m, shown y]
       where
         (y, m, d) = toGregorian day
 
-    showBoth (a, b) = [shown a, shown b]
+    -- showBoth (a, b) = [shown a, shown b]
     shownDesc       = text . escapeInLatex . unItemDesc
 
 -- | Type wrapper for latex executable path
@@ -233,41 +226,34 @@ copyDirectory from to = do
 testData :: CertificateFullInfo
 testData = CertificateFullInfo
     { cfiMeta = CertificateMeta
-        { cmSpecialization   = Just "\"Владение ~ черпаком & ведром\""
-        , cmMajor            = "123 Черпание\\dropTable{\"students\"}"
-        , cmTitle            = "Младший\nпомошник\rстаршего\tчерпальщика\\ \\\\ "
-        , cmNumber           = 100500
-        , cmEducationForm    = Parttime
+        { cmTitle            = "Часы класс"
         , cmIssueDate        = fromGregorian 2015 5 13
-        , cmStartYear        = 2010
-        , cmEndYear          = 2015
-        , cmStudentName      = "Вася Пупкин"
-        , cmStudentBirthDate = fromGregorian 1990 2 3
+        , cmEntity           = Entity 1
         }
-    , cfiGrades = fromList
-        [ CertificateGrade
-            { cgGrade = minBound
-            , cgCredits = Just 132
-            , cgHours = 123
-            , cgLang = RU
-            , cgScale = RusNonDiff
-            , cgSubject = "Следование за обозом"
-            }
-        , CertificateGrade
-            { cgGrade = maxBound
-            , cgCredits = Nothing
-            , cgHours = 13
-            , cgLang = RU
-            , cgScale = RusDiff
-            , cgSubject = "Черпание"
-            }
-        , CertificateGrade
-            { cgGrade = minBound
-            , cgCredits = Just 34
-            , cgHours = 1
-            , cgLang = EN
-            , cgScale = RusNonDiff
-            , cgSubject = "Сопротивление холере"
-            }
-        ]
+    , cfiDatas = fromList [ A.String "mda" ] -- TODO: better test data?
+        -- [ CertificateGrade
+        --     { cgGrade = minBound
+        --     , cgCredits = Just 132
+        --     , cgHours = 123
+        --     , cgLang = RU
+        --     , cgScale = RusNonDiff
+        --     , cgSubject = "Следование за обозом"
+        --     }
+        -- , CertificateGrade
+        --     { cgGrade = maxBound
+        --     , cgCredits = Nothing
+        --     , cgHours = 13
+        --     , cgLang = RU
+        --     , cgScale = RusDiff
+        --     , cgSubject = "Черпание"
+        --     }
+        -- , CertificateGrade
+        --     { cgGrade = minBound
+        --     , cgCredits = Just 34
+        --     , cgHours = 1
+        --     , cgLang = EN
+        --     , cgScale = RusNonDiff
+        --     , cgSubject = "Сопротивление холере"
+        --     }
+        -- ]
     }

@@ -160,6 +160,7 @@ library:
     - QuickCheck
     - generic-arbitrary
     - unliftio
+    - unordered-containers
     - warp
     - wai
     - wai-cors

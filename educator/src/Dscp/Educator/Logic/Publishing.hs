@@ -17,7 +17,7 @@ import Dscp.Educator.Launcher.Mode
 -- | Form and store a new private block made up from hanging private transactions.
 dumpPrivateBlock :: EducatorWorkMode ctx m => m (Maybe PrivateBlockHeader)
 dumpPrivateBlock = do
-    mblock <- transact $ dumpNonChainedTransactions Nothing
+    mblock <- transact $ dumpNonChainedTransactions
     case mblock of
         Nothing ->
             logInfo "No private chain updates, skipping private block creation"

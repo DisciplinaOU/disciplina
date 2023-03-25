@@ -1,10 +1,9 @@
 module Dscp.Educator.Logic.Certificates
-    ( certGradeToPrivateTx
-    , embedFairCVToCert
+    ( embedFairCVToCert
     , embedFairCVToCert'
     , extractFairCVFromCert
     , mapFairCV
-    , addCertificateGrades
+    , addCertificateDatas
     ) where
 
 import Universum
@@ -16,11 +15,8 @@ import qualified Pdf.Scanner as Pdf
 import qualified Text.Show
 
 import Dscp.Core
-import Dscp.Crypto
 import Dscp.DB.SQL
-import Dscp.Educator.Constants
 import Dscp.Educator.DB.Queries
-import Dscp.Educator.Logic.Submission
 import Dscp.Util
 
 ----------------------------------------------------------------------------
@@ -41,24 +37,24 @@ instance Exception FailedToBuildCertificate
 -- | Make a fake submission for certificate grade.
 -- Has to be unique for each transaction, or getting equal private
 -- transactions becomes too easy for the user.
-randomCertSubmission :: Hash Raw -> SignedSubmission
-randomCertSubmission contentsHash = do
-    makeSignedSubmission
-        defCertStudentSk
-        (hash defCertAssignment)
-        contentsHash
+-- randomCertSubmission :: Hash Raw -> SignedSubmission
+-- randomCertSubmission contentsHash = do
+--     makeSignedSubmission
+--         defCertStudentSk
+--         (hash defCertAssignment)
+--         contentsHash
 
 -- | Lift a grade to private transaction.
-certGradeToPrivateTx
-    :: SignedSubmission
-    -> CertificateMeta
-    -> CertificateGrade
+certDataToPrivateTx
+    :: CertificateMeta
+    -> A.Value
     -> PrivateTx
-certGradeToPrivateTx submission meta CertificateGrade{..} =
+certDataToPrivateTx meta cData =
     let issueTime = toTimestamp $ dayToTime (cmIssueDate meta)
+        entity = cmEntity meta
     in PrivateTx
-        { _ptSignedSubmission = submission
-        , _ptGrade = cgGrade
+        { _ptEntity = entity
+        , _ptData = cData
         , _ptTime = issueTime
         }
   where
@@ -66,45 +62,32 @@ certGradeToPrivateTx submission meta CertificateGrade{..} =
     midDay = 86400 / 2
     dayToTime day = UTCTime day midDay
 
-ensureCertSubmissionExists
-    :: (MonadIO m, MonadCatch m)
-    => DBT 'WithinTx m ()
-ensureCertSubmissionExists = do
-    unlessM (existsCourse defCertCourse) $
-        void $ createCourse (simpleCourse defCertCourse)
+-- ensureCertSubmissionExists
+--     :: (MonadIO m, MonadCatch m)
+--     => DBT 'WithinTx m ()
+-- ensureCertSubmissionExists = do
+--     unlessM (existsCourse defCertCourse) $
+--         void $ createCourse (simpleCourse defCertCourse)
 
-    unlessM (existsStudent defCertStudent) $
-        void $ createStudent defCertStudent
+--     unlessM (existsStudent defCertStudent) $
+--         void $ createStudent defCertStudent
 
-    unlessM (isEnrolledTo defCertStudent defCertCourse) $
-        void $ enrollStudentToCourse defCertStudent defCertCourse
+--     unlessM (isEnrolledTo defCertStudent defCertCourse) $
+--         void $ enrollStudentToCourse defCertStudent defCertCourse
 
-    unlessM (existsAssignment $ getId defCertAssignment) $
-        void $ createAssignment defCertAssignment
+--     unlessM (existsAssignment $ getId defCertAssignment) $
+--         void $ createAssignment defCertAssignment
 
-    unlessM (isAssignedToStudent defCertStudent (getId defCertAssignment)) $
-        void $ setStudentAssignment defCertStudent (getId defCertAssignment)
+--     unlessM (isAssignedToStudent defCertStudent (getId defCertAssignment)) $
+--         void $ setStudentAssignment defCertStudent (getId defCertAssignment)
 
 -- | Add a certificate grade to database.
-addCertificateGrades
+addCertificateDatas
     :: (MonadIO m, MonadCatch m, Traversable t)
-    => Hash Raw -> CertificateMeta -> (t CertificateGrade) -> DBT 'WithinTx m (t PrivateTx)
-addCertificateGrades rawHash meta grades = do
-    ensureCertSubmissionExists
-
-    flip evalStateT True $ do
-        forM grades $ \grade -> do
-            injectHash <- get
-            put False
-
-            lift $ do
-                submission <- (if injectHash then return rawHash else liftIO randomHash)
-                    <&> randomCertSubmission
-
-                void $ createSignedSubmission submission
-
-                let tx = certGradeToPrivateTx submission meta grade
-                tx <$ createTransaction tx
+    => CertificateMeta -> (t A.Value) -> DBT 'WithinTx m (t PrivateTx)
+addCertificateDatas meta cDatas = forM cDatas $ \cData -> do
+    let tx = certDataToPrivateTx meta cData
+    tx <$ createTransaction tx
 
 -- | Build a certificate with embedded FairCV.
 embedFairCVToCert :: FairCV -> Pdf.PDFBody -> Maybe Pdf.PDFBody

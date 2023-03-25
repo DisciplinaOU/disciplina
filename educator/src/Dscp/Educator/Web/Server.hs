@@ -21,9 +21,7 @@ import Servant.Util (methodsCoveringAPI, serverWithLogging)
 import UnliftIO (askUnliftIO)
 
 import Dscp.Config
-import Dscp.DB.SQL
 import Dscp.Educator.Config
-import Dscp.Educator.DB (existsStudent)
 import Dscp.Educator.Launcher.Mode (EducatorWorkMode)
 import Dscp.Educator.Web.Auth
 import Dscp.Educator.Web.Bot
@@ -74,14 +72,14 @@ mkStudentApiServer nat host botConfig = case botConfig ^. tree #params . selecti
         initializeBot (botConfig ^. tree #params . peekBranch #enabled) $ do
             let server = getServer $
                     \student -> addBotHandlers student $ studentApiHandlers student
-            checkAction <- mkStudentActionM $ \student -> do
-                botProvideInitSetting student
+            checkAction <- mkStudentActionM $ \_student -> do
+                -- there is no bot
+                -- botProvideInitSetting student
                 return True
             return (checkAction, server)
     "disabled" -> do
         let server = getServer studentApiHandlers
-        checkAction <- mkStudentActionM $ \addr ->
-              invoke $ existsStudent addr
+        checkAction <- mkStudentActionM $ \_addr -> return True
         return (checkAction, server)
     other -> error $ "unknown EducatorBotConfig type: " <> fromString other
   where

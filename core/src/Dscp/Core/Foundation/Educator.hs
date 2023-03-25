@@ -13,6 +13,7 @@ module Dscp.Core.Foundation.Educator
     , Timestamp (..)
     , toTimestamp
     , toTimestampUnsafe
+    , Entity (..)
     , Course (..)
     , Subject (..)
     , Student
@@ -63,8 +64,8 @@ module Dscp.Core.Foundation.Educator
     -- * Lenses
     , ptaTx
     , ptaWitness
-    , ptGrade
-    , ptSignedSubmission
+    , ptEntity
+    , ptData
     , ptTime
     , ptwKey
     , ptwSig
@@ -102,6 +103,7 @@ module Dscp.Core.Foundation.Educator
 import Universum
 import Control.Exception as E
 import Control.Lens (Getter, makeLenses, to)
+import qualified Data.Aeson as A
 import qualified Data.Text as T
 import Data.Time.Calendar (Day (..))
 import Data.Time.Clock (UTCTime (..), diffTimeToPicoseconds, picosecondsToDiffTime)
@@ -157,6 +159,14 @@ toTimestampUnsafe = TimestampUnsafe
 ----------------------------------------------------------------------------
 -- Common educator types
 ----------------------------------------------------------------------------
+
+-- | NEW: Entity ID is an ID of any thing (like a watch) to which a coherent
+-- series of private transactions is attributed to
+newtype Entity = Entity
+    { getEntityId :: Int64
+    } deriving (Eq, Ord, Show, Num, Generic)
+
+instance HasId Entity
 
 -- TODO [DSCP-416]: extract "Int64" to reasonable type helper.
 -- | ID of particular subject.
@@ -323,6 +333,9 @@ instance Buildable ATGDelta where
 isEmptyATGDelta :: ATGDelta -> Bool
 isEmptyATGDelta  = null . getATGDelta
 
+instance Buildable Entity where
+    build Entity{..} = build getEntityId
+
 instance Buildable Course where
     build Course{..} = build getCourseId
 
@@ -334,16 +347,9 @@ instance Buildable (DocumentType a) where
 
 -- | Datatype containing info about a certificate issued by Educator.
 data CertificateMeta = CertificateMeta
-    { cmStudentName      :: !ItemDesc
-    , cmStudentBirthDate :: !Day
-    , cmStartYear        :: !Word16
-    , cmEndYear          :: !Word16
-    , cmEducationForm    :: !EducationForm
-    , cmNumber           :: !Natural
+    { cmEntity           :: !Entity
     , cmIssueDate        :: !Day
     , cmTitle            :: !ItemDesc
-    , cmMajor            :: !ItemDesc
-    , cmSpecialization   :: !(Maybe ItemDesc)
     } deriving (Show, Eq, Generic)
 
 data EducationForm = Fulltime | Parttime | Fullpart
@@ -377,7 +383,7 @@ data Language = EN | RU | ES | ZH
 -- datatype represents a request body for 'AddCertificate' endpoint.
 data CertificateFullInfo = CertificateFullInfo
     { cfiMeta   :: CertificateMeta
-    , cfiGrades :: NonEmpty CertificateGrade
+    , cfiDatas  :: NonEmpty A.Value
     } deriving (Show, Eq, Generic)
 
 data StudentInfo = StudentInfo
@@ -404,6 +410,9 @@ data CertificateName = CertificateName
     { cnEducatorId    :: PubAddress
     , cnCertificateId :: Hash CertificateMeta
     } deriving (Show, Eq, Generic)
+
+instance Buildable A.Value where
+    build val = build $ decodeUtf8 @Text $ A.encode val
 
 instance Buildable StudentInfo where
     build (StudentInfo{..}) =
@@ -432,23 +441,16 @@ instance Buildable CertificateGrade where
 instance Buildable CertificateFullInfo where
     build CertificateFullInfo {..} =
         "{ meta = "+|cfiMeta|+
-        ", grades = "+|listF cfiGrades|+" }"
+        ", grades = "+|listF cfiDatas|+" }"
 
 instance Buildable EducationForm where
     build = show
 
 instance Buildable CertificateMeta where
     build CertificateMeta {..} =
-        "{ studentName = "+|cmStudentName|+
-        ", studentBirthDate = "+|cmStudentBirthDate|+
-        ", startYear = "+|cmStartYear|+
-        ", endYear = "+|cmEndYear|+
-        ", educationForm = "+|cmEducationForm|+
-        ", number = "+|toInteger cmNumber|+
+        "{ entity = "+|cmEntity|+
         ", issueDate = "+|cmIssueDate|+
-        ", title = "+|cmTitle|+
-        ", major = "+|cmMajor|+
-        ", specialization = "+|cmSpecialization|+" }"
+        ", title = "+|cmTitle|+" }"
 
 instance Buildable CertificateName where
     build (CertificateName eAddr cId) =
@@ -461,11 +463,11 @@ instance Buildable CertificateName where
 
 -- | Private transaction.
 data PrivateTx = PrivateTx
-    { _ptSignedSubmission :: !SignedSubmission
-    -- ^ Every transaction contains one signed student submission
-    , _ptGrade            :: !Grade
-    -- ^ Grade for this submission
-    , _ptTime             :: !Timestamp
+    { _ptEntity :: Entity
+    -- ^ ID of entity the transaction is attributed to
+    , _ptData   :: !A.Value
+    -- ^ Transaction data, can be literally anything
+    , _ptTime   :: !Timestamp
     -- ^ Timestamp for this transaction
     } deriving (Show, Eq, Ord, Generic)
 

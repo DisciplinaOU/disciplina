@@ -35,15 +35,7 @@ hoistStudentApiClient
     -> StudentApiEndpoints (AsClientT m)
     -> StudentApiEndpoints (AsClientT n)
 hoistStudentApiClient nat es = StudentApiEndpoints
-    { sGetCourses       = nat ... sGetCourses es
-    , sGetCourse        = nat ... sGetCourse es
-    , sGetAssignments   = nat ... sGetAssignments es
-    , sGetAssignment    = nat ... sGetAssignment es
-    , sGetSubmissions   = nat ... sGetSubmissions es
-    , sAddSubmission    = nat ... sAddSubmission es
-    , sGetSubmission    = nat ... sGetSubmission es
-    , sDeleteSubmission = nat ... sDeleteSubmission es
-    , sGetProofs        = nat ... sGetProofs es
+    { sDummy = nat ... sDummy es
     }
 
 -- | Client handlers for Student API with preset authentication.

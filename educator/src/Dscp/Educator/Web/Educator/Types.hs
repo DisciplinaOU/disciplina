@@ -31,13 +31,14 @@ module Dscp.Educator.Web.Educator.Types
     , educatorLiftAssignment
     , educatorLiftSubmission
     , requestToAssignment
-    , educatorAssignmentInfoFromRow
-    , educatorSubmissionInfoFromRow
+    -- , educatorAssignmentInfoFromRow
+    -- , educatorSubmissionInfoFromRow
     ) where
 
 import Universum
 
 import Control.Lens (at, from, (.=), (?=))
+import Data.Aeson (Value)
 import Data.Aeson.Options (defaultOptions)
 import Data.Aeson.TH (deriveJSON)
 import qualified Data.Aeson.TH as A
@@ -54,8 +55,8 @@ import Servant.Util (ForResponseLog (..), SortingParamBaseOf, SortingParamProvid
 
 import Dscp.Core
 import Dscp.Crypto
-import Dscp.DB.SQL.Util
-import Dscp.Educator.DB.Schema
+-- import Dscp.DB.SQL.Util
+-- import Dscp.Educator.DB.Schema
 import Dscp.Educator.Web.Types
 import Dscp.Util
 import Dscp.Util.Aeson
@@ -154,7 +155,7 @@ mkCountedList onlyCount ls =
 type instance SortingParamBaseOf Certificate = '[]
 
 type instance SortingParamProvidedOf Certificate =
-    '["createdAt" ?: Day, "studentName" ?: ItemDesc]
+    '["createdAt" ?: Day, "title" ?: ItemDesc]
 
 ---------------------------------------------------------------------------
 -- Simple conversions
@@ -191,25 +192,25 @@ requestToAssignment NewAssignment{..} =
     , _aDesc = naDesc
     }
 
-educatorAssignmentInfoFromRow :: AssignmentRow -> AssignmentEducatorInfo
-educatorAssignmentInfoFromRow AssignmentRow{..} =
-    AssignmentEducatorInfo
-    { aiHash = arHash
-    , aiContentsHash = arContentsHash
-    , aiDesc = arDesc
-    , aiCourseId = case arCourse of CourseRowId cId -> cId
-    , aiIsFinal = arType ^. assignmentTypeRaw
-    }
+-- educatorAssignmentInfoFromRow :: AssignmentRow -> AssignmentEducatorInfo
+-- educatorAssignmentInfoFromRow AssignmentRow{..} =
+--     AssignmentEducatorInfo
+--     { aiHash = arHash
+--     , aiContentsHash = arContentsHash
+--     , aiDesc = arDesc
+--     , aiCourseId = case arCourse of CourseRowId cId -> cId
+--     , aiIsFinal = arType ^. assignmentTypeRaw
+--     }
 
-educatorSubmissionInfoFromRow :: (SubmissionRow, Maybe TransactionRow) -> SubmissionEducatorInfo
-educatorSubmissionInfoFromRow (SubmissionRow{..}, tx) =
-    SubmissionEducatorInfo
-    { siHash = srHash
-    , siContentsHash = srContentsHash
-    , siAssignmentHash = unpackPk srAssignment
-    , siGrade = fmap gradeInfoFromRow tx
-    , siWitness = srSignature
-    }
+-- educatorSubmissionInfoFromRow :: (SubmissionRow, Maybe TransactionRow) -> SubmissionEducatorInfo
+-- educatorSubmissionInfoFromRow (SubmissionRow{..}, tx) =
+--     SubmissionEducatorInfo
+--     { siHash = srHash
+--     , siContentsHash = srContentsHash
+--     , siAssignmentHash = unpackPk srAssignment
+--     , siGrade = fmap gradeInfoFromRow tx
+--     , siWitness = srSignature
+--     }
 
 ---------------------------------------------------------------------------
 -- Buildable instances
@@ -283,6 +284,9 @@ instance Buildable CertificateTxAndBlock where
       ", block hash = " +| ctabBlockHash |+
       " }"
 
+instance Buildable (ForResponseLog Value) where
+    build (ForResponseLog v) = build v
+
 instance Buildable (ForResponseLog EducatorInfo) where
     build (ForResponseLog EducatorInfo{..})=
       "{ address = " +| eiAddress |+ " }"
@@ -313,7 +317,7 @@ instance Buildable (ForResponseLog CertificateGrade) where
 instance Buildable (ForResponseLog CertificateFullInfo) where
     build (ForResponseLog CertificateFullInfo {..}) =
         "{ meta = "+|cfiMeta|+
-        ", grades = "+|buildListForResponse (take 4) (ForResponseLog $ toList cfiGrades)|+" }"
+        ", grades = "+|buildListForResponse (take 4) (ForResponseLog $ toList cfiDatas)|+" }"
 
 instance Buildable (ForResponseLog PDFBody) where
     build _ = "<pdf>"

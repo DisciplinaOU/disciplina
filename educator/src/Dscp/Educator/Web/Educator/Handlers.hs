@@ -18,7 +18,7 @@ import Dscp.Educator.Web.Educator.Error
 import Dscp.Educator.Web.Educator.Queries
 import Dscp.Educator.Web.Educator.Types
 import Dscp.Educator.Web.Logic
-import Dscp.Educator.Web.Queries
+-- import Dscp.Educator.Web.Queries
 import Dscp.Educator.Web.Types
 import Dscp.Web.Class
 
@@ -33,78 +33,78 @@ educatorApiHandlers =
 
       -- Students
 
-    , eGetStudents = \mCourse _mIsEnrolled onlyCount pagination ->
-        fmap (mkCountedList onlyCount) $ invoke $ educatorGetStudents mCourse pagination
+    -- , eGetStudents = \mCourse _mIsEnrolled onlyCount pagination ->
+    --     fmap (mkCountedList onlyCount) $ invoke $ educatorGetStudents mCourse pagination
 
-    , eAddStudent = \(NewStudent student) ->
-        void . invoke $ createStudent student
+    -- , eAddStudent = \(NewStudent student) ->
+    --     void . invoke $ createStudent student
 
-    , eDeleteStudent =
-        invoke ... educatorRemoveStudent
+    -- , eDeleteStudent =
+    --     invoke ... educatorRemoveStudent
 
-    , eAddStudentCourse = \student (NewStudentCourse course) ->
-        transact $ enrollStudentToCourse student course
+    -- , eAddStudentCourse = \student (NewStudentCourse course) ->
+    --     transact $ enrollStudentToCourse student course
 
-    , eAddStudentAssignment = \student (NewStudentAssignment assignmentHash) ->
-        transact $ setStudentAssignment student assignmentHash
+    -- , eAddStudentAssignment = \student (NewStudentAssignment assignmentHash) ->
+    --     transact $ setStudentAssignment student assignmentHash
 
-    , eDeleteStudentAssignment =
-        invoke ... educatorUnassignFromStudent
+    -- , eDeleteStudentAssignment =
+    --     invoke ... educatorUnassignFromStudent
 
-      -- Courses
+    --   -- Courses
 
-    , eGetCourses = \mStudent onlyCount pagination ->
-        fmap (mkCountedList onlyCount) $ invoke $ educatorGetCourses mStudent pagination
+    -- , eGetCourses = \mStudent onlyCount pagination ->
+    --     fmap (mkCountedList onlyCount) $ invoke $ educatorGetCourses mStudent pagination
 
-    , eAddCourse = \(NewCourse desc subjects) ->
-        transact $ createCourse CourseDetails
-            { cdCourseId = Nothing
-            , cdDesc = desc
-            , cdSubjects = subjects
-            }
+    -- , eAddCourse = \(NewCourse desc subjects) ->
+    --     transact $ createCourse CourseDetails
+    --         { cdCourseId = Nothing
+    --         , cdDesc = desc
+    --         , cdSubjects = subjects
+    --         }
 
-    , eGetCourse =
-        invoke ... educatorGetCourse
+    -- , eGetCourse =
+    --     invoke ... educatorGetCourse
 
-      -- Assignments
+    --   -- Assignments
 
-    , eGetAssignments = \afCourse afStudent afIsFinal _afSince afOnlyCount pagination ->
-            fmap (mkCountedList afOnlyCount) $ invoke $
-            educatorGetAssignments def{ afCourse, afStudent, afIsFinal } pagination
+    -- , eGetAssignments = \afCourse afStudent afIsFinal _afSince afOnlyCount pagination ->
+    --         fmap (mkCountedList afOnlyCount) $ invoke $
+    --         educatorGetAssignments def{ afCourse, afStudent, afIsFinal } pagination
 
-    , eAddAssignment = \_autoAssign na -> do
-        void . transact $ createAssignment (requestToAssignment na)
-        -- TODO [DSCP-176]: consider autoassign
+    -- , eAddAssignment = \_autoAssign na -> do
+    --     void . transact $ createAssignment (requestToAssignment na)
+    --     -- TODO [DSCP-176]: consider autoassign
 
-      -- Submissions
+    --   -- Submissions
 
-    , eGetSubmissions = \sfCourse sfStudent sfAssignmentHash _sfIsGraded _sfSince
-                         sfOnlyCount pagination ->
-            fmap (mkCountedList sfOnlyCount) $ invoke $
-            educatorGetSubmissions
-                def{ sfCourse, sfStudent, sfAssignmentHash }
-                pagination
+    -- , eGetSubmissions = \sfCourse sfStudent sfAssignmentHash _sfIsGraded _sfSince
+    --                      sfOnlyCount pagination ->
+    --         fmap (mkCountedList sfOnlyCount) $ invoke $
+    --         educatorGetSubmissions
+    --             def{ sfCourse, sfStudent, sfAssignmentHash }
+    --             pagination
 
-    , eGetSubmission =
-        invoke ... educatorGetSubmission
+    -- , eGetSubmission =
+    --     invoke ... educatorGetSubmission
 
-    , eDeleteSubmission = \submissionH ->
-        invoke $ commonDeleteSubmission submissionH Nothing
+    -- , eDeleteSubmission = \submissionH ->
+    --     invoke $ commonDeleteSubmission submissionH Nothing
 
-      -- Grades
+    --   -- Grades
 
-    , eGetGrades = \course student assignment isFinalF _since onlyCount ->
-            fmap (mkCountedList onlyCount) $ invoke $
-            educatorGetGrades course student assignment isFinalF
+    -- , eGetGrades = \course student assignment isFinalF _since onlyCount ->
+    --         fmap (mkCountedList onlyCount) $ invoke $
+    --         educatorGetGrades course student assignment isFinalF
 
-    , eAddGrade = \(NewGrade subH grade) ->
-            transact $ educatorPostGrade subH grade
+    -- , eAddGrade = \(NewGrade subH grade) ->
+    --         transact $ educatorPostGrade subH grade
 
       -- Proofs
 
-    , eGetProofs = \pfCourse pfStudent pfAssignment pfOnlyCount ->
+    , eGetProofs = \pfEntity pfOnlyCount ->
             fmap (mkCountedList pfOnlyCount) $ transact $
-            commonGetProofs def{ pfCourse, pfStudent, pfAssignment }
+            commonGetProofs def{ pfEntity }
 
       -- Certificates
     , eGetCertificates = \sorting pagination onlyCount ->

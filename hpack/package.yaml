@@ -46,6 +46,7 @@ _definitions:
 
     - &dependencies
         - universum
+        - binary
 
     - &ghc-options
         - -Wall

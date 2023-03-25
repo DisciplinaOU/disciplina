@@ -1,5 +1,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE NamedFieldPuns     #-}
+{-# LANGUAGE DataKinds          #-}
+{-# LANGUAGE TypeApplications   #-}
 
 -- | Sized Merkle tree implementation.
 module Dscp.Crypto.MerkleTree
@@ -42,6 +44,9 @@ module Dscp.Crypto.MerkleTree
        , mkEmptyMerkleProof
        , separateProofAndData
        , mergeProofAndData
+
+       , merkleFromJson
+       , merkleTreeFromJson
        ) where
 
 import Universum
@@ -51,8 +56,11 @@ import qualified Data.ByteString.Builder.Extra as Builder
 import qualified Data.ByteString.Lazy as LBS
 import Data.Coerce (coerce)
 import qualified Data.Foldable as F (Foldable (..))
+import qualified Data.Binary as B
+import qualified Data.HashMap.Strict as HM
 import qualified Data.Map as Map ((!))
 import qualified Data.Set as Set
+import Data.Aeson (Value (..))
 import Data.Tree as Tree (Tree (Node), drawTree)
 import Fmt (Buildable (..), (+|), (|+), pretty)
 import qualified GHC.Exts as Exts (IsList (..))
@@ -183,9 +191,7 @@ instance HasHash a => Exts.IsList (MerkleTree a) where
     toList = F.toList
 
 -- | Construct some merkle tree-like structure over a non-empty list.
-merkleFromList
-    :: HasHash a
-    => (a -> node a) -> (node a -> node a -> node a) -> NonEmpty a -> node a
+merkleFromList :: (b -> node a) -> (node a -> node a -> node a) -> NonEmpty b -> node a
 merkleFromList toLeaf toBranch lst@(a :| as) = tree
   where
     (tree, assert_ null -> ()) = go (0, uLen - 1) `runState` (a : as)
@@ -477,3 +483,39 @@ mergeProofAndData (EmptyProof proof) =
     pickLeaf = state $ \case
         []       -> (Nothing, [])
         (a : as) -> (Just a, as)
+
+{-
+  Merkles for JSON
+-}
+
+-- Just a type tag for JSON merkles
+-- data AuthJSON
+
+-- Build a Merkle tree over a bunch of Merkle trees
+treeOfTrees :: NonEmpty (MerkleNode a) -> MerkleNode a
+treeOfTrees = merkleFromList id mkBranch
+
+jsonValueSig :: HasHash a => a -> MerkleSignature Value
+jsonValueSig = MerkleSignature 1 . unsafeHash
+
+kvPairMerkle :: (Text, Value) -> MerkleNode Value
+kvPairMerkle (k, v) = mkBranch l r
+  where l = MerkleLeaf (jsonValueSig @ByteString $ encodeUtf8 k) Null
+        r = merkleFromJson v
+
+merkleFromJson :: Value -> MerkleNode Value
+merkleFromJson Null = MerkleLeaf (jsonValueSig @ByteString "null") Null
+merkleFromJson a@(Bool b) = MerkleLeaf (jsonValueSig (B.encode b)) a
+merkleFromJson a@(Number n) = MerkleLeaf (jsonValueSig (B.encode n))a
+merkleFromJson a@(String s) = MerkleLeaf (jsonValueSig (B.encode s)) a
+merkleFromJson a@(Array arr) = case map merkleFromJson (toList arr) of
+  [] -> MerkleLeaf (jsonValueSig @ByteString "empty_list") a
+  (n:ns) -> treeOfTrees (n :| ns)
+merkleFromJson a@(Object obj) =
+  let ascList = sortOn fst $ HM.toList obj
+  in case map kvPairMerkle ascList of
+    [] -> MerkleLeaf (jsonValueSig @ByteString "empty_obj") a
+    (p:ps) -> treeOfTrees (p :| ps)
+
+merkleTreeFromJson :: Value -> MerkleTree Value
+merkleTreeFromJson = MerkleTree . merkleFromJson
