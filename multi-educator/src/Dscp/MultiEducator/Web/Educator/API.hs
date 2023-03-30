@@ -59,9 +59,9 @@ type FullCertificatesAPI =
 type GetCertificatePublic
     = "cert" :> Capture "certificate" CertificateName
     :> Summary "Get the certificate by ID"
-    :> Description "Gets the PDF certificate with FairCV JSON included as metadata by ID. \
-        \CertificateID is obtained as `base64url(\"<educator-UUID>:<certificate-hash>\")`, \
-        \where `<educator-UUID>` is the UUID assigned by AAA microservice to Educator, \
+    :> Description "Gets the PDF certificate with JSON included as metadata by ID. \
+        \CertificateID is obtained as `base64url(\"<issuer-id>:<certificate-hash>\")`, \
+        \where <issuer-id>` is the ETH address of certificate issuer, \
         \and `<certificate-hash>` is a hash of certificate meta."
     :> ExceptionalResponses EducatorAPIError
        '[ 404 #: "Certificate with given ID not found."
@@ -74,7 +74,7 @@ type CheckFairCV
     :> ReqBody '[JSON] FairCV
     :> Summary "Check the FairCV in JSON format"
     :> Description "Checks the FairCV JSON data and returns the result of the check"
-    :> Verb 'PUT 200 '[DSON] FairCVCheckResult
+    :> Verb 'POST 200 '[DSON] FairCVCheckResult
 
 -- | Endpoint for checking the FairCV in PDF format
 type CheckFairCVPDF
@@ -83,7 +83,7 @@ type CheckFairCVPDF
     :> Summary "Check the FairCV in PDF format"
     :> Description "Checks the FairCV PDF and returns the result of the check as well \
         \as the FairCV metadata included into the PDF in JSON format."
-    :> Verb 'PUT 200 '[DSON] FairCVAndCheckResult
+    :> Verb 'POST 200 '[DSON] FairCVAndCheckResult
 
 
 certificatesAPI :: Proxy CertificatesAPI

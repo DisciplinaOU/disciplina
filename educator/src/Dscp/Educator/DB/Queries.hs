@@ -60,7 +60,9 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import GHC.Exts (fromList)
 import Loot.Base.HasLens (HasCtx, lensOf)
+-- import Loot.Log (logDebug)
 import Pdf.Scanner (PDFBody)
+-- import Fmt ((+|), (|+))
 
 import Dscp.Core
 import Dscp.Crypto
@@ -499,7 +501,7 @@ createTransaction trans = do
             TransactionRow
             { trHash = ptid
             , trEntity = entity
-            , trData = trData
+            , trData = PgJSONB trData
             , trCreationTime = trans^.ptTime
             , trIdx = TxInMempool
             }

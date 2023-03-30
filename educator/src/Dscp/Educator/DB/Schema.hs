@@ -37,7 +37,7 @@ data TransactionRowT f = TransactionRow
     , trCreationTime :: C f Timestamp
     , trIdx          :: C f TxBlockIdx
     , trEntity       :: C f Entity
-    , trData         :: C f A.Value
+    , trData         :: C f (PgJSONB A.Value)
     } deriving (Generic)
 
 -- We need `idx` field to be able to perform queries like "get N last blocks" efficiently.
@@ -83,7 +83,7 @@ privateTxFromRow :: TransactionRow -> PrivateTx
 privateTxFromRow TransactionRow{..} =
     PrivateTx
     { _ptEntity = trEntity
-    , _ptData = trData
+    , _ptData = case trData of PgJSONB d -> d
     , _ptTime = trCreationTime
     }
 

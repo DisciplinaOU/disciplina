@@ -265,7 +265,7 @@ educatorPostData entity cData = do
             , trCreationTime = time
             , trIdx = TxInMempool
             , trEntity = entity
-            , trData = cData
+            , trData = PgJSONB cData
             }
 
 -- | Creates a private block consisting of transactions built from certificate grades
@@ -285,23 +285,34 @@ educatorAddCertificate cert = do
     certificateIssuerInfo  <- getCertificateIssuerInfo
     pdfRaw@(PDFBody body) <- Pdf.produce pdfLang certificateIssuerInfo cert pdfLatexPath pdfResPath downloadBaseUrl
 
+    logDebug "Certificate PDF created"
+
     let pdfHash = hash body
         pdfHash64 = toBase64 pdfHash
         certHashData = A.Object $ HM.singleton "pdfHash" $ A.String pdfHash64
         allDatas = certHashData <| cfiDatas cert
 
     transact $ do
+        logDebug "Starting adding the certificate data to private chain"
         txs <- addCertificateDatas (cfiMeta cert) allDatas
+        logDebug "Transactions created"
+
         (blkIdx, blkHeader) <-
             createPrivateBlock (toList @(NonEmpty _) txs)
             <&> nothingToPanic "impossible: failed to make non-empty block"
 
+        logDebug "Private block created"
+
         eAddr <- view $ lensOf @PubAddress
         -- TODO: different names for certificates?
         let faircv = privateBlockToFairCV blkHeader txs eAddr "Watch"
+
+        logDebug "FairCV proof created upon block, embedding..."
         pdf <- embedFairCVToCert' (unReadyFairCV faircv) pdfRaw
+        logDebug "Embedded FairCV to PDF, saving certificate to the database..."
 
         createCertificate (cfiMeta cert) blkIdx pdf
+        logDebug "New certificate saved, all done"
 
         return (blkHeader, pdfRaw)
 
