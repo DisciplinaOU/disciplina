@@ -87,7 +87,6 @@ addCertificateDatas
     => CertificateMeta -> (t A.Value) -> DBT 'WithinTx m (t PrivateTx)
 addCertificateDatas meta cDatas = forM cDatas $ \cData -> do
     let tx = certDataToPrivateTx meta cData
-    traceM "kekekke"
     tx <$ createTransaction tx
 
 -- | Build a certificate with embedded FairCV.

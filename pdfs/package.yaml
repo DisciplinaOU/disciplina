@@ -98,6 +98,7 @@ library:
 
   dependencies:
     - aeson
+    - aeson-pretty
     - bytestring
     - base64-bytestring
     - contravariant

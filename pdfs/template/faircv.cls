@@ -107,7 +107,7 @@
 
             \vspace*{10pt}
             \begin{Large}
-                \tr{Date of birth:}\textbf{\PrintDateOfBirth}
+                \textbf{\PrintDateOfBirth}
             \end{Large}
         \end{minipage}
         \hfill

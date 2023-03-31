@@ -31,6 +31,7 @@ import Codec.QRCode.JuicyPixels (toImage)
 import qualified Data.ByteString.Lazy.Char8 as LBS
 import qualified Data.Text.Lazy as Text
 import qualified Data.Aeson as A
+import Data.Aeson.Encode.Pretty (encodePrettyToTextBuilder)
 import Data.Text.Lazy.Builder as Text
 import Data.Time.Calendar
 import GHC.Exts (fromList)
@@ -42,6 +43,7 @@ import System.Process.Typed (byteStringInput, byteStringOutput, proc, runProcess
 import Text.Printer (text)
 
 import Dscp.Core.Foundation
+import Dscp.Core.Aeson ()
 import Dscp.Core.Web
 import Dscp.Util
 
@@ -63,7 +65,7 @@ fullInfo
     $ inBlock "document"
         $ divide (id &&& (toList . cfiDatas . snd))
             meta
-            courses
+            events
   where
     language = localized $ \case
         RU -> command "documentclass[11pt, russian]" $ const [text "faircv"]
@@ -79,7 +81,7 @@ fullInfo
         = split (const ())                  (command "MakeHeader"  $ const [])
         $ split (ciiName . fst)             (command "section"     $ pure . shownDesc)
         $ split (ciiWebsite . fst)          (command "EducatorUrl" $ pure . shownDesc)
-        $ split (cfiMeta . snd)             (inBlock "Diploma"       diploma)
+        $ split (cfiMeta . snd)             (inBlock "Diploma" diploma)
         $ ignore
 
     diploma
@@ -87,12 +89,15 @@ fullInfo
         $ split  cmTitle                    (command "DegreeLevel"     $ pure . shownDesc)
         $ ignore
 
-    courses =
-        inBlock "Courses"
-            $ allThe (the "\\\\") cData
-      where
+    events =
+        inBlock "verbatim"
+            $ allThe (the "\n\n") dumpJson
+
+    dumpJson :: A.ToJSON a => MkLatex a
+    dumpJson = custom $ \_lang -> encodePrettyToTextBuilder
+
         -- TODO: actual render!
-        cData = custom $ \_lang _dat -> ""
+        -- cData = custom $ \_lang _dat -> ""
 
         -- course
         --     = custom

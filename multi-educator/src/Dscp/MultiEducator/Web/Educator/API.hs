@@ -61,7 +61,7 @@ type GetCertificatePublic
     :> Summary "Get the certificate by ID"
     :> Description "Gets the PDF certificate with JSON included as metadata by ID. \
         \CertificateID is obtained as `base64url(\"<issuer-id>:<certificate-hash>\")`, \
-        \where <issuer-id>` is the ETH address of certificate issuer, \
+        \where `<issuer-id>` is the ETH address of certificate issuer, \
         \and `<certificate-hash>` is a hash of certificate meta."
     :> ExceptionalResponses EducatorAPIError
        '[ 404 #: "Certificate with given ID not found."
