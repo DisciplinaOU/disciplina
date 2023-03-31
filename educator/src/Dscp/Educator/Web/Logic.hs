@@ -9,7 +9,10 @@ module Dscp.Educator.Web.Logic
 
 import Universum
 
--- import Control.Lens (each, to)
+import Control.Lens (each, to, ix)
+import qualified Data.Aeson as A
+import qualified Data.Aeson.Types as A
+import Data.Aeson.Types ((.:))
 -- import Data.Coerce (coerce)
 import qualified Data.Map.Strict as M
 import Fmt ((+|), (|+))
@@ -23,6 +26,7 @@ import Dscp.Educator.DB
 import Dscp.Educator.Logic.Certificates
 import Dscp.Educator.Web.Educator.Types
 import Dscp.Educator.Web.Types
+import Dscp.Util
 import Dscp.Util.Aeson
 import Dscp.Web
 import qualified Pdf.Scanner as Pdf
@@ -90,7 +94,13 @@ checkFairCVPDF pdf = do
 
     let checkRes       = checkFairCV fairCV
         -- pdfHash        = fairCV ^? fcCVL.each.each.tiaValL.to(toList).each.ptSignedSubmission.ssSubmission.sContentsHash
-        pdfHash :: Maybe (Hash LByteString) = error "PLEASE IMPLEMENT - WHERE PDF HASH IS STORED?"
+        txWithPdfHash  = fairCV ^? fcCVL.each.each.tiaValL.to(toList).ix(0).ptData
+        parseHash      = A.withObject "hash_container" $ \o -> do
+            b64hash <- o .: "pdfHash"
+            h <- either fail pure $ fromBase64 b64hash
+            return h
+
+        pdfHash        = txWithPdfHash >>= A.parseMaybe parseHash
         sourceHash     = hash source
         pdfHashIsValid = pdfHash == Just sourceHash
 
