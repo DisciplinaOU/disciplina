@@ -31,15 +31,15 @@ type instance ParamDescription Timestamp =
 type instance ParamDescription Address =
     "Disciplina address."
 type instance ParamDescription (Hash ()) =
-    "Hex-encoded blake2b hash value."
+    "Hex-encoded keccak256 hash value."
 type instance ParamDescription (Hash Assignment) =
-    "Hex-encoded blake2b hash value of assignment."
+    "Hex-encoded keccak256 hash value of assignment."
 type instance ParamDescription (Hash Submission) =
-    "Hex-encoded blake2b hash value of submission."
+    "Hex-encoded keccak256 hash value of submission."
 type instance ParamDescription (Hash PrivateBlockHeader) =
-    "Hex-encoded blake2b hash value of private block."
+    "Hex-encoded keccak256 hash value of private block."
 type instance ParamDescription (Hash CertificateMeta) =
-    "Hex-encoded blake2b hash value of certificate meta."
+    "Hex-encoded keccak256 hash value of certificate meta."
 type instance ParamDescription Entity =
     "Entity ID."
 type instance ParamDescription Course =

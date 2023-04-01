@@ -34,6 +34,12 @@ instance ToHttpApiData PubAddress where
 instance FromHttpApiData PubAddress where
     parseUrlPiece = first toText . pubAddrFromText
 
+instance ToHttpApiData PubTxId where
+    toUrlPiece = toText
+instance FromHttpApiData PubTxId where
+    parseUrlPiece = first toText . pubTxIdFromText
+
+
 deriving instance ToHttpApiData Entity
 deriving instance FromHttpApiData Entity
 

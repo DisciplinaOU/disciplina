@@ -22,7 +22,8 @@ module Dscp.Educator.Web.Educator.Types
     , Certificate (..)
     , CertificateGrade (..)
     , CertificateFullInfo (..)
-    , CertificateWithHeader (..)
+    , HeaderWithPubTx (..)
+    , CertificateWithHeaders (..)
     , CertificateTxAndBlock (..)
     , mkCertificate
     , eaDocumentType
@@ -118,10 +119,15 @@ data SubmissionEducatorInfo = SubmissionEducatorInfo
     , siWitness        :: SubmissionWitness
     } deriving (Show, Eq, Generic)
 
-data CertificateWithHeader = CertificateWithHeader
+data HeaderWithPubTx = HeaderWithPubTx
+    { hwptHeader     :: PrivateBlockHeader
+    , hwptHeaderHash :: Hash PrivateBlockHeader
+    , hwptPubTxId    :: Maybe PubTxId
+    } deriving (Show, Eq, Generic)
+
+data CertificateWithHeaders = CertificateWithHeaders
     { cwhCertificate :: Certificate
-    , cwhHeader      :: PrivateBlockHeader
-    , cwhHeaderHash  :: Hash PrivateBlockHeader
+    , cwhHeaders     :: [HeaderWithPubTx]
     } deriving (Show, Eq, Generic)
 
 data CertificateTxAndBlock = CertificateTxAndBlock
@@ -133,7 +139,7 @@ eaDocumentType :: AssignmentEducatorInfo -> DocumentType Assignment
 eaDocumentType = documentType . aiContentsHash
 
 -- | Makes a 'Certificate' from 'CertificateMeta'.
-mkCertificate :: CertificateMeta -> Maybe PubTxId -> Certificate
+mkCertificate :: CertificateMeta -> Certificate
 mkCertificate meta = Certificate (hash meta) meta
 
 -- | Special wrapper for list which includes its length
@@ -271,11 +277,17 @@ instance Buildable (SubmissionEducatorInfo) where
       ", assignment hash = " +| siAssignmentHash |+
       " }"
 
-instance Buildable CertificateWithHeader where
-    build CertificateWithHeader {..} =
+instance Buildable HeaderWithPubTx where
+    build HeaderWithPubTx {..} =
+      "{ hash = " +| hwptHeaderHash |+
+      ", header = " +| hwptHeader |+
+      ", pubTxId = " +| hwptPubTxId |+
+      " }"
+
+instance Buildable CertificateWithHeaders where
+    build CertificateWithHeaders {..} =
       "{ certificate = " +| cwhCertificate |+
-      ", block header = " +| cwhHeader |+
-      ", header hash = " +| cwhHeaderHash |+
+      ", block headers = " +| listF cwhHeaders |+
       " }"
 
 instance Buildable CertificateTxAndBlock where
@@ -359,7 +371,8 @@ deriveJSON defaultOptions ''SubmissionEducatorInfo
 deriveJSON defaultOptions ''Certificate
 deriveJSON defaultOptions ''CertificateGrade
 deriveJSON defaultOptions ''CertificateFullInfo
-deriveJSON defaultOptions ''CertificateWithHeader
+deriveJSON defaultOptions ''HeaderWithPubTx
+deriveJSON defaultOptions ''CertificateWithHeaders
 deriveJSON defaultOptions ''CertificateTxAndBlock
 deriveJSON defaultOptions ''Counted
 deriveJSON dscpAesonOptions{ A.constructorTagModifier = map toLower } ''Language
@@ -482,7 +495,10 @@ instance ToSchema CertificateMeta where
 instance ToSchema CertificateFullInfo where
     declareNamedSchema = gDeclareNamedSchema
 
-instance ToSchema CertificateWithHeader where
+instance ToSchema HeaderWithPubTx where
+    declareNamedSchema = gDeclareNamedSchema
+
+instance ToSchema CertificateWithHeaders where
     declareNamedSchema = gDeclareNamedSchema
 
 instance ToSchema CertificateTxAndBlock where

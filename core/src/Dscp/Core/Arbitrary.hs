@@ -329,6 +329,10 @@ instance ArbitraryMixture (AbstractSig ss a) where
     arbitraryMixture = primitiveArbitraryMixture
 instance ArbitraryMixture (AbstractHash ss a) where
     arbitraryMixture = primitiveArbitraryMixture
+instance ArbitraryMixture PubAddress where
+    arbitraryMixture = primitiveArbitraryMixture
+instance ArbitraryMixture PubTxId where
+    arbitraryMixture = primitiveArbitraryMixture
 instance ArbitraryMixture Address where
     arbitraryMixture = primitiveArbitraryMixture
 instance ArbitraryMixture Nonce where

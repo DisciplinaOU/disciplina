@@ -16,14 +16,15 @@ module Dscp.Educator.Web.Educator.Queries
     -- , educatorGetGrades
     , educatorPostData
     , educatorAddCertificate
+    , educatorUpdateCertificate
     , educatorGetCertificate
     , educatorGetCertificates
+    , educatorGetCertificatesWithHeaders
     , educatorMarkBlockValidated
     ) where
 
-import Universum hiding (_1, _2)
+import Universum
 
-import Control.Lens (_1, _2)
 import qualified Data.Aeson as A
 import qualified Data.HashMap.Strict as HM
 import Data.Aeson (eitherDecode)
@@ -268,6 +269,21 @@ educatorPostData entity cData = do
             , trData = PgJSONB cData
             }
 
+mkPdfHashData :: PDFBody -> A.Value
+mkPdfHashData (PDFBody body) =
+    let pdfHash = hash body
+        pdfHash64 = toBase64 pdfHash
+    in A.Object $ HM.singleton "pdfHash" $ A.String pdfHash64
+
+
+headerWithPubTxFromRow :: BlockRow -> HeaderWithPubTx
+headerWithPubTxFromRow r@BlockRow{..} = HeaderWithPubTx
+    { hwptHeaderHash = brHash
+    , hwptHeader     = pbHeaderFromRow r
+    , hwptPubTxId    = brPubTxId
+    }
+
+
 -- | Creates a private block consisting of transactions built from certificate grades
 -- and generates a PDF certificate with an embedded FairCV (without `PubTxId` embedded yet).
 -- Also returns a header of the created block.
@@ -283,14 +299,11 @@ educatorAddCertificate cert = do
     logDebug "Starting creating the certificate"
 
     certificateIssuerInfo  <- getCertificateIssuerInfo
-    pdfRaw@(PDFBody body) <- Pdf.produce pdfLang certificateIssuerInfo cert pdfLatexPath pdfResPath downloadBaseUrl
+    pdfRaw <- Pdf.produce pdfLang certificateIssuerInfo cert pdfLatexPath pdfResPath downloadBaseUrl
 
     logDebug "Certificate PDF created"
 
-    let pdfHash = hash body
-        pdfHash64 = toBase64 pdfHash
-        certHashData = A.Object $ HM.singleton "pdfHash" $ A.String pdfHash64
-        allDatas = certHashData <| cfiDatas cert
+    let allDatas = mkPdfHashData pdfRaw <| cfiDatas cert
 
     transact $ do
         logDebug "Starting adding the certificate data to private chain"
@@ -315,6 +328,78 @@ educatorAddCertificate cert = do
         logDebug "New certificate saved, all done"
 
         return (blkHeader, pdfRaw)
+
+
+educatorUpdateCertificate
+  :: MonadEducatorWeb ctx m
+  => Hash CertificateMeta -> NonEmpty A.Value -> m CertificateWithHeaders
+educatorUpdateCertificate certHash datas = do
+    pdfLang         <- view (lensOf @Language)
+    pdfLatexPath    <- view (lensOf @Pdf.LatexPath)
+    pdfResPath      <- view (lensOf @Pdf.ResourcePath)
+    downloadBaseUrl <- view (lensOf @Pdf.DownloadBaseUrl)
+
+    logDebug "Fetching and extracting old certificate data"
+    (certMeta, oldPdf) <- invoke $ educatorGetCertificateWithMeta certHash
+    unless (hash certMeta == certHash) $
+        throwM InvalidFormat
+
+    logDebug "Checked that certificate meta yields correct hash"
+    (oldFairCV, _) <- maybe (throwM InvalidFormat) pure $ extractFairCVFromCert oldPdf
+    oldDatas <- maybe (throwM InvalidFormat) pure $ nonEmpty $ extractDatasFromFairCV oldFairCV
+    let newDatas = oldDatas <> datas
+        cert = CertificateFullInfo certMeta newDatas
+
+    logDebug "Started re-creating the certificate"
+    certificateIssuerInfo  <- getCertificateIssuerInfo
+    pdfRaw <- Pdf.produce pdfLang certificateIssuerInfo cert pdfLatexPath pdfResPath downloadBaseUrl
+
+    -- TODO: REMOVE COPY PASTE
+
+    logDebug "Certificate PDF created"
+
+    let allDatas = mkPdfHashData pdfRaw <| datas
+
+    transact $ do
+        logDebug "Starting adding the certificate data to private chain"
+        txs <- addCertificateDatas (cfiMeta cert) allDatas
+        logDebug "Transactions created"
+
+        (blkIdx, blkHeader) <-
+            createPrivateBlock (toList @(NonEmpty _) txs)
+            <&> nothingToPanic "impossible: failed to make non-empty block"
+
+        logDebug "Private block created"
+
+        eAddr <- view $ lensOf @PubAddress
+        -- TODO: different names for certificates?
+        let newFairCV = privateBlockToFairCV blkHeader txs eAddr "Watch"
+        let mergedFairCV = mergeFairCVs (readyFairCV oldFairCV) newFairCV
+              & nothingToPanic "impossible: failed to merge FairCVs non-intersecting in blocks" . eitherToMaybe
+
+        logDebug "FairCV proof created upon block, embedding..."
+        pdf <- embedFairCVToCert' (unReadyFairCV mergedFairCV) pdfRaw
+        logDebug "Embedded FairCV to PDF, saving certificate to the database..."
+
+        updateCertificatePdf certHash blkIdx pdf
+        logDebug "Updated certificate saved, all done"
+
+        blks <- fmap headerWithPubTxFromRow <$> getCertificateBlocks certHash
+
+        return $ CertificateWithHeaders (mkCertificate certMeta) blks
+
+  where
+    extractDatasFromFairCV :: FairCV -> [A.Value]
+    extractDatasFromFairCV fairCV =
+        let FairCV {..} = extractContentsFromFairCV fairCV
+            flattenedTxs  = join . toList . fmap (join . fmap tiaVal . toList) $ fcCV
+            onlyDatas     = fmap (^. ptData) flattenedTxs
+
+            isPdfHashTx (A.Object hm) = HM.member "pdfHash" hm
+            isPdfHashTx _ = False
+
+        in filter (not . isPdfHashTx) onlyDatas
+
 
 -- | Writes down the Ethereum transaction ID into the private block's row.
 -- Also update embedded `FairCVs` in the certificates
@@ -377,33 +462,44 @@ getCertificateIssuerInfo = view (lensOf @CertificateIssuerResource) >>= \case
 educatorGetCertificate
     :: MonadEducatorWebQuery m
     => Hash CertificateMeta -> DBT t m PDFBody
-educatorGetCertificate certId =
-    selectByPk crPdf (esCertificates es) certId
+educatorGetCertificate = fmap snd . educatorGetCertificateWithMeta
+
+
+educatorGetCertificateWithMeta
+    :: MonadEducatorWebQuery m
+    => Hash CertificateMeta -> DBT t m (CertificateMeta, PDFBody)
+educatorGetCertificateWithMeta certId =
+    selectByPk (\row -> (case crMeta row of PgJSONB m -> m, crPdf row)) (esCertificates es) certId
         >>= nothingToThrow (AbsentError $ CertificateDomain certId)
+
 
 educatorGetCertificates
     :: MonadEducatorWebQuery m
     => SortingSpecOf Certificate
     -> PaginationSpec
-    -> DBT t m [CertificateWithHeader]
+    -> DBT t m [Certificate]
 educatorGetCertificates sorting pagination =
-    runSelectMap certificateWithHeaderFromRow . select $
+    runSelectMap certificateFromRow . select $
     paginate_ pagination $ do
-        (cert, blk) <- sortBy_ sorting sortingSpecApp $
-            manyToMany_ (esCertificateBlocks es) (view _2) (view _1)
-                (all_ $ esCertificates es)
-                (all_ $ esBlocks es)
-        return (crHash cert, crMeta cert, blk)
-
+        cert <- sortBy_ sorting sortingSpecApp $ all_ (esCertificates es)
+        return (crHash cert, crMeta cert)
   where
-    sortingSpecApp (CertificateRow{..}, _blk) =
+    sortingSpecApp CertificateRow{..} =
         fieldSort @"createdAt" (crMeta ->>$. #cmIssueDate) .*.
         fieldSort @"title" (crMeta ->>$. #cmTitle) .*.
         HNil
-    certificateWithHeaderFromRow (cHash, cMeta, blkRow) =
-        let header = pbHeaderFromRow blkRow
-        in CertificateWithHeader
-           { cwhCertificate = certificateFromRow (cHash, cMeta, brPubTxId blkRow)
-           , cwhHeader = header
-           , cwhHeaderHash = hash header
-           }
+
+educatorGetCertificatesWithHeaders
+    :: MonadEducatorWeb ctx m
+    => SortingSpecOf Certificate
+    -> PaginationSpec
+    -> DBT t m [CertificateWithHeaders]
+educatorGetCertificatesWithHeaders sorting pagination = do
+    certificates <- educatorGetCertificates sorting pagination
+    headers <- forM certificates $ \Certificate {..} ->
+        runSelectMap headerWithPubTxFromRow . select $ orderBy_ (desc_ . brIdx) $ do
+            blkIdx :-: certHash <- all_ (esCertificateBlocks es)
+            guard_ (certHash ==. valPk_ cId)
+            related_ (esBlocks es) blkIdx
+    return $ zipWith CertificateWithHeaders certificates headers
+  where

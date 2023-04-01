@@ -33,4 +33,4 @@ educatorSubmissionInfoEx =
     }
 
 certificateListEx :: [Certificate]
-certificateListEx = detGen 123 $ vectorOf 200 $ mkCertificate <$> arbitrary <*> arbitrary
+certificateListEx = detGen 123 $ vectorOf 200 $ mkCertificate <$> arbitrary

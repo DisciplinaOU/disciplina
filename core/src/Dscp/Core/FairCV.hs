@@ -19,6 +19,7 @@ module Dscp.Core.FairCV
        , mergeFairCVs
        , addProof
        , privateBlockToFairCV
+       , extractContentsFromFairCV
 
          -- * Fair CV check result
        , FairCVCheckResult (..)
@@ -46,6 +47,7 @@ data TxIdAnnotated a = TxIdAnnotated
 
 withoutTxId :: a -> TxIdAnnotated a
 withoutTxId = TxIdAnnotated Nothing
+
 
 -- | Two-level map which represents common structure for all `FairCV*`
 -- types
@@ -77,6 +79,9 @@ type FairCV = FairCVTemplate (MerkleProof PrivateTx)
 -- | @'FairCV'@ with pre-processed proofs (all the proofs have their Merkle
 -- roots pre-calculated).
 type FairCVReady = FairCVTemplate (MerkleProofReady PrivateTx)
+
+-- | @'FairCV' with transactions extracted
+type FairCVContents = FairCVTemplate [PrivateTx]
 
 
 -- | Helper function: maps annotated values inside FairCV
@@ -153,6 +158,11 @@ privateBlockToFairCV blkHeader txs educator desc =
     let blkHash = hash blkHeader
         proof = readyProof $ merkleProofFromList txs
     in singletonFCV desc educator blkHash proof
+
+-- | Extract contents from FairCV (without proofs)
+extractContentsFromFairCV :: FairCV -> FairCVContents
+extractContentsFromFairCV = over fcCVL $ (fmap . fmap . fmap) toList
+
 
 ---------------------------------------------------------------------------
 -- Fair CV check result

@@ -46,10 +46,12 @@ module Dscp.Educator.DB.Queries
        , getPrivateBlockIdxByHash
        , getPrivateBlocksAfter
        , getPrivateBlocksAfterHash
+       , getCertificateBlocks
        , createPrivateBlock
        , dumpNonChainedTransactions
        , createTransaction
        , createCertificate
+       , updateCertificatePdf
        ) where
 
 
@@ -526,6 +528,29 @@ createCertificate meta blkIdx pdf = do
             , crMeta = PgJSONB meta
             , crPdf = pdf
             }
+
+    runInsert . insert (esCertificateBlocks es) . insertValue $
+        blkIdx <:-:> certHash
+
+
+getCertificateBlocks
+  :: DBM m
+  => Hash CertificateMeta -> DBT t m [BlockRow]
+getCertificateBlocks cId =
+    runSelect . select $ orderBy_ (desc_ . brIdx) $ do
+        blkIdx :-: certHash <- all_ (esCertificateBlocks es)
+        guard_ (certHash ==. valPk_ cId)
+        related_ (esBlocks es) blkIdx
+
+
+updateCertificatePdf
+    :: DBM m
+    => Hash CertificateMeta -> BlockIdx -> PDFBody -> DBT t m ()
+updateCertificatePdf certHash blkIdx updatedPdf = do
+    runUpdate_ $ update
+        (esCertificates es)
+        (\crt -> crPdf crt <-. val_ updatedPdf)
+        (\crt -> crHash crt ==. val_ certHash)
 
     runInsert . insert (esCertificateBlocks es) . insertValue $
         blkIdx <:-:> certHash

@@ -178,12 +178,11 @@ assignmentTypeRaw = iso forth back . from _IsFinal
 --     , giHasProof = trIdx /= TxInMempool
 --     }
 
-certificateFromRow :: (Hash CertificateMeta, PgJSONB CertificateMeta, Maybe PubTxId) -> Certificate
-certificateFromRow (cId, meta, cTxId) =
+certificateFromRow :: (Hash CertificateMeta, PgJSONB CertificateMeta) -> Certificate
+certificateFromRow (cId, meta) =
     Certificate
     { cId
     , cMeta = case meta of PgJSONB m -> m
-    , cTxId
     }
 
 ---------------------------------------------------------------------------

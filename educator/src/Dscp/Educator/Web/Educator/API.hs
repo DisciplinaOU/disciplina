@@ -23,6 +23,7 @@ import Servant.Server.Generic (AsServerT)
 import Servant.Util (ExceptionalResponses, PaginationPageSize (..), PaginationParams,
                      SortingParamsOf, Tag, type (#:))
 import Universum
+import qualified Data.Aeson as A
 
 import Dscp.Core
 import Dscp.Crypto
@@ -72,7 +73,8 @@ data EducatorApiEndpoints route = EducatorApiEndpoints
     , eGetCertificates         :: route :- GetCertificates
     , eGetCertificate          :: route :- GetCertificate
     , eAddCertificate          :: route :- AddCertificate
-    , eMarkCertValidated       :: route :- MarkCertValidated
+    , eUpdateCertificate       :: route :- UpdateCertificate
+    , eMarkCertValidated       :: route :- MarkBlockValidated
     } deriving (Generic)
 
 type RawEducatorAPI = ToServantApi EducatorApiEndpoints
@@ -338,7 +340,7 @@ type GetCertificates
     :> Summary "Get the list of certificates created by Educator"
     :> Description "Gets all the certificates created by Educator. Each \
                    \entry contains certificate metadata and certificate ID."
-    :> Get '[DSON] (Counted CertificateWithHeader)
+    :> Get '[DSON] (Counted CertificateWithHeaders)
 
 type GetCertificate
     = "certificate" :> Capture "certificate" (Hash CertificateMeta)
@@ -360,13 +362,24 @@ type AddCertificate
     :> ExceptionalResponses EducatorAPIError
        '[ 409 #: "Exactly the same certificate already exists."
         ]
-    :> PostCreated '[DSON] CertificateWithHeader
+    :> PostCreated '[DSON] CertificateWithHeaders
 
-type MarkCertValidated
-    = "certificate"
+type UpdateCertificate
+    = "certificate" :> Capture "certificateHash" (Hash CertificateMeta)
     :> Tag "Certificates"
-    :> Summary "Mark the certificate validated with the ID of Ethereum transaction"
-    :> ReqBody '[DSON] CertificateTxAndBlock
+    :> Summary "Update the certificate"
+    :> Description "Add new data to the existing certificate and re-generate it"
+    :> ReqBody '[DSON] (NonEmpty A.Value)
+    :> ExceptionalResponses EducatorAPIError
+       '[ 404 #: "Certificate with given hash not found."
+        ]
+    :> Put '[DSON] CertificateWithHeaders
+
+type MarkBlockValidated
+    = "block" :> Capture "blockHash" (Hash PrivateBlockHeader)
+    :> Tag "Certificates"
+    :> Summary "Mark the block validated with the ID of Ethereum transaction"
+    :> QueryParam' [Required, Strict] "txId" PubTxId
     :> ExceptionalResponses EducatorAPIError
        '[ 404 #: "Private block with given hash not found."
         ]

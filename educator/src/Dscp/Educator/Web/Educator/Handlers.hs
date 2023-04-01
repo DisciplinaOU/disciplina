@@ -109,16 +109,20 @@ educatorApiHandlers =
       -- Certificates
     , eGetCertificates = \sorting pagination onlyCount ->
             invoke $ fmap (mkCountedList onlyCount) $
-            educatorGetCertificates sorting pagination
+            educatorGetCertificatesWithHeaders sorting pagination
 
     , eGetCertificate =
             invoke ... educatorGetCertificate
 
     , eAddCertificate = \cert@(CertificateFullInfo meta _) -> do
             (blkHeader, _) <- educatorAddCertificate cert
-            pure $ CertificateWithHeader (mkCertificate meta Nothing) blkHeader (hash blkHeader)
+            pure $ CertificateWithHeaders
+                (mkCertificate meta)
+                [HeaderWithPubTx blkHeader (hash blkHeader) Nothing]
 
-    , eMarkCertValidated = \(CertificateTxAndBlock txId blockHash) ->
+    , eUpdateCertificate = educatorUpdateCertificate
+
+    , eMarkCertValidated = \blockHash txId ->
             void $ transact $ educatorMarkBlockValidated blockHash txId
     }
 
