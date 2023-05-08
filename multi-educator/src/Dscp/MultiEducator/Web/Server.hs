@@ -60,8 +60,8 @@ mkMultiEducatorApiServer
     -> (forall x. m x -> Handler x)
     -> NetworkAddress
     -> Server MultiEducatorAPI
-mkMultiEducatorApiServer _aaaConfig nat host =
-    withSwaggerUI protectedMultiEducatorAPI (multiEducatorAPISwagger (Just host)) $
+mkMultiEducatorApiServer _aaaConfig nat _host =
+    withSwaggerUI protectedMultiEducatorAPI (multiEducatorAPISwagger Nothing) $
         hoistServerWithContext
             protectedMultiEducatorAPI
             (Proxy :: Proxy '[MultiEducatorPublicKey, NoAuthContext "multi-educator"])
@@ -73,23 +73,23 @@ mkStudentApiServer
     => (forall x. m x -> Handler x)
     -> NetworkAddress
     -> Server MultiStudentAPI
-mkStudentApiServer nat host =
-    withSwaggerUI protectedMultiStudentAPI (multiStudentAPISwagger (Just host)) $
+mkStudentApiServer nat _host =
+    withSwaggerUI protectedMultiStudentAPI (multiStudentAPISwagger Nothing) $
         \login ->
         let ealogin = educatorAuthLoginSimple login
         in hoistServerWithContext
                 protectedStudentAPI
                 (Proxy :: Proxy '[StudentCheckAction, NoAuthContext "student"])
                 (\x -> nat $ lookupEducator ealogin >>= \c -> normalToMulti c x)
-                (\student -> toServant $ studentApiHandlers student)
+                (toServant . studentApiHandlers)
 
 mkCertificatesApiServer
     :: forall ctx m. MultiEducatorWorkMode ctx m
     => (forall x. m x -> Handler x)
     -> NetworkAddress
     -> Server FullCertificatesAPI
-mkCertificatesApiServer nat host =
-    withSwaggerUI certificatesAPI (certificatesAPISwagger (Just host)) $
+mkCertificatesApiServer nat _host =
+    withSwaggerUI certificatesAPI (certificatesAPISwagger Nothing) $
         hoistServer certificatesAPI nat $ toServant certificatesApiHandlers
 
 -- | Create an action which checks whether or not the
