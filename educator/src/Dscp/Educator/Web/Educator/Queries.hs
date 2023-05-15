@@ -25,6 +25,7 @@ module Dscp.Educator.Web.Educator.Queries
 
 import Universum
 
+import Control.Lens (each, at, (?~))
 import qualified Data.Aeson as A
 import qualified Data.HashMap.Strict as HM
 import Data.Aeson (eitherDecode)
@@ -425,9 +426,10 @@ educatorMarkBlockValidated blkHash txId = do
         forM_ certs $ \certRow -> do
              let pdf   = crPdf certRow
                  cHash = crHash certRow
+                 updateNecessaryHash fcv = fcv & fcCVL.each.at blkHash.each.tiaTxIdL ?~ txId
 
              updatedPdf <- nothingToThrow InvalidFormat $
-                 mapFairCV (annotateWithTxId txId) pdf
+                 mapFairCV updateNecessaryHash pdf
              runUpdate $ update
                  (esCertificates es)
                  (\crt -> crPdf crt <-. val_ updatedPdf)
