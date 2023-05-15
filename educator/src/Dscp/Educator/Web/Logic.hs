@@ -94,21 +94,20 @@ checkFairCVPDF pdf = do
 
     let checkRes       = checkFairCV fairCV
         -- pdfHash        = fairCV ^? fcCVL.each.each.tiaValL.to(toList).each.ptSignedSubmission.ssSubmission.sContentsHash
-        txWithPdfHash  = fairCV ^? fcCVL.each.each.tiaValL.to(toList).ix(0).ptData
+        hashContainers = fairCV ^.. fcCVL.each.each.tiaValL.to(toList).ix(0).ptData
         parseHash      = A.withObject "hash_container" $ \o -> do
             b64hash <- o .: "pdfHash"
-            h <- either fail pure $ fromBase64 b64hash
-            return h
+            either fail pure $ fromBase64 b64hash
 
-        pdfHash        = txWithPdfHash >>= A.parseMaybe parseHash
+        pdfHashes      = traverse (A.parseMaybe parseHash) hashContainers
         sourceHash     = hash source
-        pdfHashIsValid = pdfHash == Just sourceHash
+        anyHashIsValid = maybe False (elem sourceHash) pdfHashes
 
     logDebug $ "Original fairCV check result: "+|checkRes|+";"
-    logDebug $ "PDF hash inside FairCV: "+|pdfHash|+";"
+    logDebug $ "PDF hashes inside FairCV: "+|pdfHashes|+";"
     logDebug $ "Calculated source hash: "+|sourceHash|+";"
-    logDebug $ "Is hash valid? "+|pdfHashIsValid|+"."
+    logDebug $ "Is hash valid? "+|anyHashIsValid|+"."
 
     return $ FairCVAndCheckResult (readyFairCV fairCV) checkRes
-        { fairCVFullyValid = fairCVFullyValid checkRes && pdfHashIsValid
+        { fairCVFullyValid = fairCVFullyValid checkRes && anyHashIsValid
         }
